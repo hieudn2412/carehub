@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+app:
+  api-prefix: /api/v1
+  cors:
+    allowed-origin-patterns:
+      - http://localhost:*
+      - http://127.0.0.1:*
+      - https://api.fpthub.online
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-me-min-32-chars!!}
+    access-token-expiration-minutes: 15
+    refresh-token-expiration-days: 7
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/carehub
+    username: postgres
+    password: root123
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
