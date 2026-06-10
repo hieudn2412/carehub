@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined, UserOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
+import { AUTH_ROUTES } from '../constants/routes.js'
 
-function ForgotAccountScreen({ onBack, onNext }) {
+function ForgotAccountScreen() {
+  const navigate = useNavigate()
   const [account, setAccount] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
@@ -30,7 +33,7 @@ function ForgotAccountScreen({ onBack, onNext }) {
             event.preventDefault()
             setSubmitted(true)
             if (account.trim()) {
-              onNext()
+              navigate(AUTH_ROUTES.otp)
             }
           }}
         >
@@ -48,7 +51,11 @@ function ForgotAccountScreen({ onBack, onNext }) {
           </button>
         </form>
 
-        <button className="back-link" onClick={onBack} type="button">
+        <button
+          className="back-link"
+          onClick={() => navigate(AUTH_ROUTES.login)}
+          type="button"
+        >
           <ArrowLeftOutlined /> Quay lại trang đăng nhập
         </button>
       </section>

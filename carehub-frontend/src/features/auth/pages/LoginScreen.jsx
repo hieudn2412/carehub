@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HeartFilled, LockOutlined, UserOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
+import { AUTH_ROUTES } from '../constants/routes.js'
 
-function LoginScreen({ onForgotPassword }) {
+function LoginScreen() {
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
@@ -62,7 +65,11 @@ function LoginScreen({ onForgotPassword }) {
               />
               <span>Ghi nhớ đăng nhập</span>
             </label>
-            <button className="text-button" onClick={onForgotPassword} type="button">
+            <button
+              className="text-button"
+              onClick={() => navigate(AUTH_ROUTES.forgotPassword)}
+              type="button"
+            >
               Quên mật khẩu?
             </button>
           </div>

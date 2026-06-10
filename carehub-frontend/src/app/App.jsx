@@ -1,41 +1,19 @@
-import { useState } from 'react'
-import ForgotAccountScreen from '../features/auth/pages/ForgotAccountScreen.jsx'
-import LoginScreen from '../features/auth/pages/LoginScreen.jsx'
-import OtpScreen from '../features/auth/pages/OtpScreen.jsx'
-import ResetPasswordScreen from '../features/auth/pages/ResetPasswordScreen.jsx'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import AuthRoutes from '../features/auth/routes.jsx'
+import { AUTH_ROUTES } from '../features/auth/constants/routes.js'
 import '../shared/styles/auth.css'
 
 function App() {
-  const [screen, setScreen] = useState('login')
-
-  if (screen === 'forgot') {
-    return (
-      <ForgotAccountScreen
-        onBack={() => setScreen('login')}
-        onNext={() => setScreen('otp')}
-      />
-    )
-  }
-
-  if (screen === 'otp') {
-    return (
-      <OtpScreen
-        onBack={() => setScreen('forgot')}
-        onNext={() => setScreen('reset')}
-      />
-    )
-  }
-
-  if (screen === 'reset') {
-    return (
-      <ResetPasswordScreen
-        onBack={() => setScreen('otp')}
-        onDone={() => setScreen('login')}
-      />
-    )
-  }
-
-  return <LoginScreen onForgotPassword={() => setScreen('forgot')} />
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/auth/*" element={<AuthRoutes />} />
+        <Route path="/" element={<Navigate to={AUTH_ROUTES.login} replace />} />
+        <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
+        <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
+      </Routes>
+    </BrowserRouter>
+  )
 }
 
 export default App

@@ -1,11 +1,14 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined, LockOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
+import { AUTH_ROUTES } from '../constants/routes.js'
 
-function ResetPasswordScreen({ onBack, onDone }) {
+function ResetPasswordScreen() {
+  const navigate = useNavigate()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -36,7 +39,7 @@ function ResetPasswordScreen({ onBack, onDone }) {
             event.preventDefault()
             setSubmitted(true)
             if (password && confirmPassword && password === confirmPassword) {
-              onDone()
+              navigate(AUTH_ROUTES.login)
             }
           }}
         >
@@ -73,7 +76,11 @@ function ResetPasswordScreen({ onBack, onDone }) {
           </button>
         </form>
       </section>
-      <button className="floating-back" onClick={onBack} type="button">
+      <button
+        className="floating-back"
+        onClick={() => navigate(AUTH_ROUTES.otp)}
+        type="button"
+      >
         <ArrowLeftOutlined /> Quay lại
       </button>
     </AuthShell>

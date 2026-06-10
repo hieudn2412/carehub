@@ -1,10 +1,13 @@
 import { useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
+import { AUTH_ROUTES } from '../constants/routes.js'
 
-function OtpScreen({ onBack, onNext }) {
+function OtpScreen() {
+  const navigate = useNavigate()
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [submitted, setSubmitted] = useState(false)
   const inputRefs = useRef([])
@@ -51,7 +54,7 @@ function OtpScreen({ onBack, onNext }) {
             event.preventDefault()
             setSubmitted(true)
             if (otp.join('').length === 6) {
-              onNext()
+              navigate(AUTH_ROUTES.resetPassword)
             }
           }}
         >
@@ -94,7 +97,11 @@ function OtpScreen({ onBack, onNext }) {
           <span>(56s)</span>
         </div>
 
-        <button className="back-link" onClick={onBack} type="button">
+        <button
+          className="back-link"
+          onClick={() => navigate(AUTH_ROUTES.forgotPassword)}
+          type="button"
+        >
           <ArrowLeftOutlined /> Quay lại
         </button>
       </section>
