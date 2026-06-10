@@ -1,12 +1,9 @@
-import { HeartFilled } from '@ant-design/icons'
+import logoImage from '../../assets/logo.png'
 
 function BrandLogo() {
   return (
     <div className="brand-logo" aria-label="CareHub">
-      <div className="brand-logo__ring">
-        <HeartFilled />
-      </div>
-      <span>CAREHUB</span>
+      <img src={logoImage} alt="CareHub" />
     </div>
   )
 }

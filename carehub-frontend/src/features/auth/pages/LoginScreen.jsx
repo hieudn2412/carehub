@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { HeartFilled, LockOutlined, UserOutlined } from '@ant-design/icons'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
+import heartBeatIcon from '../../../assets/monitor-heart-beat-36.png'
 
 function LoginScreen({ onForgotPassword }) {
   const [username, setUsername] = useState('')
@@ -24,7 +25,7 @@ function LoginScreen({ onForgotPassword }) {
 
         <div className="divider">
           <span>
-            <HeartFilled />
+            <img src={heartBeatIcon} alt="" />
           </span>
         </div>
 

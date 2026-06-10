@@ -30,7 +30,7 @@ function OtpScreen({ onBack, onNext }) {
 
   return (
     <AuthShell showNotice>
-      <section className="auth-card auth-card--forgot">
+      <section className="auth-card auth-card--otp">
         <SecurityBadge />
         <header className="auth-card__header">
           <h1>Xác thực OTP</h1>
