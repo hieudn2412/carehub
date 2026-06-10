@@ -11,7 +11,7 @@ function ForgotAccountScreen({ onBack, onNext }) {
 
   return (
     <AuthShell showNotice>
-      <section className="auth-card auth-card--forgot">
+      <section className="auth-card auth-card--forgot auth-card--forgot-account">
         <SecurityBadge />
         <header className="auth-card__header">
           <h1>Quên mật khẩu</h1>

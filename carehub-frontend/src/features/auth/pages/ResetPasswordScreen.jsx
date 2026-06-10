@@ -10,6 +10,21 @@ function ResetPasswordScreen({ onBack, onDone }) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
+  const hasMinLength = password.length >= 8
+  const hasUppercase = /[A-Z]/.test(password)
+  const hasLowercase = /[a-z]/.test(password)
+  const hasNumber = /\d/.test(password)
+  const hasSpecialChar = /[^A-Za-z0-9\s]/.test(password)
+  const hasNoWhitespace = password.length > 0 && !/\s/.test(password)
+
+  const getRuleClass = (isValid) => {
+    if (!password) {
+      return ''
+    }
+
+    return isValid ? 'is-valid' : 'is-invalid'
+  }
+
   const confirmError =
     submitted && password && confirmPassword && password !== confirmPassword
       ? 'Mật khẩu xác nhận chưa khớp'
@@ -17,7 +32,7 @@ function ResetPasswordScreen({ onBack, onDone }) {
 
   return (
     <AuthShell>
-      <section className="auth-card auth-card--reset">
+      <section className="auth-card auth-card--reset-password">
         <SecurityBadge />
         <header className="auth-card__header">
           <h1>Đặt lại mật khẩu</h1>
@@ -49,13 +64,15 @@ function ResetPasswordScreen({ onBack, onDone }) {
             value={password}
           />
           <ul className="password-rules">
-            <li className={password.length >= 8 ? 'is-valid' : ''}>Ít nhất 8 ký tự</li>
-            <li className={/[A-Z]/.test(password) && /\d/.test(password) ? 'is-valid' : ''}>
+            <li className={getRuleClass(hasMinLength)}>Ít nhất 8 ký tự</li>
+            <li
+              className={getRuleClass(
+                hasUppercase && hasLowercase && hasNumber && hasSpecialChar,
+              )}
+            >
               Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt
             </li>
-            <li className={password && !/\s/.test(password) ? 'is-valid' : 'is-invalid'}>
-              Không chứa khoảng trắng
-            </li>
+            <li className={getRuleClass(hasNoWhitespace)}>Không chứa khoảng trắng</li>
           </ul>
 
           <FormField
@@ -72,10 +89,11 @@ function ResetPasswordScreen({ onBack, onDone }) {
             Xác nhận
           </button>
         </form>
+
+        <button className="back-link" onClick={onBack} type="button">
+          <ArrowLeftOutlined /> Quay lại
+        </button>
       </section>
-      <button className="floating-back" onClick={onBack} type="button">
-        <ArrowLeftOutlined /> Quay lại
-      </button>
     </AuthShell>
   )
 }

@@ -1,10 +1,9 @@
-import { MailFilled, SafetyCertificateFilled } from '@ant-design/icons'
+import mailSecurityImage from '../../assets/mail-security.png'
 
 function SecurityBadge() {
   return (
     <div className="security-badge" aria-hidden="true">
-      <MailFilled />
-      <SafetyCertificateFilled className="security-badge__shield" />
+      <img src={mailSecurityImage} alt="" />
     </div>
   )
 }
