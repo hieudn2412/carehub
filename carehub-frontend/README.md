@@ -1,16 +1,43 @@
-# React + Vite
+# CareHub Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend của CareHub được xây dựng bằng React và Vite.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `npm run dev`: chạy môi trường phát triển.
+- `npm run build`: build production.
+- `npm run lint`: kiểm tra lint.
+- `npm run preview`: preview bản build.
 
-## React Compiler
+## Cấu trúc thư mục
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```text
+src/
+  app/
+    App.jsx
+  assets/
+  features/
+    auth/
+      components/
+      constants/
+      pages/
+  shared/
+    components/
+    styles/
+  main.jsx
+```
 
-## Expanding the ESLint configuration
+- `app`: entry component và cấu hình cấp ứng dụng.
+- `features`: code theo từng nghiệp vụ, ví dụ `auth`.
+- `features/*/pages`: các màn hình chính của một feature.
+- `features/*/components`: component chỉ dùng trong feature đó.
+- `shared/components`: component dùng lại giữa nhiều feature.
+- `shared/styles`: CSS global và style dùng chung.
+- `assets`: hình ảnh, icon hoặc tài nguyên tĩnh được import từ source.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Quy ước
+
+- Tạo feature mới trong `src/features/<feature-name>`.
+- Component dùng riêng cho feature đặt trong `features/<feature-name>/components`.
+- Component dùng lại toàn app đặt trong `shared/components`.
+- Style nền tảng đặt trong `shared/styles/global.css`.
