@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserOutlined } from '@ant-design/icons'
-import { AUTH_ROUTES } from '../constants/routes.js'
+import { AUTH_ROUTES } from '../../../app/router.jsx'
 import '../../../styles/EmailConfirmScreen.css'
 
 const steps = [
@@ -19,7 +19,7 @@ function EmailConfirmScreen() {
     event.preventDefault()
     setSubmitted(true)
     if (email.trim()) {
-      navigate(AUTH_ROUTES.otp)
+      navigate(AUTH_ROUTES.emailConfirmOtp)
     }
   }
 

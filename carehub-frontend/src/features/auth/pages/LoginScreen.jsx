@@ -5,7 +5,7 @@ import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import heartBeatIcon from '../../../assets/monitor-heart-beat-36.png'
-import { AUTH_ROUTES } from '../constants/routes.js'
+import { AUTH_ROUTES } from '../../../app/router.jsx'
 
 
 function LoginScreen() {

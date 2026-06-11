@@ -5,7 +5,7 @@ import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
-import { AUTH_ROUTES } from '../constants/routes.js'
+import { AUTH_ROUTES } from '../../../app/router.jsx'
 
 function ForgotAccountScreen() {
   const navigate = useNavigate()
