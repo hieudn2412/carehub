@@ -1,0 +1,25 @@
+package vn.vietduc.carehubbackend.user.repository;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import vn.vietduc.carehubbackend.user.entity.Role;
+import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserRole;
+
+import java.util.List;
+
+@Repository
+public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
+
+    boolean existsByRole_Id(Long roleId);
+
+    @Query("""
+            SELECT ur.role
+            FROM UserRole ur
+            WHERE ur.user.id = :userId
+            """)
+    List<Role> findRolesByUserId(@Param("userId") Long userId);
+    void deleteByUser(User user);
+}
