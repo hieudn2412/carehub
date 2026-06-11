@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { UserOutlined } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../constants/routes.js'
+import '../../../styles/EmailConfirmScreen.css'
 
 const steps = [
   { label: 'Xác nhận email' },
@@ -24,9 +26,9 @@ function EmailConfirmScreen() {
   return (
     <div className="modal-bg">
       <div className="forgot-card">
-        <div className="icon-wrap">
-          <span className="icon-main">✉</span>
-          <span className="icon-badge">✓</span>
+        <div className="email-confirm-icon">
+          <span className="email-confirm-icon__mail">✉</span>
+          <span className="email-confirm-icon__check">✓</span>
         </div>
 
         <h1>Thiết lập bảo mật tài khoản</h1>
@@ -39,8 +41,12 @@ function EmailConfirmScreen() {
         <div className="steps">
           {steps.map((step, index) => (
             <div key={step.label} className="step-item">
-              <div className={`step-circle ${index === 0 ? 'active' : ''}`}>{index + 1}</div>
-              <span className={`step-label ${index === 0 ? 'active' : ''}`}>{step.label}</span>
+              <div className={`step-circle ${index === 0 ? 'active' : ''}`}>
+                {index + 1}
+              </div>
+              <span className={`step-label ${index === 0 ? 'active' : ''}`}>
+                {step.label}
+              </span>
               {index < steps.length - 1 && <div className="step-line" />}
             </div>
           ))}
@@ -49,7 +55,7 @@ function EmailConfirmScreen() {
         <form onSubmit={handleSubmit}>
           <label htmlFor="email-confirm">Email</label>
           <div className="input-wrap">
-            <span className="input-icon">👤</span>
+            <UserOutlined className="input-icon" />
             <input
               id="email-confirm"
               type="email"

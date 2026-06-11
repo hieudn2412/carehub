@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { HeartFilled, LockOutlined, UserOutlined } from '@ant-design/icons'
+import { Link, useNavigate } from 'react-router-dom'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
+import heartBeatIcon from '../../../assets/monitor-heart-beat-36.png'
 import { AUTH_ROUTES } from '../constants/routes.js'
+
 
 function LoginScreen() {
   const navigate = useNavigate()
@@ -27,7 +29,7 @@ function LoginScreen() {
 
         <div className="divider">
           <span>
-            <HeartFilled />
+            <img src={heartBeatIcon} alt="" />
           </span>
         </div>
 
@@ -65,13 +67,9 @@ function LoginScreen() {
               />
               <span>Ghi nhớ đăng nhập</span>
             </label>
-            <button
-              className="text-button"
-              onClick={() => navigate(AUTH_ROUTES.forgotPassword)}
-              type="button"
-            >
+            <Link className="text-button" to={AUTH_ROUTES.forgotPassword}>
               Quên mật khẩu?
-            </button>
+            </Link>
           </div>
 
           <button className="primary-button" type="submit">

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
@@ -33,7 +33,7 @@ function OtpScreen() {
 
   return (
     <AuthShell showNotice>
-      <section className="auth-card auth-card--forgot">
+      <section className="auth-card auth-card--otp">
         <SecurityBadge />
         <header className="auth-card__header">
           <h1>Xác thực OTP</h1>
@@ -97,13 +97,12 @@ function OtpScreen() {
           <span>(56s)</span>
         </div>
 
-        <button
+        <Link
           className="back-link"
-          onClick={() => navigate(AUTH_ROUTES.forgotPassword)}
-          type="button"
+          to={AUTH_ROUTES.forgotPassword}
         >
           <ArrowLeftOutlined /> Quay lại
-        </button>
+        </Link>
       </section>
     </AuthShell>
   )

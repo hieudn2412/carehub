@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined, UserOutlined } from '@ant-design/icons'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
@@ -14,7 +14,7 @@ function ForgotAccountScreen() {
 
   return (
     <AuthShell showNotice>
-      <section className="auth-card auth-card--forgot">
+      <section className="auth-card auth-card--forgot auth-card--forgot-account">
         <SecurityBadge />
         <header className="auth-card__header">
           <h1>Quên mật khẩu</h1>
@@ -51,13 +51,12 @@ function ForgotAccountScreen() {
           </button>
         </form>
 
-        <button
+        <Link
           className="back-link"
-          onClick={() => navigate(AUTH_ROUTES.login)}
-          type="button"
+          to={AUTH_ROUTES.login}
         >
           <ArrowLeftOutlined /> Quay lại trang đăng nhập
-        </button>
+        </Link>
       </section>
     </AuthShell>
   )
