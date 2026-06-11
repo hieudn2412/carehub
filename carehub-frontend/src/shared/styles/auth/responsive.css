@@ -1,0 +1,128 @@
+@media (max-height: 1000px) and (min-width: 861px) {
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.9;
+  }
+}
+
+@media (max-height: 860px) and (min-width: 861px) {
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.82;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 861px) {
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.7;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth-page {
+    padding: 0;
+  }
+
+  .auth-scene {
+    min-height: 100svh;
+    width: 100%;
+  }
+
+  .auth-card,
+  .auth-card--forgot:not(.auth-card--forgot-account),
+  .auth-card--reset {
+    left: 50%;
+    max-width: 420px;
+    top: 46%;
+    transform: translate(-50%, -50%);
+    width: calc(100% - 36px);
+  }
+
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.72;
+    left: 50%;
+    max-width: none;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(var(--login-scale));
+    transform-origin: center;
+    width: 655px;
+  }
+
+  .support-notice {
+    bottom: 16px;
+    gap: 10px;
+    left: 50%;
+    min-height: 0;
+    padding: 12px 14px;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(360px, calc(100% - 36px));
+    z-index: 4;
+  }
+
+  .support-notice > span {
+    font-size: 15px;
+    margin-top: 17px;
+  }
+
+  .support-notice strong {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .support-notice p {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .floating-back {
+    bottom: 28px;
+    left: 28px;
+  }
+
+  .background-art {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card--reset {
+    border-radius: 16px;
+    padding: 24px 22px;
+  }
+
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.55;
+    border-radius: 34px;
+  }
+
+  .auth-card__header h1 {
+    font-size: 26px;
+  }
+
+  .otp-inputs {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .auth-card--login,
+  .auth-card--forgot-account,
+  .auth-card--otp,
+  .auth-card--reset-password {
+    --login-scale: 0.48;
+  }
+}

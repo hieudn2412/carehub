@@ -1,0 +1,127 @@
+.auth-page {
+  align-items: center;
+  background: #6ec6b5;
+  display: flex;
+  min-height: 100svh;
+  justify-content: center;
+  padding: 0;
+}
+
+.auth-scene {
+  --auth-bg-image: url('../../../assets/background-login.png');
+  background-image: var(--auth-bg-image);
+  background-position: center;
+  background-size: cover;
+  min-height: 100svh;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 34px;
+  box-shadow: 8px 8px 6px rgba(31, 73, 64, 0.38);
+  color: #1f1f22;
+  left: clamp(28px, 4.7vw, 90px);
+  padding: 34px 40px 36px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(360px, calc(100% - 56px));
+  z-index: 2;
+}
+
+.auth-card--login,
+.auth-card--forgot-account,
+.auth-card--otp,
+.auth-card--reset-password {
+  --login-scale: 1;
+  height: 906px;
+  min-height: unset;
+  top: 50%;
+  transform: translateY(-50%) scale(var(--login-scale));
+  transform-origin: left center;
+  width: 655px;
+}
+
+.auth-card--login {
+  padding: 52px 73px 114px;
+}
+
+.auth-card--forgot:not(.auth-card--forgot-account),
+.auth-card--reset {
+  padding-top: 18px;
+  width: min(360px, calc(100% - 56px));
+}
+
+.auth-card--forgot-account {
+  padding: 30px 73px 30px;
+}
+
+.auth-card--otp {
+  padding: 30px 73px 30px;
+}
+
+.auth-card--reset-password {
+  padding: 24px 73px 30px;
+}
+
+.auth-card--reset {
+  width: min(405px, calc(100% - 56px));
+}
+
+.auth-card__header {
+  text-align: center;
+}
+
+.auth-card__header h1 {
+  color: #242428;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.12;
+  margin: 18px 0 10px;
+}
+
+.auth-card__header p {
+  color: #202124;
+  font-size: 24px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+.auth-card__header strong {
+  font-weight: 800;
+}
+
+.brand-logo {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.brand-logo img {
+  display: block;
+  height: 180px;
+  width: 180px;
+}
+
+.security-badge {
+  align-items: center;
+  background: #dedede;
+  border-radius: 999px;
+  display: flex;
+  height: 84px;
+  justify-content: center;
+  margin: 0 auto 14px;
+  width: 84px;
+}
+
+.security-badge img {
+  display: block;
+  height: 58%;
+  object-fit: contain;
+  width: 64%;
+}
+
