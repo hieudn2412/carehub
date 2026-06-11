@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,11 +26,15 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 @EnableMethodSecurity
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+    private final CustomJwtAuthenticationConverter converter;
+
     @Value("${app.api-prefix}")
     private String apiPrefix;
 
@@ -43,7 +48,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtEncoder jwtEncoder() {
-        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
+        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         OctetSequenceKey jwk = new OctetSequenceKey.Builder(key)
                 .algorithm(com.nimbusds.jose.JWSAlgorithm.HS256)
                 .build();
@@ -53,30 +58,12 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(), "HmacSHA256");
+        SecretKey key = new SecretKeySpec(jwtSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 
         return NimbusJwtDecoder
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-    }
-
-    @Bean
-    public JwtAuthenticationConverter jwtAuthenticationConverter() {
-
-        JwtGrantedAuthoritiesConverter authoritiesConverter =
-                new JwtGrantedAuthoritiesConverter();
-
-        authoritiesConverter.setAuthoritiesClaimName("roles");
-
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
-
-        JwtAuthenticationConverter converter =
-                new JwtAuthenticationConverter();
-
-        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
-
-        return converter;
     }
 
     @Bean
@@ -86,15 +73,19 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-//                .requestMatchers(apiPrefix + "/auth/**").permitAll()
-//                    .requestMatchers( "/webhook/**").permitAll()
-//                .anyRequest().authenticated()
-                                .anyRequest().permitAll()
+                        .requestMatchers(
+                                apiPrefix + "/auth/login",
+                                apiPrefix + "/auth/refresh-token",
+                                apiPrefix + "/auth/logout",
+                                apiPrefix + "/auth/forgot-password",
+                                apiPrefix + "/auth/reset-password"
+                        ).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(
                         oauth2 -> oauth2.jwt(
                                 jwt -> jwt.decoder(jwtDecoder())
-                                        .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+                                        .jwtAuthenticationConverter(converter)));
         return http.build();
     }
 }
