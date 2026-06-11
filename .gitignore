@@ -21,3 +21,5 @@ Thumbs.db
 
 # Generated files
 out/
+
+**/node_modules/
