@@ -70,7 +70,7 @@
     z-index: 4;
   }
 
-  .support-notice > span {
+  .support-notice > svg {
     font-size: 15px;
     margin-top: 17px;
   }
@@ -85,14 +85,6 @@
     line-height: 1.25;
   }
 
-  .floating-back {
-    bottom: 28px;
-    left: 28px;
-  }
-
-  .background-art {
-    opacity: 0.35;
-  }
 }
 
 @media (max-width: 480px) {

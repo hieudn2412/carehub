@@ -8,7 +8,7 @@
 }
 
 .auth-scene {
-  --auth-bg-image: url('../../../assets/background-login.png');
+  --auth-bg-image: url('https://res.cloudinary.com/di7brya3o/image/upload/f_auto,q_auto,w_1920/v1781011643/Background_image_login_page_haceaa.png');
   background-image: var(--auth-bg-image);
   background-position: center;
   background-size: cover;

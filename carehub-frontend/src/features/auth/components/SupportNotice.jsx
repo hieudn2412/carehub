@@ -1,9 +1,9 @@
-import { InfoCircleFilled } from '@ant-design/icons'
+import Icon from '../../../shared/components/Icon.jsx'
 
 function SupportNotice() {
   return (
     <aside className="support-notice">
-      <InfoCircleFilled />
+      <Icon name="info" />
       <div>
         <strong>Không nhận được mã?</strong>
         <p>Vui lòng kiểm tra thư mục Spam trong Gmail hoặc thử lại trong 60 giây</p>

@@ -1,22 +1,62 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LockOutlined, UserOutlined } from '@ant-design/icons'
+import { AUTH_ROUTES } from '../constants/authRoutes.js'
+import { authApi } from '../api/authApi.js'
+import { getApiErrorMessage } from '../utils/apiError.js'
+import { useAuthTokens } from '../hooks/useAuthTokens.js'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
+import Icon from '../../../shared/components/Icon.jsx'
 import heartBeatIcon from '../../../assets/monitor-heart-beat-36.png'
-import { AUTH_ROUTES } from '../../../app/router.jsx'
 
+const REMEMBERED_EMPLOYEE_CODE_KEY = 'carehub.rememberedEmployeeCode'
 
 function LoginScreen() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [employeeCode, setEmployeeCode] = useState(
+    () => window.localStorage.getItem(REMEMBERED_EMPLOYEE_CODE_KEY) ?? '',
+  )
   const [password, setPassword] = useState('')
-  const [rememberMe, setRememberMe] = useState(true)
-  const [submitted, setSubmitted] = useState(false)
+  const [rememberMe, setRememberMe] = useState(
+    () => Boolean(window.localStorage.getItem(REMEMBERED_EMPLOYEE_CODE_KEY)),
+  )
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { saveTokens } = useAuthTokens()
 
-  const usernameError = submitted ? 'Tên đăng nhập/email không tồn tại' : ''
-  const passwordError = submitted ? 'Sai mật khẩu' : ''
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    setErrorMessage('')
+
+    if (!employeeCode.trim() || !password) {
+      setErrorMessage('Vui lòng nhập mã nhân viên và mật khẩu')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const response = await authApi.login({
+        employeeCode: employeeCode.trim(),
+        password,
+      })
+      saveTokens(response.data.data)
+
+      if (rememberMe) {
+        window.localStorage.setItem(REMEMBERED_EMPLOYEE_CODE_KEY, employeeCode.trim())
+      } else {
+        window.localStorage.removeItem(REMEMBERED_EMPLOYEE_CODE_KEY)
+      }
+
+      if (response.data.data?.requiresFirstLoginSetup) {
+        navigate(AUTH_ROUTES.emailConfirm)
+      }
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Đăng nhập không thành công'))
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <AuthShell>
@@ -33,24 +73,18 @@ function LoginScreen() {
           </span>
         </div>
 
-        <form
-          className="auth-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            setSubmitted(true)
-          }}
-        >
+        <form className="auth-form" onSubmit={handleSubmit}>
           <FormField
-            error={usernameError}
-            icon={<UserOutlined />}
-            label="Tên đăng nhập"
-            onChange={setUsername}
-            placeholder="Nhập tên đăng nhập hoặc email"
-            value={username}
+            error={errorMessage && !employeeCode.trim() ? errorMessage : ''}
+            icon={<Icon name="user" />}
+            label="Mã nhân viên"
+            onChange={setEmployeeCode}
+            placeholder="Nhập mã nhân viên"
+            value={employeeCode}
           />
           <FormField
-            error={passwordError}
-            icon={<LockOutlined />}
+            error={errorMessage && employeeCode.trim() ? errorMessage : ''}
+            icon={<Icon name="lock" />}
             label="Mật khẩu"
             onChange={setPassword}
             placeholder="Nhập mật khẩu"
@@ -72,8 +106,8 @@ function LoginScreen() {
             </Link>
           </div>
 
-          <button className="primary-button" type="submit">
-            Đăng nhập
+          <button className="primary-button" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
       </section>

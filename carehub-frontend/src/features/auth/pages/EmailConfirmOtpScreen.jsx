@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { AUTH_ROUTES } from '../constants/authRoutes.js'
+import { authApi } from '../api/authApi.js'
+import { getApiErrorMessage } from '../utils/apiError.js'
+import Icon from '../../../shared/components/Icon.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
-import { AUTH_ROUTES } from '../../../app/router.jsx'
 import '../../../styles/EmailConfirmScreen.css'
 
 const emailConfirmSteps = [
@@ -13,15 +15,24 @@ const emailConfirmSteps = [
 
 function EmailConfirmOtpScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const email = location.state?.email
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [submitted, setSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isResending, setIsResending] = useState(false)
   const inputRefs = useRef([])
+  const otpValue = otp.join('')
+
+  if (!email) {
+    return <Navigate to={AUTH_ROUTES.emailConfirm} replace />
+  }
 
   const updateOtp = (value, index) => {
     const digit = value.replace(/\D/g, '').slice(-1)
     const nextOtp = [...otp]
     nextOtp[index] = digit
     setOtp(nextOtp)
+    setErrorMessage('')
 
     if (digit && index < inputRefs.current.length - 1) {
       inputRefs.current[index + 1]?.focus()
@@ -36,27 +47,42 @@ function EmailConfirmOtpScreen() {
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    setSubmitted(true)
-    if (otp.join('').length === 6) {
-      navigate(AUTH_ROUTES.emailConfirmReset)
+
+    if (otpValue.length < 6) {
+      setErrorMessage('Vui lòng nhập đủ 6 số OTP')
+      return
     }
+
+    navigate(AUTH_ROUTES.emailConfirmReset, { state: { email, otp: otpValue } })
   }
 
-  const hasError = submitted && otp.join('').length < 6
+  const handleResendOtp = async () => {
+    try {
+      setIsResending(true)
+      setErrorMessage('')
+      await authApi.sendFirstLoginOtp({ email })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Không thể gửi lại mã OTP'))
+    } finally {
+      setIsResending(false)
+    }
+  }
 
   return (
     <div className="modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
-          <span className="email-confirm-icon__mail">✉</span>
-          <span className="email-confirm-icon__check">✓</span>
+          <Icon name="user" />
+          <span className="email-confirm-icon__check">
+            <Icon name="check" />
+          </span>
         </div>
 
         <h1>Xác thực OTP</h1>
         <p>
           Chúng tôi đã gửi mã OTP đến email:
           <br />
-          <strong>abc@gmail.com</strong>
+          <strong>{email}</strong>
           <br />
           Vui lòng nhập mã để tiếp tục
         </p>
@@ -67,7 +93,7 @@ function EmailConfirmOtpScreen() {
           <div className="otp-group">
             <div className="otp-group__heading">
               <span>Nhập mã OTP</span>
-              {hasError && <span className="error-msg">Sai mã OTP</span>}
+              {errorMessage && <span className="error-msg">{errorMessage}</span>}
             </div>
             <div className="otp-inputs">
               {otp.map((value, index) => (
@@ -97,14 +123,19 @@ function EmailConfirmOtpScreen() {
 
         <div className="resend-line">
           <span>Chưa nhận được mã?</span>
-          <button className="resend-btn" type="button">
-            Gửi lại OTP
+          <button
+            className="resend-btn"
+            disabled={isResending}
+            onClick={handleResendOtp}
+            type="button"
+          >
+            {isResending ? 'Đang gửi...' : 'Gửi lại OTP'}
           </button>
           <span>(56s)</span>
         </div>
 
         <Link className="back-link" to={AUTH_ROUTES.emailConfirm}>
-          <ArrowLeftOutlined /> Quay lại
+          <Icon name="arrowLeft" /> Quay lại
         </Link>
       </div>
     </div>

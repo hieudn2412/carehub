@@ -1,5 +1,5 @@
-import { EyeInvisibleOutlined, EyeOutlined } from '@ant-design/icons'
 import { useState } from 'react'
+import Icon from './Icon.jsx'
 
 function FormField({
   error,
@@ -20,10 +20,10 @@ function FormField({
       <span className={`form-field__control ${error ? 'has-error' : ''}`}>
         <span className="form-field__icon">{icon}</span>
         <input
-          type={inputType}
-          value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          type={inputType}
+          value={value}
         />
         {isPasswordField && (
           <button
@@ -35,7 +35,7 @@ function FormField({
             }}
             type="button"
           >
-            {isPasswordVisible ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            <Icon name={isPasswordVisible ? 'eyeOff' : 'eye'} />
           </button>
         )}
       </span>
