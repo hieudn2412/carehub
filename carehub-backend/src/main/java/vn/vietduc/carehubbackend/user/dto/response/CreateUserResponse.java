@@ -12,5 +12,6 @@ public class CreateUserResponse {
     private String email;
     private String employeeCode;
     private String fullName;
+    private Long departmentId;
     private UserStatus status;
 }

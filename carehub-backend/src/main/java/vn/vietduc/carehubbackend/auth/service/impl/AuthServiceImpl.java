@@ -35,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmployeeCode(request.getEmployeeCode())
+        User user = userRepository.findByEmployeeCodeAndIsDeletedFalse(request.getEmployeeCode())
                 .orElseThrow(() -> new BadRequestException(INVALID_CREDENTIALS_MESSAGE));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -47,6 +47,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
         refreshTokenService.revokeAllUserTokens(user);
+
+        user.setLastLogin(LocalDateTime.now());
+        userRepository.save(user);
 
         AccessTokenResult accessToken = jwtTokenService.generateAccessToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);

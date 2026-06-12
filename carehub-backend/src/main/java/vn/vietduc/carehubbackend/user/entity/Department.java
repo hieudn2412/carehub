@@ -17,10 +17,12 @@ import java.util.List;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "positions")
-public class Position extends BaseEntity {
+@Table(name = "departments")
+public class Department extends BaseEntity {
     private String name;
 
-    @OneToMany(mappedBy = "position")
+    private String departmentCode;
+
+    @OneToMany(mappedBy = "department")
     private List<User> users;
 }
