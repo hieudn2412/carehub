@@ -14,6 +14,9 @@ public class CreateUserRequest {
     @NotBlank(message = "Employee code is required")
     private String employeeCode;
 
+    @NotBlank(message = "Department id is required")
+    private Long departmentId;
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email is invalid")
     private String email;

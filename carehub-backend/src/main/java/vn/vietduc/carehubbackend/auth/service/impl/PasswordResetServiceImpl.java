@@ -32,7 +32,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             ForgotPasswordRequest request
     ) {
         User user = userRepository
-                .findByEmail(request.getEmail())
+                .findByEmailAndIsDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("Email not found"));
 
         if (user.getStatus().equals(UserStatus.LOCKED)) {
@@ -71,7 +71,6 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 .findTopByEmailAndOtpAndEmailVerificationFalseOrderByCreatedAtDesc(
                         request.getEmail(), request.getOtp())
                 .orElseThrow(() -> new BadRequestException("Invalid OTP"));
-
         if (otp.isUsed()) {
             throw new BadRequestException("OTP already used");
         }
@@ -81,7 +80,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                     "OTP expired");
         }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (user.requiresFirstLoginSetup()) {
