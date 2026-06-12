@@ -1,12 +1,17 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
-import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
 import { AUTH_ROUTES } from '../../../app/router.jsx'
+import '../../../styles/EmailConfirmScreen.css'
 
-function OtpScreen() {
+const emailConfirmSteps = [
+  'Xác nhận email',
+  'Xác thực OTP',
+  'Tạo mật khẩu mới',
+]
+
+function EmailConfirmOtpScreen() {
   const navigate = useNavigate()
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [submitted, setSubmitted] = useState(false)
@@ -29,39 +34,40 @@ function OtpScreen() {
     }
   }
 
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    setSubmitted(true)
+    if (otp.join('').length === 6) {
+      navigate(AUTH_ROUTES.emailConfirmReset)
+    }
+  }
+
   const hasError = submitted && otp.join('').length < 6
 
   return (
-    <AuthShell showNotice>
-      <section className="auth-card auth-card--otp">
-        <SecurityBadge />
-        <header className="auth-card__header">
-          <h1>Xác thực OTP</h1>
-          <p>
-            Chúng tôi đã gửi mã OTP đến email:
-            <br />
-            <strong>abc@gmail.com</strong>
-            <br />
-            Vui lòng nhập mã để tiếp tục
-          </p>
-        </header>
+    <div className="modal-bg">
+      <div className="forgot-card">
+        <div className="email-confirm-icon">
+          <span className="email-confirm-icon__mail">✉</span>
+          <span className="email-confirm-icon__check">✓</span>
+        </div>
 
-        <StepIndicator activeStep={2} />
+        <h1>Xác thực OTP</h1>
+        <p>
+          Chúng tôi đã gửi mã OTP đến email:
+          <br />
+          <strong>abc@gmail.com</strong>
+          <br />
+          Vui lòng nhập mã để tiếp tục
+        </p>
 
-        <form
-          className="auth-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            setSubmitted(true)
-            if (otp.join('').length === 6) {
-              navigate(AUTH_ROUTES.resetPassword)
-            }
-          }}
-        >
+        <StepIndicator activeStep={2} steps={emailConfirmSteps} />
+
+        <form onSubmit={handleSubmit}>
           <div className="otp-group">
             <div className="otp-group__heading">
               <span>Nhập mã OTP</span>
-              {hasError && <span className="form-field__error">Sai mã OTP</span>}
+              {hasError && <span className="error-msg">Sai mã OTP</span>}
             </div>
             <div className="otp-inputs">
               {otp.map((value, index) => (
@@ -84,28 +90,25 @@ function OtpScreen() {
             </p>
           </div>
 
-          <button className="primary-button" type="submit">
+          <button className="primary-btn" type="submit">
             Xác nhận
           </button>
         </form>
 
         <div className="resend-line">
           <span>Chưa nhận được mã?</span>
-          <button className="text-button" type="button">
+          <button className="resend-btn" type="button">
             Gửi lại OTP
           </button>
           <span>(56s)</span>
         </div>
 
-        <Link
-          className="back-link"
-          to={AUTH_ROUTES.forgotPassword}
-        >
+        <Link className="back-link" to={AUTH_ROUTES.emailConfirm}>
           <ArrowLeftOutlined /> Quay lại
         </Link>
-      </section>
-    </AuthShell>
+      </div>
+    </div>
   )
 }
 
-export default OtpScreen
+export default EmailConfirmOtpScreen

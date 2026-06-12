@@ -1,10 +1,10 @@
 import { CheckOutlined } from '@ant-design/icons'
 import { passwordResetSteps } from '../constants/passwordResetSteps.js'
 
-function StepIndicator({ activeStep }) {
+function StepIndicator({ activeStep, steps = passwordResetSteps }) {
   return (
     <div className="stepper" aria-label="Tiến trình đặt lại mật khẩu">
-      {passwordResetSteps.map((label, index) => {
+      {steps.map((label, index) => {
         const stepNumber = index + 1
         const isDone = stepNumber < activeStep
         const isActive = stepNumber === activeStep
