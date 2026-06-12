@@ -35,9 +35,7 @@
     width: 100%;
   }
 
-  .auth-card,
-  .auth-card--forgot:not(.auth-card--forgot-account),
-  .auth-card--reset {
+  .auth-card {
     left: 50%;
     max-width: 420px;
     top: 46%;
@@ -88,11 +86,6 @@
 }
 
 @media (max-width: 480px) {
-  .auth-card--reset {
-    border-radius: 16px;
-    padding: 24px 22px;
-  }
-
   .auth-card--login,
   .auth-card--forgot-account,
   .auth-card--otp,
