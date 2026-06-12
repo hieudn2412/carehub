@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserOutlined } from '@ant-design/icons'
-import { AUTH_ROUTES } from '../../../app/router.jsx'
+import { AUTH_ROUTES } from '../constants/authRoutes.js'
+import { authApi } from '../api/authApi.js'
+import { getApiErrorMessage } from '../utils/apiError.js'
+import Icon from '../../../shared/components/Icon.jsx'
 import '../../../styles/EmailConfirmScreen.css'
 
 const steps = [
@@ -13,13 +15,27 @@ const steps = [
 function EmailConfirmScreen() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setSubmitted(true)
-    if (email.trim()) {
-      navigate(AUTH_ROUTES.emailConfirmOtp)
+    const normalizedEmail = email.trim()
+    setErrorMessage('')
+
+    if (!normalizedEmail) {
+      setErrorMessage('Vui lòng nhập email')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await authApi.sendFirstLoginOtp({ email: normalizedEmail })
+      navigate(AUTH_ROUTES.emailConfirmOtp, { state: { email: normalizedEmail } })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Không thể gửi mã OTP'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -27,8 +43,10 @@ function EmailConfirmScreen() {
     <div className="modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
-          <span className="email-confirm-icon__mail">✉</span>
-          <span className="email-confirm-icon__check">✓</span>
+          <Icon name="user" />
+          <span className="email-confirm-icon__check">
+            <Icon name="check" />
+          </span>
         </div>
 
         <h1>Thiết lập bảo mật tài khoản</h1>
@@ -55,18 +73,18 @@ function EmailConfirmScreen() {
         <form onSubmit={handleSubmit}>
           <label htmlFor="email-confirm">Email</label>
           <div className="input-wrap">
-            <UserOutlined className="input-icon" />
+            <Icon className="input-icon" name="user" />
             <input
               id="email-confirm"
-              type="email"
-              placeholder="Nhập email của bạn"
-              value={email}
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="Nhập email của bạn"
+              type="email"
+              value={email}
             />
           </div>
-          {submitted && !email.trim() && <p className="error">Vui lòng nhập email</p>}
-          <button type="submit" className="primary-btn">
-            Gửi mã OTP
+          {errorMessage && <p className="error">{errorMessage}</p>}
+          <button className="primary-btn" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Đang gửi...' : 'Gửi mã OTP'}
           </button>
         </form>
       </div>

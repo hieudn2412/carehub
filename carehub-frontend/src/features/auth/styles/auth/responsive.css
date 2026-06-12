@@ -35,9 +35,7 @@
     width: 100%;
   }
 
-  .auth-card,
-  .auth-card--forgot:not(.auth-card--forgot-account),
-  .auth-card--reset {
+  .auth-card {
     left: 50%;
     max-width: 420px;
     top: 46%;
@@ -70,7 +68,7 @@
     z-index: 4;
   }
 
-  .support-notice > span {
+  .support-notice > svg {
     font-size: 15px;
     margin-top: 17px;
   }
@@ -85,22 +83,9 @@
     line-height: 1.25;
   }
 
-  .floating-back {
-    bottom: 28px;
-    left: 28px;
-  }
-
-  .background-art {
-    opacity: 0.35;
-  }
 }
 
 @media (max-width: 480px) {
-  .auth-card--reset {
-    border-radius: 16px;
-    padding: 24px 22px;
-  }
-
   .auth-card--login,
   .auth-card--forgot-account,
   .auth-card--otp,

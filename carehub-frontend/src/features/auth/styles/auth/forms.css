@@ -133,8 +133,7 @@
 }
 
 .text-button,
-.back-link,
-.floating-back {
+.back-link {
   background: transparent;
   border: 0;
   color: #0d927f;
@@ -194,8 +193,7 @@
 
 .primary-button:focus-visible,
 .text-button:focus-visible,
-.back-link:focus-visible,
-.floating-back:focus-visible {
+.back-link:focus-visible {
   outline: 3px solid rgba(24, 152, 135, 0.28);
   outline-offset: 3px;
 }

@@ -48,7 +48,7 @@
   margin: 0 auto 1.5rem;
 }
 
-.email-confirm-icon__mail {
+.email-confirm-icon > svg {
   font-size: 32px;
   color: #1aaa84;
 }
@@ -188,7 +188,6 @@
 }
 
 .primary-btn {
-  background-color: #52c41a; /* Default to match antd theme or user preference */
   background-color: #4ecc9f;
   color: #fff;
   border: none;
@@ -346,6 +345,14 @@
   font-size: 14px;
   display: inline-flex;
   align-items: center;
+}
+
+.rule-dot {
+  background: #d1d5db;
+  border-radius: 999px;
+  display: inline-flex;
+  height: 10px;
+  width: 10px;
 }
 
 /* Spinner Styles */

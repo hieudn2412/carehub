@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { LockOutlined, CheckCircleFilled, CloseCircleFilled, CheckCircleOutlined } from '@ant-design/icons'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { AUTH_ROUTES } from '../constants/authRoutes.js'
+import { authApi } from '../api/authApi.js'
+import { getApiErrorMessage } from '../utils/apiError.js'
+import Icon from '../../../shared/components/Icon.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
-import { AUTH_ROUTES } from '../../../app/router.jsx'
 import '../../../styles/EmailConfirmScreen.css'
 
 const emailConfirmSteps = [
@@ -13,9 +15,17 @@ const emailConfirmSteps = [
 
 function EmailConfirmResetScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const email = location.state?.email
+  const otp = location.state?.otp
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  if (!email || !otp) {
+    return <Navigate to={AUTH_ROUTES.emailConfirm} replace />
+  }
 
   const hasMinLength = password.length >= 8
   const hasUppercase = /[A-Z]/.test(password)
@@ -23,44 +33,41 @@ function EmailConfirmResetScreen() {
   const hasNumber = /\d/.test(password)
   const hasSpecialChar = /[^A-Za-z0-9\s]/.test(password)
   const hasNoWhitespace = password.length > 0 && !/\s/.test(password)
-
-  const ruleMinLength = hasMinLength
   const ruleComplex = hasUppercase && hasLowercase && hasNumber && hasSpecialChar
-  const ruleNoSpace = hasNoWhitespace
-
-  const getRuleIcon = (isValid) => {
-    if (!password) {
-      return <CheckCircleOutlined className="rule-icon" style={{ color: '#d1d5db' }} />
-    }
-    return isValid ? (
-      <CheckCircleFilled className="rule-icon" style={{ color: '#1aaa84' }} />
-    ) : (
-      <CloseCircleFilled className="rule-icon" style={{ color: '#ef4444' }} />
-    )
-  }
+  const isStrongPassword = hasMinLength && ruleComplex && hasNoWhitespace
 
   const getRuleClass = (isValid) => {
     if (!password) return 'rule-item'
     return isValid ? 'rule-item is-valid' : 'rule-item is-invalid'
   }
 
-  const confirmError =
-    submitted && password && confirmPassword && password !== confirmPassword
-      ? 'Mật khẩu xác nhận chưa khớp'
-      : ''
+  const getRuleIcon = (isValid) => {
+    if (!password) return <span className="rule-dot" />
+    return <Icon className="rule-icon" name={isValid ? 'check' : 'info'} />
+  }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setSubmitted(true)
-    if (
-      password &&
-      confirmPassword &&
-      password === confirmPassword &&
-      ruleMinLength &&
-      ruleComplex &&
-      ruleNoSpace
-    ) {
+    setErrorMessage('')
+
+    if (!isStrongPassword) {
+      setErrorMessage('Mật khẩu chưa đạt đủ điều kiện')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('Mật khẩu xác nhận chưa khớp')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      await authApi.completeFirstLoginSetup({ email, otp, newPassword: password })
       navigate(AUTH_ROUTES.emailConfirmSuccess)
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Không thể hoàn tất thiết lập'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -68,8 +75,10 @@ function EmailConfirmResetScreen() {
     <div className="modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
-          <span className="email-confirm-icon__mail">✉</span>
-          <span className="email-confirm-icon__check">✓</span>
+          <Icon name="user" />
+          <span className="email-confirm-icon__check">
+            <Icon name="check" />
+          </span>
         </div>
 
         <h1>Tạo mật khẩu mới</h1>
@@ -80,46 +89,46 @@ function EmailConfirmResetScreen() {
         <form onSubmit={handleSubmit}>
           <label htmlFor="new-password">Mật khẩu mới</label>
           <div className="input-wrap">
-            <LockOutlined className="input-icon" />
+            <Icon className="input-icon" name="lock" />
             <input
               id="new-password"
-              type="password"
-              placeholder="Nhập mật khẩu mới"
-              value={password}
               onChange={(event) => setPassword(event.target.value)}
+              placeholder="Nhập mật khẩu mới"
+              type="password"
+              value={password}
             />
           </div>
 
           <ul className="password-rules">
-            <li className={getRuleClass(ruleMinLength)}>
-              {getRuleIcon(ruleMinLength)}
+            <li className={getRuleClass(hasMinLength)}>
+              {getRuleIcon(hasMinLength)}
               <span>Ít nhất 8 ký tự</span>
             </li>
             <li className={getRuleClass(ruleComplex)}>
               {getRuleIcon(ruleComplex)}
               <span>Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt</span>
             </li>
-            <li className={getRuleClass(ruleNoSpace)}>
-              {getRuleIcon(ruleNoSpace)}
+            <li className={getRuleClass(hasNoWhitespace)}>
+              {getRuleIcon(hasNoWhitespace)}
               <span>Không chứa khoảng trắng</span>
             </li>
           </ul>
 
           <label htmlFor="confirm-new-password">Xác thực mật khẩu mới</label>
           <div className="input-wrap">
-            <LockOutlined className="input-icon" />
+            <Icon className="input-icon" name="lock" />
             <input
               id="confirm-new-password"
-              type="password"
-              placeholder="Nhập lại mật khẩu mới"
-              value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Nhập lại mật khẩu mới"
+              type="password"
+              value={confirmPassword}
             />
           </div>
-          {confirmError && <p className="error">{confirmError}</p>}
+          {errorMessage && <p className="error">{errorMessage}</p>}
 
-          <button className="primary-btn" type="submit">
-            Xác nhận
+          <button className="primary-btn" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Đang xác nhận...' : 'Xác nhận'}
           </button>
         </form>
       </div>

@@ -1,9 +1,13 @@
-import { RouterProvider } from 'react-router-dom'
-import { router } from './router.jsx'
-import '../shared/styles/auth.css'
+import AppProviders from './providers.jsx'
+import AppRouter from './router.jsx'
+import '../features/auth/styles/auth.css'
 
 function App() {
-  return <RouterProvider router={router} />
+  return (
+    <AppProviders>
+      <AppRouter />
+    </AppProviders>
+  )
 }
 
 export default App

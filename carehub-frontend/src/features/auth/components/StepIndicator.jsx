@@ -1,5 +1,5 @@
-import { CheckOutlined } from '@ant-design/icons'
 import { passwordResetSteps } from '../constants/passwordResetSteps.js'
+import Icon from '../../../shared/components/Icon.jsx'
 
 function StepIndicator({ activeStep, steps = passwordResetSteps }) {
   return (
@@ -20,7 +20,7 @@ function StepIndicator({ activeStep, steps = passwordResetSteps }) {
                 .filter(Boolean)
                 .join(' ')}
             >
-              {isDone ? <CheckOutlined /> : stepNumber}
+              {isDone ? <Icon name="check" /> : stepNumber}
             </span>
             <span className="stepper__label">{label}</span>
           </div>

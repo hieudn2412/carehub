@@ -1,22 +1,33 @@
 import { useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { AUTH_ROUTES } from '../constants/authRoutes.js'
+import { authApi } from '../api/authApi.js'
+import { getApiErrorMessage } from '../utils/apiError.js'
 import AuthShell from '../components/AuthShell.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
+import Icon from '../../../shared/components/Icon.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
-import { AUTH_ROUTES } from '../../../app/router.jsx'
 
 function OtpScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const email = location.state?.email
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
-  const [submitted, setSubmitted] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [isResending, setIsResending] = useState(false)
   const inputRefs = useRef([])
+  const otpValue = otp.join('')
+
+  if (!email) {
+    return <Navigate to={AUTH_ROUTES.forgotPassword} replace />
+  }
 
   const updateOtp = (value, index) => {
     const digit = value.replace(/\D/g, '').slice(-1)
     const nextOtp = [...otp]
     nextOtp[index] = digit
     setOtp(nextOtp)
+    setErrorMessage('')
 
     if (digit && index < inputRefs.current.length - 1) {
       inputRefs.current[index + 1]?.focus()
@@ -29,7 +40,28 @@ function OtpScreen() {
     }
   }
 
-  const hasError = submitted && otp.join('').length < 6
+  const handleSubmit = (event) => {
+    event.preventDefault()
+
+    if (otpValue.length < 6) {
+      setErrorMessage('Vui lòng nhập đủ 6 số OTP')
+      return
+    }
+
+    navigate(AUTH_ROUTES.resetPassword, { state: { email, otp: otpValue } })
+  }
+
+  const handleResendOtp = async () => {
+    try {
+      setIsResending(true)
+      setErrorMessage('')
+      await authApi.forgotPassword({ email })
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Không thể gửi lại mã OTP'))
+    } finally {
+      setIsResending(false)
+    }
+  }
 
   return (
     <AuthShell showNotice>
@@ -40,7 +72,7 @@ function OtpScreen() {
           <p>
             Chúng tôi đã gửi mã OTP đến email:
             <br />
-            <strong>abc@gmail.com</strong>
+            <strong>{email}</strong>
             <br />
             Vui lòng nhập mã để tiếp tục
           </p>
@@ -48,20 +80,11 @@ function OtpScreen() {
 
         <StepIndicator activeStep={2} />
 
-        <form
-          className="auth-form"
-          onSubmit={(event) => {
-            event.preventDefault()
-            setSubmitted(true)
-            if (otp.join('').length === 6) {
-              navigate(AUTH_ROUTES.resetPassword)
-            }
-          }}
-        >
+        <form className="auth-form" onSubmit={handleSubmit}>
           <div className="otp-group">
             <div className="otp-group__heading">
               <span>Nhập mã OTP</span>
-              {hasError && <span className="form-field__error">Sai mã OTP</span>}
+              {errorMessage && <span className="form-field__error">{errorMessage}</span>}
             </div>
             <div className="otp-inputs">
               {otp.map((value, index) => (
@@ -91,17 +114,19 @@ function OtpScreen() {
 
         <div className="resend-line">
           <span>Chưa nhận được mã?</span>
-          <button className="text-button" type="button">
-            Gửi lại OTP
+          <button
+            className="text-button"
+            disabled={isResending}
+            onClick={handleResendOtp}
+            type="button"
+          >
+            {isResending ? 'Đang gửi...' : 'Gửi lại OTP'}
           </button>
           <span>(56s)</span>
         </div>
 
-        <Link
-          className="back-link"
-          to={AUTH_ROUTES.forgotPassword}
-        >
-          <ArrowLeftOutlined /> Quay lại
+        <Link className="back-link" to={AUTH_ROUTES.forgotPassword}>
+          <Icon name="arrowLeft" /> Quay lại
         </Link>
       </section>
     </AuthShell>
