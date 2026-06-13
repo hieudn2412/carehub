@@ -51,3 +51,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment ###
+.env.properties
+**/node_modules/

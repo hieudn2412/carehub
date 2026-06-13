@@ -2,6 +2,9 @@ server:
   port: 8080
 
 app:
+  import:
+    default-password: ${DEFAULT_PASSWORD}
+
   api-prefix: /api/v1
   cors:
     allowed-origin-patterns:
@@ -9,11 +12,31 @@ app:
       - http://127.0.0.1:*
       - https://api.fpthub.online
   jwt:
-    secret: ${JWT_SECRET:dev-only-change-me-min-32-chars!!}
+    secret: ${JWT_SECRET}
     access-token-expiration-minutes: 15
     refresh-token-expiration-days: 7
+  seed:
+    enabled: true
+    admin:
+      employee-code: ${ADMIN_EMPLOYEE_CODE}
+      email: ${ADMIN_EMAIL}
+      password: ${ADMIN_PASSWORD}
+      name: ${ADMIN_NAME}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+  config:
+    import: optional:file:.env.properties
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
   datasource:
     url: jdbc:postgresql://localhost:5432/carehub
     username: postgres
@@ -23,3 +46,22 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 1000
+        order_inserts: true
+        order_updates: true
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true

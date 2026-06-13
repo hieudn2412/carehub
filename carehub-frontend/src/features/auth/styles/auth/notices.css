@@ -1,0 +1,39 @@
+.support-notice {
+  align-items: flex-start;
+  background: rgba(255, 253, 253, 0.78);
+  border-radius: 12px;
+  bottom: 72px;
+  box-shadow: 0 10px 24px rgba(30, 64, 57, 0.12);
+  color: #111;
+  display: flex;
+  gap: 14px;
+  min-height: 96px;
+  padding: 16px 20px;
+  position: absolute;
+  right: 78px;
+  width: min(440px, calc(100% - 44px));
+  z-index: 2;
+}
+
+.support-notice > svg {
+  color: #159783;
+  font-size: 17px;
+  margin-top: 25px;
+}
+
+.support-notice strong {
+  color: #159783;
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.support-notice p {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  margin: 0;
+}
+
