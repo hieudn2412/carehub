@@ -1,11 +1,13 @@
 package vn.vietduc.carehubbackend.imports.user;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import vn.vietduc.carehubbackend.common.response.ApiResponse;
 
 import java.io.IOException;
 
@@ -20,7 +22,12 @@ public class UserImportController {
 
     @PostMapping("/users/import")
     @PreAuthorize("hasRole('ADMIN')")
-    public void importUsers(@RequestParam MultipartFile file) throws IOException {
-        userImportServiceImpl.importExcel(file);
+    public ResponseEntity<ApiResponse<ImportResult>> importUsers(@RequestParam MultipartFile file) throws IOException {
+        ImportResult result = userImportServiceImpl.importExcel(file);
+        return ResponseEntity.ok(
+                ApiResponse.success("Import users success", result)
+        );
     }
+
+
 }

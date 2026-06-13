@@ -2,6 +2,8 @@ package vn.vietduc.carehubbackend.user.service.impl;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +12,7 @@ import vn.vietduc.carehubbackend.notification.EmailMessage;
 import vn.vietduc.carehubbackend.notification.EmailProducer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UserFilterRequest;
 import vn.vietduc.carehubbackend.user.dto.response.UserDetailResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserSummaryResponse;
@@ -28,8 +31,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-
-
     private static final int PASSWORD_LENGTH = 12;
 
     private final UserRepository userRepository;
@@ -133,29 +134,29 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Page<UserSummaryResponse> getUsers(Pageable pageable, UserFilterRequest request) {
+        Page<User> users = userRepository.searchUsers(request, pageable);
+
+        return users.map(user -> {
+            List<Role> roles = userRoleRepository.findRolesByUserId(user.getId());
+            return UserSummaryResponse.builder()
+                    .id(user.getId())
+                    .employeeCode(user.getEmployeeCode())
+                    .departmentId(user.getDepartment().getId())
+                    .fullName(user.getName())
+                    .status(user.getStatus())
+                    .roles(roles)
+                    .build();
+        });
+    }
+
+    @Override
     @Transactional
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         user.setDeleted(true);
         userRepository.save(user);
-    }
-
-    @Override
-    public List<UserSummaryResponse> getAllUsers() {
-        List<UserSummaryResponse> users = userRepository.findAll().stream().map(
-                user -> {
-                    List<Role> roles = userRoleRepository.findRolesByUserId(user.getId());
-                    return UserSummaryResponse.builder()
-                            .employeeCode(user.getEmployeeCode())
-                            .id(user.getId())
-                            .status(user.getStatus())
-                            .fullName(user.getName())
-                            .roles(roles)
-                            .build();
-                }
-        ).toList();
-        return List.of();
     }
 
     @Override
@@ -181,5 +182,22 @@ public class UserServiceImpl implements UserService {
         return userResponse;
     }
 
+    public List<UserSummaryResponse> getAllUsersToExport(UserFilterRequest filter){
+        return userRepository.getAllUsersToExport(filter).stream()
+                .map(
+                        user -> {
+                            List<Role> roles = userRoleRepository.findRolesByUserId(user.getId());
+                            return UserSummaryResponse.builder()
+                                    .id(user.getId())
+                                    .employeeCode(user.getEmployeeCode())
+                                    .departmentId(user.getDepartment().getId())
+                                    .fullName(user.getName())
+                                    .status(user.getStatus())
+                                    .roles(roles)
+                                    .build();
+                        }
+                )
+                .toList();
+    }
 
 }

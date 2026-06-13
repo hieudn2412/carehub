@@ -2,12 +2,16 @@ package vn.vietduc.carehubbackend.user.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UserFilterRequest;
 import vn.vietduc.carehubbackend.user.dto.response.UserDetailResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserSummaryResponse;
@@ -46,9 +50,26 @@ public class UserController {
 
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getAllUsers() {
-        List<UserSummaryResponse> users = userService.getAllUsers();
-        return ResponseEntity.ok(ApiResponse.success("Get all user successfully", users));
+    public ResponseEntity<ApiResponse<Page<UserSummaryResponse>>> getUsers(
+            @RequestBody UserFilterRequest filter,
+            @PageableDefault(size = 20)
+            Pageable pageable
+    ) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Get list users successfully" ,userService.getUsers(pageable, filter))
+        );
+    }
+
+    @GetMapping("/users/export")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<List<UserSummaryResponse>>> getAllUsersToExport(
+            @RequestBody UserFilterRequest filter
+    ) {
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Get list users successfully" ,userService.getAllUsersToExport(filter))
+        );
     }
 
     @GetMapping("/user/{id}")
