@@ -54,6 +54,11 @@ spring:
     password: ${MAIL_PASSWORD}
 
     properties:
+      hibernate:
+        jdbc:
+          batch_size: 1000
+        order_inserts: true
+        order_updates: true
       mail:
         smtp:
           auth: true
