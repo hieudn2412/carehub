@@ -191,6 +191,17 @@
   transform: translateY(-1px);
 }
 
+.primary-button:disabled,
+.text-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+.primary-button:disabled:hover {
+  background: #5fcdb5;
+}
+
 .primary-button:focus-visible,
 .text-button:focus-visible,
 .back-link:focus-visible {

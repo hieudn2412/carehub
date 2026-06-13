@@ -75,6 +75,7 @@ function LoginScreen() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField
+            autoComplete="username"
             error={errorMessage && !employeeCode.trim() ? errorMessage : ''}
             icon={<Icon name="user" />}
             label="Mã nhân viên"
@@ -83,6 +84,7 @@ function LoginScreen() {
             value={employeeCode}
           />
           <FormField
+            autoComplete="current-password"
             error={errorMessage && employeeCode.trim() ? errorMessage : ''}
             icon={<Icon name="lock" />}
             label="Mật khẩu"

@@ -53,6 +53,7 @@ function ForgotAccountScreen() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField
+            autoComplete="email"
             error={errorMessage}
             icon={<Icon name="user" />}
             label="Email"

@@ -5,5 +5,5 @@ export function getApiErrorMessage(error, fallbackMessage) {
     return responseData.data.join(', ')
   }
 
-  return responseData?.message || fallbackMessage
+  return responseData?.message || error?.message || fallbackMessage
 }

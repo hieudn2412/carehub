@@ -72,7 +72,7 @@ function EmailConfirmResetScreen() {
   }
 
   return (
-    <div className="modal-bg">
+    <div className="email-confirm-page modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
           <Icon name="user" />
@@ -91,6 +91,7 @@ function EmailConfirmResetScreen() {
           <div className="input-wrap">
             <Icon className="input-icon" name="lock" />
             <input
+              autoComplete="new-password"
               id="new-password"
               onChange={(event) => setPassword(event.target.value)}
               placeholder="Nhập mật khẩu mới"
@@ -118,6 +119,7 @@ function EmailConfirmResetScreen() {
           <div className="input-wrap">
             <Icon className="input-icon" name="lock" />
             <input
+              autoComplete="new-password"
               id="confirm-new-password"
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Nhập lại mật khẩu mới"
