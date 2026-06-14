@@ -2,6 +2,9 @@ server:
   port: 8080
 
 app:
+  import:
+    default-password: ${DEFAULT_PASSWORD}
+
   api-prefix: /api/v1
   cors:
     allowed-origin-patterns:
@@ -21,6 +24,11 @@ app:
       name: ${ADMIN_NAME}
 
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
   config:
     import: optional:file:env.properties
 
@@ -49,6 +57,11 @@ spring:
     password: ${MAIL_PASSWORD}
 
     properties:
+      hibernate:
+        jdbc:
+          batch_size: 1000
+        order_inserts: true
+        order_updates: true
       mail:
         smtp:
           auth: true

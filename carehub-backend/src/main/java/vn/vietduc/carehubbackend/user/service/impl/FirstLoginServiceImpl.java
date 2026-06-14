@@ -37,7 +37,7 @@ public class FirstLoginServiceImpl implements FirstLoginService {
     public void sendEmailVerificationOtp(SendEmailVerificationRequest request) {
         String email = request.getEmail();
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmailAndIsDeletedFalse(email)) {
             throw new BadRequestException("Email already exists");
         }
 
@@ -90,7 +90,7 @@ public class FirstLoginServiceImpl implements FirstLoginService {
             throw new BadRequestException("First login setup is not required for this account");
         }
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
             throw new BadRequestException("Email already exists");
         }
 

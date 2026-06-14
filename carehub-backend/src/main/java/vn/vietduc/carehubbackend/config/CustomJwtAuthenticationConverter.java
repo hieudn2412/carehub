@@ -29,7 +29,7 @@ public class CustomJwtAuthenticationConverter
 
         Collection<GrantedAuthority> authorities =
                 roles.stream()
-                        .<GrantedAuthority>map(SimpleGrantedAuthority::new)
+                        .<GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                         .toList();
 
         UserPrincipal principal =

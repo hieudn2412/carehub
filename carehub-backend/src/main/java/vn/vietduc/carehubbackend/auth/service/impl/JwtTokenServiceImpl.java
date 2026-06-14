@@ -38,7 +38,6 @@ public class JwtTokenServiceImpl implements JwtTokenService {
                 .toList();
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(String.valueOf(user.getId()))
-                .claim("email", user.getEmail())
                 .claim("roles", roleCodes)
                 .claim("employeeCode", user.getEmployeeCode())
                 .issuedAt(now)
