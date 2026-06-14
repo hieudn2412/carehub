@@ -40,7 +40,7 @@ function EmailConfirmScreen() {
   }
 
   return (
-    <div className="modal-bg">
+    <div className="email-confirm-page modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
           <Icon name="user" />
@@ -75,6 +75,7 @@ function EmailConfirmScreen() {
           <div className="input-wrap">
             <Icon className="input-icon" name="user" />
             <input
+              autoComplete="email"
               id="email-confirm"
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Nhập email của bạn"

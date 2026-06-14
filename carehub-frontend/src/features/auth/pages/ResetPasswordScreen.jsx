@@ -82,6 +82,7 @@ function ResetPasswordScreen() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField
+            autoComplete="new-password"
             icon={<Icon name="lock" />}
             label="Mật khẩu mới"
             onChange={setPassword}
@@ -102,6 +103,7 @@ function ResetPasswordScreen() {
           </ul>
 
           <FormField
+            autoComplete="new-password"
             error={errorMessage}
             icon={<Icon name="lock" />}
             label="Xác thực mật khẩu mới"

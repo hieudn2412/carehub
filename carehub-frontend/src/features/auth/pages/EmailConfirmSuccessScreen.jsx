@@ -16,7 +16,7 @@ function EmailConfirmSuccessScreen() {
   }, [navigate])
 
   return (
-    <div className="modal-bg">
+    <div className="email-confirm-page modal-bg">
       <div className="forgot-card">
         <div className="email-confirm-icon">
           <Icon name="user" />

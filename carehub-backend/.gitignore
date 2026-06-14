@@ -54,4 +54,9 @@ build/
 
 ### Environment ###
 .env.properties
+env.properties
+compose-config.txt
+javaprops.txt
+postgres-env.txt
+postgres-logs.txt
 **/node_modules/

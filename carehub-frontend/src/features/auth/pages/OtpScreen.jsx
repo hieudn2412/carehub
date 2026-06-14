@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import { authApi } from '../api/authApi.js'
@@ -8,6 +8,8 @@ import StepIndicator from '../components/StepIndicator.jsx'
 import Icon from '../../../shared/components/Icon.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
 
+const RESEND_COOLDOWN_SECONDS = 60
+
 function OtpScreen() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -15,15 +17,53 @@ function OtpScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [errorMessage, setErrorMessage] = useState('')
   const [isResending, setIsResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS)
   const inputRefs = useRef([])
   const otpValue = otp.join('')
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return undefined
+    }
+
+    const timer = window.setTimeout(() => {
+      setResendCooldown((current) => Math.max(current - 1, 0))
+    }, 1000)
+
+    return () => window.clearTimeout(timer)
+  }, [resendCooldown])
 
   if (!email) {
     return <Navigate to={AUTH_ROUTES.forgotPassword} replace />
   }
 
+  const fillOtpFromIndex = (value, index) => {
+    const digits = value.replace(/\D/g, '').slice(0, otp.length - index)
+
+    if (!digits) {
+      return
+    }
+
+    const nextOtp = [...otp]
+    digits.split('').forEach((digit, offset) => {
+      nextOtp[index + offset] = digit
+    })
+    setOtp(nextOtp)
+    setErrorMessage('')
+
+    const focusIndex = Math.min(index + digits.length, inputRefs.current.length - 1)
+    inputRefs.current[focusIndex]?.focus()
+  }
+
   const updateOtp = (value, index) => {
-    const digit = value.replace(/\D/g, '').slice(-1)
+    const digits = value.replace(/\D/g, '')
+
+    if (digits.length > 1) {
+      fillOtpFromIndex(digits, index)
+      return
+    }
+
+    const digit = digits
     const nextOtp = [...otp]
     nextOtp[index] = digit
     setOtp(nextOtp)
@@ -38,6 +78,11 @@ function OtpScreen() {
     if (event.key === 'Backspace' && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus()
     }
+  }
+
+  const handlePaste = (event, index) => {
+    event.preventDefault()
+    fillOtpFromIndex(event.clipboardData.getData('text'), index)
   }
 
   const handleSubmit = (event) => {
@@ -56,6 +101,7 @@ function OtpScreen() {
       setIsResending(true)
       setErrorMessage('')
       await authApi.forgotPassword({ email })
+      setResendCooldown(RESEND_COOLDOWN_SECONDS)
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể gửi lại mã OTP'))
     } finally {
@@ -90,11 +136,13 @@ function OtpScreen() {
               {otp.map((value, index) => (
                 <input
                   aria-label={`Mã OTP số ${index + 1}`}
+                  autoComplete={index === 0 ? 'one-time-code' : 'off'}
                   inputMode="numeric"
                   key={index}
                   maxLength={1}
                   onChange={(event) => updateOtp(event.target.value, index)}
                   onKeyDown={(event) => handleKeyDown(event, index)}
+                  onPaste={(event) => handlePaste(event, index)}
                   ref={(node) => {
                     inputRefs.current[index] = node
                   }}
@@ -116,13 +164,13 @@ function OtpScreen() {
           <span>Chưa nhận được mã?</span>
           <button
             className="text-button"
-            disabled={isResending}
+            disabled={isResending || resendCooldown > 0}
             onClick={handleResendOtp}
             type="button"
           >
             {isResending ? 'Đang gửi...' : 'Gửi lại OTP'}
           </button>
-          <span>(56s)</span>
+          {resendCooldown > 0 && <span>({resendCooldown}s)</span>}
         </div>
 
         <Link className="back-link" to={AUTH_ROUTES.forgotPassword}>

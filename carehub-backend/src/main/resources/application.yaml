@@ -30,7 +30,7 @@ spring:
       max-request-size: 20MB
 
   config:
-    import: optional:file:.env.properties
+    import: optional:file:env.properties
 
   rabbitmq:
     host: localhost
@@ -41,6 +41,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/carehub
     username: postgres
     password: root123
+    hikari:
+      data-source-properties:
+        TimeZone: Asia/Ho_Chi_Minh
 
   jpa:
     hibernate:
