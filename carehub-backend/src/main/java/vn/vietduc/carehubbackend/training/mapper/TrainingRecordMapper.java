@@ -62,7 +62,8 @@ public class TrainingRecordMapper {
 
     public TrainingRecordDetailResponse toDetailResponse(
             TrainingRecord entity,
-            List<TrainingEvidenceFile> evidenceFiles
+            List<TrainingEvidenceFile> evidenceFiles,
+            long duplicateCandidateCount
     ) {
         User employee = entity.getEmployee();
         Department department = entity.getEmployeeDepartmentSnapshot();
@@ -105,6 +106,8 @@ public class TrainingRecordMapper {
                 entity.getSourceReference(),
                 entity.getSourceSubmittedAt(),
                 evidences,
+                duplicateCandidateCount > 0,
+                duplicateCandidateCount,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
                 entity.getVersion()

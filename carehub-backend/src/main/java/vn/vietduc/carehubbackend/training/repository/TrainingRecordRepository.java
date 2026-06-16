@@ -24,6 +24,38 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
 
     @Query("""
+            SELECT COUNT(r)
+            FROM TrainingRecord r
+            WHERE r.employee.id = :employeeId
+              AND lower(trim(r.title)) = lower(trim(:title))
+              AND r.startDate = :startDate
+              AND r.declaredHours = :declaredHours
+            """)
+    long countDuplicateCandidates(
+            @Param("employeeId") Long employeeId,
+            @Param("title") String title,
+            @Param("startDate") LocalDate startDate,
+            @Param("declaredHours") BigDecimal declaredHours
+    );
+
+    @Query("""
+            SELECT COUNT(r)
+            FROM TrainingRecord r
+            WHERE r.employee.id = :employeeId
+              AND lower(trim(r.title)) = lower(trim(:title))
+              AND r.startDate = :startDate
+              AND r.declaredHours = :declaredHours
+              AND r.id <> :excludeId
+            """)
+    long countDuplicateCandidatesExcluding(
+            @Param("employeeId") Long employeeId,
+            @Param("title") String title,
+            @Param("startDate") LocalDate startDate,
+            @Param("declaredHours") BigDecimal declaredHours,
+            @Param("excludeId") Long excludeId
+    );
+
+    @Query("""
             SELECT COALESCE(SUM(r.approvedHours), 0)
             FROM TrainingRecord r
             WHERE r.employee.id = :employeeId

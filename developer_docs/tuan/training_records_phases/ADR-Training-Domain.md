@@ -16,6 +16,14 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - No conversion is performed for `LESSON`, `CREDIT`, `DAY`, `MONTH`, or `YEAR`.
 - Approved records cannot be reopened by the default state machine until the business policy is confirmed.
 
+## Implemented Stance For Phase 03
+
+- The edit limit is configurable with `app.training.records.max-edit-count` and defaults to `2`; draft saves do not count, updates after a rejected/submitted workflow has begun do count.
+- Duplicate records are surfaced as a warning on the response DTO instead of being hard-blocked for every role.
+- The local Phase 03 evidence adapter validates extension, declared MIME type, magic bytes, size, checksum, and mock moderation metadata; PDF moderation remains metadata-only until the hospital policy is confirmed.
+- Local evidence storage writes to `target/local-evidence-storage` by default and is a development/test adapter, not a production object-storage decision.
+- Submit writes the `TRAINING_RECORD_SUBMITTED` audit event and leaves reviewer notification delivery to Phase 08, where notification hooks, reviewer routing, duplicate suppression, and transport policy are defined.
+
 ## Open Decisions
 
 1. How many hours a `LESSON` represents.

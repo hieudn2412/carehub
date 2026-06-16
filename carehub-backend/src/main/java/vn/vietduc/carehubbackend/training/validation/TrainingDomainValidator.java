@@ -10,6 +10,7 @@ import java.util.Set;
 
 @Component
 public class TrainingDomainValidator {
+    private static final BigDecimal MIN_DIRECT_RECORD_HOURS = BigDecimal.valueOf(0.5);
     private static final BigDecimal MAX_DIRECT_RECORD_HOURS = BigDecimal.valueOf(24);
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "image/jpeg",
@@ -22,16 +23,19 @@ public class TrainingDomainValidator {
         if (request.endDate() != null && request.endDate().isBefore(request.startDate())) {
             throw new BadRequestException("End date must be greater than or equal to start date");
         }
-        if (request.endDate() == null
+        if ((request.endDate() == null || request.endDate().isEqual(request.startDate()))
                 && request.startTime() != null
                 && request.endTime() != null
                 && request.endTime().isBefore(request.startTime())) {
             throw new BadRequestException("End time must be greater than or equal to start time");
         }
-        if (!legacyImport
-                && request.declaredHours() != null
-                && request.declaredHours().compareTo(MAX_DIRECT_RECORD_HOURS) > 0) {
-            throw new BadRequestException("Declared hours must not exceed 24 for manual records");
+        if (!legacyImport && request.declaredHours() != null) {
+            if (request.declaredHours().compareTo(MIN_DIRECT_RECORD_HOURS) < 0) {
+                throw new BadRequestException("Declared hours must be at least 0.5 for manual records");
+            }
+            if (request.declaredHours().compareTo(MAX_DIRECT_RECORD_HOURS) > 0) {
+                throw new BadRequestException("Declared hours must not exceed 24 for manual records");
+            }
         }
     }
 
