@@ -14,4 +14,11 @@ public record ErrorResponse(
         String correlationId,
         Object details
 ) {
+    @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record FieldErrorDetail(
+            String field,
+            String message
+    ) {
+    }
 }

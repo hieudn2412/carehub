@@ -14,7 +14,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import vn.vietduc.carehubbackend.training.enums.TrainingImportRowStatus;
-import vn.vietduc.carehubbackend.user.entity.BaseEntity;
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 
 import java.util.Map;
 
