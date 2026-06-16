@@ -14,6 +14,7 @@ import java.util.List;
 public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
 
     boolean existsByRole_Id(Long roleId);
+    boolean existsByUser_IdAndRole_Id(Long userId, Long roleId);
 
     @Query("""
             SELECT ur.role
@@ -22,4 +23,5 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
             """)
     List<Role> findRolesByUserId(@Param("userId") Long userId);
     void deleteByUser(User user);
+    void deleteByUser_IdAndRole_Id(Long userId, Long roleId);
 }

@@ -1,4 +1,4 @@
-package vn.vietduc.carehubbackend.notification;
+package vn.vietduc.carehubbackend.notification.messaging;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
