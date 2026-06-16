@@ -1,5 +1,7 @@
 package vn.vietduc.carehubbackend.user.entity;
 
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;

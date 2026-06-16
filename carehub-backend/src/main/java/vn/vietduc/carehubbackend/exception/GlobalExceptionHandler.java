@@ -1,62 +1,116 @@
 package vn.vietduc.carehubbackend.exception;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import vn.vietduc.carehubbackend.common.response.ApiResponse;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse<Object>> handleBadRequest(BadRequestException ex) {
-        return ResponseEntity
-                .badRequest()
-                .body(ApiResponse.error(ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "REQ_001", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity<ErrorResponse> handleUnprocessable(UnprocessableEntityException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(ApiResponse.error(ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SYS_404", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SYS_404", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<Object>> handleUnauthorized(UnauthorizedException ex) {
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(TokenException.class)
-    public ResponseEntity<ApiResponse<Object>> handleTokenException(TokenException ex) {
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(ApiResponse.error(ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleTokenException(TokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "AUTH_002", "You don't have permission to do that.", null, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<List<String>>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .toList();
 
-        return ResponseEntity
-                .badRequest()
-                .body(ApiResponse.error("Validation failed", errors));
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", "Validation failed", errors, request);
+    }
+
+    @ExceptionHandler({
+            IllegalArgumentException.class,
+            HttpMessageNotReadableException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class,
+            HttpRequestMethodNotSupportedException.class
+    })
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "REQ_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
+    public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Internal server error", null, request);
+    }
+
+    private ResponseEntity<ErrorResponse> build(
+            HttpStatus status,
+            String errorCode,
+            String message,
+            Object details,
+            HttpServletRequest request
+    ) {
+        String correlationId = correlationId(request);
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Internal server error", null));
+                .status(status)
+                .header("X-Correlation-ID", correlationId)
+                .body(ErrorResponse.builder()
+                        .errorCode(errorCode)
+                        .message(message)
+                        .correlationId(correlationId)
+                        .details(details)
+                        .build());
+    }
+
+    private String correlationId(HttpServletRequest request) {
+        String existing = request.getHeader("X-Correlation-ID");
+        if (existing != null && !existing.isBlank()) {
+            return existing;
+        }
+        return UUID.randomUUID().toString();
     }
 }

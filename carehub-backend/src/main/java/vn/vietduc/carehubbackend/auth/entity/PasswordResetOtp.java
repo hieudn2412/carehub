@@ -4,7 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
-import vn.vietduc.carehubbackend.user.entity.BaseEntity;
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 
 import java.time.LocalDateTime;
 

@@ -1,4 +1,4 @@
-package vn.vietduc.carehubbackend.user.dto.request;
+package vn.vietduc.carehubbackend.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

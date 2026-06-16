@@ -1,4 +1,4 @@
-package vn.vietduc.carehubbackend.notification;
+package vn.vietduc.carehubbackend.notification.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
