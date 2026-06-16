@@ -5,6 +5,7 @@ import EmailConfirmScreen from '../features/auth/pages/EmailConfirmScreen.jsx'
 import EmailConfirmSuccessScreen from '../features/auth/pages/EmailConfirmSuccessScreen.jsx'
 import ForgotAccountScreen from '../features/auth/pages/ForgotAccountScreen.jsx'
 import LoginScreen from '../features/auth/pages/LoginScreen.jsx'
+import StaffDashboard from '../features/staff/pages/DashboardStaffScreen.jsx'
 import OtpScreen from '../features/auth/pages/OtpScreen.jsx'
 import ResetPasswordScreen from '../features/auth/pages/ResetPasswordScreen.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -23,6 +24,7 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmReset} element={<EmailConfirmResetScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
+      <Route path={AUTH_ROUTES.staffDashboard} element={<StaffDashboard />} />
       <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
     </Routes>
   )
