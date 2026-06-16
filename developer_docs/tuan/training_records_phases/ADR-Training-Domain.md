@@ -24,6 +24,14 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Local evidence storage writes to `target/local-evidence-storage` by default and is a development/test adapter, not a production object-storage decision.
 - Submit writes the `TRAINING_RECORD_SUBMITTED` audit event and leaves reviewer notification delivery to Phase 08, where notification hooks, reviewer routing, duplicate suppression, and transport policy are defined.
 
+## Implemented Stance For Phase 04
+
+- List date filters use `training_records.start_date` until a separate completion-date policy is confirmed.
+- Non-admin list scope is enforced server-side: regular users are constrained to their own records, and managers are constrained to their current department; out-of-scope filters return no rows instead of widening access.
+- The Phase 04 list DTO includes evidence counts but no evidence binary or storage object keys.
+- Detail responses include active evidence metadata, review timeline, and change history, but download URLs remain on-demand through the Phase 03 download-url endpoint.
+- The temporary frontend for screens 15 and 16 is intentionally minimal for API testing and does not attempt final responsive/card design polish.
+
 ## Open Decisions
 
 1. How many hours a `LESSON` represents.

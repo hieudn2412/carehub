@@ -13,3 +13,4 @@
 | `phase_07_legacy_excel_import_cleanup.md` | Phase 7: Import và làm sạch dữ liệu Excel cũ |
 | `phase_08_notifications_audit_observability_performance.md` | Phase 8: Cross-cutting: notification, audit, observability và performance |
 | `phase_09_testing_uat_rollout.md` | Phase 9: Testing, UAT và rollout |
+| `openapi-training-records-phase04.yaml` | OpenAPI contract bổ sung cho Phase 4: list/detail training records |

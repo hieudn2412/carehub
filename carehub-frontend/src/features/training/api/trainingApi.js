@@ -55,6 +55,13 @@ export const trainingApi = {
     })
   },
 
+  listRecords(params) {
+    return httpClient.get('/training/records', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getRecord(id) {
     return httpClient.get(`/training/records/${id}`, {
       headers: authHeaders(),
