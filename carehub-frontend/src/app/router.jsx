@@ -13,6 +13,7 @@ import ActivityTypeFormPage from '../features/training/pages/ActivityTypeFormPag
 import ActivityTypeListPage from '../features/training/pages/ActivityTypeListPage.jsx'
 import TrainingFoundationPage from '../features/training/pages/TrainingFoundationPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
+import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 
 function AppRouter() {
   return (
@@ -35,6 +36,7 @@ function AppRouter() {
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={<StaffDashboard />} />
       <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
+      <Route path="/staff/profile" element={<ProfileStaffScreen />} />
     </Routes>
   )
 }

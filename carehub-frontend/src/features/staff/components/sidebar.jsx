@@ -37,7 +37,7 @@ const navSections = [
     label: 'Tài khoản',
     items: [
       { icon: <BellOutlined />, label: 'Thông báo', path: '/account/notifications' },
-      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/account/profile' },
+      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/staff/profile' },
     ],
   },
 ]
