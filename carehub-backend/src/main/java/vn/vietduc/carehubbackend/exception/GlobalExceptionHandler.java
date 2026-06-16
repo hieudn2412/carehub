@@ -31,6 +31,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
     }
 
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    }
+
     @ExceptionHandler(UnprocessableEntityException.class)
     public ResponseEntity<ErrorResponse> handleUnprocessable(UnprocessableEntityException ex, HttpServletRequest request) {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", ex.getMessage(), null, request);
@@ -63,7 +68,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
-        List<String> errors = ex.getBindingResult()
+        List<ErrorResponse.FieldErrorDetail> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
                 .map(error -> ErrorResponse.FieldErrorDetail.builder()
@@ -75,12 +80,16 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", "Validation failed", errors, request);
     }
 
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "REQ_001", ex.getMessage(), null, request);
+    }
+
     @ExceptionHandler({
             IllegalArgumentException.class,
             HttpMessageNotReadableException.class,
             MissingServletRequestParameterException.class,
-            MethodArgumentTypeMismatchException.class,
-            HttpRequestMethodNotSupportedException.class
+            MethodArgumentTypeMismatchException.class
     })
     public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception ex, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, "REQ_001", ex.getMessage(), null, request);
