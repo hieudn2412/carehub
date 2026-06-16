@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   BellOutlined,
   WarningOutlined,
@@ -6,9 +7,22 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../hooks/useNotifications'
+import { staffApi } from '../api/staffApi'
 
-function Header({ title = 'Trang chủ', userName = 'Phạm Quốc Bảo', roleName = 'Nhân viên' }) {
-  const avatarLetter = userName ? userName.split(' ').pop().charAt(0).toUpperCase() : 'U'
+function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
+  const [profile, setProfile] = useState(null)
+
+  useEffect(() => {
+    staffApi.getProfile()
+      .then(res => {
+        setProfile(res.data?.data)
+      })
+      .catch(err => console.error("Error loading header profile", err))
+  }, [])
+
+  const displayName = profile?.fullName || userName
+  const displayRole = profile?.roles?.map(r => r.name).join(', ') || roleName
+  const avatarLetter = displayName ? displayName.trim().split(' ').pop().charAt(0).toUpperCase() : 'U'
   const [showNotifications, setShowNotifications] = useState(false)
   const popoverRef = useRef(null)
   const notifyRef = useRef(null)
@@ -64,11 +78,14 @@ function Header({ title = 'Trang chủ', userName = 'Phạm Quốc Bảo', roleN
 
   // Hiển thị highlight đỏ cho giờ CME
   const renderDescription = (text) => {
-    if (text.includes('98 / 120h')) {
-      const parts = text.split('98 / 120h')
+    if (!text) return null
+    const match = text.match(/(\d+\s*\/\s*120\s*(?:h|giờ))/i)
+    if (match) {
+      const matchedText = match[1]
+      const parts = text.split(matchedText)
       return (
         <p className="notify-item__desc">
-          {parts[0]}<span className="highlight-red">98 / 120h</span>{parts[1]}
+          {parts[0]}<span className="highlight-red">{matchedText}</span>{parts[1]}
         </p>
       )
     }
@@ -103,7 +120,34 @@ function Header({ title = 'Trang chủ', userName = 'Phạm Quốc Bảo', roleN
 
   return (
     <header className="dashboard-header">
-      <h1 className="dashboard-header__title">{title}</h1>
+      {breadcrumbs && breadcrumbs.length > 0 ? (
+        <div className="dashboard-header__breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+          {breadcrumbs.map((item, index) => {
+            const isLast = index === breadcrumbs.length - 1
+            if (isLast) {
+              return (
+                <span key={index} style={{ color: '#1a1a1a', fontWeight: 600 }}>
+                  {item.label}
+                </span>
+              )
+            }
+            return (
+              <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {item.link ? (
+                  <Link to={item.link} style={{ color: '#6b7280', textDecoration: 'none' }}>
+                    {item.label}
+                  </Link>
+                ) : (
+                  <span style={{ color: '#6b7280' }}>{item.label}</span>
+                )}
+                <span style={{ color: '#9ca3af', fontSize: 12 }}>›</span>
+              </span>
+            )
+          })}
+        </div>
+      ) : (
+        <h1 className="dashboard-header__title">{title}</h1>
+      )}
 
       <div className="dashboard-header__right">
         <div className="dashboard-header__notify-container">
@@ -143,8 +187,8 @@ function Header({ title = 'Trang chủ', userName = 'Phạm Quốc Bảo', roleN
             {avatarLetter}
           </div>
           <div className="dashboard-header__info">
-            <p className="dashboard-header__name">{userName}</p>
-            <span className="dashboard-header__role">{roleName}</span>
+            <p className="dashboard-header__name">{displayName}</p>
+            <span className="dashboard-header__role">{displayRole}</span>
           </div>
         </div>
       </div>

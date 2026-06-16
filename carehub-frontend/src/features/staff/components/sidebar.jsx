@@ -22,7 +22,7 @@ const navSections = [
   {
     label: 'Đào tạo',
     items: [
-      { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/training/hours' },
+      { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/staff/training' },
       { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/training/status' },
     ],
   },
@@ -37,7 +37,7 @@ const navSections = [
     label: 'Tài khoản',
     items: [
       { icon: <BellOutlined />, label: 'Thông báo', path: '/account/notifications' },
-      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/account/profile' },
+      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/staff/profile' },
     ],
   },
 ]
