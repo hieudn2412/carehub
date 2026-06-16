@@ -1,0 +1,362 @@
+/* ── Training Hours Styles ── */
+.training-page {
+  padding: 0;
+}
+
+.training-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.training-alert span strong {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.training-filters-row {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.training-search-container {
+  position: relative;
+  flex: 1;
+}
+
+.training-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.training-search-input:focus {
+  border-color: #2563eb;
+}
+
+.training-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.training-select {
+  padding: 10px 36px 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  min-width: 140px;
+  transition: border-color 0.2s;
+}
+
+.training-select:focus {
+  border-color: #2563eb;
+}
+
+.training-date-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 130px;
+  background: #fff;
+}
+
+.training-table-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  overflow: hidden;
+}
+
+.training-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.training-table th {
+  padding: 13px 20px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  border-bottom: 1px solid #f3f4f6;
+  background: #f9fafb;
+}
+
+.training-table td {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.training-table tr:last-child td {
+  border-bottom: none;
+}
+
+.training-table__name {
+  color: #111827;
+  font-weight: 600;
+}
+
+.training-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.training-badge--approved {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.training-badge--pending {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.training-badge--rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.training-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.training-badge--approved .training-badge__dot { background: #16a34a; }
+.training-badge--pending .training-badge__dot { background: #ca8a04; }
+.training-badge--rejected .training-badge__dot { background: #dc2626; }
+
+.training-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.training-action-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.training-action-btn:hover {
+  background: #f9fafb;
+}
+
+/* Pagination */
+.training-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.training-pagination__info {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.training-pagination__pages {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.training-page-btn {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.training-page-btn:hover:not(.active) {
+  background: #f9f9f9;
+}
+
+.training-page-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  font-weight: 600;
+}
+
+/* ── Detail Card ── */
+.detail-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07);
+  padding: 28px;
+  margin-top: 24px;
+}
+
+.detail-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.detail-card__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.detail-card__sub {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detail-field--full {
+  grid-column: 1 / -1;
+}
+
+.detail-field__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.detail-field__value {
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 14px;
+  color: #111827;
+  min-height: 42px;
+  box-sizing: border-box;
+}
+
+/* ── Evidence Files ── */
+.evidence-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.evidence-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.evidence-file-item__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.evidence-file-item__name {
+  font-size: 14px;
+  color: #374151;
+}
+
+.dropzone-container {
+  margin-top: 14px;
+  border: 2px dashed #86efac;
+  border-radius: 10px;
+  padding: 32px 20px;
+  text-align: center;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropzone-container:hover,
+.dropzone-container.dragover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.dropzone-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.evidence-info-box {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  border: 1px solid #bbf7d0;
+}
+
+.evidence-info-text {
+  font-size: 13px;
+  color: #166534;
+  margin: 0;
+}

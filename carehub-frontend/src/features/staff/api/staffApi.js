@@ -12,4 +12,10 @@ export const staffApi = {
       headers: authHeaders(),
     })
   },
+
+  getProfile() {
+    return httpClient.get('/me', {
+      headers: authHeaders(),
+    })
+  },
 }

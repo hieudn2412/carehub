@@ -18,6 +18,10 @@ import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFor
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
+import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
+import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
+import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
+import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 
 function AppRouter() {
   return (
@@ -32,6 +36,8 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmOtp} element={<EmailConfirmOtpScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmReset} element={<EmailConfirmResetScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
+      
+      {/* Admin / General Training routes */}
       <Route path="/training" element={<TrainingFoundationPage />} />
       <Route path="/training/records" element={<TrainingRecordListPage />} />
       <Route path="/training/records/new" element={<TrainingRecordFormPage />} />
@@ -42,10 +48,18 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/new" element={<ActivityTypeFormPage />} />
       <Route path="/admin/training/activity-types/:id" element={<ActivityTypeDetailPage />} />
       <Route path="/admin/training/activity-types/:id/edit" element={<ActivityTypeFormPage />} />
+      
+      {/* Staff CME / Training Hours routes */}
+      <Route path="/staff/training" element={<TrainingHoursListScreen />} />
+      <Route path="/staff/training/new" element={<TrainingHoursFormScreen />} />
+      <Route path="/staff/training/:id" element={<TrainingHoursDetailScreen />} />
+      <Route path="/staff/training/:id/edit" element={<TrainingHoursFormScreen />} />
+      <Route path="/staff/training/:id/evidence" element={<TrainingHoursEvidenceScreen />} />
+
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={<StaffDashboard />} />
-      <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
       <Route path="/staff/profile" element={<ProfileStaffScreen />} />
+      <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
     </Routes>
   )
 }

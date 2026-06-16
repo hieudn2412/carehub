@@ -1,4 +1,14 @@
 function WelcomeBanner({ summary }) {
+  if (!summary || !summary.fullName) {
+    return (
+      <div className="welcome-banner welcome-banner--loading" style={{ minHeight: '140px', display: 'flex', alignItems: 'center' }}>
+        <div className="welcome-banner__text">
+          <h2>Đang tải thông tin cá nhân...</h2>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="welcome-banner">
       <div className="welcome-banner__text">
