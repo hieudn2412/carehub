@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
 
 const MOCK_NOTIFICATIONS = [
   {
@@ -38,7 +36,7 @@ const MOCK_NOTIFICATIONS = [
 export function useNotifications() {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error] = useState(null)
 
   useEffect(() => {
     // ── GIẢ LẬP DỮ LIỆU TỪ SERVER ───────────────────────────

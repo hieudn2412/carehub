@@ -2,7 +2,9 @@ package vn.vietduc.carehubbackend.training.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.auth.entity.UserPrincipal;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
@@ -82,11 +84,21 @@ public class TrainingAccessPolicy {
     }
 
     public User currentActor() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object principal = authentication.getPrincipal();
+        Long userId;
         if (!(principal instanceof UserPrincipal userPrincipal)) {
-            throw new ForbiddenException("Missing authenticated user");
+            if (principal instanceof Jwt jwt) {
+                userId = Long.valueOf(jwt.getSubject());
+            } else if (authentication.getName() != null && authentication.getName().matches("\\d+")) {
+                userId = Long.valueOf(authentication.getName());
+            } else {
+                throw new ForbiddenException("Missing authenticated user");
+            }
+        } else {
+            userId = userPrincipal.getId();
         }
-        return userRepository.findById(userPrincipal.getId())
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
     }
 
