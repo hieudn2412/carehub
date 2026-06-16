@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.training.enums.TrainingImportBatchStatus;
-import vn.vietduc.carehubbackend.user.entity.BaseEntity;
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.LocalDateTime;

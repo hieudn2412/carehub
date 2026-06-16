@@ -11,8 +11,8 @@ import vn.vietduc.carehubbackend.auth.dto.response.AuthResponse;
 import vn.vietduc.carehubbackend.auth.service.AuthService;
 import vn.vietduc.carehubbackend.auth.service.PasswordResetService;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
-import vn.vietduc.carehubbackend.user.dto.request.ForgotPasswordRequest;
-import vn.vietduc.carehubbackend.user.dto.request.ResetPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.ForgotPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.ResetPasswordRequest;
 
 @RestController
 @RequestMapping("${app.api-prefix}/auth")

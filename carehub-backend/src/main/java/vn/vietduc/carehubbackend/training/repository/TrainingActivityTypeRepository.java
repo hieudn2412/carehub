@@ -19,6 +19,8 @@ public interface TrainingActivityTypeRepository extends JpaRepository<TrainingAc
 
     Optional<TrainingActivityType> findByCode(String code);
 
+    List<TrainingActivityType> findByActiveTrueOrderBySortOrderAscNameAsc();
+
     Page<TrainingActivityType> findByActiveTrue(Pageable pageable);
 
     @Query("""

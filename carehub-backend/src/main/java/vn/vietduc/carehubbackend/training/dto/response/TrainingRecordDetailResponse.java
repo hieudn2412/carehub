@@ -43,6 +43,10 @@ public record TrainingRecordDetailResponse(
         String sourceReference,
         LocalDateTime sourceSubmittedAt,
         List<EvidenceMetadataResponse> evidences,
+        List<TrainingRecordReviewTimelineResponse> reviewTimeline,
+        List<TrainingRecordChangeLogResponse> changeHistory,
+        boolean duplicateWarning,
+        long duplicateCandidateCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         Long version

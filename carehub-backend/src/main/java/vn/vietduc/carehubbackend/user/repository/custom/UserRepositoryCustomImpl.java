@@ -27,31 +27,18 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 WHERE 1 = 1
                 """);
 
-        StringBuilder countSql = new StringBuilder("""
-                SELECT COUNT(DISTINCT u.id)
-                FROM users u
-                LEFT JOIN user_roles ur
-                    ON ur.user_id = u.id
-                WHERE 1 = 1
-                """);
-
         Map<String, Object> params = new HashMap<>();
 
-        appendConditions(request, sql, countSql, params);
+        appendConditions(request, sql, null, params);
 
         sql.append("""
                 ORDER BY u.id DESC
-                LIMIT :limit
-                OFFSET :offset
                 """);
 
         Query dataQuery = entityManager.createNativeQuery(sql.toString(), User.class);
 
-        Query totalQuery = entityManager.createNativeQuery(countSql.toString());
-
         params.forEach((key, value) -> {
             dataQuery.setParameter(key, value);
-            totalQuery.setParameter(key, value);
         });
 
         List<User> users = dataQuery.getResultList();
@@ -142,6 +129,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             StringBuilder countSql,
             Map<String, Object> params
     ) {
+        if (request == null) {
+            return;
+        }
 
         if (request.getKeyword() != null
                 && !request.getKeyword().isBlank()) {
@@ -154,7 +144,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                     """;
 
             sql.append(condition);
-            countSql.append(condition);
+            if (countSql != null) {
+                countSql.append(condition);
+            }
 
             params.put(
                     "keyword",
@@ -169,7 +161,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                     """;
 
             sql.append(condition);
-            countSql.append(condition);
+            if (countSql != null) {
+                countSql.append(condition);
+            }
 
             params.put(
                     "departmentId",
@@ -184,7 +178,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                     """;
 
             sql.append(condition);
-            countSql.append(condition);
+            if (countSql != null) {
+                countSql.append(condition);
+            }
 
             params.put(
                     "positionId",
@@ -199,7 +195,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                     """;
 
             sql.append(condition);
-            countSql.append(condition);
+            if (countSql != null) {
+                countSql.append(condition);
+            }
 
             params.put(
                     "roleId",
@@ -214,7 +212,9 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                     """;
 
             sql.append(condition);
-            countSql.append(condition);
+            if (countSql != null) {
+                countSql.append(condition);
+            }
 
             params.put(
                     "status",

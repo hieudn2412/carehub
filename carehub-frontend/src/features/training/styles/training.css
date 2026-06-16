@@ -144,6 +144,10 @@
   margin-bottom: 16px;
 }
 
+.training-filters--records {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .training-filters label,
 .training-form label {
   color: #445b73;
@@ -181,6 +185,16 @@
   font-weight: 500;
 }
 
+.training-muted {
+  color: #58708f;
+  font-size: 0.84rem;
+}
+
+.training-danger {
+  color: #8a1f14;
+  font-weight: 700;
+}
+
 .training-check {
   align-items: center;
   display: flex !important;
@@ -200,6 +214,10 @@
   border-collapse: collapse;
   min-width: 920px;
   width: 100%;
+}
+
+.training-table--compact {
+  min-width: 640px;
 }
 
 .training-table th,
@@ -245,6 +263,24 @@
   background: #fff1f0;
   border: 1px solid #ffb3ad;
   color: #8a1f14;
+}
+
+.training-message--success {
+  background: #e8f7ef;
+  border: 1px solid #98d6b3;
+  color: #19643a;
+}
+
+.training-note {
+  background: #eef4fb;
+  border: 1px solid #c8d3df;
+  border-radius: 6px;
+  color: #445b73;
+  padding: 10px 12px;
+}
+
+.training-form-grid--compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .training-empty,

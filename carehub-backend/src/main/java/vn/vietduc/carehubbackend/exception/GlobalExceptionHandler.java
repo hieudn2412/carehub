@@ -1,14 +1,17 @@
 package vn.vietduc.carehubbackend.exception;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import vn.vietduc.carehubbackend.common.response.ApiResponse;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 
 import jakarta.persistence.OptimisticLockException;
@@ -16,52 +19,56 @@ import java.util.List;
 import java.util.UUID;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleBadRequest(BadRequestException ex) {
-        return ResponseEntity
-                .badRequest()
-                .body(error("BAD_REQUEST", ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "REQ_001", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(OptimisticLockException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(UnprocessableEntityException.class)
+    public ResponseEntity<ErrorResponse> handleUnprocessable(UnprocessableEntityException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleNotFound(ResourceNotFoundException ex) {
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(error("NOT_FOUND", ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SYS_404", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SYS_404", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleUnauthorized(UnauthorizedException ex) {
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(error("UNAUTHORIZED", ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(TokenException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleTokenException(TokenException ex) {
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(error("TOKEN_ERROR", ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleTokenException(TokenException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
     }
 
-    @ExceptionHandler({ForbiddenException.class, AccessDeniedException.class})
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleForbidden(RuntimeException ex) {
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(error("FORBIDDEN", ex.getMessage(), null));
-    }
-
-    @ExceptionHandler({ConflictException.class, OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleConflict(RuntimeException ex) {
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(error("CONFLICT", ex.getMessage(), null));
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "AUTH_002", "You don't have permission to do that.", null, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleValidation(MethodArgumentNotValidException ex) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
         List<ErrorResponse.FieldErrorDetail> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -71,44 +78,53 @@ public class GlobalExceptionHandler {
                         .build())
                 .toList();
 
-        return ResponseEntity
-                .status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(error("VALIDATION_FAILED", "Validation failed", errors));
-    }
-
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleValidation(ValidationException ex) {
-        return ResponseEntity
-                .status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(error("VALIDATION_FAILED", ex.getMessage(), ex.getFieldErrors()));
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", "Validation failed", errors, request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
-        return ResponseEntity
-                .status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(error("METHOD_NOT_ALLOWED", ex.getMessage(), null));
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "REQ_001", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler({
+            IllegalArgumentException.class,
+            HttpMessageNotReadableException.class,
+            MissingServletRequestParameterException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<ErrorResponse> handleInvalidRequest(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "REQ_001", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<ErrorResponse>> handleException(Exception ex) {
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(error("INTERNAL_SERVER_ERROR", "Internal server error", null));
+    public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Internal server error", null, request);
     }
 
-    private ApiResponse<ErrorResponse> error(
-            String code,
+    private ResponseEntity<ErrorResponse> build(
+            HttpStatus status,
+            String errorCode,
             String message,
-            List<ErrorResponse.FieldErrorDetail> fieldErrors
+            Object details,
+            HttpServletRequest request
     ) {
-        ErrorResponse response = ErrorResponse.builder()
-                .code(code)
-                .message(message)
-                .fieldErrors(fieldErrors == null ? List.of() : fieldErrors)
-                .traceId(UUID.randomUUID().toString())
-                .build();
+        String correlationId = correlationId(request);
+        return ResponseEntity
+                .status(status)
+                .header("X-Correlation-ID", correlationId)
+                .body(ErrorResponse.builder()
+                        .errorCode(errorCode)
+                        .message(message)
+                        .correlationId(correlationId)
+                        .details(details)
+                        .build());
+    }
 
-        return ApiResponse.error(message, response);
+    private String correlationId(HttpServletRequest request) {
+        String existing = request.getHeader("X-Correlation-ID");
+        if (existing != null && !existing.isBlank()) {
+            return existing;
+        }
+        return UUID.randomUUID().toString();
     }
 }
