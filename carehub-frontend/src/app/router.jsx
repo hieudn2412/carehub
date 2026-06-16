@@ -7,6 +7,7 @@ import ForgotAccountScreen from '../features/auth/pages/ForgotAccountScreen.jsx'
 import LoginScreen from '../features/auth/pages/LoginScreen.jsx'
 import OtpScreen from '../features/auth/pages/OtpScreen.jsx'
 import ResetPasswordScreen from '../features/auth/pages/ResetPasswordScreen.jsx'
+import TrainingFoundationPage from '../features/training/pages/TrainingFoundationPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 
 function AppRouter() {
@@ -22,6 +23,7 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmOtp} element={<EmailConfirmOtpScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmReset} element={<EmailConfirmResetScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
+      <Route path="/training" element={<TrainingFoundationPage />} />
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
     </Routes>

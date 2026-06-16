@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS training_import_rows;
+DROP TABLE IF EXISTS training_record_change_logs;
+DROP TABLE IF EXISTS training_record_reviews;
+DROP TABLE IF EXISTS training_evidence_files;
+DROP TABLE IF EXISTS training_records;
+DROP TABLE IF EXISTS training_requirements;
+DROP TABLE IF EXISTS training_import_batches;
+DROP TABLE IF EXISTS training_activity_types;
+DROP TABLE IF EXISTS professional_fields;

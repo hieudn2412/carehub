@@ -50,6 +50,8 @@ function LoginScreen() {
 
       if (response.data.data?.requiresFirstLoginSetup) {
         navigate(AUTH_ROUTES.emailConfirm)
+      } else {
+        navigate('/training')
       }
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Đăng nhập không thành công'))

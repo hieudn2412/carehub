@@ -1,0 +1,38 @@
+# ADR - Training Domain Open Decisions
+
+## Context
+
+Phase 01 implements the database, domain foundation, and shared security scope for Training Records Management. Phase 00 still contains business decisions that require stakeholder confirmation, so the implementation keeps those areas explicit and configurable rather than baking in unapproved rules.
+
+## Implemented Stance For Phase 01
+
+- Employees map to the existing `users` table.
+- Job position maps to the existing `positions` table.
+- Department maps to the existing `departments` table.
+- `professional_fields` is added as a foundation table because the current codebase had no equivalent table.
+- Only `APPROVED` records are counted by the compliance calculator.
+- `AT_RISK` is returned only when a requirement has `warning_threshold_hours`.
+- Direct/manual records are validated with the SRS 24-hour upper limit; legacy import can bypass that limit for later review.
+- No conversion is performed for `LESSON`, `CREDIT`, `DAY`, `MONTH`, or `YEAR`.
+- Approved records cannot be reopened by the default state machine until the business policy is confirmed.
+
+## Open Decisions
+
+1. How many hours a `LESSON` represents.
+2. Whether `CREDIT` values can be converted to hours.
+3. Whether long courses are one record or split records.
+4. Whether reviewers can approve a different hour count from the declared value.
+5. Whether evidence is required for every activity type.
+6. How the maximum two edits are counted.
+7. Whether an approved record can be reopened, and by whom.
+8. The final formula for `AT_RISK`.
+9. Whether requirement scope should use job position, professional title, or another HR dimension.
+10. How training history is attributed when an employee changes departments.
+11. How PDF moderation should work beyond the local metadata mock.
+12. Whether old Google Drive evidence must be copied into object storage.
+
+## Consequences
+
+- Phase 02+ services must keep using `TrainingAccessPolicy`, `TrainingRecordStateMachine`, and `TrainingComplianceCalculator`.
+- CRUD endpoints must not let clients set `workflowStatus`, `approvedHours`, reviewer fields, or computed compliance fields.
+- Import services must keep raw duration data until conversion rules are confirmed.

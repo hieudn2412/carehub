@@ -1,0 +1,24 @@
+package vn.vietduc.carehubbackend.training.dto.response;
+
+import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
+
+import java.time.LocalDateTime;
+import java.util.Map;
+
+public record EvidenceMetadataResponse(
+        Long id,
+        Long trainingRecordId,
+        String originalFilename,
+        String mimeType,
+        Long fileSizeBytes,
+        String checksumSha256,
+        EvidenceModerationStatus moderationStatus,
+        String moderationProvider,
+        Map<String, Object> moderationResult,
+        LocalDateTime moderationCheckedAt,
+        Long uploadedByUserId,
+        LocalDateTime uploadedAt,
+        boolean active,
+        boolean legacyEvidence
+) {
+}
