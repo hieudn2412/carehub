@@ -24,7 +24,7 @@ public record TrainingRecordFormRequest(
         @DecimalMin("0.0") BigDecimal durationValue,
         @NotNull DurationUnit durationUnit,
         @Size(max = 100) String durationRawText,
-        @DecimalMin(value = "0.0", inclusive = false) BigDecimal declaredHours,
+        @DecimalMin(value = "0.5") BigDecimal declaredHours,
         Long version
 ) {
 }

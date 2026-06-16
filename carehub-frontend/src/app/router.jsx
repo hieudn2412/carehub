@@ -12,6 +12,8 @@ import ActivityTypeDetailPage from '../features/training/pages/ActivityTypeDetai
 import ActivityTypeFormPage from '../features/training/pages/ActivityTypeFormPage.jsx'
 import ActivityTypeListPage from '../features/training/pages/ActivityTypeListPage.jsx'
 import TrainingFoundationPage from '../features/training/pages/TrainingFoundationPage.jsx'
+import TrainingRecordEvidencePage from '../features/training/pages/TrainingRecordEvidencePage.jsx'
+import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFormPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 
 function AppRouter() {
@@ -28,6 +30,9 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmReset} element={<EmailConfirmResetScreen />} />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
       <Route path="/training" element={<TrainingFoundationPage />} />
+      <Route path="/training/records/new" element={<TrainingRecordFormPage />} />
+      <Route path="/training/records/:id/edit" element={<TrainingRecordFormPage />} />
+      <Route path="/training/records/:id/evidence" element={<TrainingRecordEvidencePage />} />
       <Route path="/admin/training/activity-types" element={<ActivityTypeListPage />} />
       <Route path="/admin/training/activity-types/new" element={<ActivityTypeFormPage />} />
       <Route path="/admin/training/activity-types/:id" element={<ActivityTypeDetailPage />} />

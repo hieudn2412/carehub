@@ -80,7 +80,8 @@ public class SecurityConfig {
                                 apiPrefix + "/auth/refresh-token",
                                 apiPrefix + "/auth/logout",
                                 apiPrefix + "/auth/forgot-password",
-                                apiPrefix + "/auth/reset-password"
+                                apiPrefix + "/auth/reset-password",
+                                apiPrefix + "/training/evidence-download/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
