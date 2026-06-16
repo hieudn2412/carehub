@@ -6,5 +6,6 @@ export const AUTH_ROUTES = {
   emailConfirmReset: '/auth/email-confirm-reset',
   emailConfirmSuccess: '/auth/email-confirm-success',
   otp: '/auth/otp',
+  staffDashboard: '/staff/dashboard',
   resetPassword: '/auth/reset-password',
 }
