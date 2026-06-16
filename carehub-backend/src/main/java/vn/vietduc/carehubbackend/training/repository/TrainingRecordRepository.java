@@ -19,6 +19,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     List<TrainingRecord> findByWorkflowStatus(TrainingRecordStatus status);
 
+    long countByActivityType_Id(Long activityTypeId);
+
+    Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
+
     @Query("""
             SELECT COALESCE(SUM(r.approvedHours), 0)
             FROM TrainingRecord r

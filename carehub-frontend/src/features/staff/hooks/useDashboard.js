@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
 
 // Dữ liệu giả lập (Mock data) khớp chính xác với thiết kế mockup
 const MOCK_DASHBOARD_DATA = {
@@ -30,7 +28,7 @@ const MOCK_DASHBOARD_DATA = {
 export function useDashboard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error] = useState(null)
 
   useEffect(() => {
     // ⚠️ LƯU Ý: Hiện tại Backend chưa viết các API này,

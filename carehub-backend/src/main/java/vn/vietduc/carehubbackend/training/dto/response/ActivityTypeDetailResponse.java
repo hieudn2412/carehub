@@ -4,6 +4,7 @@ import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ActivityTypeDetailResponse(
         Long id,
@@ -15,6 +16,9 @@ public record ActivityTypeDetailResponse(
         BigDecimal maxCreditedHoursPerRecord,
         int sortOrder,
         boolean active,
+        long usageCount,
+        List<ActivityTypeRecentRecordResponse> recentRecords,
+        List<ActivityTypeAuditResponse> auditTimeline,
         Long createdByUserId,
         Long updatedByUserId,
         LocalDateTime createdAt,
