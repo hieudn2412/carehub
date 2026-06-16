@@ -5,5 +5,11 @@ export function getApiErrorMessage(error, fallbackMessage) {
     return responseData.data.join(', ')
   }
 
-  return responseData?.message || fallbackMessage
+  if (Array.isArray(responseData?.data?.fieldErrors) && responseData.data.fieldErrors.length > 0) {
+    return responseData.data.fieldErrors
+      .map((fieldError) => `${fieldError.field}: ${fieldError.message}`)
+      .join(', ')
+  }
+
+  return responseData?.message || error?.message || fallbackMessage
 }

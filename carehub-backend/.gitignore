@@ -4,6 +4,28 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+### Environment variables and secrets ###
+.env
+.env.*
+*.env
+env.properties
+.env.properties
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+
+### Logs ###
+*.log
+logs/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
 ### STS ###
 .apt_generated
 .classpath
@@ -33,5 +55,16 @@ build/
 .vscode/
 
 ### Environment ###
-.env.properties
+compose-config.txt
+javaprops.txt
+postgres-env.txt
+postgres-logs.txt
 **/node_modules/
+
+### Runtime dumps / temp ###
+*.hprof
+hs_err_pid*
+replay_pid*
+.attach_pid*
+*.tmp
+*.temp

@@ -50,6 +50,8 @@ function LoginScreen() {
 
       if (response.data.data?.requiresFirstLoginSetup) {
         navigate(AUTH_ROUTES.emailConfirm)
+      } else {
+        navigate('/training')
       }
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Đăng nhập không thành công'))
@@ -75,6 +77,7 @@ function LoginScreen() {
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <FormField
+            autoComplete="username"
             error={errorMessage && !employeeCode.trim() ? errorMessage : ''}
             icon={<Icon name="user" />}
             label="Mã nhân viên"
@@ -83,6 +86,7 @@ function LoginScreen() {
             value={employeeCode}
           />
           <FormField
+            autoComplete="current-password"
             error={errorMessage && employeeCode.trim() ? errorMessage : ''}
             icon={<Icon name="lock" />}
             label="Mật khẩu"

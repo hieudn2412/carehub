@@ -3,7 +3,7 @@ server:
 
 app:
   import:
-    default-password: ${DEFAULT_PASSWORD}
+    default-password: ${DEFAULT_PASSWORD:ChangeMe123@}
 
   api-prefix: /api/v1
   cors:
@@ -16,7 +16,7 @@ app:
     access-token-expiration-minutes: 15
     refresh-token-expiration-days: 7
   seed:
-    enabled: true
+    enabled: ${APP_SEED_ENABLED:true}
     admin:
       employee-code: ${ADMIN_EMPLOYEE_CODE}
       email: ${ADMIN_EMAIL}
@@ -30,17 +30,28 @@ spring:
       max-request-size: 20MB
 
   config:
-    import: optional:file:.env.properties
+    import:
+      - optional:file:.env.properties
+      - optional:file:env.properties
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
 
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   datasource:
-    url: jdbc:postgresql://localhost:5432/carehub
-    username: postgres
-    password: root123
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/carehub}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root123}
+    hikari:
+      data-source-properties:
+        TimeZone: Asia/Ho_Chi_Minh
 
   jpa:
     hibernate:
@@ -55,8 +66,8 @@ spring:
         batch_versioned_data: true
 
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
 
