@@ -1,0 +1,297 @@
+openapi: 3.0.3
+info:
+  title: CareHub Training Records Phase 04 API
+  version: phase04
+paths:
+  /api/v1/training/records:
+    get:
+      summary: List training records for the current actor scope
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: activityTypeId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: professionalFieldId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: workflowStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrainingRecordStatus'
+        - name: hasEvidence
+          in: query
+          schema:
+            type: boolean
+        - name: moderationStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/EvidenceModerationStatus'
+        - name: employeeId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: departmentId
+          in: query
+          schema:
+            type: integer
+            format: int64
+        - name: sourceType
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrainingSourceType'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            example: updatedAt,desc
+      responses:
+        '200':
+          description: Paged records visible to the current actor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingRecordListApiResponse'
+        '400':
+          description: Invalid filter or unsupported sort
+        '401':
+          description: Missing or invalid token
+  /api/v1/training/records/{id}:
+    get:
+      summary: Get a training record detail by id
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Record detail including active evidence metadata, reviews, and change history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingRecordDetailApiResponse'
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Record is outside actor scope
+        '404':
+          description: Record does not exist
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TrainingRecordStatus:
+      type: string
+      enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, CANCELLED]
+    EvidenceModerationStatus:
+      type: string
+      enum: [NOT_REQUESTED, PENDING, PASSED, FAILED, ERROR]
+    TrainingSourceType:
+      type: string
+      enum: [MANUAL, LEGACY_IMPORT, ADMIN_IMPORT]
+    ApiEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    PageTrainingRecordList:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingRecordListItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        sort:
+          type: array
+          items:
+            type: string
+    TrainingRecordListApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PageTrainingRecordList'
+    TrainingRecordDetailApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/TrainingRecordDetail'
+    TrainingRecordListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        employeeId:
+          type: integer
+          format: int64
+        employeeCode:
+          type: string
+        employeeName:
+          type: string
+        employeeDepartmentIdSnapshot:
+          type: integer
+          format: int64
+        employeeDepartmentNameSnapshot:
+          type: string
+        activityTypeId:
+          type: integer
+          format: int64
+        activityTypeName:
+          type: string
+        professionalFieldId:
+          type: integer
+          format: int64
+          nullable: true
+        professionalFieldName:
+          type: string
+          nullable: true
+        title:
+          type: string
+        provider:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        declaredHours:
+          type: number
+        approvedHours:
+          type: number
+          nullable: true
+        workflowStatus:
+          $ref: '#/components/schemas/TrainingRecordStatus'
+        sourceType:
+          $ref: '#/components/schemas/TrainingSourceType'
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        evidenceCount:
+          type: integer
+          format: int64
+        passedEvidenceCount:
+          type: integer
+          format: int64
+        failedEvidenceCount:
+          type: integer
+          format: int64
+        version:
+          type: integer
+          format: int64
+    TrainingRecordDetail:
+      allOf:
+        - $ref: '#/components/schemas/TrainingRecordListItem'
+        - type: object
+          properties:
+            description:
+              type: string
+              nullable: true
+            startTime:
+              type: string
+              nullable: true
+            endTime:
+              type: string
+              nullable: true
+            durationValue:
+              type: number
+              nullable: true
+            durationUnit:
+              type: string
+            durationRawText:
+              type: string
+              nullable: true
+            editCount:
+              type: integer
+            latestReviewedByUserId:
+              type: integer
+              format: int64
+              nullable: true
+            latestReviewedAt:
+              type: string
+              format: date-time
+              nullable: true
+            latestRejectionReason:
+              type: string
+              nullable: true
+            sourceReference:
+              type: string
+              nullable: true
+            sourceSubmittedAt:
+              type: string
+              format: date-time
+              nullable: true
+            evidences:
+              type: array
+              items:
+                type: object
+            reviewTimeline:
+              type: array
+              items:
+                type: object
+            changeHistory:
+              type: array
+              items:
+                type: object

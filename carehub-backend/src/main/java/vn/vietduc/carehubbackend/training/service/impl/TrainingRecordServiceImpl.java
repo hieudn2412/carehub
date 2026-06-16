@@ -2,17 +2,24 @@ package vn.vietduc.carehubbackend.training.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
+import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSearchRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSubmitRequest;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingActivityTypeOptionResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingProfessionalFieldOptionResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordDetailResponse;
+import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordOptionsResponse;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
@@ -26,7 +33,9 @@ import vn.vietduc.carehubbackend.training.mapper.TrainingRecordMapper;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
+import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
+import vn.vietduc.carehubbackend.training.repository.TrainingRecordReviewRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingAuditService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
@@ -48,6 +57,8 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final TrainingActivityTypeRepository activityTypeRepository;
     private final ProfessionalFieldRepository professionalFieldRepository;
     private final TrainingEvidenceFileRepository evidenceFileRepository;
+    private final TrainingRecordReviewRepository reviewRepository;
+    private final TrainingRecordChangeLogRepository changeLogRepository;
     private final UserRepository userRepository;
     private final TrainingRecordMapper mapper;
     private final TrainingAccessPolicy accessPolicy;
@@ -57,6 +68,47 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
 
     @Value("${app.training.records.max-edit-count:2}")
     private int maxEditCount;
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TrainingRecordListResponse> search(TrainingRecordSearchRequest request, Pageable pageable) {
+        TrainingRecordSearchRequest criteria = request == null
+                ? new TrainingRecordSearchRequest(null, null, null, null, null, null, null, null, null, null, null)
+                : request;
+        if (criteria.dateFrom() != null && criteria.dateTo() != null && criteria.dateTo().isBefore(criteria.dateFrom())) {
+            throw new BadRequestException("dateTo must be greater than or equal to dateFrom");
+        }
+
+        User actor = accessPolicy.currentActor();
+        Collection<String> roles = accessPolicy.currentRoleCodes();
+        Long scopeEmployeeId = null;
+        Long scopeDepartmentId = null;
+
+        if (roles.contains(TrainingAccessPolicy.ROLE_ADMIN) || roles.contains(TrainingAccessPolicy.ROLE_SYSTEM_JOB)) {
+            scopeDepartmentId = null;
+        } else if (roles.contains(TrainingAccessPolicy.ROLE_MANAGER)) {
+            scopeDepartmentId = actor.getDepartment() == null ? -1L : actor.getDepartment().getId();
+        } else {
+            scopeEmployeeId = actor.getId();
+        }
+
+        return recordRepository.searchRecords(
+                scopeEmployeeId,
+                scopeDepartmentId,
+                normalizeKeyword(criteria.keyword()),
+                criteria.dateFrom(),
+                criteria.dateTo(),
+                criteria.activityTypeId(),
+                criteria.professionalFieldId(),
+                criteria.workflowStatus(),
+                criteria.hasEvidence(),
+                criteria.moderationStatus(),
+                criteria.employeeId(),
+                criteria.departmentId(),
+                criteria.sourceType(),
+                normalizePageable(pageable)
+        );
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -257,7 +309,47 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
 
     private TrainingRecordDetailResponse detailResponse(TrainingRecord record, long duplicateCount) {
         List<TrainingEvidenceFile> evidences = evidenceFileRepository.findByTrainingRecord_IdAndActiveTrue(record.getId());
-        return mapper.toDetailResponse(record, evidences, duplicateCount);
+        return mapper.toDetailResponse(
+                record,
+                evidences,
+                reviewRepository.findByTrainingRecord_IdOrderByReviewedAtDesc(record.getId()),
+                changeLogRepository.findByTrainingRecord_IdOrderByChangedAtDesc(record.getId()),
+                duplicateCount
+        );
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return keyword.trim();
+    }
+
+    private Pageable normalizePageable(Pageable pageable) {
+        int page = pageable == null ? 0 : Math.max(pageable.getPageNumber(), 0);
+        int size = pageable == null ? 20 : Math.min(Math.max(pageable.getPageSize(), 1), 100);
+        Sort sort = pageable == null || pageable.getSort().isUnsorted()
+                ? Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("startDate"), Sort.Order.desc("id"))
+                : Sort.by(pageable.getSort().stream().map(this::normalizeOrder).toList());
+        return PageRequest.of(page, size, sort);
+    }
+
+    private Sort.Order normalizeOrder(Sort.Order order) {
+        Map<String, String> allowedSorts = Map.ofEntries(
+                Map.entry("id", "id"),
+                Map.entry("title", "title"),
+                Map.entry("startDate", "startDate"),
+                Map.entry("submittedAt", "submittedAt"),
+                Map.entry("updatedAt", "updatedAt"),
+                Map.entry("declaredHours", "declaredHours"),
+                Map.entry("approvedHours", "approvedHours"),
+                Map.entry("workflowStatus", "workflowStatus")
+        );
+        String property = allowedSorts.get(order.getProperty());
+        if (property == null) {
+            throw new BadRequestException("Unsupported sort property: " + order.getProperty());
+        }
+        return new Sort.Order(order.getDirection(), property);
     }
 
     private long duplicateCount(Long employeeId, TrainingRecordFormRequest request, Long excludeId) {
