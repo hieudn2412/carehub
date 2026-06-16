@@ -23,6 +23,7 @@ public class DataSeeder implements CommandLineRunner {
     private static final String ADMIN_ROLE_CODE = "ADMIN";
     private static final String USER_ROLE_CODE = "USER";
     private static final String MANAGER_ROLE_CODE = "MANAGER";
+    private static final String SYSTEM_JOB_ROLE_CODE = "SYSTEM_JOB";
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -54,6 +55,7 @@ public class DataSeeder implements CommandLineRunner {
         Role adminRole = seedRole(ADMIN_ROLE_CODE, "Administrator");
         Role userRole = seedRole(USER_ROLE_CODE, "User");
         Role managerRole = seedRole(MANAGER_ROLE_CODE, "Manager");
+        Role systemJobRole = seedRole(SYSTEM_JOB_ROLE_CODE, "System Job");
         seedAdminUser(adminRole);
     }
 

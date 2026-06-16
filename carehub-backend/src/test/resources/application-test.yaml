@@ -1,0 +1,49 @@
+server:
+  port: 0
+
+app:
+  import:
+    default-password: test-password
+  api-prefix: /api/v1
+  cors:
+    allowed-origin-patterns:
+      - http://localhost:*
+  jwt:
+    secret: test-secret-key-test-secret-key-123456
+    access-token-expiration-minutes: 15
+    refresh-token-expiration-days: 7
+  seed:
+    enabled: false
+    admin:
+      employee-code: ADMIN
+      email: admin@example.com
+      password: admin-password
+      name: Admin
+
+spring:
+  flyway:
+    enabled: false
+  datasource:
+    url: jdbc:h2:mem:carehub-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        auto-startup: false
+      direct:
+        auto-startup: false
+  mail:
+    host: localhost
+    port: 2525
+    username: test
+    password: test
