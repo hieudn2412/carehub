@@ -15,7 +15,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
-import vn.vietduc.carehubbackend.user.entity.BaseEntity;
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.LocalDateTime;

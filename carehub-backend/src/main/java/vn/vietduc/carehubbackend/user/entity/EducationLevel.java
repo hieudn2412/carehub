@@ -1,5 +1,7 @@
 package vn.vietduc.carehubbackend.user.entity;
 
+import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -19,6 +21,8 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "education_level")
 public class EducationLevel extends BaseEntity {
+    private String educationCode;
+
     private String name;
 
     @OneToMany(mappedBy = "educationLevel")

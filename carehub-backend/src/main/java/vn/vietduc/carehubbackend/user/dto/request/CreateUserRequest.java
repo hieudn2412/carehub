@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.user.dto.request;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,7 +15,7 @@ public class CreateUserRequest {
     @NotBlank(message = "Employee code is required")
     private String employeeCode;
 
-    @NotBlank(message = "Department id is required")
+    @NotNull(message = "Department id is required")
     private Long departmentId;
 
     @NotBlank(message = "Email is required")

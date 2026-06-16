@@ -93,20 +93,20 @@ class TrainingActivityTypeControllerIntegrationTest {
 
         mockMvc.perform(post("/api/v1/training/activity-types")
                         .with(adminJwt())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(form("cme", "Duplicate", BigDecimal.valueOf(1)))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(form("cme", "Duplicate", BigDecimal.valueOf(1)))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.code", is("CONFLICT")));
+                .andExpect(jsonPath("$.error_code", is("SYS_409")));
     }
 
     @Test
     void invalidMaxHoursReturnsUnprocessableEntity() throws Exception {
         mockMvc.perform(post("/api/v1/training/activity-types")
                         .with(adminJwt())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(form("BAD", "Bad", BigDecimal.ZERO))))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(form("BAD", "Bad", BigDecimal.ZERO))))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.data.code", is("VALIDATION_FAILED")));
+                .andExpect(jsonPath("$.error_code", is("VAL_001")));
     }
 
     @Test
@@ -183,10 +183,10 @@ class TrainingActivityTypeControllerIntegrationTest {
 
         mockMvc.perform(put("/api/v1/training/activity-types/{id}", activityType.getId())
                         .with(adminJwt())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.message", containsString("updated by another user")));
+                .andExpect(jsonPath("$.message", containsString("updated by another user")));
     }
 
     @Test

@@ -16,5 +16,10 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByEmail(String email);
     boolean existsByEmployeeCodeAndIsDeletedFalse(String employeeCode);
     boolean existsByEmailAndIsDeletedFalse(String email);
+    boolean existsByEmployeeCodeAndIsDeletedFalseAndIdNot(String employeeCode, Long id);
+    boolean existsByEmailAndIsDeletedFalseAndIdNot(String email, Long id);
+    boolean existsByDepartment_IdAndIsDeletedFalse(Long departmentId);
+    boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
+    boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
 }

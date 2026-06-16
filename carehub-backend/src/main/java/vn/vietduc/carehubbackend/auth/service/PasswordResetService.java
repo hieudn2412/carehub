@@ -1,7 +1,7 @@
 package vn.vietduc.carehubbackend.auth.service;
 
-import vn.vietduc.carehubbackend.user.dto.request.ForgotPasswordRequest;
-import vn.vietduc.carehubbackend.user.dto.request.ResetPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.ForgotPasswordRequest;
+import vn.vietduc.carehubbackend.auth.dto.request.ResetPasswordRequest;
 
 public interface PasswordResetService {
     public void forgotPassword(ForgotPasswordRequest request);

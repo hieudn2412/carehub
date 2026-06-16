@@ -1,4 +1,4 @@
-package vn.vietduc.carehubbackend.user.entity;
+package vn.vietduc.carehubbackend.common.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

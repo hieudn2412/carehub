@@ -1,4 +1,4 @@
-package vn.vietduc.carehubbackend.imports.user;
+package vn.vietduc.carehubbackend.imports.user.dto;
 
 import lombok.Builder;
 
