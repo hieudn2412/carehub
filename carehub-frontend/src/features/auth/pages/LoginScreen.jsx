@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import { authApi } from '../api/authApi.js'
 import { getApiErrorMessage } from '../utils/apiError.js'
 import { useAuthTokens } from '../hooks/useAuthTokens.js'
+import { getPostLoginRoute } from '../utils/authNavigation.js'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
@@ -14,6 +15,7 @@ const REMEMBERED_EMPLOYEE_CODE_KEY = 'carehub.rememberedEmployeeCode'
 
 function LoginScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [employeeCode, setEmployeeCode] = useState(
     () => window.localStorage.getItem(REMEMBERED_EMPLOYEE_CODE_KEY) ?? '',
   )
@@ -40,7 +42,8 @@ function LoginScreen() {
         employeeCode: employeeCode.trim(),
         password,
       })
-      saveTokens(response.data.data)
+      const authData = response.data.data
+      saveTokens(authData)
 
       if (rememberMe) {
         window.localStorage.setItem(REMEMBERED_EMPLOYEE_CODE_KEY, employeeCode.trim())
@@ -48,10 +51,10 @@ function LoginScreen() {
         window.localStorage.removeItem(REMEMBERED_EMPLOYEE_CODE_KEY)
       }
 
-      if (response.data.data?.requiresFirstLoginSetup) {
-        navigate(AUTH_ROUTES.emailConfirm)
+      if (authData?.requiresFirstLoginSetup) {
+        navigate(AUTH_ROUTES.emailConfirm, { replace: true })
       } else {
-        navigate('/training')
+        navigate(getPostLoginRoute(authData?.accessToken, location.state?.from), { replace: true })
       }
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Đăng nhập không thành công'))

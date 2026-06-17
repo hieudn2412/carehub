@@ -9,6 +9,8 @@ import {
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
+import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
+import { logoutUser } from '../../auth/services/logoutUser.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
 
@@ -45,9 +47,9 @@ const navSections = [
 function Sidebar() {
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    // xử lý logout
-    navigate('/login')
+  const handleLogout = async () => {
+    await logoutUser()
+    navigate(AUTH_ROUTES.login, { replace: true })
   }
 
   return (
