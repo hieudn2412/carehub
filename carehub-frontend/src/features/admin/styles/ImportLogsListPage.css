@@ -1,0 +1,236 @@
+/* ── Import Logs List Page Styles ── */
+.il-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.il-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.il-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.il-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Filter Bar */
+.il-filter-bar {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-wrap: wrap;
+}
+
+.il-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.il-filter-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.il-filter-select,
+.il-filter-date {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  min-width: 170px;
+  height: 38px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.il-filter-select {
+  padding-right: 32px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
+.il-filter-select:focus,
+.il-filter-date:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.il-results-count {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+  margin-left: auto;
+  align-self: center;
+  white-space: nowrap;
+  padding-top: 14px;
+}
+
+/* Table Card */
+.il-table-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.il-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.il-table th {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.il-table td {
+  padding: 14px 18px;
+  color: #334155;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.il-table tr:last-child td {
+  border-bottom: none;
+}
+
+.il-table tr:hover td {
+  background: #f8fafc;
+}
+
+.il-source-file {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Failed Count Colors */
+.il-failed-count--zero {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.il-failed-count--more {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Badges for Status */
+.il-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.il-badge--success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.il-badge--partial {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.il-badge--failed {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.il-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Pagination */
+.il-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+.il-page-nums {
+  display: flex;
+  gap: 6px;
+}
+
+.il-pn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.il-pn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.il-pn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.il-pn--active {
+  background: #1aaa84;
+  color: #fff;
+  border-color: #1aaa84;
+}
+
+.il-pn--active:hover {
+  background: #158f6e;
+  border-color: #158f6e;
+}

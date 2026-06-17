@@ -1,0 +1,12 @@
+/* AdminLayout.css */
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f6fa;
+}
+
+.admin-layout__main {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
