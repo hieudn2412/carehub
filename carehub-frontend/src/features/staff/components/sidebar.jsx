@@ -23,20 +23,20 @@ const navSections = [
     label: 'Đào tạo',
     items: [
       { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/staff/training' },
-      { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/training/status' },
+      { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/staff/training-status' },
     ],
   },
   {
     label: 'Kiểm tra',
     items: [
       { icon: <EditOutlined />, label: 'Làm bài thi', path: '/exam/take' },
-      { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/exam/history' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
     ],
   },
   {
     label: 'Tài khoản',
     items: [
-      { icon: <BellOutlined />, label: 'Thông báo', path: '/account/notifications' },
+      { icon: <BellOutlined />, label: 'Thông báo', path: '/staff/notifications' },
       { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/staff/profile' },
     ],
   },

@@ -18,10 +18,13 @@ import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFor
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
+import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
 import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
 import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
+import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
+import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
 
 function AppRouter() {
   return (
@@ -55,10 +58,13 @@ function AppRouter() {
       <Route path="/staff/training/:id" element={<TrainingHoursDetailScreen />} />
       <Route path="/staff/training/:id/edit" element={<TrainingHoursFormScreen />} />
       <Route path="/staff/training/:id/evidence" element={<TrainingHoursEvidenceScreen />} />
+      <Route path="/staff/training-status" element={<TrainingStatusScreen />} />
+      <Route path="/staff/exam/history" element={<ExamHistoryScreen />} />
 
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={<StaffDashboard />} />
       <Route path="/staff/profile" element={<ProfileStaffScreen />} />
+      <Route path="/staff/notifications" element={<NotificationsStaffScreen />} />
       <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />
     </Routes>
   )
