@@ -10,8 +10,9 @@ export function useNotifications() {
   useEffect(() => {
     const token = tokenStorage.getAccessToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const params = { q: '%' }
 
-    httpClient.get('/me/notifications', { headers })
+    httpClient.get('/me/notifications', { headers, params })
       .then(res => {
         const content = res.data?.data?.content || []
         const mapped = content.map(n => {
