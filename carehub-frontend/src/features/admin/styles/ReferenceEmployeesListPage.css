@@ -1,0 +1,234 @@
+/* ── Reference Employees List Page Styles ── */
+.rel-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rel-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.rel-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.rel-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Filter Bar Multi-row layout */
+.rel-filter-bar {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.rel-filter-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.rel-search-wrapper {
+  position: relative;
+  min-width: 250px;
+  flex: 1;
+  max-width: 300px;
+}
+
+.rel-search-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px 8px 36px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  height: 38px;
+}
+
+.rel-search-input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.rel-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.rel-filter-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  min-width: 140px;
+  height: 38px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  box-sizing: border-box;
+}
+
+.rel-filter-select:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.rel-results-count {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-left: auto;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+/* Table Card */
+.rel-table-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.rel-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rel-table th {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.rel-table td {
+  padding: 14px 18px;
+  color: #334155;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.rel-table tr:last-child td {
+  border-bottom: none;
+}
+
+.rel-table tr:hover td {
+  background: #f8fafc;
+}
+
+.rel-emp-code {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Detail Button */
+.rel-btn-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  color: #1aaa84;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.rel-btn-detail:hover {
+  background: #f0fdf4;
+  border-color: #1aaa84;
+}
+
+/* Pagination */
+.rel-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+.rel-page-nums {
+  display: flex;
+  gap: 6px;
+}
+
+.rel-pn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rel-pn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.rel-pn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.rel-pn--active {
+  background: #1aaa84;
+  color: #fff;
+  border-color: #1aaa84;
+}
+
+.rel-pn--active:hover {
+  background: #158f6e;
+  border-color: #158f6e;
+}

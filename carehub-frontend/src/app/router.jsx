@@ -25,6 +25,15 @@ import TrainingHoursEvidenceScreen from '../features/staff/pages/training/Traini
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
+import AdminDashboard from '../features/admin/pages/AdminDashboard.jsx'
+import AdminAccountsScreen from '../features/admin/pages/AdminAccountsScreen.jsx'
+import SystemLogsListScreen from '../features/admin/pages/SystemLogsListScreen.jsx'
+import SystemLogDetailScreen from '../features/admin/pages/SystemLogDetailScreen.jsx'
+import ImportLogsListPage from '../features/admin/pages/ImportLogsListPage.jsx'
+import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.jsx'
+import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
+import ReferenceEmployeeDetailPage from '../features/admin/pages/ReferenceEmployeeDetailPage.jsx'
+import ReferenceDepartmentsListPage from '../features/admin/pages/ReferenceDepartmentsListPage.jsx'
 
 function AppRouter() {
   return (
@@ -41,6 +50,15 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
       
       {/* Admin / General Training routes */}
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/accounts" element={<AdminAccountsScreen />} />
+      <Route path="/admin/system-logs" element={<SystemLogsListScreen />} />
+      <Route path="/admin/system-logs/:id" element={<SystemLogDetailScreen />} />
+      <Route path="/admin/system/import-logs" element={<ImportLogsListPage />} />
+      <Route path="/admin/system-settings" element= {<SystemSettingsScreen />} />
+      <Route path="/admin/reference/employees" element={<ReferenceEmployeesListPage />} />
+      <Route path="/admin/reference/employees/:id" element={<ReferenceEmployeeDetailPage />} />
+      <Route path="/admin/reference/departments" element={<ReferenceDepartmentsListPage />} />
       <Route path="/training" element={<TrainingFoundationPage />} />
       <Route path="/training/records" element={<TrainingRecordListPage />} />
       <Route path="/training/records/new" element={<TrainingRecordFormPage />} />

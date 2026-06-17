@@ -1,0 +1,118 @@
+/* ── Reference Employee Detail Page Styles ── */
+.red-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.red-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.red-title-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.red-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.red-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.red-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.red-back-btn:hover {
+  background: #f8fafc;
+  color: #1aaa84;
+  border-color: #1aaa84;
+}
+
+/* Detail Card */
+.red-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.red-card-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+}
+
+.red-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.red-card-subtitle {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* 2-Column Grid Layout */
+.red-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.red-grid-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.red-item {
+  display: flex;
+  align-items: center;
+  font-size: 14.5px;
+  border-bottom: 1px dashed #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.red-label {
+  width: 140px;
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.red-value {
+  color: #0f172a;
+  font-weight: 600;
+}

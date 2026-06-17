@@ -1,0 +1,267 @@
+/* ── Admin Header Styles ── */
+.dashboard-header {
+  height: 64px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.dashboard-header__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.dashboard-header__right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dashboard-header__notify {
+  font-size: 18px;
+  color: #555;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-header__notify-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  background: #c0392b;
+  border-radius: 50%;
+}
+
+.dashboard-header__profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-header__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1aaa84;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dashboard-header__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.dashboard-header__role {
+  font-size: 11px;
+  color: #888;
+}
+
+/* ── Notification Popover ── */
+.dashboard-header__notify-container {
+  position: relative;
+}
+
+.notify-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 12px;
+  width: 380px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #eaeaea;
+  z-index: 100;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.notify-popover__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.notify-popover__title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notify-popover__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.notify-popover__mark-read {
+  font-size: 12px;
+  color: #555;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.notify-popover__mark-read:hover {
+  color: #1aaa84;
+}
+
+.notify-popover__subtitle {
+  font-size: 12px;
+  color: #666;
+  margin: 0;
+}
+
+.notify-popover__subtitle span {
+  color: #1aaa84;
+  font-weight: 600;
+}
+
+.notify-popover__body {
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 4px;
+}
+
+.notify-popover__body::-webkit-scrollbar {
+  width: 4px;
+}
+.notify-popover__body::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 4px;
+}
+
+.notify-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notify-group__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px;
+}
+
+.notify-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.notify-item:hover {
+  background: #f9f9f9;
+}
+
+.notify-item--unread::before {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  background: #c0392b;
+  border-radius: 50%;
+}
+
+.notify-item__icon-wrapper {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.notify-item__icon-wrapper--danger {
+  background: #fff0f0;
+  color: #c0392b;
+  border: 1px solid #f5c6c6;
+}
+
+.notify-item__icon-wrapper--warning {
+  background: #fffbf0;
+  color: #b7791f;
+  border: 1px solid #f9e4a0;
+}
+
+.notify-item__icon-wrapper--success {
+  background: #e8f5f0;
+  color: #0f6e56;
+  border: 1px solid #ccece2;
+}
+
+.notify-item__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+}
+
+.notify-item__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.notify-item__desc {
+  font-size: 12px;
+  color: #555;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.notify-item__desc span.highlight-red {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.notify-item__footer {
+  font-size: 11px;
+  color: #aaa;
+  margin: 4px 0 0;
+}

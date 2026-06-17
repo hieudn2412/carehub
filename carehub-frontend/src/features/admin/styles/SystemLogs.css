@@ -1,0 +1,361 @@
+/* ── System Logs Screen Styles ── */
+.log-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.log-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.log-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.log-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Filter Bar */
+.log-filter-bar {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-wrap: wrap;
+}
+
+.log-search {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.log-search-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px 9px 38px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.log-search-input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.log-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.log-filter-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 32px 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  min-width: 160px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
+.log-filter-select:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.log-results-count {
+  font-size: 13px;
+  color: #64748b;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Table Card */
+.log-table-card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.log-table th {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.log-table td {
+  padding: 14px 18px;
+  color: #334155;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.log-table tr:last-child td {
+  border-bottom: none;
+}
+
+.log-table tr:hover td {
+  background: #f8fafc;
+}
+
+.log-time-col {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Actions */
+.log-btn-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.log-btn-detail:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1aaa84;
+}
+
+/* Pagination */
+.log-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  font-size: 13px;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+.log-page-nums {
+  display: flex;
+  gap: 6px;
+}
+
+.log-pn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.log-pn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.log-pn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.log-pn--active {
+  background: #1aaa84;
+  color: #fff;
+  border-color: #1aaa84;
+}
+
+.log-pn--active:hover {
+  background: #158f6e;
+  border-color: #158f6e;
+}
+
+/* Action Badges in list */
+.log-action-badge {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.log-action-badge--edit {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.log-action-badge--login {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.log-action-badge--config {
+  background: #faf5ff;
+  color: #8b5cf6;
+}
+
+.log-action-badge--upload {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.log-action-badge--other {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+/* Detail Form Styling (as in mockup) */
+.log-detail-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.log-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 48px;
+  row-gap: 24px;
+}
+
+.log-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-detail-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.log-detail-value-box {
+  border: 1px solid #a8a29e;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #fff;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  font-size: 14.5px;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.log-action-pill {
+  display: inline-flex;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.log-action-pill--edit {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.log-action-pill--login {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.log-action-pill--config {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.log-action-pill--upload {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.log-action-pill--other {
+  background: #eceff1;
+  color: #455a64;
+}
+
+/* Back button in details screen */
+.log-back-bar {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.log-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.log-btn-back:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
