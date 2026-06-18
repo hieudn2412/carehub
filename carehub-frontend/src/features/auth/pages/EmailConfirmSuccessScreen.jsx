@@ -1,19 +1,35 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import Icon from '../../../shared/components/Icon.jsx'
+import { tokenStorage } from '../services/tokenStorage.js'
+import { getDefaultAuthenticatedRoute } from '../utils/authNavigation.js'
+import { getRolesFromAccessToken } from '../utils/jwt.js'
 import '../../../styles/EmailConfirmScreen.css'
 
 function EmailConfirmSuccessScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
+    if (!location.state?.completed) {
+      const accessToken = tokenStorage.getAccessToken()
+      const nextRoute = accessToken
+        ? getDefaultAuthenticatedRoute(getRolesFromAccessToken(accessToken))
+        : AUTH_ROUTES.login
+
+      navigate(nextRoute, { replace: true })
+      return undefined
+    }
+
+    tokenStorage.clear()
+
     const timer = setTimeout(() => {
-      navigate(AUTH_ROUTES.login)
+      navigate(AUTH_ROUTES.login, { replace: true })
     }, 3000)
 
     return () => clearTimeout(timer)
-  }, [navigate])
+  }, [location.state?.completed, navigate])
 
   return (
     <div className="email-confirm-page modal-bg">

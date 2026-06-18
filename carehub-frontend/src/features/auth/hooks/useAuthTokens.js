@@ -12,6 +12,7 @@ export function useAuthTokens() {
 
     tokenStorage.setAccessToken(accessToken)
     tokenStorage.setRefreshToken(refreshToken)
+    tokenStorage.setRequiresFirstLoginSetup(Boolean(tokens?.requiresFirstLoginSetup))
   }
 
   return {

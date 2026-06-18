@@ -11,13 +11,12 @@ import {
   CheckSquareOutlined,
   OrderedListOutlined,
   SlidersOutlined,
-  ClockCircleOutlined,
-  AimOutlined,
-  AppstoreOutlined,
   BellOutlined,
   MailOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
+import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
+import { logoutUser } from '../../auth/services/logoutUser.js'
 import logo from '../../../assets/logo.png'
 import '../styles/AdminSidebar.css'
 
@@ -71,9 +70,9 @@ const navSections = [
 function AdminSidebar() {
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    localStorage.removeItem('token')
-    navigate('/login')
+  const handleLogout = async () => {
+    await logoutUser()
+    navigate(AUTH_ROUTES.login, { replace: true })
   }
 
   return (

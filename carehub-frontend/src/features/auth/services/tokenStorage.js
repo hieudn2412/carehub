@@ -1,9 +1,14 @@
 const ACCESS_TOKEN_KEY = 'carehub.accessToken'
 const REFRESH_TOKEN_KEY = 'carehub.refreshToken'
+const REQUIRES_FIRST_LOGIN_SETUP_KEY = 'carehub.requiresFirstLoginSetup'
 
 export const tokenStorage = {
   getAccessToken() {
     return window.sessionStorage.getItem(ACCESS_TOKEN_KEY)
+  },
+
+  hasAccessToken() {
+    return Boolean(this.getAccessToken())
   },
 
   setAccessToken(token) {
@@ -28,8 +33,18 @@ export const tokenStorage = {
     window.sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
   },
 
+  getRequiresFirstLoginSetup() {
+    return window.sessionStorage.getItem(REQUIRES_FIRST_LOGIN_SETUP_KEY) === 'true'
+  },
+
+  setRequiresFirstLoginSetup(value) {
+    window.sessionStorage.setItem(REQUIRES_FIRST_LOGIN_SETUP_KEY, value ? 'true' : 'false')
+  },
+
   clear() {
     window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
     window.sessionStorage.removeItem(REFRESH_TOKEN_KEY)
+    window.sessionStorage.removeItem(REQUIRES_FIRST_LOGIN_SETUP_KEY)
+    window.localStorage.removeItem('token')
   },
 }
