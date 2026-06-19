@@ -9,6 +9,8 @@ import {
   UserOutlined,
   LogoutOutlined,
 } from '@ant-design/icons'
+import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
+import { logoutUser } from '../../auth/services/logoutUser.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
 
@@ -22,22 +24,22 @@ const navSections = [
   {
     label: 'Đào tạo',
     items: [
-      { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/training/hours' },
-      { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/training/status' },
+      { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/staff/training' },
+      { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/staff/training-status' },
     ],
   },
   {
     label: 'Kiểm tra',
     items: [
       { icon: <EditOutlined />, label: 'Làm bài thi', path: '/exam/take' },
-      { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/exam/history' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
     ],
   },
   {
     label: 'Tài khoản',
     items: [
-      { icon: <BellOutlined />, label: 'Thông báo', path: '/account/notifications' },
-      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/account/profile' },
+      { icon: <BellOutlined />, label: 'Thông báo', path: '/staff/notifications' },
+      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/staff/profile' },
     ],
   },
 ]
@@ -45,9 +47,9 @@ const navSections = [
 function Sidebar() {
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    // xử lý logout
-    navigate('/login')
+  const handleLogout = async () => {
+    await logoutUser()
+    navigate(AUTH_ROUTES.login, { replace: true })
   }
 
   return (

@@ -63,7 +63,7 @@ function EmailConfirmResetScreen() {
     try {
       setIsSubmitting(true)
       await authApi.completeFirstLoginSetup({ email, otp, newPassword: password })
-      navigate(AUTH_ROUTES.emailConfirmSuccess)
+      navigate(AUTH_ROUTES.emailConfirmSuccess, { state: { completed: true } })
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể hoàn tất thiết lập'))
     } finally {

@@ -6,10 +6,11 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons'
-import { useNotifications } from '../hooks/useNotifications'
-import { staffApi } from '../api/staffApi'
+import { useNotifications } from '../../staff/hooks/useNotifications'
+import { staffApi } from '../../staff/api/staffApi'
+import '../styles/AdminHeader.css'
 
-function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
+function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
   const [profile, setProfile] = useState(null)
 
   useEffect(() => {
@@ -17,12 +18,12 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
       .then(res => {
         setProfile(res.data?.data)
       })
-      .catch(err => console.error("Error loading header profile", err))
+      .catch(err => console.error("Error loading admin header profile", err))
   }, [])
 
   const displayName = profile?.fullName || userName
-  const displayRole = profile?.roles?.map(r => r.name).join(', ') || roleName
-  const avatarLetter = displayName ? displayName.trim().split(' ').pop().charAt(0).toUpperCase() : 'U'
+  const displayRole = profile?.roles?.map(r => r.name).join(', ') || roleName || 'Quản trị viên'
+  const avatarLetter = displayName ? displayName.trim().split(' ').pop().charAt(0).toUpperCase() : 'A'
   const [showNotifications, setShowNotifications] = useState(false)
   const popoverRef = useRef(null)
   const notifyRef = useRef(null)
@@ -34,7 +35,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     markAsRead,
   } = useNotifications()
 
-  // Xử lý đóng popover khi click ra ngoài
+  // Close popover when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -48,7 +49,6 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Phân bổ Icon theo Type
   const getIcon = (type) => {
     switch (type) {
       case 'DANGER':
@@ -62,7 +62,6 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     }
   }
 
-  // Phân bổ màu Icon Container theo Type
   const getIconWrapperColorClass = (type) => {
     switch (type) {
       case 'DANGER':
@@ -76,7 +75,6 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     }
   }
 
-  // Hiển thị highlight đỏ cho giờ CME
   const renderDescription = (text) => {
     if (!text) return null
     const match = text.match(/(\d+\s*\/\s*120\s*(?:h|giờ))/i)
@@ -92,7 +90,6 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     return <p className="notify-item__desc">{text}</p>
   }
 
-  // Render từng nhóm thông báo (Hôm nay, Tuần này)
   const renderGroup = (label, groupItems) => {
     if (groupItems.length === 0) return null
     return (
@@ -196,4 +193,4 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
   )
 }
 
-export default Header
+export default AdminHeader
