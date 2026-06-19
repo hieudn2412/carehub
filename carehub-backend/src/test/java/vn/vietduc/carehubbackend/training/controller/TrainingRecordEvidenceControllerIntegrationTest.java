@@ -189,10 +189,11 @@ class TrainingRecordEvidenceControllerIntegrationTest {
 
         mockMvc.perform(post("/api/v1/training/records/{id}/submit", recordId)
                         .with(jwtFor(user, "USER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.data.code", is("VALIDATION_FAILED")));
+                .andExpect(jsonPath("$.error_code", is("VAL_001")))
+                .andExpect(jsonPath("$.details[0].field", is("evidence")));
     }
 
     @Test
@@ -259,10 +260,10 @@ class TrainingRecordEvidenceControllerIntegrationTest {
 
         mockMvc.perform(put("/api/v1/training/records/{id}", rejected.getId())
                         .with(jwtFor(user, "USER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(recordJson(null, evidenceOptionalType.getId(), "Rejected changed", "2", "\"version\":" + rejected.getVersion() + ",")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJson(null, evidenceOptionalType.getId(), "Rejected changed", "2", "\"version\":" + rejected.getVersion() + ",")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.message", containsString("edit limit")));
+                .andExpect(jsonPath("$.message", containsString("edit limit")));
 
         TrainingRecord draft = recordRepository.save(TrainingRecord.builder()
                 .employee(user)
@@ -279,10 +280,10 @@ class TrainingRecordEvidenceControllerIntegrationTest {
 
         mockMvc.perform(put("/api/v1/training/records/{id}", draft.getId())
                         .with(jwtFor(user, "USER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(recordJson(null, evidenceOptionalType.getId(), "Draft changed", "2", "\"version\":99,")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJson(null, evidenceOptionalType.getId(), "Draft changed", "2", "\"version\":99,")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.message", containsString("updated by another user")));
+                .andExpect(jsonPath("$.message", containsString("updated by another user")));
     }
 
     @Test
@@ -303,16 +304,16 @@ class TrainingRecordEvidenceControllerIntegrationTest {
 
         mockMvc.perform(put("/api/v1/training/records/{id}", approved.getId())
                         .with(jwtFor(user, "USER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(recordJson(null, evidenceOptionalType.getId(), "Approved changed", "2", "\"version\":" + approved.getVersion() + ",")))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJson(null, evidenceOptionalType.getId(), "Approved changed", "2", "\"version\":" + approved.getVersion() + ",")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.message", containsString("not editable")));
+                .andExpect(jsonPath("$.message", containsString("not editable")));
 
         mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", approved.getId())
                         .file(jpegFile("approved.jpg", 1024))
                         .with(jwtFor(user, "USER")))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.data.message", containsString("not editable")));
+                .andExpect(jsonPath("$.message", containsString("not editable")));
     }
 
     @Test
@@ -393,10 +394,10 @@ class TrainingRecordEvidenceControllerIntegrationTest {
 
         mockMvc.perform(post("/api/v1/training/records")
                         .with(jwtFor(user, "USER"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(recordJson(null, evidenceOptionalType.getId(), "Inactive type", "2", null)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(recordJson(null, evidenceOptionalType.getId(), "Inactive type", "2", null)))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.data.fieldErrors.length()", greaterThanOrEqualTo(1)));
+                .andExpect(jsonPath("$.details.length()", greaterThanOrEqualTo(1)));
     }
 
     private User saveUser(String employeeCode, String email, String name, Department department) {

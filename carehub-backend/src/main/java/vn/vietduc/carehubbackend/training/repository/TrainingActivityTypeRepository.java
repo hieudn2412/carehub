@@ -27,8 +27,8 @@ public interface TrainingActivityTypeRepository extends JpaRepository<TrainingAc
             SELECT t
             FROM TrainingActivityType t
             WHERE (:keyword IS NULL
-                   OR LOWER(t.code) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                   OR LOWER(t.code) LIKE :keyword
+                   OR LOWER(t.name) LIKE :keyword)
               AND (:active IS NULL OR t.active = :active)
               AND (:requiresEvidence IS NULL OR t.requiresEvidence = :requiresEvidence)
               AND (:durationUnit IS NULL OR t.defaultDurationUnit = :durationUnit)
