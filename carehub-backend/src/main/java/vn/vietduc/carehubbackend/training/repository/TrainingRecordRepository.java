@@ -75,10 +75,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
                       AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(COALESCE(r.provider, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                           OR LOWER(r.title) LIKE :keyword
+                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
+                           OR LOWER(employee.employeeCode) LIKE :keyword
+                           OR LOWER(employee.name) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
@@ -117,10 +117,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
                       AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(COALESCE(r.provider, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                           OR LOWER(r.title) LIKE :keyword
+                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
+                           OR LOWER(employee.employeeCode) LIKE :keyword
+                           OR LOWER(employee.name) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
