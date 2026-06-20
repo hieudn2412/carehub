@@ -1,0 +1,186 @@
+/* ── Email Template Form Page Styles ── */
+.etf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.etf-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.etf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.etf-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Form Card */
+.etf-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 2-Column Grid for Metadata */
+.etf-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.etf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.etf-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.etf-label span {
+  color: #dc2626; /* Red star for required fields */
+  margin-left: 4px;
+}
+
+.etf-input,
+.etf-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  height: 38px;
+  width: 100%;
+}
+
+.etf-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 32px;
+}
+
+.etf-input:focus,
+.etf-select:focus,
+.etf-textarea:focus {
+  border-color: #0084ff;
+  box-shadow: 0 0 0 2px rgba(0, 132, 255, 0.15);
+}
+
+/* Textarea for Body */
+.etf-textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  min-height: 140px;
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* Variable Badges Block */
+.etf-variables-block {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  background: #f8fafc;
+}
+
+.etf-variables-title {
+  font-weight: 600;
+  color: #475569;
+  margin-right: 8px;
+}
+
+.etf-var-pill {
+  background: #e2f2ed;
+  color: #1aaa84;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.etf-var-pill:hover {
+  background: #d1eae1;
+}
+
+/* Action Buttons */
+.etf-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.etf-btn-submit {
+  background: #0084ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.etf-btn-submit:hover {
+  background: #006dd6;
+}
+
+.etf-btn-cancel {
+  background: #94a3b8;
+  color: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.etf-btn-cancel:hover {
+  background: #64748b;
+  border-color: #64748b;
+}

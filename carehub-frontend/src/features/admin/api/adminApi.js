@@ -45,4 +45,47 @@ export const adminApi = {
       params,
     })
   },
+
+  getNotificationConfig() {
+    return httpClient.get('/notifications/config', {
+      headers: authHeaders(),
+    })
+  },
+
+  updateNotificationConfig(data) {
+    return httpClient.put('/notifications/config', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getEmailTemplates(params) {
+    return httpClient.get('/email/templates', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEmailTemplateById(id) {
+    return httpClient.get(`/email/templates/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  createEmailTemplate(data) {
+    return httpClient.post('/email/templates', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateEmailTemplate(id, data) {
+    return httpClient.put(`/email/templates/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteEmailTemplate(id) {
+    return httpClient.delete(`/email/templates/${id}`, {
+      headers: authHeaders(),
+    })
+  },
 }

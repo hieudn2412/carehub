@@ -34,6 +34,10 @@ import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.j
 import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
 import ReferenceEmployeeDetailPage from '../features/admin/pages/ReferenceEmployeeDetailPage.jsx'
 import ReferenceDepartmentsListPage from '../features/admin/pages/ReferenceDepartmentsListPage.jsx'
+import NotificationSettingsPage from '../features/admin/pages/NotificationSettingsPage.jsx'
+import EmailTemplatesListPage from '../features/admin/pages/EmailTemplatesListPage.jsx'
+import EmailTemplateFormPage from '../features/admin/pages/EmailTemplateFormPage.jsx'
+import ImportModal from '../features/admin/pages/ImportModal.jsx'
 
 function AppRouter() {
   return (
@@ -59,6 +63,11 @@ function AppRouter() {
       <Route path="/admin/reference/employees" element={<ReferenceEmployeesListPage />} />
       <Route path="/admin/reference/employees/:id" element={<ReferenceEmployeeDetailPage />} />
       <Route path="/admin/reference/departments" element={<ReferenceDepartmentsListPage />} />
+      <Route path="/admin/notifications/settings" element={<NotificationSettingsPage />} />
+      <Route path="/admin/notifications/email-templates" element={<EmailTemplatesListPage />} />
+      <Route path="/admin/notifications/email-templates/:id" element={<EmailTemplateFormPage />} />
+      <Route path="/admin/notifications/email-templates/new" element={<EmailTemplateFormPage />} />
+      <Route path="/admin/reference/import" element={<ImportModal />} />
       <Route path="/training" element={<TrainingFoundationPage />} />
       <Route path="/training/records" element={<TrainingRecordListPage />} />
       <Route path="/training/records/new" element={<TrainingRecordFormPage />} />
