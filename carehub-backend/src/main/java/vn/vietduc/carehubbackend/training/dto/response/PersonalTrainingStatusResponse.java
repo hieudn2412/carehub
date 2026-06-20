@@ -4,6 +4,7 @@ import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public record PersonalTrainingStatusResponse(
         Long employeeId,
@@ -12,10 +13,19 @@ public record PersonalTrainingStatusResponse(
         ComplianceStatus status,
         BigDecimal requiredHours,
         BigDecimal approvedHours,
+        BigDecimal pendingHours,
+        BigDecimal rejectedHours,
         BigDecimal remainingHours,
+        BigDecimal progressPercentage,
+        Integer cycleYears,
         LocalDate windowStart,
         LocalDate windowEnd,
         Long requirementId,
-        String requirementName
+        String requirementName,
+        String warningMessage,
+        List<TrainingStatusYearlyHoursResponse> yearlyHours,
+        List<TrainingStatusActivityTypeHoursResponse> activityTypeHours,
+        List<TrainingStatusRecordSummaryResponse> recentRecords,
+        List<TrainingStatusRecordSummaryResponse> attentionRecords
 ) {
 }

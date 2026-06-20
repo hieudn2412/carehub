@@ -32,6 +32,16 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Detail responses include active evidence metadata, review timeline, and change history, but download URLs remain on-demand through the Phase 03 download-url endpoint.
 - The temporary frontend for screens 15 and 16 is intentionally minimal for API testing and does not attempt final responsive/card design polish.
 
+## Implemented Stance For Phase 05
+
+- Requirement CRUD is admin-only and uses optimistic `version` checks; active requirements cannot overlap another active requirement with the exact same department, job position, professional field, and effective period.
+- Requirement codes are normalized to uppercase on write. Requirement list search supports keyword, active status, scope filters, effective date, paging, and bounded sort fields.
+- Applicable employee count is derived from the employee's department and position because the current HR schema does not store professional field on employees; professional field remains a requirement/status selector rather than an employee attribute.
+- Personal compliance uses an inclusive rolling window ending at `asOf` or the current date. Only `APPROVED` records contribute to `approvedHours`; `PENDING_REVIEW` and `REJECTED` are returned separately for visibility and never satisfy compliance.
+- Requirement priority follows specificity, then newest `effective_from`: department + position + professional field, department + position, position + professional field, position/global variants, then global fallback. The status endpoints accept optional `professionalFieldId` to opt into professional-field-specific rules.
+- `AT_RISK` remains disabled unless a requirement has `warning_threshold_hours`; otherwise non-compliant users remain `NON_COMPLIANT`.
+- The Phase 05 frontend for requirement configuration and training status is intentionally minimal and exists to test the API flows.
+
 ## Open Decisions
 
 1. How many hours a `LESSON` represents.
