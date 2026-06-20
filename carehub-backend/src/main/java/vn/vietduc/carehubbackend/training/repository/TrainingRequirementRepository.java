@@ -1,5 +1,8 @@
 package vn.vietduc.carehubbackend.training.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +14,43 @@ import java.util.Optional;
 
 public interface TrainingRequirementRepository extends JpaRepository<TrainingRequirement, Long> {
     Optional<TrainingRequirement> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    boolean existsByCodeAndIdNot(String code, Long id);
+
+    @EntityGraph(attributePaths = {"department", "jobPosition", "professionalField"})
+    @Query("""
+            SELECT r
+            FROM TrainingRequirement r
+            WHERE (:keyword IS NULL
+                   OR LOWER(r.code) LIKE :keyword
+                   OR LOWER(r.name) LIKE :keyword)
+              AND (:active IS NULL OR r.active = :active)
+              AND (:departmentId IS NULL OR r.department.id = :departmentId)
+              AND (:positionId IS NULL OR r.jobPosition.id = :positionId)
+              AND (:professionalFieldId IS NULL OR r.professionalField.id = :professionalFieldId)
+              AND (:effectiveOn IS NULL
+                   OR (r.effectiveFrom <= :effectiveOn
+                       AND (r.effectiveTo IS NULL OR r.effectiveTo >= :effectiveOn)))
+            """)
+    Page<TrainingRequirement> search(
+            @Param("keyword") String keyword,
+            @Param("active") Boolean active,
+            @Param("departmentId") Long departmentId,
+            @Param("positionId") Long positionId,
+            @Param("professionalFieldId") Long professionalFieldId,
+            @Param("effectiveOn") LocalDate effectiveOn,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"department", "jobPosition", "professionalField"})
+    @Query("""
+            SELECT r
+            FROM TrainingRequirement r
+            WHERE r.id = :id
+            """)
+    Optional<TrainingRequirement> findDetailById(@Param("id") Long id);
 
     @Query("""
             SELECT r

@@ -30,6 +30,10 @@ public class TrainingRequirementMapper {
     }
 
     public RequirementListResponse toListResponse(TrainingRequirement entity) {
+        return toListResponse(entity, 0L);
+    }
+
+    public RequirementListResponse toListResponse(TrainingRequirement entity, long applicableEmployeeCount) {
         return new RequirementListResponse(
                 entity.getId(),
                 entity.getCode(),
@@ -42,14 +46,21 @@ public class TrainingRequirementMapper {
                 nameOf(entity.getJobPosition()),
                 idOf(entity.getProfessionalField()),
                 nameOf(entity.getProfessionalField()),
+                entity.getWarningThresholdHours(),
                 entity.getEffectiveFrom(),
                 entity.getEffectiveTo(),
                 entity.isActive(),
+                applicableEmployeeCount,
+                entity.getUpdatedAt(),
                 entity.getVersion()
         );
     }
 
     public RequirementDetailResponse toDetailResponse(TrainingRequirement entity) {
+        return toDetailResponse(entity, 0L);
+    }
+
+    public RequirementDetailResponse toDetailResponse(TrainingRequirement entity, long applicableEmployeeCount) {
         return new RequirementDetailResponse(
                 entity.getId(),
                 entity.getCode(),
@@ -66,6 +77,7 @@ public class TrainingRequirementMapper {
                 entity.getEffectiveFrom(),
                 entity.getEffectiveTo(),
                 entity.isActive(),
+                applicableEmployeeCount,
                 idOf(entity.getCreatedByUser()),
                 idOf(entity.getUpdatedByUser()),
                 entity.getCreatedAt(),

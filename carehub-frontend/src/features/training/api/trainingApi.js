@@ -49,6 +49,49 @@ export const trainingApi = {
     })
   },
 
+  getRequirements(params) {
+    return httpClient.get('/training/requirements', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getRequirement(id) {
+    return httpClient.get(`/training/requirements/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  createRequirement(payload) {
+    return httpClient.post('/training/requirements', payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateRequirement(id, payload) {
+    return httpClient.put(`/training/requirements/${id}`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateRequirementStatus(id, payload) {
+    return httpClient.patch(`/training/requirements/${id}/status`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  getDepartments() {
+    return httpClient.get('/departments', {
+      headers: authHeaders(),
+    })
+  },
+
+  getPositions() {
+    return httpClient.get('/positions', {
+      headers: authHeaders(),
+    })
+  },
+
   getRecordOptions() {
     return httpClient.get('/training/records/options', {
       headers: authHeaders(),
@@ -113,6 +156,20 @@ export const trainingApi = {
   createEvidenceDownloadUrl(recordId, evidenceId) {
     return httpClient.post(`/training/records/${recordId}/evidences/${evidenceId}/download-url`, null, {
       headers: authHeaders(),
+    })
+  },
+
+  getMyTrainingStatus(params) {
+    return httpClient.get('/training/status/me', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEmployeeTrainingStatus(employeeId, params) {
+    return httpClient.get(`/training/employees/${employeeId}/status`, {
+      headers: authHeaders(),
+      params,
     })
   },
 }

@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.training.repository.TrainingRequirementReposito
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -36,10 +37,19 @@ public class TrainingComplianceCalculator {
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    BigDecimal.ZERO,
+                    null,
                     null,
                     windowEnd,
                     null,
-                    null
+                    null,
+                    "No active training requirement is configured",
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of()
             );
         }
 
@@ -53,6 +63,7 @@ public class TrainingComplianceCalculator {
         BigDecimal requiredHours = safe(matchedRequirement.getRequiredHours());
         BigDecimal remainingHours = requiredHours.subtract(approvedHours).max(BigDecimal.ZERO);
         ComplianceStatus status = resolveStatus(matchedRequirement, approvedHours);
+        BigDecimal progressPercentage = progressPercentage(requiredHours, approvedHours);
 
         return new PersonalTrainingStatusResponse(
                 employee.getId(),
@@ -61,11 +72,20 @@ public class TrainingComplianceCalculator {
                 status,
                 requiredHours,
                 approvedHours,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
                 remainingHours,
+                progressPercentage,
+                matchedRequirement.getCycleYears(),
                 windowStart,
                 windowEnd,
                 matchedRequirement.getId(),
-                matchedRequirement.getName()
+                matchedRequirement.getName(),
+                warningMessage(status, remainingHours),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
         );
     }
 
@@ -107,7 +127,8 @@ public class TrainingComplianceCalculator {
         );
 
         return candidates.stream()
-                .max(Comparator.comparingInt(requirement -> specificityScore(requirement, professionalFieldId)));
+                .max(Comparator.comparingInt((TrainingRequirement requirement) -> specificityScore(requirement, professionalFieldId))
+                        .thenComparing(TrainingRequirement::getEffectiveFrom));
     }
 
     private int specificityScore(TrainingRequirement requirement, Long professionalFieldId) {
@@ -126,5 +147,24 @@ public class TrainingComplianceCalculator {
 
     private BigDecimal safe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal approvedHours) {
+        if (requiredHours == null || requiredHours.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.valueOf(100);
+        }
+        return approvedHours
+                .multiply(BigDecimal.valueOf(100))
+                .divide(requiredHours, 2, RoundingMode.HALF_UP)
+                .min(BigDecimal.valueOf(100));
+    }
+
+    private String warningMessage(ComplianceStatus status, BigDecimal remainingHours) {
+        return switch (status) {
+            case NOT_CONFIGURED -> "No active training requirement is configured";
+            case COMPLIANT -> "Training requirement is met";
+            case AT_RISK, NON_COMPLIANT -> remainingHours.stripTrailingZeros().toPlainString()
+                    + " approved hours remaining";
+        };
     }
 }

@@ -17,6 +17,8 @@ import TrainingRecordDetailPage from '../features/training/pages/TrainingRecordD
 import TrainingRecordEvidencePage from '../features/training/pages/TrainingRecordEvidencePage.jsx'
 import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFormPage.jsx'
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
+import TrainingRequirementPage from '../features/training/pages/TrainingRequirementPage.jsx'
+import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
@@ -84,10 +86,13 @@ function AppRouter() {
       <Route path="/training/records/:id" element={protectedElement(<TrainingRecordDetailPage />)} />
       <Route path="/training/records/:id/edit" element={protectedElement(<TrainingRecordFormPage />)} />
       <Route path="/training/records/:id/evidence" element={protectedElement(<TrainingRecordEvidencePage />)} />
+      <Route path="/training/status" element={protectedElement(<TrainingStatusPage />)} />
+      <Route path="/training/status/:employeeId" element={protectedElement(<TrainingStatusPage />)} />
       <Route path="/admin/training/activity-types" element={adminElement(<ActivityTypeListPage />)} />
       <Route path="/admin/training/activity-types/new" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
+      <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
       
       {/* Staff CME / Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />
