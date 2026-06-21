@@ -2,6 +2,14 @@ server:
   port: 8080
 
 app:
+  form-import:
+    max-batch-size: 25
+    google-public:
+      enabled: ${GOOGLE_PUBLIC_FORM_IMPORT_ENABLED:true}
+      connect-timeout: 5s
+      read-timeout: 20s
+      max-response-bytes: 5242880
+
   import:
     default-password: ${DEFAULT_PASSWORD:ChangeMe123@}
 
@@ -33,12 +41,6 @@ spring:
     import:
       - optional:file:.env.properties
       - optional:file:env.properties
-
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    baseline-version: 1
-    locations: classpath:db/migration
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}

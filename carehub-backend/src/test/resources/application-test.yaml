@@ -21,8 +21,6 @@ app:
       name: Admin
 
 spring:
-  flyway:
-    enabled: false
   datasource:
     url: jdbc:h2:mem:carehub-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     driver-class-name: org.h2.Driver
