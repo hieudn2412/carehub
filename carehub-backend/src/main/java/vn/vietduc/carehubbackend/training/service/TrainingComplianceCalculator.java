@@ -116,7 +116,7 @@ public class TrainingComplianceCalculator {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private Optional<TrainingRequirement> selectRequirement(User employee, Long professionalFieldId, LocalDate asOf) {
+    public Optional<TrainingRequirement> selectRequirement(User employee, Long professionalFieldId, LocalDate asOf) {
         Long departmentId = employee.getDepartment() == null ? null : employee.getDepartment().getId();
         Long positionId = employee.getPosition() == null ? null : employee.getPosition().getId();
         List<TrainingRequirement> candidates = requirementRepository.findActiveCandidates(
@@ -125,10 +125,31 @@ public class TrainingComplianceCalculator {
                 professionalFieldId,
                 asOf
         );
+        return selectRequirementFromCandidates(employee, professionalFieldId, candidates);
+    }
 
+    public Optional<TrainingRequirement> selectRequirementFromCandidates(
+            User employee,
+            Long professionalFieldId,
+            List<TrainingRequirement> candidates
+    ) {
         return candidates.stream()
+                .filter(requirement -> matchesEmployee(requirement, employee, professionalFieldId))
                 .max(Comparator.comparingInt((TrainingRequirement requirement) -> specificityScore(requirement, professionalFieldId))
                         .thenComparing(TrainingRequirement::getEffectiveFrom));
+    }
+
+    private boolean matchesEmployee(TrainingRequirement requirement, User employee, Long professionalFieldId) {
+        Long departmentId = employee.getDepartment() == null ? null : employee.getDepartment().getId();
+        Long positionId = employee.getPosition() == null ? null : employee.getPosition().getId();
+        Long requirementDepartmentId = requirement.getDepartment() == null ? null : requirement.getDepartment().getId();
+        Long requirementPositionId = requirement.getJobPosition() == null ? null : requirement.getJobPosition().getId();
+        Long requirementProfessionalFieldId = requirement.getProfessionalField() == null
+                ? null
+                : requirement.getProfessionalField().getId();
+        return (requirementDepartmentId == null || requirementDepartmentId.equals(departmentId))
+                && (requirementPositionId == null || requirementPositionId.equals(positionId))
+                && (requirementProfessionalFieldId == null || requirementProfessionalFieldId.equals(professionalFieldId));
     }
 
     private int specificityScore(TrainingRequirement requirement, Long professionalFieldId) {

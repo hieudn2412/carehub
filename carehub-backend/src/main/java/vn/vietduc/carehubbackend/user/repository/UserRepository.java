@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -33,6 +34,26 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND (:positionId IS NULL OR u.position.id = :positionId)
             """)
     long countActiveTrainingRequirementCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("positionId") Long positionId
+    );
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:scopeDepartmentId IS NULL OR u.department.id = :scopeDepartmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.employeeCode) LIKE :keyword
+                   OR LOWER(u.name) LIKE :keyword)
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:positionId IS NULL OR u.position.id = :positionId)
+            ORDER BY u.employeeCode ASC, u.id ASC
+            """)
+    List<User> searchTrainingEmployeeCandidates(
+            @Param("scopeDepartmentId") Long scopeDepartmentId,
+            @Param("keyword") String keyword,
             @Param("departmentId") Long departmentId,
             @Param("positionId") Long positionId
     );

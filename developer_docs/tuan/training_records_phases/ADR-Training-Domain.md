@@ -42,6 +42,16 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - `AT_RISK` remains disabled unless a requirement has `warning_threshold_hours`; otherwise non-compliant users remain `NON_COMPLIANT`.
 - The Phase 05 frontend for requirement configuration and training status is intentionally minimal and exists to test the API flows.
 
+## Implemented Stance For Phase 06
+
+- Employee training hours list is Manager/Admin/System Job only. Admin can filter across departments; Manager scope is constrained to the manager's current department server-side.
+- The Phase 06 list avoids per-employee database queries: scoped employee candidates, active requirements, and training records for the maximum active requirement cycle are fetched in batches, then each employee is evaluated with the same Phase 05 requirement priority and per-requirement rolling window. A database view/materialized view remains a future optimization if production volume requires it.
+- The only date-window input exposed for Phase 06 is `asOf`; arbitrary custom date windows are not implemented because the business rule is not confirmed.
+- `/training/employees/{employeeId}/records` uses the employee's selected requirement window and returns only `APPROVED`, `PENDING_REVIEW`, and `REJECTED` ledger rows. If no requirement is configured, the status response explains `NOT_CONFIGURED` and the compliance ledger is empty.
+- Ledger running total counts `APPROVED` hours only; pending and rejected rows remain visible but never increase compliance totals.
+- Evidence, review, and change timeline data on the Phase 06 ledger is summarized as counts per record; full record detail and download URLs remain delegated to the Phase 04/03 endpoints.
+- The Phase 06 frontend for employee list/detail is intentionally minimal and exists to test the API flows.
+
 ## Open Decisions
 
 1. How many hours a `LESSON` represents.
