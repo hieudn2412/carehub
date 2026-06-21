@@ -5,6 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="75196a66-a587-4e28-87b4-6c8eef341dfa" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistForm.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistFormItem.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistFormVersion.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistOption.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistQuestion.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/ChecklistSection.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/enums/ChecklistFormStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/enums/ChecklistSubjectType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/enums/FormFieldType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/enums/FormItemType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/carehub-backend/src/main/java/vn/vietduc/carehubbackend/form/entity/enums/FormVersionStatus.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -58,7 +69,7 @@
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "ManhTuan",
+    "git-widget-placeholder": "NgocHieu",
     "junie.onboarding.icon.badge.shown": "true",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/ĐỒ ÁN/carehub",
@@ -67,6 +78,9 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Project",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
     "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
   }
@@ -99,6 +113,8 @@
       <workItem from="1780547829947" duration="470000" />
       <workItem from="1780826079231" duration="662000" />
       <workItem from="1781009665586" duration="1228000" />
+      <workItem from="1781790951818" duration="667000" />
+      <workItem from="1781792605030" duration="58000" />
     </task>
     <servers />
   </component>

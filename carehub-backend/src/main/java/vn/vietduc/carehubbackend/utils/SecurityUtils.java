@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.utils;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.auth.entity.UserPrincipal;
 
@@ -13,9 +14,16 @@ public class SecurityUtils {
                 SecurityContextHolder.getContext()
                         .getAuthentication();
 
-        UserPrincipal principal =
-                (UserPrincipal) authentication.getPrincipal();
-
-        return principal.getId();
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof UserPrincipal userPrincipal) {
+            return userPrincipal.getId();
+        }
+        if (principal instanceof Jwt jwt) {
+            return Long.valueOf(jwt.getSubject());
+        }
+        if (authentication.getName() != null && authentication.getName().matches("\\d+")) {
+            return Long.valueOf(authentication.getName());
+        }
+        throw new IllegalStateException("Missing authenticated user id");
     }
 }
