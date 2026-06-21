@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.custom.UserRepositoryCustom;
@@ -22,4 +24,16 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
     boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
+
+    @Query("""
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:positionId IS NULL OR u.position.id = :positionId)
+            """)
+    long countActiveTrainingRequirementCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("positionId") Long positionId
+    );
 }

@@ -43,6 +43,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", ex.getMessage(), null, request);
     }
 
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponse> handleDomainValidation(ValidationException ex, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", ex.getMessage(), ex.getFieldErrors(), request);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
         return build(HttpStatus.NOT_FOUND, "SYS_404", ex.getMessage(), null, request);
@@ -66,6 +71,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, "AUTH_002", "You don't have permission to do that.", null, request);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "AUTH_002", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -99,6 +109,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled exception for {} {}", request.getMethod(), request.getRequestURI(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Internal server error", null, request);
     }
 

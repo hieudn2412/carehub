@@ -95,7 +95,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         return recordRepository.searchRecords(
                 scopeEmployeeId,
                 scopeDepartmentId,
-                normalizeKeyword(criteria.keyword()),
+                normalizeKeywordPattern(criteria.keyword()),
                 criteria.dateFrom(),
                 criteria.dateTo(),
                 criteria.activityTypeId(),
@@ -318,11 +318,11 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         );
     }
 
-    private String normalizeKeyword(String keyword) {
+    private String normalizeKeywordPattern(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
-        return keyword.trim();
+        return "%" + keyword.trim().toLowerCase() + "%";
     }
 
     private Pageable normalizePageable(Pageable pageable) {

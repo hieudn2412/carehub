@@ -57,7 +57,7 @@ public class TrainingActivityTypeServiceImpl implements TrainingActivityTypeServ
             Pageable pageable
     ) {
         Page<TrainingActivityType> page = activityTypeRepository.search(
-                normalizeKeyword(keyword),
+                normalizeKeywordPattern(keyword),
                 active,
                 requiresEvidence,
                 durationUnit,
@@ -261,11 +261,11 @@ public class TrainingActivityTypeServiceImpl implements TrainingActivityTypeServ
         return new Sort.Order(order.getDirection(), property);
     }
 
-    private String normalizeKeyword(String keyword) {
+    private String normalizeKeywordPattern(String keyword) {
         if (keyword == null || keyword.trim().isEmpty()) {
             return null;
         }
-        return keyword.trim();
+        return "%" + keyword.trim().toLowerCase() + "%";
     }
 
     private String normalizeCode(String code) {

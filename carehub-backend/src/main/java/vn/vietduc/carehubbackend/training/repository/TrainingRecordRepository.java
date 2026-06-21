@@ -26,6 +26,22 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
 
+    @Query("""
+            SELECT r
+            FROM TrainingRecord r
+            JOIN FETCH r.activityType activityType
+            LEFT JOIN FETCH r.professionalField professionalField
+            WHERE r.employee.id = :employeeId
+              AND r.startDate >= :windowStart
+              AND r.startDate <= :windowEnd
+            ORDER BY r.startDate DESC, r.id DESC
+            """)
+    List<TrainingRecord> findComplianceWindowRecords(
+            @Param("employeeId") Long employeeId,
+            @Param("windowStart") LocalDate windowStart,
+            @Param("windowEnd") LocalDate windowEnd
+    );
+
     @Query(
             value = """
                     SELECT new vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse(
@@ -75,10 +91,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
                       AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(COALESCE(r.provider, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                           OR LOWER(r.title) LIKE :keyword
+                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
+                           OR LOWER(employee.employeeCode) LIKE :keyword
+                           OR LOWER(employee.name) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
@@ -117,10 +133,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
                       AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(COALESCE(r.provider, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                           OR LOWER(employee.name) LIKE LOWER(CONCAT('%', :keyword, '%')))
+                           OR LOWER(r.title) LIKE :keyword
+                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
+                           OR LOWER(employee.employeeCode) LIKE :keyword
+                           OR LOWER(employee.name) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
