@@ -172,4 +172,18 @@ export const trainingApi = {
       params,
     })
   },
+
+  getEmployeeTrainingStatuses(params) {
+    return httpClient.get('/training/employees/status', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEmployeeTrainingRecords(employeeId, params) {
+    return httpClient.get(`/training/employees/${employeeId}/records`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
 }

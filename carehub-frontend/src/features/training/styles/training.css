@@ -153,6 +153,10 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.training-filters--employees {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .training-form-grid--requirements {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -229,6 +233,11 @@
   min-width: 640px;
 }
 
+.training-table--employee-status,
+.training-table--employee-ledger {
+  min-width: 1180px;
+}
+
 .training-table th,
 .training-table td {
   border-bottom: 1px solid #e5ebf2;
@@ -260,6 +269,11 @@
 .training-badge.is-inactive {
   background: #edf1f5;
   color: #58708f;
+}
+
+.training-badge.is-warning {
+  background: #fff6e5;
+  color: #79530a;
 }
 
 .training-message {

@@ -17,6 +17,8 @@ import TrainingRecordDetailPage from '../features/training/pages/TrainingRecordD
 import TrainingRecordEvidencePage from '../features/training/pages/TrainingRecordEvidencePage.jsx'
 import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFormPage.jsx'
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
+import TrainingEmployeeStatusDetailPage from '../features/training/pages/TrainingEmployeeStatusDetailPage.jsx'
+import TrainingEmployeeStatusListPage from '../features/training/pages/TrainingEmployeeStatusListPage.jsx'
 import TrainingRequirementPage from '../features/training/pages/TrainingRequirementPage.jsx'
 import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -37,7 +39,7 @@ import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.j
 import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
 import ReferenceEmployeeDetailPage from '../features/admin/pages/ReferenceEmployeeDetailPage.jsx'
 import ReferenceDepartmentsListPage from '../features/admin/pages/ReferenceDepartmentsListPage.jsx'
-import { ADMIN_ROLES } from '../features/auth/utils/authNavigation.js'
+import { ADMIN_ROLES, AUTH_ROLE } from '../features/auth/utils/authNavigation.js'
 
 function protectedElement(element, options = {}) {
   return <ProtectedRoute {...options}>{element}</ProtectedRoute>
@@ -45,6 +47,10 @@ function protectedElement(element, options = {}) {
 
 function adminElement(element) {
   return protectedElement(element, { allowedRoles: ADMIN_ROLES })
+}
+
+function managerOrAdminElement(element) {
+  return protectedElement(element, { allowedRoles: [AUTH_ROLE.admin, AUTH_ROLE.manager] })
 }
 
 function AppRouter() {
@@ -88,6 +94,8 @@ function AppRouter() {
       <Route path="/training/records/:id/evidence" element={protectedElement(<TrainingRecordEvidencePage />)} />
       <Route path="/training/status" element={protectedElement(<TrainingStatusPage />)} />
       <Route path="/training/status/:employeeId" element={protectedElement(<TrainingStatusPage />)} />
+      <Route path="/training/employees" element={managerOrAdminElement(<TrainingEmployeeStatusListPage />)} />
+      <Route path="/training/employees/:employeeId" element={managerOrAdminElement(<TrainingEmployeeStatusDetailPage />)} />
       <Route path="/admin/training/activity-types" element={adminElement(<ActivityTypeListPage />)} />
       <Route path="/admin/training/activity-types/new" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
