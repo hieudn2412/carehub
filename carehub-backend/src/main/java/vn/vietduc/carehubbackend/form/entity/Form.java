@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
-import vn.vietduc.carehubbackend.form.entity.enums.ChecklistFormStatus;
-import vn.vietduc.carehubbackend.form.entity.enums.ChecklistSubjectType;
+import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
+import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
 import vn.vietduc.carehubbackend.user.entity.Department;
 
 @Entity
@@ -14,10 +14,10 @@ import vn.vietduc.carehubbackend.user.entity.Department;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "checklist_forms")
-public class ChecklistForm extends BaseEntity {
+@Table(name = "form_templates")
+public class Form extends BaseEntity {
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String code;
 
     @Column(nullable = false)
@@ -28,17 +28,25 @@ public class ChecklistForm extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ChecklistSubjectType subjectType;
+    private FormSubjectType subjectType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ChecklistFormStatus status;
+    private FormStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_department_id")
     private Department ownerDepartment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private ChecklistFormVersion currentPublishedVersion;
+    @JoinColumn(name = "current_published_version_id")
+    private FormVersion currentPublishedVersion;
 
-    private boolean deleted;
+    @Builder.Default
+    @Column(name = "current_version_no", nullable = false)
+    private Integer currentVersionNumber = 0;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean deleted = false;
 }

@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 
 import jakarta.persistence.OptimisticLockException;
@@ -33,9 +34,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
     }
 
-    @ExceptionHandler(OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockException ex, HttpServletRequest request) {
-        return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    @ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, HttpServletRequest request) {
+        String message = ex.getMessage() == null || ex.getMessage().isBlank()
+                ? "The resource was updated by another request"
+                : ex.getMessage();
+        return build(HttpStatus.CONFLICT, "SYS_409", message, null, request);
     }
 
     @ExceptionHandler(UnprocessableEntityException.class)
