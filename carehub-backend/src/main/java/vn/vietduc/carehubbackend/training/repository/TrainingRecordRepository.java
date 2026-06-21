@@ -26,6 +26,22 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
 
     Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
 
+    @Query("""
+            SELECT r
+            FROM TrainingRecord r
+            JOIN FETCH r.activityType activityType
+            LEFT JOIN FETCH r.professionalField professionalField
+            WHERE r.employee.id = :employeeId
+              AND r.startDate >= :windowStart
+              AND r.startDate <= :windowEnd
+            ORDER BY r.startDate DESC, r.id DESC
+            """)
+    List<TrainingRecord> findComplianceWindowRecords(
+            @Param("employeeId") Long employeeId,
+            @Param("windowStart") LocalDate windowStart,
+            @Param("windowEnd") LocalDate windowEnd
+    );
+
     @Query(
             value = """
                     SELECT new vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse(

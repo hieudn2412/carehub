@@ -26,4 +26,16 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
     boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
+
+    @Query("""
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:positionId IS NULL OR u.position.id = :positionId)
+            """)
+    long countActiveTrainingRequirementCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("positionId") Long positionId
+    );
 }

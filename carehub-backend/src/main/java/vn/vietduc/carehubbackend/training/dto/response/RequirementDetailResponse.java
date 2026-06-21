@@ -20,6 +20,7 @@ public record RequirementDetailResponse(
         LocalDate effectiveFrom,
         LocalDate effectiveTo,
         boolean active,
+        long applicableEmployeeCount,
         Long createdByUserId,
         Long updatedByUserId,
         LocalDateTime createdAt,
