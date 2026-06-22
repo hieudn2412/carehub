@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
@@ -40,6 +41,84 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
             @Param("employeeId") Long employeeId,
             @Param("windowStart") LocalDate windowStart,
             @Param("windowEnd") LocalDate windowEnd
+    );
+
+    @Query("""
+            SELECT r
+            FROM TrainingRecord r
+            JOIN FETCH r.employee employee
+            JOIN FETCH r.activityType activityType
+            LEFT JOIN FETCH r.professionalField professionalField
+            WHERE employee.id IN :employeeIds
+              AND r.startDate >= :windowStart
+              AND r.startDate <= :windowEnd
+              AND r.workflowStatus IN :workflowStatuses
+            ORDER BY employee.id ASC, r.startDate ASC, r.id ASC
+            """)
+    List<TrainingRecord> findStatusWindowRecordsForEmployees(
+            @Param("employeeIds") List<Long> employeeIds,
+            @Param("windowStart") LocalDate windowStart,
+            @Param("windowEnd") LocalDate windowEnd,
+            @Param("workflowStatuses") List<TrainingRecordStatus> workflowStatuses
+    );
+
+    @Query("""
+            SELECT new vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse(
+                r.id,
+                r.title,
+                r.provider,
+                activityType.id,
+                activityType.name,
+                professionalField.id,
+                professionalField.name,
+                r.startDate,
+                r.endDate,
+                r.declaredHours,
+                r.approvedHours,
+                r.approvedHours,
+                r.workflowStatus,
+                r.sourceType,
+                r.sourceReference,
+                r.sourceSubmittedAt,
+                (SELECT COUNT(evidence.id)
+                 FROM TrainingEvidenceFile evidence
+                 WHERE evidence.trainingRecord.id = r.id AND evidence.active = true),
+                (SELECT COUNT(passedEvidence.id)
+                 FROM TrainingEvidenceFile passedEvidence
+                 WHERE passedEvidence.trainingRecord.id = r.id
+                   AND passedEvidence.active = true
+                   AND passedEvidence.moderationStatus = vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus.PASSED),
+                (SELECT COUNT(failedEvidence.id)
+                 FROM TrainingEvidenceFile failedEvidence
+                 WHERE failedEvidence.trainingRecord.id = r.id
+                   AND failedEvidence.active = true
+                   AND failedEvidence.moderationStatus IN (
+                       vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus.FAILED,
+                       vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus.ERROR
+                   )),
+                (SELECT COUNT(review.id)
+                 FROM TrainingRecordReview review
+                 WHERE review.trainingRecord.id = r.id),
+                (SELECT COUNT(changeLog.id)
+                 FROM TrainingRecordChangeLog changeLog
+                 WHERE changeLog.trainingRecord.id = r.id),
+                r.latestRejectionReason,
+                r.version
+            )
+            FROM TrainingRecord r
+            JOIN r.activityType activityType
+            LEFT JOIN r.professionalField professionalField
+            WHERE r.employee.id = :employeeId
+              AND r.startDate >= :windowStart
+              AND r.startDate <= :windowEnd
+              AND r.workflowStatus IN :workflowStatuses
+            ORDER BY r.startDate ASC, r.id ASC
+            """)
+    List<EmployeeTrainingRecordLedgerResponse> findEmployeeLedgerRecords(
+            @Param("employeeId") Long employeeId,
+            @Param("windowStart") LocalDate windowStart,
+            @Param("windowEnd") LocalDate windowEnd,
+            @Param("workflowStatuses") List<TrainingRecordStatus> workflowStatuses
     );
 
     @Query(

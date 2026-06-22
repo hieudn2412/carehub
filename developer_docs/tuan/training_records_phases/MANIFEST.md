@@ -15,3 +15,5 @@
 | `phase_09_testing_uat_rollout.md` | Phase 9: Testing, UAT và rollout |
 | `openapi-training-records-phase04.yaml` | OpenAPI contract bổ sung cho Phase 4: list/detail training records |
 | `openapi-training-records-phase05.yaml` | OpenAPI contract bổ sung cho Phase 5: requirements và training status |
+| `openapi-training-records-phase06.yaml` | OpenAPI contract bổ sung cho Phase 6: employee training hours list/detail |
+| `openapi-training-records-phase07.yaml` | OpenAPI contract bổ sung cho Phase 7: legacy Excel import preview/apply |

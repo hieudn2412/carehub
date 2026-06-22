@@ -52,6 +52,16 @@ public interface TrainingRequirementRepository extends JpaRepository<TrainingReq
             """)
     Optional<TrainingRequirement> findDetailById(@Param("id") Long id);
 
+    @EntityGraph(attributePaths = {"department", "jobPosition", "professionalField"})
+    @Query("""
+            SELECT r
+            FROM TrainingRequirement r
+            WHERE r.active = true
+              AND r.effectiveFrom <= :asOf
+              AND (r.effectiveTo IS NULL OR r.effectiveTo >= :asOf)
+            """)
+    List<TrainingRequirement> findActiveRequirementsAsOf(@Param("asOf") LocalDate asOf);
+
     @Query("""
             SELECT r
             FROM TrainingRequirement r
