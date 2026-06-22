@@ -1,0 +1,202 @@
+/* ── Notification Settings Page Styles ── */
+.ns-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ns-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ns-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.ns-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Settings Form Card */
+.ns-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ns-section {
+  margin-bottom: 28px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 24px;
+}
+
+.ns-section:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.ns-section-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #3b82f6; /* Blue heading as mockup */
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 20px 0;
+}
+
+/* Row Styling */
+.ns-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 24px;
+}
+
+.ns-row:last-child {
+  margin-bottom: 0;
+}
+
+.ns-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ns-row-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ns-row-desc {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* Toggle Switch */
+.ns-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.ns-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.ns-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+  border-radius: 24px;
+}
+
+.ns-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+input:checked + .ns-slider {
+  background-color: #7c3aed; /* Soft purple color matching the mockup */
+}
+
+input:checked + .ns-slider:before {
+  transform: translateX(22px);
+}
+
+/* Dropdown */
+.ns-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  min-width: 180px;
+  height: 38px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  box-sizing: border-box;
+}
+
+.ns-select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
+}
+
+/* Bottom Action Buttons */
+.ns-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.ns-btn-save {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: #007aff; /* Bright blue color */
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.ns-btn-save:hover {
+  background: #0062cc;
+}
+
+.ns-btn-default {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #94a3b8; /* Muted grey matching mockup */
+  color: #fff;
+  transition: all 0.15s ease;
+}
+
+.ns-btn-default:hover {
+  background: #64748b;
+  border-color: #64748b;
+}

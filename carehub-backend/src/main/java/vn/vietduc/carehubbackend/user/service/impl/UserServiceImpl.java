@@ -245,6 +245,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    public String resetUserPassword(Long id) {
+        User user = findUser(id);
+        String randomPassword = createRandomPassword();
+        user.setPassword(passwordEncoder.encode(randomPassword));
+        userRepository.save(user);
+        return randomPassword;
+    }
+
+    @Override
+    @Transactional
     public UserDetailResponse assignRole(Long userId, Long roleId) {
         User user = findUser(userId);
         Role role = roleRepository.findById(roleId)
@@ -324,10 +334,15 @@ public class UserServiceImpl implements UserService {
                 .phone(user.getPhone())
                 .createdAt(user.getCreatedAt())
                 .departmentName(user.getDepartment() == null ? null : user.getDepartment().getName())
+                .departmentId(user.getDepartment() == null ? null : user.getDepartment().getId())
                 .lastLogin(user.getLastLogin())
                 .email(user.getEmail())
                 .lastChangePassword(user.getLastChangePassword())
                 .positionName(user.getPosition() == null ? null : user.getPosition().getName())
+                .positionId(user.getPosition() == null ? null : user.getPosition().getId())
+                .educationLevelId(user.getEducationLevel() == null ? null : user.getEducationLevel().getId())
+                .birthday(user.getBirthday())
+                .gender(user.isGender())
                 .updatedBy(user.getUpdatedBy())
                 .roles(roles)
                 .build();

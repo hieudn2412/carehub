@@ -9,7 +9,14 @@ import {
   LeftOutlined,
   RightOutlined,
   CloseOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  PlusOutlined,
+  UploadOutlined,
+  EditOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  DeleteOutlined,
+  KeyOutlined
 } from '@ant-design/icons'
 import '../styles/AdminAccountsScreen.css'
 
@@ -35,6 +42,36 @@ function AdminAccountsScreen() {
   const [selectedUserDetail, setSelectedUserDetail] = useState(null)
   const [modalLoading, setModalLoading] = useState(false)
 
+  // Form Modal (Create / Edit) State
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState(null) // null = Create, user object = Edit
+  
+  // Reference lists
+  const [positions, setPositions] = useState([])
+  const [educationLevels, setEducationLevels] = useState([])
+
+  // Form Fields State
+  const [formEmpCode, setFormEmpCode] = useState('')
+  const [formFullName, setFormFullName] = useState('')
+  const [formEmail, setFormEmail] = useState('')
+  const [formPhone, setFormPhone] = useState('')
+  const [formDeptId, setFormDeptId] = useState('')
+  const [formPositionId, setFormPositionId] = useState('')
+  const [formEduLevelId, setFormEduLevelId] = useState('')
+  const [formBirthday, setFormBirthday] = useState('')
+  const [formGender, setFormGender] = useState(true) // true = Nam, false = Nữ
+  const [formRoleIds, setFormRoleIds] = useState([]) // Array of selected role IDs
+  const [formStatus, setFormStatus] = useState('ACTIVE')
+
+  // Password reset success banner state
+  const [newGeneratedPassword, setNewGeneratedPassword] = useState(null)
+
+  // Import Modal State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [importFile, setImportFile] = useState(null)
+  const [importLoading, setImportLoading] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+
   // Debounce search keyword
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -53,10 +90,17 @@ function AdminAccountsScreen() {
     adminApi.getRoles()
       .then(res => setRoles(res.data?.data || []))
       .catch(err => console.error('Lỗi khi tải vai trò:', err))
+
+    adminApi.getPositions()
+      .then(res => setPositions(res.data?.data || []))
+      .catch(err => console.error('Lỗi khi tải chức danh:', err))
+
+    adminApi.getEducationLevels()
+      .then(res => setEducationLevels(res.data?.data || []))
+      .catch(err => console.error('Lỗi khi tải trình độ học vấn:', err))
   }, [])
 
-  // Load user data on filter changes
-  useEffect(() => {
+  const loadUsers = () => {
     setLoading(true)
     const params = {
       page: page - 1,
@@ -80,12 +124,18 @@ function AdminAccountsScreen() {
       .finally(() => {
         setLoading(false)
       })
+  }
+
+  // Load user data on filter changes
+  useEffect(() => {
+    loadUsers()
   }, [page, debouncedSearch, deptFilter, roleFilter, statusFilter])
 
   // Load detail data when select user changes
   useEffect(() => {
     if (!selectedUserId) {
       setSelectedUserDetail(null)
+      setNewGeneratedPassword(null)
       return
     }
     setModalLoading(true)
@@ -102,6 +152,205 @@ function AdminAccountsScreen() {
         setModalLoading(false)
       })
   }, [selectedUserId])
+
+  // Actions
+  const handleOpenCreateModal = () => {
+    setFormEmpCode('')
+    setFormFullName('')
+    setFormEmail('')
+    setFormPhone('')
+    setFormDeptId('')
+    setFormPositionId('')
+    setFormEduLevelId('')
+    setFormBirthday('')
+    setFormGender(true)
+    setFormRoleIds([])
+    setFormStatus('ACTIVE')
+    setEditingUser(null)
+    setIsFormModalOpen(true)
+  }
+
+  const handleOpenEditModal = (userId) => {
+    setSelectedUserId(null) // Close detail modal if open
+    setModalLoading(true)
+    adminApi.getUserById(userId)
+      .then(res => {
+        const u = res.data?.data
+        if (u) {
+          setFormEmpCode(u.employeeCode || '')
+          setFormFullName(u.fullName || '')
+          setFormEmail(u.email || '')
+          setFormPhone(u.phone || '')
+          setFormDeptId(u.departmentId || '')
+          setFormPositionId(u.positionId || '')
+          setFormEduLevelId(u.educationLevelId || '')
+          setFormBirthday(u.birthday || '')
+          setFormGender(u.gender === undefined ? true : u.gender)
+          setFormRoleIds(u.roles ? u.roles.map(r => r.id) : [])
+          setFormStatus(u.status || 'ACTIVE')
+          setEditingUser(u)
+          setIsFormModalOpen(true)
+        }
+      })
+      .catch(err => {
+        console.error('Lỗi khi tải chi tiết người dùng để sửa:', err)
+        alert('Không thể tải thông tin chi tiết tài khoản.')
+      })
+      .finally(() => {
+        setModalLoading(false)
+      })
+  }
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault()
+    if (!formEmpCode.trim() || !formFullName.trim() || !formEmail.trim() || !formDeptId) {
+      alert('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã nhân viên, Họ và tên, Email, Phòng ban).')
+      return
+    }
+
+    if (formRoleIds.length === 0) {
+      alert('Vui lòng chọn ít nhất một vai trò cho tài khoản.')
+      return
+    }
+
+    try {
+      if (editingUser) {
+        // Edit User
+        const updatePayload = {
+          employeeCode: formEmpCode.trim(),
+          fullName: formFullName.trim(),
+          email: formEmail.trim(),
+          phone: formPhone.trim() || undefined,
+          departmentId: parseInt(formDeptId) || undefined,
+          positionId: parseInt(formPositionId) || undefined,
+          educationLevelId: parseInt(formEduLevelId) || undefined,
+          birthday: formBirthday || undefined,
+          gender: formGender,
+          status: formStatus
+        }
+
+        await adminApi.updateUser(editingUser.id, updatePayload)
+
+        // Sync Roles
+        const initialRoleIds = editingUser.roles ? editingUser.roles.map(r => r.id) : []
+        const rolesToAdd = formRoleIds.filter(id => !initialRoleIds.includes(id))
+        const rolesToRemove = initialRoleIds.filter(id => !formRoleIds.includes(id))
+
+        for (const rId of rolesToAdd) {
+          await adminApi.assignRole(editingUser.id, rId)
+        }
+        for (const rId of rolesToRemove) {
+          await adminApi.removeRole(editingUser.id, rId)
+        }
+
+        alert('Cập nhật tài khoản thành công!')
+      } else {
+        // Create User
+        const createPayload = {
+          employeeCode: formEmpCode.trim(),
+          fullName: formFullName.trim(),
+          email: formEmail.trim(),
+          departmentId: parseInt(formDeptId),
+          roleIds: formRoleIds.map(id => parseInt(id))
+        }
+
+        await adminApi.createUser(createPayload)
+        alert('Tạo tài khoản thành công! Mật khẩu ngẫu nhiên đã được gửi về email của nhân viên.')
+      }
+
+      setIsFormModalOpen(false)
+      setEditingUser(null)
+      loadUsers()
+    } catch (err) {
+      console.error('Lỗi khi lưu thông tin tài khoản:', err)
+      alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thông tin.')
+    }
+  }
+
+  const handleLockUser = (userId) => {
+    if (window.confirm('Bạn có chắc chắn muốn khoá tài khoản này? Người dùng sẽ không thể đăng nhập.')) {
+      adminApi.lockUser(userId)
+        .then(() => {
+          alert('Đã khoá tài khoản thành công.')
+          setSelectedUserId(null)
+          loadUsers()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Không thể khoá tài khoản.')
+        })
+    }
+  }
+
+  const handleUnlockUser = (userId) => {
+    if (window.confirm('Mở khoá tài khoản này? Người dùng có thể đăng nhập lại.')) {
+      adminApi.unlockUser(userId)
+        .then(() => {
+          alert('Đã mở khoá tài khoản thành công.')
+          setSelectedUserId(null)
+          loadUsers()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Không thể mở khoá tài khoản.')
+        })
+    }
+  }
+
+  const handleDeleteUser = (userId) => {
+    if (window.confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác.')) {
+      adminApi.deleteUser(userId)
+        .then(() => {
+          alert('Đã xóa tài khoản thành công.')
+          setSelectedUserId(null)
+          loadUsers()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Không thể xóa tài khoản.')
+        })
+    }
+  }
+
+  const handleResetPassword = (userId) => {
+    if (window.confirm('Hệ thống sẽ tự động đổi sang một mật khẩu ngẫu nhiên mới và cập nhật cho tài khoản này. Bạn có chắc chắn tiếp tục?')) {
+      adminApi.resetUserPassword(userId)
+        .then(res => {
+          const generatedPwd = res.data?.data
+          setNewGeneratedPassword(generatedPwd)
+          alert('Tự động thay đổi mật khẩu thành công! Xem mật khẩu mới tại khung thông tin phía dưới.')
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Không thể thay đổi mật khẩu.')
+        })
+    }
+  }
+
+  const handleImportUsers = (e) => {
+    e.preventDefault()
+    if (!importFile) {
+      alert('Vui lòng chọn tệp Excel chứa danh sách tài khoản cần import.')
+      return
+    }
+
+    setImportLoading(true)
+    setImportResult(null)
+
+    adminApi.importUsers(importFile)
+      .then(res => {
+        setImportResult(res.data?.data || { success: true })
+        alert('Nhập danh sách tài khoản thành công!')
+        loadUsers()
+      })
+      .catch(err => {
+        console.error('Lỗi khi import tài khoản:', err)
+        alert(err.response?.data?.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.')
+      })
+      .finally(() => {
+        setImportLoading(false)
+      })
+  }
 
   // Map departmentId to departmentName for table rows
   const getDeptName = (deptId) => {
@@ -276,6 +525,14 @@ function AdminAccountsScreen() {
                 {/* Results Count & Export */}
                 <span className="am-results-count">{totalElements} kết quả</span>
                 
+                <button className="am-btn-primary" onClick={handleOpenCreateModal}>
+                  <PlusOutlined /> Thêm tài khoản
+                </button>
+                
+                <button className="am-btn-secondary" onClick={() => { setIsImportModalOpen(true); setImportFile(null); setImportResult(null); }}>
+                  <UploadOutlined /> Import Excel
+                </button>
+
                 <button className="am-export-btn" onClick={handleExport} title="Xuất CSV">
                   <DownloadOutlined />
                 </button>
@@ -448,6 +705,38 @@ function AdminAccountsScreen() {
                       <span className="am-detail-value">{fmtDate(selectedUserDetail.createdAt)}</span>
                     </div>
                   </div>
+
+                  {/* Admin Actions Block */}
+                  <div className="am-detail-actions">
+                    <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
+                      <EditOutlined /> Sửa thông tin
+                    </button>
+                    {selectedUserDetail.status === 'LOCKED' ? (
+                      <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUnlockUser(selectedUserDetail.id)}>
+                        <UnlockOutlined /> Mở khoá
+                      </button>
+                    ) : (
+                      <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleLockUser(selectedUserDetail.id)}>
+                        <LockOutlined /> Khoá tài khoản
+                      </button>
+                    )}
+                    <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleResetPassword(selectedUserDetail.id)}>
+                      <KeyOutlined /> Đổi mật khẩu tự động
+                    </button>
+                    <button className="am-modal-btn" style={{ padding: '6px 12px', fontSize: '12px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
+                      <DeleteOutlined /> Xoá tài khoản
+                    </button>
+                  </div>
+
+                  {newGeneratedPassword && (
+                    <div className="am-pwd-display">
+                      <span>Mật khẩu ngẫu nhiên mới:</span>
+                      <span className="am-pwd-code">{newGeneratedPassword}</span>
+                      <span style={{ fontSize: '11px', color: '#15803d', fontWeight: 'normal', marginTop: 4 }}>
+                        * Hãy copy mật khẩu này cung cấp cho người dùng. Nó chỉ hiển thị một lần.
+                      </span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div style={{ textAlign: 'center', padding: '20px 0', color: '#dc2626' }}>
@@ -459,6 +748,292 @@ function AdminAccountsScreen() {
             <div className="am-modal-footer">
               <button className="am-modal-btn" onClick={() => setSelectedUserId(null)}>Đóng</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create or Edit Form Modal overlay */}
+      {isFormModalOpen && (
+        <div className="am-modal-overlay" onClick={() => { setIsFormModalOpen(false); setEditingUser(null); }}>
+          <div className="am-modal" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="am-modal-header">
+              <h3 className="am-modal-title">
+                {editingUser ? 'Sửa thông tin tài khoản' : 'Thêm tài khoản nhân viên'}
+              </h3>
+              <button className="am-modal-close" onClick={() => { setIsFormModalOpen(false); setEditingUser(null); }}>
+                <CloseOutlined />
+              </button>
+            </div>
+            
+            <form onSubmit={handleFormSubmit}>
+              <div className="am-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                <div className="am-form-grid">
+                  
+                  <div className="am-form-group">
+                    <label className="am-form-label">Mã nhân viên *</label>
+                    <input
+                      type="text"
+                      className="am-form-input"
+                      value={formEmpCode}
+                      onChange={(e) => setFormEmpCode(e.target.value)}
+                      placeholder="VD: NV-00042"
+                      required
+                    />
+                  </div>
+
+                  <div className="am-form-group">
+                    <label className="am-form-label">Họ và tên *</label>
+                    <input
+                      type="text"
+                      className="am-form-input"
+                      value={formFullName}
+                      onChange={(e) => setFormFullName(e.target.value)}
+                      placeholder="VD: Nguyễn Văn A"
+                      required
+                    />
+                  </div>
+
+                  <div className="am-form-group">
+                    <label className="am-form-label">Địa chỉ Email *</label>
+                    <input
+                      type="email"
+                      className="am-form-input"
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      placeholder="VD: email@example.com"
+                      required
+                    />
+                  </div>
+
+                  <div className="am-form-group">
+                    <label className="am-form-label">Số điện thoại</label>
+                    <input
+                      type="text"
+                      className="am-form-input"
+                      value={formPhone}
+                      onChange={(e) => setFormPhone(e.target.value)}
+                      placeholder="Nhập số điện thoại..."
+                    />
+                  </div>
+
+                  <div className="am-form-group">
+                    <label className="am-form-label">Phòng ban *</label>
+                    <select
+                      className="am-form-select"
+                      value={formDeptId}
+                      onChange={(e) => setFormDeptId(e.target.value)}
+                      required
+                    >
+                      <option value="">Chọn phòng ban...</option>
+                      {departments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {editingUser && (
+                    <>
+                      <div className="am-form-group">
+                        <label className="am-form-label">Chức danh</label>
+                        <select
+                          className="am-form-select"
+                          value={formPositionId}
+                          onChange={(e) => setFormPositionId(e.target.value)}
+                        >
+                          <option value="">Chọn chức danh...</option>
+                          {positions.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="am-form-group">
+                        <label className="am-form-label">Trình độ học vấn</label>
+                        <select
+                          className="am-form-select"
+                          value={formEduLevelId}
+                          onChange={(e) => setFormEduLevelId(e.target.value)}
+                        >
+                          <option value="">Chọn trình độ...</option>
+                          {educationLevels.map(el => (
+                            <option key={el.id} value={el.id}>{el.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="am-form-group">
+                        <label className="am-form-label">Ngày sinh</label>
+                        <input
+                          type="date"
+                          className="am-form-input"
+                          value={formBirthday}
+                          onChange={(e) => setFormBirthday(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="am-form-group">
+                        <label className="am-form-label">Giới tính</label>
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="gender"
+                              checked={formGender === true}
+                              onChange={() => setFormGender(true)}
+                            /> Nam
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>
+                            <input
+                              type="radio"
+                              name="gender"
+                              checked={formGender === false}
+                              onChange={() => setFormGender(false)}
+                            /> Nữ
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="am-form-group">
+                        <label className="am-form-label">Trạng thái tài khoản</label>
+                        <select
+                          className="am-form-select"
+                          value={formStatus}
+                          onChange={(e) => setFormStatus(e.target.value)}
+                        >
+                          <option value="ACTIVE">Hoạt động</option>
+                          <option value="INACTIVE">Ngưng hoạt động</option>
+                          <option value="LOCKED">Bị khoá</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="am-form-group am-form-group--full">
+                    <label className="am-form-label">Vai trò hệ thống *</label>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
+                      {roles.map(r => {
+                        const roleLabel = r.name === 'ADMIN' ? 'Quản trị' : (r.name === 'MANAGER' ? 'Quản lý' : 'Nhân viên')
+                        const isChecked = formRoleIds.includes(r.id)
+                        return (
+                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormRoleIds([...formRoleIds, r.id])
+                                } else {
+                                  setFormRoleIds(formRoleIds.filter(id => id !== r.id))
+                                }
+                              }}
+                            /> {roleLabel}
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+              
+              <div className="am-modal-footer" style={{ gap: 10 }}>
+                <button
+                  type="button"
+                  className="am-modal-btn"
+                  onClick={() => { setIsFormModalOpen(false); setEditingUser(null); }}
+                >
+                  Huỷ
+                </button>
+                <button
+                  type="submit"
+                  className="am-btn-primary"
+                  style={{ borderRadius: '8px' }}
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal overlay */}
+      {isImportModalOpen && (
+        <div className="am-modal-overlay" onClick={() => setIsImportModalOpen(false)}>
+          <div className="am-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="am-modal-header">
+              <h3 className="am-modal-title">Import danh sách tài khoản</h3>
+              <button className="am-modal-close" onClick={() => setIsImportModalOpen(false)}>
+                <CloseOutlined />
+              </button>
+            </div>
+            
+            <form onSubmit={handleImportUsers}>
+              <div className="am-modal-body">
+                <p style={{ fontSize: '13.5px', color: '#475569', margin: 0 }}>
+                  Chọn file Excel chứa danh sách tài khoản nhân viên gốc để import hàng loạt vào hệ thống.
+                </p>
+
+                <div className="am-import-dropzone" onClick={() => document.getElementById('excel-file-input').click()}>
+                  <UploadOutlined className="am-import-icon" />
+                  <div className="am-import-text">
+                    {importFile ? <strong>{importFile.name}</strong> : 'Nhấn để chọn tệp Excel (.xlsx, .xls)'}
+                  </div>
+                  <div className="am-import-subtext">Hỗ trợ các định dạng tệp Excel chuẩn</div>
+                  <input
+                    type="file"
+                    id="excel-file-input"
+                    accept=".xlsx, .xls"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setImportFile(e.target.files[0])
+                        setImportResult(null)
+                      }
+                    }}
+                  />
+                </div>
+
+                {importLoading && (
+                  <div style={{ textAlign: 'center', padding: '10px 0', color: '#64748b', fontSize: '13.5px' }}>
+                    <LoadingOutlined /> Đang tải lên và phân tích dữ liệu, vui lòng đợi...
+                  </div>
+                )}
+
+                {importResult && (
+                  <div className="am-import-result">
+                    <div className="am-import-result-title">Kết quả Import:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div>Thêm mới thành công: <strong style={{ color: '#16a34a' }}>{importResult.createdCount ?? 0}</strong></div>
+                      <div>Cập nhật thành công: <strong style={{ color: '#2563eb' }}>{importResult.updatedCount ?? 0}</strong></div>
+                      {importResult.failedCount > 0 && (
+                        <div style={{ color: '#dc2626' }}>
+                          Lỗi hàng: <strong>{importResult.failedCount}</strong>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="am-modal-footer" style={{ gap: 10 }}>
+                <button
+                  type="button"
+                  className="am-modal-btn"
+                  onClick={() => setIsImportModalOpen(false)}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="submit"
+                  className="am-btn-primary"
+                  style={{ borderRadius: '8px' }}
+                  disabled={!importFile || importLoading}
+                >
+                  Bắt đầu Import
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

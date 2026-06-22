@@ -1,0 +1,191 @@
+.form-import-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header Card */
+.filp-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.filp-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.filp-subtitle {
+  font-size: 13.5px;
+  color: var(--text-soft);
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.filp-header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.filp-btn-create {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--navy);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.filp-btn-create:hover {
+  background: var(--navy-light);
+}
+
+/* Table Card */
+.filp-table-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.filp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.filp-table th {
+  text-align: left;
+  padding: 14px 18px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-soft);
+  background: #fafbfc;
+  border-bottom: 1.5px solid var(--border);
+}
+
+.filp-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.filp-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.filp-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.filp-batch-code {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--navy);
+  background: #eef2f6;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+}
+
+.filp-text-success {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.filp-text-danger {
+  color: var(--red);
+  font-weight: 600;
+}
+
+.filp-text-muted {
+  color: var(--text-faint);
+}
+
+/* Badges */
+.batch-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.batch-badge--success {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.batch-badge--warning {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.batch-badge--processing {
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+
+.batch-badge--danger {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.batch-badge--gray {
+  background: #eef0f2;
+  color: var(--text-soft);
+}
+
+/* Actions cell */
+.filp-actions-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.filp-btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #ffffff;
+  cursor: pointer;
+  color: var(--navy);
+  transition: all 0.12s ease;
+}
+
+.filp-btn-action:hover {
+  background: var(--navy);
+  color: #ffffff;
+  border-color: var(--navy);
+}
+
+.filp-table-empty {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--text-soft);
+  font-size: 14px;
+}

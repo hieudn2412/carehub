@@ -76,6 +76,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/error",
                                 apiPrefix + "/auth/login",
                                 apiPrefix + "/auth/refresh-token",
                                 apiPrefix + "/auth/logout",

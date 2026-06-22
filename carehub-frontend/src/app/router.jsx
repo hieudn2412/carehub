@@ -40,7 +40,19 @@ import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.j
 import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
 import ReferenceEmployeeDetailPage from '../features/admin/pages/ReferenceEmployeeDetailPage.jsx'
 import ReferenceDepartmentsListPage from '../features/admin/pages/ReferenceDepartmentsListPage.jsx'
-import { ADMIN_ROLES, AUTH_ROLE } from '../features/auth/utils/authNavigation.js'
+import NotificationSettingsPage from '../features/admin/pages/NotificationSettingsPage.jsx'
+import EmailTemplatesListPage from '../features/admin/pages/EmailTemplatesListPage.jsx'
+import EmailTemplateFormPage from '../features/admin/pages/EmailTemplateFormPage.jsx'
+import ImportModal from '../features/admin/pages/ImportModal.jsx'
+import FormListPage from '../features/admin/pages/FormListPage.jsx'
+import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.jsx'
+import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
+import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
+import FormImportListPage from '../features/admin/pages/FormImportListPage.jsx'
+import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
+
+import { ADMIN_ROLES } from '../features/auth/utils/authNavigation.js'
+
 
 function protectedElement(element, options = {}) {
   return <ProtectedRoute {...options}>{element}</ProtectedRoute>
@@ -50,9 +62,11 @@ function adminElement(element) {
   return protectedElement(element, { allowedRoles: ADMIN_ROLES })
 }
 
+
 function managerOrAdminElement(element) {
   return protectedElement(element, { allowedRoles: [AUTH_ROLE.admin, AUTH_ROLE.manager] })
 }
+
 
 function AppRouter() {
   return (
@@ -78,6 +92,7 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
       
       {/* Admin / General Training routes */}
+
       <Route path="/admin/dashboard" element={adminElement(<AdminDashboard />)} />
       <Route path="/admin/accounts" element={adminElement(<AdminAccountsScreen />)} />
       <Route path="/admin/system-logs" element={adminElement(<SystemLogsListScreen />)} />
@@ -87,6 +102,17 @@ function AppRouter() {
       <Route path="/admin/reference/employees" element={adminElement(<ReferenceEmployeesListPage />)} />
       <Route path="/admin/reference/employees/:id" element={adminElement(<ReferenceEmployeeDetailPage />)} />
       <Route path="/admin/reference/departments" element={adminElement(<ReferenceDepartmentsListPage />)} />
+      <Route path="/admin/reference/import" element={adminElement(<ImportModal />)} />
+      <Route path="/admin/notifications/settings" element={adminElement(<NotificationSettingsPage />)} />
+      <Route path="/admin/notifications/email-templates" element={adminElement(<EmailTemplatesListPage />)} />
+      <Route path="/admin/notifications/email-templates/:id" element={adminElement(<EmailTemplateFormPage />)} />
+      <Route path="/admin/quality/checklists" element={adminElement(<FormListPage />)} />
+      <Route path="/admin/quality/checklists/new" element={adminElement(<FormMetadataFormPage />)} />
+      <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
+      <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
+      <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />
+      <Route path="/admin/form-imports" element={adminElement(<FormImportListPage />)} />
+      <Route path="/admin/form-imports/new" element={adminElement(<FormImportWizardPage />)} />
       <Route path="/training" element={protectedElement(<TrainingFoundationPage />)} />
       <Route path="/training/records" element={protectedElement(<TrainingRecordListPage />)} />
       <Route path="/training/records/new" element={protectedElement(<TrainingRecordFormPage />)} />
@@ -103,6 +129,7 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
+
       
       {/* Staff CME / Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />

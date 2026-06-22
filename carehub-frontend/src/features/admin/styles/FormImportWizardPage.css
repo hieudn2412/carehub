@@ -1,0 +1,309 @@
+.form-import-wizard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fiw-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: pointer;
+  width: fit-content;
+  transition: color 0.12s ease;
+}
+
+.fiw-back:hover {
+  color: var(--navy);
+  text-decoration: underline;
+}
+
+.fiw-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fiw-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.fiw-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.fiw-card-desc {
+  font-size: 13px;
+  color: var(--text-soft);
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+/* Form */
+.fiw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.fiw-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.fiw-span-2 {
+  grid-column: span 2;
+}
+
+.fiw-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fiw-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fiw-req {
+  color: var(--red);
+}
+
+.fiw-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.12s ease;
+}
+
+.fiw-input:focus {
+  border-color: var(--navy);
+}
+
+.fiw-hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.fiw-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-light);
+  padding-top: 20px;
+}
+
+.fiw-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--navy);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.fiw-btn-submit:hover {
+  background: var(--navy-light);
+}
+
+/* Status Banner info */
+.fiw-status-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid var(--blue);
+}
+
+.fiw-batch-label {
+  display: inline-block;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--blue);
+  background: var(--blue-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  margin-bottom: 6px;
+}
+
+.fiw-status-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+
+.fiw-status-desc {
+  font-size: 12.5px;
+  color: var(--text-soft);
+}
+
+.fiw-btn-apply {
+  background: #1d5fa8;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.fiw-btn-apply:hover {
+  background: #154b88;
+}
+
+/* Rows list */
+.fiw-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fiw-row-card {
+  background: #fafbfc;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.fiw-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fiw-row-code {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+.fiw-row-url {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-decoration: underline;
+}
+
+/* Badges for rows */
+.row-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.row-badge--success {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.row-badge--warning {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.row-badge--danger {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.row-badge--gray {
+  background: #eef0f2;
+  color: var(--text-soft);
+}
+
+/* Messages callout list */
+.fiw-row-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.fiw-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.fiw-msg--warning {
+  color: var(--amber);
+}
+
+.fiw-msg--error {
+  color: var(--red);
+}
+
+.fiw-msg--info {
+  color: var(--green);
+}
+
+.fiw-msg-text {
+  flex: 1;
+}
+
+.fiw-completed-banner {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid #a8dab8;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  margin-top: 20px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .fiw-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .fiw-span-2 {
+    grid-column: span 1;
+  }
+  .fiw-status-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+}

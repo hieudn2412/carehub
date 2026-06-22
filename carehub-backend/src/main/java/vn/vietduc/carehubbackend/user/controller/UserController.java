@@ -69,6 +69,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User unlocked successfully", userService.unlockUser(id)));
     }
 
+    @PatchMapping("/users/{id}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<String>> resetUserPassword(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("User password reset successfully", userService.resetUserPassword(id)));
+    }
+
     @PostMapping("/users/{userId}/roles/{roleId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserDetailResponse>> assignRole(
