@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -72,6 +73,19 @@ function AdminSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
+  const navRef = useRef(null)
+
+  // Restore scroll position
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('admin-sidebar-scroll')
+    if (savedScroll && navRef.current) {
+      navRef.current.scrollTop = parseInt(savedScroll, 10)
+    }
+  }, [])
+
+  const handleScroll = (e) => {
+    sessionStorage.setItem('admin-sidebar-scroll', String(e.target.scrollTop))
+  }
 
   const handleLogout = async () => {
     await logoutUser()
@@ -95,7 +109,7 @@ function AdminSidebar() {
         </div>
       </div>
 
-      <nav className="admin-sidebar__nav">
+      <nav ref={navRef} onScroll={handleScroll} className="admin-sidebar__nav">
         {navSections.map((section) => (
           <div key={section.label} className="admin-sidebar__section">
             <p className="admin-sidebar__section-label">{section.label}</p>
