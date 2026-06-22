@@ -186,4 +186,46 @@ export const trainingApi = {
       params,
     })
   },
+
+  listLegacyImportBatches(params) {
+    return httpClient.get('/training/imports/legacy', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getLegacyImportBatch(batchId) {
+    return httpClient.get(`/training/imports/legacy/${batchId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  previewLegacyImport({ file, activityTypeId, professionalFieldId }) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('activityTypeId', activityTypeId)
+    if (professionalFieldId) {
+      formData.append('professionalFieldId', professionalFieldId)
+    }
+
+    return httpClient.post('/training/imports/legacy/preview', formData, {
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+
+  applyLegacyImport(batchId, payload) {
+    return httpClient.post(`/training/imports/legacy/${batchId}/apply`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  parseLegacyDuration(rawText) {
+    return httpClient.get('/training/imports/legacy/duration/parse', {
+      headers: authHeaders(),
+      params: { rawText },
+    })
+  },
 }

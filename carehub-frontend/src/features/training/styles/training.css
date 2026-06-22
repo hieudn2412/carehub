@@ -157,6 +157,10 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.training-form-grid--import {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .training-form-grid--requirements {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -236,6 +240,39 @@
 .training-table--employee-status,
 .training-table--employee-ledger {
   min-width: 1180px;
+}
+
+.training-table--legacy-import {
+  min-width: 1320px;
+}
+
+.training-import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.training-import-summary span {
+  background: #f8fafc;
+  border: 1px solid #e5ebf2;
+  border-radius: 6px;
+  color: #445b73;
+  font-weight: 700;
+  padding: 8px 10px;
+}
+
+.training-cell-wrap {
+  max-width: 260px;
+  overflow-wrap: anywhere;
+}
+
+.training-inline-list {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .training-table th,

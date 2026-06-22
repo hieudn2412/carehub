@@ -19,6 +19,7 @@ import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFor
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
 import TrainingEmployeeStatusDetailPage from '../features/training/pages/TrainingEmployeeStatusDetailPage.jsx'
 import TrainingEmployeeStatusListPage from '../features/training/pages/TrainingEmployeeStatusListPage.jsx'
+import TrainingLegacyImportPage from '../features/training/pages/TrainingLegacyImportPage.jsx'
 import TrainingRequirementPage from '../features/training/pages/TrainingRequirementPage.jsx'
 import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -96,6 +97,7 @@ function AppRouter() {
       <Route path="/training/status/:employeeId" element={protectedElement(<TrainingStatusPage />)} />
       <Route path="/training/employees" element={managerOrAdminElement(<TrainingEmployeeStatusListPage />)} />
       <Route path="/training/employees/:employeeId" element={managerOrAdminElement(<TrainingEmployeeStatusDetailPage />)} />
+      <Route path="/training/imports/legacy" element={managerOrAdminElement(<TrainingLegacyImportPage />)} />
       <Route path="/admin/training/activity-types" element={adminElement(<ActivityTypeListPage />)} />
       <Route path="/admin/training/activity-types/new" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />

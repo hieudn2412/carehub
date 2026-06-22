@@ -52,6 +52,18 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Evidence, review, and change timeline data on the Phase 06 ledger is summarized as counts per record; full record detail and download URLs remain delegated to the Phase 04/03 endpoints.
 - The Phase 06 frontend for employee list/detail is intentionally minimal and exists to test the API flows.
 
+## Implemented Stance For Phase 07
+
+- Legacy Excel import is Manager/Admin/System Job only. Admin can import all employees; Manager can import only employees in the manager's current department.
+- Import uses a two-step flow: multipart Excel preview persists `training_import_batches` and `training_import_rows`, then apply creates business records only for `VALID` rows or `WARNING` rows explicitly confirmed by `confirmedRowIds` or `commitWarnings=true`.
+- The source Excel has no reliable activity type column, so preview requires a selected `activityTypeId`; `professionalFieldId` is optional and applied to every committed row in the batch.
+- Employee code normalization trims, uppercases, removes whitespace, and prefixes numeric-only codes with `VD`; suspicious/non-matching codes stay failed/manual-review and are not auto-corrected.
+- Duration parsing stores raw text, parsed value, parsed unit, normalized hours, confidence, and warnings. Explicit hour values are normalized to hours. `LESSON`, `CREDIT`, `MONTH`, and `YEAR` are parsed without converting to hours because conversion rules are still open decisions.
+- Rows with no evidence, Google Drive evidence, duplicate candidates, ambiguous numeric duration, snapshot mismatches, or unconfirmed units are warnings, not auto-applied. Invalid employee, missing title/date, unsafe date range, and unparseable duration block the row.
+- Committed legacy rows create `PENDING_REVIEW` training records with `sourceType=LEGACY_IMPORT`; they do not become approved or counted automatically.
+- Google Drive/legacy evidence is saved only in `legacy_external_url`; `object_key` remains null until a separate object-storage migration/download process is approved.
+- The Phase 07 frontend is intentionally minimal and exists to upload, preview, confirm, and apply batches for API testing.
+
 ## Open Decisions
 
 1. How many hours a `LESSON` represents.

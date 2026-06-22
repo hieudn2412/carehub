@@ -16,6 +16,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
     Optional<User> findByEmailAndIsDeletedFalse(String email);
     Optional<User> findByEmployeeCodeAndIsDeletedFalse(String employeeCode);
+
+    @EntityGraph(attributePaths = {"department", "position", "educationLevel"})
+    Optional<User> findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(String employeeCode, vn.vietduc.carehubbackend.user.entity.UserStatus status);
     boolean existsByEmail(String email);
     boolean existsByEmployeeCodeAndIsDeletedFalse(String employeeCode);
     boolean existsByEmailAndIsDeletedFalse(String email);
@@ -25,6 +28,15 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
     boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND UPPER(u.employeeCode) IN :employeeCodes
+            """)
+    List<User> findActiveByNormalizedEmployeeCodes(@Param("employeeCodes") Collection<String> employeeCodes);
 
     @Query("""
             SELECT COUNT(u)
