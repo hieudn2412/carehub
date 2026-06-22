@@ -2,6 +2,11 @@ package vn.vietduc.carehubbackend.user.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+<<<<<<< HEAD
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+=======
+>>>>>>> 128797e4e5e93630585f978a3ec1492ea5675ce6
 import org.springframework.stereotype.Repository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.custom.UserRepositoryCustom;
@@ -26,6 +31,15 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
     boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query("""
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND UPPER(u.employeeCode) IN :employeeCodes
+            """)
+    List<User> findActiveByNormalizedEmployeeCodes(@Param("employeeCodes") Collection<String> employeeCodes);
 
     @Query("""
             SELECT COUNT(u)
