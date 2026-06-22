@@ -33,8 +33,6 @@ import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.j
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
 import AdminDashboard from '../features/admin/pages/AdminDashboard.jsx'
 import AdminAccountsScreen from '../features/admin/pages/AdminAccountsScreen.jsx'
-import SystemLogsListScreen from '../features/admin/pages/SystemLogsListScreen.jsx'
-import SystemLogDetailScreen from '../features/admin/pages/SystemLogDetailScreen.jsx'
 import ImportLogsListPage from '../features/admin/pages/ImportLogsListPage.jsx'
 import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.jsx'
 import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
@@ -95,8 +93,7 @@ function AppRouter() {
 
       <Route path="/admin/dashboard" element={adminElement(<AdminDashboard />)} />
       <Route path="/admin/accounts" element={adminElement(<AdminAccountsScreen />)} />
-      <Route path="/admin/system-logs" element={adminElement(<SystemLogsListScreen />)} />
-      <Route path="/admin/system-logs/:id" element={adminElement(<SystemLogDetailScreen />)} />
+      <Route path="/admin/system-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system/import-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system-settings" element={adminElement(<SystemSettingsScreen />)} />
       <Route path="/admin/reference/employees" element={adminElement(<ReferenceEmployeesListPage />)} />

@@ -16,8 +16,8 @@ const generateMockTemplates = () => {
     {
       id: 1,
       code: 'Mẫu nhắc nhở thiếu giờ học (CME)',
-      subject: '[VietDuc] Nhắc nhở: Bạn còn thiếu {{missing_hours}} giờ CME',
-      body: 'Kính gửi {{employee_name}},\n\nTổng giờ CME 5 năm hiện tại: {{current_hours}} / 120h. Vui lòng bổ sung trước {{deadline}}.\n\nTrân trọng,\nHệ thống VietDuc',
+      subject: '[VietDuc] Nhắc nhở: Bạn còn thiếu CME',
+      body: 'Kính gửi {{userName}},\n\nTổng giờ CME 5 năm hiện tại của bạn đang thiếu. Chi tiết: {{content}}. Vui lòng bổ sung trước {{deadline}}.\n\nTrân trọng,\nHệ thống VietDuc',
       categoryName: 'Đào tạo',
       triggerCondition: 'Tự động · hàng tuần',
       active: true
@@ -25,8 +25,8 @@ const generateMockTemplates = () => {
     {
       id: 2,
       code: 'Mẫu thông báo khi được giao bài thi mới',
-      subject: '[VietDuc] Thông báo: Giao bài thi mới cho {{employee_name}}',
-      body: 'Kính gửi {{employee_name}},\n\nBạn đã được giao bài thi mới: {{test_name}}. Thời gian hoàn thành trước {{deadline}}.\n\nTrân trọng,\nHệ thống VietDuc',
+      subject: '[VietDuc] Thông báo: Giao bài thi mới cho {{userName}}',
+      body: 'Kính gửi {{userName}},\n\nBạn đã được giao bài thi mới: {{title}}. Thời gian hoàn thành trước {{deadline}}.\n\nTrân trọng,\nHệ thống VietDuc',
       categoryName: 'Đánh giá',
       triggerCondition: 'Tự động · được giao',
       active: true
@@ -34,8 +34,8 @@ const generateMockTemplates = () => {
     {
       id: 3,
       code: 'Mẫu cảnh báo khi nhân viên thi trượt',
-      subject: '[VietDuc] Cảnh báo: Nhân viên {{employee_name}} thi trượt',
-      body: 'Kính gửi Quản lý,\n\nNhân viên {{employee_name}} thuộc phòng ban {{department}} đã thi trượt bài thi {{test_name}}.\n\nTrân trọng,\nHệ thống VietDuc',
+      subject: '[VietDuc] Cảnh báo: Nhân viên {{userName}} thi trượt',
+      body: 'Kính gửi {{managerName}},\n\nNhân viên {{userName}} (Mã NV: {{employeeCode}}) đã thi trượt bài thi.\n\nTrân trọng,\nHệ thống VietDuc',
       categoryName: 'Đánh giá',
       triggerCondition: 'Tự động · khi không đạt',
       active: false
@@ -44,7 +44,7 @@ const generateMockTemplates = () => {
       id: 4,
       code: 'Mẫu cảnh báo khi tỷ lệ làm đúng quy trình bị tụt dưới mức mục tiêu',
       subject: '[VietDuc] Cảnh báo: Tỷ lệ tuân thủ thấp dưới mức mục tiêu',
-      body: 'Kính gửi Quản lý,\n\nTỷ lệ tuân thủ của {{department}} đang đạt {{compliance_rate}}%, thấp dưới mức mục tiêu {{target_rate}}%.\n\nTrân trọng,\nHệ thống VietDuc',
+      body: 'Kính gửi {{managerName}},\n\nTỷ lệ tuân thủ của phòng ban đang đạt dưới mức mục tiêu: {{content}}.\n\nTrân trọng,\nHệ thống VietDuc',
       categoryName: 'Chất lượng',
       triggerCondition: 'Tự động · hàng ngày',
       active: true
@@ -63,7 +63,7 @@ const generateMockTemplates = () => {
       id: i,
       code: codeName,
       subject: `[VietDuc] Tiêu đề email mẫu số ${i}`,
-      body: `Kính gửi {{employee_name}},\n\nĐây là nội dung email mẫu số ${i} thuộc danh mục ${categories[catIndex]}.\n\nTrân trọng,\nHệ thống VietDuc`,
+      body: `Kính gửi {{userName}},\n\nĐây là nội dung email mẫu số ${i} thuộc danh mục ${categories[catIndex]} dành cho mã nhân viên {{employeeCode}}.\n\nTrân trọng,\nHệ thống VietDuc`,
       categoryName: categories[catIndex],
       triggerCondition: triggers[trigIndex],
       active: i % 5 !== 0

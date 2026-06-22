@@ -234,3 +234,365 @@
   background: #158f6e;
   border-color: #158f6e;
 }
+
+/* Action Button */
+.il-action-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.il-action-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+}
+
+/* Details Modal Overlay */
+.il-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: ilFadeIn 0.2s ease-out;
+}
+
+/* Modal Content Card */
+.il-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 850px;
+  max-height: 90vh;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  animation: ilSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.il-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.il-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.il-modal-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.il-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.il-modal-close:hover {
+  color: #475569;
+}
+
+.il-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.il-modal-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+/* Summary Grid inside Modal */
+.il-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.il-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.il-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.il-summary-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+/* Count Stats Row */
+.il-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.il-stat-card {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  background: #fff;
+}
+
+.il-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.il-stat-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.il-stat-card--total .il-stat-num { color: #1e293b; }
+.il-stat-card--inserted {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.il-stat-card--inserted .il-stat-num { color: #16a34a; }
+
+.il-stat-card--updated {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.il-stat-card--updated .il-stat-num { color: #2563eb; }
+
+.il-stat-card--failed {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.il-stat-card--failed .il-stat-num { color: #dc2626; }
+
+/* Row Level Results Section */
+.il-row-results-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.il-row-results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.il-row-results-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.il-row-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.il-row-filter-select {
+  height: 34px !important;
+  padding: 6px 30px 6px 10px !important;
+  font-size: 12.5px !important;
+  min-width: 140px !important;
+}
+
+.il-row-search-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  outline: none;
+  height: 34px;
+  width: 180px;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.il-row-search-input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+/* Row Log Table */
+.il-row-table-container {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow-y: auto;
+  max-height: 280px;
+  background: #fff;
+}
+
+.il-row-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.il-row-table th {
+  font-size: 11.5px;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  text-align: left;
+}
+
+.il-row-table td {
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.il-row-table tr:last-child td {
+  border-bottom: none;
+}
+
+.il-row-table tr:hover td {
+  background: #f8fafc;
+}
+
+.il-row-emp-code {
+  font-family: monospace;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.il-row-msg-cell {
+  word-break: break-all;
+}
+
+.il-row-msg-error {
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.il-row-msg-info {
+  color: #475569;
+}
+
+/* Row Badges */
+.il-row-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.il-row-badge--inserted {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.il-row-badge--updated {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.il-row-badge--unchanged {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.il-row-badge--failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Modal Footer */
+.il-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  background: #f8fafc;
+}
+
+.il-modal-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.il-modal-btn--secondary {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.il-modal-btn--secondary:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #94a3b8;
+}
+
+/* Keyframes */
+@keyframes ilFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ilSlideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
