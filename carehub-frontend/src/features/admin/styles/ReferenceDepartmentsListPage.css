@@ -204,3 +204,203 @@
   background: #158f6e;
   border-color: #158f6e;
 }
+
+/* Department CRUD Modal & Buttons */
+.rdl-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1aaa84;
+  color: #fff;
+  border: 1px solid #1aaa84;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  height: 38px;
+  white-space: nowrap;
+}
+
+.rdl-btn-primary:hover {
+  background: #158f6e;
+  border-color: #158f6e;
+}
+
+.rdl-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.rdl-btn-secondary:hover {
+  background: #f8fafc;
+  color: #1aaa84;
+  border-color: #1aaa84;
+}
+
+.rdl-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.rdl-btn-danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #ef4444;
+}
+
+.rdl-actions-cell {
+  display: flex;
+  gap: 8px;
+}
+
+/* Modal styling */
+.rdl-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeInRdl 0.2s ease-out;
+}
+
+.rdl-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: slideUpRdl 0.25s ease-out;
+}
+
+.rdl-modal-header {
+  padding: 18px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rdl-modal-title {
+  font-size: 16.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rdl-modal-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.rdl-modal-close:hover {
+  color: #0f172a;
+}
+
+.rdl-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rdl-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rdl-form-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.rdl-form-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.rdl-form-input:focus {
+  border-color: #1aaa84;
+}
+
+.rdl-modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.rdl-modal-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  transition: all 0.15s ease;
+  height: 38px;
+}
+
+.rdl-modal-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+@keyframes fadeInRdl {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUpRdl {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

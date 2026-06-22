@@ -45,6 +45,38 @@ const generateMockLogs = () => {
     
     // Decreasing timestamp by i * 4 hours
     const logTime = new Date(startTimestamp - i * 4 * 3600 * 1000)
+
+    // Generate mock rowResultsJson for detail modal
+    const rowResults = []
+    const limit = Math.min(totalRows, 15)
+    for (let r = 1; r <= limit; r++) {
+      let rStatus = 'UNCHANGED'
+      let rMsg = 'Không có thay đổi dữ liệu'
+      if (status === 'FAILED') {
+        rStatus = 'FAILED'
+        rMsg = 'Dòng chứa thông tin không hợp lệ: Định dạng ngày tháng sai'
+      } else if (status === 'PARTIAL') {
+        if (r % 3 === 0) {
+          rStatus = 'FAILED'
+          rMsg = 'Mã nhân viên đã tồn tại ở một phòng ban khác'
+        } else if (r % 3 === 1) {
+          rStatus = 'INSERTED'
+          rMsg = 'Thêm mới tài khoản và nhân viên thành công'
+        } else {
+          rStatus = 'UPDATED'
+          rMsg = 'Cập nhật phòng ban và chức vụ thành công'
+        }
+      } else {
+        rStatus = r % 2 === 0 ? 'INSERTED' : 'UPDATED'
+        rMsg = rStatus === 'INSERTED' ? 'Đã thêm mới bản ghi tham chiếu' : 'Đã cập nhật thông tin tham chiếu'
+      }
+      rowResults.push({
+        rowNumber: r + 1,
+        employeeCode: `NV${1000 + r + i}`,
+        status: rStatus,
+        message: rMsg
+      })
+    }
     
     logs.push({
       id,
@@ -55,7 +87,8 @@ const generateMockLogs = () => {
       updatedRows,
       failedRows,
       durationMs: 500 + (i * 15) % 1500,
-      createdAt: logTime.toISOString()
+      createdAt: logTime.toISOString(),
+      rowResultsJson: JSON.stringify(rowResults)
     })
   }
   return logs
@@ -75,10 +108,20 @@ function ImportLogsListPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
+  // Details Modal State
+  const [selectedLog, setSelectedLog] = useState(null)
+  const [logDetail, setLogDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [rowStatusFilter, setRowStatusFilter] = useState('ALL')
+  const [rowSearchQuery, setRowSearchQuery] = useState('')
+
+  const isSystemLogsPath = window.location.pathname.includes('/admin/system-logs')
+
   // Breadcrumbs config for AdminHeader
   const breadcrumbs = [
     { label: 'Hệ thống' },
-    { label: 'Import logs' }
+    { label: isSystemLogsPath ? 'System logs' : 'Import logs' }
   ]
 
   // Generate mock logs once
@@ -131,18 +174,39 @@ function ImportLogsListPage() {
     }
 
     // Prepare parameters for API
+    let apiStatus = undefined
+    if (statusFilter === 'SUCCESS') {
+      apiStatus = 'COMPLETED'
+    } else if (statusFilter === 'PARTIAL') {
+      apiStatus = 'COMPLETED_WITH_ERRORS'
+    } else if (statusFilter === 'FAILED') {
+      apiStatus = 'FAILED'
+    }
+
     const params = {
       page: page - 1, // 0-indexed in backend
       size: 10,
       q: fileFilter !== 'all' ? fileFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined
+      status: apiStatus
     }
 
     adminApi.getImportLogs(params)
       .then(res => {
         const responseData = res.data?.data
         if (responseData && responseData.content && responseData.content.length > 0) {
-          setLogs(responseData.content)
+          let apiLogs = responseData.content
+
+          // Apply client-side date filtering if specified
+          if (dateFrom) {
+            const fromTime = new Date(dateFrom + 'T00:00:00').getTime()
+            apiLogs = apiLogs.filter(log => new Date(log.createdAt).getTime() >= fromTime)
+          }
+          if (dateTo) {
+            const toTime = new Date(dateTo + 'T23:59:59').getTime()
+            apiLogs = apiLogs.filter(log => new Date(log.createdAt).getTime() <= toTime)
+          }
+
+          setLogs(apiLogs)
           setTotalElements(responseData.totalElements || 0)
           setTotalPages(responseData.totalPages || 0)
           setLoading(false)
@@ -169,6 +233,62 @@ function ImportLogsListPage() {
     }
   }, [page, fileFilter, statusFilter, dateFrom, dateTo, useMock])
 
+  // Open details modal
+  const handleOpenDetailModal = (log) => {
+    setSelectedLog(log)
+    setIsDetailModalOpen(true)
+    setRowStatusFilter('ALL')
+    setRowSearchQuery('')
+
+    if (useMock) {
+      setLogDetail(log)
+      return
+    }
+
+    setDetailLoading(true)
+    setLogDetail(null)
+    adminApi.getImportLogById(log.id)
+      .then(res => {
+        const responseData = res.data?.data
+        if (responseData) {
+          setLogDetail(responseData)
+        } else {
+          setLogDetail(log)
+        }
+        setDetailLoading(false)
+      })
+      .catch(err => {
+        console.error('Failed to fetch import log detail:', err)
+        setLogDetail(log)
+        setDetailLoading(false)
+      })
+  }
+
+  // Parse rowResultsJson
+  const parsedRowResults = useMemo(() => {
+    if (!logDetail?.rowResultsJson) return []
+    try {
+      const parsed = JSON.parse(logDetail.rowResultsJson)
+      return Array.isArray(parsed) ? parsed : []
+    } catch (e) {
+      console.error('Failed to parse rowResultsJson:', e)
+      return []
+    }
+  }, [logDetail])
+
+  // Filtered row results within the modal
+  const filteredRowResults = useMemo(() => {
+    let result = parsedRowResults
+    if (rowStatusFilter !== 'ALL') {
+      result = result.filter(r => r.status === rowStatusFilter)
+    }
+    if (rowSearchQuery.trim()) {
+      const q = rowSearchQuery.toLowerCase()
+      result = result.filter(r => r.employeeCode && r.employeeCode.toLowerCase().includes(q))
+    }
+    return result
+  }, [parsedRowResults, rowStatusFilter, rowSearchQuery])
+
   // Helper to format date string to DD/MM/YYYY HH:mm
   const fmtDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -184,6 +304,7 @@ function ImportLogsListPage() {
   const renderStatusBadge = (status) => {
     switch (status) {
       case 'SUCCESS':
+      case 'COMPLETED':
         return (
           <span className="il-badge il-badge--success">
             <span className="il-badge__dot" />
@@ -191,6 +312,7 @@ function ImportLogsListPage() {
           </span>
         )
       case 'PARTIAL':
+      case 'COMPLETED_WITH_ERRORS':
         return (
           <span className="il-badge il-badge--partial">
             <span className="il-badge__dot" />
@@ -214,6 +336,22 @@ function ImportLogsListPage() {
     }
   }
 
+  // Helper to render status badge of specific Excel rows in modal
+  const renderRowStatusBadge = (status) => {
+    switch (status) {
+      case 'INSERTED':
+        return <span className="il-row-badge il-row-badge--inserted">Thêm mới</span>
+      case 'UPDATED':
+        return <span className="il-row-badge il-row-badge--updated">Cập nhật</span>
+      case 'UNCHANGED':
+        return <span className="il-row-badge il-row-badge--unchanged">Không đổi</span>
+      case 'FAILED':
+        return <span className="il-row-badge il-row-badge--failed">Thất bại</span>
+      default:
+        return <span className="il-row-badge">{status}</span>
+    }
+  }
+
   return (
     <div className="dashboard-layout">
       <AdminSidebar />
@@ -225,8 +363,14 @@ function ImportLogsListPage() {
               
               {/* Title & Subtitle Card */}
               <div className="il-title-card">
-                <h1 className="il-title">Import logs</h1>
-                <p className="il-subtitle">Lịch sử của tất cả các đợt nhập dữ liệu tham chiếu.</p>
+                <h1 className="il-title">
+                  {isSystemLogsPath ? 'Nhật ký hệ thống (System logs)' : 'Nhật ký nhập dữ liệu (Import logs)'}
+                </h1>
+                <p className="il-subtitle">
+                  {isSystemLogsPath
+                    ? 'Giám sát và kiểm toán toàn bộ hoạt động nhập dữ liệu tham chiếu trên hệ thống.'
+                    : 'Lịch sử của tất cả các đợt nhập dữ liệu tham chiếu.'}
+                </p>
               </div>
 
               {/* Filters Block */}
@@ -292,18 +436,19 @@ function ImportLogsListPage() {
                       <th style={{ textAlign: 'right' }}>Thành công</th>
                       <th style={{ textAlign: 'right' }}>Lỗi</th>
                       <th>Trạng thái</th>
+                      <th style={{ textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                           <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải lịch sử nhập dữ liệu...
                         </td>
                       </tr>
                     ) : logs.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                           Không tìm thấy nhật ký nhập dữ liệu phù hợp.
                         </td>
                       </tr>
@@ -324,6 +469,14 @@ function ImportLogsListPage() {
                               </span>
                             </td>
                             <td>{renderStatusBadge(log.status)}</td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                className="il-action-btn"
+                                onClick={() => handleOpenDetailModal(log)}
+                              >
+                                Chi tiết
+                              </button>
+                            </td>
                           </tr>
                         )
                       })
@@ -372,6 +525,143 @@ function ImportLogsListPage() {
           </main>
         </div>
       </div>
+
+      {/* Details Modal */}
+      {isDetailModalOpen && (
+        <div className="il-modal-overlay" onClick={() => setIsDetailModalOpen(false)}>
+          <div className="il-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="il-modal-header">
+              <div>
+                <h2 className="il-modal-title">Chi tiết đợt nhập dữ liệu #{selectedLog?.id}</h2>
+                <p className="il-modal-subtitle">Chi tiết kết quả và các dòng lỗi từ file nhập.</p>
+              </div>
+              <button className="il-modal-close" onClick={() => setIsDetailModalOpen(false)}>
+                &times;
+              </button>
+            </div>
+
+            <div className="il-modal-body">
+              {detailLoading ? (
+                <div className="il-modal-loading">
+                  <LoadingOutlined /> Đang tải thông tin chi tiết...
+                </div>
+              ) : (
+                <>
+                  {/* Summary Grid */}
+                  <div className="il-summary-grid">
+                    <div className="il-summary-item">
+                      <span className="il-summary-label">Tên tệp nguồn</span>
+                      <span className="il-summary-value">{logDetail?.sourceFile}</span>
+                    </div>
+                    <div className="il-summary-item">
+                      <span className="il-summary-label">Thời gian nhập</span>
+                      <span className="il-summary-value">{fmtDate(logDetail?.createdAt)}</span>
+                    </div>
+                    <div className="il-summary-item">
+                      <span className="il-summary-label">Thời gian chạy</span>
+                      <span className="il-summary-value">{((logDetail?.durationMs || 0) / 1000).toFixed(2)} giây</span>
+                    </div>
+                    <div className="il-summary-item">
+                      <span className="il-summary-label">Trạng thái chung</span>
+                      <span className="il-summary-value">{renderStatusBadge(logDetail?.status)}</span>
+                    </div>
+                  </div>
+
+                  {/* Count Stats Cards */}
+                  <div className="il-stats-row">
+                    <div className="il-stat-card il-stat-card--total">
+                      <div className="il-stat-num">{logDetail?.totalRows || 0}</div>
+                      <div className="il-stat-label">Tổng số dòng</div>
+                    </div>
+                    <div className="il-stat-card il-stat-card--inserted">
+                      <div className="il-stat-num">{logDetail?.insertedRows || 0}</div>
+                      <div className="il-stat-label">Thêm mới</div>
+                    </div>
+                    <div className="il-stat-card il-stat-card--updated">
+                      <div className="il-stat-num">{logDetail?.updatedRows || 0}</div>
+                      <div className="il-stat-label">Cập nhật</div>
+                    </div>
+                    <div className="il-stat-card il-stat-card--failed">
+                      <div className="il-stat-num">{logDetail?.failedRows || 0}</div>
+                      <div className="il-stat-label">Thất bại</div>
+                    </div>
+                  </div>
+
+                  {/* Row Level Results */}
+                  <div className="il-row-results-section">
+                    <div className="il-row-results-header">
+                      <h3>Kết quả chi tiết từng dòng ({parsedRowResults.length})</h3>
+                      <div className="il-row-filters">
+                        <select
+                          className="il-filter-select il-row-filter-select"
+                          value={rowStatusFilter}
+                          onChange={(e) => setRowStatusFilter(e.target.value)}
+                        >
+                          <option value="ALL">Tất cả trạng thái</option>
+                          <option value="INSERTED">Thêm mới</option>
+                          <option value="UPDATED">Cập nhật</option>
+                          <option value="UNCHANGED">Không đổi</option>
+                          <option value="FAILED">Thất bại</option>
+                        </select>
+                        <input
+                          type="text"
+                          className="il-row-search-input"
+                          placeholder="Tìm mã nhân viên..."
+                          value={rowSearchQuery}
+                          onChange={(e) => setRowSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="il-row-table-container">
+                      <table className="il-row-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '80px' }}>Dòng Excel</th>
+                            <th style={{ width: '150px' }}>Mã nhân viên</th>
+                            <th style={{ width: '130px' }}>Kết quả</th>
+                            <th>Thông báo chi tiết</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRowResults.length === 0 ? (
+                            <tr>
+                              <td colSpan="4" style={{ textAlign: 'center', padding: '24px 0', color: '#64748b' }}>
+                                Không tìm thấy kết quả dòng phù hợp với bộ lọc.
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredRowResults.map((row, idx) => (
+                              <tr key={idx}>
+                                <td>{row.rowNumber}</td>
+                                <td>
+                                  <span className="il-row-emp-code">{row.employeeCode || '-'}</span>
+                                </td>
+                                <td>{renderRowStatusBadge(row.status)}</td>
+                                <td className="il-row-msg-cell">
+                                  <span className={row.status === 'FAILED' ? 'il-row-msg-error' : 'il-row-msg-info'}>
+                                    {row.message}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="il-modal-footer">
+              <button className="il-modal-btn il-modal-btn--secondary" onClick={() => setIsDetailModalOpen(false)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -28,7 +28,12 @@ function NotificationSettingsPage() {
         const config = res.data?.data
         if (config) {
           setCmeAlertEnabled(config.emailEnabled)
-          setAlertSchedule(config.alertSchedule || 'Hàng tuần')
+          const schedule = config.alertSchedule
+          if (schedule === 'EVERY_15_MIN' || !['Hàng ngày', 'Hàng tuần', 'Hàng tháng'].includes(schedule)) {
+            setAlertSchedule('Hàng tuần')
+          } else {
+            setAlertSchedule(schedule || 'Hàng tuần')
+          }
         }
       })
       .catch(err => {

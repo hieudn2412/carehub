@@ -7,6 +7,37 @@ import { LeftOutlined, LoadingOutlined } from '@ant-design/icons'
 import { generateMockTemplates } from './EmailTemplatesListPage'
 import '../styles/EmailTemplateFormPage.css'
 
+const placeholderMap = [
+  { raw: '{{userName}}', friendly: '[Tên người dùng]' },
+  { raw: '{{employeeCode}}', friendly: '[Mã nhân viên]' },
+  { raw: '{{otp}}', friendly: '[Mã OTP]' },
+  { raw: '{{resetLink}}', friendly: '[Liên kết đặt lại mật khẩu]' },
+  { raw: '{{title}}', friendly: '[Tiêu đề nội dung]' },
+  { raw: '{{content}}', friendly: '[Nội dung chi tiết]' },
+  { raw: '{{deadline}}', friendly: '[Hạn chót]' },
+  { raw: '{{managerName}}', friendly: '[Tên quản lý]' }
+]
+
+// Convert from raw database format {{placeholder}} to friendly [Tên tiếng Việt] for UI editing
+const toFriendlyFormat = (text) => {
+  if (!text) return ''
+  let result = text
+  placeholderMap.forEach(item => {
+    result = result.replaceAll(item.raw, item.friendly)
+  })
+  return result
+}
+
+// Convert from friendly [Tên tiếng Việt] to raw format {{placeholder}} for database saving
+const toRawFormat = (text) => {
+  if (!text) return ''
+  let result = text
+  placeholderMap.forEach(item => {
+    result = result.replaceAll(item.friendly, item.raw)
+  })
+  return result
+}
+
 function EmailTemplateFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -60,8 +91,8 @@ function EmailTemplateFormPage() {
         const tpl = res.data?.data
         if (tpl) {
           setCode(tpl.code || '')
-          setSubject(tpl.subject || '')
-          setBody(tpl.body || '')
+          setSubject(toFriendlyFormat(tpl.subject || ''))
+          setBody(toFriendlyFormat(tpl.body || ''))
           setActive(tpl.active ? 'Hoạt động' : 'Ngừng hoạt động')
           
           const enriched = getEnrichedFields(tpl)
@@ -82,8 +113,8 @@ function EmailTemplateFormPage() {
     const mockTpl = mockDatabase.find(t => String(t.id) === String(id))
     if (mockTpl) {
       setCode(mockTpl.code || '')
-      setSubject(mockTpl.subject || '')
-      setBody(mockTpl.body || '')
+      setSubject(toFriendlyFormat(mockTpl.subject || ''))
+      setBody(toFriendlyFormat(mockTpl.body || ''))
       setActive(mockTpl.active ? 'Hoạt động' : 'Ngừng hoạt động')
       
       const enriched = getEnrichedFields(mockTpl)
@@ -129,8 +160,8 @@ function EmailTemplateFormPage() {
 
     const payload = {
       code: code.trim(),
-      subject: subject.trim(),
-      body: body,
+      subject: toRawFormat(subject.trim()),
+      body: toRawFormat(body),
       active: active === 'Hoạt động',
       mandatory: false
     }
@@ -193,7 +224,16 @@ function EmailTemplateFormPage() {
     { label: isEditMode ? 'Chỉnh sửa biểu mẫu' : 'Tạo mới biểu mẫu' }
   ]
 
-  const variables = ['{{employee_name}}', '{{missing_hours}}', '{{current_hours}}', '{{deadline}}', '{{department}}']
+  const variables = [
+    { label: 'Tên người dùng', friendly: '[Tên người dùng]', raw: '{{userName}}' },
+    { label: 'Mã nhân viên', friendly: '[Mã nhân viên]', raw: '{{employeeCode}}' },
+    { label: 'Mã OTP', friendly: '[Mã OTP]', raw: '{{otp}}' },
+    { label: 'Liên kết đặt lại mật khẩu', friendly: '[Liên kết đặt lại mật khẩu]', raw: '{{resetLink}}' },
+    { label: 'Tiêu đề nội dung', friendly: '[Tiêu đề nội dung]', raw: '{{title}}' },
+    { label: 'Nội dung chi tiết', friendly: '[Nội dung chi tiết]', raw: '{{content}}' },
+    { label: 'Hạn chót', friendly: '[Hạn chót]', raw: '{{deadline}}' },
+    { label: 'Tên quản lý', friendly: '[Tên quản lý]', raw: '{{managerName}}' }
+  ]
 
   return (
     <div className="dashboard-layout">
@@ -297,17 +337,16 @@ function EmailTemplateFormPage() {
                     />
                   </div>
 
-                  {/* Variable Pills */}
                   <div className="etf-variables-block">
-                    <span className="etf-variables-title">Available variables:</span>
+                    <span className="etl-variables-title">Từ khóa động hỗ trợ (Click để chèn):</span>
                     {variables.map(v => (
                       <span
-                        key={v}
+                        key={v.raw}
                         className="etf-var-pill"
-                        onClick={() => handleInsertVariable(v)}
-                        title="Click để chèn vào nội dung"
+                        onClick={() => handleInsertVariable(v.friendly)}
+                        title={`Click để chèn ${v.friendly} vào nội dung`}
                       >
-                        {v}
+                        {v.label}
                       </span>
                     ))}
                   </div>

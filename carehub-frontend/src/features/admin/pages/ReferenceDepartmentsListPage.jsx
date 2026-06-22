@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
-import { SearchOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
+import { SearchOutlined, LeftOutlined, RightOutlined, LoadingOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
 import '../styles/ReferenceDepartmentsListPage.css'
 
 // Generate 248 mock reference departments to match mockup details
@@ -66,10 +66,15 @@ function ReferenceDepartmentsListPage() {
   const [blockFilter, setBlockFilter] = useState('all')
   const [page, setPage] = useState(1)
 
+  // Modal & Form State
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingDept, setEditingDept] = useState(null) // null = Create, object = Edit
+  const [formDeptCode, setFormDeptCode] = useState('')
+  const [formDeptName, setFormDeptName] = useState('')
+
   const mockDatabase = useMemo(() => generateMockDepartments(), [])
 
-  // Fetch departments from backend or fallback
-  useEffect(() => {
+  const loadDepartments = () => {
     setLoading(true)
     adminApi.getDepartments()
       .then(res => {
@@ -81,6 +86,7 @@ function ReferenceDepartmentsListPage() {
             return {
               id: dept.id,
               name: dept.name,
+              departmentCode: dept.departmentCode || `DEPT-${dept.id}`,
               blockName: blockNames[index % blockNames.length],
               employeeCount: 50 + (index * 25) % 250,
               managerCode: `VD${String(368 + (index % 5)).padStart(5, '0')}`
@@ -88,18 +94,91 @@ function ReferenceDepartmentsListPage() {
           })
           setApiDepts(enriched)
           setUseMock(false)
-          setLoading(false)
         } else {
           setUseMock(true)
-          setLoading(false)
         }
       })
       .catch(err => {
         console.warn('GET /departments API failed. Falling back to mock departments.', err)
         setUseMock(true)
+      })
+      .finally(() => {
         setLoading(false)
       })
+  }
+
+  // Fetch departments from backend or fallback
+  useEffect(() => {
+    loadDepartments()
   }, [])
+
+  // Action handlers
+  const handleOpenCreateModal = () => {
+    setFormDeptCode('')
+    setFormDeptName('')
+    setEditingDept(null)
+    setIsModalOpen(true)
+  }
+
+  const handleOpenEditModal = (dept) => {
+    setFormDeptCode(dept.departmentCode || '')
+    setFormDeptName(dept.name || '')
+    setEditingDept(dept)
+    setIsModalOpen(true)
+  }
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault()
+    if (!formDeptCode.trim() || !formDeptName.trim()) {
+      alert('Vui lòng nhập đầy đủ Mã và Tên phòng ban.')
+      return
+    }
+
+    const payload = {
+      departmentCode: formDeptCode.trim().toUpperCase(),
+      name: formDeptName.trim()
+    }
+
+    if (editingDept) {
+      // Update
+      adminApi.updateDepartment(editingDept.id, payload)
+        .then(() => {
+          alert('Cập nhật phòng ban thành công!')
+          setIsModalOpen(false)
+          loadDepartments()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phòng ban.')
+        })
+    } else {
+      // Create
+      adminApi.createDepartment(payload)
+        .then(() => {
+          alert('Tạo phòng ban thành công!')
+          setIsModalOpen(false)
+          loadDepartments()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Có lỗi xảy ra khi tạo phòng ban.')
+        })
+    }
+  }
+
+  const handleDeleteDept = (id) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa phòng ban này? Hành động này không thể hoàn tác.')) {
+      adminApi.deleteDepartment(id)
+        .then(() => {
+          alert('Xóa phòng ban thành công!')
+          loadDepartments()
+        })
+        .catch(err => {
+          console.error(err)
+          alert(err.response?.data?.message || 'Không thể xóa phòng ban này.')
+        })
+    }
+  }
 
   // Reset page when filters change
   useEffect(() => {
@@ -154,7 +233,7 @@ function ReferenceDepartmentsListPage() {
               {/* Title Card */}
               <div className="rdl-title-card">
                 <h1 className="rdl-title">Danh sách khoa/phòng ban gốc</h1>
-                <p className="rdl-subtitle">Dữ liệu khoa/phòng ban gốc · Chỉ đọc · Được đồng bộ từ hệ thống nhân sự</p>
+                <p className="rdl-subtitle">Quản lý danh mục các khoa/phòng ban gốc trong hệ thống</p>
               </div>
 
               {/* Filter Bar */}
@@ -184,6 +263,10 @@ function ReferenceDepartmentsListPage() {
                 </select>
 
                 <span className="rdl-results-count">{totalElements} kết quả</span>
+                
+                <button className="rdl-btn-primary" onClick={handleOpenCreateModal}>
+                  <PlusOutlined /> Thêm phòng ban
+                </button>
               </div>
 
               {/* Table Card */}
@@ -191,23 +274,24 @@ function ReferenceDepartmentsListPage() {
                 <table className="rdl-table">
                   <thead>
                     <tr>
-                      <th>Mã</th>
-                      <th>Tên phòng ban</th>
-                      <th>Khối</th>
-                      <th>Số lượng nhân viên</th>
-                      <th>Quản lý được phân công</th>
+                      <th style={{ width: '10%' }}>ID</th>
+                      <th style={{ width: '15%' }}>Mã Code</th>
+                      <th style={{ width: '30%' }}>Tên phòng ban</th>
+                      <th style={{ width: '20%' }}>Khối</th>
+                      <th style={{ width: '13%' }}>Nhân viên</th>
+                      <th style={{ width: '12%', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                           <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải danh sách phòng ban gốc...
                         </td>
                       </tr>
                     ) : paginatedDepartments.length === 0 ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                           Không tìm thấy phòng ban gốc phù hợp.
                         </td>
                       </tr>
@@ -215,10 +299,20 @@ function ReferenceDepartmentsListPage() {
                       paginatedDepartments.map(dept => (
                         <tr key={dept.id}>
                           <td><span className="rdl-dept-code">{dept.id}</span></td>
+                          <td><strong>{dept.departmentCode || '-'}</strong></td>
                           <td><strong>{dept.name}</strong></td>
                           <td>{dept.blockName}</td>
                           <td>{dept.employeeCount}</td>
-                          <td>{dept.managerCode}</td>
+                          <td>
+                            <div className="rdl-actions-cell" style={{ justifyContent: 'center' }}>
+                              <button className="rdl-btn-secondary" onClick={() => handleOpenEditModal(dept)}>
+                                <EditOutlined /> Sửa
+                              </button>
+                              <button className="rdl-btn-danger" onClick={() => handleDeleteDept(dept.id)}>
+                                <DeleteOutlined /> Xoá
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -266,6 +360,59 @@ function ReferenceDepartmentsListPage() {
           </main>
         </div>
       </div>
+
+      {/* Create / Edit Modal */}
+      {isModalOpen && (
+        <div className="rdl-modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="rdl-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="rdl-modal-header">
+              <h3 className="rdl-modal-title">
+                {editingDept ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban mới'}
+              </h3>
+              <button className="rdl-modal-close" onClick={() => setIsModalOpen(false)}>
+                <CloseOutlined />
+              </button>
+            </div>
+            
+            <form onSubmit={handleFormSubmit}>
+              <div className="rdl-modal-body">
+                <div className="rdl-form-group">
+                  <label className="rdl-form-label">Mã Code phòng ban *</label>
+                  <input
+                    type="text"
+                    className="rdl-form-input"
+                    placeholder="VD: K-TIMMACH"
+                    value={formDeptCode}
+                    onChange={(e) => setFormDeptCode(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="rdl-form-group">
+                  <label className="rdl-form-label">Tên khoa/phòng ban *</label>
+                  <input
+                    type="text"
+                    className="rdl-form-input"
+                    placeholder="VD: Khoa Tim mạch"
+                    value={formDeptName}
+                    onChange={(e) => setFormDeptName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="rdl-modal-footer">
+                <button type="button" className="rdl-modal-btn" onClick={() => setIsModalOpen(false)}>
+                  Huỷ
+                </button>
+                <button type="submit" className="rdl-btn-primary" style={{ borderRadius: '8px' }}>
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

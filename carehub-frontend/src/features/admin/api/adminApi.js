@@ -20,6 +20,30 @@ export const adminApi = {
     })
   },
 
+  getDepartmentById(id) {
+    return httpClient.get(`/departments/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  createDepartment(data) {
+    return httpClient.post('/departments', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateDepartment(id, data) {
+    return httpClient.put(`/departments/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteDepartment(id) {
+    return httpClient.delete(`/departments/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
   getRoles() {
     return httpClient.get('/roles', {
       headers: authHeaders(),
@@ -114,6 +138,12 @@ export const adminApi = {
     return httpClient.get('/system/import-logs', {
       headers: authHeaders(),
       params,
+    })
+  },
+
+  getImportLogById(id) {
+    return httpClient.get(`/system/import-logs/${id}`, {
+      headers: authHeaders(),
     })
   },
 
