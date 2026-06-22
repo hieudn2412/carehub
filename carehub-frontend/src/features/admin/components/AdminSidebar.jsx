@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -55,6 +55,7 @@ const navSections = [
       { icon: <CheckSquareOutlined />, label: 'Quản lý checklist', path: '/admin/quality/checklists' },
       { icon: <OrderedListOutlined />, label: 'Checklist được giao', path: '/admin/quality/assigned' },
       { icon: <SlidersOutlined />, label: 'Cài đặt thang điểm', path: '/admin/quality/scoring' },
+      { icon: <ImportOutlined />, label: 'Import Google Form', path: '/admin/form-imports' },
     ],
   },
 
@@ -69,10 +70,19 @@ const navSections = [
 
 function AdminSidebar() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentPath = location.pathname
 
   const handleLogout = async () => {
     await logoutUser()
     navigate(AUTH_ROUTES.login, { replace: true })
+  }
+
+  const isLinkActive = (itemPath) => {
+    if (itemPath === '/admin/dashboard') {
+      return currentPath === itemPath
+    }
+    return currentPath === itemPath || currentPath.startsWith(itemPath)
   }
 
   return (
@@ -93,8 +103,8 @@ function AdminSidebar() {
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={({ isActive }) =>
-                  `admin-sidebar__item ${isActive ? 'admin-sidebar__item--active' : ''}`
+                className={() =>
+                  `admin-sidebar__item ${isLinkActive(item.path) ? 'admin-sidebar__item--active' : ''}`
                 }
               >
                 <span className="admin-sidebar__item-icon">{item.icon}</span>

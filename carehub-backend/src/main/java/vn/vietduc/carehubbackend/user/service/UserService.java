@@ -26,5 +26,6 @@ public interface UserService {
     Page<UserSummaryResponse> getUsers(Pageable pageable, UserFilterRequest request);
     UserDetailResponse getUserDetails(Long id);
 
+    String resetUserPassword(Long id);
     List<UserSummaryResponse> getAllUsersToExport(UserFilterRequest filter);
 }

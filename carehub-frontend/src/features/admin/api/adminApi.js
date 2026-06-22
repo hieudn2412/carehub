@@ -26,9 +26,80 @@ export const adminApi = {
     })
   },
 
+  getPositions() {
+    return httpClient.get('/positions', {
+      headers: authHeaders(),
+    })
+  },
+
+  getEducationLevels() {
+    return httpClient.get('/education-levels', {
+      headers: authHeaders(),
+    })
+  },
+
   getUserById(id) {
     return httpClient.get(`/user/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  createUser(data) {
+    return httpClient.post('/users', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateUser(id, data) {
+    return httpClient.put(`/users/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteUser(id) {
+    return httpClient.delete(`/user/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  lockUser(id) {
+    return httpClient.patch(`/users/${id}/lock`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  unlockUser(id) {
+    return httpClient.patch(`/users/${id}/unlock`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  resetUserPassword(id) {
+    return httpClient.patch(`/users/${id}/reset-password`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  assignRole(userId, roleId) {
+    return httpClient.post(`/users/${userId}/roles/${roleId}`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  removeRole(userId, roleId) {
+    return httpClient.delete(`/users/${userId}/roles/${roleId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  importUsers(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return httpClient.post('/users/import', formData, {
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
     })
   },
 
@@ -86,6 +157,124 @@ export const adminApi = {
   deleteEmailTemplate(id) {
     return httpClient.delete(`/email/templates/${id}`, {
       headers: authHeaders(),
+    })
+  },
+  
+  // Forms Management
+  getForms(params) {
+    return httpClient.get('/forms', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  createForm(data) {
+    return httpClient.post('/forms', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormById(id) {
+    return httpClient.get(`/forms/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateForm(id, data) {
+    return httpClient.put(`/forms/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteForm(id) {
+    return httpClient.delete(`/forms/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  // Form Versions
+  getFormVersions(formId) {
+    return httpClient.get(`/forms/${formId}/versions`, {
+      headers: authHeaders(),
+    })
+  },
+
+  createFormVersion(formId, data) {
+    return httpClient.post(`/forms/${formId}/versions`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormVersionById(formId, versionId) {
+    return httpClient.get(`/forms/${formId}/versions/${versionId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormVersion(formId, versionId, data) {
+    return httpClient.put(`/forms/${formId}/versions/${versionId}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteFormVersion(formId, versionId) {
+    return httpClient.delete(`/forms/${formId}/versions/${versionId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  publishFormVersion(formId, versionId) {
+    return httpClient.post(`/forms/${formId}/versions/${versionId}/publication`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  // Form Previews
+  getFormPreviews(params) {
+    return httpClient.get('/form-previews', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormPreviewById(formId, params) {
+    return httpClient.get(`/form-previews/${formId}`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  // Google Form Importer
+  createFormImportBatch(data) {
+    return httpClient.post('/form-import-batches', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormImportBatches(params) {
+    return httpClient.get('/form-import-batches', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormImportBatchById(batchId) {
+    return httpClient.get(`/form-import-batches/${batchId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  applyFormImportBatch(batchId) {
+    return httpClient.post(`/form-import-batches/${batchId}/application`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  // Form Subjects (Employee Lookup)
+  findFormSubject(params) {
+    return httpClient.get('/form-subjects/users', {
+      headers: authHeaders(),
+      params,
     })
   },
 }
