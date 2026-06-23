@@ -1,498 +1,587 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import '../styles/training.css'
+import AdminSidebar from '../../admin/components/AdminSidebar'
+import AdminHeader from '../../admin/components/AdminHeader'
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import '../styles/TrainingRequirementPage.css'
 
 const TODAY = new Date().toISOString().slice(0, 10)
 
-const EMPTY_FORM = {
-  code: '',
-  name: '',
-  requiredHours: 120,
-  cycleYears: 5,
-  jobPositionId: '',
-  departmentId: '',
-  professionalFieldId: '',
-  warningThresholdHours: '',
-  effectiveFrom: TODAY,
-  effectiveTo: '',
-  active: true,
-  version: null,
-}
-
-const DEFAULT_FILTERS = {
-  keyword: '',
-  active: '',
-  departmentId: '',
-  jobPositionId: '',
-  professionalFieldId: '',
-  effectiveOn: '',
-}
-
 function TrainingRequirementPage() {
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [editingId, setEditingId] = useState(null)
-  const [requirements, setRequirements] = useState(null)
-  const [departments, setDepartments] = useState([])
+  const [defaultHours, setDefaultHours] = useState(120)
+  const [defaultCycle, setDefaultCycle] = useState(5)
+  const [defaultReqRecord, setDefaultReqRecord] = useState(null)
+  const [hoursInputFocused, setHoursInputFocused] = useState(false)
+
+  const [overrides, setOverrides] = useState([])
+  const [deletedOverrideIds, setDeletedOverrideIds] = useState([])
+
   const [positions, setPositions] = useState([])
-  const [professionalFields, setProfessionalFields] = useState([])
-  const [page, setPage] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [message, setMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [message, setMessage] = useState('')
 
-  const rows = requirements?.content ?? []
-  const hasFilters = useMemo(
-    () => Object.values(filters).some((value) => value !== ''),
-    [filters],
-  )
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalMode, setModalMode] = useState('add') // 'add' or 'edit'
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [modalForm, setModalForm] = useState({
+    id: null,
+    code: '',
+    name: '',
+    requiredHours: 120,
+    cycleYears: 5,
+    jobPositionId: '',
+  })
 
   const fetchData = async () => {
     setIsLoading(true)
     setErrorMessage('')
+    setMessage('')
 
     try {
-      const [requirementsResponse, departmentsResponse, positionsResponse, optionsResponse] = await Promise.all([
+      const [requirementsResponse, positionsResponse] = await Promise.all([
         trainingApi.getRequirements({
-          keyword: filters.keyword || undefined,
-          active: filters.active === '' ? undefined : filters.active === 'true',
-          departmentId: filters.departmentId || undefined,
-          jobPositionId: filters.jobPositionId || undefined,
-          professionalFieldId: filters.professionalFieldId || undefined,
-          effectiveOn: filters.effectiveOn || undefined,
-          page,
-          size: 10,
-          sort: 'updatedAt,desc',
+          size: 100,
         }),
-        trainingApi.getDepartments(),
         trainingApi.getPositions(),
-        trainingApi.getRecordOptions(),
       ])
 
-      setRequirements(requirementsResponse.data.data)
-      setDepartments(departmentsResponse.data.data ?? [])
-      setPositions(positionsResponse.data.data ?? [])
-      setProfessionalFields(optionsResponse.data.data?.professionalFields ?? [])
+      const allReqs = requirementsResponse.data?.data?.content || []
+      const posList = positionsResponse.data?.data || []
+      setPositions(posList)
+
+      // 1. Find default requirement (no department, position, or professional field)
+      const defaultReq = allReqs.find(
+        (r) => !r.departmentId && !r.jobPositionId && !r.professionalFieldId && r.active
+      )
+
+      if (defaultReq) {
+        setDefaultHours(defaultReq.requiredHours)
+        setDefaultCycle(defaultReq.cycleYears)
+        setDefaultReqRecord(defaultReq)
+      } else {
+        setDefaultHours(120)
+        setDefaultCycle(5)
+        setDefaultReqRecord(null)
+      }
+
+      // 2. Find overrides (jobPositionId is not null)
+      const activeOverrides = allReqs.filter(
+        (r) => r.jobPositionId !== null && r.active
+      )
+
+      if (activeOverrides.length > 0) {
+        setOverrides(
+          activeOverrides.map((r) => ({
+            id: r.id,
+            code: r.code,
+            name: r.name,
+            requiredHours: r.requiredHours,
+            cycleYears: r.cycleYears,
+            jobPositionId: r.jobPositionId,
+            jobPositionName: r.jobPositionName,
+            version: r.version,
+            active: r.active,
+          }))
+        )
+      } else {
+        setOverrides([])
+      }
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không tải được cấu hình requirement'))
+      setErrorMessage(getApiErrorMessage(error, 'Không tải được dữ liệu cấu hình'))
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(fetchData, 0)
+    fetchData()
+  }, [])
 
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, filters])
-
-  const updateFilter = (name, value) => {
-    setPage(0)
-    setFilters((current) => ({
-      ...current,
-      [name]: value,
-    }))
-  }
-
-  const updateForm = (name, value) => {
-    setForm((current) => ({
-      ...current,
-      [name]: value,
-    }))
-  }
-
-  const resetForm = () => {
-    setEditingId(null)
-    setForm(EMPTY_FORM)
-    setMessage('')
-  }
-
-  const editRequirement = (item) => {
-    setEditingId(item.id)
-    setMessage('')
-    setForm({
-      code: item.code ?? '',
-      name: item.name ?? '',
-      requiredHours: item.requiredHours ?? 120,
-      cycleYears: item.cycleYears ?? 5,
-      jobPositionId: item.jobPositionId ?? '',
-      departmentId: item.departmentId ?? '',
-      professionalFieldId: item.professionalFieldId ?? '',
-      warningThresholdHours: item.warningThresholdHours ?? '',
-      effectiveFrom: item.effectiveFrom ?? TODAY,
-      effectiveTo: item.effectiveTo ?? '',
-      active: Boolean(item.active),
-      version: item.version,
+  const handleOpenAddModal = () => {
+    setModalMode('add')
+    setEditingIndex(null)
+    setModalForm({
+      id: null,
+      code: '',
+      name: '',
+      requiredHours: 120,
+      cycleYears: 5,
+      jobPositionId: '',
     })
+    setIsModalOpen(true)
   }
 
-  const saveRequirement = async (event) => {
-    event.preventDefault()
+  const handleEditOverride = (item, index) => {
+    setModalMode('edit')
+    setEditingIndex(index)
+    setModalForm({
+      id: item.id,
+      code: item.code,
+      name: item.name,
+      requiredHours: item.requiredHours,
+      cycleYears: item.cycleYears,
+      jobPositionId: item.jobPositionId || '',
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleDeleteOverride = (item, index) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa cấu hình ghi đè này không?`)) {
+      return
+    }
+
+    const newOverrides = [...overrides]
+    newOverrides.splice(index, 1)
+    setOverrides(newOverrides)
+
+    if (typeof item.id === 'number') {
+      setDeletedOverrideIds((prev) => [...prev, { id: item.id, version: item.version }])
+    }
+  }
+
+  const handleModalSubmit = (e) => {
+    e.preventDefault()
+
+    if (modalMode === 'add') {
+      const selectedPos = positions.find((pos) => pos.id === Number(modalForm.jobPositionId))
+      const posName = selectedPos ? selectedPos.name : `Chức danh #${modalForm.jobPositionId}`
+
+      const newOverride = {
+        id: `new-${Date.now()}`,
+        code: `REQ-POS-${modalForm.jobPositionId}-${Date.now()}`,
+        name: `Yêu cầu cho ${posName}`,
+        requiredHours: Number(modalForm.requiredHours),
+        cycleYears: Number(modalForm.cycleYears),
+        jobPositionId: Number(modalForm.jobPositionId),
+        jobPositionName: posName,
+        active: true,
+      }
+
+      const exists = overrides.some(
+        (o) => o.jobPositionId === Number(modalForm.jobPositionId)
+      )
+      if (exists) {
+        alert('Ghi đè cho chức danh này đã tồn tại!')
+        return
+      }
+
+      setOverrides((prev) => [...prev, newOverride])
+    } else {
+      const updatedOverrides = [...overrides]
+      const currentItem = updatedOverrides[editingIndex]
+
+      updatedOverrides[editingIndex] = {
+        ...currentItem,
+        requiredHours: Number(modalForm.requiredHours),
+        cycleYears: Number(modalForm.cycleYears),
+      }
+
+      setOverrides(updatedOverrides)
+    }
+
+    setIsModalOpen(false)
+  }
+
+  const handleSaveConfig = async () => {
     setIsSaving(true)
     setErrorMessage('')
     setMessage('')
 
-    const payload = {
-      code: form.code,
-      name: form.name,
-      requiredHours: Number(form.requiredHours),
-      cycleYears: Number(form.cycleYears),
-      jobPositionId: numberOrNull(form.jobPositionId),
-      departmentId: numberOrNull(form.departmentId),
-      professionalFieldId: numberOrNull(form.professionalFieldId),
-      warningThresholdHours: form.warningThresholdHours === '' ? null : Number(form.warningThresholdHours),
-      effectiveFrom: form.effectiveFrom,
-      effectiveTo: form.effectiveTo || null,
-      active: form.active,
-      version: form.version,
-    }
-
     try {
-      if (editingId) {
-        await trainingApi.updateRequirement(editingId, payload)
-        setMessage('Đã cập nhật requirement.')
-      } else {
-        await trainingApi.createRequirement(payload)
-        setMessage('Đã tạo requirement.')
+      // 1. Save default requirement
+      const defaultPayload = {
+        code: defaultReqRecord?.code || 'REQ-DEFAULT',
+        name: defaultReqRecord?.name || 'Yêu cầu đào tạo mặc định',
+        requiredHours: Number(defaultHours),
+        cycleYears: Number(defaultCycle),
+        jobPositionId: null,
+        departmentId: null,
+        professionalFieldId: null,
+        warningThresholdHours: null,
+        effectiveFrom: defaultReqRecord?.effectiveFrom || TODAY,
+        effectiveTo: null,
+        active: true,
+        version: defaultReqRecord?.version || null,
       }
-      resetForm()
-      fetchData()
+
+      if (defaultReqRecord?.id) {
+        await trainingApi.updateRequirement(defaultReqRecord.id, defaultPayload)
+      } else {
+        await trainingApi.createRequirement(defaultPayload)
+      }
+
+      // 2. Process deletions of overrides
+      for (const del of deletedOverrideIds) {
+        await trainingApi.updateRequirementStatus(del.id, {
+          active: false,
+          version: del.version,
+        })
+      }
+
+      // 3. Process creations and updates of overrides
+      for (const item of overrides) {
+        const payload = {
+          code: item.code,
+          name: item.name,
+          requiredHours: Number(item.requiredHours),
+          cycleYears: Number(item.cycleYears),
+          jobPositionId: item.jobPositionId,
+          departmentId: null,
+          professionalFieldId: null,
+          warningThresholdHours: null,
+          effectiveFrom: item.effectiveFrom || TODAY,
+          effectiveTo: null,
+          active: true,
+          version: typeof item.id === 'number' ? item.version : null,
+        }
+
+        if (typeof item.id === 'number') {
+          await trainingApi.updateRequirement(item.id, payload)
+        } else if (typeof item.id === 'string' && item.id.startsWith('new-')) {
+          await trainingApi.createRequirement(payload)
+        }
+      }
+
+      setMessage('Đã lưu cấu hình thành công!')
+      setDeletedOverrideIds([])
+      await fetchData()
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không lưu được requirement'))
+      setErrorMessage(getApiErrorMessage(error, 'Không thể lưu cấu hình'))
     } finally {
       setIsSaving(false)
     }
   }
 
-  const toggleStatus = async (item) => {
-    const nextStatus = !item.active
-    const label = nextStatus ? 'kích hoạt' : 'ngừng kích hoạt'
-    if (!window.confirm(`Bạn muốn ${label} requirement "${item.name}"?`)) {
+  const handleResetToDefault = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn thiết lập lại toàn bộ cấu hình về mặc định (120h, chu kỳ 5 năm)?')) {
       return
     }
 
+    setIsSaving(true)
+    setErrorMessage('')
+    setMessage('')
+
     try {
-      await trainingApi.updateRequirementStatus(item.id, {
-        active: nextStatus,
-        version: item.version,
-      })
-      fetchData()
+      const allReqsResponse = await trainingApi.getRequirements({ size: 100 })
+      const allReqs = allReqsResponse.data?.data?.content || []
+
+      for (const r of allReqs) {
+        if (r.active && (r.jobPositionId !== null || r.departmentId !== null || r.professionalFieldId !== null)) {
+          await trainingApi.updateRequirementStatus(r.id, {
+            active: false,
+            version: r.version,
+          })
+        }
+      }
+
+      const defaultReq = allReqs.find(
+        (r) => !r.departmentId && !r.jobPositionId && !r.professionalFieldId && r.active
+      )
+
+      const defaultPayload = {
+        code: defaultReq?.code || 'REQ-DEFAULT',
+        name: defaultReq?.name || 'Yêu cầu đào tạo mặc định',
+        requiredHours: 120,
+        cycleYears: 5,
+        jobPositionId: null,
+        departmentId: null,
+        professionalFieldId: null,
+        warningThresholdHours: null,
+        effectiveFrom: defaultReq?.effectiveFrom || TODAY,
+        effectiveTo: null,
+        active: true,
+        version: defaultReq?.version || null,
+      }
+
+      if (defaultReq?.id) {
+        await trainingApi.updateRequirement(defaultReq.id, defaultPayload)
+      } else {
+        await trainingApi.createRequirement(defaultPayload)
+      }
+
+      setMessage('Đã khôi phục cấu hình mặc định thành công!')
+      setDeletedOverrideIds([])
+      await fetchData()
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không cập nhật được trạng thái'))
+      setErrorMessage(getApiErrorMessage(error, 'Không thể khôi phục cấu hình mặc định'))
+    } finally {
+      setIsSaving(false)
     }
   }
 
+  const breadcrumbs = [{ label: 'Yêu cầu' }]
+
   return (
-    <main className="training-page">
-      <section className="training-header">
-        <div>
-          <p className="training-eyebrow">Admin</p>
-          <h1>Training Requirements</h1>
-        </div>
-      </section>
-
-      <section className="training-grid">
-        <div className="training-panel training-panel--wide">
-          <div className="training-filters training-filters--requirements">
-            <label>
-              Keyword
-              <input
-                onChange={(event) => updateFilter('keyword', event.target.value)}
-                placeholder="Code hoặc tên"
-                value={filters.keyword}
-              />
-            </label>
-            <label>
-              Status
-              <select onChange={(event) => updateFilter('active', event.target.value)} value={filters.active}>
-                <option value="">All</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </select>
-            </label>
-            <label>
-              Department
-              <select
-                onChange={(event) => updateFilter('departmentId', event.target.value)}
-                value={filters.departmentId}
-              >
-                <option value="">All</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Position
-              <select
-                onChange={(event) => updateFilter('jobPositionId', event.target.value)}
-                value={filters.jobPositionId}
-              >
-                <option value="">All</option>
-                {positions.map((position) => (
-                  <option key={position.id} value={position.id}>
-                    {position.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Professional field
-              <select
-                onChange={(event) => updateFilter('professionalFieldId', event.target.value)}
-                value={filters.professionalFieldId}
-              >
-                <option value="">All</option>
-                {professionalFields.map((field) => (
-                  <option key={field.id} value={field.id}>
-                    {field.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Effective on
-              <input
-                onChange={(event) => updateFilter('effectiveOn', event.target.value)}
-                type="date"
-                value={filters.effectiveOn}
-              />
-            </label>
-          </div>
-
-          {errorMessage ? <div className="training-message training-message--error">{errorMessage}</div> : null}
-          {message ? <div className="training-message training-message--success">{message}</div> : null}
-
-          {isLoading ? (
-            <div className="training-skeleton">Loading requirements...</div>
-          ) : rows.length === 0 ? (
-            <div className="training-empty">
-              {hasFilters ? 'Không có requirement phù hợp.' : 'Chưa có requirement.'}
-            </div>
-          ) : (
-            <>
-              <div className="training-table-wrap">
-                <table className="training-table">
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Name</th>
-                      <th>Required</th>
-                      <th>Cycle</th>
-                      <th>Scope</th>
-                      <th>Effective</th>
-                      <th>Warning</th>
-                      <th>Employees</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.code}</td>
-                        <td>{item.name}</td>
-                        <td>{item.requiredHours}</td>
-                        <td>{item.cycleYears} năm</td>
-                        <td>{scopeText(item)}</td>
-                        <td>
-                          {item.effectiveFrom}
-                          <br />
-                          <span className="training-muted">{item.effectiveTo || 'No end'}</span>
-                        </td>
-                        <td>{item.warningThresholdHours ?? '-'}</td>
-                        <td>{item.applicableEmployeeCount}</td>
-                        <td>
-                          <span className={`training-badge ${item.active ? 'is-active' : 'is-inactive'}`}>
-                            {item.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="training-actions">
-                            <button onClick={() => editRequirement(item)} type="button">
-                              Edit
-                            </button>
-                            <button onClick={() => toggleStatus(item)} type="button">
-                              {item.active ? 'Deactivate' : 'Activate'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      <div className="dashboard-layout__content">
+        <AdminHeader breadcrumbs={breadcrumbs} />
+        <div className="dashboard-root">
+          <main className="dashboard-body">
+            <div className="tr-page">
+              {/* Title Card */}
+              <div className="tr-title-card">
+                <h1 className="tr-title">Cấu hình yêu cầu đào tạo</h1>
+                <p className="tr-subtitle">
+                  Thiết lập số giờ đào tạo tối thiểu theo chu kỳ, chức danh hoặc chuyên khoa
+                </p>
               </div>
 
-              <div className="training-pagination">
-                <button disabled={page <= 0} onClick={() => setPage((value) => value - 1)} type="button">
-                  Previous
-                </button>
-                <span>
-                  Page {requirements.page + 1} / {Math.max(requirements.totalPages, 1)}
-                </span>
+              {/* Feedback messages */}
+              {errorMessage && (
+                <div style={{ padding: '12px 16px', background: '#ffebeb', color: '#d32f2f', borderRadius: 8, fontSize: 13.5, fontWeight: 500 }}>
+                  {errorMessage}
+                </div>
+              )}
+              {message && (
+                <div style={{ padding: '12px 16px', background: '#e8f5f0', color: '#0f6e56', borderRadius: 8, fontSize: 13.5, fontWeight: 500 }}>
+                  {message}
+                </div>
+              )}
+
+              {/* Main Configuration Card */}
+              <div className="tr-config-card">
+                {/* DEFAULT REQUIREMENT */}
+                <div className="tr-config-section">
+                  <h3 className="tr-section-label">YÊU CẦU MẶC ĐỊNH</h3>
+                  
+                  <div className="tr-default-row">
+                    <div className="tr-default-info">
+                      <div className="tr-default-title">Số giờ CME tối thiểu mỗi chu kỳ {defaultCycle} năm</div>
+                      <div className="tr-default-desc">Áp dụng cho toàn bộ nhân viên trừ khi được ghi đè bên dưới</div>
+                    </div>
+                    <div className="tr-default-input-wrap">
+                      <input
+                        type="text"
+                        className="tr-input-h"
+                        value={hoursInputFocused ? defaultHours : `${defaultHours}h`}
+                        onFocus={() => setHoursInputFocused(true)}
+                        onBlur={() => setHoursInputFocused(false)}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '')
+                          setDefaultHours(val ? Number(val) : '')
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="tr-default-row">
+                    <div className="tr-default-info">
+                      <div className="tr-default-title">Thời hạn chu kỳ</div>
+                    </div>
+                    <div>
+                      <select
+                        className="tr-select-cycle"
+                        value={defaultCycle}
+                        onChange={(e) => setDefaultCycle(Number(e.target.value))}
+                      >
+                        <option value={1}>1 năm</option>
+                        <option value={2}>2 năm</option>
+                        <option value={3}>3 năm</option>
+                        <option value={4}>4 năm</option>
+                        <option value={5}>5 năm</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="tr-divider"></div>
+
+                {/* OVERRIDE BY JOB POSITION */}
+                <div className="tr-config-section">
+                  <h3 className="tr-section-label">GHI ĐÈ THEO CHỨC DANH</h3>
+                  
+                  {isLoading ? (
+                    <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                      Đang tải cấu hình...
+                    </div>
+                  ) : (
+                    <div className="tr-table-wrap">
+                      <table className="tr-table">
+                        <thead>
+                          <tr>
+                            <th>Chức danh</th>
+                            <th>Số giờ bắt buộc</th>
+                            <th>Chu kỳ</th>
+                            <th style={{ width: '100px', textAlign: 'center' }}>Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {overrides.length === 0 ? (
+                            <tr>
+                              <td colSpan="4" style={{ textAlign: 'center', color: '#94a3b8', padding: '24px 0' }}>
+                                Chưa có cấu hình ghi đè nào.
+                              </td>
+                            </tr>
+                          ) : (
+                            overrides.map((item, index) => (
+                              <tr key={item.id || index}>
+                                <td style={{ fontWeight: 500 }}>{item.jobPositionName || item.name}</td>
+                                <td style={{ fontWeight: 600 }}>{item.requiredHours}h</td>
+                                <td>{item.cycleYears} năm</td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                                    <button
+                                      type="button"
+                                      className="tr-action-btn tr-action-btn--edit"
+                                      onClick={() => handleEditOverride(item, index)}
+                                      title="Chỉnh sửa"
+                                    >
+                                      <EditOutlined />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="tr-action-btn tr-action-btn--delete"
+                                      onClick={() => handleDeleteOverride(item, index)}
+                                      title="Xóa"
+                                    >
+                                      <DeleteOutlined />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="tr-btn-add"
+                    onClick={handleOpenAddModal}
+                  >
+                    + Thêm ghi đè
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom Save & Reset Actions */}
+              <div className="tr-bottom-actions">
                 <button
-                  disabled={page + 1 >= requirements.totalPages}
-                  onClick={() => setPage((value) => value + 1)}
                   type="button"
+                  className="tr-btn-save"
+                  onClick={handleSaveConfig}
+                  disabled={isSaving}
                 >
-                  Next
+                  {isSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                </button>
+                <button
+                  type="button"
+                  className="tr-btn-reset"
+                  onClick={handleResetToDefault}
+                  disabled={isSaving}
+                >
+                  Thiết lập mặc định
                 </button>
               </div>
-            </>
-          )}
+            </div>
+          </main>
         </div>
+      </div>
 
-        <div className="training-panel training-panel--wide">
-          <h2>{editingId ? 'Edit requirement' : 'Create requirement'}</h2>
-          <form className="training-form" onSubmit={saveRequirement}>
-            <div className="training-form-grid training-form-grid--requirements">
-              <label>
-                Code
+      {/* Override Modal */}
+      {isModalOpen && (
+        <div className="tr-modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="tr-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="tr-modal-title">
+              {modalMode === 'add' ? 'Thêm cấu hình ghi đè' : 'Chỉnh sửa cấu hình ghi đè'}
+            </h3>
+            <form className="tr-modal-form" onSubmit={handleModalSubmit}>
+              {modalMode === 'add' && (
+                <div className="tr-modal-group">
+                  <label>Chức danh *</label>
+                  <select
+                    className="tr-modal-select"
+                    required
+                    value={modalForm.jobPositionId}
+                    onChange={(e) =>
+                      setModalForm((prev) => ({ ...prev, jobPositionId: e.target.value }))
+                    }
+                  >
+                    <option value="">-- Chọn chức danh --</option>
+                    {positions.map((pos) => (
+                      <option key={pos.id} value={pos.id}>
+                        {pos.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {modalMode === 'edit' && (
+                <div className="tr-modal-group">
+                  <label>Chức danh</label>
+                  <input
+                    type="text"
+                    className="tr-modal-input"
+                    disabled
+                    value={
+                      overrides[editingIndex]?.jobPositionName ||
+                      overrides[editingIndex]?.name ||
+                      ''
+                    }
+                  />
+                </div>
+              )}
+
+              <div className="tr-modal-group">
+                <label>Số giờ bắt buộc *</label>
                 <input
-                  maxLength={50}
-                  onChange={(event) => updateForm('code', event.target.value)}
-                  required
-                  value={form.code}
-                />
-              </label>
-              <label>
-                Name
-                <input
-                  maxLength={255}
-                  onChange={(event) => updateForm('name', event.target.value)}
-                  required
-                  value={form.name}
-                />
-              </label>
-              <label>
-                Required hours
-                <input
+                  type="number"
+                  className="tr-modal-input"
+                  min="0"
                   max="500"
-                  min="0"
-                  onChange={(event) => updateForm('requiredHours', event.target.value)}
                   required
-                  step="0.01"
-                  type="number"
-                  value={form.requiredHours}
+                  value={modalForm.requiredHours}
+                  onChange={(e) =>
+                    setModalForm((prev) => ({ ...prev, requiredHours: e.target.value }))
+                  }
                 />
-              </label>
-              <label>
-                Cycle years
-                <input
-                  min="1"
-                  onChange={(event) => updateForm('cycleYears', event.target.value)}
-                  required
-                  type="number"
-                  value={form.cycleYears}
-                />
-              </label>
-              <label>
-                Warning threshold
-                <input
-                  min="0"
-                  onChange={(event) => updateForm('warningThresholdHours', event.target.value)}
-                  step="0.01"
-                  type="number"
-                  value={form.warningThresholdHours}
-                />
-              </label>
-              <label>
-                Department
-                <select onChange={(event) => updateForm('departmentId', event.target.value)} value={form.departmentId}>
-                  <option value="">Global</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Position
-                <select
-                  onChange={(event) => updateForm('jobPositionId', event.target.value)}
-                  value={form.jobPositionId}
-                >
-                  <option value="">Any</option>
-                  {positions.map((position) => (
-                    <option key={position.id} value={position.id}>
-                      {position.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Professional field
-                <select
-                  onChange={(event) => updateForm('professionalFieldId', event.target.value)}
-                  value={form.professionalFieldId}
-                >
-                  <option value="">Any</option>
-                  {professionalFields.map((field) => (
-                    <option key={field.id} value={field.id}>
-                      {field.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Effective from
-                <input
-                  onChange={(event) => updateForm('effectiveFrom', event.target.value)}
-                  required
-                  type="date"
-                  value={form.effectiveFrom}
-                />
-              </label>
-              <label>
-                Effective to
-                <input
-                  onChange={(event) => updateForm('effectiveTo', event.target.value)}
-                  type="date"
-                  value={form.effectiveTo}
-                />
-              </label>
-            </div>
+              </div>
 
-            <label className="training-check">
-              <input
-                checked={form.active}
-                onChange={(event) => updateForm('active', event.target.checked)}
-                type="checkbox"
-              />
-              Active
-            </label>
+              <div className="tr-modal-group">
+                <label>Chu kỳ (Năm) *</label>
+                <select
+                  className="tr-modal-select"
+                  required
+                  value={modalForm.cycleYears}
+                  onChange={(e) =>
+                    setModalForm((prev) => ({ ...prev, cycleYears: Number(e.target.value) }))
+                  }
+                >
+                  <option value={1}>1 năm</option>
+                  <option value={2}>2 năm</option>
+                  <option value={3}>3 năm</option>
+                  <option value={4}>4 năm</option>
+                  <option value={5}>5 năm</option>
+                </select>
+              </div>
 
-            <div className="training-form-actions">
-              <button className="training-button training-button--primary" disabled={isSaving} type="submit">
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
-              <button className="training-button" onClick={resetForm} type="button">
-                Reset
-              </button>
-            </div>
-          </form>
+              <div className="tr-modal-actions">
+                <button type="submit" className="tr-modal-btn-submit">
+                  Xác nhận
+                </button>
+                <button
+                  type="button"
+                  className="tr-modal-btn-cancel"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Hủy
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </section>
-    </main>
+      )}
+    </div>
   )
 }
 
-function scopeText(item) {
-  return [
-    item.departmentName || 'All departments',
-    item.jobPositionName || 'All positions',
-    item.professionalFieldName || 'All fields',
-  ].join(' / ')
-}
-
-function numberOrNull(value) {
-  return value === '' || value === null || value === undefined ? null : Number(value)
-}
-
 export default TrainingRequirementPage
+

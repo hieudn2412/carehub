@@ -22,6 +22,11 @@ import TrainingEmployeeStatusListPage from '../features/training/pages/TrainingE
 import TrainingLegacyImportPage from '../features/training/pages/TrainingLegacyImportPage.jsx'
 import TrainingRequirementPage from '../features/training/pages/TrainingRequirementPage.jsx'
 import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
+import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
+import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
+import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
+
+
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
@@ -126,6 +131,11 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
+      <Route path="/admin/evaluation/categories" element={adminElement(<QuestionCategoryListPage />)} />
+      <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
+      <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
+      <Route path="/admin/evaluation/question-sets/:id/edit" element={adminElement(<QuestionSetFormPage />)} />
+
 
       
       {/* Staff CME / Training Hours routes */}

@@ -1,7 +1,9 @@
+import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import AdminSidebar from '../../admin/components/AdminSidebar'
+import AdminHeader from '../../admin/components/AdminHeader'
 import '../styles/training.css'
 
 function ActivityTypeDetailPage() {
@@ -24,12 +26,7 @@ function ActivityTypeDetailPage() {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      fetchDetail()
-    }, 0)
-
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchDetail()
   }, [id])
 
   const toggleStatus = async () => {
@@ -51,144 +48,167 @@ function ActivityTypeDetailPage() {
     }
   }
 
+  const breadcrumbs = [
+    { label: 'Các hình thức đào tạo', link: '/admin/training/activity-types' },
+    { label: 'Chi tiết hình thức đào tạo' }
+  ]
+
   return (
-    <main className="training-page">
-      <section className="training-header">
-        <div>
-          <p className="training-eyebrow">Admin</p>
-          <h1>Activity Type Detail</h1>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      <div className="dashboard-layout__content">
+        <AdminHeader breadcrumbs={breadcrumbs} />
+        <div className="dashboard-root">
+          <main className="dashboard-body">
+            <div className="training-detail-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              
+              {/* Header Panel */}
+              <div className="atl-title-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h1 className="atl-title">Chi tiết hình thức đào tạo</h1>
+                  <p className="atl-subtitle">Xem thông tin chi tiết và lịch sử sử dụng của hình thức này</p>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <Link className="training-button" to="/admin/training/activity-types" style={{ textDecoration: 'none' }}>
+                    Quay lại
+                  </Link>
+                  {activityType && (
+                    <>
+                      <Link className="training-button training-button--primary" to={`/admin/training/activity-types/${activityType.id}/edit`} style={{ textDecoration: 'none' }}>
+                        Chỉnh sửa
+                      </Link>
+                      <button className="training-button" onClick={toggleStatus} type="button">
+                        {activityType.active ? 'Ngưng hoạt động' : 'Kích hoạt'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {isLoading && (
+                <div className="training-panel training-skeleton" style={{ textAlign: 'center', padding: 40 }}>
+                  Đang tải thông tin chi tiết...
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="training-panel training-message training-message--error" style={{ padding: '12px 16px', background: '#ffebeb', color: '#d32f2f', borderRadius: 8 }}>
+                  <p>{errorMessage}</p>
+                  <button className="training-button" onClick={fetchDetail} type="button">
+                    Thử lại
+                  </button>
+                </div>
+              )}
+
+              {activityType && (
+                <div className="training-detail-grid">
+                  <article className="training-panel">
+                    <h2>Thông tin chung</h2>
+                    <dl className="training-definition">
+                      <dt>Mã hình thức</dt>
+                      <dd>{activityType.code}</dd>
+                      <dt>Tên hình thức</dt>
+                      <dd>{activityType.name}</dd>
+                      <dt>Mô tả</dt>
+                      <dd>{activityType.description || '-'}</dd>
+                      <dt>Trạng thái</dt>
+                      <dd>
+                        <span className={`training-badge ${activityType.active ? 'is-active' : 'is-inactive'}`}>
+                          {activityType.active ? 'Hoạt động' : 'Ngưng sử dụng'}
+                        </span>
+                      </dd>
+                    </dl>
+                  </article>
+
+                  <article className="training-panel">
+                    <h2>Quy tắc tính giờ & Minh chứng</h2>
+                    <dl className="training-definition">
+                      <dt>Đơn vị tính thời gian</dt>
+                      <dd>{activityType.defaultDurationUnit}</dd>
+                      <dt>Yêu cầu minh chứng</dt>
+                      <dd>{activityType.requiresEvidence ? 'Bắt buộc' : 'Không bắt buộc'}</dd>
+                      <dt>Số giờ tích lũy tối đa / hồ sơ</dt>
+                      <dd>{activityType.maxCreditedHoursPerRecord ?? 'Không giới hạn'}</dd>
+                      <dt>Thứ tự hiển thị</dt>
+                      <dd>{activityType.sortOrder}</dd>
+                    </dl>
+                  </article>
+
+                  <article className="training-panel">
+                    <h2>Thống kê sử dụng</h2>
+                    <p className="training-stat" style={{ fontSize: 32, fontWeight: 700, color: '#2563eb', margin: '12px 0 4px 0' }}>
+                      {activityType.usageCount}
+                    </p>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: 13.5 }}>hồ sơ đào tạo đang áp dụng hình thức này</p>
+                  </article>
+
+                  <article className="training-panel">
+                    <h2>Thông tin hệ thống</h2>
+                    <dl className="training-definition">
+                      <dt>Ngày tạo</dt>
+                      <dd>{formatDateTime(activityType.createdAt)}</dd>
+                      <dt>Cập nhật lần cuối</dt>
+                      <dd>{formatDateTime(activityType.updatedAt)}</dd>
+                      <dt>Phiên bản (Version)</dt>
+                      <dd>{activityType.version}</dd>
+                    </dl>
+                  </article>
+
+                  <article className="training-panel training-panel--wide">
+                    <h2>Các hồ sơ đào tạo gần đây</h2>
+                    {activityType.recentRecords.length === 0 ? (
+                      <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có hồ sơ đào tạo nào áp dụng hình thức này.</p>
+                    ) : (
+                      <table className="training-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+                        <thead>
+                          <tr>
+                            <th>Tên chuyên đề / Khóa học</th>
+                            <th>Nhân viên</th>
+                            <th>Ngày bắt đầu</th>
+                            <th>Số giờ khai báo</th>
+                            <th>Số giờ phê duyệt</th>
+                            <th>Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {activityType.recentRecords.map((record) => (
+                            <tr key={record.id}>
+                              <td>{record.title}</td>
+                              <td>{record.employeeCode} - {record.employeeName}</td>
+                              <td>{record.startDate}</td>
+                              <td>{record.declaredHours ?? '-'}</td>
+                              <td>{record.approvedHours ?? '-'}</td>
+                              <td>{record.workflowStatus}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </article>
+
+                  <article className="training-panel training-panel--wide">
+                    <h2>Lịch sử thay đổi (Audit timeline)</h2>
+                    {activityType.auditTimeline.length === 0 ? (
+                      <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có lịch sử thay đổi nào được lưu lại.</p>
+                    ) : (
+                      <ul className="training-timeline" style={{ paddingLeft: 20, marginTop: 12 }}>
+                        {activityType.auditTimeline.map((event) => (
+                          <li key={event.id} style={{ marginBottom: 10 }}>
+                            <strong style={{ color: '#0f172a' }}>{event.changeType}</strong>{' '}
+                            <span style={{ color: '#64748b', fontSize: 12 }}>({formatDateTime(event.changedAt)})</span> -{' '}
+                            <span style={{ color: '#475569' }}>Thực hiện bởi: {event.changedByName || `User ID: ${event.changedByUserId}`}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                </div>
+              )}
+            </div>
+          </main>
         </div>
-        <div className="training-header-actions">
-          <Link className="training-button" to="/admin/training/activity-types">
-            Back
-          </Link>
-          {activityType ? (
-            <>
-              <Link className="training-button" to={`/admin/training/activity-types/${activityType.id}/edit`}>
-                Edit
-              </Link>
-              <button className="training-button" onClick={toggleStatus} type="button">
-                {activityType.active ? 'Deactivate' : 'Activate'}
-              </button>
-            </>
-          ) : null}
-        </div>
-      </section>
-
-      {isLoading ? <div className="training-panel training-skeleton">Loading detail...</div> : null}
-
-      {errorMessage ? (
-        <section className="training-panel training-message training-message--error">
-          <p>{errorMessage}</p>
-          <button className="training-button" onClick={fetchDetail} type="button">
-            Retry
-          </button>
-        </section>
-      ) : null}
-
-      {activityType ? (
-        <section className="training-detail-grid">
-          <article className="training-panel">
-            <h2>Thông tin chung</h2>
-            <dl className="training-definition">
-              <dt>Code</dt>
-              <dd>{activityType.code}</dd>
-              <dt>Name</dt>
-              <dd>{activityType.name}</dd>
-              <dt>Description</dt>
-              <dd>{activityType.description || '-'}</dd>
-              <dt>Status</dt>
-              <dd>
-                <span className={`training-badge ${activityType.active ? 'is-active' : 'is-inactive'}`}>
-                  {activityType.active ? 'Active' : 'Inactive'}
-                </span>
-              </dd>
-            </dl>
-          </article>
-
-          <article className="training-panel">
-            <h2>Quy tắc thời lượng và evidence</h2>
-            <dl className="training-definition">
-              <dt>Default duration unit</dt>
-              <dd>{activityType.defaultDurationUnit}</dd>
-              <dt>Requires evidence</dt>
-              <dd>{activityType.requiresEvidence ? 'Required' : 'Optional'}</dd>
-              <dt>Max credited hours/record</dt>
-              <dd>{activityType.maxCreditedHoursPerRecord ?? '-'}</dd>
-              <dt>Sort order</dt>
-              <dd>{activityType.sortOrder}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel">
-            <h2>Usage statistics</h2>
-            <p className="training-stat">{activityType.usageCount}</p>
-            <p>record đang sử dụng type này</p>
-          </article>
-
-          <article className="training-panel">
-            <h2>Metadata</h2>
-            <dl className="training-definition">
-              <dt>Created</dt>
-              <dd>{formatDateTime(activityType.createdAt)}</dd>
-              <dt>Updated</dt>
-              <dd>{formatDateTime(activityType.updatedAt)}</dd>
-              <dt>Version</dt>
-              <dd>{activityType.version}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel training-panel--wide">
-            <h2>Record gần đây</h2>
-            {activityType.recentRecords.length === 0 ? (
-              <p>Chưa có record sử dụng type này.</p>
-            ) : (
-              <table className="training-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Employee</th>
-                    <th>Start date</th>
-                    <th>Declared</th>
-                    <th>Approved</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activityType.recentRecords.map((record) => (
-                    <tr key={record.id}>
-                      <td>{record.title}</td>
-                      <td>{record.employeeCode} - {record.employeeName}</td>
-                      <td>{record.startDate}</td>
-                      <td>{record.declaredHours ?? '-'}</td>
-                      <td>{record.approvedHours ?? '-'}</td>
-                      <td>{record.workflowStatus}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </article>
-
-          <article className="training-panel training-panel--wide">
-            <h2>Audit timeline</h2>
-            {activityType.auditTimeline.length === 0 ? (
-              <p>Chưa có audit event.</p>
-            ) : (
-              <ul className="training-timeline">
-                {activityType.auditTimeline.map((event) => (
-                  <li key={event.id}>
-                    <strong>{event.changeType}</strong>
-                    <span>{formatDateTime(event.changedAt)}</span>
-                    <span>{event.changedByName || `User ${event.changedByUserId}`}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        </section>
-      ) : null}
-    </main>
+      </div>
+    </div>
   )
 }
 

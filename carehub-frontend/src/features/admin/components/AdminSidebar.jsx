@@ -1,6 +1,6 @@
+import { useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  DashboardOutlined,
   TeamOutlined,
   FileTextOutlined,
   SettingOutlined,
@@ -11,9 +11,16 @@ import {
   CheckSquareOutlined,
   OrderedListOutlined,
   SlidersOutlined,
-  BellOutlined,
-  MailOutlined,
   LogoutOutlined,
+  HistoryOutlined,
+  BookOutlined,
+  AuditOutlined,
+  FolderOutlined,
+  CarryOutOutlined,
+  ApartmentOutlined,
+  CalculatorOutlined,
+  AimOutlined,
+  TrophyOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -22,15 +29,48 @@ import '../styles/AdminSidebar.css'
 
 const navSections = [
   {
-    label: 'TỔNG QUAN',
-    items: [
-      { icon: <DashboardOutlined />, label: 'Dashboard', path: '/admin/dashboard' },
-    ],
-  },
-  {
     label: 'TÀI KHOẢN',
     items: [
       { icon: <TeamOutlined />, label: 'Quản lý tài khoản', path: '/admin/accounts' },
+    ],
+  },
+  {
+    label: 'DỮ LIỆU THAM CHIẾU',
+    items: [
+      { icon: <TeamOutlined />, label: 'Danh sách nhân viên gốc', path: '/admin/reference/employees' },
+      { icon: <BankOutlined />, label: 'Danh mục phòng ban gốc', path: '/admin/reference/departments' },
+      { icon: <DatabaseOutlined />, label: 'Import data', path: '/admin/reference/import' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
+    ],
+  },
+  {
+    label: 'ĐÀO TẠO',
+    items: [
+      { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
+      { icon: <AuditOutlined />, label: 'Yêu cầu', path: '/admin/training/requirements' },
+      { icon: <SlidersOutlined />, label: 'Các hình thức đào tạo', path: '/admin/training/activity-types' },
+    ],
+  },
+  {
+    label: 'ĐÁNH GIÁ',
+    items: [
+      { icon: <OrderedListOutlined />, label: 'Danh mục câu hỏi', path: '/admin/evaluation/categories' },
+      { icon: <CarryOutOutlined />, label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
+      { icon: <FolderOutlined />, label: 'Ngân hàng câu hỏi', path: '/admin/evaluation/question-bank' },
+      { icon: <CheckSquareOutlined />, label: 'Quy tắc phân loại', path: '/admin/evaluation/classification-rules' },
+      { icon: <SlidersOutlined />, label: 'Cấu hình bài kiểm tra', path: '/admin/evaluation/configs' },
+    ],
+  },
+  {
+    label: 'CHẤT LƯỢNG',
+    items: [
+      { icon: <CheckSquareOutlined />, label: 'Danh sách checklist', path: '/admin/quality/checklists' },
+      { icon: <CarryOutOutlined />, label: 'Checklist được giao', path: '/admin/quality/assigned' },
+      { icon: <ApartmentOutlined />, label: 'Biểu mẫu chất lượng', path: '/admin/quality/templates' },
+      { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
+      { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
+      { icon: <TrophyOutlined />, label: 'Cài đặt thang điểm', path: '/admin/quality/scoring' },
+      { icon: <ImportOutlined />, label: 'Import Google Form', path: '/admin/form-imports' },
     ],
   },
   {
@@ -41,37 +81,25 @@ const navSections = [
       { icon: <ImportOutlined />, label: 'Import logs', path: '/admin/system/import-logs' },
     ],
   },
-  {
-    label: 'DỮ LIỆU THAM CHIẾU',
-    items: [
-      { icon: <IdcardOutlined />, label: 'Danh sách nhân viên gốc', path: '/admin/reference/employees' },
-      { icon: <BankOutlined />, label: 'Danh mục phòng ban gốc', path: '/admin/reference/departments' },
-      { icon: <DatabaseOutlined />, label: 'Import data', path: '/admin/reference/import' },
-    ],
-  },
-  {
-    label: 'CHẤT LƯỢNG',
-    items: [
-      { icon: <CheckSquareOutlined />, label: 'Quản lý checklist', path: '/admin/quality/checklists' },
-      { icon: <OrderedListOutlined />, label: 'Checklist được giao', path: '/admin/quality/assigned' },
-      { icon: <SlidersOutlined />, label: 'Cài đặt thang điểm', path: '/admin/quality/scoring' },
-      { icon: <ImportOutlined />, label: 'Import Google Form', path: '/admin/form-imports' },
-    ],
-  },
-
-  {
-    label: 'THÔNG BÁO',
-    items: [
-      { icon: <BellOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
-      { icon: <MailOutlined />, label: 'Email templates', path: '/admin/notifications/email-templates' },
-    ],
-  },
 ]
 
 function AdminSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
+  const navRef = useRef(null)
+
+  // Restore scroll position
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('admin-sidebar-scroll')
+    if (savedScroll && navRef.current) {
+      navRef.current.scrollTop = parseInt(savedScroll, 10)
+    }
+  }, [])
+
+  const handleScroll = (e) => {
+    sessionStorage.setItem('admin-sidebar-scroll', String(e.target.scrollTop))
+  }
 
   const handleLogout = async () => {
     await logoutUser()
@@ -95,7 +123,7 @@ function AdminSidebar() {
         </div>
       </div>
 
-      <nav className="admin-sidebar__nav">
+      <nav ref={navRef} onScroll={handleScroll} className="admin-sidebar__nav">
         {navSections.map((section) => (
           <div key={section.label} className="admin-sidebar__section">
             <p className="admin-sidebar__section-label">{section.label}</p>

@@ -10,7 +10,6 @@ import {
   DeleteOutlined,
   LoadingOutlined,
   SafetyCertificateOutlined,
-  ImportOutlined,
 } from '@ant-design/icons'
 import '../styles/FormListPage.css'
 
@@ -210,12 +209,6 @@ function FormListPage() {
                   </p>
                 </div>
                 <div className="flp-header-actions">
-                  <button
-                    className="flp-btn-import"
-                    onClick={() => navigate('/admin/form-imports/new')}
-                  >
-                    <ImportOutlined /> Import từ Google Form
-                  </button>
                   <button
                     className="flp-btn-create"
                     onClick={() => navigate('/admin/quality/checklists/new')}

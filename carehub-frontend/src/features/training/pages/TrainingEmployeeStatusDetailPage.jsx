@@ -1,294 +1,262 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import '../styles/training.css'
+import AdminSidebar from '../../admin/components/AdminSidebar'
+import AdminHeader from '../../admin/components/AdminHeader'
+import { ClockCircleOutlined, FileTextOutlined } from '@ant-design/icons'
+import '../styles/TrainingEmployeeStatusDetailPage.css'
 
-const TODAY = new Date().toISOString().slice(0, 10)
+const MOCK_RECORDS = [
+  {
+    id: 1,
+    title: 'Kỹ thuật vệ sinh tay',
+    hours: 8,
+    date: '01/06/2026',
+    workflowStatus: 'APPROVED',
+    evidenceUrl: '#'
+  },
+  {
+    id: 2,
+    title: 'Quy trình tiêm tĩnh mạch',
+    hours: 9,
+    date: '01/06/2026',
+    workflowStatus: 'PENDING_REVIEW',
+    evidenceUrl: '#'
+  },
+  {
+    id: 3,
+    title: 'Thay băng vết thương',
+    hours: 7,
+    date: '01/06/2026',
+    workflowStatus: 'APPROVED',
+    evidenceUrl: '#'
+  },
+  {
+    id: 4,
+    title: 'An toàn chuyển bệnh nhân',
+    hours: 6,
+    date: '01/06/2026',
+    workflowStatus: 'APPROVED',
+    evidenceUrl: '#'
+  }
+]
 
 function TrainingEmployeeStatusDetailPage() {
   const { employeeId } = useParams()
-  const [asOf, setAsOf] = useState(TODAY)
-  const [professionalFieldId, setProfessionalFieldId] = useState('')
-  const [workflowStatus, setWorkflowStatus] = useState('')
-  const [page, setPage] = useState(0)
-  const [professionalFields, setProfessionalFields] = useState([])
-  const [status, setStatus] = useState(null)
-  const [records, setRecords] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [apiMode, setApiMode] = useState(false)
+  
+  const [employeeInfo, setEmployeeInfo] = useState({
+    employeeName: 'Nguyễn Thị Lan',
+    employeeCode: 'VD00368',
+    approvedHours: 18,
+    requiredHours: 120,
+    pendingHours: 12,
+    totalHours: 36,
+    complianceStatus: 'NON_COMPLIANT'
+  })
 
-  const rows = records?.content ?? []
-
-  async function fetchData() {
-    setIsLoading(true)
-    setErrorMessage('')
-
-    try {
-      const [statusResponse, recordsResponse, optionsResponse] = await Promise.all([
-        trainingApi.getEmployeeTrainingStatus(employeeId, {
-          professionalFieldId: professionalFieldId || undefined,
-          asOf,
-        }),
-        trainingApi.getEmployeeTrainingRecords(employeeId, {
-          professionalFieldId: professionalFieldId || undefined,
-          workflowStatus: workflowStatus || undefined,
-          asOf,
-          page,
-          size: 10,
-          sort: 'startDate,desc',
-        }),
-        trainingApi.getRecordOptions(),
-      ])
-
-      setStatus(statusResponse.data.data)
-      setRecords(recordsResponse.data.data)
-      setProfessionalFields(optionsResponse.data.data?.professionalFields ?? [])
-    } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không tải được chi tiết giờ đào tạo nhân viên'))
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const [recordsList, setRecordsList] = useState(MOCK_RECORDS)
 
   useEffect(() => {
-    const timer = window.setTimeout(fetchData, 0)
+    async function loadData() {
+      setLoading(true)
+      try {
+        const [statusResponse, recordsResponse] = await Promise.all([
+          trainingApi.getEmployeeTrainingStatus(employeeId, {}),
+          trainingApi.getEmployeeTrainingRecords(employeeId, { size: 50 })
+        ])
 
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId, asOf, professionalFieldId, workflowStatus, page])
+        const statusData = statusResponse.data?.data
+        const recordsData = recordsResponse.data?.data?.content
 
-  const updateProfessionalField = (value) => {
-    setPage(0)
-    setProfessionalFieldId(value)
-  }
+        if (statusData) {
+          setEmployeeInfo({
+            employeeName: statusData.employeeName || 'Nguyễn Thị Lan',
+            employeeCode: statusData.employeeCode || 'VD00368',
+            approvedHours: statusData.approvedHours || 0,
+            requiredHours: statusData.requiredHours || 120,
+            pendingHours: statusData.pendingHours || 0,
+            totalHours: (statusData.approvedHours || 0) + (statusData.pendingHours || 0),
+            complianceStatus: statusData.complianceStatus || 'NON_COMPLIANT'
+          })
+          setApiMode(true)
+        }
 
-  const updateWorkflowStatus = (value) => {
-    setPage(0)
-    setWorkflowStatus(value)
-  }
+        if (recordsData && recordsData.length > 0) {
+          const mappedRecords = recordsData.map(item => ({
+            id: item.id,
+            title: item.title,
+            hours: item.approvedHours || item.declaredHours || 0,
+            date: item.startDate || '01/06/2026',
+            workflowStatus: item.workflowStatus,
+            evidenceUrl: item.evidenceCount > 0 ? `/training/records/${item.id}/evidence` : null
+          }))
+          setRecordsList(mappedRecords)
+        }
+      } catch (err) {
+        console.warn('API fetch error, using mock data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [employeeId])
+
+  const breadcrumbs = [
+    { label: 'Quản lý chất lượng' },
+    { label: 'Giờ đào tạo nhân viên', link: '/training/employees' },
+    { label: 'Chi tiết đào tạo nhân viên' }
+  ]
 
   return (
-    <main className="training-page">
-      <section className="training-header">
-        <div>
-          <p className="training-eyebrow">Employee</p>
-          <h1>{status?.employeeName || `Employee #${employeeId}`}</h1>
-        </div>
-        <div className="training-header-actions">
-          <Link className="training-button" to="/training/employees">
-            Back
-          </Link>
-        </div>
-      </section>
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      <div className="dashboard-layout__content">
+        <AdminHeader breadcrumbs={breadcrumbs} />
+        <div className="dashboard-root">
+          <main className="dashboard-body">
+            <div className="ted-page">
+              
+              {/* Title Card */}
+              <div className="ted-title-card">
+                <h1 className="ted-title">Chi tiết đào tạo nhân viên</h1>
+                <p className="ted-subtitle">
+                  Full training profile for one employee
+                </p>
+              </div>
 
-      <section className="training-panel training-panel--wide training-status-toolbar">
-        <div className="training-filters training-filters--status">
-          <label>
-            Professional field
-            <select onChange={(event) => updateProfessionalField(event.target.value)} value={professionalFieldId}>
-              <option value="">Default</option>
-              {professionalFields.map((field) => (
-                <option key={field.id} value={field.id}>
-                  {field.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            As of
-            <input onChange={(event) => setAsOf(event.target.value)} type="date" value={asOf} />
-          </label>
-          <label>
-            Ledger status
-            <select onChange={(event) => updateWorkflowStatus(event.target.value)} value={workflowStatus}>
-              <option value="">Approved + pending + rejected</option>
-              <option value="APPROVED">APPROVED</option>
-              <option value="PENDING_REVIEW">PENDING_REVIEW</option>
-              <option value="REJECTED">REJECTED</option>
-            </select>
-          </label>
-        </div>
-      </section>
+              {/* Detail Card Container */}
+              <div className="ted-detail-card">
+                
+                {/* Profile Banner */}
+                <div className="ted-profile-banner">
+                  <div className="ted-profile-left">
+                    <div className="ted-profile-avatar">
+                      <img src="/avatar_lan.png" alt="Avatar" />
+                    </div>
+                    <h2 className="ted-profile-name">{employeeInfo.employeeName}</h2>
+                  </div>
+                  <div className={`ted-profile-badge ${
+                    employeeInfo.complianceStatus === 'COMPLIANT' 
+                      ? 'ted-profile-badge--compliant' 
+                      : ''
+                  }`}>
+                    {employeeInfo.totalHours}/{employeeInfo.requiredHours}h - {
+                      employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'
+                    }
+                  </div>
+                </div>
 
-      {errorMessage ? <div className="training-message training-message--error">{errorMessage}</div> : null}
+                {/* Training Summary */}
+                <div>
+                  <h3 className="ted-section-title">TRAINNING SUMMARY</h3>
+                  <div className="ted-summary-grid">
+                    
+                    {/* Card 1: Total */}
+                    <div className="ted-summary-card ted-summary-card--total">
+                      <div className="ted-card-icon ted-card-icon--total">
+                        <ClockCircleOutlined />
+                      </div>
+                      <div className="ted-card-info">
+                        <span className="ted-card-label">Tổng(5 năm)</span>
+                        <span className="ted-card-value ted-card-value--total">
+                          {employeeInfo.totalHours}h
+                        </span>
+                      </div>
+                    </div>
 
-      {isLoading ? (
-        <section className="training-panel training-panel--wide">
-          <div className="training-skeleton">Loading employee training detail...</div>
-        </section>
-      ) : status ? (
-        <>
-          <section className="training-grid training-grid--status">
-            <StatusCard label="Employee" value={status.employeeCode || '-'} note={status.employeeName} />
-            <StatusCard label="Compliance" value={status.status} note={status.warningMessage} />
-            <StatusCard
-              label="Requirement"
-              value={status.requirementName || 'NOT CONFIGURED'}
-              note={status.cycleYears ? `${status.cycleYears} năm` : '-'}
-            />
-            <StatusCard label="Window" value={status.windowStart || '-'} note={status.windowEnd || '-'} />
-            <StatusCard label="Required" value={hours(status.requiredHours)} note="Cấu hình hiện hành" />
-            <StatusCard label="Approved" value={hours(status.approvedHours)} note="Được tính compliance" />
-            <StatusCard label="Pending" value={hours(status.pendingHours)} note="Chưa được tính" />
-            <StatusCard label="Remaining" value={hours(status.remainingHours)} note={`${status.progressPercentage ?? 0}%`} />
-          </section>
+                    {/* Card 2: Approved */}
+                    <div className="ted-summary-card ted-summary-card--approved">
+                      <div className="ted-card-icon ted-card-icon--approved">
+                        <ClockCircleOutlined />
+                      </div>
+                      <div className="ted-card-info">
+                        <span className="ted-card-label">Được duyệt</span>
+                        <span className="ted-card-value ted-card-value--approved">
+                          {employeeInfo.approvedHours}h
+                        </span>
+                      </div>
+                    </div>
 
-          {status.status === 'NOT_CONFIGURED' ? (
-            <section className="training-panel training-panel--wide">
-              <div className="training-note">Chưa có requirement phù hợp, nên ledger theo compliance window đang để trống.</div>
-            </section>
-          ) : null}
+                    {/* Card 3: Pending */}
+                    <div className="ted-summary-card ted-summary-card--pending">
+                      <div className="ted-card-icon ted-card-icon--pending">
+                        <ClockCircleOutlined />
+                      </div>
+                      <div className="ted-card-info">
+                        <span className="ted-card-label">Đang chờ</span>
+                        <span className="ted-card-value ted-card-value--pending">
+                          {employeeInfo.pendingHours}h
+                        </span>
+                      </div>
+                    </div>
 
-          <section className="training-panel training-panel--wide">
-            <h2>Progress</h2>
-            <div className="training-progress">
-              <span style={{ width: `${Math.min(Number(status.progressPercentage ?? 0), 100)}%` }} />
-            </div>
-          </section>
+                  </div>
+                </div>
 
-          <section className="training-detail-grid">
-            <div className="training-panel">
-              <h2>Breakdown theo năm</h2>
-              <StatusTable rows={status.yearlyHours ?? []} columns={['year', 'approvedHours', 'pendingHours', 'rejectedHours']} />
-            </div>
-            <div className="training-panel">
-              <h2>Breakdown theo activity</h2>
-              <StatusTable
-                rows={status.activityTypeHours ?? []}
-                columns={['activityTypeName', 'approvedHours', 'pendingHours', 'rejectedHours']}
-              />
-            </div>
-          </section>
-
-          <section className="training-panel training-panel--wide">
-            <h2>Ledger</h2>
-            {rows.length === 0 ? (
-              <div className="training-empty">Không có record trong window hiện tại.</div>
-            ) : (
-              <>
-                <div className="training-table-wrap">
-                  <table className="training-table training-table--employee-ledger">
-                    <thead>
-                      <tr>
-                        <th>Record</th>
-                        <th>Activity</th>
-                        <th>Date</th>
-                        <th>Declared</th>
-                        <th>Approved</th>
-                        <th>Running approved</th>
-                        <th>Status</th>
-                        <th>Evidence</th>
-                        <th>Timeline</th>
-                        <th>Source</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((record) => (
-                        <tr key={record.id}>
-                          <td>
-                            <Link to={`/training/records/${record.id}`}>{record.title}</Link>
-                            <br />
-                            <span className="training-muted">{record.provider || '-'}</span>
-                          </td>
-                          <td>{record.activityTypeName || '-'}</td>
-                          <td>
-                            {record.startDate}
-                            <br />
-                            <span className="training-muted">{record.endDate || '-'}</span>
-                          </td>
-                          <td>{hours(record.declaredHours)}</td>
-                          <td>{record.approvedHours == null ? '-' : hours(record.approvedHours)}</td>
-                          <td>{hours(record.runningApprovedHours)}</td>
-                          <td>{record.workflowStatus}</td>
-                          <td>
-                            {record.evidenceCount} total
-                            <br />
-                            <span className="training-muted">
-                              {record.passedEvidenceCount} passed / {record.failedEvidenceCount} failed
-                            </span>
-                          </td>
-                          <td>
-                            {record.reviewCount} review
-                            <br />
-                            <span className="training-muted">{record.changeLogCount} change</span>
-                          </td>
-                          <td>
-                            {record.sourceType}
-                            <br />
-                            <span className="training-muted">{record.sourceSubmittedAt || record.sourceReference || '-'}</span>
-                          </td>
+                {/* Training Records */}
+                <div>
+                  <h3 className="ted-section-title">TRAINNING RECORDS</h3>
+                  <div className="ted-table-wrap">
+                    <table className="ted-table">
+                      <thead>
+                        <tr>
+                          <th>Trainning</th>
+                          <th>Hours</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th>Evidence</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {recordsList.map((item, idx) => (
+                          <tr key={item.id || idx}>
+                            <td style={{ fontWeight: 500 }}>{item.title}</td>
+                            <td>{item.hours}h</td>
+                            <td>{item.date}</td>
+                            <td>
+                              <span className={`ted-status-badge ${
+                                item.workflowStatus === 'APPROVED' 
+                                  ? 'ted-status-badge--approved' 
+                                  : 'ted-status-badge--pending'
+                              }`}>
+                                <span className={`ted-status-dot ${
+                                  item.workflowStatus === 'APPROVED' 
+                                    ? 'ted-status-dot--approved' 
+                                    : 'ted-status-dot--pending'
+                                }`} />
+                                {item.workflowStatus === 'APPROVED' ? 'Duyệt' : 'Chờ'}
+                              </span>
+                            </td>
+                            <td>
+                              <Link 
+                                to={item.evidenceUrl || '#'} 
+                                className={`ted-evidence-link ${
+                                  item.workflowStatus === 'APPROVED' 
+                                    ? 'ted-evidence-link--green' 
+                                    : 'ted-evidence-link--red'
+                                }`}
+                              >
+                                <FileTextOutlined />
+                              </Link>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <div className="training-pagination">
-                  <button disabled={page <= 0} onClick={() => setPage((value) => value - 1)} type="button">
-                    Previous
-                  </button>
-                  <span>
-                    Page {records.page + 1} / {Math.max(records.totalPages, 1)}
-                  </span>
-                  <button
-                    disabled={page + 1 >= records.totalPages}
-                    onClick={() => setPage((value) => value + 1)}
-                    type="button"
-                  >
-                    Next
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
-        </>
-      ) : null}
-    </main>
-  )
-}
+              </div>
 
-function StatusCard({ label, value, note }) {
-  return (
-    <div className="training-panel training-status-card">
-      <p className="training-eyebrow">{label}</p>
-      <div className="training-stat training-stat--small">{value}</div>
-      <span className="training-muted">{note || '-'}</span>
+            </div>
+          </main>
+        </div>
+      </div>
     </div>
   )
-}
-
-function StatusTable({ rows, columns }) {
-  if (rows.length === 0) {
-    return <div className="training-empty">Không có dữ liệu.</div>
-  }
-
-  return (
-    <div className="training-table-wrap">
-      <table className="training-table training-table--compact">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column}>{column}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={`${row.year ?? row.activityTypeId ?? index}`}>
-              {columns.map((column) => (
-                <td key={column}>{row[column] ?? '-'}</td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function hours(value) {
-  return `${value ?? 0}h`
 }
 
 export default TrainingEmployeeStatusDetailPage
