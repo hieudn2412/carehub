@@ -5,7 +5,6 @@ import {
   FileTextOutlined,
   SettingOutlined,
   ImportOutlined,
-  IdcardOutlined,
   BankOutlined,
   DatabaseOutlined,
   CheckSquareOutlined,
@@ -70,7 +69,6 @@ const navSections = [
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
       { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
       { icon: <TrophyOutlined />, label: 'Cài đặt thang điểm', path: '/admin/quality/scoring' },
-      { icon: <ImportOutlined />, label: 'Import Google Form', path: '/admin/form-imports' },
     ],
   },
   {
