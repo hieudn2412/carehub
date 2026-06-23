@@ -8,6 +8,18 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Theme variables */
+  --navy: #1a1a2e;
+  --navy-light: #2d2d4e;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --text-soft: #666666;
+  --red: #ef4444;
 }
 
 * {

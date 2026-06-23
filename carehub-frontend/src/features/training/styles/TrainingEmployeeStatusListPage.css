@@ -1,0 +1,273 @@
+/* ── Training Employee Status List Page Styles ── */
+.tes-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tes-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tes-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.tes-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Filter Bar */
+.tes-filter-bar {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 20px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  flex-wrap: wrap;
+}
+
+.tes-search {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.tes-search-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px 9px 38px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.tes-search-input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.tes-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.tes-filter-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 32px 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  color: #334155;
+  min-width: 180px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.15s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
+.tes-filter-select:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
+}
+
+.tes-btn-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 16px;
+}
+
+.tes-btn-export:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+/* Table Card */
+.tes-table-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.tes-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tes-table th {
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.tes-table td {
+  padding: 16px;
+  font-size: 13.5px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.tes-table th:first-child,
+.tes-table td:first-child {
+  padding-left: 20px;
+}
+
+.tes-table th:last-child,
+.tes-table td:last-child {
+  padding-right: 20px;
+}
+
+.tes-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Badge styles */
+.tes-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.tes-badge--compliant {
+  background: #e8f5f0;
+  color: #0f6e56;
+}
+
+.tes-badge--non-compliant {
+  background: #ffebeb;
+  color: #d32f2f;
+}
+
+/* Actions */
+.tes-btn-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.tes-btn-detail:hover {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Pagination */
+.tes-pagination-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.tes-pagination-info {
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.tes-pagination-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.tes-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tes-page-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.tes-page-btn--active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.tes-page-btn--active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.tes-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tes-page-btn--dots {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+.tes-page-btn--dots:hover {
+  background: transparent;
+}

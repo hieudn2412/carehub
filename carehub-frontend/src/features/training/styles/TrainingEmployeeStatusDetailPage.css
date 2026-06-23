@@ -1,0 +1,287 @@
+/* ── Training Employee Status Detail Page Styles ── */
+.ted-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ted-title-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ted-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.ted-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Detail Card Container */
+.ted-detail-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* Profile Banner */
+.ted-profile-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 20px;
+}
+
+.ted-profile-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ted-profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffe2e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #475569;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.ted-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ted-profile-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ted-profile-badge {
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: #ffebeb;
+  color: #d32f2f;
+}
+
+.ted-profile-badge--compliant {
+  background: #e8f5f0;
+  color: #0f6e56;
+}
+
+/* Section Header */
+.ted-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin: 0 0 14px 0;
+}
+
+/* Summary Grid */
+.ted-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.ted-summary-card {
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
+  border: 1px solid transparent;
+}
+
+.ted-summary-card--total {
+  background: #fff5f5;
+  border-color: #ffd8d8;
+}
+
+.ted-summary-card--approved {
+  background: #f4fcf7;
+  border-color: #d1fae5;
+}
+
+.ted-summary-card--pending {
+  background: #fffaf0;
+  border-color: #ffedd5;
+}
+
+.ted-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.ted-card-icon--total {
+  color: #ef4444;
+}
+
+.ted-card-icon--approved {
+  color: #10b981;
+}
+
+.ted-card-icon--pending {
+  color: #f59e0b;
+}
+
+.ted-card-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.ted-card-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 2px;
+}
+
+.ted-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ted-card-value--total {
+  color: #ef4444;
+}
+
+.ted-card-value--approved {
+  color: #10b981;
+}
+
+.ted-card-value--pending {
+  color: #f59e0b;
+}
+
+/* Records Table */
+.ted-table-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ted-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ted-table th {
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.ted-table td {
+  padding: 16px 18px;
+  font-size: 13.5px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.ted-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ted-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Status Badges */
+.ted-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.ted-status-badge--approved {
+  background: #e8f5f0;
+  color: #0f6e56;
+}
+
+.ted-status-badge--pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.ted-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ted-status-dot--approved {
+  background: #10b981;
+}
+
+.ted-status-dot--pending {
+  background: #f59e0b;
+}
+
+/* Evidence Icon */
+.ted-evidence-link {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  transition: transform 0.1s ease;
+}
+
+.ted-evidence-link:hover {
+  transform: scale(1.1);
+}
+
+.ted-evidence-link--green {
+  color: #10b981;
+}
+
+.ted-evidence-link--red {
+  color: #ef4444;
+}

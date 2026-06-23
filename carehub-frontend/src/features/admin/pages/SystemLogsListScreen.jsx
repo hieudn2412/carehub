@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
-import { MOCK_LOGS } from '../api/mockLogs'
 import {
   SearchOutlined,
   EyeOutlined,
@@ -13,6 +12,7 @@ import '../styles/SystemLogs.css'
 
 function SystemLogsListScreen() {
   const navigate = useNavigate()
+  const [logs, setLogs] = useState([])
   const [search, setSearch] = useState('')
   const [actionFilter, setActionFilter] = useState('all')
   const [page, setPage] = useState(1)
@@ -23,13 +23,13 @@ function SystemLogsListScreen() {
 
   // Extract all unique action types for dropdown filter
   const actionTypes = useMemo(() => {
-    const types = MOCK_LOGS.map(l => l.action)
+    const types = logs.map(l => l.action)
     return ['all', ...Array.from(new Set(types))]
   }, [])
 
   // Filter logs list
   const filteredLogs = useMemo(() => {
-    return MOCK_LOGS.filter(log => {
+    return logs.filter(log => {
       const matchSearch = 
         log.actor.toLowerCase().includes(search.toLowerCase()) ||
         log.action.toLowerCase().includes(search.toLowerCase()) ||

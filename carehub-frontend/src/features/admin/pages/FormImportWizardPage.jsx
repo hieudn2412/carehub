@@ -288,7 +288,7 @@ function FormImportWizardPage() {
                         Trạng thái đợt: <strong>{batchDetail?.status}</strong>
                       </h3>
                       <p className="fiw-status-desc">
-                        Tổng số Form: {batchDetail?.rowTotal} · Thành công: {batchDetail?.rowSuccess} · Lỗi: {batchDetail?.rowErrors}
+                        Tổng số Form: {batchDetail?.totalForms ?? batchDetail?.rowTotal ?? 0} · Thành công: {batchDetail?.successForms ?? batchDetail?.rowSuccess ?? 0} · Lỗi: {batchDetail?.failedForms ?? batchDetail?.rowErrors ?? 0}
                       </p>
                     </div>
 
@@ -298,7 +298,7 @@ function FormImportWizardPage() {
                         onClick={handleApply}
                         disabled={submitting}
                       >
-                        {submitting ? <LoadingOutlined /> : 'Áp dụng Import (Apply)'}
+                        {submitting ? <LoadingOutlined /> : 'Lưu kết quả & Áp dụng Import'}
                       </button>
                     )}
                   </div>
@@ -348,8 +348,20 @@ function FormImportWizardPage() {
                       )}
                     </div>
 
+                    {canApply && (
+                      <div className="fiw-bottom-actions" style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          className="fiw-btn-apply"
+                          onClick={handleApply}
+                          disabled={submitting}
+                        >
+                          {submitting ? <LoadingOutlined /> : 'Lưu kết quả & Áp dụng Import'}
+                        </button>
+                      </div>
+                    )}
+
                     {batchDetail?.status === 'APPLIED' && (
-                      <div className="fiw-completed-banner">
+                      <div className="fiw-completed-banner" style={{ marginTop: '20px' }}>
                         <CheckCircleOutlined /> Import thành công! Các biểu mẫu đã được tạo dưới dạng bản nháp (**DRAFT**). 
                         Vui lòng quay lại danh sách [Quản lý Checklist](/admin/quality/checklists) để thiết kế nâng cao hoặc cấu hình thang điểm và xuất bản (Publish).
                       </div>

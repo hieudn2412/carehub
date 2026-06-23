@@ -141,7 +141,7 @@ function FormImportListPage() {
                     className="filp-btn-create"
                     onClick={() => navigate('/admin/form-imports/new')}
                   >
-                    <PlusCircleOutlined /> Nhập biểu mẫu mới
+                    <ImportOutlined /> Import từ Google Form
                   </button>
                 </div>
               </div>
@@ -174,43 +174,48 @@ function FormImportListPage() {
                         </td>
                       </tr>
                     ) : (
-                      batches.map((batch) => (
-                        <tr key={batch.id}>
-                          <td>
-                            <span className="filp-batch-code">BATCH #{batch.id}</span>
-                          </td>
-                          <td>
-                            {batch.createdAt ? new Date(batch.createdAt).toLocaleString('vi-VN') : '—'}
-                          </td>
-                          <td>
-                            <strong>{batch.rowTotal || (batch.rowSuccess + batch.rowErrors)}</strong>
-                          </td>
-                          <td>
-                            <span className="filp-text-success">{batch.rowSuccess}</span>
-                          </td>
-                          <td>
-                            <span className={batch.rowErrors > 0 ? 'filp-text-danger' : 'filp-text-muted'}>
-                              {batch.rowErrors}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`batch-badge ${getBatchStatusBadgeClass(batch.status)}`}>
-                              {getBatchStatusText(batch.status)}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="filp-actions-cell">
-                              <button
-                                className="filp-btn-action"
-                                onClick={() => navigate(`/admin/form-imports/new?batchId=${batch.id}`)}
-                                title="Xem chi tiết lô hàng"
-                              >
-                                <EyeOutlined /> Chi tiết
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                      batches.map((batch) => {
+                        const total = batch.totalForms ?? batch.rowTotal ?? 0
+                        const success = batch.successForms ?? batch.rowSuccess ?? 0
+                        const failed = batch.failedForms ?? batch.rowErrors ?? 0
+                        return (
+                          <tr key={batch.id}>
+                            <td>
+                              <span className="filp-batch-code">BATCH #{batch.id}</span>
+                            </td>
+                            <td>
+                              {batch.createdAt ? new Date(batch.createdAt).toLocaleString('vi-VN') : '—'}
+                            </td>
+                            <td>
+                              <strong>{total}</strong>
+                            </td>
+                            <td>
+                              <span className="filp-text-success">{success}</span>
+                            </td>
+                            <td>
+                              <span className={failed > 0 ? 'filp-text-danger' : 'filp-text-muted'}>
+                                {failed}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`batch-badge ${getBatchStatusBadgeClass(batch.status)}`}>
+                                {getBatchStatusText(batch.status)}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="filp-actions-cell">
+                                <button
+                                  className="filp-btn-action"
+                                  onClick={() => navigate(`/admin/form-imports/new?batchId=${batch.id}`)}
+                                  title="Xem chi tiết lô hàng"
+                                >
+                                  <EyeOutlined /> Chi tiết
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
