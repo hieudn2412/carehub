@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -18,7 +18,7 @@ function FormImportWizardPage() {
   const [searchParams] = useSearchParams()
   const queryBatchId = searchParams.get('batchId')
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(Boolean(queryBatchId))
   const [submitting, setSubmitting] = useState(false)
   const [batchId, setBatchId] = useState(queryBatchId || null)
   const [batchDetail, setBatchDetail] = useState(null)
@@ -29,7 +29,7 @@ function FormImportWizardPage() {
   const [sourceUrl, setSourceUrl] = useState('')
   const [displayOrder, setDisplayOrder] = useState(0)
 
-  const MOCK_BATCH_VALIDATED = {
+  const MOCK_BATCH_VALIDATED = useMemo(() => ({
     id: 101,
     status: 'VALIDATED',
     rowTotal: 1,
@@ -46,9 +46,9 @@ function FormImportWizardPage() {
         ]
       }
     ]
-  }
+  }), [])
 
-  const MOCK_BATCH_APPLIED = {
+  const MOCK_BATCH_APPLIED = useMemo(() => ({
     id: 101,
     status: 'APPLIED',
     rowTotal: 1,
@@ -65,16 +65,9 @@ function FormImportWizardPage() {
         ]
       }
     ]
-  }
+  }), [])
 
-  useEffect(() => {
-    if (batchId) {
-      loadBatchDetail()
-    }
-  }, [batchId, useMock])
-
-  const loadBatchDetail = () => {
-    setLoading(true)
+  const loadBatchDetail = useCallback(() => {
     adminApi.getFormImportBatchById(batchId)
       .then((res) => {
         if (res.data?.data) {
@@ -90,7 +83,13 @@ function FormImportWizardPage() {
         setUseMock(true)
         setLoading(false)
       })
-  }
+  }, [batchId, MOCK_BATCH_VALIDATED])
+
+  useEffect(() => {
+    if (batchId) {
+      loadBatchDetail()
+    }
+  }, [batchId, loadBatchDetail])
 
   const handleValidate = (e) => {
     e.preventDefault()
@@ -159,6 +158,7 @@ function FormImportWizardPage() {
     adminApi.applyFormImportBatch(batchId)
       .then(() => {
         alert('Áp dụng import thành công!')
+        setLoading(true)
         loadBatchDetail()
         setSubmitting(false)
       })
@@ -204,7 +204,7 @@ function FormImportWizardPage() {
 
   const breadcrumbs = [
     { label: 'Quản lý chất lượng' },
-    { label: 'Lịch sử Import', route: '/admin/form-imports' },
+    { label: 'Danh sách checklist', route: '/admin/quality/checklists' },
     { label: batchId ? `Chi tiết lô #${batchId}` : 'Import biểu mẫu mới' }
   ]
 
@@ -218,8 +218,8 @@ function FormImportWizardPage() {
             <div className="form-import-wizard-page">
               
               {/* Back Nav */}
-              <div className="fiw-back" onClick={() => navigate('/admin/form-imports')}>
-                <ArrowLeftOutlined /> Quay lại lịch sử Import
+              <div className="fiw-back" onClick={() => navigate('/admin/quality/checklists')}>
+                <ArrowLeftOutlined /> Quay lại danh sách checklist
               </div>
 
               {!batchId ? (
