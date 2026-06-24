@@ -110,6 +110,7 @@ function AppRouter() {
       <Route path="/admin/notifications/email-templates/:id" element={adminElement(<EmailTemplateFormPage />)} />
       <Route path="/admin/quality/checklists" element={adminElement(<FormListPage />)} />
       <Route path="/admin/quality/checklists/new" element={adminElement(<ChecklistCreatePage />)} />
+      <Route path="/admin/quality/checklists/:id/detail" element={adminElement(<ChecklistCreatePage />)} />
       <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />

@@ -220,7 +220,7 @@
 
 .flp-table {
   width: 100%;
-  min-width: 1020px;
+  min-width: 1120px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -253,23 +253,23 @@
 }
 
 .flp-table th:nth-child(1) {
-  width: 14%;
+  width: 12%;
 }
 
 .flp-table th:nth-child(2) {
-  width: 31%;
+  width: 28%;
 }
 
 .flp-table th:nth-child(3) {
-  width: 11%;
+  width: 10%;
 }
 
 .flp-table th:nth-child(4) {
-  width: 13%;
+  width: 12%;
 }
 
 .flp-table th:nth-child(5) {
-  width: 12%;
+  width: 11%;
 }
 
 .flp-table th:nth-child(6) {
@@ -277,7 +277,7 @@
 }
 
 .flp-table th:nth-child(7) {
-  width: 9%;
+  width: 17%;
 }
 
 .flp-table__actions-heading {
@@ -372,6 +372,7 @@
   display: flex;
   gap: 8px;
   justify-content: center;
+  min-width: 170px;
 }
 
 .flp-btn-action {
@@ -387,6 +388,7 @@
   cursor: pointer;
   background: #ffffff;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .flp-btn-action:disabled {
@@ -394,11 +396,11 @@
   opacity: 0.65;
 }
 
-.flp-btn-edit {
+.flp-btn-detail {
   color: var(--navy);
 }
 
-.flp-btn-edit:hover {
+.flp-btn-detail:hover {
   background: var(--navy);
   color: #ffffff;
   border-color: var(--navy);
@@ -407,7 +409,6 @@
 .flp-btn-delete {
   color: var(--red);
   border-color: #f3b9b7;
-  padding: 6px 8px;
 }
 
 .flp-btn-delete:hover {

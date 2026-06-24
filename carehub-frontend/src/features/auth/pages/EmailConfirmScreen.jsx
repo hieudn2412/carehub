@@ -4,6 +4,7 @@ import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import { authApi } from '../api/authApi.js'
 import { getApiErrorMessage } from '../utils/apiError.js'
 import Icon from '../../../shared/components/Icon.jsx'
+import { createOtpExpiresAt } from '../hooks/useOtpExpiry.js'
 import '../../../styles/EmailConfirmScreen.css'
 
 const steps = [
@@ -31,7 +32,12 @@ function EmailConfirmScreen() {
     try {
       setIsSubmitting(true)
       await authApi.sendFirstLoginOtp({ email: normalizedEmail })
-      navigate(AUTH_ROUTES.emailConfirmOtp, { state: { email: normalizedEmail } })
+      navigate(AUTH_ROUTES.emailConfirmOtp, {
+        state: {
+          email: normalizedEmail,
+          otpExpiresAt: createOtpExpiresAt(),
+        },
+      })
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể gửi mã OTP'))
     } finally {

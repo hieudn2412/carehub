@@ -221,6 +221,17 @@
   margin-bottom: 1rem;
 }
 
+.email-confirm-page .otp-expiry-note {
+  margin: 8px 0 0;
+  color: #667085;
+  font-size: 13px;
+  text-align: center;
+}
+
+.email-confirm-page .otp-expiry-note strong {
+  color: #14866d;
+}
+
 /* OTP Screen Styles */
 .email-confirm-page .otp-group {
   margin-bottom: 1.5rem;

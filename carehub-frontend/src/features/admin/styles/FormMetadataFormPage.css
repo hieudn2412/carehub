@@ -4,6 +4,16 @@
   gap: 16px;
 }
 
+.fmp-error {
+  padding: 12px 14px;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid #f2b8b5;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .fmp-back-nav {
   display: inline-flex;
   align-items: center;

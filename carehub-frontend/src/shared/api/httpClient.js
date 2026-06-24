@@ -16,6 +16,17 @@ function shouldIgnoreRefresh(url = '') {
   return REFRESH_IGNORED_PATHS.some((path) => url.endsWith(path) || url.includes(path))
 }
 
+function clearSessionAndRedirectToLogin() {
+  tokenStorage.clear()
+
+  if (
+    typeof window !== 'undefined'
+    && window.location.pathname !== '/auth/login'
+  ) {
+    window.location.replace('/auth/login')
+  }
+}
+
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -51,7 +62,7 @@ httpClient.interceptors.response.use(
     const refreshToken = tokenStorage.getRefreshToken()
 
     if (!refreshToken) {
-      tokenStorage.clear()
+      clearSessionAndRedirectToLogin()
       return Promise.reject(error)
     }
 
@@ -83,7 +94,7 @@ httpClient.interceptors.response.use(
       originalRequest.headers.Authorization = `Bearer ${authData.accessToken}`
       return httpClient(originalRequest)
     } catch (refreshError) {
-      tokenStorage.clear()
+      clearSessionAndRedirectToLogin()
       return Promise.reject(refreshError)
     } finally {
       refreshTokenRequest = null

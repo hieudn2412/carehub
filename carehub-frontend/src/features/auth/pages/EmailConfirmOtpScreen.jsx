@@ -5,6 +5,7 @@ import { authApi } from '../api/authApi.js'
 import { getApiErrorMessage } from '../utils/apiError.js'
 import Icon from '../../../shared/components/Icon.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
+import { useOtpExpiry } from '../hooks/useOtpExpiry.js'
 import '../../../styles/EmailConfirmScreen.css'
 
 const emailConfirmSteps = [
@@ -18,12 +19,19 @@ function EmailConfirmOtpScreen() {
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email
+  const initialOtpExpiresAt = location.state?.otpExpiresAt
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [errorMessage, setErrorMessage] = useState('')
   const [isResending, setIsResending] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN_SECONDS)
   const inputRefs = useRef([])
   const otpValue = otp.join('')
+  const {
+    expiresAt,
+    formattedRemaining,
+    isExpired,
+    resetExpiry,
+  } = useOtpExpiry(initialOtpExpiresAt)
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -97,7 +105,13 @@ function EmailConfirmOtpScreen() {
       return
     }
 
-    navigate(AUTH_ROUTES.emailConfirmReset, { state: { email, otp: otpValue } })
+    navigate(AUTH_ROUTES.emailConfirmReset, {
+      state: {
+        email,
+        otp: otpValue,
+        otpExpiresAt: expiresAt,
+      },
+    })
   }
 
   const handleResendOtp = async () => {
@@ -106,6 +120,8 @@ function EmailConfirmOtpScreen() {
       setErrorMessage('')
       await authApi.sendFirstLoginOtp({ email })
       setResendCooldown(RESEND_COOLDOWN_SECONDS)
+      resetExpiry()
+      setOtp(['', '', '', '', '', ''])
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể gửi lại mã OTP'))
     } finally {
@@ -159,11 +175,17 @@ function EmailConfirmOtpScreen() {
               ))}
             </div>
             <p>
-              Mã OTP sẽ hết hạn sau <strong>05:00</strong>
+              {isExpired ? (
+                <strong>Mã OTP đã hết hạn. Vui lòng gửi lại mã.</strong>
+              ) : (
+                <>
+                  Mã OTP sẽ hết hạn sau <strong>{formattedRemaining}</strong>
+                </>
+              )}
             </p>
           </div>
 
-          <button className="primary-btn" type="submit">
+          <button className="primary-btn" disabled={isExpired} type="submit">
             Xác nhận
           </button>
         </form>

@@ -4,6 +4,34 @@
   gap: 16px;
 }
 
+.fpp-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  color: var(--red);
+  background: var(--red-bg);
+  border: 1px solid #f2b8b5;
+  border-radius: var(--radius-sm);
+}
+
+.fpp-error button {
+  flex: none;
+  padding: 6px 10px;
+  color: var(--red);
+  background: #ffffff;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.fpp-subject-error {
+  margin-top: 10px;
+  color: var(--red);
+  font-size: 12.5px;
+}
+
 .fpp-back-nav {
   display: inline-flex;
   align-items: center;
