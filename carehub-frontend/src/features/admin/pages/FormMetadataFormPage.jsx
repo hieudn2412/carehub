@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
+import {
+  getChecklistDisplayCode,
+  normalizeVietnameseFormCode,
+} from '../utils/formCode.js'
 import {
   ArrowLeftOutlined,
   SaveOutlined,
@@ -20,12 +24,12 @@ function FormMetadataFormPage() {
   const navigate = useNavigate()
   const isEditMode = id && id !== 'new'
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(Boolean(isEditMode))
   const [submitting, setSubmitting] = useState(false)
   const [departments, setDepartments] = useState([])
   const [versions, setVersions] = useState([])
-  const [versionsLoading, setVersionsLoading] = useState(false)
-  const [useMock, setUseMock] = useState(false)
+  const [versionsLoading, setVersionsLoading] = useState(Boolean(isEditMode))
+  const [errorMessage, setErrorMessage] = useState('')
 
   // Form states
   const [code, setCode] = useState('')
@@ -34,103 +38,74 @@ function FormMetadataFormPage() {
   const [subjectType, setSubjectType] = useState('USER')
   const [ownerDepartmentId, setOwnerDepartmentId] = useState('')
 
-  const MOCK_DEPARTMENTS = [
-    { id: 1, code: 'K-HSTC', name: 'Khoa Hồi sức tích cực' },
-    { id: 2, code: 'K-CC', name: 'Khoa Cấp cứu' },
-    { id: 3, code: 'K-TM', name: 'Khoa Tim mạch' },
-    { id: 4, code: 'K-Ngoai', name: 'Khoa Ngoại tổng hợp' }
-  ]
+  const getErrorMessage = (error, fallback) => (
+    error?.response?.data?.message
+    || error?.response?.data?.error
+    || fallback
+  )
 
-  const MOCK_VERSIONS = [
-    {
-      id: 101,
-      versionNumber: 1,
-      status: 'PUBLISHED',
-      publishedAt: '2026-06-01T15:30:00Z',
-      publishedBy: { name: 'Nguyễn Văn A' },
-      createdAt: '2026-05-10T08:00:00Z'
-    },
-    {
-      id: 102,
-      versionNumber: 2,
-      status: 'DRAFT',
-      publishedAt: null,
-      publishedBy: null,
-      createdAt: '2026-06-22T08:20:00Z'
-    }
-  ]
+  const loadFormData = useCallback(() => {
+    adminApi.getFormById(id)
+      .then(res => {
+        const form = res.data?.data
+        if (!form) {
+          throw new Error('Phản hồi thông tin biểu mẫu không hợp lệ.')
+        }
+
+        setCode(getChecklistDisplayCode(form.code))
+        setTitle(form.title)
+        setDescription(form.description || '')
+        setSubjectType(form.subjectType)
+        setOwnerDepartmentId(form.ownerDepartment?.id || '')
+      })
+      .catch((error) => {
+        console.error('Không thể tải thông tin biểu mẫu.', error)
+        setErrorMessage(getErrorMessage(error, 'Không thể tải thông tin biểu mẫu.'))
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id])
+
+  const loadFormVersions = useCallback(() => {
+    adminApi.getFormVersions(id, { page: 0, size: 100 })
+      .then(res => {
+        const pageData = res.data?.data
+        if (!Array.isArray(pageData?.content)) {
+          throw new Error('Phản hồi danh sách phiên bản không hợp lệ.')
+        }
+
+        setVersions(pageData.content)
+      })
+      .catch((error) => {
+        console.error('Không thể tải danh sách phiên bản.', error)
+        setVersions([])
+        setErrorMessage(getErrorMessage(error, 'Không thể tải danh sách phiên bản.'))
+      })
+      .finally(() => {
+        setVersionsLoading(false)
+      })
+  }, [id])
 
   useEffect(() => {
-    // Load departments
     adminApi.getDepartments()
       .then(res => {
-        if (res.data?.data) {
-          setDepartments(res.data.data)
-        } else {
-          setDepartments(MOCK_DEPARTMENTS)
-        }
+        const departmentData = res.data?.data
+        const departmentList = Array.isArray(departmentData)
+          ? departmentData
+          : departmentData?.content
+        setDepartments(Array.isArray(departmentList) ? departmentList : [])
       })
-      .catch(() => {
-        setDepartments(MOCK_DEPARTMENTS)
+      .catch((error) => {
+        console.error('Không thể tải danh sách khoa phòng.', error)
+        setDepartments([])
       })
 
     if (isEditMode) {
       loadFormData()
       loadFormVersions()
     }
-  }, [id, useMock])
-
-  const loadFormData = () => {
-    setLoading(true)
-    adminApi.getFormById(id)
-      .then(res => {
-        const form = res.data?.data
-        if (form) {
-          setCode(form.code)
-          setTitle(form.title)
-          setDescription(form.description || '')
-          setSubjectType(form.subjectType)
-          setOwnerDepartmentId(form.ownerDepartment?.id || '')
-          setLoading(false)
-        } else {
-          setUseMock(true)
-        }
-      })
-      .catch(() => {
-        // Mock fallback
-        const mockForm = {
-          code: 'HAND_HYGIENE',
-          title: 'Tuân thủ vệ sinh tay',
-          description: 'Đánh giá quy trình tuân thủ vệ sinh tay của nhân viên y tế tại các khoa lâm sàng',
-          subjectType: 'USER',
-          ownerDepartment: { id: 1 }
-        }
-        setCode(mockForm.code)
-        setTitle(mockForm.title)
-        setDescription(mockForm.description)
-        setSubjectType(mockForm.subjectType)
-        setOwnerDepartmentId(mockForm.ownerDepartment.id)
-        setUseMock(true)
-        setLoading(false)
-      })
-  }
-
-  const loadFormVersions = () => {
-    setVersionsLoading(true)
-    adminApi.getFormVersions(id)
-      .then(res => {
-        if (res.data?.data) {
-          setVersions(res.data.data)
-        } else {
-          setVersions(MOCK_VERSIONS)
-        }
-        setVersionsLoading(false)
-      })
-      .catch(() => {
-        setVersions(MOCK_VERSIONS)
-        setVersionsLoading(false)
-      })
-  }
+  }, [isEditMode, loadFormData, loadFormVersions])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -140,15 +115,15 @@ function FormMetadataFormPage() {
     }
 
     // Validation: Code must be alphanumeric uppercase
-    const cleanCode = code.trim().toUpperCase().replace(/[^A-Z0-9_.-]/g, '')
-    if (cleanCode !== code) {
-      alert('Mã biểu mẫu chỉ được chứa chữ cái viết hoa, số và ký tự gạch dưới (_), gạch ngang (-), dấu chấm (.)')
+    const cleanCode = normalizeVietnameseFormCode(code)
+    if (cleanCode.length < 2) {
+      alert('Mã biểu mẫu cần có ít nhất 2 ký tự.')
       return
     }
 
     setSubmitting(true)
-    const payload = {
-      code: cleanCode,
+    setErrorMessage('')
+    const metadataPayload = {
       title,
       description: description || null,
       subjectType,
@@ -156,19 +131,24 @@ function FormMetadataFormPage() {
     }
 
     if (isEditMode) {
-      adminApi.updateForm(id, payload)
+      adminApi.updateForm(id, metadataPayload)
         .then(() => {
           alert('Cập nhật thông tin biểu mẫu thành công!')
           setSubmitting(false)
           navigate('/admin/quality/checklists')
         })
         .catch(err => {
-          setSubmitting(false)
           console.error(err)
-          alert(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật biểu mẫu.')
+          setErrorMessage(getErrorMessage(err, 'Có lỗi xảy ra khi cập nhật biểu mẫu.'))
+        })
+        .finally(() => {
+          setSubmitting(false)
         })
     } else {
-      adminApi.createForm(payload)
+      adminApi.createForm({
+        code: cleanCode,
+        ...metadataPayload,
+      })
         .then(res => {
           alert('Tạo biểu mẫu thành công!')
           setSubmitting(false)
@@ -180,9 +160,11 @@ function FormMetadataFormPage() {
           }
         })
         .catch(err => {
-          setSubmitting(false)
           console.error(err)
-          alert(err.response?.data?.message || 'Có lỗi xảy ra khi tạo mới biểu mẫu.')
+          setErrorMessage(getErrorMessage(err, 'Có lỗi xảy ra khi tạo mới biểu mẫu.'))
+        })
+        .finally(() => {
+          setSubmitting(false)
         })
     }
   }
@@ -190,36 +172,27 @@ function FormMetadataFormPage() {
   // Versions Management Actions
   const handleCreateDraft = () => {
     setVersionsLoading(true)
+    setErrorMessage('')
     adminApi.createFormVersion(id, {})
       .then(() => {
         alert('Tạo bản nháp phiên bản mới thành công!')
         loadFormVersions()
       })
       .catch(err => {
-        setVersionsLoading(false)
         if (err.response?.status === 409) {
-          alert('Không thể tạo bản nháp mới: Biểu mẫu này đang có sẵn một phiên bản DRAFT nháp chưa được công bố. Vui lòng thiết kế tiếp hoặc xóa bản nháp cũ.')
+          setErrorMessage('Biểu mẫu đang có một bản nháp chưa công bố. Hãy tiếp tục thiết kế hoặc xóa bản nháp cũ.')
         } else {
           console.error(err)
-          // local mockup fallback
-          const newId = Date.now()
-          const nextNo = versions.length + 1
-          setVersions(prev => [...prev, {
-            id: newId,
-            versionNumber: nextNo,
-            status: 'DRAFT',
-            publishedAt: null,
-            publishedBy: null,
-            createdAt: new Date().toISOString()
-          }])
-          alert('Tạo bản nháp mới thành công! (Chế độ giả lập)')
+          setErrorMessage(getErrorMessage(err, 'Không thể tạo bản nháp mới.'))
         }
+        setVersionsLoading(false)
       })
   }
 
   const handlePublishVersion = (versionId) => {
     if (window.confirm('Bạn có chắc chắn muốn công bố (Publish) phiên bản này không? Sau khi công bố, phiên bản này sẽ hoạt động chính thức và KHÔNG THỂ chỉnh sửa.')) {
       setVersionsLoading(true)
+      setErrorMessage('')
       adminApi.publishFormVersion(id, versionId)
         .then(() => {
           alert('Công bố phiên bản thành công!')
@@ -228,13 +201,7 @@ function FormMetadataFormPage() {
         .catch(err => {
           setVersionsLoading(false)
           console.error(err)
-          // local mock fallback
-          setVersions(prev => prev.map(v => {
-            if (v.id === versionId) return { ...v, status: 'PUBLISHED', publishedAt: new Date().toISOString(), publishedBy: { name: 'Quản trị viên' } }
-            if (v.status === 'PUBLISHED') return { ...v, status: 'RETIRED' }
-            return v
-          }))
-          alert('Công bố phiên bản thành công! (Chế độ giả lập)')
+          setErrorMessage(getErrorMessage(err, 'Không thể công bố phiên bản. Hãy kiểm tra cấu hình câu hỏi và điểm số.'))
         })
     }
   }
@@ -242,6 +209,7 @@ function FormMetadataFormPage() {
   const handleDeleteVersion = (versionId) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa bản nháp này không? Thao tác này sẽ xóa vĩnh viễn cấu trúc câu hỏi nháp.')) {
       setVersionsLoading(true)
+      setErrorMessage('')
       adminApi.deleteFormVersion(id, versionId)
         .then(() => {
           alert('Đã xóa bản nháp thành công!')
@@ -250,9 +218,7 @@ function FormMetadataFormPage() {
         .catch(err => {
           setVersionsLoading(false)
           console.error(err)
-          // local mock fallback
-          setVersions(prev => prev.filter(v => v.id !== versionId))
-          alert('Đã xóa bản nháp thành công! (Chế độ giả lập)')
+          setErrorMessage(getErrorMessage(err, 'Không thể xóa bản nháp.'))
         })
     }
   }
@@ -284,6 +250,11 @@ function FormMetadataFormPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-metadata-page">
+              {errorMessage && (
+                <div className="fmp-error" role="alert">
+                  {errorMessage}
+                </div>
+              )}
               
               {/* Back Header link */}
               <div className="fmp-back-nav" onClick={() => navigate('/admin/quality/checklists')}>
@@ -312,14 +283,19 @@ function FormMetadataFormPage() {
                           <input
                             type="text"
                             className="fmp-input"
-                            placeholder="Ví dụ: DONG_PHUC_Y_TE"
+                            maxLength={50}
+                            placeholder="Ví dụ: VE_SINH_TAY_LAM_SANG"
                             value={code}
-                            onChange={(e) => setCode(e.target.value.toUpperCase())}
+                            onChange={(e) => setCode(e.target.value)}
+                            onBlur={(e) => setCode(
+                              normalizeVietnameseFormCode(e.target.value),
+                            )}
                             disabled={isEditMode}
                             required
                           />
                           <span className="fmp-input-hint">
-                            Mã duy nhất, viết hoa, không dấu, không khoảng trắng (chỉ cho phép chữ, số, `_`, `-`, `.`).
+                            Có thể nhập tiếng Việt. Hệ thống tự chuyển thành chữ hoa
+                            không dấu và nối bằng gạch dưới.
                           </span>
                         </div>
 

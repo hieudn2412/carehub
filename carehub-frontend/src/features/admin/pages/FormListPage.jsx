@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DeleteOutlined,
-  EditOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
   ImportOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
@@ -13,6 +13,10 @@ import {
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
+import {
+  getChecklistDisplayCode,
+  resolveChecklistSearchKeyword,
+} from '../utils/formCode.js'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
@@ -77,13 +81,15 @@ function FormListPage() {
 
   useEffect(() => {
     const normalizedKeyword = keyword.trim()
-    if (normalizedKeyword === debouncedKeyword) {
+    const resolvedKeyword = resolveChecklistSearchKeyword(normalizedKeyword)
+
+    if (resolvedKeyword === debouncedKeyword) {
       return undefined
     }
 
     const timer = window.setTimeout(() => {
       setLoading(true)
-      setDebouncedKeyword(normalizedKeyword)
+      setDebouncedKeyword(resolvedKeyword)
     }, SEARCH_DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
@@ -101,9 +107,9 @@ function FormListPage() {
       subjectType: subjectType !== 'all' ? subjectType : undefined,
     }
 
-    adminApi
-      .getForms(params)
-      .then((response) => {
+    const loadForms = async () => {
+      try {
+        const response = await adminApi.getForms(params)
         if (ignoreResponse) {
           return
         }
@@ -123,8 +129,7 @@ function FormListPage() {
         setForms(pageData.content)
         setTotalElements(Number(pageData.totalElements) || 0)
         setTotalPages(nextTotalPages)
-      })
-      .catch((error) => {
+      } catch (error) {
         if (ignoreResponse) {
           return
         }
@@ -133,12 +138,14 @@ function FormListPage() {
         setTotalElements(0)
         setTotalPages(0)
         setErrorMessage(getChecklistErrorMessage(error))
-      })
-      .finally(() => {
+      } finally {
         if (!ignoreResponse && !keepLoading) {
           setLoading(false)
         }
-      })
+      }
+    }
+
+    loadForms()
 
     return () => {
       ignoreResponse = true
@@ -383,7 +390,12 @@ function FormListPage() {
                         forms.map((form) => (
                           <tr key={form.id}>
                             <td>
-                              <span className="flp-form-code">{form.code}</span>
+                              <span
+                                className="flp-form-code"
+                                title={`Mã hệ thống: ${form.code}`}
+                              >
+                                {getChecklistDisplayCode(form.code)}
+                              </span>
                             </td>
                             <td>
                               <div className="flp-form-title-wrapper">
@@ -425,14 +437,14 @@ function FormListPage() {
                             <td>
                               <div className="flp-actions-cell">
                                 <button
-                                  className="flp-btn-action flp-btn-edit"
+                                  className="flp-btn-action flp-btn-detail"
                                   onClick={() =>
-                                    navigate(`/admin/quality/checklists/${form.id}/edit`)
+                                    navigate(`/admin/quality/checklists/${form.id}/detail`)
                                   }
-                                  title="Xem chi tiết và phiên bản"
+                                  title="Xem nội dung checklist"
                                   type="button"
                                 >
-                                  <EditOutlined /> Chi tiết
+                                  <EyeOutlined /> Chi tiết
                                 </button>
                                 {form.status !== 'RETIRED' && (
                                   <button
@@ -446,7 +458,9 @@ function FormListPage() {
                                     {deletingFormId === form.id ? (
                                       <LoadingOutlined spin />
                                     ) : (
-                                      <DeleteOutlined />
+                                      <>
+                                        <DeleteOutlined /> Ngừng
+                                      </>
                                     )}
                                   </button>
                                 )}

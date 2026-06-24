@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
+import { getChecklistDisplayCode } from '../utils/formCode.js'
 import {
   ArrowLeftOutlined,
   SearchOutlined,
@@ -20,151 +21,46 @@ function FormPreviewPage() {
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState(null)
   const [version, setVersion] = useState(null)
-  const [useMock, setUseMock] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   // Subject lookup state
   const [employeeCode, setEmployeeCode] = useState('')
   const [subjectDetails, setSubjectDetails] = useState(null)
   const [subjectLoading, setSubjectLoading] = useState(false)
+  const [subjectError, setSubjectError] = useState('')
 
   // Dummy form states for rendering preview controls
   const [formAnswers, setFormAnswers] = useState({})
 
-  const MOCK_PREVIEW = {
-    form: {
-      id: 1,
-      code: 'HAND_HYGIENE',
-      title: 'Tuân thủ vệ sinh tay',
-      description: 'Bảng kiểm đánh giá sự tuân thủ vệ sinh tay',
-      subjectType: 'USER',
-      status: 'PUBLISHED',
-    },
-    version: {
-      id: 101,
-      versionNumber: 1,
-      status: 'PUBLISHED',
-      title: 'Đánh giá vệ sinh tay lâm sàng',
-      description: 'Áp dụng cho mọi vị trí tiếp xúc trực tiếp bệnh nhân',
-      settings: {
-        subjectSelector: {
-          lookupBy: 'employeeCode',
-          required: true,
-          displayFields: ['employeeCode', 'fullName', 'position', 'department'],
-          readOnly: true,
-        },
-      },
-      sections: [
-        {
-          id: 10,
-          title: 'I. Thông tin chung',
-          description: 'Phần điền thông tin hành chính',
-          displayOrder: 0,
-          items: [
-            {
-              id: 21,
-              itemType: 'INSTRUCTION',
-              displayOrder: 0,
-              description: 'Nhập mã số nhân viên cần đánh giá vào ô Tra cứu để tự động điền hồ sơ.',
-            },
-          ],
-        },
-        {
-          id: 11,
-          title: 'II. Nội dung đánh giá',
-          description: 'Hãy tích chọn đạt hoặc không đạt cho từng hành động sau:',
-          displayOrder: 1,
-          items: [
-            {
-              id: 22,
-              itemType: 'QUESTION',
-              displayOrder: 0,
-              question: {
-                id: 30,
-                questionKey: 'q1',
-                code: 'VS_TAY_01',
-                title: 'Vệ sinh tay trước khi tiếp xúc người bệnh?',
-                helpText: 'Dùng xà phòng sát khuẩn hoặc dung dịch cồn',
-                fieldType: 'SINGLE_CHOICE',
-                required: true,
-                critical: true,
-                excludeFromScore: false,
-                weight: 1,
-                options: [
-                  { id: 40, value: 'YES', label: 'Có (Đạt)', scoreValue: 1, compliant: true },
-                  { id: 41, value: 'NO', label: 'Không (Không đạt)', scoreValue: 0, compliant: false },
-                ],
-              },
-            },
-            {
-              id: 23,
-              itemType: 'QUESTION',
-              displayOrder: 1,
-              question: {
-                id: 31,
-                questionKey: 'q2',
-                code: 'VS_TAY_02',
-                title: 'Vệ sinh tay sau khi tiếp xúc dịch tiết cơ thể?',
-                helpText: 'Bắt buộc dùng xà phòng nước',
-                fieldType: 'SINGLE_CHOICE',
-                required: true,
-                critical: true,
-                excludeFromScore: false,
-                weight: 1,
-                options: [
-                  { id: 42, value: 'YES', label: 'Có (Đạt)', scoreValue: 1, compliant: true },
-                  { id: 43, value: 'NO', label: 'Không (Không đạt)', scoreValue: 0, compliant: false },
-                ],
-              },
-            },
-            {
-              id: 24,
-              itemType: 'QUESTION',
-              displayOrder: 2,
-              question: {
-                id: 32,
-                questionKey: 'q3',
-                code: 'NHAN_XET',
-                title: 'Ý kiến nhận xét khác (nếu có):',
-                helpText: 'Ghi rõ hành động hoặc hạn chế',
-                fieldType: 'LONG_TEXT',
-                required: false,
-                critical: false,
-                excludeFromScore: true,
-                options: [],
-              },
-            },
-          ],
-        },
-      ],
-    },
-  }
-
-  useEffect(() => {
-    loadPreviewData()
-  }, [id, versionId, useMock])
-
-  const loadPreviewData = () => {
-    setLoading(true)
+  const loadPreviewData = useCallback(() => {
     const params = versionId ? { versionId } : {}
     adminApi.getFormPreviewById(id, params)
       .then((res) => {
         const preview = res.data?.data
-        if (preview && preview.form && preview.version) {
-          setForm(preview.form)
-          setVersion(preview.version)
-          setLoading(false)
-        } else {
-          setUseMock(true)
+        if (!preview?.form || !preview?.version) {
+          throw new Error('Phản hồi xem trước biểu mẫu không hợp lệ.')
         }
+
+        setForm(preview.form)
+        setVersion(preview.version)
+        setErrorMessage('')
       })
       .catch((err) => {
-        console.warn('GET preview details failed. Fallback to local preview layout.', err)
-        setForm(MOCK_PREVIEW.form)
-        setVersion(MOCK_PREVIEW.version)
-        setUseMock(true)
+        console.error('Không thể tải dữ liệu xem trước.', err)
+        setForm(null)
+        setVersion(null)
+        setErrorMessage(
+          err.response?.data?.message || 'Không thể tải dữ liệu xem trước biểu mẫu.',
+        )
+      })
+      .finally(() => {
         setLoading(false)
       })
-  }
+  }, [id, versionId])
+
+  useEffect(() => {
+    loadPreviewData()
+  }, [loadPreviewData])
 
   const handleSubjectLookup = () => {
     if (!employeeCode.trim()) {
@@ -173,32 +69,23 @@ function FormPreviewPage() {
     }
 
     setSubjectLoading(true)
+    setSubjectError('')
+    setSubjectDetails(null)
     adminApi.findFormSubject({ employeeCode: employeeCode.trim() })
       .then((res) => {
         if (res.data?.data) {
           setSubjectDetails(res.data.data)
         } else {
-          alert('Không tìm thấy nhân viên hoặc không có quyền truy cập.')
+          setSubjectError('Không tìm thấy nhân viên hoặc bạn không có quyền truy cập.')
         }
-        setSubjectLoading(false)
       })
-      .catch(() => {
-        // Mock fallback
-        if (employeeCode.trim().toUpperCase() === 'NV001') {
-          setSubjectDetails({
-            employeeCode: 'NV001',
-            fullName: 'Nguyễn Văn A',
-            position: 'Điều dưỡng',
-            department: 'Khoa Hồi sức tích cực',
-          })
-        } else {
-          setSubjectDetails({
-            employeeCode: employeeCode.toUpperCase(),
-            fullName: 'Trần Thị B',
-            position: 'Bác sĩ',
-            department: 'Khoa Cấp cứu',
-          })
-        }
+      .catch((error) => {
+        console.error('Không thể tra cứu nhân viên.', error)
+        setSubjectError(
+          error.response?.data?.message || 'Không thể tra cứu nhân viên.',
+        )
+      })
+      .finally(() => {
         setSubjectLoading(false)
       })
   }
@@ -320,7 +207,7 @@ function FormPreviewPage() {
             ))}
           </div>
         )
-      case 'MULTIPLE_CHOICE':
+      case 'MULTIPLE_CHOICE': {
         const checkedList = Array.isArray(val) ? val : []
         const toggleCheckbox = (optVal) => {
           const next = checkedList.includes(optVal)
@@ -342,6 +229,7 @@ function FormPreviewPage() {
             ))}
           </div>
         )
+      }
       case 'DATE':
         return (
           <input
@@ -400,6 +288,20 @@ function FormPreviewPage() {
                 <div className="fpp-loading">
                   <LoadingOutlined /> Đang tải giao diện xem trước...
                 </div>
+              ) : !form || !version ? (
+                <div className="fpp-error" role="alert">
+                  <span>{errorMessage || 'Không thể hiển thị bản xem trước.'}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoading(true)
+                      setErrorMessage('')
+                      loadPreviewData()
+                    }}
+                  >
+                    Thử tải lại
+                  </button>
+                </div>
               ) : (
                 <div className="fpp-container">
                   
@@ -412,7 +314,12 @@ function FormPreviewPage() {
 
                   {/* Header Form card */}
                   <div className="fpp-head-card">
-                    <span className="fpp-form-code">{form?.code}</span>
+                    <span
+                      className="fpp-form-code"
+                      title={`Mã hệ thống: ${form?.code}`}
+                    >
+                      {getChecklistDisplayCode(form?.code)}
+                    </span>
                     <h1 className="fpp-form-title">{form?.title}</h1>
                     {form?.description && <p className="fpp-form-desc">{form?.description}</p>}
                   </div>
@@ -442,6 +349,12 @@ function FormPreviewPage() {
                           {subjectLoading ? <LoadingOutlined /> : <><SearchOutlined /> Tra cứu</>}
                         </button>
                       </div>
+
+                      {subjectError && (
+                        <div className="fpp-subject-error" role="alert">
+                          {subjectError}
+                        </div>
+                      )}
 
                       {/* Display fields read-only */}
                       {subjectDetails && (

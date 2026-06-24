@@ -5,6 +5,7 @@ import { authApi } from '../api/authApi.js'
 import { getApiErrorMessage } from '../utils/apiError.js'
 import Icon from '../../../shared/components/Icon.jsx'
 import StepIndicator from '../components/StepIndicator.jsx'
+import { useOtpExpiry } from '../hooks/useOtpExpiry.js'
 import '../../../styles/EmailConfirmScreen.css'
 
 const emailConfirmSteps = [
@@ -18,10 +19,12 @@ function EmailConfirmResetScreen() {
   const location = useLocation()
   const email = location.state?.email
   const otp = location.state?.otp
+  const otpExpiresAt = location.state?.otpExpiresAt
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { formattedRemaining, isExpired } = useOtpExpiry(otpExpiresAt)
 
   if (!email || !otp) {
     return <Navigate to={AUTH_ROUTES.emailConfirm} replace />
@@ -49,6 +52,11 @@ function EmailConfirmResetScreen() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')
+
+    if (isExpired) {
+      setErrorMessage('Mã OTP đã hết hạn. Vui lòng quay lại và gửi mã mới.')
+      return
+    }
 
     if (!isStrongPassword) {
       setErrorMessage('Mật khẩu chưa đạt đủ điều kiện')
@@ -127,12 +135,37 @@ function EmailConfirmResetScreen() {
               value={confirmPassword}
             />
           </div>
-          {errorMessage && <p className="error">{errorMessage}</p>}
+          {errorMessage && !isExpired && <p className="error">{errorMessage}</p>}
+          {!isExpired && (
+            <p className="otp-expiry-note">
+              Mã OTP còn hiệu lực trong <strong>{formattedRemaining}</strong>
+            </p>
+          )}
+          {isExpired && (
+            <p className="error" role="alert">
+              Mã OTP đã hết hạn. Vui lòng quay lại và gửi mã mới.
+            </p>
+          )}
 
-          <button className="primary-btn" disabled={isSubmitting} type="submit">
+          <button
+            className="primary-btn"
+            disabled={isSubmitting || isExpired}
+            type="submit"
+          >
             {isSubmitting ? 'Đang xác nhận...' : 'Xác nhận'}
           </button>
         </form>
+
+        <button
+          className="back-link"
+          onClick={() => navigate(
+            AUTH_ROUTES.emailConfirmOtp,
+            { state: { email, otpExpiresAt } },
+          )}
+          type="button"
+        >
+          <Icon name="arrowLeft" /> Quay lại
+        </button>
       </div>
     </div>
   )

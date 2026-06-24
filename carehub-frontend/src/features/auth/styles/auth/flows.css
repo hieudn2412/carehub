@@ -217,6 +217,17 @@
   font-weight: 500;
 }
 
+.auth-card--reset-password .otp-expiry-note {
+  margin: 0;
+  color: #667085;
+  font-size: 13px;
+  text-align: center;
+}
+
+.auth-card--reset-password .otp-expiry-note strong {
+  color: #14866d;
+}
+
 .auth-card--reset-password .password-rules {
   gap: 7px;
   margin: -2px 0 12px;

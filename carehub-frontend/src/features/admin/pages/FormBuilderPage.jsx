@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -9,10 +9,12 @@ import {
   PlusOutlined,
   DeleteOutlined,
   LoadingOutlined,
-  QuestionCircleOutlined,
   PlusCircleOutlined,
 } from '@ant-design/icons'
 import '../styles/FormBuilderPage.css'
+
+const CHOICE_FIELD_TYPES = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN']
+const SCORABLE_FIELD_TYPES = ['SINGLE_CHOICE', 'DROPDOWN']
 
 // Helper to generate UUID v4
 function uuidv4() {
@@ -23,13 +25,52 @@ function uuidv4() {
   })
 }
 
+function createDefaultQuestion() {
+  return {
+    questionKey: uuidv4(),
+    code: `Q_${Date.now()}`,
+    metricCode: null,
+    title: 'Câu hỏi mới',
+    helpText: '',
+    fieldType: 'SINGLE_CHOICE',
+    required: true,
+    readOnly: false,
+    critical: false,
+    excludeFromScore: false,
+    weight: 1,
+    validationConfig: null,
+    displayConfig: null,
+    options: [
+      {
+        optionKey: uuidv4(),
+        value: 'YES',
+        label: 'Đạt',
+        scoreValue: 1,
+        compliant: true,
+        excludeFromDenominator: false,
+        displayOrder: 0,
+      },
+      {
+        optionKey: uuidv4(),
+        value: 'NO',
+        label: 'Không đạt',
+        scoreValue: 0,
+        compliant: false,
+        excludeFromDenominator: false,
+        displayOrder: 1,
+      },
+    ],
+  }
+}
+
 function FormBuilderPage() {
   const { id, versionId } = useParams()
   const navigate = useNavigate()
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [useMock, setUseMock] = useState(false)
+  const [versionLoaded, setVersionLoaded] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   // Version schema state
   const [versionNumber, setVersionNumber] = useState(1)
@@ -39,96 +80,37 @@ function FormBuilderPage() {
   const [lockVersion, setLockVersion] = useState(0)
   const [sections, setSections] = useState([])
 
-  useEffect(() => {
-    loadVersionDetails()
-  }, [id, versionId, useMock])
-
-  const loadVersionDetails = () => {
-    setLoading(true)
+  const loadVersionDetails = useCallback(() => {
     adminApi.getFormVersionById(id, versionId)
       .then((res) => {
         const ver = res.data?.data
-        if (ver) {
-          setVersionNumber(ver.versionNumber || 1)
-          setTitle(ver.title || '')
-          setDescription(ver.description || '')
-          setSettings(ver.settings || null)
-          setLockVersion(ver.lockVersion || 0)
-          setSections(ver.sections || [])
-          setLoading(false)
-        } else {
-          setUseMock(true)
+        if (!ver) {
+          throw new Error('Phản hồi phiên bản biểu mẫu không hợp lệ.')
         }
+
+        setVersionNumber(ver.versionNumber || 1)
+        setTitle(ver.title || '')
+        setDescription(ver.description || '')
+        setSettings(ver.settings || null)
+        setLockVersion(ver.lockVersion || 0)
+        setSections(ver.sections || [])
+        setVersionLoaded(true)
       })
       .catch((err) => {
-        console.warn('GET version detail failed. Falling back to mockup editor state.', err)
-        // Mock fallback
-        setVersionNumber(1)
-        setTitle('Đánh giá an toàn thuốc')
-        setDescription('Bản kiểm khảo sát sự tuân thủ quy tắc sử dụng thuốc')
-        setLockVersion(0)
-        setSections([
-          {
-            id: 10,
-            sectionKey: uuidv4(),
-            title: 'Nội dung đánh giá',
-            description: 'Các tiêu chí đo lường trực quan tại chỗ',
-            displayOrder: 0,
-            items: [
-              {
-                id: 20,
-                itemKey: uuidv4(),
-                itemType: 'QUESTION',
-                displayOrder: 0,
-                title: null,
-                description: null,
-                mediaUrl: null,
-                question: {
-                  id: 30,
-                  questionKey: uuidv4(),
-                  code: 'MED_RIGHT_PATIENT',
-                  metricCode: 'M1',
-                  title: 'Xác định đúng người bệnh trước khi dùng thuốc?',
-                  helpText: 'Đối chiếu mã vòng tay người bệnh',
-                  fieldType: 'SINGLE_CHOICE',
-                  required: true,
-                  readOnly: false,
-                  critical: true,
-                  excludeFromScore: false,
-                  weight: 1,
-                  validationConfig: null,
-                  displayConfig: null,
-                  options: [
-                    {
-                      id: 40,
-                      optionKey: uuidv4(),
-                      value: 'YES',
-                      label: 'Có',
-                      scoreValue: 1,
-                      compliant: true,
-                      excludeFromDenominator: false,
-                      displayOrder: 0,
-                    },
-                    {
-                      id: 41,
-                      optionKey: uuidv4(),
-                      value: 'NO',
-                      label: 'Không',
-                      scoreValue: 0,
-                      compliant: false,
-                      excludeFromDenominator: false,
-                      displayOrder: 1,
-                    },
-                  ],
-                },
-              },
-            ],
-          },
-        ])
-        setUseMock(true)
+        console.error('Không thể tải phiên bản biểu mẫu.', err)
+        setVersionLoaded(false)
+        setErrorMessage(
+          err.response?.data?.message || 'Không thể tải cấu trúc biểu mẫu. Vui lòng thử lại.',
+        )
+      })
+      .finally(() => {
         setLoading(false)
       })
-  }
+  }, [id, versionId])
+
+  useEffect(() => {
+    loadVersionDetails()
+  }, [loadVersionDetails])
 
   // --- Actions ---
 
@@ -168,41 +150,7 @@ function FormBuilderPage() {
       title: '',
       description: '',
       mediaUrl: null,
-      question: {
-        questionKey: uuidv4(),
-        code: `Q_${Date.now()}`,
-        metricCode: null,
-        title: 'Câu hỏi mới',
-        helpText: '',
-        fieldType: 'SINGLE_CHOICE',
-        required: true,
-        readOnly: false,
-        critical: false,
-        excludeFromScore: false,
-        weight: 1,
-        validationConfig: null,
-        displayConfig: null,
-        options: [
-          {
-            optionKey: uuidv4(),
-            value: 'YES',
-            label: 'Đạt',
-            scoreValue: 1,
-            compliant: true,
-            excludeFromDenominator: false,
-            displayOrder: 0,
-          },
-          {
-            optionKey: uuidv4(),
-            value: 'NO',
-            label: 'Không đạt',
-            scoreValue: 0,
-            compliant: false,
-            excludeFromDenominator: false,
-            displayOrder: 1,
-          },
-        ],
-      },
+      question: createDefaultQuestion(),
     }
     updated[sectionIndex].items = [...itemsList, newItem]
     setSections(updated)
@@ -218,17 +166,38 @@ function FormBuilderPage() {
 
   const handleItemChange = (sectionIndex, itemIndex, field, value) => {
     const updated = [...sections]
-    updated[sectionIndex].items[itemIndex] = {
-      ...updated[sectionIndex].items[itemIndex],
+    const currentItem = updated[sectionIndex].items[itemIndex]
+    const nextItem = {
+      ...currentItem,
       [field]: value,
     }
+
+    if (field === 'itemType' && value === 'QUESTION' && !currentItem.question) {
+      nextItem.question = createDefaultQuestion()
+    }
+
+    updated[sectionIndex].items[itemIndex] = nextItem
     setSections(updated)
   }
 
   const handleQuestionChange = (sectionIndex, itemIndex, field, value) => {
     const updated = [...sections]
     const q = updated[sectionIndex].items[itemIndex].question || {}
-    updated[sectionIndex].items[itemIndex].question = { ...q, [field]: value }
+    const nextQuestion = { ...q, [field]: value }
+
+    if (field === 'fieldType') {
+      if (CHOICE_FIELD_TYPES.includes(value) && (!q.options || q.options.length === 0)) {
+        nextQuestion.options = createDefaultQuestion().options
+      }
+
+      if (!SCORABLE_FIELD_TYPES.includes(value)) {
+        nextQuestion.excludeFromScore = true
+        nextQuestion.critical = false
+        nextQuestion.weight = null
+      }
+    }
+
+    updated[sectionIndex].items[itemIndex].question = nextQuestion
     setSections(updated)
   }
 
@@ -267,6 +236,11 @@ function FormBuilderPage() {
   // --- Save ---
 
   const handleSave = () => {
+    if (!versionLoaded) {
+      setErrorMessage('Chưa tải được dữ liệu phiên bản nên không thể lưu.')
+      return
+    }
+
     // Basic validation
     if (!title) {
       alert('Vui lòng điền tiêu đề phiên bản.')
@@ -277,33 +251,70 @@ function FormBuilderPage() {
     const codes = new Set()
     let duplicateCode = null
     let missingCode = false
-    let hasOrderConflict = false
+    let validationError = ''
 
-    sections.forEach((sec) => {
-      sec.items.forEach((item) => {
+    sections.forEach((sec, sectionIndex) => {
+      if (!sec.title?.trim() && !validationError) {
+        validationError = `Phần ${sectionIndex + 1} cần có tiêu đề.`
+      }
+
+      sec.items.forEach((item, itemIndex) => {
         if (item.itemType === 'QUESTION' && item.question) {
-          const qcode = item.question.code?.trim()
+          const qcode = item.question.code?.trim().toUpperCase()
+          const questionPosition = `Câu hỏi ${itemIndex + 1} của phần ${sectionIndex + 1}`
+
+          if (!item.question.title?.trim() && !validationError) {
+            validationError = `${questionPosition} cần có nội dung câu hỏi.`
+          }
+
           if (!qcode) {
             missingCode = true
+          } else if (!/^[A-Z0-9_.-]+$/.test(qcode) && !validationError) {
+            validationError = `${questionPosition} có mã chứa ký tự không được hỗ trợ.`
           } else if (codes.has(qcode)) {
             duplicateCode = qcode
           } else {
             codes.add(qcode)
           }
+
+          if (CHOICE_FIELD_TYPES.includes(item.question.fieldType)) {
+            const options = item.question.options || []
+            const optionValues = new Set()
+
+            if (options.length < 2 && !validationError) {
+              validationError = `${questionPosition} cần có ít nhất 2 lựa chọn.`
+            }
+
+            options.forEach((option) => {
+              const normalizedValue = option.value?.trim().toLowerCase()
+              if ((!option.label?.trim() || !normalizedValue) && !validationError) {
+                validationError = `${questionPosition} có lựa chọn chưa đủ nhãn hoặc giá trị.`
+              } else if (optionValues.has(normalizedValue) && !validationError) {
+                validationError = `${questionPosition} có giá trị lựa chọn bị trùng.`
+              } else {
+                optionValues.add(normalizedValue)
+              }
+            })
+          }
         }
       })
     })
 
+    if (validationError) {
+      setErrorMessage(validationError)
+      return
+    }
     if (missingCode) {
-      alert('Lỗi: Mọi câu hỏi đều phải được đặt mã câu hỏi (Question Code).')
+      setErrorMessage('Mọi câu hỏi đều phải được đặt mã câu hỏi.')
       return
     }
     if (duplicateCode) {
-      alert(`Lỗi: Trùng lặp mã câu hỏi "${duplicateCode}". Mã câu hỏi phải là duy nhất trong biểu mẫu.`)
+      setErrorMessage(`Mã câu hỏi "${duplicateCode}" đang bị trùng trong biểu mẫu.`)
       return
     }
 
     setSaving(true)
+    setErrorMessage('')
 
     // Re-index all elements before saving just to be absolutely sure
     const cleanedSections = sections.map((sec, secIdx) => {
@@ -317,12 +328,17 @@ function FormBuilderPage() {
 
         if (item.itemType === 'QUESTION' && item.question) {
           const q = item.question
-          const isChoiceField = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(q.fieldType)
+          const isChoiceField = CHOICE_FIELD_TYPES.includes(q.fieldType)
+          const isScorableField = SCORABLE_FIELD_TYPES.includes(q.fieldType)
           
           cleanedItem.question = {
             ...q,
             code: q.code.trim().toUpperCase(),
-            weight: q.excludeFromScore ? null : (q.weight ? parseFloat(q.weight) : 1),
+            excludeFromScore: isScorableField ? q.excludeFromScore : true,
+            critical: isScorableField ? q.critical : false,
+            weight: !isScorableField || q.excludeFromScore
+              ? null
+              : (q.weight ? parseFloat(q.weight) : 1),
             options: isChoiceField ? (q.options || []).map((opt, optIdx) => ({
               ...opt,
               displayOrder: optIdx,
@@ -351,15 +367,6 @@ function FormBuilderPage() {
       lockVersion: lockVersion,
     }
 
-    if (useMock) {
-      setTimeout(() => {
-        setSaving(false)
-        setLockVersion(prev => prev + 1)
-        alert('Lưu bản thiết kế thành công! (Giả lập)')
-      }, 500)
-      return
-    }
-
     adminApi.updateFormVersion(id, versionId, payload)
       .then((res) => {
         alert('Lưu bản thiết kế câu hỏi thành công!')
@@ -369,13 +376,15 @@ function FormBuilderPage() {
         }
       })
       .catch((err) => {
-        setSaving(false)
         console.error(err)
         if (err.response?.status === 409) {
-          alert('Lỗi xung đột phiên bản (409): Dữ liệu biểu mẫu đã được cập nhật ở nơi khác. Vui lòng làm mới trang và chỉnh sửa lại.')
+          setErrorMessage('Dữ liệu biểu mẫu đã được cập nhật ở nơi khác. Hãy tải lại trang trước khi chỉnh sửa tiếp.')
         } else {
-          alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thiết kế câu hỏi.')
+          setErrorMessage(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thiết kế câu hỏi.')
         }
+      })
+      .finally(() => {
+        setSaving(false)
       })
   }
 
@@ -394,13 +403,34 @@ function FormBuilderPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-builder-page">
+              {errorMessage && (
+                <div className="fbp-error" role="alert">
+                  <span>{errorMessage}</span>
+                  {!versionLoaded && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setErrorMessage('')
+                        setLoading(true)
+                        loadVersionDetails()
+                      }}
+                    >
+                      Thử tải lại
+                    </button>
+                  )}
+                </div>
+              )}
               
               {/* Toolbar */}
               <div className="fbp-top-nav">
                 <div className="fbp-back" onClick={() => navigate(`/admin/quality/checklists/${id}/edit`)}>
                   <ArrowLeftOutlined /> Quay lại cấu hình biểu mẫu
                 </div>
-                <button className="fbp-btn-save" onClick={handleSave} disabled={saving}>
+                <button
+                  className="fbp-btn-save"
+                  onClick={handleSave}
+                  disabled={saving || loading || !versionLoaded}
+                >
                   {saving ? <LoadingOutlined /> : <><SaveOutlined /> Lưu thiết kế</>}
                 </button>
               </div>
@@ -568,7 +598,12 @@ function FormBuilderPage() {
                                         type="text"
                                         className="fbp-input"
                                         value={item.question.code || ''}
-                                        onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'code', e.target.value.toUpperCase())}
+                                        onChange={(e) => handleQuestionChange(
+                                          secIdx,
+                                          itemIdx,
+                                          'code',
+                                          e.target.value.toUpperCase().replace(/[^A-Z0-9_.-]/g, ''),
+                                        )}
                                         placeholder="Vd: VS_TAY_01"
                                       />
                                     </div>
@@ -607,20 +642,33 @@ function FormBuilderPage() {
                                       <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ bảng kiểm">
                                         <input
                                           type="checkbox"
-                                          checked={item.question.critical}
+                                          checked={
+                                            SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                            && item.question.critical
+                                          }
+                                          disabled={
+                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                          }
                                           onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'critical', e.target.checked)}
                                         /> Tiêu chí Trọng yếu (Critical)
                                       </label>
                                       <label className="fbp-checkbox-label">
                                         <input
                                           type="checkbox"
-                                          checked={item.question.excludeFromScore}
+                                          checked={
+                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                            || item.question.excludeFromScore
+                                          }
+                                          disabled={
+                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                          }
                                           onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'excludeFromScore', e.target.checked)}
                                         /> Không tính điểm
                                       </label>
                                     </div>
 
-                                    {!item.question.excludeFromScore && (
+                                    {SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                      && !item.question.excludeFromScore && (
                                       <div className="fbp-form-field" style={{ width: '100px' }}>
                                         <label>Trọng số:</label>
                                         <input
@@ -647,7 +695,7 @@ function FormBuilderPage() {
                                   </div>
 
                                   {/* Render options configs for single/multiple/dropdown choices */}
-                                  {['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN'].includes(item.question.fieldType) && (
+                                  {CHOICE_FIELD_TYPES.includes(item.question.fieldType) && (
                                     <div className="fbp-options-section">
                                       <div className="fbp-options-header">
                                         <span className="fbp-opts-title">Danh sách lựa chọn</span>
@@ -668,7 +716,7 @@ function FormBuilderPage() {
                                         <div className="fbp-opt-th" style={{ textAlign: 'center' }}>Hành động</div>
 
                                         {(item.question.options || []).map((opt, optIdx) => (
-                                          <React.Fragment key={opt.optionKey || optIdx}>
+                                          <Fragment key={opt.optionKey || optIdx}>
                                             <div>
                                               <input
                                                 type="text"
@@ -713,7 +761,7 @@ function FormBuilderPage() {
                                                 ✕
                                               </button>
                                             </div>
-                                          </React.Fragment>
+                                          </Fragment>
                                         ))}
                                       </div>
                                     </div>
