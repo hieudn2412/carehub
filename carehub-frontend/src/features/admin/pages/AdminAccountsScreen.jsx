@@ -30,6 +30,27 @@ function AdminAccountsScreen() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
 
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   // Filters State
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -598,15 +619,20 @@ function AdminAccountsScreen() {
                         <LeftOutlined />
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                        <button
-                          key={n}
-                          className={`am-pn ${n === page ? 'am-pn--active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {getVisiblePages().map((n, idx) => {
+                        if (n === '...') {
+                          return <span key={`dots-${idx}`} className="am-pn-dots">...</span>
+                        }
+                        return (
+                          <button
+                            key={n}
+                            className={`am-pn ${n === page ? 'am-pn--active' : ''}`}
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
 
                       <button 
                         className="am-pn" 

@@ -19,6 +19,7 @@ public record UserDetailResponse(
         String positionName,
         Long positionId,
         Long educationLevelId,
+        String educationLevelName,
         java.time.LocalDate birthday,
         Boolean gender,
         List<Role> roles,
