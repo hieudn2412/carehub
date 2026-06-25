@@ -105,6 +105,7 @@ function AppRouter() {
       <Route path="/admin/accounts" element={adminElement(<AdminAccountsScreen />)} />
       <Route path="/admin/system-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system/import-logs" element={adminElement(<ImportLogsListPage />)} />
+      <Route path="/admin/reference/sync-history" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system-settings" element={adminElement(<SystemSettingsScreen />)} />
       <Route path="/admin/reference/employees" element={adminElement(<ReferenceEmployeesListPage />)} />
       <Route path="/admin/reference/employees/:id" element={adminElement(<ReferenceEmployeeDetailPage />)} />

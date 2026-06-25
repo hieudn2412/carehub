@@ -109,6 +109,7 @@ function ReferenceDepartmentsListPage() {
 
   // Fetch departments from backend or fallback
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDepartments()
   }, [])
 
@@ -182,6 +183,7 @@ function ReferenceDepartmentsListPage() {
 
   // Reset page when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [search, blockFilter])
 
@@ -220,6 +222,28 @@ function ReferenceDepartmentsListPage() {
     })
     return Array.from(blocks)
   }, [activeDatabase])
+
+  // Generate pagination buttons array with ellipsis for clean design
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   return (
     <div className="dashboard-layout">
@@ -322,7 +346,7 @@ function ReferenceDepartmentsListPage() {
                 {/* Pagination Footer */}
                 {!loading && totalElements > 0 && (
                   <div className="rdl-pagination">
-                    <span>
+                    <span className="rdl-pagination-info">
                       Hiển thị {paginatedDepartments.length} trong tổng số {totalElements} kết quả
                     </span>
                     <div className="rdl-page-nums">
@@ -334,15 +358,24 @@ function ReferenceDepartmentsListPage() {
                         <LeftOutlined />
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                        <button
-                          key={n}
-                          className={`rdl-pn ${n === page ? 'rdl-pn--active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {getVisiblePages().map((n, idx) => {
+                        if (n === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="rdl-pn-dots">
+                              ...
+                            </span>
+                          )
+                        }
+                        return (
+                          <button
+                            key={n}
+                            className={`rdl-pn ${n === page ? 'rdl-pn--active' : ''}`}
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
 
                       <button
                         className="rdl-pn"

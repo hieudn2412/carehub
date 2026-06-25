@@ -50,8 +50,8 @@ const generateMockLogs = () => {
     const rowResults = []
     const limit = Math.min(totalRows, 15)
     for (let r = 1; r <= limit; r++) {
-      let rStatus = 'UNCHANGED'
-      let rMsg = 'Không có thay đổi dữ liệu'
+      let rStatus
+      let rMsg
       if (status === 'FAILED') {
         rStatus = 'FAILED'
         rMsg = 'Dòng chứa thông tin không hợp lệ: Định dạng ngày tháng sai'
@@ -66,9 +66,12 @@ const generateMockLogs = () => {
           rStatus = 'UPDATED'
           rMsg = 'Cập nhật phòng ban và chức vụ thành công'
         }
-      } else {
+      } else if (status === 'SUCCESS') {
         rStatus = r % 2 === 0 ? 'INSERTED' : 'UPDATED'
         rMsg = rStatus === 'INSERTED' ? 'Đã thêm mới bản ghi tham chiếu' : 'Đã cập nhật thông tin tham chiếu'
+      } else {
+        rStatus = 'UNCHANGED'
+        rMsg = 'Không có thay đổi dữ liệu'
       }
       rowResults.push({
         rowNumber: r + 1,
@@ -117,12 +120,40 @@ function ImportLogsListPage() {
   const [rowSearchQuery, setRowSearchQuery] = useState('')
 
   const isSystemLogsPath = window.location.pathname.includes('/admin/system-logs')
+  const isSyncHistoryPath = window.location.pathname.includes('/admin/reference/sync-history')
 
   // Breadcrumbs config for AdminHeader
-  const breadcrumbs = [
-    { label: 'Hệ thống' },
-    { label: isSystemLogsPath ? 'System logs' : 'Import logs' }
-  ]
+  const breadcrumbs = isSyncHistoryPath
+    ? [
+        { label: 'Dữ liệu tham chiếu' },
+        { label: 'Lịch sử đồng bộ' }
+      ]
+    : [
+        { label: 'Hệ thống' },
+        { label: isSystemLogsPath ? 'System logs' : 'Import logs' }
+      ]
+
+  // Generate pagination buttons array with ellipsis for clean design
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   // Generate mock logs once
   const mockDatabase = useMemo(() => generateMockLogs(), [])
@@ -166,6 +197,7 @@ function ImportLogsListPage() {
 
   // Fetch data
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
 
     if (useMock) {
@@ -219,18 +251,22 @@ function ImportLogsListPage() {
         console.warn('GET /system/import-logs API request failed or not found. Falling back to mock logs.', err)
         setUseMock(true)
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, fileFilter, statusFilter, dateFrom, dateTo, useMock])
 
   // Reset page to 1 when filters change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [fileFilter, statusFilter, dateFrom, dateTo])
 
   // Re-apply filters for mock data when page or filters change
   useEffect(() => {
     if (useMock) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       applyMockFilters()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, fileFilter, statusFilter, dateFrom, dateTo, useMock])
 
   // Open details modal
@@ -364,10 +400,16 @@ function ImportLogsListPage() {
               {/* Title & Subtitle Card */}
               <div className="il-title-card">
                 <h1 className="il-title">
-                  {isSystemLogsPath ? 'Nhật ký hệ thống (System logs)' : 'Nhật ký nhập dữ liệu (Import logs)'}
+                  {isSyncHistoryPath
+                    ? 'Lịch sử đồng bộ'
+                    : isSystemLogsPath
+                    ? 'Nhật ký hệ thống (System logs)'
+                    : 'Nhật ký nhập dữ liệu (Import logs)'}
                 </h1>
                 <p className="il-subtitle">
-                  {isSystemLogsPath
+                  {isSyncHistoryPath
+                    ? 'Lịch sử của tất cả các đợt đồng bộ/nhập dữ liệu tham chiếu.'
+                    : isSystemLogsPath
                     ? 'Giám sát và kiểm toán toàn bộ hoạt động nhập dữ liệu tham chiếu trên hệ thống.'
                     : 'Lịch sử của tất cả các đợt nhập dữ liệu tham chiếu.'}
                 </p>
@@ -487,7 +529,7 @@ function ImportLogsListPage() {
                 {/* Pagination Footer */}
                 {!loading && logs.length > 0 && (
                   <div className="il-pagination">
-                    <span>
+                    <span className="il-pagination-info">
                       Hiển thị {logs.length} trong tổng số {totalElements} kết quả
                     </span>
                     <div className="il-page-nums">
@@ -499,15 +541,24 @@ function ImportLogsListPage() {
                         <LeftOutlined />
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                        <button
-                          key={n}
-                          className={`il-pn ${n === page ? 'il-pn--active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {getVisiblePages().map((n, idx) => {
+                        if (n === '...') {
+                          return (
+                            <span key={`dots-${idx}`} className="il-pn-dots">
+                              ...
+                            </span>
+                          )
+                        }
+                        return (
+                          <button
+                            key={n}
+                            className={`il-pn ${n === page ? 'il-pn--active' : ''}`}
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
 
                       <button
                         className="il-pn"

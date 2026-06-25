@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
@@ -98,6 +98,7 @@ function TrainingRequirementPage() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [])
 
