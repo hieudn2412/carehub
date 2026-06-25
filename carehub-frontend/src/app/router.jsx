@@ -25,6 +25,11 @@ import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.js
 import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
 import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
+import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
+import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
+import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
+import ClassificationRuleFormPage from '../features/evaluation/pages/ClassificationRuleFormPage.jsx'
+import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
 
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -135,6 +140,13 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/edit" element={adminElement(<QuestionSetFormPage />)} />
+      <Route path="/admin/evaluation/question-bank" element={adminElement(<QuestionBankListPage />)} />
+      <Route path="/admin/evaluation/question-bank/new" element={adminElement(<QuestionFormPage />)} />
+      <Route path="/admin/evaluation/question-bank/:id/edit" element={adminElement(<QuestionFormPage />)} />
+      <Route path="/admin/evaluation/classification-rules" element={adminElement(<ClassificationRuleListPage />)} />
+      <Route path="/admin/evaluation/classification-rules/new" element={adminElement(<ClassificationRuleFormPage />)} />
+      <Route path="/admin/evaluation/classification-rules/:id/edit" element={adminElement(<ClassificationRuleFormPage />)} />
+      <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
 
 
       
