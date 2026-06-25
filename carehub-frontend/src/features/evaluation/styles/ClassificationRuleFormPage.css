@@ -1,0 +1,291 @@
+/* ── Competency Classification Rule Form Page Styles ── */
+.crf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.crf-container {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.crf-header {
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.crf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.crf-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.crf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.crf-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .crf-form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.crf-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crf-form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.crf-required-star {
+  color: #dc2626;
+}
+
+/* Red Border Inputs (All Form inputs in mockup) */
+.crf-input-red {
+  border: 1.5px solid #dc2626 !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.crf-input-red:focus {
+  border-color: #b91c1c !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+select.crf-input-red {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc2626'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  padding-right: 36px;
+}
+
+/* Section Divider */
+.crf-section-divider {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 6px 0;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.crf-divider-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.5px;
+}
+
+/* Badge Color Selector Grid */
+.crf-color-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .crf-color-selector {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+.crf-color-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.crf-color-card:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.crf-color-card--selected {
+  border: 1.5px solid #f59e0b !important; /* Gold/orange border in mockup */
+  background: #fffbeb !important;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.05);
+}
+
+.crf-color-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crf-color-card-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.crf-color-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.crf-color-card-check {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f59e0b; /* Gold checkmark */
+}
+
+/* Preview Card Area */
+.crf-preview-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 24px;
+}
+
+.crf-preview-desc {
+  font-size: 13.5px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Warn Box Banner */
+.crf-warning-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fffbeb;
+  border: 1.5px solid #fef3c7;
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin-top: 8px;
+}
+
+.crf-warning-icon {
+  color: #d97706;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  margin-top: 1px;
+}
+
+.crf-warning-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #b45309;
+  line-height: 1.4;
+}
+
+/* Actions footer */
+.crf-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 24px;
+  margin-top: 12px;
+}
+
+.crf-btn-save {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #007aff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+.crf-btn-save:hover {
+  background: #0062cc;
+}
+
+.crf-btn-cancel {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #8e8e93;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.crf-btn-cancel:hover {
+  background: #7c7c80;
+}
+
+/* Copied crl-badge classes to support self-containment */
+.crl-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+  min-width: 80px;
+}
+.crf-badge--green {
+  background: #e8f7ef;
+  color: #19643a;
+}
+.crf-badge--blue {
+  background: #eff6ff;
+  color: #1e40af;
+}
+.crf-badge--yellow {
+  background: #fff6e5;
+  color: #b45309;
+}
+.crf-badge--red {
+  background: #ffebeb;
+  color: #d32f2f;
+}

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
+import { adminApi } from '../api/adminApi.js'
 import '../styles/ReferenceEmployeesListPage.css'
 
-// Generate 248 mock reference employees to match mockup details
+// Generate 248 mock reference employees to match mockup details (kept as fallback helper)
 const generateMockEmployees = () => {
   const employees = []
   const names = [
@@ -103,7 +104,10 @@ const generateMockEmployees = () => {
 
 function ReferenceEmployeesListPage() {
   const navigate = useNavigate()
-  const mockDatabase = useMemo(() => generateMockEmployees(), [])
+  
+  const [employees, setEmployees] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // Filters State
   const [search, setSearch] = useState('')
@@ -114,6 +118,49 @@ function ReferenceEmployeesListPage() {
   const [genderFilter, setGenderFilter] = useState('all')
   const [cbTypeFilter, setCbTypeFilter] = useState('all')
   const [page, setPage] = useState(1)
+
+  // Load real employee data from backend
+  useEffect(() => {
+    let active = true
+    const loadData = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await adminApi.getUsers({ size: 10000 })
+        if (active && response.data?.success) {
+          const content = response.data.data.content || []
+          
+          // Map to match frontend format
+          const mapped = content.map(emp => {
+            const roleNames = emp.roles?.map(r => r.name).join(', ') || 'USER'
+            return {
+              id: emp.id,
+              employeeCode: emp.employeeCode,
+              fullName: emp.fullName,
+              departmentName: emp.departmentName || '–',
+              cbType: roleNames,
+              gender: emp.gender ? 'Nam' : 'Nữ',
+              degree: emp.educationLevelName || '–',
+              positionName: emp.positionName || '–',
+              titleName: roleNames,
+              birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('vi-VN') : '–',
+              blockCode: '–'
+            }
+          })
+          setEmployees(mapped)
+        }
+      } catch (err) {
+        console.error(err)
+        if (active) {
+          setError('Không thể tải danh sách nhân viên từ backend.')
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadData()
+    return () => { active = false }
+  }, [])
 
   // Reset page when filters change
   useEffect(() => {
@@ -130,11 +177,11 @@ function ReferenceEmployeesListPage() {
       genders: new Set(),
       cbTypes: new Set()
     }
-    mockDatabase.forEach(emp => {
-      if (emp.positionName) options.positions.add(emp.positionName)
-      if (emp.degree) options.degrees.add(emp.degree)
-      if (emp.departmentName) options.departments.add(emp.departmentName)
-      if (emp.titleName) options.titles.add(emp.titleName)
+    employees.forEach(emp => {
+      if (emp.positionName && emp.positionName !== '–') options.positions.add(emp.positionName)
+      if (emp.degree && emp.degree !== '–') options.degrees.add(emp.degree)
+      if (emp.departmentName && emp.departmentName !== '–') options.departments.add(emp.departmentName)
+      if (emp.titleName && emp.titleName !== '–') options.titles.add(emp.titleName)
       if (emp.gender) options.genders.add(emp.gender)
       if (emp.cbType) options.cbTypes.add(emp.cbType)
     })
@@ -146,11 +193,11 @@ function ReferenceEmployeesListPage() {
       genders: Array.from(options.genders),
       cbTypes: Array.from(options.cbTypes)
     }
-  }, [mockDatabase])
+  }, [employees])
 
   // Apply filters
   const filteredEmployees = useMemo(() => {
-    return mockDatabase.filter(emp => {
+    return employees.filter(emp => {
       const matchSearch = 
         emp.fullName.toLowerCase().includes(search.toLowerCase()) ||
         emp.employeeCode.toLowerCase().includes(search.toLowerCase())
@@ -164,12 +211,32 @@ function ReferenceEmployeesListPage() {
 
       return matchSearch && matchPosition && matchDegree && matchDept && matchTitle && matchGender && matchCbType
     })
-  }, [mockDatabase, search, positionFilter, degreeFilter, deptFilter, titleFilter, genderFilter, cbTypeFilter])
+  }, [employees, search, positionFilter, degreeFilter, deptFilter, titleFilter, genderFilter, cbTypeFilter])
 
   // Pagination
   const PAGE_SIZE = 10
   const totalElements = filteredEmployees.length
   const totalPages = Math.ceil(totalElements / PAGE_SIZE)
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
   const paginatedEmployees = useMemo(() => {
     const startIndex = (page - 1) * PAGE_SIZE
     return filteredEmployees.slice(startIndex, startIndex + PAGE_SIZE)
@@ -209,6 +276,7 @@ function ReferenceEmployeesListPage() {
                       placeholder="Tìm theo tên/ID"
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
+                      disabled={loading}
                     />
                   </div>
 
@@ -216,6 +284,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={positionFilter}
                     onChange={(e) => setPositionFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Vị trí</option>
                     {filterOptions.positions.map(pos => (
@@ -227,6 +296,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={degreeFilter}
                     onChange={(e) => setDegreeFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Trình độ</option>
                     {filterOptions.degrees.map(deg => (
@@ -243,6 +313,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Đơn vị</option>
                     {filterOptions.departments.map(dept => (
@@ -254,6 +325,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={titleFilter}
                     onChange={(e) => setTitleFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Chức danh</option>
                     {filterOptions.titles.map(title => (
@@ -265,6 +337,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={genderFilter}
                     onChange={(e) => setGenderFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Giới tính</option>
                     {filterOptions.genders.map(g => (
@@ -276,6 +349,7 @@ function ReferenceEmployeesListPage() {
                     className="rel-filter-select"
                     value={cbTypeFilter}
                     onChange={(e) => setCbTypeFilter(e.target.value)}
+                    disabled={loading}
                   >
                     <option value="all">Loại CB</option>
                     {filterOptions.cbTypes.map(t => (
@@ -287,6 +361,12 @@ function ReferenceEmployeesListPage() {
 
               {/* Table Card */}
               <div className="rel-table-card">
+                {error && (
+                  <div className="rel-error-msg" style={{ padding: '20px', color: '#dc2626', textAlign: 'center' }}>
+                    {error}
+                  </div>
+                )}
+                
                 <table className="rel-table">
                   <thead>
                     <tr>
@@ -302,7 +382,13 @@ function ReferenceEmployeesListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedEmployees.length === 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan="9" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                          Đang tải danh sách nhân viên từ backend...
+                        </td>
+                      </tr>
+                    ) : paginatedEmployees.length === 0 ? (
                       <tr>
                         <td colSpan="9" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
                           Không tìm thấy nhân viên gốc phù hợp.
@@ -334,7 +420,7 @@ function ReferenceEmployeesListPage() {
                 </table>
 
                 {/* Table Footer / Pagination */}
-                {totalElements > 0 && (
+                {!loading && totalElements > 0 && (
                   <div className="rel-pagination">
                     <span>
                       Hiển thị {paginatedEmployees.length} trong tổng số {totalElements} kết quả
@@ -348,15 +434,20 @@ function ReferenceEmployeesListPage() {
                         <LeftOutlined />
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                        <button
-                          key={n}
-                          className={`rel-pn ${n === page ? 'rel-pn--active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {getVisiblePages().map((n, idx) => {
+                        if (n === '...') {
+                          return <span key={`dots-${idx}`} className="rel-pn-dots">...</span>
+                        }
+                        return (
+                          <button
+                            key={n}
+                            className={`rel-pn ${n === page ? 'rel-pn--active' : ''}`}
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
 
                       <button
                         className="rel-pn"

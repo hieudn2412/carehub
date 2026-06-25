@@ -1,20 +1,54 @@
-import { useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { LeftOutlined } from '@ant-design/icons'
-import { generateMockEmployees } from './ReferenceEmployeesListPage'
+import { adminApi } from '../api/adminApi.js'
 import '../styles/ReferenceEmployeeDetailPage.css'
 
 function ReferenceEmployeeDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  // Load the mock database to find the selected employee
-  const mockDatabase = useMemo(() => generateMockEmployees(), [])
-  const employee = useMemo(() => {
-    return mockDatabase.find(e => String(e.id) === String(id))
-  }, [mockDatabase, id])
+  const [employee, setEmployee] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    const loadEmployeeDetail = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const response = await adminApi.getUserById(id)
+
+        if (active && response.data?.success) {
+          const emp = response.data.data
+          setEmployee({
+            employeeCode: emp.employeeCode,
+            fullName: emp.fullName,
+            cbType: emp.roles?.map(r => r.name).join(', ') || 'USER',
+            gender: emp.gender ? 'Nam' : 'Nữ',
+            birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('vi-VN') : '–',
+            departmentName: emp.departmentName || '–',
+            blockCode: '–',
+            positionName: emp.positionName || '–',
+            degree: emp.educationLevelName || '–',
+            titleName: emp.roles?.map(r => r.name).join(', ') || '–'
+          })
+        }
+      } catch (err) {
+        console.error(err)
+        if (active) {
+          setError('Không thể tải chi tiết thông tin nhân viên.')
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadEmployeeDetail()
+    return () => { active = false }
+  }, [id])
 
   const breadcrumbs = [
     { label: 'Danh sách nhân viên gốc', link: '/admin/reference/employees' },
@@ -42,7 +76,15 @@ function ReferenceEmployeeDetailPage() {
               </div>
 
               {/* Detail Card Content */}
-              {employee ? (
+              {loading ? (
+                <div className="red-card" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                  Đang tải thông tin chi tiết nhân viên...
+                </div>
+              ) : error ? (
+                <div className="red-card" style={{ textAlign: 'center', padding: '40px 0', color: '#dc2626' }}>
+                  {error}
+                </div>
+              ) : employee ? (
                 <div className="red-card">
                   <div className="red-card-header">
                     <h2 className="red-card-title">Employee reference detail</h2>
@@ -95,11 +137,7 @@ function ReferenceEmployeeDetailPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="red-card" style={{ textAlign: 'center', padding: '40px 0', color: '#dc2626' }}>
-                  Lỗi: Không tìm thấy dữ liệu nhân viên gốc phù hợp.
-                </div>
-              )}
+              ) : null}
 
             </div>
           </main>

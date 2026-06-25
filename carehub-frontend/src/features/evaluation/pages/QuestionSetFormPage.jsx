@@ -7,19 +7,18 @@ import '../styles/QuestionSetFormPage.css'
 
 const CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'An toàn sử dụng thuốc', 'An toàn người bệnh', 'Quy trình lâm sàng']
 
-const MOCK_QUESTIONS = [
-  { id: 1, content: 'Quy trình vệ sinh tay thường quy gồm bao nhiêu bước?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Dễ' },
-  { id: 2, content: 'Kỹ thuật đeo găng tay vô khuẩn đúng cách khi làm thủ thuật?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Trung bình' },
-  { id: 3, content: 'Quy tắc 6 đúng trong sử dụng thuốc gồm những gì?', category: 'An toàn sử dụng thuốc', difficulty: 'Dễ' },
-  { id: 4, content: 'Xử trí ban đầu khi người bệnh bị phản vệ mức độ nặng?', category: 'An toàn sử dụng thuốc', difficulty: 'Khó' },
-  { id: 5, content: 'Mục đích đeo vòng định danh bệnh nhân khi điều trị nội trú?', category: 'An toàn người bệnh', difficulty: 'Dễ' },
-  { id: 6, content: 'Quy trình bàn giao người bệnh trước khi chuyển giao ca phẫu thuật?', category: 'An toàn người bệnh', difficulty: 'Trung bình' },
-  { id: 7, content: 'Kỹ thuật đặt ống thông tiểu lưu cho bệnh nhân nam?', category: 'Quy trình lâm sàng', difficulty: 'Khó' },
-  { id: 8, content: 'Các bước chăm sóc và thay băng vết thương nhiễm trùng?', category: 'Quy trình lâm sàng', difficulty: 'Trung bình' },
-  { id: 9, content: 'Quy định phân loại chất thải y tế nguy hại tại nguồn?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Dễ' },
-  { id: 10, content: 'Quy trình xử lý dụng cụ y tế tái sử dụng sau phẫu thuật?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Khó' },
-  { id: 11, content: 'Quy trình nhận diện người bệnh chính xác khi thực hiện tiêm thuốc?', category: 'An toàn người bệnh', difficulty: 'Dễ' },
-  { id: 12, content: 'Quy tắc bảo quản các loại thuốc nguy cơ cao (High Alert Medications)?', category: 'An toàn sử dụng thuốc', difficulty: 'Khó' },
+const DEFAULT_QUESTIONS = [
+  { id: 1, content: 'Correct hand hygiene technique before patient contact?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Dễ' },
+  { id: 2, content: 'Steps for safe IV medication administration?', category: 'Quy trình lâm sàng', difficulty: 'Khó' },
+  { id: 3, content: 'First action when patient shows signs of anaphylaxis?', category: 'Cấp cứu', difficulty: 'Trung bình' },
+  { id: 4, content: 'Purpose of patient wristband identification?', category: 'An toàn người bệnh', difficulty: 'Dễ' },
+  { id: 5, content: 'Quy trình bàn giao người bệnh trước khi chuyển giao ca phẫu thuật?', category: 'An toàn người bệnh', difficulty: 'Trung bình' },
+  { id: 6, content: 'Kỹ thuật đặt ống thông tiểu lưu cho bệnh nhân nam?', category: 'Quy trình lâm sàng', difficulty: 'Khó' },
+  { id: 7, content: 'Các bước chăm sóc và thay băng vết thương nhiễm trùng?', category: 'Quy trình lâm sàng', difficulty: 'Trung bình' },
+  { id: 8, content: 'Quy định phân loại chất thải y tế nguy hại tại nguồn?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Dễ' },
+  { id: 9, content: 'Quy trình xử lý dụng cụ y tế tái sử dụng sau phẫu thuật?', category: 'Kiểm soát nhiễm khuẩn', difficulty: 'Khó' },
+  { id: 10, content: 'Quy trình nhận diện người bệnh chính xác khi thực hiện tiêm thuốc?', category: 'An toàn người bệnh', difficulty: 'Dễ' },
+  { id: 11, content: 'Quy tắc bảo quản các loại thuốc nguy cơ cao (High Alert Medications)?', category: 'Cấp cứu', difficulty: 'Khó' },
 ]
 
 function QuestionSetFormPage() {
@@ -34,6 +33,19 @@ function QuestionSetFormPage() {
   const [active, setActive] = useState(true)
   const [description, setDescription] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
+
+  // Question List State from LocalStorage
+  const [questionsList, setQuestionsList] = useState(() => {
+    const stored = localStorage.getItem('carehub_questions')
+    if (stored) {
+      try {
+        return JSON.parse(stored)
+      } catch (e) {
+        console.error('Error parsing stored questions in QuestionSetFormPage:', e)
+      }
+    }
+    return DEFAULT_QUESTIONS
+  })
 
   // Question Search/Filter State
   const [qKeyword, setQKeyword] = useState('')
@@ -64,7 +76,7 @@ function QuestionSetFormPage() {
   }, [id, isEditMode])
 
   // Filter questions
-  const filteredQuestions = MOCK_QUESTIONS.filter((q) => {
+  const filteredQuestions = questionsList.filter((q) => {
     const matchesKeyword = q.content.toLowerCase().includes(qKeyword.toLowerCase())
     const matchesCategory = qCategory === '' ? true : q.category === qCategory
     return matchesKeyword && matchesCategory

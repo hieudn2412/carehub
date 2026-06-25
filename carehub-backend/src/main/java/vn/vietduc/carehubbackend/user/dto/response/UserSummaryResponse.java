@@ -12,6 +12,11 @@ public record UserSummaryResponse(
         String employeeCode,
         String fullName,
         Long departmentId,
+        String departmentName,
+        String positionName,
+        String educationLevelName,
+        Boolean gender,
+        java.time.LocalDate birthday,
         List<Role> roles,
         UserStatus status
 ) {
