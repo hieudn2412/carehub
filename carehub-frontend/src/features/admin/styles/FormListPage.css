@@ -1,4 +1,10 @@
 .form-list-page {
+  --green: #14866d;
+  --green-bg: #e8f5f0;
+  --amber: #9a6700;
+  --amber-bg: #fff7df;
+  --red-bg: #fff0ef;
+  --text-faint: #94a3b8;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -68,6 +74,44 @@
   background: var(--navy-light);
 }
 
+.flp-feedback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid;
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.flp-feedback span {
+  flex: 1;
+}
+
+.flp-feedback button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flp-feedback--error {
+  background: var(--red-bg);
+  border-color: #fecaca;
+  color: #b42318;
+}
+
+.flp-feedback--success {
+  background: var(--green-bg);
+  border-color: #a7dfcf;
+  color: #0f6e56;
+}
+
 /* Toolbar filters */
 .flp-toolbar {
   display: flex;
@@ -125,7 +169,7 @@
   gap: 8px;
 }
 
-.flp-filter-group label {
+.flp-filter-group > span {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-soft);
@@ -147,6 +191,20 @@
   border-color: var(--navy);
 }
 
+.flp-clear-filters {
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: #0f6e56;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.flp-clear-filters:hover {
+  text-decoration: underline;
+}
+
 /* Table Card */
 .flp-table-card {
   background: var(--card);
@@ -156,8 +214,13 @@
   overflow: hidden;
 }
 
+.flp-table-scroll {
+  overflow-x: auto;
+}
+
 .flp-table {
   width: 100%;
+  min-width: 1120px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -187,6 +250,38 @@
 
 .flp-table tbody tr:hover {
   background: #fafbfc;
+}
+
+.flp-table th:nth-child(1) {
+  width: 12%;
+}
+
+.flp-table th:nth-child(2) {
+  width: 28%;
+}
+
+.flp-table th:nth-child(3) {
+  width: 10%;
+}
+
+.flp-table th:nth-child(4) {
+  width: 12%;
+}
+
+.flp-table th:nth-child(5) {
+  width: 11%;
+}
+
+.flp-table th:nth-child(6) {
+  width: 10%;
+}
+
+.flp-table th:nth-child(7) {
+  width: 17%;
+}
+
+.flp-table__actions-heading {
+  text-align: center !important;
 }
 
 .flp-form-code {
@@ -277,6 +372,7 @@
   display: flex;
   gap: 8px;
   justify-content: center;
+  min-width: 170px;
 }
 
 .flp-btn-action {
@@ -292,13 +388,19 @@
   cursor: pointer;
   background: #ffffff;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.flp-btn-edit {
+.flp-btn-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.flp-btn-detail {
   color: var(--navy);
 }
 
-.flp-btn-edit:hover {
+.flp-btn-detail:hover {
   background: var(--navy);
   color: #ffffff;
   border-color: var(--navy);
@@ -307,7 +409,6 @@
 .flp-btn-delete {
   color: var(--red);
   border-color: #f3b9b7;
-  padding: 6px 8px;
 }
 
 .flp-btn-delete:hover {
@@ -318,9 +419,31 @@
 
 .flp-table-empty {
   text-align: center;
-  padding: 48px 0;
+  padding: 48px 20px !important;
   color: var(--text-soft);
   font-size: 14px;
+}
+
+.flp-table-empty strong,
+.flp-table-empty span {
+  display: block;
+}
+
+.flp-table-empty strong {
+  margin-bottom: 5px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.flp-table-empty button {
+  margin-top: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--navy);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Pagination */
@@ -376,6 +499,9 @@
     align-items: flex-start;
     gap: 16px;
   }
+  .flp-header-actions {
+    flex-wrap: wrap;
+  }
   .flp-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -384,6 +510,57 @@
     max-width: none;
   }
   .flp-filters {
-    justify-content: space-between;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+  .flp-filter-group {
+    flex: 1;
+    min-width: 210px;
+  }
+  .flp-select {
+    flex: 1;
+  }
+  .flp-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-body {
+    padding: 16px;
+  }
+  .flp-header-card {
+    padding: 18px;
+  }
+  .flp-header-actions {
+    width: 100%;
+  }
+  .flp-btn-import,
+  .flp-btn-create {
+    justify-content: center;
+    width: 100%;
+  }
+  .flp-search-box {
+    min-width: 0;
+  }
+  .flp-filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .flp-filter-group {
+    align-items: stretch;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .flp-feedback {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .flp-pagination-buttons {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 }

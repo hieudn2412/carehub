@@ -8,6 +8,7 @@ import StepIndicator from '../components/StepIndicator.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import Icon from '../../../shared/components/Icon.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
+import { createOtpExpiresAt } from '../hooks/useOtpExpiry.js'
 
 function ForgotAccountScreen() {
   const navigate = useNavigate()
@@ -28,7 +29,12 @@ function ForgotAccountScreen() {
     try {
       setIsSubmitting(true)
       await authApi.forgotPassword({ email: normalizedEmail })
-      navigate(AUTH_ROUTES.otp, { state: { email: normalizedEmail } })
+      navigate(AUTH_ROUTES.otp, {
+        state: {
+          email: normalizedEmail,
+          otpExpiresAt: createOtpExpiresAt(),
+        },
+      })
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể gửi mã OTP'))
     } finally {

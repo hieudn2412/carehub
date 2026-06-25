@@ -1,195 +1,238 @@
-import React, { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  EyeOutlined,
+  ImportOutlined,
+  LoadingOutlined,
+  PlusCircleOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import {
-  SearchOutlined,
-  PlusCircleOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  LoadingOutlined,
-  SafetyCertificateOutlined,
-} from '@ant-design/icons'
+  getChecklistDisplayCode,
+  resolveChecklistSearchKeyword,
+} from '../utils/formCode.js'
 import '../styles/FormListPage.css'
+
+const PAGE_SIZE = 10
+const SEARCH_DEBOUNCE_MS = 400
+
+const SUBJECT_TYPE_LABELS = {
+  USER: 'Nhân viên',
+  PATIENT: 'Bệnh nhân',
+  PROCESS: 'Quy trình',
+  ROOM: 'Phòng bệnh',
+  DEPARTMENT: 'Khoa phòng',
+}
+
+const STATUS_LABELS = {
+  PUBLISHED: 'Hoạt động',
+  DRAFT: 'Bản nháp',
+  RETIRED: 'Ngừng hoạt động',
+}
+
+function getChecklistErrorMessage(error) {
+  const statusCode = error?.response?.status
+
+  if (!error?.response) {
+    return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend và thử lại.'
+  }
+
+  if (statusCode === 401) {
+    return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+  }
+
+  if (statusCode === 403) {
+    return 'Bạn không có quyền xem danh sách checklist.'
+  }
+
+  return 'Không thể tải danh sách checklist. Vui lòng thử lại sau.'
+}
+
+function getVisiblePages(currentPage, totalPages) {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1)
+  }
+
+  const startPage = Math.min(Math.max(currentPage - 2, 1), totalPages - 4)
+  return Array.from({ length: 5 }, (_, index) => startPage + index)
+}
 
 function FormListPage() {
   const navigate = useNavigate()
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [deletingFormId, setDeletingFormId] = useState(null)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [useMock, setUseMock] = useState(false)
-
-  // Filter state
+  const [totalPages, setTotalPages] = useState(0)
   const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('all')
   const [subjectType, setSubjectType] = useState('all')
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const MOCK_FORMS = [
-    {
-      id: 1,
-      code: 'HAND_HYGIENE',
-      title: 'Tuân thủ vệ sinh tay',
-      description: 'Đánh giá quy trình tuân thủ vệ sinh tay của nhân viên y tế tại các khoa lâm sàng',
-      subjectType: 'USER',
-      status: 'PUBLISHED',
-      ownerDepartment: { id: 1, code: 'K-HSTC', name: 'Khoa Hồi sức tích cực' },
-      currentPublishedVersion: { id: 101, versionNumber: 1 },
-      createdAt: '2026-05-10T08:00:00Z',
-      updatedAt: '2026-06-01T15:30:00Z',
-    },
-    {
-      id: 2,
-      code: 'PATIENT_IDENTIFICATION',
-      title: 'Xác định đúng danh tính người bệnh',
-      description: 'Kiểm tra quy định đối chiếu thông tin người bệnh trước khi tiêm truyền hoặc làm thủ thuật',
-      subjectType: 'PATIENT',
-      status: 'PUBLISHED',
-      ownerDepartment: { id: 2, code: 'K-CC', name: 'Khoa Cấp cứu' },
-      currentPublishedVersion: { id: 102, versionNumber: 2 },
-      createdAt: '2026-05-15T09:12:00Z',
-      updatedAt: '2026-06-18T10:45:00Z',
-    },
-    {
-      id: 3,
-      code: 'IV_INJECTION',
-      title: 'Kỹ thuật tiêm tĩnh mạch',
-      description: 'Bảng kiểm đánh giá tay nghề thực hành tiêm tĩnh mạch của điều dưỡng',
-      subjectType: 'USER',
-      status: 'DRAFT',
-      ownerDepartment: null,
-      currentPublishedVersion: null,
-      createdAt: '2026-06-20T14:00:00Z',
-      updatedAt: '2026-06-22T08:20:00Z',
-    },
-    {
-      id: 4,
-      code: 'VAP_BUNDLE',
-      title: 'Dự phòng viêm phổi liên quan máy thở',
-      description: 'Care bundle giám sát tuân thủ dự phòng VAP cho bệnh nhân thở máy',
-      subjectType: 'PROCESS',
-      status: 'RETIRED',
-      ownerDepartment: { id: 1, code: 'K-HSTC', name: 'Khoa Hồi sức tích cực' },
-      currentPublishedVersion: { id: 99, versionNumber: 1 },
-      createdAt: '2025-12-01T07:00:00Z',
-      updatedAt: '2026-04-10T11:00:00Z',
-    }
-  ]
+  useEffect(() => {
+    const normalizedKeyword = keyword.trim()
+    const resolvedKeyword = resolveChecklistSearchKeyword(normalizedKeyword)
 
-  const loadForms = () => {
-    setLoading(true)
-    if (useMock) {
-      setTimeout(() => {
-        let filtered = [...MOCK_FORMS]
-        if (keyword) {
-          filtered = filtered.filter(f =>
-            f.title.toLowerCase().includes(keyword.toLowerCase()) ||
-            f.code.toLowerCase().includes(keyword.toLowerCase())
-          )
-        }
-        if (status !== 'all') {
-          filtered = filtered.filter(f => f.status === status)
-        }
-        if (subjectType !== 'all') {
-          filtered = filtered.filter(f => f.subjectType === subjectType)
-        }
-        setForms(filtered)
-        setTotalElements(filtered.length)
-        setTotalPages(1)
-        setLoading(false)
-      }, 300)
-      return
+    if (resolvedKeyword === debouncedKeyword) {
+      return undefined
     }
 
+    const timer = window.setTimeout(() => {
+      setLoading(true)
+      setDebouncedKeyword(resolvedKeyword)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [debouncedKeyword, keyword])
+
+  useEffect(() => {
+    let ignoreResponse = false
+    let keepLoading = false
     const params = {
       page: page - 1,
-      size: 10,
-      keyword: keyword || undefined,
+      size: PAGE_SIZE,
+      sort: 'updatedAt,desc',
+      keyword: debouncedKeyword || undefined,
       status: status !== 'all' ? status : undefined,
       subjectType: subjectType !== 'all' ? subjectType : undefined,
     }
 
-    adminApi.getForms(params)
-      .then(res => {
-        const pageData = res.data?.data
-        if (pageData && pageData.content) {
-          setForms(pageData.content)
-          setTotalElements(pageData.totalElements)
-          setTotalPages(pageData.totalPages || 1)
-          setLoading(false)
-        } else {
-          setUseMock(true)
+    const loadForms = async () => {
+      try {
+        const response = await adminApi.getForms(params)
+        if (ignoreResponse) {
+          return
         }
-      })
-      .catch(err => {
-        console.warn('GET /forms failed. Falling back to mockup data.', err)
-        setUseMock(true)
-      })
-  }
 
-  useEffect(() => {
-    loadForms()
-  }, [page, keyword, status, subjectType, useMock])
+        const pageData = response.data?.data
+        if (!Array.isArray(pageData?.content)) {
+          throw new Error('Invalid checklist list response')
+        }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa (ngừng hoạt động) biểu mẫu này không? (Trạng thái sẽ chuyển về RETIRED)')) {
-      if (useMock) {
-        setForms(prev => prev.map(f => f.id === id ? { ...f, status: 'RETIRED' } : f))
-        alert('Đã xóa mềm biểu mẫu (chuyển sang RETIRED) thành công!')
-      } else {
-        adminApi.deleteForm(id)
-          .then(() => {
-            alert('Đã xóa mềm biểu mẫu thành công!')
-            loadForms()
-          })
-          .catch(err => {
-            console.error('Delete form failed, fallback to local', err)
-            setForms(prev => prev.map(f => f.id === id ? { ...f, status: 'RETIRED' } : f))
-          })
+        const nextTotalPages = Number(pageData.totalPages) || 0
+        if (nextTotalPages > 0 && page > nextTotalPages) {
+          keepLoading = true
+          setPage(nextTotalPages)
+          return
+        }
+
+        setForms(pageData.content)
+        setTotalElements(Number(pageData.totalElements) || 0)
+        setTotalPages(nextTotalPages)
+      } catch (error) {
+        if (ignoreResponse) {
+          return
+        }
+
+        setForms([])
+        setTotalElements(0)
+        setTotalPages(0)
+        setErrorMessage(getChecklistErrorMessage(error))
+      } finally {
+        if (!ignoreResponse && !keepLoading) {
+          setLoading(false)
+        }
       }
     }
-  }
 
-  const translateSubjectType = (type) => {
-    const map = {
-      USER: 'Nhân viên',
-      PATIENT: 'Bệnh nhân',
-      PROCESS: 'Quy trình',
-      ROOM: 'Phòng bệnh',
-      DEPARTMENT: 'Khoa phòng'
+    loadForms()
+
+    return () => {
+      ignoreResponse = true
     }
-    return map[type] || type
+  }, [debouncedKeyword, page, refreshKey, status, subjectType])
+
+  const visiblePages = useMemo(
+    () => getVisiblePages(page, totalPages),
+    [page, totalPages],
+  )
+  const hasFilters = Boolean(keyword || status !== 'all' || subjectType !== 'all')
+
+  const updatePage = (nextPage) => {
+    if (nextPage === page || nextPage < 1 || nextPage > totalPages) {
+      return
+    }
+
+    setErrorMessage('')
+    setLoading(true)
+    setPage(nextPage)
   }
 
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case 'PUBLISHED':
-        return 'form-badge--published'
-      case 'DRAFT':
-        return 'form-badge--draft'
-      case 'RETIRED':
-        return 'form-badge--retired'
-      default:
-        return 'form-badge--gray'
+  const updateStatus = (event) => {
+    setErrorMessage('')
+    setLoading(true)
+    setStatus(event.target.value)
+    setPage(1)
+  }
+
+  const updateSubjectType = (event) => {
+    setErrorMessage('')
+    setLoading(true)
+    setSubjectType(event.target.value)
+    setPage(1)
+  }
+
+  const clearFilters = () => {
+    setErrorMessage('')
+    setLoading(true)
+    setKeyword('')
+    setDebouncedKeyword('')
+    setStatus('all')
+    setSubjectType('all')
+    setPage(1)
+  }
+
+  const retryLoad = () => {
+    setErrorMessage('')
+    setLoading(true)
+    setRefreshKey((current) => current + 1)
+  }
+
+  const handleRetire = async (form) => {
+    const confirmed = window.confirm(
+      `Ngừng hoạt động checklist "${form.title}"? Checklist sẽ không còn xuất hiện trong danh sách hoạt động.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setDeletingFormId(form.id)
+      setErrorMessage('')
+      setSuccessMessage('')
+      await adminApi.deleteForm(form.id)
+      setSuccessMessage(`Đã ngừng hoạt động checklist "${form.title}".`)
+      setLoading(true)
+
+      if (forms.length === 1 && page > 1) {
+        setPage((current) => current - 1)
+      } else {
+        setRefreshKey((current) => current + 1)
+      }
+    } catch (error) {
+      setErrorMessage(getChecklistErrorMessage(error))
+    } finally {
+      setDeletingFormId(null)
     }
   }
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'PUBLISHED':
-        return 'Hoạt động'
-      case 'DRAFT':
-        return 'Bản nháp'
-      case 'RETIRED':
-        return 'Ngừng hoạt động'
-      default:
-        return status
-    }
+  const getStatusBadgeClass = (formStatus) => {
+    const statusClass = formStatus?.toLowerCase()
+    return STATUS_LABELS[formStatus] ? `form-badge--${statusClass}` : 'form-badge--gray'
   }
 
-  const breadcrumbs = [{ label: 'Quản lý chất lượng' }, { label: 'Quản lý checklist' }]
+  const breadcrumbs = [{ label: 'Quản lý chất lượng' }, { label: 'Danh sách checklist' }]
 
   return (
     <div className="dashboard-layout">
@@ -199,210 +242,277 @@ function FormListPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-list-page">
-              
-              {/* Title Header Card */}
-              <div className="flp-header-card">
+              <section className="flp-header-card">
                 <div className="flp-header-info">
                   <h1 className="flp-title">Danh sách biểu mẫu checklist</h1>
                   <p className="flp-subtitle">
-                    Thiết kế và quản trị các bảng kiểm đánh giá chất lượng lâm sàng & an toàn người bệnh
+                    Thiết kế và quản trị các bảng kiểm đánh giá chất lượng lâm sàng và an
+                    toàn người bệnh
                   </p>
                 </div>
                 <div className="flp-header-actions">
                   <button
+                    className="flp-btn-import"
+                    onClick={() => navigate('/admin/form-imports/new')}
+                    type="button"
+                  >
+                    <ImportOutlined /> Import Google Form
+                  </button>
+                  <button
                     className="flp-btn-create"
                     onClick={() => navigate('/admin/quality/checklists/new')}
+                    type="button"
                   >
                     <PlusCircleOutlined /> Tạo biểu mẫu mới
                   </button>
                 </div>
-              </div>
+              </section>
 
-              {/* Toolbar filters */}
-              <div className="flp-toolbar">
+              {errorMessage && (
+                <div className="flp-feedback flp-feedback--error" role="alert">
+                  <ExclamationCircleOutlined />
+                  <span>{errorMessage}</span>
+                  <button onClick={retryLoad} type="button">
+                    <ReloadOutlined /> Thử lại
+                  </button>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flp-feedback flp-feedback--success" role="status">
+                  <span>{successMessage}</span>
+                  <button
+                    aria-label="Đóng thông báo"
+                    onClick={() => setSuccessMessage('')}
+                    type="button"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+
+              <section className="flp-toolbar" aria-label="Bộ lọc checklist">
                 <div className="flp-search-box">
-                  <span className="flp-search-icon">
-                    <SearchOutlined />
-                  </span>
+                  <SearchOutlined className="flp-search-icon" />
                   <input
-                    type="text"
+                    aria-label="Tìm kiếm checklist"
                     className="flp-search-input"
-                    placeholder="Tìm kiếm theo mã, tiêu đề biểu mẫu..."
-                    value={keyword}
-                    onChange={(e) => {
-                      setKeyword(e.target.value)
+                    onChange={(event) => {
+                      setErrorMessage('')
+                      setKeyword(event.target.value)
                       setPage(1)
                     }}
+                    placeholder="Tìm theo mã hoặc tiêu đề..."
+                    type="search"
+                    value={keyword}
                   />
                 </div>
 
                 <div className="flp-filters">
-                  <div className="flp-filter-group">
-                    <label>Đối tượng:</label>
+                  <label className="flp-filter-group">
+                    <span>Đối tượng</span>
                     <select
                       className="flp-select"
+                      onChange={updateSubjectType}
                       value={subjectType}
-                      onChange={(e) => {
-                        setSubjectType(e.target.value)
-                        setPage(1)
-                      }}
                     >
                       <option value="all">Tất cả đối tượng</option>
-                      <option value="USER">Nhân viên</option>
-                      <option value="PATIENT">Bệnh nhân</option>
-                      <option value="PROCESS">Quy trình</option>
-                      <option value="ROOM">Phòng bệnh</option>
-                      <option value="DEPARTMENT">Khoa phòng</option>
+                      {Object.entries(SUBJECT_TYPE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
-                  </div>
+                  </label>
 
-                  <div className="flp-filter-group">
-                    <label>Trạng thái:</label>
-                    <select
-                      className="flp-select"
-                      value={status}
-                      onChange={(e) => {
-                        setStatus(e.target.value)
-                        setPage(1)
-                      }}
-                    >
+                  <label className="flp-filter-group">
+                    <span>Trạng thái</span>
+                    <select className="flp-select" onChange={updateStatus} value={status}>
                       <option value="all">Tất cả trạng thái</option>
-                      <option value="PUBLISHED">Hoạt động</option>
-                      <option value="DRAFT">Bản nháp</option>
-                      <option value="RETIRED">Ngừng hoạt động</option>
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
-                  </div>
-                </div>
-              </div>
+                  </label>
 
-              {/* Table Card */}
-              <div className="flp-table-card">
-                <table className="flp-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: '15%' }}>Mã biểu mẫu</th>
-                      <th style={{ width: '35%' }}>Tiêu đề biểu mẫu</th>
-                      <th style={{ width: '12%' }}>Đối tượng</th>
-                      <th style={{ width: '15%' }}>Đơn vị sở hữu</th>
-                      <th style={{ width: '10%' }}>Phiên bản hiện tại</th>
-                      <th style={{ width: '13%' }}>Trạng thái</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {loading ? (
+                  {hasFilters && (
+                    <button className="flp-clear-filters" onClick={clearFilters} type="button">
+                      Xóa bộ lọc
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              <section className="flp-table-card" aria-busy={loading}>
+                <div className="flp-table-scroll">
+                  <table className="flp-table">
+                    <thead>
                       <tr>
-                        <td colSpan="7" className="flp-table-empty">
-                          <LoadingOutlined /> Đang tải dữ liệu...
-                        </td>
+                        <th>Mã biểu mẫu</th>
+                        <th>Tiêu đề biểu mẫu</th>
+                        <th>Đối tượng</th>
+                        <th>Đơn vị sở hữu</th>
+                        <th>Phiên bản hiện tại</th>
+                        <th>Trạng thái</th>
+                        <th className="flp-table__actions-heading">Hành động</th>
                       </tr>
-                    ) : forms.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="flp-table-empty">
-                          Không tìm thấy biểu mẫu checklist phù hợp.
-                        </td>
-                      </tr>
-                    ) : (
-                      forms.map((form) => (
-                        <tr key={form.id}>
-                          <td>
-                            <span className="flp-form-code">{form.code}</span>
-                          </td>
-                          <td>
-                            <div className="flp-form-title-wrapper">
-                              <span className="flp-form-title">{form.title}</span>
-                              {form.description && (
-                                <span className="flp-form-desc">{form.description}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td>{translateSubjectType(form.subjectType)}</td>
-                          <td>
-                            {form.ownerDepartment ? (
-                              <span className="flp-dept-tag" title={form.ownerDepartment.name}>
-                                {form.ownerDepartment.code}
-                              </span>
-                            ) : (
-                              <span className="flp-text-muted">—</span>
-                            )}
-                          </td>
-                          <td>
-                            {form.currentPublishedVersion ? (
-                              <span className="flp-version-badge">
-                                v{form.currentPublishedVersion.versionNumber}
-                              </span>
-                            ) : (
-                              <span className="flp-text-muted">Chưa có</span>
-                            )}
-                          </td>
-                          <td>
-                            <span className={`form-badge ${getStatusBadgeClass(form.status)}`}>
-                              {getStatusText(form.status)}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="flp-actions-cell">
-                              <button
-                                className="flp-btn-action flp-btn-edit"
-                                onClick={() => navigate(`/admin/quality/checklists/${form.id}/edit`)}
-                                title="Chi tiết & Phiên bản"
-                              >
-                                <EditOutlined /> Chi tiết
-                              </button>
-                              {form.status !== 'RETIRED' && (
-                                <button
-                                  className="flp-btn-action flp-btn-delete"
-                                  onClick={() => handleDelete(form.id)}
-                                  title="Xóa mềm"
-                                >
-                                  <DeleteOutlined />
-                                </button>
-                              )}
-                            </div>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td className="flp-table-empty" colSpan="7">
+                            <LoadingOutlined spin /> Đang tải danh sách checklist...
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : forms.length === 0 ? (
+                        <tr>
+                          <td className="flp-table-empty" colSpan="7">
+                            <strong>
+                              {hasFilters
+                                ? 'Không tìm thấy checklist phù hợp'
+                                : 'Chưa có checklist nào'}
+                            </strong>
+                            <span>
+                              {hasFilters
+                                ? 'Hãy thử thay đổi từ khóa hoặc bộ lọc.'
+                                : 'Tạo biểu mẫu đầu tiên để bắt đầu quản lý checklist.'}
+                            </span>
+                            {hasFilters && (
+                              <button onClick={clearFilters} type="button">
+                                Xóa bộ lọc
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ) : (
+                        forms.map((form) => (
+                          <tr key={form.id}>
+                            <td>
+                              <span
+                                className="flp-form-code"
+                                title={`Mã hệ thống: ${form.code}`}
+                              >
+                                {getChecklistDisplayCode(form.code)}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flp-form-title-wrapper">
+                                <span className="flp-form-title">{form.title}</span>
+                                {form.description && (
+                                  <span className="flp-form-desc">{form.description}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td>{SUBJECT_TYPE_LABELS[form.subjectType] || form.subjectType}</td>
+                            <td>
+                              {form.ownerDepartment ? (
+                                <span
+                                  className="flp-dept-tag"
+                                  title={form.ownerDepartment.name}
+                                >
+                                  {form.ownerDepartment.code}
+                                </span>
+                              ) : (
+                                <span className="flp-text-muted">Chưa gán</span>
+                              )}
+                            </td>
+                            <td>
+                              {form.currentPublishedVersion ? (
+                                <span className="flp-version-badge">
+                                  v{form.currentPublishedVersion.versionNumber}
+                                </span>
+                              ) : (
+                                <span className="flp-text-muted">Chưa có</span>
+                              )}
+                            </td>
+                            <td>
+                              <span
+                                className={`form-badge ${getStatusBadgeClass(form.status)}`}
+                              >
+                                {STATUS_LABELS[form.status] || form.status}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="flp-actions-cell">
+                                <button
+                                  className="flp-btn-action flp-btn-detail"
+                                  onClick={() =>
+                                    navigate(`/admin/quality/checklists/${form.id}/detail`)
+                                  }
+                                  title="Xem nội dung checklist"
+                                  type="button"
+                                >
+                                  <EyeOutlined /> Chi tiết
+                                </button>
+                                {form.status !== 'RETIRED' && (
+                                  <button
+                                    aria-label={`Ngừng hoạt động ${form.title}`}
+                                    className="flp-btn-action flp-btn-delete"
+                                    disabled={deletingFormId === form.id}
+                                    onClick={() => handleRetire(form)}
+                                    title="Ngừng hoạt động"
+                                    type="button"
+                                  >
+                                    {deletingFormId === form.id ? (
+                                      <LoadingOutlined spin />
+                                    ) : (
+                                      <>
+                                        <DeleteOutlined /> Ngừng
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
-                {/* Pagination */}
-                {!loading && totalElements > 0 && (
+                {!loading && !errorMessage && totalElements > 0 && (
                   <div className="flp-pagination">
                     <span className="flp-pagination-summary">
-                      Hiển thị <strong>{forms.length}</strong> trên tổng số <strong>{totalElements}</strong> kết quả
+                      Hiển thị <strong>{forms.length}</strong> trên tổng số{' '}
+                      <strong>{totalElements}</strong> kết quả
                     </span>
                     {totalPages > 1 && (
-                      <div className="flp-pagination-buttons">
+                      <nav className="flp-pagination-buttons" aria-label="Phân trang checklist">
                         <button
                           className="flp-pg-btn"
                           disabled={page === 1}
-                          onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                          onClick={() => updatePage(page - 1)}
+                          type="button"
                         >
                           Trước
                         </button>
-                        {[...Array(totalPages)].map((_, i) => (
+                        {visiblePages.map((pageNumber) => (
                           <button
-                            key={i + 1}
-                            className={`flp-pg-btn ${page === i + 1 ? 'active' : ''}`}
-                            onClick={() => setPage(i + 1)}
+                            aria-current={page === pageNumber ? 'page' : undefined}
+                            className={`flp-pg-btn ${page === pageNumber ? 'active' : ''}`}
+                            key={pageNumber}
+                            onClick={() => updatePage(pageNumber)}
+                            type="button"
                           >
-                            {i + 1}
+                            {pageNumber}
                           </button>
                         ))}
                         <button
                           className="flp-pg-btn"
                           disabled={page === totalPages}
-                          onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                          onClick={() => updatePage(page + 1)}
+                          type="button"
                         >
                           Sau
                         </button>
-                      </div>
+                      </nav>
                     )}
                   </div>
                 )}
-              </div>
-
+              </section>
             </div>
           </main>
         </div>

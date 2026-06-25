@@ -223,9 +223,10 @@ export const adminApi = {
   },
 
   // Form Versions
-  getFormVersions(formId) {
+  getFormVersions(formId, params) {
     return httpClient.get(`/forms/${formId}/versions`, {
       headers: authHeaders(),
+      params,
     })
   },
 

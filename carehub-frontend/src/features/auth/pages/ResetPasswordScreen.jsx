@@ -8,16 +8,19 @@ import StepIndicator from '../components/StepIndicator.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
 import Icon from '../../../shared/components/Icon.jsx'
 import SecurityBadge from '../../../shared/components/SecurityBadge.jsx'
+import { useOtpExpiry } from '../hooks/useOtpExpiry.js'
 
 function ResetPasswordScreen() {
   const navigate = useNavigate()
   const location = useLocation()
   const email = location.state?.email
   const otp = location.state?.otp
+  const otpExpiresAt = location.state?.otpExpiresAt
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const { formattedRemaining, isExpired } = useOtpExpiry(otpExpiresAt)
 
   if (!email || !otp) {
     return <Navigate to={AUTH_ROUTES.forgotPassword} replace />
@@ -43,6 +46,11 @@ function ResetPasswordScreen() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')
+
+    if (isExpired) {
+      setErrorMessage('Mã OTP đã hết hạn. Vui lòng quay lại và gửi mã mới.')
+      return
+    }
 
     if (!isStrongPassword) {
       setErrorMessage('Mật khẩu chưa đạt đủ điều kiện')
@@ -104,7 +112,7 @@ function ResetPasswordScreen() {
 
           <FormField
             autoComplete="new-password"
-            error={errorMessage}
+            error={isExpired ? '' : errorMessage}
             icon={<Icon name="lock" />}
             label="Xác thực mật khẩu mới"
             onChange={setConfirmPassword}
@@ -113,12 +121,31 @@ function ResetPasswordScreen() {
             value={confirmPassword}
           />
 
-          <button className="primary-button" disabled={isSubmitting} type="submit">
+          {!isExpired && (
+            <p className="otp-expiry-note">
+              Mã OTP còn hiệu lực trong <strong>{formattedRemaining}</strong>
+            </p>
+          )}
+          {isExpired && (
+            <p className="form-field__error" role="alert">
+              Mã OTP đã hết hạn. Vui lòng quay lại và gửi mã mới.
+            </p>
+          )}
+
+          <button
+            className="primary-button"
+            disabled={isSubmitting || isExpired}
+            type="submit"
+          >
             {isSubmitting ? 'Đang xác nhận...' : 'Xác nhận'}
           </button>
         </form>
 
-        <Link className="back-link" to={AUTH_ROUTES.otp} state={{ email }}>
+        <Link
+          className="back-link"
+          to={AUTH_ROUTES.otp}
+          state={{ email, otpExpiresAt }}
+        >
           <Icon name="arrowLeft" /> Quay lại
         </Link>
       </section>
