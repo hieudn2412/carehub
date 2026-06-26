@@ -1,20 +1,112 @@
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import {
   ArrowLeftOutlined,
+  CheckCircleOutlined,
+  DownOutlined,
   SaveOutlined,
   PlusOutlined,
   DeleteOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
+  QuestionCircleOutlined,
+  RightOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import '../styles/FormBuilderPage.css'
 
 const CHOICE_FIELD_TYPES = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN']
 const SCORABLE_FIELD_TYPES = ['SINGLE_CHOICE', 'DROPDOWN']
+const FIELD_TYPE_LABELS = {
+  SINGLE_CHOICE: 'Trắc nghiệm',
+  MULTIPLE_CHOICE: 'Hộp kiểm',
+  DROPDOWN: 'Menu thả xuống',
+  BOOLEAN: 'Đúng / Sai',
+  SHORT_TEXT: 'Trả lời ngắn',
+  LONG_TEXT: 'Đoạn văn',
+  NUMBER: 'Nhập số',
+  DATE: 'Ngày',
+  DATETIME: 'Ngày và giờ',
+  USER_REF: 'Tra cứu nhân viên',
+  DEPARTMENT_REF: 'Tra cứu khoa phòng',
+}
+const ITEM_TYPE_LABELS = {
+  QUESTION: 'Câu hỏi',
+  TITLE_DESCRIPTION: 'Tiêu đề và mô tả',
+  IMAGE: 'Hình ảnh',
+  INSTRUCTION: 'Hướng dẫn',
+}
+const OPTION_MARKER_CLASS = {
+  SINGLE_CHOICE: 'radio',
+  MULTIPLE_CHOICE: 'checkbox',
+  DROPDOWN: 'dropdown',
+}
+const QUESTION_FIELD_OPTIONS = [
+  { value: 'SHORT_TEXT', label: FIELD_TYPE_LABELS.SHORT_TEXT, icon: 'short-text' },
+  { value: 'LONG_TEXT', label: FIELD_TYPE_LABELS.LONG_TEXT, icon: 'paragraph' },
+  { value: 'SINGLE_CHOICE', label: FIELD_TYPE_LABELS.SINGLE_CHOICE, icon: 'radio' },
+  { value: 'MULTIPLE_CHOICE', label: FIELD_TYPE_LABELS.MULTIPLE_CHOICE, icon: 'checkbox' },
+  { value: 'DROPDOWN', label: FIELD_TYPE_LABELS.DROPDOWN, icon: 'dropdown' },
+  { value: 'BOOLEAN', label: FIELD_TYPE_LABELS.BOOLEAN, icon: 'boolean' },
+  { value: 'NUMBER', label: FIELD_TYPE_LABELS.NUMBER, icon: 'number' },
+  { value: 'DATE', label: FIELD_TYPE_LABELS.DATE, icon: 'date' },
+  { value: 'DATETIME', label: FIELD_TYPE_LABELS.DATETIME, icon: 'datetime' },
+  { value: 'USER_REF', label: FIELD_TYPE_LABELS.USER_REF, icon: 'user' },
+  { value: 'DEPARTMENT_REF', label: FIELD_TYPE_LABELS.DEPARTMENT_REF, icon: 'department' },
+]
+
+function QuestionTypeSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const selected = QUESTION_FIELD_OPTIONS.find((option) => option.value === value)
+    || QUESTION_FIELD_OPTIONS[0]
+
+  return (
+    <div
+      className={`fbp-type-select ${open ? 'is-open' : ''}`}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false)
+        }
+      }}
+    >
+      <button
+        className="fbp-type-select__trigger"
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={`fbp-type-icon fbp-type-icon--${selected.icon}`} aria-hidden="true" />
+        <span>{selected.label}</span>
+        <DownOutlined className="fbp-type-select__chevron" />
+      </button>
+
+      {open && (
+        <div className="fbp-type-select__menu" role="listbox">
+          {QUESTION_FIELD_OPTIONS.map((option) => (
+            <button
+              className={`fbp-type-select__option ${option.value === value ? 'is-selected' : ''}`}
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+              role="option"
+              type="button"
+              aria-selected={option.value === value}
+            >
+              <span className={`fbp-type-icon fbp-type-icon--${option.icon}`} aria-hidden="true" />
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Helper to generate UUID v4
 function uuidv4() {
@@ -71,6 +163,9 @@ function FormBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [versionLoaded, setVersionLoaded] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [dirty, setDirty] = useState(false)
+  const [expandedItems, setExpandedItems] = useState(() => new Set())
+  const [advancedItems, setAdvancedItems] = useState(() => new Set())
 
   // Version schema state
   const [versionNumber, setVersionNumber] = useState(1)
@@ -94,6 +189,10 @@ function FormBuilderPage() {
         setSettings(ver.settings || null)
         setLockVersion(ver.lockVersion || 0)
         setSections(ver.sections || [])
+        const firstItem = ver.sections?.[0]?.items?.[0]
+        setExpandedItems(firstItem ? new Set([firstItem.itemKey]) : new Set())
+        setAdvancedItems(new Set())
+        setDirty(false)
         setVersionLoaded(true)
       })
       .catch((err) => {
@@ -112,32 +211,90 @@ function FormBuilderPage() {
     loadVersionDetails()
   }, [loadVersionDetails])
 
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (!dirty) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [dirty])
+
   // --- Actions ---
+
+  const updateSections = (nextSections) => {
+    setSections(nextSections)
+    setDirty(true)
+  }
+
+  const getItemKey = (item, sectionIndex, itemIndex) => (
+    item.itemKey || `${sectionIndex}-${itemIndex}`
+  )
+
+  const toggleItem = (itemKey) => {
+    setExpandedItems((current) => {
+      if (current.has(itemKey)) {
+        return new Set()
+      }
+      return new Set([itemKey])
+    })
+  }
+
+  const focusItem = (itemKey) => {
+    setExpandedItems(new Set([itemKey]))
+    window.requestAnimationFrame(() => {
+      document.getElementById(`builder-item-${itemKey}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
+  }
+
+  const toggleAdvancedItem = (itemKey) => {
+    setAdvancedItems((current) => {
+      const next = new Set(current)
+      if (next.has(itemKey)) {
+        next.delete(itemKey)
+      } else {
+        next.add(itemKey)
+      }
+      return next
+    })
+  }
+
+  const handleBack = () => {
+    if (dirty && !window.confirm('Bạn có thay đổi chưa lưu. Bạn vẫn muốn rời khỏi trang?')) {
+      return
+    }
+    navigate(`/admin/quality/checklists/${id}/edit`)
+  }
 
   const handleAddSection = () => {
     const newSection = {
       sectionKey: uuidv4(),
-      title: 'Section mới',
+      title: 'Phần mới',
       description: '',
       displayOrder: sections.length,
       items: [],
     }
-    setSections([...sections, newSection])
+    updateSections([...sections, newSection])
   }
 
   const handleRemoveSection = (sectionIndex) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa section này cùng toàn bộ các câu hỏi bên trong không?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa phần này cùng toàn bộ câu hỏi bên trong không?')) {
       const updated = sections.filter((_, idx) => idx !== sectionIndex)
       // Re-index sections
       const reindexed = updated.map((sec, i) => ({ ...sec, displayOrder: i }))
-      setSections(reindexed)
+      updateSections(reindexed)
     }
   }
 
   const handleSectionChange = (sectionIndex, field, value) => {
     const updated = [...sections]
     updated[sectionIndex] = { ...updated[sectionIndex], [field]: value }
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleAddItem = (sectionIndex) => {
@@ -153,7 +310,8 @@ function FormBuilderPage() {
       question: createDefaultQuestion(),
     }
     updated[sectionIndex].items = [...itemsList, newItem]
-    setSections(updated)
+    updateSections(updated)
+    setExpandedItems(new Set([newItem.itemKey]))
   }
 
   const handleRemoveItem = (sectionIndex, itemIndex) => {
@@ -161,7 +319,7 @@ function FormBuilderPage() {
     const filtered = updated[sectionIndex].items.filter((_, idx) => idx !== itemIndex)
     // Re-index items
     updated[sectionIndex].items = filtered.map((item, i) => ({ ...item, displayOrder: i }))
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleItemChange = (sectionIndex, itemIndex, field, value) => {
@@ -177,7 +335,7 @@ function FormBuilderPage() {
     }
 
     updated[sectionIndex].items[itemIndex] = nextItem
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleQuestionChange = (sectionIndex, itemIndex, field, value) => {
@@ -198,7 +356,7 @@ function FormBuilderPage() {
     }
 
     updated[sectionIndex].items[itemIndex].question = nextQuestion
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleAddOption = (sectionIndex, itemIndex) => {
@@ -215,7 +373,7 @@ function FormBuilderPage() {
       displayOrder: opts.length,
     }
     q.options = [...opts, newOpt]
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleRemoveOption = (sectionIndex, itemIndex, optionIndex) => {
@@ -223,14 +381,14 @@ function FormBuilderPage() {
     const q = updated[sectionIndex].items[itemIndex].question
     const filtered = q.options.filter((_, idx) => idx !== optionIndex)
     q.options = filtered.map((opt, i) => ({ ...opt, displayOrder: i }))
-    setSections(updated)
+    updateSections(updated)
   }
 
   const handleOptionChange = (sectionIndex, itemIndex, optionIndex, field, value) => {
     const updated = [...sections]
     const opts = updated[sectionIndex].items[itemIndex].question.options
     opts[optionIndex] = { ...opts[optionIndex], [field]: value }
-    setSections(updated)
+    updateSections(updated)
   }
 
   // --- Save ---
@@ -374,6 +532,7 @@ function FormBuilderPage() {
         if (res.data?.data) {
           setLockVersion(res.data.data.lockVersion || 0)
         }
+        setDirty(false)
       })
       .catch((err) => {
         console.error(err)
@@ -423,16 +582,34 @@ function FormBuilderPage() {
               
               {/* Toolbar */}
               <div className="fbp-top-nav">
-                <div className="fbp-back" onClick={() => navigate(`/admin/quality/checklists/${id}/edit`)}>
-                  <ArrowLeftOutlined /> Quay lại cấu hình biểu mẫu
+                <div className="fbp-toolbar-main">
+                  <button
+                    className="fbp-back"
+                    onClick={handleBack}
+                    type="button"
+                  >
+                    <ArrowLeftOutlined />
+                    <span>Quay lại</span>
+                  </button>
+                  <div className="fbp-toolbar-title">
+                    <span>Trình thiết kế checklist</span>
+                    <strong>{title || `Phiên bản ${versionNumber}`}</strong>
+                  </div>
                 </div>
-                <button
-                  className="fbp-btn-save"
-                  onClick={handleSave}
-                  disabled={saving || loading || !versionLoaded}
-                >
-                  {saving ? <LoadingOutlined /> : <><SaveOutlined /> Lưu thiết kế</>}
-                </button>
+                <div className="fbp-toolbar-actions">
+                  <span className={`fbp-save-state ${dirty ? 'is-dirty' : 'is-saved'}`}>
+                    {dirty ? <QuestionCircleOutlined /> : <CheckCircleOutlined />}
+                    {dirty ? 'Có thay đổi chưa lưu' : 'Đã lưu'}
+                  </span>
+                  <button
+                    className="fbp-btn-save"
+                    onClick={handleSave}
+                    disabled={saving || loading || !versionLoaded || !dirty}
+                    type="button"
+                  >
+                    {saving ? <LoadingOutlined /> : <><SaveOutlined /> Lưu thay đổi</>}
+                  </button>
+                </div>
               </div>
 
               {loading ? (
@@ -440,27 +617,86 @@ function FormBuilderPage() {
                   <LoadingOutlined /> Đang tải cấu trúc biểu mẫu...
                 </div>
               ) : (
-                <div className="fbp-editor-container">
+                <div className="fbp-workspace">
+                  <aside className="fbp-outline">
+                    <div className="fbp-outline__summary">
+                      <span>PHIÊN BẢN {versionNumber}</span>
+                      <strong>{sections.length} phần</strong>
+                      <small>
+                        {sections.reduce((total, section) => total + (section.items?.length || 0), 0)}
+                        {' '}phần tử
+                      </small>
+                    </div>
+                    <nav className="fbp-outline__nav" aria-label="Mục lục biểu mẫu">
+                      {sections.map((section, sectionIndex) => (
+                        <div className="fbp-outline__section" key={section.sectionKey || sectionIndex}>
+                          <button
+                            onClick={() => {
+                              document.getElementById(`builder-section-${sectionIndex}`)?.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start',
+                              })
+                            }}
+                            type="button"
+                          >
+                            <span>{sectionIndex + 1}</span>
+                            <strong>{section.title || `Phần ${sectionIndex + 1}`}</strong>
+                            <small>{section.items?.length || 0} phần tử</small>
+                          </button>
+                          {(section.items || []).map((item, itemIndex) => {
+                            const itemKey = getItemKey(item, sectionIndex, itemIndex)
+                            return (
+                              <button
+                                className="fbp-outline__item"
+                                key={itemKey}
+                                onClick={() => focusItem(itemKey)}
+                                title={item.question?.title || item.title || `Phần tử ${itemIndex + 1}`}
+                                type="button"
+                              >
+                                <span>{itemIndex + 1}</span>
+                                {item.question?.title || item.title || `Phần tử ${itemIndex + 1}`}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </nav>
+                    <button className="fbp-outline__add" onClick={handleAddSection} type="button">
+                      <PlusOutlined /> Thêm phần
+                    </button>
+                  </aside>
+
+                  <div className="fbp-editor-container">
                   
                   {/* General settings */}
                   <div className="fbp-meta-card">
+                    <div className="fbp-meta-heading">
+                      <span>Thông tin chung</span>
+                      <p>Tên và mô tả hiển thị với người sử dụng checklist.</p>
+                    </div>
                     <div className="fbp-form-field">
-                      <label>Tiêu đề phiên bản hiển thị:</label>
+                      <label>Tiêu đề biểu mẫu</label>
                       <input
                         type="text"
                         className="fbp-input"
                         value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                        onChange={(e) => {
+                          setTitle(e.target.value)
+                          setDirty(true)
+                        }}
                         placeholder="Ví dụ: Đánh giá vệ sinh tay v1"
                       />
                     </div>
                     <div className="fbp-form-field">
-                      <label>Mô tả bổ sung của phiên bản:</label>
+                      <label>Mô tả hoặc hướng dẫn chung</label>
                       <input
                         type="text"
                         className="fbp-input"
                         value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        onChange={(e) => {
+                          setDescription(e.target.value)
+                          setDirty(true)
+                        }}
                         placeholder="Mô tả hướng dẫn chung..."
                       />
                     </div>
@@ -469,7 +705,11 @@ function FormBuilderPage() {
                   {/* Sections list */}
                   <div className="fbp-sections-list">
                     {sections.map((sec, secIdx) => (
-                      <div key={sec.sectionKey || secIdx} className="fbp-section-card">
+                      <div
+                        id={`builder-section-${secIdx}`}
+                        key={sec.sectionKey || secIdx}
+                        className="fbp-section-card"
+                      >
                         
                         {/* Section Header */}
                         <div className="fbp-section-header">
@@ -480,19 +720,20 @@ function FormBuilderPage() {
                               className="fbp-section-title-input"
                               value={sec.title || ''}
                               onChange={(e) => handleSectionChange(secIdx, 'title', e.target.value)}
-                              placeholder="Nhập tên phần (Section title)..."
+                              placeholder="Nhập tên phần..."
                             />
                           </div>
                           <button
                             className="fbp-btn-icon-danger"
                             onClick={() => handleRemoveSection(secIdx)}
-                            title="Xóa section này"
+                            title="Xóa phần này"
+                            type="button"
                           >
-                            <DeleteOutlined /> Xóa Phần
+                            <DeleteOutlined /> Xóa phần
                           </button>
                         </div>
                         
-                        <div style={{ marginBottom: 16 }}>
+                        <div className="fbp-section-description-row">
                           <input
                             type="text"
                             className="fbp-input-sub"
@@ -504,8 +745,46 @@ function FormBuilderPage() {
 
                         {/* Items under Section */}
                         <div className="fbp-items-list">
-                          {sec.items && sec.items.map((item, itemIdx) => (
-                            <div key={item.itemKey || itemIdx} className="fbp-item-box">
+                          {sec.items && sec.items.map((item, itemIdx) => {
+                            const itemKey = getItemKey(item, secIdx, itemIdx)
+                            const isExpanded = expandedItems.has(itemKey)
+                            const isAdvancedOpen = advancedItems.has(itemKey)
+                            const itemTitle = item.question?.title
+                              || item.title
+                              || `${ITEM_TYPE_LABELS[item.itemType] || 'Phần tử'} ${itemIdx + 1}`
+                            const itemTypeLabel = item.itemType === 'QUESTION'
+                              ? FIELD_TYPE_LABELS[item.question?.fieldType] || 'Câu hỏi'
+                              : ITEM_TYPE_LABELS[item.itemType] || 'Phần tử'
+
+                            return (
+                            <div
+                              id={`builder-item-${itemKey}`}
+                              key={itemKey}
+                              className={`fbp-item-box fbp-item-box--${item.itemType?.toLowerCase()} ${isExpanded ? 'is-expanded' : ''}`}
+                            >
+                              <button
+                                className="fbp-item-summary"
+                                onClick={() => toggleItem(itemKey)}
+                                type="button"
+                                aria-expanded={isExpanded}
+                              >
+                                <span className="fbp-item-summary__number">{itemIdx + 1}</span>
+                                <span className="fbp-item-summary__text">
+                                  <strong>{itemTitle}</strong>
+                                  <small>{itemTypeLabel}</small>
+                                </span>
+                                <span className="fbp-item-summary__badges">
+                                  {item.question?.required && <span>Bắt buộc</span>}
+                                  {item.question?.critical && <span className="is-critical">Trọng yếu</span>}
+                                  {item.question && !item.question.excludeFromScore && <span>Có tính điểm</span>}
+                                </span>
+                                <span className="fbp-item-summary__chevron" aria-hidden="true">
+                                  {isExpanded ? <DownOutlined /> : <RightOutlined />}
+                                </span>
+                              </button>
+
+                              {isExpanded && (
+                              <div className="fbp-item-editor">
                               
                               {/* Item Header */}
                               <div className="fbp-item-header">
@@ -516,18 +795,32 @@ function FormBuilderPage() {
                                     value={item.itemType}
                                     onChange={(e) => handleItemChange(secIdx, itemIdx, 'itemType', e.target.value)}
                                   >
-                                    <option value="QUESTION">Câu hỏi đánh giá (Question)</option>
-                                    <option value="TITLE_DESCRIPTION">Khối văn bản tự do (Header)</option>
-                                    <option value="IMAGE">Khối hình ảnh (Image)</option>
-                                    <option value="INSTRUCTION">Lời khuyên / Hướng dẫn (Instruction)</option>
+                                    <option value="QUESTION">Câu hỏi</option>
+                                    <option value="TITLE_DESCRIPTION">Tiêu đề và mô tả</option>
+                                    <option value="IMAGE">Hình ảnh</option>
+                                    <option value="INSTRUCTION">Hướng dẫn</option>
                                   </select>
                                 </div>
-                                <button
-                                  className="fbp-btn-item-delete"
-                                  onClick={() => handleRemoveItem(secIdx, itemIdx)}
-                                >
-                                  Xóa
-                                </button>
+                                <div className="fbp-item-actions">
+                                  {item.itemType === 'QUESTION' && item.question && (
+                                    <button
+                                      className={`fbp-btn-advanced ${isAdvancedOpen ? 'is-active' : ''}`}
+                                      onClick={() => toggleAdvancedItem(itemKey)}
+                                      title="Cài đặt câu hỏi"
+                                      type="button"
+                                      aria-expanded={isAdvancedOpen}
+                                    >
+                                      <SettingOutlined /> Cài đặt
+                                    </button>
+                                  )}
+                                  <button
+                                    className="fbp-btn-item-delete"
+                                    onClick={() => handleRemoveItem(secIdx, itemIdx)}
+                                    type="button"
+                                  >
+                                    <DeleteOutlined /> Xóa phần tử
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Item Fields depending on type */}
@@ -583,7 +876,7 @@ function FormBuilderPage() {
                                 <div className="fbp-question-fields">
                                   <div className="fbp-q-row-1">
                                     <div className="fbp-form-field" style={{ flex: 2 }}>
-                                      <label>Tiêu đề câu hỏi / Tiêu chí đánh giá:</label>
+                                      <label>Nội dung câu hỏi</label>
                                       <input
                                         type="text"
                                         className="fbp-input"
@@ -592,99 +885,133 @@ function FormBuilderPage() {
                                         placeholder="Nhập nội dung câu hỏi..."
                                       />
                                     </div>
-                                    <div className="fbp-form-field" style={{ flex: 1 }}>
-                                      <label>Mã câu hỏi (Unique Code):</label>
-                                      <input
-                                        type="text"
-                                        className="fbp-input"
-                                        value={item.question.code || ''}
-                                        onChange={(e) => handleQuestionChange(
-                                          secIdx,
-                                          itemIdx,
-                                          'code',
-                                          e.target.value.toUpperCase().replace(/[^A-Z0-9_.-]/g, ''),
-                                        )}
-                                        placeholder="Vd: VS_TAY_01"
+                                  </div>
+
+                                  {isAdvancedOpen && (
+                                    <div className="fbp-advanced-panel">
+                                      <div className="fbp-settings-section">
+                                        <div>
+                                          <strong>Quy tắc câu hỏi</strong>
+                                          <p>Thiết lập cách câu hỏi ảnh hưởng tới biểu mẫu.</p>
+                                        </div>
+                                        <div className="fbp-rule-group" aria-label="Quy tắc câu hỏi">
+                                          <label className="fbp-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              checked={item.question.required}
+                                              onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'required', e.target.checked)}
+                                            /> Bắt buộc
+                                          </label>
+                                          <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ bảng kiểm">
+                                            <input
+                                              type="checkbox"
+                                              checked={
+                                                SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                                && item.question.critical
+                                              }
+                                              disabled={
+                                                !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                              }
+                                              onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'critical', e.target.checked)}
+                                            /> Tiêu chí trọng yếu
+                                          </label>
+                                        </div>
+                                      </div>
+
+                                      <div className="fbp-settings-section">
+                                        <div>
+                                          <strong>Chấm điểm</strong>
+                                          <p>Chọn một trong hai chế độ cho câu hỏi này.</p>
+                                        </div>
+                                        <div className="fbp-score-settings">
+                                          <div className="fbp-score-mode-group" aria-label="Thiết lập chấm điểm">
+                                            <label className="fbp-score-choice">
+                                              <input
+                                                type="radio"
+                                                name={`${itemKey}-score-mode`}
+                                                value="score"
+                                                checked={
+                                                  SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                                  && !item.question.excludeFromScore
+                                                }
+                                                disabled={
+                                                  !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                                }
+                                                onChange={() => handleQuestionChange(secIdx, itemIdx, 'excludeFromScore', false)}
+                                              />
+                                              <span>Tính điểm</span>
+                                            </label>
+                                            <label className="fbp-score-choice">
+                                              <input
+                                                type="radio"
+                                                name={`${itemKey}-score-mode`}
+                                                value="no-score"
+                                                checked={
+                                                  !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                                  || item.question.excludeFromScore
+                                                }
+                                                disabled={
+                                                  !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                                }
+                                                onChange={() => handleQuestionChange(secIdx, itemIdx, 'excludeFromScore', true)}
+                                              />
+                                              <span>Không tính điểm</span>
+                                            </label>
+                                          </div>
+
+                                          {SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
+                                            && !item.question.excludeFromScore && (
+                                            <div className="fbp-form-field fbp-weight-field">
+                                              <label>Hệ số</label>
+                                              <input
+                                                type="number"
+                                                className="fbp-input"
+                                                value={item.question.weight || ''}
+                                                onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'weight', e.target.value)}
+                                                min="0.1"
+                                                step="0.1"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="fbp-settings-section fbp-settings-section--technical">
+                                        <div>
+                                          <strong>Kỹ thuật</strong>
+                                          <p>Mã câu hỏi dùng để đồng bộ với backend/import. Chỉ chỉnh khi cần.</p>
+                                        </div>
+                                        <div className="fbp-form-field">
+                                          <label>Mã câu hỏi</label>
+                                          <input
+                                            type="text"
+                                            className="fbp-input"
+                                            value={item.question.code || ''}
+                                            onChange={(e) => handleQuestionChange(
+                                              secIdx,
+                                              itemIdx,
+                                              'code',
+                                              e.target.value.toUpperCase().replace(/[^A-Z0-9_.-]/g, ''),
+                                            )}
+                                            placeholder="Vd: VS_TAY_01"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="fbp-q-row-2">
+                                    <div className="fbp-form-field">
+                                      <label>Kiểu câu hỏi</label>
+                                      <QuestionTypeSelect
+                                        value={item.question.fieldType}
+                                        onChange={(nextFieldType) => handleQuestionChange(secIdx, itemIdx, 'fieldType', nextFieldType)}
                                       />
                                     </div>
                                   </div>
 
-                                  <div className="fbp-q-row-2">
-                                    <div className="fbp-form-field">
-                                      <label>Kiểu câu hỏi:</label>
-                                      <select
-                                        className="fbp-select-control"
-                                        value={item.question.fieldType}
-                                        onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'fieldType', e.target.value)}
-                                      >
-                                        <option value="SINGLE_CHOICE">Trắc nghiệm chọn một (Radio)</option>
-                                        <option value="MULTIPLE_CHOICE">Chọn nhiều lựa chọn (Checkbox)</option>
-                                        <option value="DROPDOWN">Dropdown List</option>
-                                        <option value="BOOLEAN">Switch Đúng/Sai (Yes/No)</option>
-                                        <option value="SHORT_TEXT">Văn bản ngắn (Short text)</option>
-                                        <option value="LONG_TEXT">Ý kiến / Nhận xét (Long text)</option>
-                                        <option value="NUMBER">Nhập số lượng (Number)</option>
-                                        <option value="DATE">Ngày (Date)</option>
-                                        <option value="DATETIME">Ngày & Giờ (DateTime)</option>
-                                        <option value="USER_REF">Tra cứu nhân viên y tế</option>
-                                        <option value="DEPARTMENT_REF">Tra cứu khoa phòng</option>
-                                      </select>
-                                    </div>
-
-                                    <div className="fbp-q-row-checkboxes">
-                                      <label className="fbp-checkbox-label">
-                                        <input
-                                          type="checkbox"
-                                          checked={item.question.required}
-                                          onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'required', e.target.checked)}
-                                        /> Bắt buộc nhập
-                                      </label>
-                                      <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ bảng kiểm">
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
-                                            && item.question.critical
-                                          }
-                                          disabled={
-                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
-                                          }
-                                          onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'critical', e.target.checked)}
-                                        /> Tiêu chí Trọng yếu (Critical)
-                                      </label>
-                                      <label className="fbp-checkbox-label">
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
-                                            || item.question.excludeFromScore
-                                          }
-                                          disabled={
-                                            !SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
-                                          }
-                                          onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'excludeFromScore', e.target.checked)}
-                                        /> Không tính điểm
-                                      </label>
-                                    </div>
-
-                                    {SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
-                                      && !item.question.excludeFromScore && (
-                                      <div className="fbp-form-field" style={{ width: '100px' }}>
-                                        <label>Trọng số:</label>
-                                        <input
-                                          type="number"
-                                          className="fbp-input"
-                                          value={item.question.weight || ''}
-                                          onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'weight', e.target.value)}
-                                          min="0.1"
-                                          step="0.1"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-
                                   <div className="fbp-form-field">
-                                    <label>Văn bản hướng dẫn / Giải thích:</label>
+                                    <label>Hướng dẫn hoặc giải thích</label>
                                     <input
                                       type="text"
                                       className="fbp-input"
@@ -708,60 +1035,71 @@ function FormBuilderPage() {
                                         </button>
                                       </div>
 
-                                      <div className="fbp-options-grid">
-                                        <div className="fbp-opt-th">Nhãn hiển thị (Label)</div>
-                                        <div className="fbp-opt-th">Giá trị lưu (Value)</div>
-                                        <div className="fbp-opt-th">Điểm số</div>
-                                        <div className="fbp-opt-th" style={{ textAlign: 'center' }}>Đạt chuẩn?</div>
-                                        <div className="fbp-opt-th" style={{ textAlign: 'center' }}>Hành động</div>
-
+                                      <div className="fbp-options-list">
                                         {(item.question.options || []).map((opt, optIdx) => (
-                                          <Fragment key={opt.optionKey || optIdx}>
-                                            <div>
+                                          <div className="fbp-option-row" key={opt.optionKey || optIdx}>
+                                            <span
+                                              className={`fbp-option-marker fbp-option-marker--${OPTION_MARKER_CLASS[item.question.fieldType] || 'radio'}`}
+                                              aria-hidden="true"
+                                            >
+                                              {item.question.fieldType === 'DROPDOWN' ? optIdx + 1 : ''}
+                                            </span>
+                                            <div className="fbp-option-main">
+                                              <span className="fbp-option-field-label">
+                                                Đáp án
+                                              </span>
                                               <input
                                                 type="text"
-                                                className="fbp-opt-input"
+                                                className="fbp-option-label-input"
+                                                aria-label={`Nhãn lựa chọn ${optIdx + 1}`}
                                                 value={opt.label || ''}
                                                 onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'label', e.target.value)}
                                                 placeholder="Ví dụ: Có"
                                               />
+                                              {isAdvancedOpen && (
+                                                <div className="fbp-option-advanced">
+                                                  <label>Giá trị lưu</label>
+                                                  <input
+                                                    type="text"
+                                                    className="fbp-option-value-input"
+                                                    value={opt.value || ''}
+                                                    onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'value', e.target.value.toUpperCase())}
+                                                    placeholder="YES"
+                                                  />
+                                                </div>
+                                              )}
                                             </div>
-                                            <div>
-                                              <input
-                                                type="text"
-                                                className="fbp-opt-input"
-                                                value={opt.value || ''}
-                                                onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'value', e.target.value.toUpperCase())}
-                                                placeholder="YES"
-                                              />
-                                            </div>
-                                            <div>
+
+                                            <label className="fbp-option-score">
+                                              <span>Điểm</span>
                                               <input
                                                 type="number"
-                                                className="fbp-opt-input"
+                                                className="fbp-option-score-input"
                                                 value={opt.scoreValue !== null ? opt.scoreValue : ''}
                                                 onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'scoreValue', e.target.value)}
                                                 placeholder="1"
                                               />
-                                            </div>
-                                            <div style={{ textAlign: 'center' }}>
+                                            </label>
+
+                                            <label className="fbp-option-compliant">
                                               <input
                                                 type="checkbox"
                                                 checked={!!opt.compliant}
                                                 onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'compliant', e.target.checked)}
                                               />
-                                            </div>
-                                            <div style={{ textAlign: 'center' }}>
-                                              <button
-                                                type="button"
-                                                className="fbp-btn-opt-del"
-                                                onClick={() => handleRemoveOption(secIdx, itemIdx, optIdx)}
-                                                disabled={(item.question.options || []).length <= 1}
-                                              >
-                                                ✕
-                                              </button>
-                                            </div>
-                                          </Fragment>
+                                              <span>Đạt chuẩn</span>
+                                            </label>
+
+                                            <button
+                                              type="button"
+                                              className="fbp-btn-opt-del"
+                                              onClick={() => handleRemoveOption(secIdx, itemIdx, optIdx)}
+                                              disabled={(item.question.options || []).length <= 1}
+                                              title="Xóa lựa chọn"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
                                         ))}
                                       </div>
                                     </div>
@@ -770,12 +1108,19 @@ function FormBuilderPage() {
                                 </div>
                               )}
 
+                              </div>
+                              )}
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
 
                         {/* Add Item button */}
-                        <button className="fbp-btn-add-item" onClick={() => handleAddItem(secIdx)}>
+                        <button
+                          className="fbp-btn-add-item"
+                          onClick={() => handleAddItem(secIdx)}
+                          type="button"
+                        >
                           <PlusOutlined /> Thêm câu hỏi / phần tử mới
                         </button>
                       </div>
@@ -783,10 +1128,11 @@ function FormBuilderPage() {
                   </div>
 
                   {/* Add Section Button */}
-                  <button className="fbp-btn-add-section" onClick={handleAddSection}>
-                    <PlusCircleOutlined /> Thêm phần mới (Add Section)
+                  <button className="fbp-btn-add-section" onClick={handleAddSection} type="button">
+                    <PlusCircleOutlined /> Thêm phần mới
                   </button>
 
+                  </div>
                 </div>
               )}
 

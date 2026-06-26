@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
+  DashboardOutlined,
   TeamOutlined,
   FileTextOutlined,
   SettingOutlined,
@@ -27,6 +28,12 @@ import logo from '../../../assets/logo.png'
 import '../styles/AdminSidebar.css'
 
 const navSections = [
+  {
+    label: 'TỔNG QUAN',
+    items: [
+      { icon: <DashboardOutlined />, label: 'Dashboard', path: '/admin/dashboard' },
+    ],
+  },
   {
     label: 'TÀI KHOẢN',
     items: [
