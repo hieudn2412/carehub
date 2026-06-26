@@ -297,6 +297,20 @@
   border-color: #158f6e;
 }
 
+.am-pn-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.am-pagination span {
+  white-space: nowrap;
+}
+
 /* Modal styling */
 .am-modal-overlay {
   position: fixed;

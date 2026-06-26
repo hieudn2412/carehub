@@ -232,3 +232,17 @@
   background: #158f6e;
   border-color: #158f6e;
 }
+
+.rel-pn-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.rel-pagination span {
+  white-space: nowrap;
+}

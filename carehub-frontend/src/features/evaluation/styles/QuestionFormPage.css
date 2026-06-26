@@ -1,0 +1,299 @@
+/* ── Question Form Page Styles ── */
+.qf-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.qf-container {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.qf-header {
+  border-bottom: 1px solid #cbd5e1;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.qf-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.qf-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.qf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.qf-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .qf-form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.qf-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qf-form-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.qf-required-star {
+  color: #dc2626;
+}
+
+/* Green Border Field */
+.qf-input-green {
+  border: 1.5px solid #10b981 !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.qf-input-green:focus {
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Red Border Field (selects & explanation as shown in mockup) */
+.qf-input-red {
+  border: 1.5px solid #dc2626 !important;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.qf-input-red:focus {
+  border-color: #b91c1c !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+}
+
+select.qf-input-red {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc2626'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 14px;
+  padding-right: 36px;
+}
+
+/* Section Divider */
+.qf-section-divider {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 6px 0;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.qf-divider-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.5px;
+}
+
+/* Options Cards List */
+.qf-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qf-option-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qf-option-card:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.qf-option-card--correct {
+  background: #e8f7ef !important;
+  border-color: #10b981 !important;
+}
+
+.qf-option-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.qf-option-control {
+  transform: scale(1.2);
+  cursor: pointer;
+}
+
+.qf-option-letter {
+  font-weight: 700;
+  font-size: 15px;
+  color: #334155;
+  min-width: 14px;
+}
+
+.qf-option-text-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+  flex: 1;
+  padding: 4px 0;
+  font-weight: 500;
+}
+
+.qf-option-text-input::placeholder {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.qf-option-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qf-option-correct-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.qf-option-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all 0.12s ease;
+}
+
+.qf-option-delete-btn:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* Add Option Button */
+.qf-btn-add-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.qf-btn-add-option:hover {
+  background: #f1f5f9;
+  border-color: #007aff;
+  color: #007aff;
+}
+
+/* Actions footer */
+.qf-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 24px;
+  margin-top: 12px;
+}
+
+.qf-btn-save {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #007aff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+.qf-btn-save:hover {
+  background: #0062cc;
+}
+
+.qf-btn-cancel {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #8e8e93;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.qf-btn-cancel:hover {
+  background: #7c7c80;
+}

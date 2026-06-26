@@ -30,6 +30,27 @@ function AdminAccountsScreen() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
 
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   // Filters State
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -128,12 +149,15 @@ function AdminAccountsScreen() {
 
   // Load user data on filter changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch, deptFilter, roleFilter, statusFilter])
 
   // Load detail data when select user changes
   useEffect(() => {
     if (!selectedUserId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedUserDetail(null)
       setNewGeneratedPassword(null)
       return
@@ -381,7 +405,7 @@ function AdminAccountsScreen() {
           u.employeeCode || '',
           u.fullName || '',
           getDeptName(u.departmentId),
-          u.roles?.map(r => r.name).join(', ') || '',
+          u.roles?.map(r => r.name || r.code).join(', ') || '',
           u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động')
         ])
 
@@ -409,13 +433,11 @@ function AdminAccountsScreen() {
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {userRoles.map(r => {
           let mod = 'staff'
-          let label = 'Nhân viên'
-          if (r.name === 'ADMIN') {
+          let label = r.name || r.code
+          if (r.code === 'ADMIN') {
             mod = 'admin'
-            label = 'Quản trị'
-          } else if (r.name === 'MANAGER') {
+          } else if (r.code === 'MANAGER') {
             mod = 'manager'
-            label = 'Quản lý'
           }
           return (
             <span key={r.id} className={`am-badge am-badge--role-${mod}`}>
@@ -505,7 +527,7 @@ function AdminAccountsScreen() {
                 >
                   <option value="all">Tất cả vai trò</option>
                   {roles.map(r => {
-                    const roleLabel = r.name === 'ADMIN' ? 'Quản trị' : (r.name === 'MANAGER' ? 'Quản lý' : 'Nhân viên')
+                    const roleLabel = r.name || r.code
                     return <option key={r.id} value={r.id}>{roleLabel}</option>
                   })}
                 </select>
@@ -598,15 +620,20 @@ function AdminAccountsScreen() {
                         <LeftOutlined />
                       </button>
 
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                        <button
-                          key={n}
-                          className={`am-pn ${n === page ? 'am-pn--active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                      {getVisiblePages().map((n, idx) => {
+                        if (n === '...') {
+                          return <span key={`dots-${idx}`} className="am-pn-dots">...</span>
+                        }
+                        return (
+                          <button
+                            key={n}
+                            className={`am-pn ${n === page ? 'am-pn--active' : ''}`}
+                            onClick={() => setPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      })}
 
                       <button 
                         className="am-pn" 
@@ -678,8 +705,8 @@ function AdminAccountsScreen() {
                       <span className="am-detail-value" style={{ display: 'flex', gap: 4 }}>
                         {selectedUserDetail.roles && selectedUserDetail.roles.length > 0 ? (
                           selectedUserDetail.roles.map(r => (
-                            <span key={r.id} className={`am-badge am-badge--role-${r.name === 'ADMIN' ? 'admin' : (r.name === 'MANAGER' ? 'manager' : 'staff')}`}>
-                              {r.name === 'ADMIN' ? 'Quản trị' : (r.name === 'MANAGER' ? 'Quản lý' : 'Nhân viên')}
+                            <span key={r.id} className={`am-badge am-badge--role-${r.code === 'ADMIN' ? 'admin' : (r.code === 'MANAGER' ? 'manager' : 'staff')}`}>
+                              {r.name || r.code}
                             </span>
                           ))
                         ) : (
@@ -912,7 +939,7 @@ function AdminAccountsScreen() {
                     <label className="am-form-label">Vai trò hệ thống *</label>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
                       {roles.map(r => {
-                        const roleLabel = r.name === 'ADMIN' ? 'Quản trị' : (r.name === 'MANAGER' ? 'Quản lý' : 'Nhân viên')
+                        const roleLabel = r.name || r.code
                         const isChecked = formRoleIds.includes(r.id)
                         return (
                           <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>

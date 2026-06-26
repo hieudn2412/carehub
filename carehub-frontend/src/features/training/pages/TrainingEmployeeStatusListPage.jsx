@@ -1,7 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'
@@ -46,65 +45,134 @@ const MOCK_EMPLOYEES = [
   }
 ]
 
-const DEPARTMENTS = [
-  'Khoa Thần kinh',
-  'Khoa Tim mạch',
-  'Khoa Phẫu thuật tổng hợp',
-  'Phòng Kiểm soát nhiễm khuẩn'
-]
-
 function TrainingEmployeeStatusListPage() {
-  const navigate = useNavigate()
-  const [keyword, setKeyword] = useState('')
-  const [department, setDepartment] = useState('')
-  const [status, setStatus] = useState('')
+  
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES)
-  const [apiMode, setApiMode] = useState(false)
+  const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(false)
+  const [apiMode, setApiMode] = useState(false)
 
+  // Filters State
+  const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const [complianceStatus, setComplianceStatus] = useState('')
+
+  // Pagination State
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalElements, setTotalElements] = useState(MOCK_EMPLOYEES.length)
+
+  // Debounce search input
   useEffect(() => {
-    async function loadData() {
-      setLoading(true)
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(keyword)
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [keyword])
+
+  // Fetch departments list for filter
+  useEffect(() => {
+    async function loadDepts() {
       try {
-        const response = await trainingApi.getEmployeeTrainingStatuses({
-          size: 50
-        })
-        const apiData = response.data?.data?.content
-        if (apiData && apiData.length > 0) {
-          const mapped = apiData.map(item => ({
-            employeeId: String(item.employeeId),
-            employeeCode: item.employeeCode,
-            employeeName: item.employeeName,
-            departmentName: item.departmentName || 'Chưa xác định',
-            approvedHours: item.approvedHours || 0,
-            requiredHours: item.requiredHours || 120,
-            complianceStatus: item.complianceStatus
-          }))
-          setEmployees(mapped)
-          setApiMode(true)
+        const response = await trainingApi.getDepartments()
+        if (response.data?.success) {
+          setDepartments(response.data.data || [])
         }
       } catch (err) {
-        console.warn('API error, falling back to mock data:', err)
-      } finally {
-        setLoading(false)
+        console.error('Error fetching departments:', err)
       }
     }
-    loadData()
+    loadDepts()
   }, [])
 
+  // Reset page when filters change
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1)
+  }, [debouncedKeyword, departmentId, complianceStatus])
+
+  // Fetch training statuses list from server
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      const params = {
+        page: page - 1, // 0-based in backend
+        size: 10,
+        keyword: debouncedKeyword.trim() || undefined,
+        departmentId: departmentId || undefined,
+        complianceStatus: complianceStatus || undefined
+      }
+      const response = await trainingApi.getEmployeeTrainingStatuses(params)
+      if (response.data?.success) {
+        const pageData = response.data.data
+        const content = pageData?.content || []
+        const mapped = content.map(item => ({
+          employeeId: String(item.employeeId),
+          employeeCode: item.employeeCode,
+          employeeName: item.employeeName,
+          departmentName: item.departmentName || 'Chưa xác định',
+          approvedHours: item.approvedHours || 0,
+          requiredHours: item.requiredHours || 120,
+          complianceStatus: item.complianceStatus
+        }))
+        setEmployees(mapped)
+        setTotalElements(pageData?.totalElements || 0)
+        setTotalPages(pageData?.totalPages || 0)
+        setApiMode(true)
+      } else {
+        setApiMode(false)
+      }
+    } catch (err) {
+      console.warn('API error, falling back to mock data:', err)
+      setApiMode(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData()
+  }, [page, debouncedKeyword, departmentId, complianceStatus])
+
+  // Local fallback filtering logic when API mode is off
   const filteredEmployees = useMemo(() => {
-    return employees.filter(emp => {
+    if (apiMode) return employees
+
+    return MOCK_EMPLOYEES.filter(emp => {
       const matchKeyword = 
         emp.employeeName.toLowerCase().includes(keyword.toLowerCase()) ||
         emp.employeeCode.toLowerCase().includes(keyword.toLowerCase())
       
-      const matchDept = department ? emp.departmentName === department : true
-      
-      const matchStatus = status ? emp.complianceStatus === status : true
+      const matchDept = departmentId ? emp.departmentName.includes(departmentId) : true
+      const matchStatus = complianceStatus ? emp.complianceStatus === complianceStatus : true
 
       return matchKeyword && matchDept && matchStatus
     })
-  }, [employees, keyword, department, status])
+  }, [employees, keyword, departmentId, complianceStatus, apiMode])
+
+  // Generate pagination buttons array
+  const getVisiblePages = () => {
+    const pages = []
+    const range = 1
+    pages.push(1)
+    if (page - range > 2) {
+      pages.push('...')
+    }
+    const start = Math.max(2, page - range)
+    const end = Math.min(totalPages - 1, page + range)
+    for (let i = start; i <= end; i++) {
+      pages.push(i)
+    }
+    if (page + range < totalPages - 1) {
+      pages.push('...')
+    }
+    if (totalPages > 1) {
+      pages.push(totalPages)
+    }
+    return pages
+  }
 
   const breadcrumbs = [
     { label: 'Quản lý chất lượng' },
@@ -124,7 +192,7 @@ function TrainingEmployeeStatusListPage() {
               <div className="tes-title-card">
                 <h1 className="tes-title">Giờ đào tạo nhân viên</h1>
                 <p className="tes-subtitle">
-                  View and monitor training records across all departments
+                  Theo dõi và giám sát hồ sơ đào tạo trên toàn khoa/phòng
                 </p>
               </div>
 
@@ -137,7 +205,7 @@ function TrainingEmployeeStatusListPage() {
                   <input
                     type="text"
                     className="tes-search-input"
-                    placeholder="Tìm theo tên nhân viên.."
+                    placeholder="Tìm theo tên/mã nhân viên.."
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                   />
@@ -145,19 +213,19 @@ function TrainingEmployeeStatusListPage() {
 
                 <select
                   className="tes-filter-select"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
                 >
                   <option value="">Khoa/Phòng</option>
-                  {DEPARTMENTS.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}
                 </select>
 
                 <select
                   className="tes-filter-select"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
+                  value={complianceStatus}
+                  onChange={(e) => setComplianceStatus(e.target.value)}
                 >
                   <option value="">Trạng thái</option>
                   <option value="COMPLIANT">Đạt</option>
@@ -234,17 +302,37 @@ function TrainingEmployeeStatusListPage() {
                     {/* Pagination Bar */}
                     <div className="tes-pagination-bar">
                       <div className="tes-pagination-info">
-                        Hiển thị {filteredEmployees.length} trong tổng số {apiMode ? filteredEmployees.length : 74} kết quả
+                        Hiển thị {filteredEmployees.length} trong tổng số {totalElements} kết quả
                       </div>
                       <div className="tes-pagination-buttons">
-                        <button className="tes-page-btn" disabled>&lt;</button>
-                        <button className="tes-page-btn tes-page-btn--active">1</button>
-                        <button className="tes-page-btn">2</button>
-                        <button className="tes-page-btn">3</button>
-                        <button className="tes-page-btn">4</button>
-                        <button className="tes-page-btn tes-page-btn--dots">...</button>
-                        <button className="tes-page-btn">10</button>
-                        <button className="tes-page-btn">&gt;</button>
+                        <button 
+                          className="tes-page-btn" 
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          disabled={page === 1}
+                        >
+                          &lt;
+                        </button>
+                        {getVisiblePages().map((n, idx) => {
+                          if (n === '...') {
+                            return <span key={`dots-${idx}`} className="tes-page-btn tes-page-btn--dots">...</span>
+                          }
+                          return (
+                            <button
+                              key={n}
+                              className={`tes-page-btn ${n === page ? 'tes-page-btn--active' : ''}`}
+                              onClick={() => setPage(n)}
+                            >
+                              {n}
+                            </button>
+                          )
+                        })}
+                        <button 
+                          className="tes-page-btn" 
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          disabled={page >= totalPages || totalPages === 0}
+                        >
+                          &gt;
+                        </button>
                       </div>
                     </div>
                   </>
