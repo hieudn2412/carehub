@@ -227,11 +227,59 @@ function AdminAccountsScreen() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    if (!formEmpCode.trim() || !formFullName.trim() || !formEmail.trim() || !formDeptId) {
+
+    const empCode = formEmpCode.trim()
+    const fullName = formFullName.trim()
+    const email = formEmail.trim()
+    const phone = formPhone.trim()
+
+    // 1. Check required fields
+    if (!empCode || !fullName || !email || !formDeptId) {
       alert('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã nhân viên, Họ và tên, Email, Phòng ban).')
       return
     }
 
+    // 2. Validate Employee Code format
+    const codeRegex = /^[a-zA-Z0-9-_]+$/
+    if (!codeRegex.test(empCode)) {
+      alert('Mã nhân viên chỉ được chứa các ký tự chữ, số, dấu gạch ngang (-) hoặc gạch dưới (_), không chứa khoảng trắng.')
+      return
+    }
+
+    // 3. Validate FullName length
+    if (fullName.length < 2) {
+      alert('Họ và tên phải có ít nhất 2 ký tự.')
+      return
+    }
+
+    // 4. Validate Email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      alert('Email không hợp lệ. Vui lòng nhập đúng định dạng email (VD: abc@domain.com).')
+      return
+    }
+
+    // 5. Validate Phone format if entered
+    if (phone) {
+      const phoneRegex = /^[0-9]{10,11}$/
+      if (!phoneRegex.test(phone)) {
+        alert('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.')
+        return
+      }
+    }
+
+    // 6. Validate Birthday if entered
+    if (formBirthday) {
+      const selectedDate = new Date(formBirthday)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      if (selectedDate > today) {
+        alert('Ngày sinh không thể lớn hơn ngày hiện tại.')
+        return
+      }
+    }
+
+    // 7. Check at least one role
     if (formRoleIds.length === 0) {
       alert('Vui lòng chọn ít nhất một vai trò cho tài khoản.')
       return
@@ -241,10 +289,10 @@ function AdminAccountsScreen() {
       if (editingUser) {
         // Edit User
         const updatePayload = {
-          employeeCode: formEmpCode.trim(),
-          fullName: formFullName.trim(),
-          email: formEmail.trim(),
-          phone: formPhone.trim() || undefined,
+          employeeCode: empCode,
+          fullName: fullName,
+          email: email,
+          phone: phone || undefined,
           departmentId: parseInt(formDeptId) || undefined,
           positionId: parseInt(formPositionId) || undefined,
           educationLevelId: parseInt(formEduLevelId) || undefined,
@@ -271,9 +319,9 @@ function AdminAccountsScreen() {
       } else {
         // Create User
         const createPayload = {
-          employeeCode: formEmpCode.trim(),
-          fullName: formFullName.trim(),
-          email: formEmail.trim(),
+          employeeCode: empCode,
+          fullName: fullName,
+          email: email,
           departmentId: parseInt(formDeptId),
           roleIds: formRoleIds.map(id => parseInt(id))
         }
