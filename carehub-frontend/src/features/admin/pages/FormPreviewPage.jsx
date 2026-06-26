@@ -202,7 +202,7 @@ function FormPreviewPage() {
                   value={opt.value}
                   checked={val === opt.value}
                   onChange={() => handleAnswerChange(q.questionKey, opt.value)}
-                /> {opt.label} {opt.scoreValue !== null && `(${opt.scoreValue}đ)`}
+                /> {opt.label}
               </label>
             ))}
           </div>

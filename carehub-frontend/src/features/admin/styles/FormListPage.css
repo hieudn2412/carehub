@@ -41,6 +41,11 @@
   gap: 12px;
 }
 
+.flp-import-menu {
+  position: relative;
+  display: inline-flex;
+}
+
 .flp-btn-import,
 .flp-btn-create {
   display: inline-flex;
@@ -63,6 +68,76 @@
 
 .flp-btn-import:hover {
   background: #d0e4f8;
+}
+
+.flp-btn-import__chevron {
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+
+.flp-import-menu.is-open .flp-btn-import__chevron {
+  transform: rotate(180deg);
+}
+
+.flp-import-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 320px;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+}
+
+.flp-import-menu__option {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  text-align: left;
+  color: var(--navy);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.flp-import-menu__option:hover {
+  background: #f3f8fc;
+  transform: translateY(-1px);
+}
+
+.flp-import-menu__option strong,
+.flp-import-menu__option small {
+  display: block;
+}
+
+.flp-import-menu__option strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flp-import-menu__option small {
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-soft);
+}
+
+.flp-import-menu__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #1d5fa8;
+  background: #e3f0fb;
+  border-radius: 9px;
 }
 
 .flp-btn-create {
@@ -535,6 +610,14 @@
     padding: 18px;
   }
   .flp-header-actions {
+    width: 100%;
+  }
+  .flp-import-menu {
+    width: 100%;
+  }
+  .flp-import-menu__panel {
+    left: 0;
+    right: auto;
     width: 100%;
   }
   .flp-btn-import,

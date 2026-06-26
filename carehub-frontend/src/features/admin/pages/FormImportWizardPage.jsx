@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
+import { legacyGoogleFormImports } from '../data/legacyGoogleFormImports.js'
 import {
   getChecklistDisplayCode,
   normalizeVietnameseFormCode,
@@ -16,6 +17,10 @@ import {
   CloseCircleOutlined,
   DeleteOutlined,
   PlusOutlined,
+  FileTextOutlined,
+  InfoCircleOutlined,
+  LinkOutlined,
+  NumberOutlined,
 } from '@ant-design/icons'
 import '../styles/FormImportWizardPage.css'
 
@@ -47,6 +52,16 @@ const getApiErrorMessage = (error, fallback) => (
   || fallback
 )
 
+const getImportMessageText = (message) => {
+  const text = message?.trim() || ''
+
+  if (/form code already exists/i.test(text)) {
+    return 'Mã biểu mẫu đã tồn tại trong hệ thống.'
+  }
+
+  return text
+}
+
 const createImportSource = (index) => ({
   id: `${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
   code: '',
@@ -54,10 +69,24 @@ const createImportSource = (index) => ({
   displayOrder: index,
 })
 
+const LEGACY_IMPORT_PRESET = 'legacy-18'
+
+const createInitialImportSources = (useLegacyPreset) => {
+  if (!useLegacyPreset) {
+    return [createImportSource(0)]
+  }
+
+  return legacyGoogleFormImports.map((source, index) => ({
+    ...createImportSource(index),
+    ...source,
+  }))
+}
+
 function FormImportWizardPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const queryBatchId = searchParams.get('batchId')
+  const hasLegacyPreset = searchParams.get('preset') === LEGACY_IMPORT_PRESET
 
   const [loading, setLoading] = useState(Boolean(queryBatchId))
   const [submitting, setSubmitting] = useState(false)
@@ -66,7 +95,19 @@ function FormImportWizardPage() {
   const [batchVerified, setBatchVerified] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
-  const [importSources, setImportSources] = useState(() => [createImportSource(0)])
+  const [importSources, setImportSources] = useState(() => createInitialImportSources(hasLegacyPreset))
+
+  const switchImportPreset = (useLegacyPreset) => {
+    setErrorMessage('')
+    setBatchId(null)
+    setBatchDetail(null)
+    setBatchVerified(false)
+    setLoading(false)
+    setImportSources(createInitialImportSources(useLegacyPreset))
+    navigate(useLegacyPreset
+      ? `/admin/form-imports/new?preset=${LEGACY_IMPORT_PRESET}`
+      : '/admin/form-imports/new')
+  }
 
   const loadBatchDetail = useCallback(() => {
     adminApi.getFormImportBatchById(batchId)
@@ -251,11 +292,59 @@ function FormImportWizardPage() {
     (batchDetail.status === 'VALIDATED' || batchDetail.status === 'PARTIAL') &&
     batchDetail.rows?.some(r => r.status === 'READY' || r.status === 'WARNING')
   const isApplied = batchDetail?.status === 'APPLIED' || batchDetail?.status === 'APPLIED_PARTIAL'
+  const successfulForms = Number(batchDetail?.successForms) || 0
+  const failedForms = Number(batchDetail?.failedForms) || 0
+  const applyOutcome = !isApplied
+    ? null
+    : successfulForms === 0 && failedForms > 0
+      ? 'failed'
+      : failedForms > 0 || batchDetail?.status === 'APPLIED_PARTIAL'
+        ? 'partial'
+        : 'success'
+
+  const appliedStatusText = applyOutcome === 'failed'
+    ? 'Import thất bại'
+    : applyOutcome === 'partial'
+      ? 'Đã import một phần'
+      : BATCH_STATUS_TEXT[batchDetail?.status] || batchDetail?.status
+
+  const inputStepTitle = hasLegacyPreset
+    ? `Import ${legacyGoogleFormImports.length} Google Form cũ`
+    : 'Nhập liên kết Google Form cần Import'
+  const inputStepDescription = hasLegacyPreset
+    ? `Danh sách ${legacyGoogleFormImports.length} biểu mẫu cũ đã được nạp sẵn. Bạn vẫn có thể rà lại mã, thứ tự và liên kết trước khi gửi backend kiểm tra.`
+    : 'Thêm tối đa 25 Google Form công khai. Hệ thống sẽ gửi tất cả liên kết trong một lô để kiểm tra trước khi ghi vào cơ sở dữ liệu.'
+  const activeStep = isApplied ? 3 : batchId ? 2 : 1
+  const batchRows = batchDetail?.rows || []
+  const metricCards = [
+    { label: 'Tổng form', value: batchDetail?.totalForms ?? importSources.length, tone: 'neutral' },
+    { label: isApplied ? 'Đã import' : 'Có thể import', value: batchDetail?.successForms ?? 0, tone: 'success' },
+    { label: 'Cảnh báo', value: batchDetail?.warningForms ?? 0, tone: 'warning' },
+    { label: 'Lỗi', value: batchDetail?.failedForms ?? 0, tone: 'danger' },
+  ]
+  const importModeTitle = hasLegacyPreset ? 'Bộ 18 form cũ' : 'Import tùy chỉnh'
+  const importModeDesc = hasLegacyPreset
+    ? 'Dữ liệu cũ đã được nạp sẵn, chỉ cần kiểm tra rồi gửi backend.'
+    : 'Tự thêm từng Google Form công khai bằng mã biểu mẫu và URL.'
+
+  const getStepClass = (stepNumber) => {
+    if (activeStep === stepNumber) {
+      return 'is-current'
+    }
+
+    return activeStep > stepNumber ? 'is-done' : ''
+  }
 
   const breadcrumbs = [
     { label: 'Quản lý chất lượng' },
     { label: 'Danh sách checklist', route: '/admin/quality/checklists' },
-    { label: batchId ? `Chi tiết lô #${batchId}` : 'Import biểu mẫu mới' }
+    {
+      label: batchId
+        ? `Chi tiết lô #${batchId}`
+        : hasLegacyPreset
+          ? 'Import 18 form cũ'
+          : 'Import biểu mẫu mới',
+    }
   ]
 
   return (
@@ -266,6 +355,51 @@ function FormImportWizardPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-import-wizard-page">
+              <section className="fiw-hero">
+                <div className="fiw-hero-top">
+                  <button
+                    className="fiw-back"
+                    onClick={() => navigate('/admin/quality/checklists')}
+                    type="button"
+                  >
+                    <ArrowLeftOutlined /> Quay lại danh sách checklist
+                  </button>
+                  <span className="fiw-mode-chip">{importModeTitle}</span>
+                </div>
+
+                <div className="fiw-hero-main">
+                  <div>
+                    <span className="fiw-eyebrow">Import Google Form</span>
+                    <h1>{inputStepTitle}</h1>
+                    <p>{inputStepDescription}</p>
+                  </div>
+                  {!batchId && (
+                    <button
+                      className="fiw-mode-switch"
+                      onClick={() => switchImportPreset(!hasLegacyPreset)}
+                      type="button"
+                    >
+                      {hasLegacyPreset ? 'Chuyển sang import mới' : 'Nạp 18 form cũ'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="fiw-steps" aria-label="Tiến trình import">
+                  <div className={`fiw-step ${getStepClass(1)}`}>
+                    <span>1</span>
+                    <strong>Nhập nguồn</strong>
+                  </div>
+                  <div className={`fiw-step ${getStepClass(2)}`}>
+                    <span>2</span>
+                    <strong>Kiểm tra</strong>
+                  </div>
+                  <div className={`fiw-step ${getStepClass(3)}`}>
+                    <span>3</span>
+                    <strong>Áp dụng</strong>
+                  </div>
+                </div>
+              </section>
+
               {errorMessage && (
                 <div className="fiw-error" role="alert">
                   <CloseCircleOutlined />
@@ -284,129 +418,163 @@ function FormImportWizardPage() {
                   )}
                 </div>
               )}
-              
-              {/* Back Nav */}
-              <div className="fiw-back" onClick={() => navigate('/admin/quality/checklists')}>
-                <ArrowLeftOutlined /> Quay lại danh sách checklist
-              </div>
 
               {!batchId ? (
                 /* Step 1: Input URL */
-                <div className="fiw-card">
-                  <h2 className="fiw-card-title">Nhập liên kết Google Form cần Import</h2>
-                  <p className="fiw-card-desc">
-                    Thêm tối đa 25 Google Form công khai. Hệ thống sẽ gửi tất cả liên kết
-                    trong một lô để kiểm tra trước khi ghi vào cơ sở dữ liệu.
-                  </p>
+                <div className="fiw-import-layout">
+                  <aside className="fiw-side-panel">
+                    <div className="fiw-side-card">
+                      <span className="fiw-side-icon">
+                        <FileTextOutlined />
+                      </span>
+                      <strong>{importModeTitle}</strong>
+                      <p>{importModeDesc}</p>
+                      <div className="fiw-side-count">
+                        <span>{importSources.length}</span>
+                        <small>biểu mẫu trong lô</small>
+                      </div>
+                    </div>
 
-                  <form onSubmit={handleValidate} className="fiw-form">
-                    <div className="fiw-source-list">
-                      {importSources.map((source, index) => (
-                        <div className="fiw-source-card" key={source.id}>
-                          <div className="fiw-source-header">
-                            <strong>Google Form {index + 1}</strong>
-                            {importSources.length > 1 && (
-                              <button
-                                aria-label={`Xóa Google Form ${index + 1}`}
-                                className="fiw-source-remove"
-                                onClick={() => removeImportSource(source.id)}
-                                type="button"
-                              >
-                                <DeleteOutlined />
-                              </button>
-                            )}
-                          </div>
+                    <div className="fiw-side-card fiw-side-card--tips">
+                      <strong>
+                        <InfoCircleOutlined />
+                        Lưu ý trước khi gửi
+                      </strong>
+                      <ul>
+                        <li>Mỗi mã biểu mẫu phải là duy nhất trong cùng một lô.</li>
+                        <li>Link cần là Google Form công khai và bắt đầu bằng HTTPS.</li>
+                        <li>Sau bước kiểm tra, hệ thống mới ghi form vào danh sách checklist.</li>
+                      </ul>
+                    </div>
+                  </aside>
 
-                          <div className="fiw-form-grid">
-                            <div className="fiw-field">
-                              <label>
-                                Mã biểu mẫu <span className="fiw-req">*</span>
-                              </label>
-                              <input
-                                className="fiw-input"
-                                maxLength={50}
-                                minLength={2}
-                                onChange={(event) => updateImportSource(
-                                  source.id,
-                                  'code',
-                                  event.target.value,
-                                )}
-                                onBlur={(event) => updateImportSource(
-                                  source.id,
-                                  'code',
-                                  normalizeVietnameseFormCode(event.target.value),
-                                )}
-                                placeholder="Ví dụ: VE_SINH_TAY_LAM_SANG"
-                                required
-                                type="text"
-                                value={source.code}
-                              />
-                              <span className="fiw-hint">
-                                Có thể nhập tiếng Việt. Hệ thống tự chuyển thành chữ hoa
-                                không dấu và nối bằng gạch dưới.
+                  <div className="fiw-card fiw-import-card">
+                    <div className="fiw-card-heading">
+                      <div>
+                        <h2 className="fiw-card-title">Danh sách Google Form</h2>
+                        <p className="fiw-card-desc">
+                          Rà lại mã, thứ tự hiển thị và đường dẫn trước khi gửi backend kiểm tra.
+                        </p>
+                      </div>
+                      <span className="fiw-source-total">{importSources.length}/25 form</span>
+                    </div>
+
+                    <form onSubmit={handleValidate} className="fiw-form">
+                      <div className="fiw-source-list">
+                        {importSources.map((source, index) => (
+                          <div className="fiw-source-card" key={source.id}>
+                            <div className="fiw-source-header">
+                              <span className="fiw-source-number">
+                                {String(index + 1).padStart(2, '0')}
                               </span>
+                              <div>
+                                <strong>Google Form {index + 1}</strong>
+                                <small>{source.code || 'Chưa có mã biểu mẫu'}</small>
+                              </div>
+                              {importSources.length > 1 && (
+                                <button
+                                  aria-label={`Xóa Google Form ${index + 1}`}
+                                  className="fiw-source-remove"
+                                  onClick={() => removeImportSource(source.id)}
+                                  type="button"
+                                >
+                                  <DeleteOutlined />
+                                </button>
+                              )}
                             </div>
 
-                            <div className="fiw-field">
-                              <label>Thứ tự hiển thị</label>
-                              <input
-                                className="fiw-input"
-                                min="0"
-                                onChange={(event) => updateImportSource(
-                                  source.id,
-                                  'displayOrder',
-                                  event.target.value,
-                                )}
-                                required
-                                type="number"
-                                value={source.displayOrder}
-                              />
-                            </div>
+                            <div className="fiw-form-grid">
+                              <div className="fiw-field">
+                                <label>
+                                  <FileTextOutlined />
+                                  Mã biểu mẫu <span className="fiw-req">*</span>
+                                </label>
+                                <input
+                                  className="fiw-input"
+                                  maxLength={50}
+                                  minLength={2}
+                                  onChange={(event) => updateImportSource(
+                                    source.id,
+                                    'code',
+                                    event.target.value,
+                                  )}
+                                  onBlur={(event) => updateImportSource(
+                                    source.id,
+                                    'code',
+                                    normalizeVietnameseFormCode(event.target.value),
+                                  )}
+                                  placeholder="Ví dụ: VE_SINH_TAY_LAM_SANG"
+                                  required
+                                  type="text"
+                                  value={source.code}
+                                />
+                              </div>
 
-                            <div className="fiw-field fiw-span-2">
-                              <label>
-                                Liên kết Google Form công khai
-                                <span className="fiw-req"> *</span>
-                              </label>
-                              <input
-                                className="fiw-input"
-                                onChange={(event) => updateImportSource(
-                                  source.id,
-                                  'sourceUrl',
-                                  event.target.value,
-                                )}
-                                placeholder="https://docs.google.com/forms/d/e/.../viewform"
-                                required
-                                type="url"
-                                value={source.sourceUrl}
-                              />
+                              <div className="fiw-field">
+                                <label>
+                                  <NumberOutlined />
+                                  Thứ tự
+                                </label>
+                                <input
+                                  className="fiw-input"
+                                  min="0"
+                                  onChange={(event) => updateImportSource(
+                                    source.id,
+                                    'displayOrder',
+                                    event.target.value,
+                                  )}
+                                  required
+                                  type="number"
+                                  value={source.displayOrder}
+                                />
+                              </div>
+
+                              <div className="fiw-field fiw-span-2">
+                                <label>
+                                  <LinkOutlined />
+                                  Liên kết Google Form công khai
+                                  <span className="fiw-req"> *</span>
+                                </label>
+                                <input
+                                  className="fiw-input"
+                                  onChange={(event) => updateImportSource(
+                                    source.id,
+                                    'sourceUrl',
+                                    event.target.value,
+                                  )}
+                                  placeholder="https://docs.google.com/forms/d/e/.../viewform"
+                                  required
+                                  type="url"
+                                  value={source.sourceUrl}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
 
-                    <div className="fiw-actions">
-                      <button
-                        className="fiw-btn-add-source"
-                        disabled={submitting || importSources.length >= 25}
-                        onClick={addImportSource}
-                        type="button"
-                      >
-                        <PlusOutlined /> Thêm Google Form
-                      </button>
-                      <button type="submit" className="fiw-btn-submit" disabled={submitting}>
-                        {submitting ? (
-                          <LoadingOutlined />
-                        ) : (
-                          <>
-                            <CloudUploadOutlined />
-                            Kiểm tra {importSources.length} biểu mẫu
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </form>
+                      <div className="fiw-actions">
+                        <button
+                          className="fiw-btn-add-source"
+                          disabled={submitting || importSources.length >= 25}
+                          onClick={addImportSource}
+                          type="button"
+                        >
+                          <PlusOutlined /> Thêm Google Form
+                        </button>
+                        <button type="submit" className="fiw-btn-submit" disabled={submitting}>
+                          {submitting ? (
+                            <LoadingOutlined />
+                          ) : (
+                            <>
+                              <CloudUploadOutlined />
+                              Kiểm tra {importSources.length} biểu mẫu
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 </div>
               ) : (
                 /* Step 2: Show Batch Validation & Apply */
@@ -416,11 +584,10 @@ function FormImportWizardPage() {
                   <div className="fiw-card fiw-status-banner">
                     <div className="fiw-status-info">
                       <span className="fiw-batch-label">LÔ IMPORT #{batchDetail?.id}</span>
-                      <h3 className="fiw-status-title">
-                        Trạng thái đợt: <strong>{BATCH_STATUS_TEXT[batchDetail?.status] || batchDetail?.status}</strong>
-                      </h3>
+                      <h2 className="fiw-status-title">{appliedStatusText}</h2>
                       <p className="fiw-status-desc">
-                        Tổng số form: {batchDetail?.totalForms ?? 0} · Có thể import/đã import: {batchDetail?.successForms ?? 0} · Cảnh báo: {batchDetail?.warningForms ?? 0} · Lỗi: {batchDetail?.failedForms ?? 0}
+                        Đây là kết quả backend trả về sau khi phân tích các Google Form trong lô.
+                        Kiểm tra lỗi/cảnh báo trước khi áp dụng import vào danh sách checklist.
                       </p>
                     </div>
 
@@ -435,18 +602,37 @@ function FormImportWizardPage() {
                     )}
                   </div>
 
+                  <div className="fiw-metrics-grid">
+                    {metricCards.map((metric) => (
+                      <div className={`fiw-metric-card fiw-metric-card--${metric.tone}`} key={metric.label}>
+                        <span>{metric.label}</span>
+                        <strong>{metric.value}</strong>
+                      </div>
+                    ))}
+                  </div>
+
                   {/* Rows validation details */}
                   <div className="fiw-card">
-                    <h2 className="fiw-card-title">Kết quả phân tích câu hỏi</h2>
-                    <p className="fiw-card-desc">Danh sách các form và trạng thái câu hỏi ghi nhận:</p>
+                    <div className="fiw-card-heading">
+                      <div>
+                        <h2 className="fiw-card-title">Kết quả phân tích câu hỏi</h2>
+                        <p className="fiw-card-desc">
+                          Danh sách form, trạng thái từng form và lỗi/cảnh báo backend ghi nhận.
+                        </p>
+                      </div>
+                    </div>
 
                     <div className="fiw-rows-list">
                       {loading ? (
-                        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                        <div className="fiw-loading-state">
                           <LoadingOutlined /> Đang tải kết quả...
                         </div>
                       ) : (
-                        batchDetail?.rows?.map((row, idx) => (
+                        batchRows.length === 0 ? (
+                          <div className="fiw-empty-state">
+                            Chưa có dữ liệu phân tích cho lô import này.
+                          </div>
+                        ) : batchRows.map((row, idx) => (
                           <div key={row.id || idx} className="fiw-row-card">
                             
                             <div className="fiw-row-header">
@@ -474,7 +660,9 @@ function FormImportWizardPage() {
                                     {msg.severity === 'WARNING' && <WarningOutlined />}
                                     {msg.severity === 'ERROR' && <CloseCircleOutlined />}
                                     {msg.severity === 'INFO' && <CheckCircleOutlined />}
-                                    <span className="fiw-msg-text">{msg.message}</span>
+                                    <span className="fiw-msg-text">
+                                      {getImportMessageText(msg.message)}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -486,7 +674,7 @@ function FormImportWizardPage() {
                     </div>
 
                     {canApply && (
-                      <div className="fiw-bottom-actions" style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <div className="fiw-bottom-actions">
                         <button
                           className="fiw-btn-apply"
                           onClick={handleApply}
@@ -498,10 +686,33 @@ function FormImportWizardPage() {
                     )}
 
                     {isApplied && (
-                      <div className="fiw-completed-banner" style={{ marginTop: '20px' }}>
-                        <CheckCircleOutlined />
+                      <div
+                        className={`fiw-completed-banner fiw-completed-banner--${applyOutcome}`}
+                        style={{ marginTop: '20px' }}
+                        role={applyOutcome === 'failed' ? 'alert' : 'status'}
+                      >
+                        {applyOutcome === 'success' && <CheckCircleOutlined />}
+                        {applyOutcome === 'partial' && <WarningOutlined />}
+                        {applyOutcome === 'failed' && <CloseCircleOutlined />}
                         <div>
-                          <strong>Import hoàn tất.</strong> Các biểu mẫu hợp lệ đã được tạo dưới dạng bản nháp.
+                          {applyOutcome === 'success' && (
+                            <>
+                              <strong>Import hoàn tất.</strong> {successfulForms} biểu mẫu đã
+                              được tạo dưới dạng bản nháp.
+                            </>
+                          )}
+                          {applyOutcome === 'partial' && (
+                            <>
+                              <strong>Import hoàn tất một phần.</strong> {successfulForms} biểu
+                              mẫu đã được tạo, {failedForms} biểu mẫu lỗi không được import.
+                            </>
+                          )}
+                          {applyOutcome === 'failed' && (
+                            <>
+                              <strong>Import thất bại.</strong> Không có biểu mẫu nào được tạo.
+                              Vui lòng kiểm tra lỗi bên trên và sử dụng mã biểu mẫu khác.
+                            </>
+                          )}
                           <button
                             type="button"
                             className="fiw-completed-link"
