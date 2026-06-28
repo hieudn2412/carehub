@@ -5,6 +5,7 @@ import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import { LeftOutlined, LoadingOutlined } from '@ant-design/icons'
 import { generateMockTemplates } from './EmailTemplatesListPage'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EmailTemplateFormPage.css'
 
 const placeholderMap = [
@@ -39,6 +40,7 @@ const toRawFormat = (text) => {
 }
 
 function EmailTemplateFormPage() {
+  const { showToast } = useToast()
   const { id } = useParams()
   const navigate = useNavigate()
   const isEditMode = id && id !== 'new'
@@ -121,7 +123,7 @@ function EmailTemplateFormPage() {
       setCategory(enriched.category)
       setTrigger(enriched.trigger)
     } else {
-      alert('Không tìm thấy biểu mẫu!')
+      showToast('Không tìm thấy biểu mẫu!', 'error')
       navigate('/admin/notifications/email-templates')
     }
     setLoading(false)
@@ -152,7 +154,7 @@ function EmailTemplateFormPage() {
     e.preventDefault()
 
     if (!code.trim() || !subject.trim() || !body.trim()) {
-      alert('Vui lòng điền đầy đủ các thông tin bắt buộc (*)')
+      showToast('Vui lòng điền đầy đủ các thông tin bắt buộc (*)', 'warning')
       return
     }
 
@@ -177,7 +179,7 @@ function EmailTemplateFormPage() {
         localStorage.setItem(`tpl_cat_${savedId}`, category)
         localStorage.setItem(`tpl_trig_${savedId}`, trigger)
         
-        alert(isEditMode ? 'Cập nhật biểu mẫu email thành công!' : 'Tạo mới biểu mẫu email thành công!')
+        showToast(isEditMode ? 'Cập nhật biểu mẫu email thành công!' : 'Tạo mới biểu mẫu email thành công!', 'success')
         navigate('/admin/notifications/email-templates')
       })
       .catch(err => {
@@ -211,7 +213,7 @@ function EmailTemplateFormPage() {
           })
         }
 
-        alert(isEditMode ? 'Cập nhật biểu mẫu thành công (Mock)!' : 'Tạo mới biểu mẫu thành công (Mock)!')
+        showToast(isEditMode ? 'Cập nhật biểu mẫu thành công (Mock)!' : 'Tạo mới biểu mẫu thành công (Mock)!', 'success')
         navigate('/admin/notifications/email-templates')
       })
       .finally(() => {

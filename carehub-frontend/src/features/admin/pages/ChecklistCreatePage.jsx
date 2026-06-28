@@ -15,6 +15,7 @@ import AdminHeader from '../components/AdminHeader'
 import ChecklistReadOnlyVersion from '../components/ChecklistReadOnlyVersion.jsx'
 import { adminApi } from '../api/adminApi'
 import { createChecklistCode } from '../utils/formCode.js'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/ChecklistCreatePage.css'
 
 const CHOICE_FIELD_TYPES = ['DROPDOWN', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE']
@@ -254,6 +255,11 @@ function mapVersionToSimpleEditor(version) {
 function ChecklistCreatePage() {
   const navigate = useNavigate()
   const { id } = useParams()
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false
+  })
   const isDetailMode = Boolean(id)
   const [pendingDraft, setPendingDraft] = useState(
     () => (isDetailMode ? null : readPendingDraft()),
@@ -578,13 +584,12 @@ function ChecklistCreatePage() {
       return
     }
 
-    const confirmed = window.confirm(
-      `Hủy checklist #${pendingFormId} đang tạo dở? Dữ liệu này sẽ bị xóa khỏi hệ thống.`,
-    )
+    setConfirmModal({
+      isOpen: true
+    })
+  }
 
-    if (!confirmed) {
-      return
-    }
+  const executeDiscardPendingDraft = async () => {
 
     try {
       setSaving(true)
@@ -1000,6 +1005,17 @@ function ChecklistCreatePage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Hủy bản nháp checklist"
+        message={pendingFormId ? `Hủy checklist #${pendingFormId} đang tạo dở? Dữ liệu này sẽ bị xóa khỏi hệ thống.` : ''}
+        danger={true}
+        onConfirm={() => {
+          executeDiscardPendingDraft()
+          setConfirmModal({ isOpen: false })
+        }}
+        onCancel={() => setConfirmModal({ isOpen: false })}
+      />
     </div>
   )
 }

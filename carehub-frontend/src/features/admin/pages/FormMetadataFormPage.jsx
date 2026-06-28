@@ -17,10 +17,22 @@ import {
   SafetyCertificateOutlined,
   LoadingOutlined,
 } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/FormMetadataFormPage.css'
 
 function FormMetadataFormPage() {
+  const { showToast } = useToast()
   const { id } = useParams()
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    danger: false
+  })
   const navigate = useNavigate()
   const isEditMode = id && id !== 'new'
 
@@ -110,14 +122,14 @@ function FormMetadataFormPage() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!code || !title) {
-      alert('Vui lòng điền đầy đủ các thông tin bắt buộc.')
+      showToast('Vui lòng điền đầy đủ các thông tin bắt buộc.', 'warning')
       return
     }
 
     // Validation: Code must be alphanumeric uppercase
     const cleanCode = normalizeVietnameseFormCode(code)
     if (cleanCode.length < 2) {
-      alert('Mã biểu mẫu cần có ít nhất 2 ký tự.')
+      showToast('Mã biểu mẫu cần có ít nhất 2 ký tự.', 'warning')
       return
     }
 
@@ -133,7 +145,7 @@ function FormMetadataFormPage() {
     if (isEditMode) {
       adminApi.updateForm(id, metadataPayload)
         .then(() => {
-          alert('Cập nhật thông tin biểu mẫu thành công!')
+          showToast('Cập nhật thông tin biểu mẫu thành công!', 'success')
           setSubmitting(false)
           navigate('/admin/quality/checklists')
         })
@@ -150,7 +162,7 @@ function FormMetadataFormPage() {
         ...metadataPayload,
       })
         .then(res => {
-          alert('Tạo biểu mẫu thành công!')
+          showToast('Tạo biểu mẫu thành công!', 'success')
           setSubmitting(false)
           const newFormId = res.data?.data?.id
           if (newFormId) {
@@ -175,7 +187,7 @@ function FormMetadataFormPage() {
     setErrorMessage('')
     adminApi.createFormVersion(id, {})
       .then(() => {
-        alert('Tạo bản nháp phiên bản mới thành công!')
+        showToast('Tạo bản nháp phiên bản mới thành công!', 'success')
         loadFormVersions()
       })
       .catch(err => {
@@ -190,37 +202,49 @@ function FormMetadataFormPage() {
   }
 
   const handlePublishVersion = (versionId) => {
-    if (window.confirm('Bạn có chắc chắn muốn công bố (Publish) phiên bản này không? Sau khi công bố, phiên bản này sẽ hoạt động chính thức và KHÔNG THỂ chỉnh sửa.')) {
-      setVersionsLoading(true)
-      setErrorMessage('')
-      adminApi.publishFormVersion(id, versionId)
-        .then(() => {
-          alert('Công bố phiên bản thành công!')
-          loadFormVersions()
-        })
-        .catch(err => {
-          setVersionsLoading(false)
-          console.error(err)
-          setErrorMessage(getErrorMessage(err, 'Không thể công bố phiên bản. Hãy kiểm tra cấu hình câu hỏi và điểm số.'))
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Công bố phiên bản',
+      message: 'Bạn có chắc chắn muốn công bố (Publish) phiên bản này không? Sau khi công bố, phiên bản này sẽ hoạt động chính thức và KHÔNG THỂ chỉnh sửa.',
+      danger: false,
+      onConfirm: () => {
+        setVersionsLoading(true)
+        setErrorMessage('')
+        adminApi.publishFormVersion(id, versionId)
+          .then(() => {
+            showToast('Công bố phiên bản thành công!', 'success')
+            loadFormVersions()
+          })
+          .catch(err => {
+            setVersionsLoading(false)
+            console.error(err)
+            setErrorMessage(getErrorMessage(err, 'Không thể công bố phiên bản. Hãy kiểm tra cấu hình câu hỏi và điểm số.'))
+          })
+      }
+    })
   }
 
   const handleDeleteVersion = (versionId) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa bản nháp này không? Thao tác này sẽ xóa vĩnh viễn cấu trúc câu hỏi nháp.')) {
-      setVersionsLoading(true)
-      setErrorMessage('')
-      adminApi.deleteFormVersion(id, versionId)
-        .then(() => {
-          alert('Đã xóa bản nháp thành công!')
-          loadFormVersions()
-        })
-        .catch(err => {
-          setVersionsLoading(false)
-          console.error(err)
-          setErrorMessage(getErrorMessage(err, 'Không thể xóa bản nháp.'))
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa bản nháp',
+      message: 'Bạn có chắc chắn muốn xóa bản nháp này không? Thao tác này sẽ xóa vĩnh viễn cấu trúc câu hỏi nháp.',
+      danger: true,
+      onConfirm: () => {
+        setVersionsLoading(true)
+        setErrorMessage('')
+        adminApi.deleteFormVersion(id, versionId)
+          .then(() => {
+            showToast('Đã xóa bản nháp thành công!', 'success')
+            loadFormVersions()
+          })
+          .catch(err => {
+            setVersionsLoading(false)
+            console.error(err)
+            setErrorMessage(getErrorMessage(err, 'Không thể xóa bản nháp.'))
+          })
+      }
+    })
   }
 
   const breadcrumbs = [
@@ -482,6 +506,17 @@ function FormMetadataFormPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        danger={confirmModal.danger}
+        onConfirm={() => {
+          confirmModal.onConfirm()
+          setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        }}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

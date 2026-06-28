@@ -18,9 +18,11 @@ import {
   DeleteOutlined,
   KeyOutlined
 } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/AdminAccountsScreen.css'
 
 function AdminAccountsScreen() {
+  const { showToast } = useToast()
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
   const [roles, setRoles] = useState([])
@@ -66,6 +68,14 @@ function AdminAccountsScreen() {
   // Form Modal (Create / Edit) State
   const [isFormModalOpen, setIsFormModalOpen] = useState(false)
   const [editingUser, setEditingUser] = useState(null) // null = Create, user object = Edit
+
+  // Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  })
   
   // Reference lists
   const [positions, setPositions] = useState([])
@@ -169,7 +179,7 @@ function AdminAccountsScreen() {
       })
       .catch(err => {
         console.error('Lỗi khi tải chi tiết người dùng:', err)
-        alert('Không thể tải thông tin chi tiết nhân viên.')
+        showToast('Không thể tải thông tin chi tiết nhân viên.', 'error')
         setSelectedUserId(null)
       })
       .finally(() => {
@@ -218,7 +228,7 @@ function AdminAccountsScreen() {
       })
       .catch(err => {
         console.error('Lỗi khi tải chi tiết người dùng để sửa:', err)
-        alert('Không thể tải thông tin chi tiết tài khoản.')
+        showToast('Không thể tải thông tin chi tiết tài khoản.', 'error')
       })
       .finally(() => {
         setModalLoading(false)
@@ -235,27 +245,27 @@ function AdminAccountsScreen() {
 
     // 1. Check required fields
     if (!empCode || !fullName || !email || !formDeptId) {
-      alert('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã nhân viên, Họ và tên, Email, Phòng ban).')
+      showToast('Vui lòng nhập đầy đủ thông tin bắt buộc (Mã nhân viên, Họ và tên, Email, Phòng ban).', 'warning')
       return
     }
 
     // 2. Validate Employee Code format
     const codeRegex = /^[a-zA-Z0-9-_]+$/
     if (!codeRegex.test(empCode)) {
-      alert('Mã nhân viên chỉ được chứa các ký tự chữ, số, dấu gạch ngang (-) hoặc gạch dưới (_), không chứa khoảng trắng.')
+      showToast('Mã nhân viên chỉ được chứa các ký tự chữ, số, dấu gạch ngang (-) hoặc gạch dưới (_), không chứa khoảng trắng.', 'warning')
       return
     }
 
     // 3. Validate FullName length
     if (fullName.length < 2) {
-      alert('Họ và tên phải có ít nhất 2 ký tự.')
+      showToast('Họ và tên phải có ít nhất 2 ký tự.', 'warning')
       return
     }
 
     // 4. Validate Email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      alert('Email không hợp lệ. Vui lòng nhập đúng định dạng email (VD: abc@domain.com).')
+      showToast('Email không hợp lệ. Vui lòng nhập đúng định dạng email (VD: abc@domain.com).', 'warning')
       return
     }
 
@@ -263,7 +273,7 @@ function AdminAccountsScreen() {
     if (phone) {
       const phoneRegex = /^[0-9]{10,11}$/
       if (!phoneRegex.test(phone)) {
-        alert('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.')
+        showToast('Số điện thoại không hợp lệ. Vui lòng nhập từ 10 đến 11 chữ số.', 'warning')
         return
       }
     }
@@ -274,14 +284,14 @@ function AdminAccountsScreen() {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       if (selectedDate > today) {
-        alert('Ngày sinh không thể lớn hơn ngày hiện tại.')
+        showToast('Ngày sinh không thể lớn hơn ngày hiện tại.', 'warning')
         return
       }
     }
 
     // 7. Check at least one role
     if (formRoleIds.length === 0) {
-      alert('Vui lòng chọn ít nhất một vai trò cho tài khoản.')
+      showToast('Vui lòng chọn ít nhất một vai trò cho tài khoản.', 'warning')
       return
     }
 
@@ -315,7 +325,7 @@ function AdminAccountsScreen() {
           await adminApi.removeRole(editingUser.id, rId)
         }
 
-        alert('Cập nhật tài khoản thành công!')
+        showToast('Cập nhật tài khoản thành công!', 'success')
       } else {
         // Create User
         const createPayload = {
@@ -327,7 +337,7 @@ function AdminAccountsScreen() {
         }
 
         await adminApi.createUser(createPayload)
-        alert('Tạo tài khoản thành công! Mật khẩu ngẫu nhiên đã được gửi về email của nhân viên.')
+        showToast('Tạo tài khoản thành công! Mật khẩu ngẫu nhiên đã được gửi về email của nhân viên.', 'success')
       }
 
       setIsFormModalOpen(false)
@@ -335,74 +345,97 @@ function AdminAccountsScreen() {
       loadUsers()
     } catch (err) {
       console.error('Lỗi khi lưu thông tin tài khoản:', err)
-      alert(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thông tin.')
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi lưu thông tin.', 'error')
     }
   }
 
   const handleLockUser = (userId) => {
-    if (window.confirm('Bạn có chắc chắn muốn khoá tài khoản này? Người dùng sẽ không thể đăng nhập.')) {
-      adminApi.lockUser(userId)
-        .then(() => {
-          alert('Đã khoá tài khoản thành công.')
-          setSelectedUserId(null)
-          loadUsers()
-        })
-        .catch(err => {
-          console.error(err)
-          alert(err.response?.data?.message || 'Không thể khoá tài khoản.')
-        })
-    }
+    console.log('handleLockUser called with userId:', userId)
+    setConfirmModal({
+      isOpen: true,
+      title: 'Khóa tài khoản',
+      message: 'Bạn có chắc chắn muốn khoá tài khoản này? Người dùng sẽ không thể đăng nhập.',
+      onConfirm: () => {
+        console.log('User confirmed lock action. Calling backend API...')
+        adminApi.lockUser(userId)
+          .then((res) => {
+            console.log('Backend lock success response:', res.data)
+            showToast('Đã khoá tài khoản thành công.', 'success')
+            setSelectedUserId(null)
+            loadUsers()
+          })
+          .catch(err => {
+            console.error('Backend lock error:', err)
+            showToast(err.response?.data?.message || 'Không thể khoá tài khoản.', 'error')
+          })
+      }
+    })
   }
 
   const handleUnlockUser = (userId) => {
-    if (window.confirm('Mở khoá tài khoản này? Người dùng có thể đăng nhập lại.')) {
-      adminApi.unlockUser(userId)
-        .then(() => {
-          alert('Đã mở khoá tài khoản thành công.')
-          setSelectedUserId(null)
-          loadUsers()
-        })
-        .catch(err => {
-          console.error(err)
-          alert(err.response?.data?.message || 'Không thể mở khoá tài khoản.')
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Mở khóa tài khoản',
+      message: 'Mở khoá tài khoản này? Người dùng có thể đăng nhập lại.',
+      onConfirm: () => {
+        adminApi.unlockUser(userId)
+          .then(() => {
+            showToast('Đã mở khoá tài khoản thành công.', 'success')
+            setSelectedUserId(null)
+            loadUsers()
+          })
+          .catch(err => {
+            console.error(err)
+            showToast(err.response?.data?.message || 'Không thể mở khoá tài khoản.', 'error')
+          })
+      }
+    })
   }
 
   const handleDeleteUser = (userId) => {
-    if (window.confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác.')) {
-      adminApi.deleteUser(userId)
-        .then(() => {
-          alert('Đã xóa tài khoản thành công.')
-          setSelectedUserId(null)
-          loadUsers()
-        })
-        .catch(err => {
-          console.error(err)
-          alert(err.response?.data?.message || 'Không thể xóa tài khoản.')
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa tài khoản',
+      message: 'CẢNH BÁO: Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này? Thao tác này không thể hoàn tác.',
+      onConfirm: () => {
+        adminApi.deleteUser(userId)
+          .then(() => {
+            showToast('Đã xóa tài khoản thành công.', 'success')
+            setSelectedUserId(null)
+            loadUsers()
+          })
+          .catch(err => {
+            console.error(err)
+            showToast(err.response?.data?.message || 'Không thể xóa tài khoản.', 'error')
+          })
+      }
+    })
   }
 
   const handleResetPassword = (userId) => {
-    if (window.confirm('Hệ thống sẽ tự động đổi sang một mật khẩu ngẫu nhiên mới và cập nhật cho tài khoản này. Bạn có chắc chắn tiếp tục?')) {
-      adminApi.resetUserPassword(userId)
-        .then(res => {
-          const generatedPwd = res.data?.data
-          setNewGeneratedPassword(generatedPwd)
-          alert('Tự động thay đổi mật khẩu thành công! Xem mật khẩu mới tại khung thông tin phía dưới.')
-        })
-        .catch(err => {
-          console.error(err)
-          alert(err.response?.data?.message || 'Không thể thay đổi mật khẩu.')
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Đổi mật khẩu tự động',
+      message: 'Hệ thống sẽ tự động đổi sang một mật khẩu ngẫu nhiên mới và cập nhật cho tài khoản này. Bạn có chắc chắn tiếp tục?',
+      onConfirm: () => {
+        adminApi.resetUserPassword(userId)
+          .then(res => {
+            const generatedPwd = res.data?.data
+            setNewGeneratedPassword(generatedPwd)
+            showToast('Tự động thay đổi mật khẩu thành công! Xem mật khẩu mới tại khung thông tin phía dưới.', 'success')
+          })
+          .catch(err => {
+            console.error(err)
+            showToast(err.response?.data?.message || 'Không thể thay đổi mật khẩu.', 'error')
+          })
+      }
+    })
   }
 
   const handleImportUsers = (e) => {
     e.preventDefault()
     if (!importFile) {
-      alert('Vui lòng chọn tệp Excel chứa danh sách tài khoản cần import.')
+      showToast('Vui lòng chọn tệp Excel chứa danh sách tài khoản cần import.', 'warning')
       return
     }
 
@@ -412,12 +445,12 @@ function AdminAccountsScreen() {
     adminApi.importUsers(importFile)
       .then(res => {
         setImportResult(res.data?.data || { success: true })
-        alert('Nhập danh sách tài khoản thành công!')
+        showToast('Nhập danh sách tài khoản thành công!', 'success')
         loadUsers()
       })
       .catch(err => {
         console.error('Lỗi khi import tài khoản:', err)
-        alert(err.response?.data?.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.')
+        showToast(err.response?.data?.message || 'Có lỗi xảy ra khi nhập dữ liệu từ Excel.', 'error')
       })
       .finally(() => {
         setImportLoading(false)
@@ -444,7 +477,7 @@ function AdminAccountsScreen() {
       .then(res => {
         const list = res.data?.data || []
         if (list.length === 0) {
-          alert('Không có dữ liệu phù hợp để xuất.')
+          showToast('Không có dữ liệu phù hợp để xuất.', 'info')
           return
         }
 
@@ -470,7 +503,7 @@ function AdminAccountsScreen() {
       })
       .catch(err => {
         console.error('Lỗi khi xuất danh sách:', err)
-        alert('Có lỗi xảy ra khi xuất tệp dữ liệu.')
+        showToast('Có lỗi xảy ra khi xuất tệp dữ liệu.', 'error')
       })
   }
 
@@ -1109,6 +1142,53 @@ function AdminAccountsScreen() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirm Modal */}
+      {confirmModal.isOpen && (
+        <div className="am-modal-overlay" onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}>
+          <div className="am-modal" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="am-modal-header">
+              <h3 className="am-modal-title">{confirmModal.title}</h3>
+              <button className="am-modal-close" onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}>
+                <CloseOutlined />
+              </button>
+            </div>
+            <div className="am-modal-body">
+              <p style={{ fontSize: '14.5px', color: '#334155', marginBottom: '24px', lineHeight: '1.5' }}>
+                {confirmModal.message}
+              </p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button 
+                  type="button"
+                  className="am-modal-btn" 
+                  style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}
+                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                >
+                  Hủy
+                </button>
+                <button 
+                  type="button"
+                  className="am-btn-primary" 
+                  style={{ 
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '13.5px',
+                    background: confirmModal.title.includes('Xóa') ? '#dc2626' : '#2563eb', 
+                    color: '#fff', 
+                    borderColor: 'transparent' 
+                  }}
+                  onClick={() => {
+                    confirmModal.onConfirm()
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                  }}
+                >
+                  Xác nhận
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

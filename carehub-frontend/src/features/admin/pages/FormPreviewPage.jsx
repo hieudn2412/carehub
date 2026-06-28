@@ -10,9 +10,11 @@ import {
   LoadingOutlined,
   ExclamationCircleOutlined,
 } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/FormPreviewPage.css'
 
 function FormPreviewPage() {
+  const { showToast } = useToast()
   const { id } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -64,7 +66,7 @@ function FormPreviewPage() {
 
   const handleSubjectLookup = () => {
     if (!employeeCode.trim()) {
-      alert('Vui lòng nhập mã nhân viên để tra cứu.')
+      showToast('Vui lòng nhập mã nhân viên để tra cứu.', 'warning')
       return
     }
 
@@ -458,7 +460,7 @@ function FormPreviewPage() {
                     <button
                       type="button"
                       className="fpp-btn-submit-mock"
-                      onClick={() => alert('Đây là chế độ xem trước (Preview). Kết quả đánh giá không thể lưu thực sự vào hệ thống.')}
+                      onClick={() => showToast('Đây là chế độ xem trước (Preview). Kết quả đánh giá không thể lưu thực sự vào hệ thống.', 'info')}
                     >
                       Gửi kết quả (Thử nghiệm)
                     </button>

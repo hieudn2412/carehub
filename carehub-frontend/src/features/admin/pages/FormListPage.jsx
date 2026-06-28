@@ -18,6 +18,7 @@ import {
   getChecklistDisplayCode,
   resolveChecklistSearchKeyword,
 } from '../utils/formCode.js'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
@@ -144,6 +145,12 @@ function getVisiblePages(currentPage, totalPages) {
 
 function FormListPage() {
   const navigate = useNavigate()
+  
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    form: null
+  })
   const [forms, setForms] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -309,13 +316,13 @@ function FormListPage() {
   }
 
   const handleRetire = async (form) => {
-    const confirmed = window.confirm(
-      `Ngừng hoạt động checklist "${form.title}"? Checklist sẽ không còn xuất hiện trong danh sách hoạt động.`,
-    )
+    setConfirmModal({
+      isOpen: true,
+      form
+    })
+  }
 
-    if (!confirmed) {
-      return
-    }
+  const executeRetire = async (form) => {
 
     try {
       setDeletingFormId(form.id)
@@ -694,6 +701,17 @@ function FormListPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Ngừng hoạt động checklist"
+        message={confirmModal.form ? `Ngừng hoạt động checklist "${confirmModal.form.title}"? Checklist sẽ không còn xuất hiện trong danh sách hoạt động.` : ''}
+        danger={true}
+        onConfirm={() => {
+          executeRetire(confirmModal.form)
+          setConfirmModal({ isOpen: false, form: null })
+        }}
+        onCancel={() => setConfirmModal({ isOpen: false, form: null })}
+      />
     </div>
   )
 }

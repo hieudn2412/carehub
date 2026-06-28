@@ -35,94 +35,122 @@
 
 .admin-sidebar {
   flex-shrink: 0;
-  width: 230px;
+  width: 222px;
   height: 100vh;
-  background: #fff;
-  border-right: 1px solid #e8e8e8;
+  background: #1e2a3a;
+  border-right: none;
   display: flex;
   flex-direction: column;
   font-size: 13px;
+  overflow: hidden;
 }
 
 .admin-sidebar__logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 20px 16px;
-  border-bottom: 1px solid #e8e8e8;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .admin-sidebar__logo-icon {
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .admin-sidebar__logo-name {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #fff;
+  letter-spacing: 0.01em;
 }
 
 .admin-sidebar__logo-sub {
   font-size: 11px;
-  color: #888;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .admin-sidebar__nav {
   flex: 1;
-  padding: 10px 8px;
+  padding: 4px 0 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.admin-sidebar__nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.admin-sidebar__nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar__nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+
+.admin-sidebar__nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .admin-sidebar__section-label {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
-  color: #1aaa84;
-  letter-spacing: 0.03em;
-  padding: 12px 10px 4px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 14px 18px 5px;
   margin: 0;
 }
 
 .admin-sidebar__item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  color: #555;
+  gap: 10px;
+  padding: 7px 18px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
-  transition: background 0.15s;
+  border-right: 3px solid transparent;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
 }
 
 .admin-sidebar__item:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
 }
 
 .admin-sidebar__item--active {
-  background: #e8f5f0;
-  color: #0f6e56;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
   font-weight: 500;
+  border-right-color: #4ade80;
 }
 
 .admin-sidebar__item-icon {
   font-size: 15px;
-  color: #999;
+  width: 15px;
+  text-align: center;
   flex-shrink: 0;
-}
-
-.admin-sidebar__item--active .admin-sidebar__item-icon {
-  color: #1aaa84;
+  opacity: 0.85;
+  color: inherit;
 }
 
 .admin-sidebar__footer {
+  margin-top: auto;
   padding: 10px 8px;
-  border-top: 0.5px solid #f0f0f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
 }
 
 .admin-sidebar__logout {
@@ -134,11 +162,11 @@
   border: none;
   background: none;
   border-radius: 8px;
-  color: #c0392b;
+  color: #fca5a5;
   font-size: 13px;
   cursor: pointer;
 }
 
 .admin-sidebar__logout:hover {
-  background: #fff0f0;
+  background: rgba(252, 165, 165, 0.08);
 }
