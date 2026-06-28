@@ -50,18 +50,16 @@ const QUESTION_FIELD_OPTIONS = [
   { value: 'SINGLE_CHOICE', label: FIELD_TYPE_LABELS.SINGLE_CHOICE, icon: 'radio' },
   { value: 'MULTIPLE_CHOICE', label: FIELD_TYPE_LABELS.MULTIPLE_CHOICE, icon: 'checkbox' },
   { value: 'DROPDOWN', label: FIELD_TYPE_LABELS.DROPDOWN, icon: 'dropdown' },
-  { value: 'BOOLEAN', label: FIELD_TYPE_LABELS.BOOLEAN, icon: 'boolean' },
-  { value: 'NUMBER', label: FIELD_TYPE_LABELS.NUMBER, icon: 'number' },
-  { value: 'DATE', label: FIELD_TYPE_LABELS.DATE, icon: 'date' },
-  { value: 'DATETIME', label: FIELD_TYPE_LABELS.DATETIME, icon: 'datetime' },
-  { value: 'USER_REF', label: FIELD_TYPE_LABELS.USER_REF, icon: 'user' },
-  { value: 'DEPARTMENT_REF', label: FIELD_TYPE_LABELS.DEPARTMENT_REF, icon: 'department' },
 ]
 
 function QuestionTypeSelect({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const selected = QUESTION_FIELD_OPTIONS.find((option) => option.value === value)
-    || QUESTION_FIELD_OPTIONS[0]
+    || {
+      value,
+      label: FIELD_TYPE_LABELS[value] || 'Kiểu câu hỏi cũ',
+      icon: 'legacy',
+    }
 
   return (
     <div
@@ -365,7 +363,7 @@ function FormBuilderPage() {
     const opts = q.options || []
     const newOpt = {
       optionKey: uuidv4(),
-      value: `OPT_${Date.now()}`,
+      value: `OPT_${Date.now()}_${opts.length}`,
       label: 'Lựa chọn mới',
       scoreValue: 0,
       compliant: true,
@@ -976,27 +974,6 @@ function FormBuilderPage() {
                                         </div>
                                       </div>
 
-                                      <div className="fbp-settings-section fbp-settings-section--technical">
-                                        <div>
-                                          <strong>Kỹ thuật</strong>
-                                          <p>Mã câu hỏi dùng để đồng bộ với backend/import. Chỉ chỉnh khi cần.</p>
-                                        </div>
-                                        <div className="fbp-form-field">
-                                          <label>Mã câu hỏi</label>
-                                          <input
-                                            type="text"
-                                            className="fbp-input"
-                                            value={item.question.code || ''}
-                                            onChange={(e) => handleQuestionChange(
-                                              secIdx,
-                                              itemIdx,
-                                              'code',
-                                              e.target.value.toUpperCase().replace(/[^A-Z0-9_.-]/g, ''),
-                                            )}
-                                            placeholder="Vd: VS_TAY_01"
-                                          />
-                                        </div>
-                                      </div>
                                     </div>
                                   )}
 
@@ -1056,18 +1033,6 @@ function FormBuilderPage() {
                                                 onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'label', e.target.value)}
                                                 placeholder="Ví dụ: Có"
                                               />
-                                              {isAdvancedOpen && (
-                                                <div className="fbp-option-advanced">
-                                                  <label>Giá trị lưu</label>
-                                                  <input
-                                                    type="text"
-                                                    className="fbp-option-value-input"
-                                                    value={opt.value || ''}
-                                                    onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'value', e.target.value.toUpperCase())}
-                                                    placeholder="YES"
-                                                  />
-                                                </div>
-                                              )}
                                             </div>
 
                                             <label className="fbp-option-score">
