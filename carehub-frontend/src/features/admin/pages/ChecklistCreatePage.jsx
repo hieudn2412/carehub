@@ -5,7 +5,7 @@ import {
   CloseOutlined,
   CopyOutlined,
   DeleteOutlined,
-  DownCircleOutlined,
+  DownOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   SaveOutlined,
@@ -27,6 +27,79 @@ const QUESTION_TYPES = [
   { value: 'SHORT_TEXT', label: 'Trả lời ngắn' },
   { value: 'LONG_TEXT', label: 'Đoạn văn' },
 ]
+
+const QUESTION_TYPE_ICONS = {
+  SHORT_TEXT: 'short-text',
+  LONG_TEXT: 'paragraph',
+  SINGLE_CHOICE: 'radio',
+  MULTIPLE_CHOICE: 'checkbox',
+  DROPDOWN: 'dropdown',
+}
+const QUESTION_TYPE_ORDER = [
+  'SHORT_TEXT',
+  'LONG_TEXT',
+  'SINGLE_CHOICE',
+  'MULTIPLE_CHOICE',
+  'DROPDOWN',
+]
+const QUESTION_TYPE_SELECT_OPTIONS = QUESTION_TYPE_ORDER
+  .map((value) => QUESTION_TYPES.find((type) => type.value === value))
+  .filter(Boolean)
+  .map((type) => ({
+    ...type,
+    icon: QUESTION_TYPE_ICONS[type.value] || 'legacy',
+  }))
+
+function QuestionTypeSelect({ disabled, onChange, value }) {
+  const [open, setOpen] = useState(false)
+  const selected = QUESTION_TYPE_SELECT_OPTIONS.find((type) => type.value === value)
+    || { value, label: value || 'Legacy', icon: 'legacy' }
+
+  return (
+    <div
+      className={`ccp-type-select ${open ? 'is-open' : ''}`}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+          setOpen(false)
+        }
+      }}
+    >
+      <button
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className="ccp-type-select__trigger"
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        type="button"
+      >
+        <span className={`ccp-type-icon ccp-type-icon--${selected.icon}`} aria-hidden="true" />
+        <span>{selected.label}</span>
+        <DownOutlined className="ccp-type-select__chevron" />
+      </button>
+
+      {open && (
+        <div className="ccp-type-select__menu" role="listbox">
+          {QUESTION_TYPE_SELECT_OPTIONS.map((type) => (
+            <button
+              aria-selected={type.value === value}
+              className={`ccp-type-select__option ${type.value === value ? 'is-selected' : ''}`}
+              key={type.value}
+              onClick={() => {
+                onChange(type.value)
+                setOpen(false)
+              }}
+              role="option"
+              type="button"
+            >
+              <span className={`ccp-type-icon ccp-type-icon--${type.icon}`} aria-hidden="true" />
+              <span>{type.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function createId() {
   if (typeof window !== 'undefined' && window.crypto?.randomUUID) {
@@ -56,7 +129,7 @@ function createQuestion() {
     questionKey: null,
     code: null,
     title: '',
-    fieldType: 'DROPDOWN',
+    fieldType: 'SINGLE_CHOICE',
     options: [createOption(0), createOption(1)],
   }
 }
@@ -812,30 +885,13 @@ function ChecklistCreatePage() {
                           value={question.title}
                         />
 
-                        <label className="ccp-type-select">
-                          <DownCircleOutlined />
-                          <select
-                            aria-label="Loại câu hỏi"
-                            disabled={!formControlsEnabled}
-                            onChange={(event) =>
-                              updateQuestion(question.id, 'fieldType', event.target.value)
-                            }
-                            value={question.fieldType}
-                          >
-                            {!QUESTION_TYPES.some(
-                              (type) => type.value === question.fieldType,
-                            ) && (
-                              <option value={question.fieldType}>
-                                {question.fieldType}
-                              </option>
-                            )}
-                            {QUESTION_TYPES.map((type) => (
-                              <option key={type.value} value={type.value}>
-                                {type.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        <QuestionTypeSelect
+                          disabled={!formControlsEnabled}
+                          onChange={(nextFieldType) =>
+                            updateQuestion(question.id, 'fieldType', nextFieldType)
+                          }
+                          value={question.fieldType}
+                        />
                       </div>
 
                       {isChoiceField(question.fieldType) ? (
