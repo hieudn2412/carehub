@@ -3,6 +3,8 @@ import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import { SearchOutlined, LeftOutlined, RightOutlined, LoadingOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/ReferenceDepartmentsListPage.css'
 
 // Generate 248 mock reference departments to match mockup details
@@ -57,9 +59,16 @@ const generateMockDepartments = () => {
 }
 
 function ReferenceDepartmentsListPage() {
+  const { showToast } = useToast()
   const [apiDepts, setApiDepts] = useState([])
   const [loading, setLoading] = useState(true)
   const [useMock, setUseMock] = useState(false)
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    id: null
+  })
 
   // Filters State
   const [search, setSearch] = useState('')
@@ -131,7 +140,7 @@ function ReferenceDepartmentsListPage() {
   const handleFormSubmit = (e) => {
     e.preventDefault()
     if (!formDeptCode.trim() || !formDeptName.trim()) {
-      alert('Vui lòng nhập đầy đủ Mã và Tên phòng ban.')
+      showToast('Vui lòng nhập đầy đủ Mã và Tên phòng ban.', 'warning')
       return
     }
 
@@ -144,41 +153,46 @@ function ReferenceDepartmentsListPage() {
       // Update
       adminApi.updateDepartment(editingDept.id, payload)
         .then(() => {
-          alert('Cập nhật phòng ban thành công!')
+          showToast('Cập nhật phòng ban thành công!', 'success')
           setIsModalOpen(false)
           loadDepartments()
         })
         .catch(err => {
           console.error(err)
-          alert(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phòng ban.')
+          showToast(err.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phòng ban.', 'error')
         })
     } else {
       // Create
       adminApi.createDepartment(payload)
         .then(() => {
-          alert('Tạo phòng ban thành công!')
+          showToast('Tạo phòng ban thành công!', 'success')
           setIsModalOpen(false)
           loadDepartments()
         })
         .catch(err => {
           console.error(err)
-          alert(err.response?.data?.message || 'Có lỗi xảy ra khi tạo phòng ban.')
+          showToast(err.response?.data?.message || 'Có lỗi xảy ra khi tạo phòng ban.', 'error')
         })
     }
   }
 
   const handleDeleteDept = (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa phòng ban này? Hành động này không thể hoàn tác.')) {
-      adminApi.deleteDepartment(id)
-        .then(() => {
-          alert('Xóa phòng ban thành công!')
-          loadDepartments()
-        })
-        .catch(err => {
-          console.error(err)
-          alert(err.response?.data?.message || 'Không thể xóa phòng ban này.')
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      id
+    })
+  }
+
+  const executeDeleteDept = (id) => {
+    adminApi.deleteDepartment(id)
+      .then(() => {
+        showToast('Xóa phòng ban thành công!', 'success')
+        loadDepartments()
+      })
+      .catch(err => {
+        console.error(err)
+        showToast(err.response?.data?.message || 'Không thể xóa phòng ban này.', 'error')
+      })
   }
 
   // Reset page when filters change
@@ -446,6 +460,17 @@ function ReferenceDepartmentsListPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Xóa phòng ban"
+        message="Bạn có chắc chắn muốn xóa phòng ban này? Hành động này không thể hoàn tác."
+        danger={true}
+        onConfirm={() => {
+          executeDeleteDept(confirmModal.id)
+          setConfirmModal({ isOpen: false, id: null })
+        }}
+        onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+      />
     </div>
   )
 }

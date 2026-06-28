@@ -58,6 +58,7 @@ import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.j
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
+import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
 import { ADMIN_ROLES, AUTH_ROLE } from '../features/auth/utils/authNavigation.js'
 
@@ -148,6 +149,90 @@ function AppRouter() {
       <Route path="/admin/evaluation/classification-rules/new" element={adminElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={adminElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
+
+      {/* Placeholder routes — sidebar mới có mục này nhưng trang thật chưa được code, sẽ thay bằng trang thật khi xây xong */}
+      <Route
+        path="/admin/training/evidence-review"
+        element={adminElement(
+          <ComingSoonPage
+            title="Duyệt minh chứng"
+            breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/history"
+        element={adminElement(
+          <ComingSoonPage
+            title="Lịch sử đánh giá"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Lịch sử đánh giá' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/formulas"
+        element={adminElement(
+          <ComingSoonPage
+            title="Công thức chỉ số"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/targets"
+        element={adminElement(
+          <ComingSoonPage
+            title="Mục tiêu chất lượng"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Mục tiêu chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/training-dashboard"
+        element={adminElement(
+          <ComingSoonPage
+            title="Dashboard đào tạo"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard đào tạo' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/quality-dashboard"
+        element={adminElement(
+          <ComingSoonPage
+            title="Dashboard chất lượng"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/export-training"
+        element={adminElement(
+          <ComingSoonPage
+            title="Xuất báo cáo đào tạo"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo đào tạo' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/export-quality"
+        element={adminElement(
+          <ComingSoonPage
+            title="Xuất báo cáo chất lượng"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/profile"
+        element={adminElement(
+          <ComingSoonPage
+            title="Hồ sơ cá nhân"
+            breadcrumbs={[{ label: 'Tài khoản tôi' }, { label: 'Hồ sơ cá nhân' }]}
+          />
+        )}
+      />
+
 
 
       

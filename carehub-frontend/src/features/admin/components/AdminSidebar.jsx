@@ -9,18 +9,20 @@ import {
   BankOutlined,
   DatabaseOutlined,
   CheckSquareOutlined,
-  OrderedListOutlined,
   SlidersOutlined,
   LogoutOutlined,
   HistoryOutlined,
   BookOutlined,
   AuditOutlined,
-  FolderOutlined,
-  CarryOutOutlined,
-  ApartmentOutlined,
   CalculatorOutlined,
   AimOutlined,
-  TrophyOutlined,
+  FileSearchOutlined,
+  BarChartOutlined,
+  LineChartOutlined,
+  DownloadOutlined,
+  BellOutlined,
+  MailOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -37,11 +39,11 @@ const navSections = [
   {
     label: 'TÀI KHOẢN',
     items: [
-      { icon: <TeamOutlined />, label: 'Quản lý tài khoản', path: '/admin/accounts' },
+      { icon: <TeamOutlined />, label: 'Danh sách tài khoản', path: '/admin/accounts' },
     ],
   },
   {
-    label: 'DỮ LIỆU THAM CHIẾU',
+    label: 'DỮ LIỆU NỀN',
     items: [
       { icon: <TeamOutlined />, label: 'Danh sách nhân viên gốc', path: '/admin/reference/employees' },
       { icon: <BankOutlined />, label: 'Danh mục phòng ban gốc', path: '/admin/reference/departments' },
@@ -53,37 +55,48 @@ const navSections = [
     label: 'ĐÀO TẠO',
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
-      { icon: <AuditOutlined />, label: 'Yêu cầu', path: '/admin/training/requirements' },
-      { icon: <SlidersOutlined />, label: 'Các hình thức đào tạo', path: '/admin/training/activity-types' },
-    ],
-  },
-  {
-    label: 'ĐÁNH GIÁ',
-    items: [
-      { icon: <OrderedListOutlined />, label: 'Danh mục câu hỏi', path: '/admin/evaluation/categories' },
-      { icon: <CarryOutOutlined />, label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
-      { icon: <FolderOutlined />, label: 'Ngân hàng câu hỏi', path: '/admin/evaluation/question-bank' },
-      { icon: <CheckSquareOutlined />, label: 'Quy tắc phân loại', path: '/admin/evaluation/classification-rules' },
-      { icon: <SlidersOutlined />, label: 'Cấu hình bài kiểm tra', path: '/admin/evaluation/configs' },
+      { icon: <FileSearchOutlined />, label: 'Duyệt minh chứng', path: '/admin/training/evidence-review' },
+      { icon: <AuditOutlined />, label: 'Cấu hình yêu cầu', path: '/admin/training/requirements' },
+      { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
     ],
   },
   {
     label: 'CHẤT LƯỢNG',
     items: [
-      { icon: <CheckSquareOutlined />, label: 'Danh sách checklist', path: '/admin/quality/checklists' },
-      { icon: <CarryOutOutlined />, label: 'Checklist được giao', path: '/admin/quality/assigned' },
-      { icon: <ApartmentOutlined />, label: 'Biểu mẫu chất lượng', path: '/admin/quality/templates' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm / Quality forms', path: '/admin/quality/checklists' },
+      { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
       { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
-      { icon: <TrophyOutlined />, label: 'Cài đặt thang điểm', path: '/admin/quality/scoring' },
+    ],
+  },
+  {
+    label: 'DASHBOARD & BÁO CÁO',
+    items: [
+      { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
+      { icon: <LineChartOutlined />, label: 'Dashboard chất lượng', path: '/admin/reports/quality-dashboard' },
+      { icon: <DownloadOutlined />, label: 'Xuất báo cáo đào tạo', path: '/admin/reports/export-training' },
+      { icon: <DownloadOutlined />, label: 'Xuất báo cáo chất lượng', path: '/admin/reports/export-quality' },
     ],
   },
   {
     label: 'HỆ THỐNG',
     items: [
-      { icon: <FileTextOutlined />, label: 'System logs', path: '/admin/system-logs' },
       { icon: <SettingOutlined />, label: 'Cấu hình hệ thống', path: '/admin/system-settings' },
+      { icon: <FileTextOutlined />, label: 'System logs', path: '/admin/system-logs' },
       { icon: <ImportOutlined />, label: 'Import logs', path: '/admin/system/import-logs' },
+    ],
+  },
+  {
+    label: 'THÔNG BÁO',
+    items: [
+      { icon: <BellOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
+      { icon: <MailOutlined />, label: 'Mẫu email', path: '/admin/notifications/email-templates' },
+    ],
+  },
+  {
+    label: 'TÀI KHOẢN TÔI',
+    items: [
+      { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/admin/profile' },
     ],
   },
 ]
