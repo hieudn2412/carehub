@@ -30,6 +30,9 @@ import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
 import ClassificationRuleFormPage from '../features/evaluation/pages/ClassificationRuleFormPage.jsx'
 import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
+import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
+import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
+import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
 
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -138,6 +141,9 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
+      <Route path="/admin/evaluation/question-documents" element={adminElement(<QuestionDocumentListPage />)} />
+      <Route path="/admin/evaluation/question-documents/:documentId" element={adminElement(<QuestionDocumentDetailPage />)} />
+      <Route path="/admin/evaluation/document-question-jobs/:jobId" element={adminElement(<DocumentQuestionJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={adminElement(<QuestionCategoryListPage />)} />
       <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
