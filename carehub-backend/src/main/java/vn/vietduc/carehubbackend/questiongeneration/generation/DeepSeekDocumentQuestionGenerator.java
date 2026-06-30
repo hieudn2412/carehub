@@ -209,6 +209,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 "messages", messages,
                                 "temperature", properties.getTemperature(),
                                 "max_tokens", properties.getMaxOutputTokens(),
+                                "thinking", Map.of("type", "disabled"),
                                 "response_format", Map.of("type", "json_object")
                         ))
                         .retrieve()

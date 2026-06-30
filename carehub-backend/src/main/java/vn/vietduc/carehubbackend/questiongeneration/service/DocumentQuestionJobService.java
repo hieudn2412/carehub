@@ -120,6 +120,14 @@ public class DocumentQuestionJobService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<DocumentQuestionJobResponse> listByDocument(Long documentId) {
+        QuestionDocument document = documentService.findDocument(documentId);
+        return jobRepository.findByDocumentOrderByCreatedAtDesc(document).stream()
+                .map(job -> mapper.toJobResponse(job, List.of(), List.of()))
+                .toList();
+    }
+
     @Transactional
     public DocumentQuestionJobResponse retryFailedChunks(Long jobId) {
         DocumentQuestionJob job = findJob(jobId);
@@ -227,6 +235,9 @@ public class DocumentQuestionJobService {
             CandidateValidationResult validation = validationService.validate(question, chunk.getText());
             DuplicateCheckResult duplicate = duplicateCheckService.check(question.stem());
             List<String> warnings = new ArrayList<>(validation.warnings());
+            if (duplicate.warning() != null && !duplicate.warning().isBlank()) {
+                warnings.add(duplicate.warning());
+            }
             CandidateStatus status;
             CandidateLabel label;
             if (validation.rejected()) {

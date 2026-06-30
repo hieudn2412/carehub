@@ -33,6 +33,7 @@ import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
+import ParaphraseJobReviewPage from '../features/evaluation/pages/ParaphraseJobReviewPage.jsx'
 
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -157,6 +158,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-documents" element={adminElement(<QuestionDocumentListPage />)} />
       <Route path="/admin/evaluation/question-documents/:documentId" element={adminElement(<QuestionDocumentDetailPage />)} />
       <Route path="/admin/evaluation/document-question-jobs/:jobId" element={adminElement(<DocumentQuestionJobReviewPage />)} />
+      <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={adminElement(<ParaphraseJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={adminElement(<QuestionCategoryListPage />)} />
       <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
