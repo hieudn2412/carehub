@@ -16,6 +16,8 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateDocumentQu
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.DocumentQuestionJobService;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("${app.api-prefix}")
 @RequiredArgsConstructor
@@ -32,6 +34,14 @@ public class DocumentQuestionJobController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Tạo phiên sinh câu hỏi thành công",
                 jobService.createJob(documentId, request, actor(authentication))
+        ));
+    }
+
+    @GetMapping("/documents/{documentId}/question-jobs")
+    public ResponseEntity<ApiResponse<List<DocumentQuestionJobResponse>>> listByDocument(@PathVariable Long documentId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy lịch sử phiên sinh câu hỏi thành công",
+                jobService.listByDocument(documentId)
         ));
     }
 

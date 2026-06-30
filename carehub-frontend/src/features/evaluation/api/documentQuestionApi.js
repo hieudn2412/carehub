@@ -38,6 +38,12 @@ export const documentQuestionApi = {
     })
   },
 
+  listQuestionJobs(documentId) {
+    return httpClient.get(`/documents/${documentId}/question-jobs`, {
+      headers: authHeaders(),
+    })
+  },
+
   getQuestionJob(jobId) {
     return httpClient.get(`/document-question-jobs/${jobId}`, {
       headers: authHeaders(),

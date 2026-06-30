@@ -8,6 +8,8 @@ export const JOB_STATUS_LABELS = {
   CREATED: 'Đã tạo',
   GENERATING: 'Đang tạo',
   GENERATED: 'Đã tạo xong',
+  VALIDATING: 'Đang kiểm tra',
+  COMPLETED: 'Hoàn tất',
   PARTIALLY_COMPLETED: 'Hoàn thành một phần',
   FAILED: 'Thất bại',
   CANCELLED: 'Đã hủy',
@@ -72,8 +74,8 @@ export function difficultyText(value) {
 }
 
 export function statusTone(status) {
-  if (['READY', 'GOOD', 'APPROVED', 'VALIDATED', 'GENERATED'].includes(status)) return 'success'
-  if (['OCR_REQUIRED', 'NEED_REVIEW', 'PARTIALLY_COMPLETED', 'GENERATING', 'CREATED'].includes(status)) return 'warning'
+  if (['READY', 'GOOD', 'APPROVED', 'VALIDATED', 'GENERATED', 'COMPLETED'].includes(status)) return 'success'
+  if (['OCR_REQUIRED', 'NEED_REVIEW', 'PARTIALLY_COMPLETED', 'GENERATING', 'CREATED', 'VALIDATING'].includes(status)) return 'warning'
   if (['FAILED', 'REJECTED', 'CANCELLED'].includes(status)) return 'danger'
   if (['SAVED'].includes(status)) return 'info'
   return 'neutral'

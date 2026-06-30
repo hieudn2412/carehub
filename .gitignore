@@ -68,3 +68,8 @@ replay_pid*
 .attach_pid*
 *.tmp
 *.temp
+
+# Local storage
+storage/
+models/
+carehub-backend/models/

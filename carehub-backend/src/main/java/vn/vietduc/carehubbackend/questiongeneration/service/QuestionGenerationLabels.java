@@ -4,6 +4,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ParaphraseJobStatus;
 
 public final class QuestionGenerationLabels {
     private QuestionGenerationLabels() {
@@ -56,6 +57,20 @@ public final class QuestionGenerationLabels {
             case GOOD -> "Đạt";
             case NEED_REVIEW -> "Cần xem xét";
             case REJECTED -> "Đã từ chối";
+        };
+    }
+
+    public static String paraphraseJobStatus(ParaphraseJobStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case CREATED -> "Đã tạo";
+            case GENERATING -> "Đang diễn đạt lại";
+            case GENERATED -> "Đã sinh";
+            case VALIDATING -> "Đang kiểm tra";
+            case COMPLETED -> "Hoàn tất";
+            case FAILED -> "Thất bại";
         };
     }
 }

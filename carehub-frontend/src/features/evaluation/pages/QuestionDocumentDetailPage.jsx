@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeftOutlined,
+  EyeOutlined,
   FileSearchOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
@@ -17,6 +18,7 @@ import {
   documentStatusText,
   formatDateTime,
   formatNumber,
+  jobStatusText,
   qualityFlagsText,
   shortHash,
   statusTone,
@@ -28,6 +30,7 @@ function QuestionDocumentDetailPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [documentDetail, setDocumentDetail] = useState(null)
+  const [questionJobs, setQuestionJobs] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [showJobModal, setShowJobModal] = useState(false)
@@ -37,8 +40,12 @@ function QuestionDocumentDetailPage() {
   const loadDocument = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await documentQuestionApi.getDocument(documentId)
-      setDocumentDetail(apiData(response))
+      const [documentResponse, jobsResponse] = await Promise.all([
+        documentQuestionApi.getDocument(documentId),
+        documentQuestionApi.listQuestionJobs(documentId),
+      ])
+      setDocumentDetail(apiData(documentResponse))
+      setQuestionJobs(apiData(jobsResponse, []))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -231,10 +238,61 @@ function QuestionDocumentDetailPage() {
                     )}
 
                     {activeTab === 'jobs' && (
-                      <div className="qdoc-tab-body">
-                        <div className="qdoc-empty-state">
-                          Lịch sử phiên tạo sẽ hiển thị sau khi backend bổ sung API danh sách job theo tài liệu.
-                        </div>
+                      <div className="qdoc-tab-body qdoc-table-scroll">
+                        <table className="qdoc-table">
+                          <thead>
+                            <tr>
+                              <th>Phiên</th>
+                              <th>Trạng thái</th>
+                              <th>Model</th>
+                              <th>Câu hỏi</th>
+                              <th>Chunk</th>
+                              <th>Token</th>
+                              <th>Ngày tạo</th>
+                              <th>Hành động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {questionJobs.length === 0 ? (
+                              <tr>
+                                <td colSpan="8" className="qdoc-empty-cell">Chưa có phiên tạo câu hỏi cho tài liệu này.</td>
+                              </tr>
+                            ) : (
+                              questionJobs.map((job) => (
+                                <tr key={job.id}>
+                                  <td>#{job.id}</td>
+                                  <td>
+                                    <span className={`qdoc-badge qdoc-badge--${statusTone(job.status)}`}>
+                                      {jobStatusText(job)}
+                                    </span>
+                                  </td>
+                                  <td>{job.model || job.provider || 'Không rõ'}</td>
+                                  <td>{formatNumber(job.candidateCount)}</td>
+                                  <td>
+                                    {formatNumber(job.completedChunkCount)} / {formatNumber(job.chunkCount)}
+                                    {Number(job.failedChunkCount) > 0 && (
+                                      <span className="qdoc-mini-badge qdoc-mini-badge--warning">
+                                        Lỗi {formatNumber(job.failedChunkCount)}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>{formatNumber(job.usage?.totalTokens)}</td>
+                                  <td>{formatDateTime(job.createdAt)}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="qdoc-icon-btn qdoc-icon-btn--primary"
+                                      title="Mở review"
+                                      onClick={() => navigate(`/admin/evaluation/document-question-jobs/${job.id}`)}
+                                    >
+                                      <EyeOutlined />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     )}
                   </section>
