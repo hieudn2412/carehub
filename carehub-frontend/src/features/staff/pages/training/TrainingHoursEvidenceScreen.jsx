@@ -1,30 +1,43 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileTextOutlined,
   FileImageOutlined,
   FileUnknownOutlined,
   DownloadOutlined,
   DeleteOutlined,
-  UploadOutlined,
   InfoCircleOutlined,
-  ArrowLeftOutlined
+  ArrowLeftOutlined,
+  InboxOutlined,
+  LoadingOutlined
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursEvidenceScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
+  const { showToast } = useToast()
+
   const [record, setRecord] = useState(null)
   const [evidenceList, setEvidenceList] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
-  const [error, setError] = useState('')
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    evidenceId: null
+  })
+
+  // Editable constraint: only DRAFT or REJECTED records can modify evidence
+  const isEditable = record && (record.workflowStatus === 'DRAFT' || record.workflowStatus === 'REJECTED')
 
   const fetchRecordAndEvidence = () => {
     setLoading(true)
@@ -38,7 +51,7 @@ function TrainingHoursEvidenceScreen() {
       })
       .catch(err => {
         console.error("Error loading record or evidence", err)
-        setError("Không thể tải thông tin minh chứng.")
+        showToast("Không thể tải thông tin minh chứng.", "error")
       })
       .finally(() => {
         setLoading(false)
@@ -50,20 +63,33 @@ function TrainingHoursEvidenceScreen() {
   }, [id])
 
   const handleUpload = (file) => {
-    // Validate file size (5MB max)
+    if (!isEditable) {
+      showToast("Hồ sơ ở trạng thái hiện tại không thể thêm minh chứng.", "warning")
+      return
+    }
+
     if (file.size > 5 * 1024 * 1024) {
-      alert("Tập tin quá lớn. Kích thước tối đa là 5MB.")
+      showToast("Tập tin quá lớn. Kích thước tối đa là 5MB.", "warning")
+      return
+    }
+
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+    const fileExtension = file.name.split('.').pop().toLowerCase()
+    const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg']
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+      showToast("Định dạng tệp không được hỗ trợ. Chỉ cho phép các tệp PDF, PNG, JPG.", "warning")
       return
     }
 
     setUploading(true)
     trainingApi.uploadEvidence(id, file)
       .then(() => {
+        showToast("Tải lên minh chứng thành công!", "success")
         fetchRecordAndEvidence()
       })
       .catch(err => {
         console.error("Error uploading evidence", err)
-        alert("Tải lên thất bại. Vui lòng thử lại.")
+        showToast("Tải lên thất bại. Vui lòng thử lại.", "error")
       })
       .finally(() => {
         setUploading(false)
@@ -71,8 +97,8 @@ function TrainingHoursEvidenceScreen() {
   }
 
   const handleDropzoneClick = () => {
-    if (record?.workflowStatus === 'APPROVED') {
-      alert("Hồ sơ đã duyệt không thể chỉnh sửa minh chứng.")
+    if (!isEditable) {
+      showToast("Hồ sơ ở trạng thái hiện tại không thể chỉnh sửa minh chứng.", "warning")
       return
     }
     fileInputRef.current?.click()
@@ -87,7 +113,7 @@ function TrainingHoursEvidenceScreen() {
 
   const handleDragOver = (e) => {
     e.preventDefault()
-    if (record?.workflowStatus !== 'APPROVED') {
+    if (isEditable) {
       setDragOver(true)
     }
   }
@@ -99,7 +125,7 @@ function TrainingHoursEvidenceScreen() {
   const handleDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
-    if (record?.workflowStatus === 'APPROVED') {
+    if (!isEditable) {
       return
     }
     const file = e.dataTransfer.files?.[0]
@@ -113,37 +139,48 @@ function TrainingHoursEvidenceScreen() {
       .then(res => {
         const url = res.data?.data?.downloadUrl
         if (url) {
-          window.open(url, '_blank')
+          window.open(toAbsoluteDownloadUrl(url), '_blank', 'noopener,noreferrer')
+          showToast("Đang mở liên kết tải xuống...", "success")
         }
       })
       .catch(err => {
         console.error("Error downloading file", err)
-        alert("Không thể tải tập tin.")
+        showToast("Không thể tải tập tin.", "error")
       })
   }
 
   const handleDelete = (evidenceId) => {
-    if (record?.workflowStatus === 'APPROVED') {
-      alert("Hồ sơ đã duyệt không thể xóa minh chứng.")
+    if (!isEditable) {
+      showToast("Hồ sơ ở trạng thái hiện tại không thể xóa minh chứng.", "warning")
       return
     }
-    if (window.confirm("Bạn có chắc muốn xóa tệp minh chứng này không?")) {
-      trainingApi.deleteEvidence(id, evidenceId)
-        .then(() => {
-          fetchRecordAndEvidence()
-        })
-        .catch(err => {
-          console.error("Error deleting evidence", err)
-          alert("Không thể xóa tập tin.")
-        })
-    }
+    setConfirmModal({
+      isOpen: true,
+      evidenceId
+    })
+  }
+
+  const executeDelete = (evidenceId) => {
+    trainingApi.deleteEvidence(id, evidenceId)
+      .then(() => {
+        showToast("Đã xóa tệp minh chứng thành công.", "success")
+        fetchRecordAndEvidence()
+      })
+      .catch(err => {
+        console.error("Error deleting evidence", err)
+        showToast("Không thể xóa tập tin.", "error")
+      })
   }
 
   const getFileIcon = (mimeType) => {
-    if (!mimeType) return <FileUnknownOutlined />
-    if (mimeType.includes('pdf')) return <FileTextOutlined style={{ color: '#dc2626' }} />
-    if (mimeType.includes('image')) return <FileImageOutlined style={{ color: '#2563eb' }} />
-    return <FileUnknownOutlined />
+    if (!mimeType) return <FileUnknownOutlined className="file-type-icon" style={{ background: '#f1f5f9', color: '#64748b' }} />
+    if (mimeType.includes('pdf')) {
+      return <FileTextOutlined className="file-type-icon file-type-icon--pdf" />
+    }
+    if (mimeType.includes('image') || mimeType.includes('png') || mimeType.includes('jpeg')) {
+      return <FileImageOutlined className="file-type-icon file-type-icon--image" />
+    }
+    return <FileUnknownOutlined className="file-type-icon" style={{ background: '#f1f5f9', color: '#64748b' }} />
   }
 
   const formatSize = (bytes) => {
@@ -156,31 +193,49 @@ function TrainingHoursEvidenceScreen() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'APPROVED':
-        return 'Duyệt'
-      case 'PENDING_REVIEW':
-        return 'Chờ'
-      case 'REJECTED':
-        return 'Từ chối'
-      case 'DRAFT':
-        return 'Nháp'
-      default:
-        return status
+      case 'APPROVED': return 'Đã phê duyệt'
+      case 'PENDING_REVIEW': return 'Chờ phê duyệt'
+      case 'REJECTED': return 'Bị từ chối'
+      case 'DRAFT': return 'Bản nháp'
+      default: return status
     }
   }
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'APPROVED':
-        return 'training-badge--approved'
-      case 'PENDING_REVIEW':
-        return 'training-badge--pending'
-      case 'REJECTED':
-        return 'training-badge--rejected'
-      case 'DRAFT':
-        return 'training-badge--pending'
+      case 'APPROVED': return 'training-badge--approved'
+      case 'PENDING_REVIEW': return 'training-badge--pending'
+      case 'REJECTED': return 'training-badge--rejected'
+      case 'DRAFT': return 'training-badge--pending'
+      default: return 'training-badge--pending'
+    }
+  }
+
+  const toAbsoluteDownloadUrl = (downloadUrl) => {
+    if (!downloadUrl) return ''
+    if (/^https?:\/\//i.test(downloadUrl)) return downloadUrl
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+    const apiBase = new URL(apiBaseUrl, window.location.origin)
+    return new URL(downloadUrl, apiBase.origin).toString()
+  }
+
+  const getModerationLabel = (status) => {
+    switch (status) {
+      case 'PASSED': return 'Đã duyệt'
+      case 'FAILED': return 'Từ chối'
+      case 'PENDING':
       default:
-        return 'training-badge--pending'
+        return 'Chờ duyệt'
+    }
+  }
+
+  const getModerationBadgeClass = (status) => {
+    switch (status) {
+      case 'PASSED': return 'moderation-status-badge--passed'
+      case 'FAILED': return 'moderation-status-badge--failed'
+      case 'PENDING':
+      default:
+        return 'moderation-status-badge--pending'
     }
   }
 
@@ -195,143 +250,164 @@ function TrainingHoursEvidenceScreen() {
         ]} />
         <div className="dashboard-layout__body">
           <div className="training-page">
-
             {loading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Đang tải thông tin minh chứng...</div>
-            ) : error || !record ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>{error || 'Không tìm thấy hồ sơ.'}</div>
+              <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
+                <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin minh chứng...
+              </div>
+            ) : !record ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#ef4444' }}>
+                Không tìm thấy thông tin hồ sơ.
+              </div>
             ) : (
               <div>
                 <div>
                   <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Minh chứng đào tạo</h1>
-                  <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>{record.title} · Tải lên và quản lý các tệp minh chứng</p>
+                  <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 20px' }}>
+                    {record.title} · Quản lý và tải lên tệp minh chứng CME
+                  </p>
                 </div>
 
-                <div className="detail-card">
-                  {/* Top info */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 24 }}>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Đào tạo</label>
-                      <div className="detail-field__value">{record.title}</div>
-                    </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Trạng thái</label>
-                      <div className="detail-field__value" style={{ background: '#fff', display: 'flex', alignItems: 'center' }}>
-                        <span className={`training-badge ${getStatusClass(record.workflowStatus)}`}>
+                <div style={{ display: 'grid', gap: 20, gridTemplateColumns: '1fr 1fr', alignItems: 'stretch', marginBottom: 24 }}>
+                  {/* Left Info Panel */}
+                  <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0 }}>
+                    <dl className="training-definition" style={{ gap: '12px 16px' }}>
+                      <dt>Đào tạo</dt>
+                      <dd style={{ color: '#1e293b', fontWeight: 600 }}>{record.title}</dd>
+                      <dt>Trạng thái hồ sơ</dt>
+                      <dd>
+                        <span className={`training-badge ${getStatusClass(record.workflowStatus)}`} style={{ margin: 0 }}>
                           <span className="training-badge__dot" />
                           {getStatusLabel(record.workflowStatus)}
                         </span>
-                      </div>
-                    </div>
+                      </dd>
+                      <dt>Số giờ khai báo</dt>
+                      <dd style={{ color: '#2563eb', fontWeight: 700 }}>{record.declaredHours} giờ</dd>
+                    </dl>
                   </div>
 
-                  {/* Upload input */}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-
-                  {/* Files List */}
-                  <div style={{ marginBottom: 20 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      DANH SÁCH FILE MINH CHỨNG
-                    </p>
-                    {evidenceList.length === 0 ? (
-                      <div style={{ padding: '20px 0', textHTML: 'center', color: '#6b7280', border: '1px dashed #e5e7eb', borderRadius: 8, textAlign: 'center' }}>
-                        Chưa có tệp minh chứng nào được tải lên.
+                  {/* Right Upload Panel */}
+                  <div className="detail-card" style={{ margin: 0, padding: 18 }}>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/png,image/jpeg,application/pdf"
+                      style={{ display: 'none' }}
+                    />
+                    
+                    {isEditable ? (
+                      <div
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={handleDropzoneClick}
+                        className={`evidence-dropzone ${dragOver ? 'drag-active' : ''}`}
+                        style={{ margin: 0, padding: '24px 16px' }}
+                      >
+                        <InboxOutlined className="dropzone-icon" />
+                        <p className="dropzone-text">
+                          {uploading ? 'Đang tải lên...' : 'Kéo thả hoặc click để chọn file minh chứng'}
+                        </p>
+                        <small className="dropzone-hint">Định dạng JPG, PNG, PDF · Tối đa 5MB</small>
                       </div>
                     ) : (
-                      <div className="evidence-files-list">
-                        {evidenceList.map((f) => (
-                          <div key={f.id} className="evidence-file-item">
-                            <div className="evidence-file-item__info">
+                      <div className="evidence-info-box" style={{ background: '#f8fafc', borderColor: '#cbd5e1', color: '#64748b', height: '100%', display: 'flex', alignItems: 'center' }}>
+                        <InfoCircleOutlined style={{ fontSize: 18, color: '#64748b' }} />
+                        <p className="evidence-info-text">
+                          Hồ sơ đang ở trạng thái <strong>{getStatusLabel(record.workflowStatus)}</strong>. Bạn không thể thêm hoặc sửa đổi minh chứng trong trạng thái này.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Evidence List section */}
+                <div style={{ marginTop: 24 }}>
+                  <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: 8, marginBottom: 16 }}>
+                    Danh sách tệp minh chứng đã đính kèm
+                  </h2>
+                  
+                  {evidenceList.length === 0 ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280', border: '1px dashed #e5e7eb', borderRadius: 8 }}>
+                      Chưa có tệp minh chứng nào được tải lên cho hồ sơ này.
+                    </div>
+                  ) : (
+                    <div className="evidence-cards-grid">
+                      {evidenceList.map((f) => (
+                        <div className="evidence-card" key={f.id}>
+                          <div>
+                            <div className="evidence-card-header">
                               {getFileIcon(f.mimeType)}
-                              <div>
-                                <div className="evidence-file-item__name" style={{ fontWeight: 500 }}>{f.originalFilename}</div>
-                                <div style={{ fontSize: 12, color: '#6b7280' }}>{formatSize(f.fileSizeBytes)}</div>
+                              <div style={{ flex: 1 }}>
+                                <h4 className="evidence-card-title" title={f.originalFilename}>
+                                  {f.originalFilename}
+                                </h4>
+                                <div className="evidence-card-meta">
+                                  <span>{formatSize(f.fileSizeBytes)}</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="training-actions">
-                              <button
-                                onClick={() => handleDownload(f.id)}
-                                className="training-action-btn"
-                                style={{ color: '#16a34a', borderColor: '#16a34a' }}
-                                title="Tải xuống"
+                          </div>
+
+                          <div className="evidence-card-footer">
+                            <span className={`moderation-status-badge ${getModerationBadgeClass(f.moderationStatus)}`}>
+                              {getModerationLabel(f.moderationStatus)}
+                            </span>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button 
+                                className="training-button" 
+                                onClick={() => handleDownload(f.id)} 
+                                style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px' }}
+                                type="button"
                               >
-                                <DownloadOutlined />
+                                <DownloadOutlined style={{ marginRight: 4 }} /> Tải về
                               </button>
-                              {record.workflowStatus !== 'APPROVED' && (
-                                <button
-                                  onClick={() => handleDelete(f.id)}
-                                  className="training-action-btn"
-                                  style={{ color: '#dc2626', borderColor: '#fecaca' }}
-                                  title="Xóa"
+                              
+                              {isEditable && (
+                                <button 
+                                  className="training-button" 
+                                  onClick={() => handleDelete(f.id)} 
+                                  style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px', color: '#b91c1c', borderColor: '#fca5a5', background: '#fef2f2' }}
+                                  type="button"
                                 >
-                                  <DeleteOutlined />
+                                  <DeleteOutlined style={{ marginRight: 4 }} /> Xóa
                                 </button>
                               )}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Drop zone */}
-                  {record.workflowStatus !== 'APPROVED' && (
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onClick={handleDropzoneClick}
-                      className={`dropzone-container ${dragOver ? 'dragover' : ''}`}
-                    >
-                      <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
-                        <UploadOutlined style={{ fontSize: 32, color: '#1aaa84' }} />
-                      </div>
-                      <p className="dropzone-text">
-                        {uploading ? 'Đang tải lên...' : 'Kéo & thả hoặc click để chọn file · Định dạng .JPG, PNG, PDF · Tối đa 5MB'}
-                      </p>
+                        </div>
+                      ))}
                     </div>
                   )}
+                </div>
 
-                  {/* Info Box */}
-                  <div className="evidence-info-box">
-                    <InfoCircleOutlined style={{ color: '#16a34a', fontSize: 18 }} />
-                    <p className="evidence-info-text">
-                      Minh chứng có thể được xuất trình cho quản lý của bạn trong quá trình đánh giá. Tải xuống để lưu về máy.
-                    </p>
-                  </div>
-
-                  {/* Footer buttons */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
-                    <button
-                      onClick={() => navigate(`/staff/training/${id}`)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '10px 20px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        background: '#fff',
-                        color: '#374151',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <ArrowLeftOutlined /> Quay lại chi tiết
-                    </button>
-                  </div>
+                {/* Footer action */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, borderTop: '1px solid #e5e7eb', paddingTop: 20 }}>
+                  <button
+                    onClick={() => navigate(`/staff/training/${id}`)}
+                    className="training-button"
+                    style={{ borderRadius: 8, padding: '8px 18px', fontWeight: 600 }}
+                  >
+                    <ArrowLeftOutlined style={{ marginRight: 6 }} /> Quay lại chi tiết hồ sơ
+                  </button>
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Xóa minh chứng"
+        message="Bạn có chắc chắn muốn xóa tệp minh chứng này không? Hành động này không thể hoàn tác."
+        danger={true}
+        onConfirm={() => {
+          executeDelete(confirmModal.evidenceId)
+          setConfirmModal({ isOpen: false, evidenceId: null })
+        }}
+        onCancel={() => setConfirmModal({ isOpen: false, evidenceId: null })}
+      />
     </div>
   )
 }

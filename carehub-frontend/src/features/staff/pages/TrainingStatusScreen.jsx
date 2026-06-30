@@ -5,6 +5,7 @@ import { trainingApi } from '../../training/api/trainingApi'
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
+  LoadingOutlined
 } from '@ant-design/icons'
 import '../styles/TrainingStatusScreen.css'
 
@@ -16,61 +17,43 @@ function TrainingStatusScreen() {
     completionPercent: 0,
   })
 
-  const [yearsData, setYearsData] = useState([
-    { year: 2022, hours: 0, target: 24, passed: false },
-    { year: 2023, hours: 0, target: 24, passed: false },
-    { year: 2024, hours: 0, target: 24, passed: false },
-    { year: 2025, hours: 0, target: 24, passed: false },
-    { year: 2026, hours: 0, target: 24, passed: false },
-  ])
+  const [yearsData, setYearsData] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    trainingApi.listRecords({ size: 1000, workflowStatus: 'APPROVED', keyword: '%' })
+    setLoading(true)
+    trainingApi.getMyTrainingStatus()
       .then(res => {
-        const content = res.data?.data?.content || []
-        const total = content.reduce((sum, r) => sum + (r.approvedHours || 0), 0)
-        const missing = Math.max(0, 120 - total)
-        const pct = Math.min(Math.round((total / 120) * 100), 100)
+        const statusData = res.data?.data
+        if (statusData) {
+          setSummary({
+            totalHours: statusData.approvedHours || 0,
+            requiredHours: statusData.requiredHours || 120,
+            remainingHours: statusData.remainingHours || 0,
+            completionPercent: statusData.progressPercentage ? Math.round(statusData.progressPercentage) : 0,
+          })
 
-        setSummary({
-          totalHours: total,
-          requiredHours: 120,
-          remainingHours: missing,
-          completionPercent: pct,
-        })
+          const yearlyList = statusData.yearlyHours || []
+          
+          // Target hours mapped to match mock goals for visual authenticity
+          const yearlyTargets = { 2022: 28, 2023: 30, 2024: 30, 2025: 30, 2026: 30 }
 
-        // Group by year (2022 to 2026)
-        const yearMap = { 2022: 0, 2023: 0, 2024: 0, 2025: 0, 2026: 0 }
-        content.forEach(r => {
-          if (r.startDate) {
-            const y = r.startDate.substring(0, 4)
-            if (yearMap[y] !== undefined) {
-              yearMap[y] += (r.approvedHours || 0)
+          const updatedYears = yearlyList.map(y => {
+            const target = yearlyTargets[y.year] || 30
+            const hrs = y.approvedHours || 0
+            return {
+              year: y.year,
+              hours: hrs,
+              target: target,
+              passed: hrs >= target,
             }
-          }
-        })
+          }).sort((a, b) => a.year - b.year)
 
-        // Target hours mapped to match mock goals for visual authenticity:
-        // 2022: 28h, 2023: 30h, 2024: 30h, 2025: 30h, 2026: 30h
-        const yearlyTargets = { 2022: 28, 2023: 30, 2024: 30, 2025: 30, 2026: 30 }
-
-        const updatedYears = Object.keys(yearMap).map(y => {
-          const yr = parseInt(y)
-          const hrs = yearMap[y]
-          const target = yearlyTargets[yr] || 30
-          return {
-            year: yr,
-            hours: hrs,
-            target: target,
-            passed: hrs >= target,
-          }
-        }).sort((a, b) => a.year - b.year)
-
-        setYearsData(updatedYears)
+          setYearsData(updatedYears)
+        }
       })
       .catch(err => {
-        console.error("Lỗi khi tải trạng thái đào tạo:", err)
+        console.error("Lỗi khi tải trạng thái đào tạo từ API status/me:", err)
       })
       .finally(() => {
         setLoading(false)
@@ -87,8 +70,8 @@ function TrainingStatusScreen() {
           <p className="ts-page__sub">Tổng quan về việc tuân thủ CME · Chu kỳ 5 năm</p>
 
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>
-              Đang tải thông tin...
+            <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
+              <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin trạng thái...
             </div>
           ) : (
             <>
