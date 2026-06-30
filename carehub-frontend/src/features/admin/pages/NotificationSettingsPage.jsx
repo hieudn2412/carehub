@@ -3,12 +3,18 @@ import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import { LoadingOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/NotificationSettingsPage.css'
 
 function NotificationSettingsPage() {
+  const { showToast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
+
+  // Confirm Modal state
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
 
   // State corresponding to mockup switches
   const [cmeAlertEnabled, setCmeAlertEnabled] = useState(true)
@@ -80,7 +86,7 @@ function NotificationSettingsPage() {
       })
       .catch(err => {
         console.error('Lỗi khi lưu cấu hình:', err)
-        alert('Có lỗi xảy ra khi lưu cấu hình thông báo.')
+        showToast('Có lỗi xảy ra khi lưu cấu hình thông báo.', 'error')
       })
       .finally(() => {
         setSaving(false)
@@ -89,15 +95,18 @@ function NotificationSettingsPage() {
 
   // Reset to Defaults
   const handleResetDefaults = () => {
-    if (window.confirm('Bạn có chắc chắn muốn khôi phục thiết lập mặc định?')) {
-      setCmeAlertEnabled(true)
-      setAlertSchedule('Hàng tuần')
-      setTestAssignedEnabled(true)
-      setTestFailedEnabled(true)
-      setComplianceLowEnabled(true)
-      setCompliancePersonalEnabled(false)
+    setIsConfirmOpen(true)
+  }
 
-      setSaving(true)
+  const executeResetDefaults = () => {
+    setCmeAlertEnabled(true)
+    setAlertSchedule('Hàng tuần')
+    setTestAssignedEnabled(true)
+    setTestFailedEnabled(true)
+    setComplianceLowEnabled(true)
+    setCompliancePersonalEnabled(false)
+
+    setSaving(true)
       const payload = {
         inAppEnabled: true,
         emailEnabled: true,
@@ -120,7 +129,6 @@ function NotificationSettingsPage() {
         .finally(() => {
           setSaving(false)
         })
-    }
   }
 
   const breadcrumbs = [
@@ -292,6 +300,16 @@ function NotificationSettingsPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={isConfirmOpen}
+        title="Khôi phục thiết lập"
+        message="Bạn có chắc chắn muốn khôi phục thiết lập mặc định?"
+        onConfirm={() => {
+          setIsConfirmOpen(false)
+          executeResetDefaults()
+        }}
+        onCancel={() => setIsConfirmOpen(false)}
+      />
     </div>
   )
 }

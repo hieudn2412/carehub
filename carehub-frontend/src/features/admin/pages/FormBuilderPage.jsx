@@ -16,6 +16,8 @@ import {
   RightOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/FormBuilderPage.css'
 
 const CHOICE_FIELD_TYPES = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN']
@@ -154,8 +156,18 @@ function createDefaultQuestion() {
 }
 
 function FormBuilderPage() {
+  const { showToast } = useToast()
   const { id, versionId } = useParams()
   const navigate = useNavigate()
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null,
+    danger: false
+  })
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -263,10 +275,19 @@ function FormBuilderPage() {
   }
 
   const handleBack = () => {
-    if (dirty && !window.confirm('Bạn có thay đổi chưa lưu. Bạn vẫn muốn rời khỏi trang?')) {
-      return
+    if (dirty) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Thay đổi chưa lưu',
+        message: 'Bạn có thay đổi chưa lưu. Bạn vẫn muốn rời khỏi trang?',
+        danger: false,
+        onConfirm: () => {
+          navigate(`/admin/quality/checklists/${id}/edit`)
+        }
+      })
+    } else {
+      navigate(`/admin/quality/checklists/${id}/edit`)
     }
-    navigate(`/admin/quality/checklists/${id}/edit`)
   }
 
   const handleAddSection = () => {
@@ -281,12 +302,18 @@ function FormBuilderPage() {
   }
 
   const handleRemoveSection = (sectionIndex) => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa phần này cùng toàn bộ câu hỏi bên trong không?')) {
-      const updated = sections.filter((_, idx) => idx !== sectionIndex)
-      // Re-index sections
-      const reindexed = updated.map((sec, i) => ({ ...sec, displayOrder: i }))
-      updateSections(reindexed)
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa phần',
+      message: 'Bạn có chắc chắn muốn xóa phần này cùng toàn bộ câu hỏi bên trong không?',
+      danger: true,
+      onConfirm: () => {
+        const updated = sections.filter((_, idx) => idx !== sectionIndex)
+        // Re-index sections
+        const reindexed = updated.map((sec, i) => ({ ...sec, displayOrder: i }))
+        updateSections(reindexed)
+      }
+    })
   }
 
   const handleSectionChange = (sectionIndex, field, value) => {
@@ -399,7 +426,7 @@ function FormBuilderPage() {
 
     // Basic validation
     if (!title) {
-      alert('Vui lòng điền tiêu đề phiên bản.')
+      showToast('Vui lòng điền tiêu đề phiên bản.', 'warning')
       return
     }
 
@@ -525,7 +552,7 @@ function FormBuilderPage() {
 
     adminApi.updateFormVersion(id, versionId, payload)
       .then((res) => {
-        alert('Lưu bản thiết kế câu hỏi thành công!')
+        showToast('Lưu bản thiết kế câu hỏi thành công!', 'success')
         setSaving(false)
         if (res.data?.data) {
           setLockVersion(res.data.data.lockVersion || 0)
@@ -1105,6 +1132,17 @@ function FormBuilderPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        danger={confirmModal.danger}
+        onConfirm={() => {
+          confirmModal.onConfirm()
+          setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        }}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }

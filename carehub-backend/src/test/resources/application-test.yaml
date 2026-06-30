@@ -20,6 +20,16 @@ app:
       password: admin-password
       name: Admin
 
+ai:
+  generation:
+    provider: mock
+  embedding:
+    provider: lexical
+    preload: false
+  paraphrase:
+    provider: mock
+    preload: false
+
 spring:
   datasource:
     url: jdbc:h2:mem:carehub-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH

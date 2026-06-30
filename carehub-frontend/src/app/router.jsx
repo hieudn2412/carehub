@@ -30,6 +30,10 @@ import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
 import ClassificationRuleFormPage from '../features/evaluation/pages/ClassificationRuleFormPage.jsx'
 import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
+import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
+import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
+import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
+import ParaphraseJobReviewPage from '../features/evaluation/pages/ParaphraseJobReviewPage.jsx'
 
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
@@ -38,6 +42,7 @@ import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaff
 import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
 import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
+import TrainingHoursEvidencesListScreen from '../features/staff/pages/training/TrainingHoursEvidencesListScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
@@ -58,6 +63,19 @@ import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.j
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
+import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
+
+import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
+import ManagerEmployeeListPage from '../features/staff/pages/manager/ManagerEmployeeListPage.jsx'
+import ManagerEmployeeDetailPage from '../features/staff/pages/manager/ManagerEmployeeDetailPage.jsx'
+import ManagerEvidenceReviewListPage from '../features/staff/pages/manager/ManagerEvidenceReviewListPage.jsx'
+import ManagerEvidenceReviewDetailPage from '../features/staff/pages/manager/ManagerEvidenceReviewDetailPage.jsx'
+import ManagerExamResultsPage from '../features/staff/pages/manager/ManagerExamResultsPage.jsx'
+import ManagerExamResultDetailPage from '../features/staff/pages/manager/ManagerExamResultDetailPage.jsx'
+import ManagerChecklistListPage from '../features/staff/pages/manager/ManagerChecklistListPage.jsx'
+import ManagerChecklistEvaluationPage from '../features/staff/pages/manager/ManagerChecklistEvaluationPage.jsx'
+import ManagerEvaluationHistoryPage from '../features/staff/pages/manager/ManagerEvaluationHistoryPage.jsx'
+import ManagerEvaluationHistoryDetailPage from '../features/staff/pages/manager/ManagerEvaluationHistoryDetailPage.jsx'
 
 import { ADMIN_ROLES, AUTH_ROLE } from '../features/auth/utils/authNavigation.js'
 
@@ -137,6 +155,10 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
+      <Route path="/admin/evaluation/question-documents" element={adminElement(<QuestionDocumentListPage />)} />
+      <Route path="/admin/evaluation/question-documents/:documentId" element={adminElement(<QuestionDocumentDetailPage />)} />
+      <Route path="/admin/evaluation/document-question-jobs/:jobId" element={adminElement(<DocumentQuestionJobReviewPage />)} />
+      <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={adminElement(<ParaphraseJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={adminElement(<QuestionCategoryListPage />)} />
       <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
@@ -149,14 +171,109 @@ function AppRouter() {
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={adminElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
 
+      {/* Placeholder routes — sidebar mới có mục này nhưng trang thật chưa được code, sẽ thay bằng trang thật khi xây xong */}
+      <Route
+        path="/admin/training/evidence-review"
+        element={adminElement(
+          <ComingSoonPage
+            title="Duyệt minh chứng"
+            breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/history"
+        element={adminElement(
+          <ComingSoonPage
+            title="Lịch sử đánh giá"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Lịch sử đánh giá' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/formulas"
+        element={adminElement(
+          <ComingSoonPage
+            title="Công thức chỉ số"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/quality/targets"
+        element={adminElement(
+          <ComingSoonPage
+            title="Mục tiêu chất lượng"
+            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Mục tiêu chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/training-dashboard"
+        element={adminElement(
+          <ComingSoonPage
+            title="Dashboard đào tạo"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard đào tạo' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/quality-dashboard"
+        element={adminElement(
+          <ComingSoonPage
+            title="Dashboard chất lượng"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/export-training"
+        element={adminElement(
+          <ComingSoonPage
+            title="Xuất báo cáo đào tạo"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo đào tạo' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/reports/export-quality"
+        element={adminElement(
+          <ComingSoonPage
+            title="Xuất báo cáo chất lượng"
+            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo chất lượng' }]}
+          />
+        )}
+      />
+      <Route
+        path="/admin/profile"
+        element={adminElement(
+          <ComingSoonPage
+            title="Hồ sơ cá nhân"
+            breadcrumbs={[{ label: 'Tài khoản tôi' }, { label: 'Hồ sơ cá nhân' }]}
+          />
+        )}
+      />
 
-      
+      {/* Manager Specific Routes */}
+      <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
+      <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
+      <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
+      <Route path="/manager/evidence-review" element={managerOrAdminElement(<ManagerEvidenceReviewListPage />)} />
+      <Route path="/manager/evidence-review/:id" element={managerOrAdminElement(<ManagerEvidenceReviewDetailPage />)} />
+      <Route path="/manager/exam-results" element={managerOrAdminElement(<ManagerExamResultsPage />)} />
+      <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
+      <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
+      <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
+      <Route path="/manager/quality/history" element={managerOrAdminElement(<ManagerEvaluationHistoryPage />)} />
+      <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
+
       {/* Staff CME / Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />
       <Route path="/staff/training/new" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id" element={protectedElement(<TrainingHoursDetailScreen />)} />
       <Route path="/staff/training/:id/edit" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
+      <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />
 

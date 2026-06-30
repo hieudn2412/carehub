@@ -1,16 +1,21 @@
-import React, { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { questionBankApi } from '../api/questionBankApi.js'
+import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionFormPage.css'
 
 const CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'Quy trình lâm sàng', 'Cấp cứu', 'An toàn người bệnh']
 const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
+const ANSWER_LETTERS = ['A', 'B', 'C', 'D']
 
 function QuestionFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { showToast } = useToast()
   const isEditMode = Boolean(id)
 
   // Form State
@@ -20,14 +25,63 @@ function QuestionFormPage() {
   const [active, setActive] = useState(true)
   const [explanation, setExplanation] = useState('')
   const [questionType, setQuestionType] = useState('single') // 'single' or 'multiple'
+  const [isLoadingQuestion, setIsLoadingQuestion] = useState(false)
+  const [isBackendQuestion, setIsBackendQuestion] = useState(false)
   
   // Dynamic Options State
   const [options, setOptions] = useState(['', '', '', ''])
   const [correctOptionIndices, setCorrectOptionIndices] = useState([0])
 
+  const categoryOptions = useMemo(() => {
+    if (category && !CATEGORIES.includes(category)) {
+      return [category, ...CATEGORIES]
+    }
+    return CATEGORIES
+  }, [category])
+
   // Load existing question details in edit mode
   useEffect(() => {
-    if (isEditMode) {
+    if (!isEditMode) {
+      setIsBackendQuestion(false)
+      return undefined
+    }
+
+    let ignore = false
+
+    async function loadQuestion() {
+      setIsLoadingQuestion(true)
+      try {
+        const response = await questionBankApi.getQuestion(id)
+        const question = apiData(response)
+        if (!question) {
+          throw new Error('Empty question response')
+        }
+        if (ignore) return
+
+        setContent(question.stem || '')
+        setCategory(question.topic || question.sourceDocument || 'Chưa phân loại')
+        setDifficulty(difficultyText(question.difficulty))
+        setActive(question.status === 'APPROVED')
+        setExplanation(question.explanation || '')
+        setQuestionType('single')
+        setOptions([question.optionA || '', question.optionB || '', question.optionC || '', question.optionD || ''])
+        setCorrectOptionIndices([Math.max(0, ANSWER_LETTERS.indexOf(String(question.correctAnswer || 'A').toUpperCase()))])
+        setIsBackendQuestion(true)
+      } catch (error) {
+        if (ignore) return
+        setIsBackendQuestion(false)
+        const loadedLocal = loadLocalQuestion()
+        if (!loadedLocal) {
+          showToast(apiErrorMessage(error), 'warning')
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingQuestion(false)
+        }
+      }
+    }
+
+    function loadLocalQuestion() {
       const stored = localStorage.getItem('carehub_questions')
       if (stored) {
         try {
@@ -53,13 +107,21 @@ function QuestionFormPage() {
             } else {
               setCorrectOptionIndices([0])
             }
+            return true
           }
         } catch (e) {
           console.error('Error loading question details:', e)
         }
       }
+      return false
     }
-  }, [id, isEditMode])
+
+    loadQuestion()
+
+    return () => {
+      ignore = true
+    }
+  }, [id, isEditMode, showToast])
 
   const handleQuestionTypeChange = (type) => {
     setQuestionType(type)
@@ -113,6 +175,11 @@ function QuestionFormPage() {
 
   const handleSave = (e) => {
     e.preventDefault()
+
+    if (isBackendQuestion) {
+      showToast('Chưa có API cập nhật câu hỏi backend trong phase này.', 'warning')
+      return
+    }
     
     if (!content.trim()) {
       alert('Vui lòng nhập nội dung câu hỏi!')

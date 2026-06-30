@@ -4,6 +4,8 @@ import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import { SearchOutlined, EditOutlined, DeleteOutlined, LeftOutlined, RightOutlined, LoadingOutlined, PlusCircleOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/EmailTemplatesListPage.css'
 
 // Generate 74 mock email templates matching mockup exactly
@@ -73,9 +75,16 @@ const generateMockTemplates = () => {
 }
 
 function EmailTemplatesListPage() {
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Confirm Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    id: null
+  })
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
@@ -195,26 +204,31 @@ function EmailTemplatesListPage() {
 
   // Handle Delete Template
   const handleDelete = (id) => {
-    if (window.confirm('Bạn có chắc chắn muốn xoá biểu mẫu email này không?')) {
-      if (useMock) {
-        const idx = mockDatabase.findIndex(t => t.id === id)
-        if (idx !== -1) mockDatabase.splice(idx, 1)
-        applyMockFilters()
-      } else {
-        adminApi.deleteEmailTemplate(id)
-          .then(() => {
-            alert('Xoá biểu mẫu email thành công!')
-            setTemplates(prev => prev.filter(t => t.id !== id))
-            setTotalElements(prev => prev - 1)
-          })
-          .catch(err => {
-            console.error('Delete failed, fallback to local', err)
-            // Local fallback
-            const idx = mockDatabase.findIndex(t => t.id === id)
-            if (idx !== -1) mockDatabase.splice(idx, 1)
-            applyMockFilters()
-          })
-      }
+    setConfirmModal({
+      isOpen: true,
+      id
+    })
+  }
+
+  const executeDelete = (id) => {
+    if (useMock) {
+      const idx = mockDatabase.findIndex(t => t.id === id)
+      if (idx !== -1) mockDatabase.splice(idx, 1)
+      applyMockFilters()
+    } else {
+      adminApi.deleteEmailTemplate(id)
+        .then(() => {
+          showToast('Xoá biểu mẫu email thành công!', 'success')
+          setTemplates(prev => prev.filter(t => t.id !== id))
+          setTotalElements(prev => prev - 1)
+        })
+        .catch(err => {
+          console.error('Delete failed, fallback to local', err)
+          // Local fallback
+          const idx = mockDatabase.findIndex(t => t.id === id)
+          if (idx !== -1) mockDatabase.splice(idx, 1)
+          applyMockFilters()
+        })
     }
   }
 
@@ -382,6 +396,17 @@ function EmailTemplatesListPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Xóa biểu mẫu email"
+        message="Bạn có chắc chắn muốn xoá biểu mẫu email này không?"
+        danger={true}
+        onConfirm={() => {
+          executeDelete(confirmModal.id)
+          setConfirmModal({ isOpen: false, id: null })
+        }}
+        onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+      />
     </div>
   )
 }

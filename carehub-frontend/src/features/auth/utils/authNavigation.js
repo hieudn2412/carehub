@@ -33,7 +33,7 @@ export function getDefaultAuthenticatedRoute(roles) {
   }
 
   if (normalizedRoles.includes(AUTH_ROLE.manager)) {
-    return '/training'
+    return '/manager/dashboard'
   }
 
   if (normalizedRoles.includes(AUTH_ROLE.user)) {
