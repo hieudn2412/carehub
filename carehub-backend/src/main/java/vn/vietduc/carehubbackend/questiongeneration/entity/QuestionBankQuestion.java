@@ -4,6 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -58,6 +61,10 @@ public class QuestionBankQuestion extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "question_type", nullable = false, length = 16)
     private QuestionType questionType;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_question_id")
+    private QuestionBankQuestion parentQuestion;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

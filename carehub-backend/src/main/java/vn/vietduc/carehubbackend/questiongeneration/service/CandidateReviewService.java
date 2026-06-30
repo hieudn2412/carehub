@@ -9,6 +9,7 @@ import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDocumentQuestionCandidateRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
+import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
@@ -31,6 +32,7 @@ public class CandidateReviewService {
     private final QuestionBankQuestionRepository questionRepository;
     private final QuestionCandidateValidationService validationService;
     private final DuplicateCheckService duplicateCheckService;
+    private final QuestionEmbeddingService questionEmbeddingService;
     private final DocumentQuestionMapper mapper;
     private final ObjectMapper objectMapper;
 
@@ -106,6 +108,7 @@ public class CandidateReviewService {
                 .reviewedBy(actor)
                 .build();
         QuestionBankQuestion saved = questionRepository.save(question);
+        questionEmbeddingService.saveStemEmbedding(saved);
         candidate.setSavedQuestionId(saved.getId());
         candidate.setStatus(CandidateStatus.SAVED);
         return mapper.toCandidateResponse(candidateRepository.save(candidate));
@@ -130,6 +133,9 @@ public class CandidateReviewService {
         CandidateValidationResult validation = validationService.validate(generated, candidate.getChunk().getText());
         DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem());
         List<String> warnings = new ArrayList<>(validation.warnings());
+        if (duplicate.warning() != null && !duplicate.warning().isBlank()) {
+            warnings.add(duplicate.warning());
+        }
         if (validation.rejected()) {
             candidate.setStatus(CandidateStatus.REJECTED);
             candidate.setLabel(CandidateLabel.REJECTED);

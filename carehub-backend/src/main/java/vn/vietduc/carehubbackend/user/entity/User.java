@@ -61,6 +61,7 @@ public class User extends BaseEntity {
     private UserStatus status;
 
     @Column(name = "is_deleted")
+    @Builder.Default
     private boolean isDeleted = false;
 
     public boolean requiresFirstLoginSetup() {
