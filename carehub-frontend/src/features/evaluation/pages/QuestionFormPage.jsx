@@ -260,9 +260,15 @@ function QuestionFormPage() {
                     {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
                   </h2>
                   <p className="qf-subtitle">
-                    Thêm hoặc chỉnh sửa câu hỏi trắc nghiệm trong ngân hàng
+                    {isBackendQuestion
+                      ? 'Đang hiển thị câu hỏi từ backend. API cập nhật sẽ bổ sung ở phase sau.'
+                      : 'Thêm hoặc chỉnh sửa câu hỏi trắc nghiệm trong ngân hàng'}
                   </p>
                 </div>
+
+                {isLoadingQuestion && (
+                  <div className="qf-info-banner">Đang tải chi tiết câu hỏi...</div>
+                )}
 
                 <form onSubmit={handleSave} className="qf-form">
                   {/* Question Text */}
@@ -277,6 +283,7 @@ function QuestionFormPage() {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
+                      disabled={isLoadingQuestion || isBackendQuestion}
                     />
                   </div>
 
@@ -291,8 +298,9 @@ function QuestionFormPage() {
                         required
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
+                        disabled={isLoadingQuestion || isBackendQuestion}
                       >
-                        {CATEGORIES.map((cat, idx) => (
+                        {categoryOptions.map((cat, idx) => (
                           <option key={idx} value={cat}>
                             {cat}
                           </option>
@@ -309,6 +317,7 @@ function QuestionFormPage() {
                         required
                         value={difficulty}
                         onChange={(e) => setDifficulty(e.target.value)}
+                        disabled={isLoadingQuestion || isBackendQuestion}
                       >
                         {DIFFICULTIES.map((diff, idx) => (
                           <option key={idx} value={diff}>
@@ -327,6 +336,7 @@ function QuestionFormPage() {
                         required
                         value={questionType}
                         onChange={(e) => handleQuestionTypeChange(e.target.value)}
+                        disabled={isLoadingQuestion || isBackendQuestion}
                       >
                         <option value="single">Một đáp án đúng (Single choice)</option>
                         <option value="multiple">Nhiều đáp án đúng (Multiple choice)</option>
@@ -339,6 +349,7 @@ function QuestionFormPage() {
                         className="qf-input-red"
                         value={active.toString()}
                         onChange={(e) => setActive(e.target.value === 'true')}
+                        disabled={isLoadingQuestion || isBackendQuestion}
                       >
                         <option value="true">Hoạt động (Active)</option>
                         <option value="false">Ngưng hoạt động (Inactive)</option>
@@ -354,6 +365,7 @@ function QuestionFormPage() {
                       value={explanation}
                       onChange={(e) => setExplanation(e.target.value)}
                       placeholder="Nhập giải thích ngắn gọn cho đáp án đúng..."
+                      disabled={isLoadingQuestion || isBackendQuestion}
                     />
                   </div>
 
@@ -370,7 +382,11 @@ function QuestionFormPage() {
                         <div
                           key={idx}
                           className={`qf-option-card ${isCorrect ? 'qf-option-card--correct' : ''}`}
-                          onClick={() => handleSelectCorrect(idx)}
+                          onClick={() => {
+                            if (!isBackendQuestion && !isLoadingQuestion) {
+                              handleSelectCorrect(idx)
+                            }
+                          }}
                         >
                           <div className="qf-option-left">
                             <input
@@ -380,6 +396,7 @@ function QuestionFormPage() {
                               onChange={() => handleSelectCorrect(idx)}
                               className="qf-option-control"
                               onClick={(e) => e.stopPropagation()} // Prevent double triggers
+                              disabled={isLoadingQuestion || isBackendQuestion}
                             />
                             <span className="qf-option-letter">{getOptionLetter(idx)}</span>
                             <input
@@ -389,6 +406,7 @@ function QuestionFormPage() {
                               value={optionText}
                               onChange={(e) => handleOptionChange(idx, e.target.value)}
                               onClick={(e) => e.stopPropagation()} // Prevent selecting checkbox on text focus
+                              disabled={isLoadingQuestion || isBackendQuestion}
                             />
                           </div>
 
@@ -398,12 +416,13 @@ function QuestionFormPage() {
                                 <CheckOutlined /> Đúng (Correct)
                               </span>
                             )}
-                            {options.length > 2 && (
+                            {!isBackendQuestion && options.length > 2 && (
                               <button
                                 type="button"
                                 className="qf-option-delete-btn"
                                 onClick={() => handleDeleteOption(idx)}
                                 title="Xóa phương án này"
+                                disabled={isLoadingQuestion}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -415,18 +434,21 @@ function QuestionFormPage() {
                   </div>
 
                   {/* Add Option Button */}
-                  <button
-                    type="button"
-                    className="qf-btn-add-option"
-                    onClick={handleAddOption}
-                  >
-                    <PlusOutlined /> Thêm phương án trả lời
-                  </button>
+                  {!isBackendQuestion && (
+                    <button
+                      type="button"
+                      className="qf-btn-add-option"
+                      onClick={handleAddOption}
+                      disabled={isLoadingQuestion}
+                    >
+                      <PlusOutlined /> Thêm phương án trả lời
+                    </button>
+                  )}
 
                   {/* Actions Footer */}
                   <div className="qf-form-actions">
-                    <button type="submit" className="qf-btn-save">
-                      Lưu câu hỏi
+                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isBackendQuestion}>
+                      {isBackendQuestion ? 'Chưa hỗ trợ lưu backend' : 'Lưu câu hỏi'}
                     </button>
                     <button
                       type="button"
