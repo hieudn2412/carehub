@@ -50,11 +50,19 @@ function FormMetadataFormPage() {
   const [subjectType, setSubjectType] = useState('USER')
   const [ownerDepartmentId, setOwnerDepartmentId] = useState('')
 
-  const getErrorMessage = (error, fallback) => (
-    error?.response?.data?.message
-    || error?.response?.data?.error
-    || fallback
-  )
+  const getErrorMessage = (error, fallback) => {
+    const data = error?.response?.data
+    if (data) {
+      if (Array.isArray(data.details)) {
+        const detailsMsg = data.details.map(d => `${d.field}: ${d.message}`).join('; ')
+        if (detailsMsg) {
+          return `${data.message || 'Lỗi kiểm duyệt'}: ${detailsMsg}`
+        }
+      }
+      return data.message || data.error || fallback
+    }
+    return fallback
+  }
 
   const loadFormData = useCallback(() => {
     adminApi.getFormById(id)

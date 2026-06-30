@@ -9,11 +9,13 @@ import {
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursDetailScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [record, setRecord] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -42,12 +44,12 @@ function TrainingHoursDetailScreen() {
     setSubmitting(true)
     trainingApi.submitRecord(id)
       .then(() => {
-        alert("Gửi duyệt hồ sơ thành công!")
+        showToast("Gửi duyệt hồ sơ thành công!", "success")
         fetchRecord()
       })
       .catch(err => {
         console.error("Error submitting record", err)
-        alert("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.")
+        showToast("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.", "error")
       })
       .finally(() => {
         setSubmitting(false)
@@ -192,7 +194,7 @@ function TrainingHoursDetailScreen() {
                     >
                       <ArrowLeftOutlined /> Quay lại
                     </button>
-                    {record.workflowStatus !== 'APPROVED' && (
+                    {['DRAFT', 'REJECTED'].includes(record.workflowStatus) && (
                       <button
                         onClick={() => navigate(`/staff/training/${record.id}/edit`)}
                         style={{

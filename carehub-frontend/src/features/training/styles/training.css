@@ -459,3 +459,168 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Premium Evidence Styles */
+.evidence-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 32px 20px;
+  text-align: center;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.evidence-dropzone:hover, .evidence-dropzone.drag-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.evidence-dropzone.file-selected {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.dropzone-icon {
+  font-size: 36px;
+  color: #64748b;
+  margin-bottom: 12px;
+  transition: color 0.25s ease;
+}
+
+.evidence-dropzone:hover .dropzone-icon, .evidence-dropzone.drag-active .dropzone-icon {
+  color: #2563eb;
+}
+
+.evidence-dropzone.file-selected .dropzone-icon {
+  color: #10b981;
+}
+
+.dropzone-text {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0 0 4px;
+}
+
+.dropzone-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.selected-file-info {
+  text-align: center;
+}
+
+.selected-file-info .filename {
+  font-weight: 700;
+  color: #065f46;
+  margin: 0 0 4px;
+}
+
+.selected-file-info .filesize {
+  font-size: 12.5px;
+  color: #047857;
+}
+
+/* Modern List Cards for Evidences */
+.evidence-cards-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  margin-top: 16px;
+}
+
+.evidence-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.evidence-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.evidence-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.file-type-icon {
+  font-size: 28px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.file-type-icon--pdf {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.file-type-icon--image {
+  color: #3b82f6;
+  background: #dbeafe;
+}
+
+.evidence-card-title {
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #1e293b;
+  margin: 0 0 4px;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.evidence-card-meta {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.evidence-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.moderation-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.moderation-status-badge--passed {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.moderation-status-badge--pending {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.moderation-status-badge--failed {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+

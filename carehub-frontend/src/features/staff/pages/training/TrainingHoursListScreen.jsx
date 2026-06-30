@@ -16,10 +16,12 @@ import {
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursListScreen() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
   const [records, setRecords] = useState([])
@@ -70,7 +72,7 @@ function TrainingHoursListScreen() {
   const handleDirectSubmit = (recordId) => {
     trainingApi.submitRecord(recordId)
       .then(() => {
-        alert("Gửi duyệt hồ sơ thành công!")
+        showToast("Gửi duyệt hồ sơ thành công!", "success")
         setTrigger(t => t + 1)
         trainingApi.listRecords({ size: 1000, workflowStatus: 'APPROVED', keyword: '%' })
           .then(res => {
@@ -81,7 +83,7 @@ function TrainingHoursListScreen() {
       })
       .catch(err => {
         console.error("Error submitting record", err)
-        alert("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.")
+        showToast("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.", "error")
       })
   }
 
