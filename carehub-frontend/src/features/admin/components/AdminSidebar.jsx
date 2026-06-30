@@ -4,6 +4,7 @@ import {
   DashboardOutlined,
   TeamOutlined,
   FileTextOutlined,
+  FileAddOutlined,
   SettingOutlined,
   ImportOutlined,
   BankOutlined,
@@ -67,6 +68,17 @@ const navSections = [
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
       { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
+    ],
+  },
+  {
+    label: 'ĐÁNH GIÁ',
+    items: [
+      { icon: <FileAddOutlined />, label: 'Tạo câu hỏi từ tài liệu', path: '/admin/evaluation/question-documents' },
+      { icon: <FileTextOutlined />, label: 'Ngân hàng câu hỏi', path: '/admin/evaluation/question-bank' },
+      { icon: <BookOutlined />, label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
+      { icon: <DatabaseOutlined />, label: 'Danh mục câu hỏi', path: '/admin/evaluation/categories' },
+      { icon: <AuditOutlined />, label: 'Quy tắc phân loại', path: '/admin/evaluation/classification-rules' },
+      { icon: <SlidersOutlined />, label: 'Cấu hình đề kiểm tra', path: '/admin/evaluation/configs' },
     ],
   },
   {

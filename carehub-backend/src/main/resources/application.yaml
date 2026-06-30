@@ -31,6 +31,48 @@ app:
       password: ${ADMIN_PASSWORD}
       name: ${ADMIN_NAME}
 
+ai:
+  generation:
+    provider: ${GENERATION_PROVIDER:mock}
+    api-base-url: ${GENERATION_API_BASE_URL:https://api.deepseek.com}
+    api-key: ${GENERATION_API_KEY:${DEEPSEEK_API_KEY:}}
+    model: ${GENERATION_MODEL:deepseek-v4-flash}
+    fallback-model: ${GENERATION_FALLBACK_MODEL:deepseek-v4-pro}
+    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v1}
+    timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
+    max-retries: ${GENERATION_MAX_RETRIES:1}
+    temperature: ${GENERATION_TEMPERATURE:0.2}
+    max-output-tokens: ${GENERATION_MAX_OUTPUT_TOKENS:1800}
+    llm-validation-enabled: ${GENERATION_LLM_VALIDATION_ENABLED:true}
+  embedding:
+    provider: ${EMBEDDING_PROVIDER:lexical}
+    model: ${EMBEDDING_MODEL:intfloat/multilingual-e5-small}
+    dimension: ${EMBEDDING_DIMENSION:384}
+  paraphrase:
+    provider: ${PARAPHRASE_PROVIDER:local}
+    model: ${PARAPHRASE_MODEL:ngwgsang/vietquill-vit5-base-tsubaki}
+
+document:
+  storage-path: ${DOCUMENT_STORAGE_PATH:storage/documents}
+  supported-file-types:
+    - pdf
+    - docx
+    - txt
+    - md
+  questions-per-chunk: ${DOCUMENT_QUESTIONS_PER_CHUNK:3}
+  chunk:
+    target-tokens: ${DOCUMENT_CHUNK_TARGET_TOKENS:750}
+    max-tokens: ${DOCUMENT_CHUNK_MAX_TOKENS:1200}
+    overlap-tokens: ${DOCUMENT_CHUNK_OVERLAP_TOKENS:80}
+    min-useful-text-length: ${DOCUMENT_CHUNK_MIN_USEFUL_TEXT_LENGTH:80}
+
+validation:
+  duplicate:
+    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.93}
+    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.80}
+  quality:
+    reject-min: ${VALIDATION_QUALITY_REJECT_MIN:0.55}
+
 spring:
   servlet:
     multipart:
