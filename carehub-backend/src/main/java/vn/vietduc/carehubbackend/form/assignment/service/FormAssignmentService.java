@@ -57,8 +57,7 @@ public class FormAssignmentService {
             if (version.getStatus() != FormVersionStatus.PUBLISHED) {
                 throw ValidationException.field("formVersionIds", "Only published form versions can be assigned");
             }
-            if (itemRepository.existsOverlappingActiveAssignment(manager.getId(), version.getId(),
-                    FormAssignmentStatus.ACTIVE, from, request.validUntil())) {
+            if (hasOverlappingActiveAssignment(manager.getId(), version.getId(), from, request.validUntil())) {
                 throw new ConflictException("Manager already has an active assignment for form " + version.getForm().getCode());
             }
         }
@@ -117,6 +116,15 @@ public class FormAssignmentService {
     private User activeUser(Long id, String message) {
         return userRepository.findById(id).filter(u -> !u.isDeleted() && u.getStatus() == UserStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException(message));
+    }
+
+    private boolean hasOverlappingActiveAssignment(Long managerId, Long versionId, Instant from, Instant until) {
+        if (until == null) {
+            return itemRepository.existsOpenEndedOverlappingActiveAssignment(
+                    managerId, versionId, FormAssignmentStatus.ACTIVE, from);
+        }
+        return itemRepository.existsBoundedOverlappingActiveAssignment(
+                managerId, versionId, FormAssignmentStatus.ACTIVE, from, until);
     }
 
     private AssignedFormResponse toAssigned(FormAssignmentItem item, boolean detail) {
