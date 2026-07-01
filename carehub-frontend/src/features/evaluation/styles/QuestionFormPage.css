@@ -32,6 +32,17 @@
   margin: 0;
 }
 
+.qf-info-banner {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
 .qf-form {
   display: flex;
   flex-direction: column;
@@ -84,6 +95,20 @@
 .qf-input-green:focus {
   border-color: #059669 !important;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.qf-input-green:disabled,
+.qf-input-red:disabled,
+.qf-option-control:disabled,
+.qf-option-text-input:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.qf-input-green:disabled,
+.qf-input-red:disabled {
+  background: #f8fafc;
+  border-color: #cbd5e1 !important;
 }
 
 /* Red Border Field (selects & explanation as shown in mockup) */
@@ -190,6 +215,10 @@ select.qf-input-red {
   font-weight: 500;
 }
 
+.qf-option-text-input:disabled {
+  color: #0f172a;
+}
+
 .qf-option-text-input::placeholder {
   color: #94a3b8;
   font-style: italic;
@@ -280,6 +309,12 @@ select.qf-input-red {
 
 .qf-btn-save:hover {
   background: #0062cc;
+}
+
+.qf-btn-save:disabled,
+.qf-btn-add-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .qf-btn-cancel {
