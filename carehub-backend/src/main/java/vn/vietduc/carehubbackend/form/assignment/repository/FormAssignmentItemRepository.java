@@ -77,9 +77,24 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
               and i.status = :active
               and i.assignment.status = :active
               and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :fromTime)
-              and (:toTime is null or i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :toTime)
             """)
-    boolean existsOverlappingActiveAssignment(
+    boolean existsOpenEndedOverlappingActiveAssignment(
+            @Param("managerId") Long managerId,
+            @Param("versionId") Long versionId,
+            @Param("active") FormAssignmentStatus active,
+            @Param("fromTime") Instant fromTime
+    );
+
+    @Query("""
+            select (count(i) > 0) from FormAssignmentItem i
+            where i.assignment.manager.id = :managerId
+              and i.formVersion.id = :versionId
+              and i.status = :active
+              and i.assignment.status = :active
+              and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :fromTime)
+              and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :toTime)
+            """)
+    boolean existsBoundedOverlappingActiveAssignment(
             @Param("managerId") Long managerId,
             @Param("versionId") Long versionId,
             @Param("active") FormAssignmentStatus active,
