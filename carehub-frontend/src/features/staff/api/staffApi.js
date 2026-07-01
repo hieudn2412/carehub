@@ -18,4 +18,42 @@ export const staffApi = {
       headers: authHeaders(),
     })
   },
+
+  getAssignedForms(params) {
+    return httpClient.get('/assigned-forms', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getAssignedForm(assignmentItemId) {
+    return httpClient.get(`/assigned-forms/${assignmentItemId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  findAssignedFormSubject(params) {
+    return httpClient.get('/form-subjects/users', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  createFormSubmission(data) {
+    return httpClient.post('/form-submissions', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormSubmission(id, data) {
+    return httpClient.put(`/form-submissions/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  submitFormSubmission(id, data) {
+    return httpClient.post(`/form-submissions/${id}/submission`, data, {
+      headers: authHeaders(),
+    })
+  },
 }

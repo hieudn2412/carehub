@@ -64,7 +64,7 @@ const navSections = [
   {
     label: 'CHẤT LƯỢNG',
     items: [
-      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm / Quality forms', path: '/admin/quality/checklists' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
       { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },

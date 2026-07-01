@@ -116,7 +116,7 @@ function AppRouter() {
         element={protectedElement(<EmailConfirmResetScreen />, { allowFirstLoginSetup: true })}
       />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
-      
+
       {/* Admin / General Training routes */}
 
       <Route path="/admin/dashboard" element={adminElement(<AdminDashboard />)} />
@@ -171,7 +171,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={adminElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
 
-      {/* Placeholder routes — sidebar mới có mục này nhưng trang thật chưa được code, sẽ thay bằng trang thật khi xây xong */}
+      {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
       <Route
         path="/admin/training/evidence-review"
         element={adminElement(

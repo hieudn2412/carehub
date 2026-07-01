@@ -1,23 +1,48 @@
 # CareHub Frontend
 
-Frontend của CareHub được xây dựng bằng React và Vite.
+Frontend của CareHub được xây dựng bằng React và Vite. Dự án hiện dùng JavaScript/JSX, chưa dùng TypeScript.
 
-## Scripts
+## Công nghệ
 
-- `npm run dev`: chạy môi trường phát triển.
-- `npm run build`: build production.
-- `npm run lint`: kiểm tra lint.
-- `npm run preview`: preview bản build.
+- React
+- Vite
+- React Router
+- Axios
+- Recharts
+- CSS thuần theo từng feature
 
-## Environment
+## Chạy local
 
-Tạo file `.env` từ `.env.example` khi chạy local:
+```powershell
+npm install
+Copy-Item .env.example .env
+npm run dev
+```
+
+Ứng dụng mặc định chạy tại:
+
+```text
+http://localhost:5173
+```
+
+## Biến môi trường
+
+Tạo file `.env` từ `.env.example`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080/api/v1
 ```
 
-Không commit file `.env` chứa thông tin thật.
+Không commit `.env` vì file này có thể chứa cấu hình local hoặc secret.
+
+## Scripts
+
+```powershell
+npm run dev      # Chạy môi trường phát triển
+npm run build    # Build production
+npm run lint     # Kiểm tra lint
+npm run preview  # Preview bản build
+```
 
 ## Cấu trúc thư mục
 
@@ -29,6 +54,13 @@ src/
     router.jsx
   assets/
   features/
+    admin/
+      api/
+      components/
+      data/
+      pages/
+      styles/
+      utils/
     auth/
       api/
       components/
@@ -37,6 +69,10 @@ src/
       pages/
       services/
       styles/
+      utils/
+    evaluation/
+    staff/
+    training/
   shared/
     api/
     components/
@@ -44,26 +80,14 @@ src/
   main.jsx
 ```
 
-## Vai trò chính
+## Quy ước code
 
-- `app`: cấu hình cấp ứng dụng như router và provider.
-- `features`: code theo từng nghiệp vụ. Hiện có `auth`.
-- `features/auth/pages`: các màn hình login, quên mật khẩu, OTP, đặt lại mật khẩu.
-- `features/auth/components`: component chỉ dùng trong auth.
-- `features/auth/api`: hàm gọi API auth qua `httpClient`.
-- `features/auth/services`: logic không phụ thuộc React, ví dụ lưu token.
-- `features/auth/hooks`: custom hook cho auth.
-- `features/auth/styles`: CSS riêng cho auth.
-- `shared/api`: cấu hình HTTP dùng chung.
-- `shared/components`: component có thể tái sử dụng nhiều nơi.
-- `shared/styles`: style global thật sự dùng toàn app.
-- `assets`: chỉ giữ asset nhỏ. Ảnh lớn nên đưa lên CDN/Cloudinary.
-
-## Quy ước
-
-- Không gọi Axios trực tiếp trong page.
-- Không hard-code API URL trong component.
-- Không để feature-specific CSS trong `shared/styles`.
+- Không gọi Axios trực tiếp trong page; dùng API module của feature.
+- Không hard-code API URL trong component; dùng `VITE_API_BASE_URL`.
+- Không để CSS của một feature trong `shared/styles`.
 - `shared` không import ngược từ `features`.
-- Ảnh lớn không commit vào repo; dùng CDN với `f_auto,q_auto` nếu có thể.
-- Chạy `npm run lint` và `npm run build` trước khi commit.
+- Asset lớn nên đưa lên CDN/cloud và chỉ lưu URL trong code/config.
+- Mỗi màn lớn nên có file CSS riêng để tránh một file phình quá to và đá style lẫn nhau.
+- Trước khi commit nên chạy `npm run lint` và `npm run build`.
+
+

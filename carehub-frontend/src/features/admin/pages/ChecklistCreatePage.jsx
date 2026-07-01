@@ -20,6 +20,7 @@ import '../styles/ChecklistCreatePage.css'
 
 const CHOICE_FIELD_TYPES = ['DROPDOWN', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE']
 const PENDING_DRAFT_STORAGE_KEY = 'carehub.pendingChecklistDraft'
+const DEFAULT_FORM_SUBJECT_TYPE = 'USER'
 
 const QUESTION_TYPES = [
   { value: 'DROPDOWN', label: 'Menu thả xuống' },
@@ -280,7 +281,6 @@ function ChecklistCreatePage() {
   )
   const [noticeMessage, setNoticeMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-  const [existingForm, setExistingForm] = useState(null)
   const [loadedVersion, setLoadedVersion] = useState(null)
   const [sectionKey, setSectionKey] = useState(null)
   const [simpleEditable, setSimpleEditable] = useState(true)
@@ -319,7 +319,6 @@ function ChecklistCreatePage() {
       const draftSummary = versions.find((version) => version.status === 'DRAFT')
       const selectedVersionId = draftSummary?.id || form.currentPublishedVersion?.id
 
-      setExistingForm(form)
       setTitle(form.title || '')
       setDescription(form.description || '')
 
@@ -648,8 +647,8 @@ function ChecklistCreatePage() {
           await adminApi.updateForm(id, {
             title: resolvedTitle,
             description: resolvedDescription || null,
-            subjectType: existingForm?.subjectType || 'PROCESS',
-            ownerDepartmentId: existingForm?.ownerDepartment?.id || null,
+            subjectType: DEFAULT_FORM_SUBJECT_TYPE,
+            ownerDepartmentId: null,
           })
         } catch (metadataError) {
           await loadExistingChecklist()
@@ -675,7 +674,7 @@ function ChecklistCreatePage() {
           code: createChecklistCode(resolvedTitle),
           title: resolvedTitle,
           description: resolvedDescription || null,
-          subjectType: 'PROCESS',
+          subjectType: DEFAULT_FORM_SUBJECT_TYPE,
           ownerDepartmentId: null,
         })
 
@@ -687,7 +686,7 @@ function ChecklistCreatePage() {
         await adminApi.updateForm(formId, {
           title: resolvedTitle,
           description: resolvedDescription || null,
-          subjectType: 'PROCESS',
+          subjectType: DEFAULT_FORM_SUBJECT_TYPE,
           ownerDepartmentId: null,
         })
       }
