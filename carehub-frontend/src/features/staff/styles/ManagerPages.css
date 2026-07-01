@@ -237,6 +237,60 @@
   cursor: pointer;
 }
 
+.mgr-textarea {
+  width: 100%;
+  min-height: 84px;
+  padding: 10px 12px;
+  border: 1px solid var(--mgr-border);
+  border-radius: var(--mgr-radius-sm);
+  background: #fff;
+  color: var(--mgr-text);
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+}
+
+.mgr-textarea:focus,
+.mgr-select:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.mgr-feedback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid;
+  border-radius: var(--mgr-radius);
+  font-size: 13px;
+}
+
+.mgr-feedback span {
+  flex: 1;
+}
+
+.mgr-feedback button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mgr-feedback--error {
+  background: var(--mgr-red-bg);
+  border-color: #fecaca;
+  color: #b42318;
+}
+
 /* Badges */
 .mgr-badge {
   display: inline-flex;
@@ -383,4 +437,63 @@
   background: var(--mgr-green-bg);
   color: var(--mgr-green);
   font-weight: 600;
+}
+
+.mgr-checklist-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.mgr-checklist-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.mgr-checklist-card__top,
+.mgr-checklist-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mgr-checklist-card__top {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mgr-checklist-card__title {
+  color: var(--mgr-text);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 14px;
+}
+
+.mgr-checklist-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 14px 0 20px;
+  color: var(--mgr-text-soft);
+  font-size: 13px;
+}
+
+.mgr-checklist-card__meta > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mgr-checklist-card__footer {
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--mgr-border-light);
+}
+
+@media (max-width: 900px) {
+  .mgr-checklist-grid {
+    grid-template-columns: 1fr;
+  }
 }
