@@ -56,4 +56,17 @@ export const staffApi = {
       headers: authHeaders(),
     })
   },
+
+  getFormSubmissions(params) {
+    return httpClient.get('/form-submissions', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormSubmission(id) {
+    return httpClient.get(`/form-submissions/${id}`, {
+      headers: authHeaders(),
+    })
+  },
 }

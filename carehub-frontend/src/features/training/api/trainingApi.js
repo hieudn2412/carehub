@@ -105,6 +105,25 @@ export const trainingApi = {
     })
   },
 
+  getPendingRecords(params) {
+    return httpClient.get('/training/records/pending', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  approveRecord(id, payload) {
+    return httpClient.post(`/training/records/${id}/approve`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  rejectRecord(id, payload) {
+    return httpClient.post(`/training/records/${id}/reject`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
   getRecord(id) {
     return httpClient.get(`/training/records/${id}`, {
       headers: authHeaders(),

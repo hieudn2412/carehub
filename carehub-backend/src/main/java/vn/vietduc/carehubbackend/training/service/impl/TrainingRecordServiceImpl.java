@@ -36,6 +36,9 @@ import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileReposit
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordReviewRepository;
+import vn.vietduc.carehubbackend.training.entity.TrainingRecordReview;
+import vn.vietduc.carehubbackend.training.enums.ReviewDecision;
+import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordReviewRequest;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingAuditService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
@@ -45,10 +48,12 @@ import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -388,5 +393,79 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         data.put("editCount", record.getEditCount());
         data.put("version", record.getVersion());
         return data;
+    }
+
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse approve(Long id, TrainingRecordReviewRequest request) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        Set<String> roles = accessPolicy.currentRoleCodes();
+        if (!accessPolicy.canReviewRecord(actor, roles, record)) {
+            throw new ForbiddenException("You do not have permission to review this record");
+        }
+        
+        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.APPROVED, isAdmin());
+        
+        Map<String, Object> before = snapshot(record);
+        
+        BigDecimal approvedHours = request != null && request.approvedHours() != null 
+                ? request.approvedHours() 
+                : record.getDeclaredHours();
+        
+        record.setWorkflowStatus(TrainingRecordStatus.APPROVED);
+        record.setApprovedHours(approvedHours);
+        record.setUpdatedByUser(actor);
+        
+        TrainingRecord saved = recordRepository.save(record);
+        
+        reviewRepository.save(TrainingRecordReview.builder()
+                .trainingRecord(saved)
+                .decision(ReviewDecision.APPROVED)
+                .declaredHoursSnapshot(saved.getDeclaredHours())
+                .approvedHours(approvedHours)
+                .reason(request != null ? request.reason() : "Approved")
+                .reviewedByUser(actor)
+                .reviewedAt(LocalDateTime.now())
+                .build());
+                
+        auditService.logRecordChange(saved, TrainingRecordChangeType.APPROVED, before, snapshot(saved), actor);
+        return detailResponse(saved, 0);
+    }
+
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse reject(Long id, TrainingRecordReviewRequest request) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        Set<String> roles = accessPolicy.currentRoleCodes();
+        if (!accessPolicy.canReviewRecord(actor, roles, record)) {
+            throw new ForbiddenException("You do not have permission to review this record");
+        }
+        
+        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.REJECTED, isAdmin());
+        
+        String reason = request != null ? request.reason() : null;
+        stateMachine.requireRejectReason(reason);
+        
+        Map<String, Object> before = snapshot(record);
+        
+        record.setWorkflowStatus(TrainingRecordStatus.REJECTED);
+        record.setUpdatedByUser(actor);
+        
+        TrainingRecord saved = recordRepository.save(record);
+        
+        reviewRepository.save(TrainingRecordReview.builder()
+                .trainingRecord(saved)
+                .decision(ReviewDecision.REJECTED)
+                .declaredHoursSnapshot(saved.getDeclaredHours())
+                .approvedHours(BigDecimal.ZERO)
+                .reason(reason)
+                .reviewedByUser(actor)
+                .reviewedAt(LocalDateTime.now())
+                .build());
+                
+        auditService.logRecordChange(saved, TrainingRecordChangeType.REJECTED, before, snapshot(saved), actor);
+        return detailResponse(saved, 0);
     }
 }

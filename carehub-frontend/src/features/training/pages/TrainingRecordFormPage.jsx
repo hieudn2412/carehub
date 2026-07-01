@@ -367,7 +367,7 @@ function toPayload(form) {
     title: form.title,
     provider: form.provider || null,
     description: form.description || null,
-    startDate: form.startDate,
+    startDate: form.startDate || null,
     endDate: form.endDate || null,
     startTime: form.startTime || null,
     endTime: form.endTime || null,

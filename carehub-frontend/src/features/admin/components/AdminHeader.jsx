@@ -8,10 +8,71 @@ import {
 } from '@ant-design/icons'
 import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
+import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import '../styles/AdminHeader.css'
+
+function getFallbackLink(label, roles = []) {
+  const isAdm = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
+  const isMgr = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
+  const lbl = String(label).toLowerCase().trim()
+  
+  if (lbl.includes('chất lượng') || lbl.includes('checklist') || lbl.includes('bảng kiểm')) {
+    return isAdm ? '/admin/quality/checklists' : '/manager/quality/checklists'
+  }
+  if (lbl.includes('đào tạo')) {
+    return '/training/employees'
+  }
+  if (lbl.includes('đánh giá') || lbl.includes('lịch sử')) {
+    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
+  }
+  if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
+    return isAdm ? '/admin/reference/employees' : '/manager/employees'
+  }
+  if (lbl.includes('phòng ban')) {
+    return '/admin/reference/departments'
+  }
+  if (lbl.includes('hệ thống') || lbl.includes('log') || lbl.includes('cấu hình hệ thống')) {
+    return '/admin/system-settings'
+  }
+  if (lbl.includes('thông báo')) {
+    return '/admin/notifications/settings'
+  }
+  if (lbl.includes('mẫu email')) {
+    return '/admin/notifications/email-templates'
+  }
+  if (lbl.includes('quy tắc phân loại')) {
+    return '/admin/evaluation/classification-rules'
+  }
+  if (lbl.includes('bộ câu hỏi')) {
+    return '/admin/evaluation/question-sets'
+  }
+  if (lbl.includes('danh mục câu hỏi')) {
+    return '/admin/evaluation/categories'
+  }
+  if (lbl.includes('ngân hàng câu hỏi')) {
+    return '/admin/evaluation/question-bank'
+  }
+  if (lbl.includes('cấu hình đề')) {
+    return '/admin/evaluation/configs'
+  }
+  if (lbl.includes('tạo câu hỏi từ tài liệu')) {
+    return '/admin/evaluation/question-documents'
+  }
+  if (lbl.includes('duyệt minh chứng')) {
+    return isAdm ? '/admin/training/evidence-review' : '/manager/evidence-review'
+  }
+  if (lbl === 'trang chủ' || lbl === 'home') {
+    return isAdm ? '/admin/dashboard' : (isMgr ? '/manager/dashboard' : '/staff/dashboard')
+  }
+  return null
+}
 
 function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
   const [profile, setProfile] = useState(null)
+  
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
 
   useEffect(() => {
     staffApi.getProfile()
@@ -62,51 +123,28 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
     }
   }
 
-  const getIconWrapperColorClass = (type) => {
-    switch (type) {
-      case 'DANGER':
-        return 'danger'
-      case 'WARNING':
-        return 'warning'
-      case 'SUCCESS':
-        return 'success'
-      default:
-        return 'warning'
-    }
-  }
-
-  const renderDescription = (text) => {
-    if (!text) return null
-    const match = text.match(/(\d+\s*\/\s*120\s*(?:h|giờ))/i)
-    if (match) {
-      const matchedText = match[1]
-      const parts = text.split(matchedText)
+  const renderNotificationContent = () => {
+    if (notifications.length === 0) {
       return (
-        <p className="notify-item__desc">
-          {parts[0]}<span className="highlight-red">{matchedText}</span>{parts[1]}
-        </p>
+        <div className="notify-popover__empty">
+          <p>Không có thông báo mới nào</p>
+        </div>
       )
     }
-    return <p className="notify-item__desc">{text}</p>
-  }
 
-  const renderGroup = (label, groupItems) => {
-    if (groupItems.length === 0) return null
     return (
-      <div className="notify-group">
-        <p className="notify-group__label">{label}</p>
-        {groupItems.map(item => (
+      <div className="notify-popover__list">
+        {notifications.map((item) => (
           <div
             key={item.id}
-            className={`notify-item ${!item.isRead ? 'notify-item--unread' : ''}`}
+            className={`notify-item ${item.read ? 'read' : ''}`}
             onClick={() => markAsRead(item.id)}
           >
-            <div className={`notify-item__icon-wrapper notify-item__icon-wrapper--${getIconWrapperColorClass(item.type)}`}>
+            <div className={`notify-item__icon ${item.type?.toLowerCase()}`}>
               {getIcon(item.type)}
             </div>
             <div className="notify-item__content">
-              <p className="notify-item__title">{item.title}</p>
-              {renderDescription(item.description)}
+              <p className="notify-item__text">{item.message}</p>
               <p className="notify-item__footer">{item.sender} - {item.createdAt}</p>
             </div>
           </div>
@@ -121,6 +159,7 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
         <div className="dashboard-header__breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
+            const resolvedLink = item.link || getFallbackLink(item.label, roles)
             if (isLast) {
               return (
                 <span key={index} style={{ color: '#1a1a1a', fontWeight: 600 }}>
@@ -130,8 +169,8 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
             }
             return (
               <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {item.link ? (
-                  <Link to={item.link} style={{ color: '#6b7280', textDecoration: 'none' }}>
+                {resolvedLink ? (
+                  <Link to={resolvedLink} style={{ color: '#6b7280', textDecoration: 'none' }} className="hover:text-[#1890ff] transition-colors">
                     {item.label}
                   </Link>
                 ) : (

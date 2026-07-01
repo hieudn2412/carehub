@@ -172,15 +172,8 @@ function AppRouter() {
       <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
 
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
-      <Route
-        path="/admin/training/evidence-review"
-        element={adminElement(
-          <ComingSoonPage
-            title="Duyệt minh chứng"
-            breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]}
-          />
-        )}
-      />
+      <Route path="/admin/training/evidence-review" element={adminElement(<ManagerEvidenceReviewListPage />)} />
+      <Route path="/admin/training/evidence-review/:id" element={adminElement(<ManagerEvidenceReviewDetailPage />)} />
       <Route
         path="/admin/quality/history"
         element={adminElement(

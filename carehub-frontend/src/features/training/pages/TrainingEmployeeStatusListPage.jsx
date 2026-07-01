@@ -1,56 +1,24 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import Sidebar from '../../staff/components/sidebar'
+import Header from '../../staff/components/Header'
+import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
 import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons'
 import '../styles/TrainingEmployeeStatusListPage.css'
 
-const MOCK_EMPLOYEES = [
-  {
-    employeeId: '1',
-    employeeCode: 'VD00368',
-    employeeName: 'Vũ Thị Thanh',
-    departmentName: 'Khoa Thần kinh',
-    approvedHours: 120,
-    requiredHours: 120,
-    complianceStatus: 'COMPLIANT'
-  },
-  {
-    employeeId: '2',
-    employeeCode: 'VD00368',
-    employeeName: 'Vũ Thị Thanh',
-    departmentName: 'Khoa Tim mạch',
-    approvedHours: 125,
-    requiredHours: 120,
-    complianceStatus: 'COMPLIANT'
-  },
-  {
-    employeeId: '3',
-    employeeCode: 'VD00368',
-    employeeName: 'Vũ Thị Thanh',
-    departmentName: 'Khoa Phẫu thuật tổng hợp',
-    approvedHours: 36,
-    requiredHours: 120,
-    complianceStatus: 'NON_COMPLIANT'
-  },
-  {
-    employeeId: '4',
-    employeeCode: 'VD00368',
-    employeeName: 'Vũ Thị Thanh',
-    departmentName: 'Phòng Kiểm soát nhiễm khuẩn',
-    approvedHours: 129,
-    requiredHours: 120,
-    complianceStatus: 'COMPLIANT'
-  }
-]
-
 function TrainingEmployeeStatusListPage() {
-  
-  const [employees, setEmployees] = useState(MOCK_EMPLOYEES)
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+
+  const [employees, setEmployees] = useState([])
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(false)
-  const [apiMode, setApiMode] = useState(false)
 
   // Filters State
   const [keyword, setKeyword] = useState('')
@@ -61,7 +29,7 @@ function TrainingEmployeeStatusListPage() {
   // Pagination State
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [totalElements, setTotalElements] = useState(MOCK_EMPLOYEES.length)
+  const [totalElements, setTotalElements] = useState(0)
 
   // Debounce search input
   useEffect(() => {
@@ -88,7 +56,6 @@ function TrainingEmployeeStatusListPage() {
 
   // Reset page when filters change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
   }, [debouncedKeyword, departmentId, complianceStatus])
 
@@ -119,38 +86,17 @@ function TrainingEmployeeStatusListPage() {
         setEmployees(mapped)
         setTotalElements(pageData?.totalElements || 0)
         setTotalPages(pageData?.totalPages || 0)
-        setApiMode(true)
-      } else {
-        setApiMode(false)
       }
     } catch (err) {
-      console.warn('API error, falling back to mock data:', err)
-      setApiMode(false)
+      console.error('API error loading employee training statuses:', err)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
   }, [page, debouncedKeyword, departmentId, complianceStatus])
-
-  // Local fallback filtering logic when API mode is off
-  const filteredEmployees = useMemo(() => {
-    if (apiMode) return employees
-
-    return MOCK_EMPLOYEES.filter(emp => {
-      const matchKeyword = 
-        emp.employeeName.toLowerCase().includes(keyword.toLowerCase()) ||
-        emp.employeeCode.toLowerCase().includes(keyword.toLowerCase())
-      
-      const matchDept = departmentId ? emp.departmentName.includes(departmentId) : true
-      const matchStatus = complianceStatus ? emp.complianceStatus === complianceStatus : true
-
-      return matchKeyword && matchDept && matchStatus
-    })
-  }, [employees, keyword, departmentId, complianceStatus, apiMode])
 
   // Generate pagination buttons array
   const getVisiblePages = () => {
@@ -181,9 +127,9 @@ function TrainingEmployeeStatusListPage() {
 
   return (
     <div className="dashboard-layout">
-      <AdminSidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header breadcrumbs={breadcrumbs} />}
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="tes-page">
@@ -230,6 +176,8 @@ function TrainingEmployeeStatusListPage() {
                   <option value="">Trạng thái</option>
                   <option value="COMPLIANT">Đạt</option>
                   <option value="NON_COMPLIANT">Không đạt</option>
+                  <option value="AT_RISK">Đang theo dõi</option>
+                  <option value="NOT_CONFIGURED">Chưa thiết lập</option>
                 </select>
 
                 <button 
@@ -262,14 +210,14 @@ function TrainingEmployeeStatusListPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredEmployees.length === 0 ? (
+                        {employees.length === 0 ? (
                           <tr>
                             <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: '#64748b' }}>
                               Không tìm thấy kết quả phù hợp
                             </td>
                           </tr>
                         ) : (
-                          filteredEmployees.map((item, idx) => (
+                          employees.map((item, idx) => (
                             <tr key={item.employeeId + '-' + idx}>
                               <td style={{ fontWeight: 500 }}>{item.employeeCode}</td>
                               <td>{item.employeeName}</td>
@@ -280,9 +228,11 @@ function TrainingEmployeeStatusListPage() {
                                 <span className={`tes-badge ${
                                   item.complianceStatus === 'COMPLIANT' 
                                     ? 'tes-badge--compliant' 
-                                    : 'tes-badge--non-compliant'
+                                    : item.complianceStatus === 'NON_COMPLIANT' 
+                                      ? 'tes-badge--non-compliant' 
+                                      : 'tes-badge--at-risk'
                                 }`}>
-                                  {item.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}
+                                  {item.complianceStatus === 'COMPLIANT' ? 'Đạt' : item.complianceStatus === 'NON_COMPLIANT' ? 'Không đạt' : 'Đang theo dõi'}
                                 </span>
                               </td>
                               <td>
@@ -302,7 +252,7 @@ function TrainingEmployeeStatusListPage() {
                     {/* Pagination Bar */}
                     <div className="tes-pagination-bar">
                       <div className="tes-pagination-info">
-                        Hiển thị {filteredEmployees.length} trong tổng số {totalElements} kết quả
+                        Hiển thị {employees.length} trong tổng số {totalElements} kết quả
                       </div>
                       <div className="tes-pagination-buttons">
                         <button 

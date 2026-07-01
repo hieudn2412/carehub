@@ -13,31 +13,63 @@ import {
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import { staffApi } from '../../api/staffApi.js'
+import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function ManagerDashboard() {
   const navigate = useNavigate()
   
-  const [metrics] = useState({
-    totalEmployees: 32,
-    pendingEvidences: 5,
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [nonCompliantCount, setNonCompliantCount] = useState(0)
+  const [metrics, setMetrics] = useState({
+    totalEmployees: 0,
+    pendingEvidences: 0,
     examPassRate: 74,
     qualityCompliance: 81
   })
 
-  const [actions] = useState([
-    { title: 'Minh chứng chờ duyệt', route: '/manager/evidence-review', desc: '5 minh chứng đang chờ phê duyệt', status: 'Cần duyệt', color: 'amber' },
-    { title: 'Nhân sự chưa đạt chuẩn giờ đào tạo', route: '/training/employees', desc: '8 nhân sự dưới 120 giờ trong chu kỳ 5 năm', status: 'Xem', color: 'red' },
+  useEffect(() => {
+    Promise.all([
+      staffApi.getProfile(),
+      trainingApi.getEmployeeTrainingStatuses({ size: 1 }),
+      trainingApi.getEmployeeTrainingStatuses({ size: 1, complianceStatus: 'NON_COMPLIANT' }),
+      trainingApi.getPendingRecords({ size: 1 })
+    ])
+      .then(([profileRes, statusRes, nonCompliantRes, pendingRes]) => {
+        setProfile(profileRes.data?.data)
+        const totalEmp = statusRes.data?.data?.totalElements || 0
+        const nonComp = nonCompliantRes.data?.data?.totalElements || 0
+        const pendingEv = pendingRes.data?.data?.totalElements || 0
+
+        setMetrics(current => ({
+          ...current,
+          totalEmployees: totalEmp,
+          pendingEvidences: pendingEv
+        }))
+        setNonCompliantCount(nonComp)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error("Error loading manager dashboard metrics", err)
+        setLoading(false)
+      })
+  }, [])
+
+  const actions = [
+    { title: 'Minh chứng chờ duyệt', route: '/manager/evidence-review', desc: `${metrics.pendingEvidences} minh chứng đang chờ phê duyệt`, status: 'Cần duyệt', color: 'amber' },
+    { title: 'Nhân sự chưa đạt chuẩn giờ đào tạo', route: '/training/employees', desc: `${nonCompliantCount} nhân sự chưa đạt chuẩn giờ`, status: 'Xem', color: 'red' },
     { title: 'Kết quả thi chưa đạt', route: '/manager/exam-results', desc: '3 nhân sự cần thi lại', status: 'Xem', color: 'red' },
     { title: 'Chất lượng chăm sóc dưới mục tiêu', route: '/manager/quality/checklists', desc: 'Tiêm truyền TM đạt 88% (mục tiêu 90%)', status: 'Cần chấm', color: 'amber' },
-  ])
+  ]
 
-  const [activities] = useState([
-    { icon: '✅', text: 'Nguyễn Văn An nộp minh chứng đào tạo KSNK 2026', time: '20/06/2026 08:42' },
+  const activities = [
+    { icon: '✅', text: 'Hệ thống đã đồng bộ danh sách nhân sự thực tế', time: 'Vừa xong' },
     { icon: '📝', text: 'Bài thi KSNK Q2/2026 có 12 lượt làm mới', time: '19/06/2026 08:35' },
-    { icon: '⚠️', text: 'Hệ thống gửi cảnh báo 5 nhân sự thiếu giờ', time: '25/06/2026 08:10' },
-    { icon: '✔', text: 'Trần Thị Bích được duyệt 4 giờ đào tạo', time: '18/06/2026 07:55' },
-  ])
+    { icon: '⚠️', text: 'Hệ thống tự động theo dõi tiến độ hoàn thành CME', time: 'Hôm nay' },
+    { icon: '✔', text: 'Lịch sử chấm điểm chất lượng tự động cập nhật', time: 'Hôm nay' },
+  ]
 
   return (
     <div className="dashboard-layout">
@@ -48,7 +80,7 @@ function ManagerDashboard() {
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Dashboard Tổng quan</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Xin chào, Trưởng khoa Nguyễn Thị Mai · Khoa Nội tổng hợp
+              Xin chào, Trưởng khoa {profile?.fullName || 'Nguyễn Thị Mai'} · {profile?.departmentName || 'Khoa Nội tổng hợp'}
             </p>
           </div>
 
@@ -61,7 +93,7 @@ function ManagerDashboard() {
               </div>
               <div className="mgr-metric-val">{metrics.totalEmployees}</div>
               <div className="mgr-metric-sub">
-                <span style={{ color: '#ef4444', fontWeight: 600 }}>8</span> chưa đạt chuẩn giờ
+                <span style={{ color: '#ef4444', fontWeight: 600 }}>{nonCompliantCount}</span> chưa đạt chuẩn giờ
               </div>
             </div>
 

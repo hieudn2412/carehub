@@ -16,7 +16,7 @@ import {
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
-import { AUTH_ROLE } from '../../auth/utils/authNavigation.js'
+import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
@@ -26,7 +26,7 @@ function Sidebar() {
   
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
-  const isManager = roles.includes(AUTH_ROLE.manager)
+  const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
 
   // Base items for all staff members
   const navSections = [
