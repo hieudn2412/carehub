@@ -11,6 +11,7 @@ import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
+import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function sortByDisplayOrder(items = []) {
@@ -58,6 +59,8 @@ function ManagerChecklistEvaluationPage() {
   const [answers, setAnswers] = useState({})
   const [submission, setSubmission] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [employees, setEmployees] = useState([])
+  const [employeesLoading, setEmployeesLoading] = useState(false)
 
   const loadAssignedForm = () => {
     setLoading(true)
@@ -85,6 +88,17 @@ function ManagerChecklistEvaluationPage() {
 
   useEffect(() => {
     loadAssignedForm()
+    setEmployeesLoading(true)
+    trainingApi.getEmployeeTrainingStatuses({ size: 1000 })
+      .then((res) => {
+        setEmployees(res.data?.data?.content || [])
+      })
+      .catch((err) => {
+        console.error("Error loading employees for evaluation dropdown", err)
+      })
+      .finally(() => {
+        setEmployeesLoading(false)
+      })
   }, [id])
 
   const sections = useMemo(
@@ -107,11 +121,11 @@ function ManagerChecklistEvaluationPage() {
     }))
   }
 
-  const handleSubjectLookup = () => {
-    const normalizedEmployeeCode = employeeCode.trim()
+  const handleSubjectLookup = (codeToLookup) => {
+    const normalizedEmployeeCode = (codeToLookup || employeeCode).trim()
 
     if (!normalizedEmployeeCode) {
-      setSubjectError('Vui lòng nhập mã nhân viên cần giám sát.')
+      setSubjectError('Vui lòng chọn nhân viên được giám sát.')
       return
     }
 
@@ -415,30 +429,36 @@ function ManagerChecklistEvaluationPage() {
             <div className="mgr-card">
               <div style={{ marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 20 }}>
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
-                  Mã nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
+                  Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <input
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
                     className="mgr-select"
+                    value={employeeCode}
                     onChange={(event) => {
-                      setEmployeeCode(event.target.value)
+                      const code = event.target.value
+                      setEmployeeCode(code)
                       setSubjectDetails(null)
                       setSubmission(null)
+                      if (code) {
+                        handleSubjectLookup(code)
+                      }
                     }}
-                    placeholder="VD00123"
-                    style={{ cursor: 'text', width: 260 }}
-                    type="text"
-                    value={employeeCode}
-                  />
-                  <button
-                    className="training-button training-button--primary"
-                    disabled={subjectLoading}
-                    onClick={handleSubjectLookup}
-                    style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-                    type="button"
+                    style={{ width: '100%', maxWidth: 400, height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', fontSize: 13.5, cursor: 'pointer' }}
+                    disabled={employeesLoading || subjectLoading}
                   >
-                    {subjectLoading ? <LoadingOutlined spin /> : <SearchOutlined />} Tra cứu
-                  </button>
+                    <option value="">-- Chọn nhân viên được giám sát --</option>
+                    {employees.map((emp) => (
+                      <option key={emp.employeeCode} value={emp.employeeCode}>
+                        {emp.employeeName} ({emp.employeeCode})
+                      </option>
+                    ))}
+                  </select>
+                  {(employeesLoading || subjectLoading) && (
+                    <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <LoadingOutlined spin /> Đang xử lý...
+                    </span>
+                  )}
                 </div>
                 {subjectError && (
                   <p style={{ color: '#ef4444', margin: '8px 0 0', fontSize: 13 }}>{subjectError}</p>

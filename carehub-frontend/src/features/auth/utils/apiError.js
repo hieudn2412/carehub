@@ -42,7 +42,7 @@ function translateMessage(message) {
     return translatedMessage
   }
 
-  return /[À-ỹĐđ]/.test(message) ? message.trim() : ''
+  return message.trim()
 }
 
 function getFieldErrors(responseData) {

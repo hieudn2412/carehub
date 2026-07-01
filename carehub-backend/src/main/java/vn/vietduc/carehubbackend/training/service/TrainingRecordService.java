@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSearchRequest;
+import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordReviewRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSubmitRequest;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordDetailResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
@@ -21,4 +22,8 @@ public interface TrainingRecordService {
     TrainingRecordDetailResponse update(Long id, TrainingRecordFormRequest request);
 
     TrainingRecordDetailResponse submit(Long id, TrainingRecordSubmitRequest request);
+
+    TrainingRecordDetailResponse approve(Long id, TrainingRecordReviewRequest request);
+
+    TrainingRecordDetailResponse reject(Long id, TrainingRecordReviewRequest request);
 }

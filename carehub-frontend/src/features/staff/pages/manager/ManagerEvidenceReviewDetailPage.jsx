@@ -1,9 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, DownloadOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, DownloadOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import AdminSidebar from '../../../admin/components/AdminSidebar'
+import AdminHeader from '../../../admin/components/AdminHeader'
+import { tokenStorage } from '../../../auth/services/tokenStorage.js'
+import { AUTH_ROLE, hasAnyRole } from '../../../auth/utils/authNavigation.js'
+import { getRolesFromAccessToken } from '../../../auth/utils/jwt.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function ManagerEvidenceReviewDetailPage() {
@@ -13,27 +19,50 @@ function ManagerEvidenceReviewDetailPage() {
   
   const [comment, setComment] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
+  const [evidence, setEvidence] = useState(null)
+  const [evidenceFiles, setEvidenceFiles] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const [evidence] = useState({
-    id: id || 1,
-    employeeId: 'NV-001',
-    employeeName: 'Nguyễn Văn An',
-    title: 'Chứng chỉ Kiểm soát nhiễm khuẩn 2026',
-    hours: 8,
-    date: '20/06/2026',
-    filename: 'ksnk_cert_2026.pdf',
-    size: '1.2MB',
-    provider: 'Bệnh viện Hữu nghị Việt Đức',
-    description: 'Khóa tập huấn chuyên sâu 3 ngày về KSNK phòng mổ và KSNK tay cơ bản cho điều dưỡng ngoại khoa.'
-  })
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  const backPath = isAdmin ? '/admin/training/evidence-review' : '/manager/evidence-review'
+
+  useEffect(() => {
+    setLoading(true)
+    Promise.all([
+      trainingApi.getRecord(id),
+      trainingApi.listEvidence(id)
+    ])
+      .then(([recordRes, evidenceRes]) => {
+        setEvidence(recordRes.data?.data)
+        setEvidenceFiles(evidenceRes.data?.data || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error("Error loading pending evidence details", err)
+        setError("Không thể tải chi tiết minh chứng.")
+        setLoading(false)
+      })
+  }, [id])
 
   const handleApprove = () => {
     setActionLoading(true)
-    setTimeout(() => {
-      showToast("Đã duyệt minh chứng thành công!", "success")
-      setActionLoading(false)
-      navigate('/manager/evidence-review')
-    }, 800)
+    trainingApi.approveRecord(id, { 
+      approvedHours: evidence?.declaredHours,
+      reason: comment || "Phê duyệt"
+    })
+      .then(() => {
+        showToast("Đã duyệt minh chứng thành công!", "success")
+        setActionLoading(false)
+        navigate(backPath)
+      })
+      .catch(err => {
+        console.error("Error approving record", err)
+        showToast(err.response?.data?.message || "Lỗi khi phê duyệt minh chứng.", "error")
+        setActionLoading(false)
+      })
   }
 
   const handleReject = () => {
@@ -42,25 +71,90 @@ function ManagerEvidenceReviewDetailPage() {
       return
     }
     setActionLoading(true)
-    setTimeout(() => {
-      showToast("Đã từ chối minh chứng.", "error")
-      setActionLoading(false)
-      navigate('/manager/evidence-review')
-    }, 800)
+    trainingApi.rejectRecord(id, {
+      reason: comment
+    })
+      .then(() => {
+        showToast("Đã từ chối minh chứng thành công.", "success")
+        setActionLoading(false)
+        navigate(backPath)
+      })
+      .catch(err => {
+        console.error("Error rejecting record", err)
+        showToast(err.response?.data?.message || "Lỗi khi từ chối minh chứng.", "error")
+        setActionLoading(false)
+      })
   }
+
+  const handleDownload = (file) => {
+    trainingApi.createEvidenceDownloadUrl(id, file.id)
+      .then(res => {
+        const downloadUrl = res.data?.data?.downloadUrl
+        if (downloadUrl) {
+          window.open(downloadUrl, '_blank')
+        } else {
+          showToast("Không tìm thấy đường dẫn tải về.", "error")
+        }
+      })
+      .catch(err => {
+        console.error("Error getting download url", err)
+        showToast("Lỗi khi lấy đường dẫn tải tệp.", "error")
+      })
+  }
+
+  const formatSize = (bytes) => {
+    if (!bytes) return '---'
+    const kb = bytes / 1024
+    if (kb < 1024) return kb.toFixed(1) + ' KB'
+    return (kb / 1024).toFixed(1) + ' MB'
+  }
+
+  if (loading) {
+    return (
+      <div className="dashboard-layout">
+        {isAdmin ? <AdminSidebar /> : <Sidebar />}
+        <div className="dashboard-layout__content">
+          {isAdmin ? <AdminHeader breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]} /> : <Header title="Duyệt minh chứng" />}
+          <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
+            <LoadingOutlined style={{ fontSize: 32, color: '#2563eb' }} />
+            <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải chi tiết minh chứng...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !evidence) {
+    return (
+      <div className="dashboard-layout">
+        {isAdmin ? <AdminSidebar /> : <Sidebar />}
+        <div className="dashboard-layout__content">
+          {isAdmin ? <AdminHeader breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]} /> : <Header title="Duyệt minh chứng" />}
+          <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
+            <p style={{ color: '#ef4444', fontWeight: 600 }}>{error || 'Không tìm thấy thông tin minh chứng.'}</p>
+            <button className="training-button" onClick={() => navigate(backPath)} style={{ marginTop: 12 }}>
+              <ArrowLeftOutlined /> Quay lại danh sách
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const breadcrumbs = [
+    { label: 'Duyệt minh chứng', link: backPath },
+    { label: 'Chi tiết duyệt' }
+  ]
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Duyệt minh chứng', link: '/manager/evidence-review' },
-          { label: 'Chi tiết duyệt' }
-        ]} />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header breadcrumbs={breadcrumbs} />}
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
             <button 
-              onClick={() => navigate('/manager/evidence-review')}
+              onClick={() => navigate(backPath)}
               style={{
                 background: 'none',
                 border: 'none',
@@ -92,7 +186,7 @@ function ManagerEvidenceReviewDetailPage() {
               <div className="mgr-kv-grid" style={{ gridTemplateColumns: '1fr', gap: 14 }}>
                 <div className="mgr-kv-item">
                   <span className="mgr-kv-label">Nhân viên khai báo</span>
-                  <div className="mgr-kv-val" style={{ fontWeight: 600 }}>{evidence.employeeName} ({evidence.employeeId})</div>
+                  <div className="mgr-kv-val" style={{ fontWeight: 600 }}>{evidence.employeeName} ({evidence.employeeCode})</div>
                 </div>
                 <div className="mgr-kv-item">
                   <span className="mgr-kv-label">Tên khóa học / Hội thảo</span>
@@ -104,15 +198,18 @@ function ManagerEvidenceReviewDetailPage() {
                 </div>
                 <div className="mgr-kv-item">
                   <span className="mgr-kv-label">Số giờ đào tạo</span>
-                  <div className="mgr-kv-val" style={{ fontWeight: 600, color: '#2563eb' }}>{evidence.hours} giờ</div>
+                  <div className="mgr-kv-val" style={{ fontWeight: 600, color: '#2563eb' }}>{evidence.declaredHours} giờ</div>
                 </div>
                 <div className="mgr-kv-item">
-                  <span className="mgr-kv-label">Mô tả chi tiết</span>
-                  <div className="mgr-kv-val" style={{ minHeight: 60, alignItems: 'flex-start' }}>{evidence.description}</div>
+                  <span className="mgr-kv-label">Ngày bắt đầu - kết thúc</span>
+                  <div className="mgr-kv-val">
+                    {evidence.startDate ? new Date(evidence.startDate).toLocaleDateString('vi-VN') : ''}
+                    {evidence.endDate ? ` - ${new Date(evidence.endDate).toLocaleDateString('vi-VN')}` : ''}
+                  </div>
                 </div>
                 <div className="mgr-kv-item">
                   <span className="mgr-kv-label">Ngày nộp</span>
-                  <div className="mgr-kv-val">{evidence.date}</div>
+                  <div className="mgr-kv-val">{evidence.submittedAt ? new Date(evidence.submittedAt).toLocaleDateString('vi-VN') : ''}</div>
                 </div>
               </div>
             </div>
@@ -123,32 +220,54 @@ function ManagerEvidenceReviewDetailPage() {
                 Tệp minh chứng đính kèm
               </div>
               
-              {/* File details card */}
-              <div style={{
-                background: '#f8fafc',
-                border: '1px dashed #cbd5e1',
-                borderRadius: 8,
-                padding: '24px 16px',
-                textAlign: 'center',
-                marginBottom: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flex: 1
-              }}>
-                <span style={{ fontSize: 48, marginBottom: 12 }}>📄</span>
-                <div style={{ fontWeight: 600, fontSize: 14.5, color: '#0f172a' }}>{evidence.filename}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Kích thước: {evidence.size}</div>
-                
-                <button 
-                  onClick={() => showToast("Đang tải tệp tin...", "success")}
-                  className="training-button"
-                  style={{ marginTop: 16, height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-                >
-                  <DownloadOutlined /> Tải tệp tin về máy
-                </button>
-              </div>
+              {evidenceFiles.length === 0 ? (
+                <div style={{
+                  background: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
+                  borderRadius: 8,
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  marginBottom: 20,
+                  color: '#64748b',
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  Không có tệp đính kèm nào được tải lên.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, flex: 1 }}>
+                  {evidenceFiles.map(file => (
+                    <div key={file.id} style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 8,
+                      padding: 16,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+                        <span style={{ fontSize: 32 }}>📄</span>
+                        <div style={{ overflow: 'hidden' }}>
+                          <div style={{ fontWeight: 600, fontSize: 13.5, color: '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={file.fileName}>
+                            {file.fileName}
+                          </div>
+                          <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>Kích thước: {formatSize(file.fileSizeBytes)}</div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleDownload(file)}
+                        className="training-button"
+                        style={{ height: 32, padding: '0 10px', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0 }}
+                      >
+                        <DownloadOutlined /> Tải về
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Comment inputs */}
               <div style={{ marginBottom: 20 }}>

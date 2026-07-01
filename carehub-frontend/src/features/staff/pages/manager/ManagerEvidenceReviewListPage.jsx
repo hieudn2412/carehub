@@ -1,33 +1,56 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchOutlined, CheckCircleOutlined, EyeOutlined } from '@ant-design/icons'
+import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import AdminSidebar from '../../../admin/components/AdminSidebar'
+import AdminHeader from '../../../admin/components/AdminHeader'
+import { tokenStorage } from '../../../auth/services/tokenStorage.js'
+import { AUTH_ROLE, hasAnyRole } from '../../../auth/utils/authNavigation.js'
+import { getRolesFromAccessToken } from '../../../auth/utils/jwt.js'
+import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function ManagerEvidenceReviewListPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [evidences, setEvidences] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  const [evidences] = useState([
-    { id: 1, employeeId: 'NV-001', employeeName: 'Nguyễn Văn An', title: 'Chứng chỉ Kiểm soát nhiễm khuẩn 2026', hours: 8, date: '20/06/2026', filename: 'ksnk_cert_2026.pdf', size: '1.2MB' },
-    { id: 2, employeeId: 'NV-002', employeeName: 'Trần Thị Bích', title: 'Chứng chỉ Tiêm truyền an toàn', hours: 4, date: '18/06/2026', filename: 'tiem_truyen_safe.png', size: '850KB' },
-    { id: 3, employeeId: 'NV-005', employeeName: 'Hoàng Minh Đức', title: 'Hội thảo ICU Cấp cứu nâng cao', hours: 6, date: '15/06/2026', filename: 'icu_emergency_ws.pdf', size: '2.4MB' },
-    { id: 4, employeeId: 'NV-002', employeeName: 'Trần Thị Bích', title: 'Chứng chỉ Chăm sóc vết thương ngoại khoa', hours: 8, date: '10/06/2026', filename: 'wound_dressing.pdf', size: '1.8MB' },
-    { id: 5, employeeId: 'NV-001', employeeName: 'Nguyễn Văn An', title: 'Nghiên cứu khoa học Điều dưỡng Q1', hours: 16, date: '05/06/2026', filename: 'research_q1_vn.pdf', size: '3.1MB' },
-  ])
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+
+  useEffect(() => {
+    trainingApi.getPendingRecords({ size: 100 })
+      .then(res => {
+        setEvidences(res.data?.data?.content || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error("Error fetching pending records", err)
+        setError("Không thể tải danh sách minh chứng chờ duyệt.")
+        setLoading(false)
+      })
+  }, [])
 
   const filteredEvidences = evidences.filter(ev => 
-    ev.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-    ev.employeeId.toLowerCase().includes(search.toLowerCase()) ||
-    ev.title.toLowerCase().includes(search.toLowerCase())
+    (ev.employeeName || '').toLowerCase().includes(search.toLowerCase()) ||
+    (ev.employeeCode || '').toLowerCase().includes(search.toLowerCase()) ||
+    (ev.title || '').toLowerCase().includes(search.toLowerCase())
   )
+
+  const breadcrumbs = [
+    { label: 'Đào tạo' },
+    { label: 'Duyệt minh chứng' }
+  ]
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <Header title="Duyệt minh chứng" />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header title="Duyệt minh chứng" />}
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Duyệt minh chứng</h1>
@@ -51,53 +74,75 @@ function ManagerEvidenceReviewListPage() {
 
           {/* List Card */}
           <div className="mgr-card" style={{ padding: 0, overflow: 'hidden' }}>
-            <table className="mgr-table">
-              <thead>
-                <tr>
-                  <th>Nhân viên</th>
-                  <th>Tên khóa đào tạo / Hội thảo</th>
-                  <th>Số giờ khai báo</th>
-                  <th>Ngày nộp</th>
-                  <th>Tên file đính kèm</th>
-                  <th style={{ width: 80, textAlign: 'center' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEvidences.map((ev) => (
-                  <tr key={ev.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{ev.employeeName}</div>
-                      <div style={{ fontSize: 11.5, color: '#64748b' }}>{ev.employeeId}</div>
-                    </td>
-                    <td style={{ fontWeight: 500 }}>{ev.title}</td>
-                    <td><strong style={{ color: '#2563eb' }}>{ev.hours}h</strong></td>
-                    <td style={{ color: '#475569' }}>{ev.date}</td>
-                    <td style={{ color: '#64748b', fontSize: 12.5 }}>
-                      📄 {ev.filename} <span style={{ color: '#94a3b8' }}>({ev.size})</span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button 
-                        onClick={() => navigate(`/manager/evidence-review/${ev.id}`)}
-                        style={{
-                          border: '1px solid #e2e8f0',
-                          background: '#fff',
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          color: '#475569',
-                          transition: 'all 0.15s'
-                        }}
-                        title="Xem chi tiết & Phê duyệt"
-                        onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
-                        onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
-                      >
-                        <EyeOutlined />
-                      </button>
-                    </td>
+            {loading ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải danh sách...
+              </div>
+            ) : error ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>
+                {error}
+              </div>
+            ) : filteredEvidences.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
+                Không có minh chứng nào đang chờ phê duyệt.
+              </div>
+            ) : (
+              <table className="mgr-table">
+                <thead>
+                  <tr>
+                    <th>Nhân viên</th>
+                    <th>Tên khóa đào tạo / Hội thảo</th>
+                    <th>Số giờ khai báo</th>
+                    <th>Ngày nộp</th>
+                    <th>Tài liệu minh chứng</th>
+                    <th style={{ width: 80, textAlign: 'center' }}>Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredEvidences.map((ev) => (
+                    <tr key={ev.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: '#0f172a' }}>{ev.employeeName}</div>
+                        <div style={{ fontSize: 11.5, color: '#64748b' }}>{ev.employeeCode}</div>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{ev.title}</td>
+                      <td><strong style={{ color: '#2563eb' }}>{ev.declaredHours}h</strong></td>
+                      <td style={{ color: '#475569' }}>
+                        {ev.submittedAt ? new Date(ev.submittedAt).toLocaleDateString('vi-VN') : '---'}
+                      </td>
+                      <td style={{ color: '#64748b', fontSize: 12.5 }}>
+                        {ev.evidences && ev.evidences.length > 0 ? (
+                          <span style={{ color: '#16a34a', fontWeight: 500 }}>
+                            📄 {ev.evidences.length} tệp đính kèm
+                          </span>
+                        ) : (
+                          <span style={{ color: '#94a3b8' }}>Chưa đính kèm file</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button 
+                          onClick={() => navigate(isAdmin ? `/admin/training/evidence-review/${ev.id}` : `/manager/evidence-review/${ev.id}`)}
+                          style={{
+                            border: '1px solid #e2e8f0',
+                            background: '#fff',
+                            padding: '6px 10px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            color: '#475569',
+                            transition: 'all 0.15s'
+                          }}
+                          title="Xem chi tiết & Phê duyệt"
+                          onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
+                          onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
+                        >
+                          <EyeOutlined />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
