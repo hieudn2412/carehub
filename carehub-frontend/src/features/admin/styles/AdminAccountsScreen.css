@@ -566,6 +566,38 @@
   border-color: #1aaa84;
 }
 
+.am-form-input:disabled, .am-form-select:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  background: #f8fafc;
+}
+
+.am-form-help {
+  margin-top: 2px;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.am-form-help--warning {
+  color: #b45309;
+}
+
+.am-inline-link {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  color: #008a72;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.am-inline-link:hover {
+  color: #006b59;
+}
+
 /* Import Dropzone */
 .am-import-dropzone {
   border: 2px dashed #cbd5e1;

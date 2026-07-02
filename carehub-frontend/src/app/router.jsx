@@ -63,6 +63,8 @@ import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.j
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
+import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
+import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
@@ -174,15 +176,8 @@ function AppRouter() {
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
       <Route path="/admin/training/evidence-review" element={adminElement(<ManagerEvidenceReviewListPage />)} />
       <Route path="/admin/training/evidence-review/:id" element={adminElement(<ManagerEvidenceReviewDetailPage />)} />
-      <Route
-        path="/admin/quality/history"
-        element={adminElement(
-          <ComingSoonPage
-            title="Lịch sử đánh giá"
-            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Lịch sử đánh giá' }]}
-          />
-        )}
-      />
+      <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />
+      <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
       <Route
         path="/admin/quality/formulas"
         element={adminElement(

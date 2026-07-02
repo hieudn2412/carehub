@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
@@ -21,10 +22,20 @@ import {
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/AdminAccountsScreen.css'
 
+function normalizeReferenceList(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.content)) return payload.content
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
 function AdminAccountsScreen() {
   const { showToast } = useToast()
+  const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [departments, setDepartments] = useState([])
+  const [departmentLoading, setDepartmentLoading] = useState(true)
+  const [departmentLoadError, setDepartmentLoadError] = useState('')
   const [roles, setRoles] = useState([])
   
   const [loading, setLoading] = useState(true)
@@ -103,6 +114,14 @@ function AdminAccountsScreen() {
   const [importLoading, setImportLoading] = useState(false)
   const [importResult, setImportResult] = useState(null)
 
+  const departmentEmpty = !departmentLoading && !departmentLoadError && departments.length === 0
+  const departmentSelectDisabled = departmentLoading || Boolean(departmentLoadError) || departmentEmpty
+
+  const goToDepartmentReference = () => {
+    setIsFormModalOpen(false)
+    navigate('/admin/reference/departments')
+  }
+
   // Debounce search keyword
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -114,21 +133,49 @@ function AdminAccountsScreen() {
 
   // Load static reference data on mount
   useEffect(() => {
+    let isActive = true
+
     adminApi.getDepartments()
-      .then(res => setDepartments(res.data?.data || []))
-      .catch(err => console.error('Lỗi khi tải phòng ban:', err))
+      .then(res => {
+        if (!isActive) return
+        setDepartments(normalizeReferenceList(res.data?.data))
+        setDepartmentLoadError('')
+      })
+      .catch(err => {
+        console.error('Lỗi khi tải phòng ban:', err)
+        if (!isActive) return
+        setDepartments([])
+        setDepartmentLoadError('Không thể tải danh sách phòng ban.')
+      })
+      .finally(() => {
+        if (!isActive) return
+        setDepartmentLoading(false)
+      })
 
     adminApi.getRoles()
-      .then(res => setRoles(res.data?.data || []))
+      .then(res => {
+        if (!isActive) return
+        setRoles(normalizeReferenceList(res.data?.data))
+      })
       .catch(err => console.error('Lỗi khi tải vai trò:', err))
 
     adminApi.getPositions()
-      .then(res => setPositions(res.data?.data || []))
+      .then(res => {
+        if (!isActive) return
+        setPositions(normalizeReferenceList(res.data?.data))
+      })
       .catch(err => console.error('Lỗi khi tải chức danh:', err))
 
     adminApi.getEducationLevels()
-      .then(res => setEducationLevels(res.data?.data || []))
+      .then(res => {
+        if (!isActive) return
+        setEducationLevels(normalizeReferenceList(res.data?.data))
+      })
       .catch(err => console.error('Lỗi khi tải trình độ học vấn:', err))
+
+    return () => {
+      isActive = false
+    }
   }, [])
 
   const loadUsers = () => {
@@ -185,7 +232,7 @@ function AdminAccountsScreen() {
       .finally(() => {
         setModalLoading(false)
       })
-  }, [selectedUserId])
+  }, [selectedUserId, showToast])
 
   // Actions
   const handleOpenCreateModal = () => {
@@ -460,7 +507,7 @@ function AdminAccountsScreen() {
   // Map departmentId to departmentName for table rows
   const getDeptName = (deptId) => {
     if (!deptId) return 'Chưa phân phòng'
-    const dept = departments.find(d => d.id === deptId)
+    const dept = departments.find(d => String(d.id) === String(deptId))
     return dept ? dept.name : `Mã phòng ${deptId}`
   }
 
@@ -595,6 +642,9 @@ function AdminAccountsScreen() {
                   onChange={(e) => { setDeptFilter(e.target.value); setPage(1) }}
                 >
                   <option value="all">Tất cả phòng ban</option>
+                  {departmentLoading && <option disabled>Đang tải phòng ban...</option>}
+                  {!departmentLoading && departmentLoadError && <option disabled>Không tải được phòng ban</option>}
+                  {departmentEmpty && <option disabled>Chưa có phòng ban</option>}
                   {departments.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
@@ -930,13 +980,30 @@ function AdminAccountsScreen() {
                       className="am-form-select"
                       value={formDeptId}
                       onChange={(e) => setFormDeptId(e.target.value)}
+                      disabled={departmentSelectDisabled}
                       required
                     >
-                      <option value="">Chọn phòng ban...</option>
+                      <option value="">
+                        {departmentLoading ? 'Đang tải phòng ban...' : 'Chọn phòng ban...'}
+                      </option>
+                      {!departmentLoading && departmentLoadError && (
+                        <option value="" disabled>Không tải được phòng ban</option>
+                      )}
+                      {departmentEmpty && (
+                        <option value="" disabled>Chưa có phòng ban trong hệ thống</option>
+                      )}
                       {departments.map(d => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
+                    {(departmentLoadError || departmentEmpty) && (
+                      <div className="am-form-help am-form-help--warning">
+                        {departmentLoadError || 'Chưa có phòng ban thật trong cơ sở dữ liệu. Hãy tạo phòng ban trước khi thêm tài khoản.'}
+                        <button type="button" className="am-inline-link" onClick={goToDepartmentReference}>
+                          Tới danh mục phòng ban
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {editingUser && (

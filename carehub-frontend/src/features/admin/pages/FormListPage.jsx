@@ -519,7 +519,7 @@ function FormListPage() {
                     onClick={openAssignmentModal}
                     type="button"
                   >
-                    <UserSwitchOutlined /> Phân quyền manager
+                    <UserSwitchOutlined /> Giao checklist
                   </button>
                   <div
                     className={`flp-import-menu${importMenuOpen ? ' is-open' : ''}`}
