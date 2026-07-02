@@ -7,7 +7,7 @@ import AdminSidebar from '../../../admin/components/AdminSidebar'
 import AdminHeader from '../../../admin/components/AdminHeader'
 import { tokenStorage } from '../../../auth/services/tokenStorage.js'
 import { AUTH_ROLE, hasAnyRole } from '../../../auth/utils/authNavigation.js'
-import { getRolesFromAccessToken } from '../../../auth/utils/jwt.js'
+import { getRolesFromAccessToken, getJwtPayload } from '../../../auth/utils/jwt.js'
 import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
@@ -19,8 +19,10 @@ function ManagerEvidenceReviewListPage() {
   const [error, setError] = useState(null)
 
   const accessToken = tokenStorage.getAccessToken()
+  const payload = getJwtPayload(accessToken)
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  const currentEmployeeCode = payload?.employeeCode || ''
 
   useEffect(() => {
     trainingApi.getPendingRecords({ size: 100 })
@@ -35,11 +37,18 @@ function ManagerEvidenceReviewListPage() {
       })
   }, [])
 
-  const filteredEvidences = evidences.filter(ev => 
-    (ev.employeeName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (ev.employeeCode || '').toLowerCase().includes(search.toLowerCase()) ||
-    (ev.title || '').toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredEvidences = evidences.filter(ev => {
+    // Managers cannot review their own records, so we hide them from their queue.
+    // Admins can see and review everything.
+    if (!isAdmin && ev.employeeCode === currentEmployeeCode) {
+      return false
+    }
+    return (
+      (ev.employeeName || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ev.employeeCode || '').toLowerCase().includes(search.toLowerCase()) ||
+      (ev.title || '').toLowerCase().includes(search.toLowerCase())
+    )
+  })
 
   const breadcrumbs = [
     { label: 'Đào tạo' },

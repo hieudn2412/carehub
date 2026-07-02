@@ -101,7 +101,8 @@ const navSections = [
   {
     label: 'THÔNG BÁO',
     items: [
-      { icon: <BellOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
+      { icon: <BellOutlined />, label: 'Thông báo của tôi', path: '/staff/notifications' },
+      { icon: <SettingOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
       { icon: <MailOutlined />, label: 'Mẫu email', path: '/admin/notifications/email-templates' },
     ],
   },

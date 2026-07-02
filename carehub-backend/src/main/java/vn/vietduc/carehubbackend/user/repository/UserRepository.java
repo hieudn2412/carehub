@@ -69,4 +69,13 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("departmentId") Long departmentId,
             @Param("positionId") Long positionId
     );
+
+    @Query("""
+            SELECT ur.user
+            FROM UserRole ur
+            WHERE ur.user.isDeleted = false
+              AND ur.user.department.id = :departmentId
+              AND ur.role.code = 'MANAGER'
+            """)
+    List<User> findManagersByDepartmentId(@Param("departmentId") Long departmentId);
 }
