@@ -29,19 +29,22 @@ function TrainingHoursListScreen() {
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
   const [totalApprovedHours, setTotalApprovedHours] = useState(0)
+  const [requiredHours, setRequiredHours] = useState(120)
   const [trigger, setTrigger] = useState(0)
   const size = 10
 
-  // Fetch approved hours dynamically
+  // Fetch approved hours dynamically from compliance status (5-year rolling cycle)
   useEffect(() => {
-    trainingApi.listRecords({ size: 1000, workflowStatus: 'APPROVED', keyword: '%' })
+    trainingApi.getMyTrainingStatus()
       .then(res => {
-        const content = res.data?.data?.content || []
-        const total = content.reduce((sum, r) => sum + (r.approvedHours || 0), 0)
-        setTotalApprovedHours(total)
+        const statusData = res.data?.data
+        if (statusData) {
+          setTotalApprovedHours(statusData.approvedHours || 0)
+          setRequiredHours(statusData.requiredHours || 120)
+        }
       })
       .catch(err => console.error("Error fetching approved hours", err))
-  }, [])
+  }, [trigger])
 
   // Fetch training records with debounce
   useEffect(() => {
@@ -74,12 +77,6 @@ function TrainingHoursListScreen() {
       .then(() => {
         showToast("Gửi duyệt hồ sơ thành công!", "success")
         setTrigger(t => t + 1)
-        trainingApi.listRecords({ size: 1000, workflowStatus: 'APPROVED', keyword: '%' })
-          .then(res => {
-            const content = res.data?.data?.content || []
-            const total = content.reduce((sum, r) => sum + (r.approvedHours || 0), 0)
-            setTotalApprovedHours(total)
-          })
       })
       .catch(err => {
         console.error("Error submitting record", err)
@@ -152,7 +149,7 @@ function TrainingHoursListScreen() {
               <div className="training-alert">
                 <ExclamationCircleOutlined style={{ color: '#dc2626', fontSize: 18 }} />
                 <span>
-                  Tổng số giờ CME: <strong>{totalApprovedHours} / 120 giờ</strong> — {totalApprovedHours >= 120 ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${120 - totalApprovedHours} giờ.`}
+                  Tổng số giờ CME: <strong>{totalApprovedHours} / {requiredHours} giờ</strong> — {totalApprovedHours >= requiredHours ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${requiredHours - totalApprovedHours} giờ.`}
                 </span>
               </div>
             </div>
