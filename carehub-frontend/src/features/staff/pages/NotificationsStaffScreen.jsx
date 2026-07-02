@@ -16,13 +16,26 @@ import {
 } from '@ant-design/icons'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
+import AdminSidebar from '../../admin/components/AdminSidebar'
+import AdminHeader from '../../admin/components/AdminHeader'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
+import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import '../styles/NotificationsStaffScreen.css'
 
 function NotificationsStaffScreen() {
   const { showToast } = useToast()
+  
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  
+  const breadcrumbs = [
+    { label: 'Hệ thống' },
+    { label: 'Thông báo của tôi' }
+  ]
   
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
@@ -232,9 +245,9 @@ function NotificationsStaffScreen() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <Header title="Thông báo" />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header title="Thông báo" />}
         <div className="dashboard-layout__body">
           <div className="notify-page-container">
             <div className="notify-card">

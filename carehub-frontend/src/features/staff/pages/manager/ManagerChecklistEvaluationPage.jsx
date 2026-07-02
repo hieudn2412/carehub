@@ -61,6 +61,17 @@ function ManagerChecklistEvaluationPage() {
   const [submitting, setSubmitting] = useState(false)
   const [employees, setEmployees] = useState([])
   const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [employeeSearch, setEmployeeSearch] = useState('')
+
+  const filteredEmployees = useMemo(() => {
+    if (!employeeSearch.trim()) return employees
+    const q = employeeSearch.toLowerCase().trim()
+    return employees.filter(emp => 
+      (emp.employeeName || '').toLowerCase().includes(q) ||
+      (emp.employeeCode || '').toLowerCase().includes(q)
+    )
+  }, [employees, employeeSearch])
 
   const loadAssignedForm = () => {
     setLoading(true)
@@ -431,29 +442,128 @@ function ManagerChecklistEvaluationPage() {
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
                   Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <select
-                    className="mgr-select"
-                    value={employeeCode}
-                    onChange={(event) => {
-                      const code = event.target.value
-                      setEmployeeCode(code)
-                      setSubjectDetails(null)
-                      setSubmission(null)
-                      if (code) {
-                        handleSubjectLookup(code)
-                      }
-                    }}
-                    style={{ width: '100%', maxWidth: 400, height: 38, padding: '0 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', fontSize: 13.5, cursor: 'pointer' }}
-                    disabled={employeesLoading || subjectLoading}
-                  >
-                    <option value="">-- Chọn nhân viên được giám sát --</option>
-                    {employees.map((emp) => (
-                      <option key={emp.employeeCode} value={emp.employeeCode}>
-                        {emp.employeeName} ({emp.employeeCode})
-                      </option>
-                    ))}
-                  </select>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
+                  <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
+                    {/* Backdrop for closing dropdown */}
+                    {dropdownOpen && (
+                      <div 
+                        onClick={() => setDropdownOpen(false)}
+                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+                      />
+                    )}
+
+                    {/* Selected Header */}
+                    <div 
+                      onClick={() => !employeesLoading && !subjectLoading && setDropdownOpen(!dropdownOpen)}
+                      style={{
+                        width: '100%',
+                        height: 38,
+                        padding: '0 12px',
+                        borderRadius: 8,
+                        border: '1px solid #cbd5e1',
+                        background: (employeesLoading || subjectLoading) ? '#f8fafc' : '#fff',
+                        color: (employeesLoading || subjectLoading) ? '#94a3b8' : '#0f172a',
+                        fontSize: 13.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: (employeesLoading || subjectLoading) ? 'not-allowed' : 'pointer',
+                        userSelect: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <span>
+                        {employeeCode 
+                          ? `${employees.find(e => e.employeeCode === employeeCode)?.employeeName || employeeCode} (${employeeCode})`
+                          : '-- Chọn nhân viên được giám sát --'
+                        }
+                      </span>
+                      <span style={{ fontSize: 10, color: '#64748b' }}>▼</span>
+                    </div>
+
+                    {/* Dropdown Menu */}
+                    {dropdownOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 1000,
+                        background: '#fff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 8,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        marginTop: 4,
+                        padding: 8,
+                        boxSizing: 'border-box'
+                      }}>
+                        {/* Search Input */}
+                        <input
+                          type="text"
+                          placeholder="Nhập mã hoặc tên để tìm..."
+                          value={employeeSearch}
+                          onChange={(e) => setEmployeeSearch(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            width: '100%',
+                            height: 34,
+                            padding: '0 10px',
+                            borderRadius: 6,
+                            border: '1px solid #cbd5e1',
+                            fontSize: 13,
+                            marginBottom: 8,
+                            boxSizing: 'border-box',
+                            outline: 'none'
+                          }}
+                        />
+
+                        {/* List Items */}
+                        <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          {filteredEmployees.length === 0 ? (
+                            <div style={{ padding: '8px 12px', fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+                              Không tìm thấy nhân viên
+                            </div>
+                          ) : (
+                            filteredEmployees.map((emp) => (
+                              <div
+                                key={emp.employeeCode}
+                                onClick={() => {
+                                  setEmployeeCode(emp.employeeCode)
+                                  setSubjectDetails(null)
+                                  setSubmission(null)
+                                  handleSubjectLookup(emp.employeeCode)
+                                  setDropdownOpen(false)
+                                  setEmployeeSearch('')
+                                }}
+                                style={{
+                                  padding: '8px 12px',
+                                  borderRadius: 6,
+                                  fontSize: 13.5,
+                                  cursor: 'pointer',
+                                  background: employeeCode === emp.employeeCode ? '#eff6ff' : 'transparent',
+                                  color: employeeCode === emp.employeeCode ? '#2563eb' : '#0f172a',
+                                  fontWeight: employeeCode === emp.employeeCode ? 600 : 400,
+                                  transition: 'all 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                  if (employeeCode !== emp.employeeCode) {
+                                    e.target.style.background = '#f8fafc'
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  if (employeeCode !== emp.employeeCode) {
+                                    e.target.style.background = 'transparent'
+                                  }
+                                }}
+                              >
+                                {emp.employeeName} ({emp.employeeCode})
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {(employeesLoading || subjectLoading) && (
                     <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       <LoadingOutlined spin /> Đang xử lý...
