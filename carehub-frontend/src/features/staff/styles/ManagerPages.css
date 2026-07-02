@@ -497,3 +497,26 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Custom styling for comment/rejection textarea */
+.f-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px 14px;
+  border: 1px solid var(--mgr-border);
+  border-radius: var(--mgr-radius-sm);
+  background: #ffffff;
+  color: var(--mgr-text);
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.6;
+  outline: none;
+  resize: vertical;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.f-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
