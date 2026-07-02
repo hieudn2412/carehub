@@ -7,7 +7,7 @@ import AdminSidebar from '../../../admin/components/AdminSidebar'
 import AdminHeader from '../../../admin/components/AdminHeader'
 import { tokenStorage } from '../../../auth/services/tokenStorage.js'
 import { AUTH_ROLE, hasAnyRole } from '../../../auth/utils/authNavigation.js'
-import { getRolesFromAccessToken } from '../../../auth/utils/jwt.js'
+import { getRolesFromAccessToken, getJwtPayload } from '../../../auth/utils/jwt.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
@@ -25,8 +25,10 @@ function ManagerEvidenceReviewDetailPage() {
   const [error, setError] = useState(null)
 
   const accessToken = tokenStorage.getAccessToken()
+  const payload = getJwtPayload(accessToken)
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  const currentEmployeeCode = payload?.employeeCode || ''
   const backPath = isAdmin ? '/admin/training/evidence-review' : '/manager/evidence-review'
 
   useEffect(() => {
@@ -269,39 +271,65 @@ function ManagerEvidenceReviewDetailPage() {
                 </div>
               )}
 
-              {/* Comment inputs */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
-                  Ý kiến nhận xét / Lý do từ chối
-                </label>
-                <textarea 
-                  className="f-textarea"
-                  placeholder="Nhập nhận xét phê duyệt hoặc lý do từ chối (bắt buộc khi Từ chối)..."
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  style={{ minHeight: 80 }}
-                />
-              </div>
+               {/* Comment inputs & action buttons or self-review warning */}
+              {!isAdmin && evidence?.employeeCode === currentEmployeeCode ? (
+                <div style={{
+                  background: '#fffbeb',
+                  border: '1px solid #fef3c7',
+                  borderRadius: 8,
+                  padding: 16,
+                  color: '#d97706',
+                  fontSize: 13.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  lineHeight: '1.5',
+                  marginBottom: 10
+                }}>
+                  <span>⚠️</span>
+                  <div>
+                    <strong>Bạn không thể tự phê duyệt hồ sơ của chính mình.</strong>
+                    <br />
+                    Vui lòng liên hệ Admin để phê duyệt minh chứng này.
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Comment inputs */}
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>
+                      Ý kiến nhận xét / Lý do từ chối
+                    </label>
+                    <textarea 
+                      className="f-textarea"
+                      placeholder="Nhập nhận xét phê duyệt hoặc lý do từ chối (bắt buộc khi Từ chối)..."
+                      value={comment}
+                      onChange={e => setComment(e.target.value)}
+                      style={{ minHeight: 80 }}
+                    />
+                  </div>
 
-              {/* Action buttons */}
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button 
-                  onClick={handleReject}
-                  disabled={actionLoading}
-                  className="training-button"
-                  style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fecaca', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
-                >
-                  <CloseOutlined /> Từ chối
-                </button>
-                <button 
-                  onClick={handleApprove}
-                  disabled={actionLoading}
-                  className="training-button training-button--primary"
-                  style={{ background: '#10b981', borderColor: '#10b981', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
-                >
-                  <CheckOutlined /> Phê duyệt
-                </button>
-              </div>
+                  {/* Action buttons */}
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                    <button 
+                      onClick={handleReject}
+                      disabled={actionLoading}
+                      className="training-button"
+                      style={{ background: '#fef2f2', color: '#ef4444', borderColor: '#fecaca', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
+                    >
+                      <CloseOutlined /> Từ chối
+                    </button>
+                    <button 
+                      onClick={handleApprove}
+                      disabled={actionLoading}
+                      className="training-button training-button--primary"
+                      style={{ background: '#10b981', borderColor: '#10b981', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
+                    >
+                      <CheckOutlined /> Phê duyệt
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

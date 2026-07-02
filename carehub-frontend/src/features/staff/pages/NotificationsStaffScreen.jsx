@@ -69,12 +69,27 @@ function NotificationsStaffScreen() {
       params.read = true
     }
 
-    httpClient.get('/me/notifications', { headers, params })
-      .then(res => {
-        const data = res.data?.data
-        setNotifications(data?.content || [])
+    Promise.all([
+      httpClient.get('/me/notifications', { headers, params }),
+      httpClient.get('/me', { headers })
+    ])
+      .then(([notifRes, profileRes]) => {
+        const profile = profileRes.data?.data
+        const currentName = profile?.fullName || ''
+        const data = notifRes.data?.data
+        const content = data?.content || []
+
+        const filtered = content.filter(n => {
+          // Filter out self-submit notifications for managers
+          if (n.title === 'Hồ sơ CME mới chờ duyệt' && currentName && n.content.includes(currentName)) {
+            return false
+          }
+          return true
+        })
+
+        setNotifications(filtered)
         setTotalPages(data?.totalPages || 0)
-        setTotalElements(data?.totalElements || 0)
+        setTotalElements(filtered.length)
         setError(null)
       })
       .catch(err => {
