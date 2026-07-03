@@ -18,6 +18,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     Optional<User> findByEmployeeCodeAndIsDeletedFalse(String employeeCode);
 
     @EntityGraph(attributePaths = {"department", "position", "educationLevel"})
+    Optional<User> findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(String employeeCode);
+
+    @EntityGraph(attributePaths = {"department", "position", "educationLevel"})
     Optional<User> findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(String employeeCode, vn.vietduc.carehubbackend.user.entity.UserStatus status);
     boolean existsByEmail(String email);
     boolean existsByEmployeeCodeAndIsDeletedFalse(String employeeCode);
