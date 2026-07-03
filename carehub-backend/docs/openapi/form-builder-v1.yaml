@@ -393,6 +393,33 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /forms/{formId}/assignments:
+    get:
+      tags: [Form Assignment]
+      operationId: listFormManagerAssignments
+      summary: List manager assignments for one form (ADMIN)
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/FormAssignmentStatus'
+          example: ACTIVE
+          description: Defaults to ACTIVE when omitted.
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Paginated manager assignments for the form
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormManagerAssignmentPageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /form-assignments/{assignmentId}:
     parameters:
       - name: assignmentId
@@ -796,6 +823,24 @@ components:
         formVersionId: { type: integer, format: int64 }
         versionNumber: { type: integer }
         status: { $ref: '#/components/schemas/FormAssignmentStatus' }
+    FormManagerAssignment:
+      type: object
+      required: [assignmentId, assignmentItemId, manager, assignedBy, assignedAt, assignmentStatus, effectiveStatus, itemStatus, formVersionId, versionNumber, title]
+      properties:
+        assignmentId: { type: integer, format: int64 }
+        assignmentItemId: { type: integer, format: int64 }
+        manager: { $ref: '#/components/schemas/AssignmentUser' }
+        assignedBy: { $ref: '#/components/schemas/AssignmentUser' }
+        assignedAt: { type: string, format: date-time }
+        validFrom: { type: [string, 'null'], format: date-time }
+        validUntil: { type: [string, 'null'], format: date-time }
+        revokedAt: { type: [string, 'null'], format: date-time }
+        assignmentStatus: { $ref: '#/components/schemas/FormAssignmentStatus' }
+        effectiveStatus: { $ref: '#/components/schemas/FormAssignmentStatus' }
+        itemStatus: { $ref: '#/components/schemas/FormAssignmentStatus' }
+        formVersionId: { type: integer, format: int64 }
+        versionNumber: { type: integer }
+        title: { type: string }
     AssignedForm:
       type: object
       required: [assignmentItemId, formId, formCode, title]
@@ -927,6 +972,18 @@ components:
             - type: object
               properties:
                 content: { type: array, items: { $ref: '#/components/schemas/FormAssignment' } }
+    FormManagerAssignmentPageEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success: { type: boolean, const: true }
+        message: { type: string }
+        data:
+          allOf:
+            - $ref: '#/components/schemas/PageMetadata'
+            - type: object
+              properties:
+                content: { type: array, items: { $ref: '#/components/schemas/FormManagerAssignment' } }
     AssignedFormEnvelope:
       type: object
       required: [success, message, data]

@@ -467,6 +467,24 @@ POST /api/v1/form-assignments
 }
 ```
 
+Popup phân quyền ở từng form dùng API này để lấy danh sách manager đã được gán cho form:
+
+```http
+GET /api/v1/forms/{formId}/assignments?status=ACTIVE&page=0&size=20
+```
+
+Response `data.content[]` gồm `assignmentId`, `assignmentItemId`, thông tin `manager`, người gán, thời gian hiệu lực, trạng thái và version form đã gán. Frontend dùng:
+
+- `manager.employeeCode` / `manager.fullName` để hiển thị trong popup.
+- `assignmentItemId` để xóa quyền của riêng manager đó khỏi form.
+- `formVersionId` / `versionNumber` để biết manager đang được ghim vào version nào.
+
+Thêm manager trong popup vẫn gọi `POST /api/v1/form-assignments`, truyền `managerId` và `formVersionIds` là version `PUBLISHED` hiện tại của form. Xóa manager khỏi form gọi:
+
+```http
+DELETE /api/v1/form-assignment-items/{assignmentItemId}
+```
+
 Manager tải form được cấp:
 
 ```http
