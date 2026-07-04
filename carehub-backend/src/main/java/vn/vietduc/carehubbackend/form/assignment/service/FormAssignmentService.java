@@ -9,8 +9,10 @@ import vn.vietduc.carehubbackend.form.assignment.dto.*;
 import vn.vietduc.carehubbackend.form.assignment.entity.*;
 import vn.vietduc.carehubbackend.form.assignment.repository.*;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
+import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
 import vn.vietduc.carehubbackend.form.mapper.FormMapper;
+import vn.vietduc.carehubbackend.form.repository.FormRepository;
 import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.*;
@@ -25,6 +27,7 @@ public class FormAssignmentService {
     private static final int MAX_PAGE_SIZE = 100;
     private final FormAssignmentRepository assignmentRepository;
     private final FormAssignmentItemRepository itemRepository;
+    private final FormRepository formRepository;
     private final FormVersionRepository versionRepository;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
@@ -54,11 +57,12 @@ public class FormAssignmentService {
             throw ValidationException.field("formVersionIds", "One or more form versions do not exist");
         }
         for (FormVersion version : versions) {
-            if (version.getStatus() != FormVersionStatus.PUBLISHED) {
+            if (version.getStatus() != FormVersionStatus.PUBLISHED
+                    || version.getForm().isDeleted()
+                    || version.getForm().getStatus() != FormStatus.PUBLISHED) {
                 throw ValidationException.field("formVersionIds", "Only published form versions can be assigned");
             }
-            if (itemRepository.existsOverlappingActiveAssignment(manager.getId(), version.getId(),
-                    FormAssignmentStatus.ACTIVE, from, request.validUntil())) {
+            if (hasOverlappingActiveAssignment(manager.getId(), version.getId(), from, request.validUntil())) {
                 throw new ConflictException("Manager already has an active assignment for form " + version.getForm().getCode());
             }
         }
@@ -76,6 +80,13 @@ public class FormAssignmentService {
     @Transactional(readOnly = true)
     public Page<FormAssignmentResponse> search(Long managerId, Pageable pageable) {
         return assignmentRepository.search(managerId, normalize(pageable)).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FormManagerAssignmentResponse> searchByForm(Long formId, FormAssignmentStatus status, Pageable pageable) {
+        formRepository.findByIdAndDeletedFalse(formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        return itemRepository.findByFormId(formId, status, normalize(pageable)).map(this::toFormManagerResponse);
     }
 
     @Transactional(readOnly = true)
@@ -106,7 +117,8 @@ public class FormAssignmentService {
     public Page<AssignedFormResponse> assignedForms(Pageable pageable) {
         long managerId = securityUtils.getCurrentUserId();
         return itemRepository.findActiveForManager(managerId, FormAssignmentStatus.ACTIVE,
-                Instant.now(clock), normalize(pageable)).map(item -> toAssigned(item, false));
+                FormStatus.PUBLISHED, FormVersionStatus.PUBLISHED, Instant.now(clock),
+                normalize(pageable)).map(item -> toAssigned(item, false));
     }
 
     @Transactional(readOnly = true)
@@ -117,6 +129,15 @@ public class FormAssignmentService {
     private User activeUser(Long id, String message) {
         return userRepository.findById(id).filter(u -> !u.isDeleted() && u.getStatus() == UserStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException(message));
+    }
+
+    private boolean hasOverlappingActiveAssignment(Long managerId, Long versionId, Instant from, Instant until) {
+        if (until == null) {
+            return itemRepository.existsOpenEndedOverlappingActiveAssignment(
+                    managerId, versionId, FormAssignmentStatus.ACTIVE, from);
+        }
+        return itemRepository.existsBoundedOverlappingActiveAssignment(
+                managerId, versionId, FormAssignmentStatus.ACTIVE, from, until);
     }
 
     private AssignedFormResponse toAssigned(FormAssignmentItem item, boolean detail) {
@@ -140,6 +161,26 @@ public class FormAssignmentService {
                 .build();
     }
 
+    private FormManagerAssignmentResponse toFormManagerResponse(FormAssignmentItem item) {
+        FormAssignment assignment = item.getAssignment();
+        return FormManagerAssignmentResponse.builder()
+                .assignmentId(assignment.getId())
+                .assignmentItemId(item.getId())
+                .manager(userSummary(assignment.getManager()))
+                .assignedBy(userSummary(assignment.getAssignedBy()))
+                .assignedAt(assignment.getAssignedAt())
+                .validFrom(assignment.getEffectiveFrom())
+                .validUntil(assignment.getEffectiveTo())
+                .revokedAt(assignment.getRevokedAt())
+                .assignmentStatus(assignment.getStatus())
+                .effectiveStatus(effectiveStatus(assignment))
+                .itemStatus(item.getStatus())
+                .formVersionId(item.getFormVersion().getId())
+                .versionNumber(item.getFormVersion().getVersionNumber())
+                .title(item.getFormVersion().getTitle())
+                .build();
+    }
+
     private FormAssignmentStatus effectiveStatus(FormAssignment assignment) {
         return assignment.getStatus() == FormAssignmentStatus.ACTIVE && assignment.getEffectiveTo() != null
                 && assignment.getEffectiveTo().isBefore(Instant.now(clock)) ? FormAssignmentStatus.EXPIRED : assignment.getStatus();
@@ -147,6 +188,10 @@ public class FormAssignmentService {
 
     private FormAssignmentResponse.UserSummary user(User user) {
         return new FormAssignmentResponse.UserSummary(user.getId(), user.getEmployeeCode(), user.getName());
+    }
+
+    private FormManagerAssignmentResponse.UserSummary userSummary(User user) {
+        return new FormManagerAssignmentResponse.UserSummary(user.getId(), user.getEmployeeCode(), user.getName());
     }
 
     private Pageable normalize(Pageable pageable) {

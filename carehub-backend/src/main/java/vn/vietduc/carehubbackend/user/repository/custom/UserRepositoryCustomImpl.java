@@ -41,6 +41,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             dataQuery.setParameter(key, value);
         });
 
+        @SuppressWarnings("unchecked")
         List<User> users = dataQuery.getResultList();
         return users;
     }
@@ -110,6 +111,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 pageable.getOffset()
         );
 
+        @SuppressWarnings("unchecked")
         List<User> users = dataQuery.getResultList();
 
         Long total =

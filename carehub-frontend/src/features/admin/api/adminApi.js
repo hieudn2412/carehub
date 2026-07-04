@@ -308,4 +308,49 @@ export const adminApi = {
       params,
     })
   },
+
+  // Form Assignments
+  createFormAssignment(data) {
+    return httpClient.post('/form-assignments', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormAssignments(params) {
+    return httpClient.get('/form-assignments', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentById(id) {
+    return httpClient.get(`/form-assignments/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  revokeFormAssignment(id) {
+    return httpClient.delete(`/form-assignments/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  revokeFormAssignmentItem(id) {
+    return httpClient.delete(`/form-assignment-items/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormSubmissions(params) {
+    return httpClient.get('/form-submissions', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormSubmission(id) {
+    return httpClient.get(`/form-submissions/${id}`, {
+      headers: authHeaders(),
+    })
+  },
 }

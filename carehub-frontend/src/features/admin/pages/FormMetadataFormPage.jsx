@@ -21,6 +21,8 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/FormMetadataFormPage.css'
 
+const DEFAULT_FORM_SUBJECT_TYPE = 'USER'
+
 function FormMetadataFormPage() {
   const { showToast } = useToast()
   const { id } = useParams()
@@ -38,7 +40,6 @@ function FormMetadataFormPage() {
 
   const [loading, setLoading] = useState(Boolean(isEditMode))
   const [submitting, setSubmitting] = useState(false)
-  const [departments, setDepartments] = useState([])
   const [versions, setVersions] = useState([])
   const [versionsLoading, setVersionsLoading] = useState(Boolean(isEditMode))
   const [errorMessage, setErrorMessage] = useState('')
@@ -47,14 +48,20 @@ function FormMetadataFormPage() {
   const [code, setCode] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [subjectType, setSubjectType] = useState('USER')
-  const [ownerDepartmentId, setOwnerDepartmentId] = useState('')
 
-  const getErrorMessage = (error, fallback) => (
-    error?.response?.data?.message
-    || error?.response?.data?.error
-    || fallback
-  )
+  const getErrorMessage = (error, fallback) => {
+    const data = error?.response?.data
+    if (data) {
+      if (Array.isArray(data.details)) {
+        const detailsMsg = data.details.map(d => `${d.field}: ${d.message}`).join('; ')
+        if (detailsMsg) {
+          return `${data.message || 'Lỗi kiểm duyệt'}: ${detailsMsg}`
+        }
+      }
+      return data.message || data.error || fallback
+    }
+    return fallback
+  }
 
   const loadFormData = useCallback(() => {
     adminApi.getFormById(id)
@@ -67,8 +74,6 @@ function FormMetadataFormPage() {
         setCode(getChecklistDisplayCode(form.code))
         setTitle(form.title)
         setDescription(form.description || '')
-        setSubjectType(form.subjectType)
-        setOwnerDepartmentId(form.ownerDepartment?.id || '')
       })
       .catch((error) => {
         console.error('Không thể tải thông tin biểu mẫu.', error)
@@ -100,19 +105,6 @@ function FormMetadataFormPage() {
   }, [id])
 
   useEffect(() => {
-    adminApi.getDepartments()
-      .then(res => {
-        const departmentData = res.data?.data
-        const departmentList = Array.isArray(departmentData)
-          ? departmentData
-          : departmentData?.content
-        setDepartments(Array.isArray(departmentList) ? departmentList : [])
-      })
-      .catch((error) => {
-        console.error('Không thể tải danh sách khoa phòng.', error)
-        setDepartments([])
-      })
-
     if (isEditMode) {
       loadFormData()
       loadFormVersions()
@@ -138,8 +130,8 @@ function FormMetadataFormPage() {
     const metadataPayload = {
       title,
       description: description || null,
-      subjectType,
-      ownerDepartmentId: ownerDepartmentId ? parseInt(ownerDepartmentId) : null
+      subjectType: DEFAULT_FORM_SUBJECT_TYPE,
+      ownerDepartmentId: null
     }
 
     if (isEditMode) {
@@ -347,36 +339,6 @@ function FormMetadataFormPage() {
                           />
                         </div>
 
-                        <div className="fmp-form-field">
-                          <label>Đối tượng đánh giá chất lượng</label>
-                          <select
-                            className="fmp-select-control"
-                            value={subjectType}
-                            onChange={(e) => setSubjectType(e.target.value)}
-                          >
-                            <option value="USER">Nhân viên (Điều dưỡng/Bác sĩ)</option>
-                            <option value="PATIENT">Bệnh nhân</option>
-                            <option value="PROCESS">Quy trình chuyên môn</option>
-                            <option value="ROOM">Phòng bệnh/Phòng khám</option>
-                            <option value="DEPARTMENT">Khoa/Phòng</option>
-                          </select>
-                        </div>
-
-                        <div className="fmp-form-field">
-                          <label>Khoa/Phòng sở hữu</label>
-                          <select
-                            className="fmp-select-control"
-                            value={ownerDepartmentId}
-                            onChange={(e) => setOwnerDepartmentId(e.target.value)}
-                          >
-                            <option value="">Không phân khoa phòng (Áp dụng chung)</option>
-                            {departments.map((dept) => (
-                              <option key={dept.id} value={dept.id}>
-                                {dept.name} ({dept.code})
-                              </option>
-                            ))}
-                          </select>
-                        </div>
                       </div>
 
                       <div className="fmp-form-actions">

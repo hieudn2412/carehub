@@ -22,6 +22,7 @@ import java.util.UUID;
 
 @RestControllerAdvice
 @Slf4j
+@SuppressWarnings("deprecation")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadRequestException.class)

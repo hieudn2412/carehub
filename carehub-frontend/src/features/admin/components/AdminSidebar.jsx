@@ -67,7 +67,7 @@ const navSections = [
   {
     label: 'CHẤT LƯỢNG',
     items: [
-      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm / Quality forms', path: '/admin/quality/checklists' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
       { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
@@ -179,7 +179,8 @@ const navSections = [
   {
     label: 'THÔNG BÁO',
     items: [
-      { icon: <BellOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
+      { icon: <BellOutlined />, label: 'Thông báo của tôi', path: '/staff/notifications' },
+      { icon: <SettingOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
       { icon: <MailOutlined />, label: 'Mẫu email', path: '/admin/notifications/email-templates' },
     ],
   },

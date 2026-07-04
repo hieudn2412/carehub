@@ -12,10 +12,24 @@ export function useNotifications() {
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     const params = { q: '%' }
 
-    httpClient.get('/me/notifications', { headers, params })
-      .then(res => {
-        const content = res.data?.data?.content || []
-        const mapped = content.map(n => {
+    Promise.all([
+      httpClient.get('/me/notifications', { headers, params }),
+      httpClient.get('/me', { headers })
+    ])
+      .then(([notifRes, profileRes]) => {
+        const profile = profileRes.data?.data
+        const currentName = profile?.fullName || ''
+        const content = notifRes.data?.data?.content || []
+
+        const filtered = content.filter(n => {
+          // Filter out self-submit notifications for managers
+          if (n.title === 'Hồ sơ CME mới chờ duyệt' && currentName && n.content.includes(currentName)) {
+            return false
+          }
+          return true
+        })
+
+        const mapped = filtered.map(n => {
           // Determine group: "Hôm nay", "Tuần này", "Cũ hơn"
           let group = 'Cũ hơn'
           try {

@@ -36,6 +36,9 @@ import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileReposit
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordReviewRepository;
+import vn.vietduc.carehubbackend.training.entity.TrainingRecordReview;
+import vn.vietduc.carehubbackend.training.enums.ReviewDecision;
+import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordReviewRequest;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingAuditService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
@@ -45,10 +48,13 @@ import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import vn.vietduc.carehubbackend.notification.service.NotificationService;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +71,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final TrainingRecordStateMachine stateMachine;
     private final TrainingDomainValidator validator;
     private final TrainingAuditService auditService;
+    private final NotificationService notificationService;
 
     @Value("${app.training.records.max-edit-count:2}")
     private int maxEditCount;
@@ -217,6 +224,26 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
 
         TrainingRecord saved = recordRepository.save(record);
         auditService.logRecordChange(saved, TrainingRecordChangeType.SUBMITTED, before, snapshot(saved), actor);
+
+        // Send notifications to department managers
+        if (saved.getEmployee().getDepartment() != null) {
+            try {
+                List<User> managers = userRepository.findManagersByDepartmentId(saved.getEmployee().getDepartment().getId());
+                for (User manager : managers) {
+                    notificationService.createInAppNotification(
+                            manager.getId(),
+                            "WARNING",
+                            "Hồ sơ CME mới chờ duyệt",
+                            "Nhân viên " + saved.getEmployee().getName() + " đã gửi duyệt hồ sơ '" + saved.getTitle() + "'.",
+                            "/manager/evidence-review/" + saved.getId(),
+                            "cme_submit_" + saved.getId() + "_" + saved.getVersion() + "_" + manager.getId()
+                    );
+                }
+            } catch (Exception e) {
+                // Log and swallow exception to prevent rollback of transaction on notification failure
+            }
+        }
+
         return detailResponse(saved, 0);
     }
 
@@ -388,5 +415,109 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         data.put("editCount", record.getEditCount());
         data.put("version", record.getVersion());
         return data;
+    }
+
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse approve(Long id, TrainingRecordReviewRequest request) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        Set<String> roles = accessPolicy.currentRoleCodes();
+        if (!accessPolicy.canReviewRecord(actor, roles, record)) {
+            throw new ForbiddenException("You do not have permission to review this record");
+        }
+        
+        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.APPROVED, isAdmin());
+        
+        Map<String, Object> before = snapshot(record);
+        
+        BigDecimal approvedHours = request != null && request.approvedHours() != null 
+            ? request.approvedHours() 
+            : record.getDeclaredHours();
+        
+        record.setWorkflowStatus(TrainingRecordStatus.APPROVED);
+        record.setApprovedHours(approvedHours);
+        record.setUpdatedByUser(actor);
+        
+        TrainingRecord saved = recordRepository.save(record);
+        
+        reviewRepository.save(TrainingRecordReview.builder()
+                .trainingRecord(saved)
+                .decision(ReviewDecision.APPROVED)
+                .declaredHoursSnapshot(saved.getDeclaredHours())
+                .approvedHours(approvedHours)
+                .reason(request != null ? request.reason() : "Approved")
+                .reviewedByUser(actor)
+                .reviewedAt(LocalDateTime.now())
+                .build());
+                
+        auditService.logRecordChange(saved, TrainingRecordChangeType.APPROVED, before, snapshot(saved), actor);
+
+        // Notify the employee about the approval
+        try {
+            notificationService.createInAppNotification(
+                    saved.getEmployee().getId(),
+                    "SUCCESS",
+                    "Hồ sơ CME đã được phê duyệt",
+                    "Hồ sơ CME '" + saved.getTitle() + "' đã được phê duyệt với " + approvedHours.stripTrailingZeros().toPlainString() + " giờ CME.",
+                    "/staff/training/" + saved.getId(),
+                    "cme_approve_" + saved.getId() + "_" + saved.getVersion()
+            );
+        } catch (Exception e) {
+            // Log and swallow notification errors to prevent transaction rollback
+        }
+
+        return detailResponse(saved, 0);
+    }
+
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse reject(Long id, TrainingRecordReviewRequest request) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        Set<String> roles = accessPolicy.currentRoleCodes();
+        if (!accessPolicy.canReviewRecord(actor, roles, record)) {
+            throw new ForbiddenException("You do not have permission to review this record");
+        }
+        
+        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.REJECTED, isAdmin());
+        
+        String reason = request != null ? request.reason() : null;
+        stateMachine.requireRejectReason(reason);
+        
+        Map<String, Object> before = snapshot(record);
+        
+        record.setWorkflowStatus(TrainingRecordStatus.REJECTED);
+        record.setUpdatedByUser(actor);
+        
+        TrainingRecord saved = recordRepository.save(record);
+        
+        reviewRepository.save(TrainingRecordReview.builder()
+                .trainingRecord(saved)
+                .decision(ReviewDecision.REJECTED)
+                .declaredHoursSnapshot(saved.getDeclaredHours())
+                .approvedHours(BigDecimal.ZERO)
+                .reason(reason)
+                .reviewedByUser(actor)
+                .reviewedAt(LocalDateTime.now())
+                .build());
+                
+        auditService.logRecordChange(saved, TrainingRecordChangeType.REJECTED, before, snapshot(saved), actor);
+
+        // Notify the employee about the rejection
+        try {
+            notificationService.createInAppNotification(
+                    saved.getEmployee().getId(),
+                    "DANGER",
+                    "Hồ sơ CME bị từ chối",
+                    "Hồ sơ CME '" + saved.getTitle() + "' đã bị từ chối. Lý do: " + reason,
+                    "/staff/training/" + saved.getId(),
+                    "cme_reject_" + saved.getId() + "_" + saved.getVersion()
+            );
+        } catch (Exception e) {
+            // Log and swallow notification errors to prevent transaction rollback
+        }
+
+        return detailResponse(saved, 0);
     }
 }

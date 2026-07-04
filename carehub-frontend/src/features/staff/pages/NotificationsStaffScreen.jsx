@@ -11,14 +11,32 @@ import {
   WarningOutlined,
   InfoCircleOutlined,
   LinkOutlined,
+  CloseOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
+import AdminSidebar from '../../admin/components/AdminSidebar'
+import AdminHeader from '../../admin/components/AdminHeader'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
+import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import '../styles/NotificationsStaffScreen.css'
 
 function NotificationsStaffScreen() {
+  const { showToast } = useToast()
+  
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  
+  const breadcrumbs = [
+    { label: 'Hệ thống' },
+    { label: 'Thông báo của tôi' }
+  ]
+  
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -31,6 +49,10 @@ function NotificationsStaffScreen() {
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const size = 10
+
+  // Notification Detail Modal state
+  const [selectedNotification, setSelectedNotification] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   // Xử lý debounce cho tìm kiếm
   useEffect(() => {
@@ -60,12 +82,27 @@ function NotificationsStaffScreen() {
       params.read = true
     }
 
-    httpClient.get('/me/notifications', { headers, params })
-      .then(res => {
-        const data = res.data?.data
-        setNotifications(data?.content || [])
+    Promise.all([
+      httpClient.get('/me/notifications', { headers, params }),
+      httpClient.get('/me', { headers })
+    ])
+      .then(([notifRes, profileRes]) => {
+        const profile = profileRes.data?.data
+        const currentName = profile?.fullName || ''
+        const data = notifRes.data?.data
+        const content = data?.content || []
+
+        const filtered = content.filter(n => {
+          // Filter out self-submit notifications for managers
+          if (n.title === 'Hồ sơ CME mới chờ duyệt' && currentName && n.content.includes(currentName)) {
+            return false
+          }
+          return true
+        })
+
+        setNotifications(filtered)
         setTotalPages(data?.totalPages || 0)
-        setTotalElements(data?.totalElements || 0)
+        setTotalElements(filtered.length)
         setError(null)
       })
       .catch(err => {
@@ -81,21 +118,51 @@ function NotificationsStaffScreen() {
     fetchNotifications()
   }, [activeTab, debouncedQuery, page])
 
-  // Đánh dấu đã đọc một thông báo
-  const handleMarkAsRead = async (id) => {
+  // Tải chi tiết một thông báo (gắn API GET /api/v1/me/notifications/{id})
+  const handleOpenDetail = async (notif) => {
+    setDetailLoading(true)
+    setSelectedNotification(notif)
+    
+    try {
+      const token = tokenStorage.getAccessToken()
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const response = await httpClient.get(`/me/notifications/${notif.id}`, { headers })
+      
+      const freshData = response.data?.data
+      if (freshData) {
+        setSelectedNotification(freshData)
+      }
+
+      // Tự động đánh dấu đã đọc khi xem chi tiết
+      if (!notif.read) {
+        handleMarkAsRead(notif.id, true)
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải chi tiết thông báo:", err)
+      showToast("Không thể tải chi tiết thông báo.", "error")
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  // Đánh dấu đã đọc một thông báo (gắn API POST /api/v1/me/notifications/{id}/action)
+  const handleMarkAsRead = async (id, silent = false) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
     
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       await httpClient.post(`/me/notifications/${id}/action`, { action: 'MARK_READ' }, { headers })
+      if (!silent) {
+        showToast("Đã đánh dấu là đã đọc.", "success")
+      }
     } catch (err) {
       console.error("Lỗi khi đánh dấu đã đọc:", err)
       fetchNotifications()
     }
   }
 
-  // Xóa một thông báo
+  // Xóa một thông báo (gắn API DELETE /api/v1/me/notifications/{id})
   const handleDelete = async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
     
@@ -104,8 +171,10 @@ function NotificationsStaffScreen() {
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       await httpClient.delete(`/me/notifications/${id}`, { headers })
       setTotalElements(prev => Math.max(0, prev - 1))
+      showToast("Đã xóa thông báo thành công.", "success")
     } catch (err) {
       console.error("Lỗi khi xóa thông báo:", err)
+      showToast("Không thể xóa thông báo.", "error")
       fetchNotifications()
     }
   }
@@ -125,6 +194,7 @@ function NotificationsStaffScreen() {
           httpClient.post(`/me/notifications/${n.id}/action`, { action: 'MARK_READ' }, { headers })
         )
       )
+      showToast("Đã đánh dấu đọc tất cả thông báo.", "success")
     } catch (err) {
       console.error("Lỗi khi đánh dấu tất cả đã đọc:", err)
       fetchNotifications()
@@ -140,27 +210,19 @@ function NotificationsStaffScreen() {
   // Icon phụ trợ theo loại thông báo
   const getIcon = (type) => {
     switch (type) {
-      case 'DANGER':
-        return <WarningOutlined />
-      case 'WARNING':
-        return <InfoCircleOutlined />
-      case 'SUCCESS':
-        return <CheckCircleOutlined />
-      default:
-        return <InfoCircleOutlined />
+      case 'DANGER': return <WarningOutlined />
+      case 'WARNING': return <InfoCircleOutlined />
+      case 'SUCCESS': return <CheckCircleOutlined />
+      default: return <InfoCircleOutlined />
     }
   }
 
   const getIconClass = (type) => {
     switch (type) {
-      case 'DANGER':
-        return 'notify-icon-box--danger'
-      case 'WARNING':
-        return 'notify-icon-box--warning'
-      case 'SUCCESS':
-        return 'notify-icon-box--success'
-      default:
-        return 'notify-icon-box--info'
+      case 'DANGER': return 'notify-icon-box--danger'
+      case 'WARNING': return 'notify-icon-box--warning'
+      case 'SUCCESS': return 'notify-icon-box--success'
+      default: return 'notify-icon-box--info'
     }
   }
 
@@ -183,9 +245,9 @@ function NotificationsStaffScreen() {
 
   return (
     <div className="dashboard-layout">
-      <Sidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <Header title="Thông báo" />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header title="Thông báo" />}
         <div className="dashboard-layout__body">
           <div className="notify-page-container">
             <div className="notify-card">
@@ -260,6 +322,8 @@ function NotificationsStaffScreen() {
                     <div 
                       key={n.id} 
                       className={`notify-item-card ${!n.read ? 'notify-item-card--unread' : ''}`}
+                      onClick={() => handleOpenDetail(n)}
+                      style={{ cursor: 'pointer' }}
                     >
                       <div className={`notify-icon-box ${getIconClass(n.type)}`}>
                         {getIcon(n.type)}
@@ -270,13 +334,9 @@ function NotificationsStaffScreen() {
                           <h4 className="notify-item-title">{n.title}</h4>
                           {!n.read && <span className="notify-unread-dot" title="Chưa đọc" />}
                         </div>
-                        <p className="notify-item-desc">{n.content}</p>
-                        
-                        {n.deepLink && (
-                          <Link to={n.deepLink} className="notify-deep-link">
-                            <LinkOutlined /> Xem chi tiết
-                          </Link>
-                        )}
+                        <p className="notify-item-desc" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {n.content}
+                        </p>
                         
                         <div className="notify-item-footer">
                           <span>Hệ thống</span>
@@ -288,7 +348,7 @@ function NotificationsStaffScreen() {
                       <div className="notify-item-actions">
                         {!n.read && (
                           <button 
-                            onClick={() => handleMarkAsRead(n.id)}
+                            onClick={(e) => { e.stopPropagation(); handleMarkAsRead(n.id); }}
                             className="notify-action-circle-btn notify-action-circle-btn--success"
                             title="Đánh dấu đã đọc"
                           >
@@ -296,7 +356,7 @@ function NotificationsStaffScreen() {
                           </button>
                         )}
                         <button 
-                          onClick={() => handleDelete(n.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
                           className="notify-action-circle-btn notify-action-circle-btn--danger"
                           title="Xóa thông báo"
                         >
@@ -345,6 +405,61 @@ function NotificationsStaffScreen() {
           </div>
         </div>
       </div>
+
+      {/* Detail Modal Overlay */}
+      {selectedNotification && (
+        <div className="notify-modal-overlay" onClick={() => setSelectedNotification(null)}>
+          <div className="notify-modal-container" onClick={(e) => e.stopPropagation()}>
+            <button className="notify-modal-close" onClick={() => setSelectedNotification(null)}>
+              <CloseOutlined />
+            </button>
+            
+            {detailLoading ? (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>
+                <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải chi tiết thông báo...
+              </div>
+            ) : (
+              <>
+                <div className="notify-modal-header">
+                  <div className={`notify-icon-box ${getIconClass(selectedNotification.type)}`}>
+                    {getIcon(selectedNotification.type)}
+                  </div>
+                  <div>
+                    <h3 className="notify-modal-title">{selectedNotification.title}</h3>
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                      <span>Hệ thống</span> • <span>{formatDateTime(selectedNotification.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="notify-modal-content">
+                  {selectedNotification.content}
+                </div>
+                
+                <div className="notify-modal-footer">
+                  {selectedNotification.deepLink && (
+                    <Link 
+                      to={selectedNotification.deepLink} 
+                      className="training-button training-button--primary"
+                      style={{ textDecoration: 'none', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', fontSize: 13.5 }}
+                      onClick={() => setSelectedNotification(null)}
+                    >
+                      <LinkOutlined style={{ marginRight: 6 }} /> Xem chi tiết
+                    </Link>
+                  )}
+                  <button 
+                    className="training-button"
+                    style={{ height: 38, borderRadius: 8, fontSize: 13.5 }}
+                    onClick={() => setSelectedNotification(null)}
+                  >
+                    Đóng
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

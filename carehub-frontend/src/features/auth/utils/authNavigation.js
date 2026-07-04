@@ -64,7 +64,7 @@ export function getDefaultAuthenticatedRoute(roles, permissions = []) {
   }
 
   if (normalizedRoles.includes(AUTH_ROLE.manager)) {
-    return '/training'
+    return '/manager/dashboard'
   }
 
   if (normalizedRoles.includes(AUTH_ROLE.user)) {

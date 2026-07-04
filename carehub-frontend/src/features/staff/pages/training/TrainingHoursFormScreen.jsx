@@ -9,11 +9,13 @@ import {
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursFormScreen() {
   const { id } = useParams() // empty if creating, exists if editing
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const isEditMode = !!id
 
   const [form, setForm] = useState({
@@ -53,6 +55,11 @@ function TrainingHoursFormScreen() {
         .then(res => {
           const record = res.data?.data
           if (record) {
+            if (record.workflowStatus !== 'DRAFT' && record.workflowStatus !== 'REJECTED') {
+              showToast("Chỉ có thể chỉnh sửa hồ sơ ở trạng thái Bản nháp hoặc Bị từ chối.", "warning")
+              navigate('/staff/training')
+              return
+            }
             setForm({
               name: record.title || '',
               date: record.startDate || '',
@@ -66,7 +73,7 @@ function TrainingHoursFormScreen() {
         })
         .catch(err => {
           console.error("Error fetching record for editing", err)
-          alert("Không thể tải thông tin hồ sơ để chỉnh sửa.")
+          showToast("Không thể tải thông tin hồ sơ để chỉnh sửa.", "error")
           navigate('/staff/training')
         })
         .finally(() => {
@@ -117,7 +124,7 @@ function TrainingHoursFormScreen() {
     apiCall
       .then((res) => {
         const savedRecord = res.data?.data
-        alert(isEditMode ? "Cập nhật thành công!" : "Tạo mới thành công!")
+        showToast(isEditMode ? "Cập nhật thành công!" : "Tạo mới thành công!", "success")
         
         // If creating a new record, automatically submit it to move from DRAFT to PENDING_REVIEW
         if (!isEditMode && savedRecord && savedRecord.id) {
@@ -136,7 +143,7 @@ function TrainingHoursFormScreen() {
       })
       .catch(err => {
         console.error("Error saving record", err)
-        alert("Lưu biểu mẫu thất bại. Vui lòng kiểm tra lại thông tin.")
+        showToast("Lưu biểu mẫu thất bại. Vui lòng kiểm tra lại thông tin.", "error")
       })
       .finally(() => {
         setSaving(false)

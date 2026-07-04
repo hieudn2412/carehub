@@ -7,6 +7,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.form.assignment.entity.*;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -42,7 +43,7 @@ class FormSubjectServiceTest {
         authenticate("ROLE_MANAGER");
         when(securityUtils.getCurrentUserId()).thenReturn(5L);
         when(assignmentAccessService.requireActiveOwnedItem(10L, 5L)).thenReturn(item);
-        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus("nv01", UserStatus.ACTIVE))
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("nv01"))
                 .thenReturn(Optional.of(target));
 
         var response = service.findByEmployeeCode(10L, "nv01");
@@ -56,11 +57,24 @@ class FormSubjectServiceTest {
     void adminCanLookupWithoutAssignment() {
         authenticate("ROLE_ADMIN");
         User target = User.builder().employeeCode("NV02").name("User").status(UserStatus.ACTIVE).build();
-        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus("NV02", UserStatus.ACTIVE))
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV02"))
                 .thenReturn(Optional.of(target));
 
         assertEquals("NV02", service.findByEmployeeCode(null, "NV02").employeeCode());
         verifyNoInteractions(assignmentAccessService, securityUtils);
+    }
+
+    @Test
+    void returnsConflictWhenEmployeeIsInactive() {
+        authenticate("ROLE_ADMIN");
+        User target = User.builder().employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV03"))
+                .thenReturn(Optional.of(target));
+
+        ConflictException exception = assertThrows(ConflictException.class,
+                () -> service.findByEmployeeCode(null, "NV03"));
+
+        assertEquals("Nhân viên chưa active", exception.getMessage());
     }
 
     private void authenticate(String role) {

@@ -51,6 +51,7 @@ import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaff
 import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
 import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
+import TrainingHoursEvidencesListScreen from '../features/staff/pages/training/TrainingHoursEvidencesListScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
@@ -73,7 +74,22 @@ import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.j
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
+import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
+import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
+import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
+
+import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
+import ManagerEmployeeListPage from '../features/staff/pages/manager/ManagerEmployeeListPage.jsx'
+import ManagerEmployeeDetailPage from '../features/staff/pages/manager/ManagerEmployeeDetailPage.jsx'
+import ManagerEvidenceReviewListPage from '../features/staff/pages/manager/ManagerEvidenceReviewListPage.jsx'
+import ManagerEvidenceReviewDetailPage from '../features/staff/pages/manager/ManagerEvidenceReviewDetailPage.jsx'
+import ManagerExamResultsPage from '../features/staff/pages/manager/ManagerExamResultsPage.jsx'
+import ManagerExamResultDetailPage from '../features/staff/pages/manager/ManagerExamResultDetailPage.jsx'
+import ManagerChecklistListPage from '../features/staff/pages/manager/ManagerChecklistListPage.jsx'
+import ManagerChecklistEvaluationPage from '../features/staff/pages/manager/ManagerChecklistEvaluationPage.jsx'
+import ManagerEvaluationHistoryPage from '../features/staff/pages/manager/ManagerEvaluationHistoryPage.jsx'
+import ManagerEvaluationHistoryDetailPage from '../features/staff/pages/manager/ManagerEvaluationHistoryDetailPage.jsx'
 
 import { ADMIN_ROLES, AUTH_ROLE, EVALUATION_PERMISSIONS } from '../features/auth/utils/authNavigation.js'
 
@@ -121,7 +137,7 @@ function AppRouter() {
         element={protectedElement(<EmailConfirmResetScreen />, { allowFirstLoginSetup: true })}
       />
       <Route path={AUTH_ROUTES.emailConfirmSuccess} element={<EmailConfirmSuccessScreen />} />
-      
+
       {/* Admin / General Training routes */}
 
       <Route path="/admin/dashboard" element={adminElement(<AdminDashboard />)} />
@@ -185,25 +201,12 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
 
-      {/* Placeholder routes — sidebar mới có mục này nhưng trang thật chưa được code, sẽ thay bằng trang thật khi xây xong */}
-      <Route
-        path="/admin/training/evidence-review"
-        element={adminElement(
-          <ComingSoonPage
-            title="Duyệt minh chứng"
-            breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Duyệt minh chứng' }]}
-          />
-        )}
-      />
-      <Route
-        path="/admin/quality/history"
-        element={adminElement(
-          <ComingSoonPage
-            title="Lịch sử đánh giá"
-            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Lịch sử đánh giá' }]}
-          />
-        )}
-      />
+      {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
+      <Route path="/admin/training/evidence-review" element={adminElement(<ManagerEvidenceReviewListPage />)} />
+      <Route path="/admin/training/evidence-review/:id" element={adminElement(<ManagerEvidenceReviewDetailPage />)} />
+      <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />
+      <Route path="/admin/quality/history/forms/:formId/versions/:versionId" element={adminElement(<AdminQualityHistoryVersionPage />)} />
+      <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
       <Route
         path="/admin/quality/formulas"
         element={adminElement(
@@ -268,15 +271,26 @@ function AppRouter() {
         )}
       />
 
+      {/* Manager Specific Routes */}
+      <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
+      <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
+      <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
+      <Route path="/manager/evidence-review" element={managerOrAdminElement(<ManagerEvidenceReviewListPage />)} />
+      <Route path="/manager/evidence-review/:id" element={managerOrAdminElement(<ManagerEvidenceReviewDetailPage />)} />
+      <Route path="/manager/exam-results" element={managerOrAdminElement(<ManagerExamResultsPage />)} />
+      <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
+      <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
+      <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
+      <Route path="/manager/quality/history" element={managerOrAdminElement(<ManagerEvaluationHistoryPage />)} />
+      <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
 
-
-      
       {/* Staff CME / Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />
       <Route path="/staff/training/new" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id" element={protectedElement(<TrainingHoursDetailScreen />)} />
       <Route path="/staff/training/:id/edit" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
+      <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />

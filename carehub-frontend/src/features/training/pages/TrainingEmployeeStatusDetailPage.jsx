@@ -4,64 +4,39 @@ import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
-import { ClockCircleOutlined, FileTextOutlined } from '@ant-design/icons'
+import Sidebar from '../../staff/components/sidebar'
+import Header from '../../staff/components/Header'
+import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
+import { ClockCircleOutlined, FileTextOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/TrainingEmployeeStatusDetailPage.css'
-
-const MOCK_RECORDS = [
-  {
-    id: 1,
-    title: 'Kỹ thuật vệ sinh tay',
-    hours: 8,
-    date: '01/06/2026',
-    workflowStatus: 'APPROVED',
-    evidenceUrl: '#'
-  },
-  {
-    id: 2,
-    title: 'Quy trình tiêm tĩnh mạch',
-    hours: 9,
-    date: '01/06/2026',
-    workflowStatus: 'PENDING_REVIEW',
-    evidenceUrl: '#'
-  },
-  {
-    id: 3,
-    title: 'Thay băng vết thương',
-    hours: 7,
-    date: '01/06/2026',
-    workflowStatus: 'APPROVED',
-    evidenceUrl: '#'
-  },
-  {
-    id: 4,
-    title: 'An toàn chuyển bệnh nhân',
-    hours: 6,
-    date: '01/06/2026',
-    workflowStatus: 'APPROVED',
-    evidenceUrl: '#'
-  }
-]
 
 function TrainingEmployeeStatusDetailPage() {
   const { employeeId } = useParams()
-  const [loading, setLoading] = useState(false)
-  const [apiMode, setApiMode] = useState(false)
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   
   const [employeeInfo, setEmployeeInfo] = useState({
-    employeeName: 'Nguyễn Thị Lan',
-    employeeCode: 'VD00368',
-    approvedHours: 18,
+    employeeName: '',
+    employeeCode: '',
+    approvedHours: 0,
     requiredHours: 120,
-    pendingHours: 12,
-    totalHours: 36,
+    pendingHours: 0,
+    totalHours: 0,
     complianceStatus: 'NON_COMPLIANT'
   })
 
-  const [recordsList, setRecordsList] = useState(MOCK_RECORDS)
+  const [recordsList, setRecordsList] = useState([])
 
   useEffect(() => {
     async function loadData() {
       setLoading(true)
+      setError(null)
       try {
         const [statusResponse, recordsResponse] = await Promise.all([
           trainingApi.getEmployeeTrainingStatus(employeeId, {}),
@@ -73,30 +48,30 @@ function TrainingEmployeeStatusDetailPage() {
 
         if (statusData) {
           setEmployeeInfo({
-            employeeName: statusData.employeeName || 'Nguyễn Thị Lan',
-            employeeCode: statusData.employeeCode || 'VD00368',
+            employeeName: statusData.employeeName || '---',
+            employeeCode: statusData.employeeCode || '---',
             approvedHours: statusData.approvedHours || 0,
             requiredHours: statusData.requiredHours || 120,
             pendingHours: statusData.pendingHours || 0,
             totalHours: (statusData.approvedHours || 0) + (statusData.pendingHours || 0),
             complianceStatus: statusData.complianceStatus || 'NON_COMPLIANT'
           })
-          setApiMode(true)
         }
 
-        if (recordsData && recordsData.length > 0) {
+        if (recordsData) {
           const mappedRecords = recordsData.map(item => ({
             id: item.id,
             title: item.title,
             hours: item.approvedHours || item.declaredHours || 0,
-            date: item.startDate || '01/06/2026',
+            date: item.startDate || '---',
             workflowStatus: item.workflowStatus,
             evidenceUrl: item.evidenceCount > 0 ? `/training/records/${item.id}/evidence` : null
           }))
           setRecordsList(mappedRecords)
         }
       } catch (err) {
-        console.warn('API fetch error, using mock data:', err)
+        console.error('API fetch error in employee training status details:', err)
+        setError("Không thể tải chi tiết đào tạo nhân viên.")
       } finally {
         setLoading(false)
       }
@@ -112,9 +87,9 @@ function TrainingEmployeeStatusDetailPage() {
 
   return (
     <div className="dashboard-layout">
-      <AdminSidebar />
+      {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header breadcrumbs={breadcrumbs} />}
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="ted-page">
@@ -123,132 +98,153 @@ function TrainingEmployeeStatusDetailPage() {
               <div className="ted-title-card">
                 <h1 className="ted-title">Chi tiết đào tạo nhân viên</h1>
                 <p className="ted-subtitle">
-                  Full training profile for one employee
+                  Hồ sơ đào tạo CME chi tiết của nhân sự
                 </p>
               </div>
 
               {/* Detail Card Container */}
               <div className="ted-detail-card">
-                
-                {/* Profile Banner */}
-                <div className="ted-profile-banner">
-                  <div className="ted-profile-left">
-                    <div className="ted-profile-avatar">
-                      <img src="/avatar_lan.png" alt="Avatar" />
-                    </div>
-                    <h2 className="ted-profile-name">{employeeInfo.employeeName}</h2>
+                {loading ? (
+                  <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+                    <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải dữ liệu...
                   </div>
-                  <div className={`ted-profile-badge ${
-                    employeeInfo.complianceStatus === 'COMPLIANT' 
-                      ? 'ted-profile-badge--compliant' 
-                      : ''
-                  }`}>
-                    {employeeInfo.totalHours}/{employeeInfo.requiredHours}h - {
-                      employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'
-                    }
+                ) : error ? (
+                  <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>
+                    {error}
                   </div>
-                </div>
-
-                {/* Training Summary */}
-                <div>
-                  <h3 className="ted-section-title">TRAINNING SUMMARY</h3>
-                  <div className="ted-summary-grid">
-                    
-                    {/* Card 1: Total */}
-                    <div className="ted-summary-card ted-summary-card--total">
-                      <div className="ted-card-icon ted-card-icon--total">
-                        <ClockCircleOutlined />
+                ) : (
+                  <>
+                    {/* Profile Banner */}
+                    <div className="ted-profile-banner">
+                      <div className="ted-profile-left">
+                        <div className="ted-profile-avatar" style={{ background: '#3b82f6', color: '#fff', fontSize: 20, fontWeight: 700, display: 'grid', placeItems: 'center' }}>
+                          {(employeeInfo.employeeName || 'NV')[0].toUpperCase()}
+                        </div>
+                        <h2 className="ted-profile-name">{employeeInfo.employeeName} ({employeeInfo.employeeCode})</h2>
                       </div>
-                      <div className="ted-card-info">
-                        <span className="ted-card-label">Tổng(5 năm)</span>
-                        <span className="ted-card-value ted-card-value--total">
-                          {employeeInfo.totalHours}h
-                        </span>
+                      <div className={`ted-profile-badge ${
+                        employeeInfo.complianceStatus === 'COMPLIANT' 
+                          ? 'ted-profile-badge--compliant' 
+                          : ''
+                      }`}>
+                        {employeeInfo.totalHours}/{employeeInfo.requiredHours}h - {
+                          employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'
+                        }
                       </div>
                     </div>
 
-                    {/* Card 2: Approved */}
-                    <div className="ted-summary-card ted-summary-card--approved">
-                      <div className="ted-card-icon ted-card-icon--approved">
-                        <ClockCircleOutlined />
-                      </div>
-                      <div className="ted-card-info">
-                        <span className="ted-card-label">Được duyệt</span>
-                        <span className="ted-card-value ted-card-value--approved">
-                          {employeeInfo.approvedHours}h
-                        </span>
+                    {/* Training Summary */}
+                    <div style={{ marginTop: 24 }}>
+                      <h3 className="ted-section-title">TỔNG HỢP GIỜ ĐÀO TẠO</h3>
+                      <div className="ted-summary-grid">
+                        
+                        {/* Card 1: Total */}
+                        <div className="ted-summary-card ted-summary-card--total">
+                          <div className="ted-card-icon ted-card-icon--total">
+                            <ClockCircleOutlined />
+                          </div>
+                          <div className="ted-card-info">
+                            <span className="ted-card-label">Tổng (5 năm)</span>
+                            <span className="ted-card-value ted-card-value--total">
+                              {employeeInfo.totalHours}h
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Card 2: Approved */}
+                        <div className="ted-summary-card ted-summary-card--approved">
+                          <div className="ted-card-icon ted-card-icon--approved">
+                            <ClockCircleOutlined />
+                          </div>
+                          <div className="ted-card-info">
+                            <span className="ted-card-label">Được duyệt</span>
+                            <span className="ted-card-value ted-card-value--approved">
+                              {employeeInfo.approvedHours}h
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Card 3: Pending */}
+                        <div className="ted-summary-card ted-summary-card--pending">
+                          <div className="ted-card-icon ted-card-icon--pending">
+                            <ClockCircleOutlined />
+                          </div>
+                          <div className="ted-card-info">
+                            <span className="ted-card-label">Đang chờ duyệt</span>
+                            <span className="ted-card-value ted-card-value--pending">
+                              {employeeInfo.pendingHours}h
+                            </span>
+                          </div>
+                        </div>
+
                       </div>
                     </div>
 
-                    {/* Card 3: Pending */}
-                    <div className="ted-summary-card ted-summary-card--pending">
-                      <div className="ted-card-icon ted-card-icon--pending">
-                        <ClockCircleOutlined />
-                      </div>
-                      <div className="ted-card-info">
-                        <span className="ted-card-label">Đang chờ</span>
-                        <span className="ted-card-value ted-card-value--pending">
-                          {employeeInfo.pendingHours}h
-                        </span>
+                    {/* Training Records */}
+                    <div style={{ marginTop: 24 }}>
+                      <h3 className="ted-section-title">LỊCH SỬ KHAI BÁO CME</h3>
+                      <div className="ted-table-wrap">
+                        <table className="ted-table">
+                          <thead>
+                            <tr>
+                              <th>Khóa học / Hội thảo</th>
+                              <th>Số giờ</th>
+                              <th>Ngày bắt đầu</th>
+                              <th>Trạng thái</th>
+                              <th>Minh chứng</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recordsList.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                  Không có lịch sử khai báo nào.
+                                </td>
+                              </tr>
+                            ) : (
+                              recordsList.map((item, idx) => (
+                                <tr key={item.id || idx}>
+                                  <td style={{ fontWeight: 500 }}>{item.title}</td>
+                                  <td>{item.hours}h</td>
+                                  <td>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}</td>
+                                  <td>
+                                    <span className={`ted-status-badge ${
+                                      item.workflowStatus === 'APPROVED' 
+                                        ? 'ted-status-badge--approved' 
+                                        : 'ted-status-badge--pending'
+                                    }`}>
+                                      <span className={`ted-status-dot ${
+                                        item.workflowStatus === 'APPROVED' 
+                                          ? 'ted-status-dot--approved' 
+                                          : 'ted-status-dot--pending'
+                                      }`} />
+                                      {item.workflowStatus === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {item.evidenceUrl ? (
+                                      <Link 
+                                        to={item.evidenceUrl} 
+                                        className="ted-evidence-link ted-evidence-link--green"
+                                        title="Xem minh chứng"
+                                      >
+                                        <FileTextOutlined />
+                                      </Link>
+                                    ) : (
+                                      <span style={{ color: '#cbd5e1' }} title="Không có minh chứng">
+                                        <FileTextOutlined />
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-
-                  </div>
-                </div>
-
-                {/* Training Records */}
-                <div>
-                  <h3 className="ted-section-title">TRAINNING RECORDS</h3>
-                  <div className="ted-table-wrap">
-                    <table className="ted-table">
-                      <thead>
-                        <tr>
-                          <th>Trainning</th>
-                          <th>Hours</th>
-                          <th>Date</th>
-                          <th>Status</th>
-                          <th>Evidence</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recordsList.map((item, idx) => (
-                          <tr key={item.id || idx}>
-                            <td style={{ fontWeight: 500 }}>{item.title}</td>
-                            <td>{item.hours}h</td>
-                            <td>{item.date}</td>
-                            <td>
-                              <span className={`ted-status-badge ${
-                                item.workflowStatus === 'APPROVED' 
-                                  ? 'ted-status-badge--approved' 
-                                  : 'ted-status-badge--pending'
-                              }`}>
-                                <span className={`ted-status-dot ${
-                                  item.workflowStatus === 'APPROVED' 
-                                    ? 'ted-status-dot--approved' 
-                                    : 'ted-status-dot--pending'
-                                }`} />
-                                {item.workflowStatus === 'APPROVED' ? 'Duyệt' : 'Chờ'}
-                              </span>
-                            </td>
-                            <td>
-                              <Link 
-                                to={item.evidenceUrl || '#'} 
-                                className={`ted-evidence-link ${
-                                  item.workflowStatus === 'APPROVED' 
-                                    ? 'ted-evidence-link--green' 
-                                    : 'ted-evidence-link--red'
-                                }`}
-                              >
-                                <FileTextOutlined />
-                              </Link>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
+                  </>
+                )}
               </div>
 
             </div>

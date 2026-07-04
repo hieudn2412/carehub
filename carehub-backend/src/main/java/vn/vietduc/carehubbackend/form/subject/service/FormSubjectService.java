@@ -5,6 +5,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.form.subject.dto.FormSubjectUserResponse;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
@@ -28,9 +29,11 @@ public class FormSubjectService {
             var item = assignmentAccessService.requireActiveOwnedItem(assignmentItemId, securityUtils.getCurrentUserId());
             if (item.getForm().getSubjectType() != FormSubjectType.USER) throw notFound();
         }
-        User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(
-                        employeeCode.trim(), UserStatus.ACTIVE)
+        User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
                 .orElseThrow(this::notFound);
+        if (target.getStatus() != UserStatus.ACTIVE) {
+            throw new ConflictException("Nhân viên chưa active");
+        }
         return FormSubjectUserResponse.builder()
                 .employeeCode(target.getEmployeeCode()).fullName(target.getName())
                 .position(target.getPosition() == null ? null : target.getPosition().getName())

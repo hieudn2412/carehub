@@ -45,9 +45,11 @@ public class FormSubmissionService {
                 || request.subject().type() != FormSubjectType.USER) {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
-        User subject = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(
-                        request.subject().employeeCode().trim(), UserStatus.ACTIVE)
+        User subject = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(request.subject().employeeCode().trim())
                 .orElseThrow(() -> new ResourceNotFoundException("Form subject user not found"));
+        if (subject.getStatus() != UserStatus.ACTIVE) {
+            throw new ConflictException("Nhân viên chưa active");
+        }
         if (submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                 item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)) {
             throw new ConflictException("An open draft already exists for this employee and assigned form");
