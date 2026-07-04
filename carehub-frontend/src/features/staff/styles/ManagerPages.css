@@ -463,6 +463,13 @@
   margin-bottom: 12px;
 }
 
+.mgr-checklist-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
 .mgr-checklist-card__title {
   color: var(--mgr-text);
   font-size: 16px;

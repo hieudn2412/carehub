@@ -46,6 +46,13 @@ function formatDateTime(value) {
   }
 }
 
+function getVersionNumber(checklist) {
+  return checklist.version?.versionNumber
+    || checklist.versionNumber
+    || checklist.formVersionNumber
+    || null
+}
+
 function ManagerChecklistListPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -53,18 +60,42 @@ function ManagerChecklistListPage() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
-  const loadAssignedForms = () => {
-    setLoading(true)
-    setErrorMessage('')
-
-    staffApi.getAssignedForms({
+  const fetchAssignedForms = async () => {
+    const response = await staffApi.getAssignedForms({
       page: 0,
       size: 100,
       sort: 'id,desc',
     })
-      .then((response) => {
-        const content = response.data?.data?.content
-        setChecklists(Array.isArray(content) ? content : [])
+
+    const content = response.data?.data?.content
+    const assignedForms = Array.isArray(content) ? content : []
+
+    return Promise.all(
+      assignedForms.map(async (checklist) => {
+        if (getVersionNumber(checklist) || !checklist.assignmentItemId) {
+          return checklist
+        }
+
+        try {
+          const detailResponse = await staffApi.getAssignedForm(checklist.assignmentItemId)
+          return {
+            ...checklist,
+            version: detailResponse.data?.data?.version || checklist.version,
+          }
+        } catch {
+          return checklist
+        }
+      }),
+    )
+  }
+
+  const loadAssignedForms = () => {
+    setLoading(true)
+    setErrorMessage('')
+
+    fetchAssignedForms()
+      .then((enrichedForms) => {
+        setChecklists(enrichedForms)
       })
       .catch((error) => {
         setChecklists([])
@@ -76,7 +107,29 @@ function ManagerChecklistListPage() {
   }
 
   useEffect(() => {
-    loadAssignedForms()
+    let alive = true
+
+    fetchAssignedForms()
+      .then((enrichedForms) => {
+        if (alive) {
+          setChecklists(enrichedForms)
+        }
+      })
+      .catch((error) => {
+        if (alive) {
+          setChecklists([])
+          setErrorMessage(getAssignedFormsError(error))
+        }
+      })
+      .finally(() => {
+        if (alive) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      alive = false
+    }
   }, [])
 
   const filteredChecklists = useMemo(() => {
@@ -156,9 +209,16 @@ function ManagerChecklistListPage() {
                 <div key={checklist.assignmentItemId} className="mgr-card mgr-checklist-card">
                   <div>
                     <div className="mgr-checklist-card__top">
-                      <span className="mgr-badge mgr-badge--blue" style={{ fontSize: 11 }}>
-                        {checklist.formCode}
-                      </span>
+                      <div className="mgr-checklist-card__badges">
+                        <span className="mgr-badge mgr-badge--blue" style={{ fontSize: 11 }}>
+                          {checklist.formCode}
+                        </span>
+                        {getVersionNumber(checklist) && (
+                          <span className="mgr-badge mgr-badge--purple" style={{ fontSize: 11 }}>
+                            v{getVersionNumber(checklist)}
+                          </span>
+                        )}
+                      </div>
                       <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
                     </div>
 
