@@ -13,7 +13,7 @@ import vn.vietduc.carehubbackend.questiongeneration.service.AiModelRuntimeStatus
 @RestController
 @RequestMapping("${app.api-prefix}/ai-model-runtime")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@evaluationSecurity.canAccess(authentication)")
 public class AiModelRuntimeController {
     private final AiModelRuntimeStatusService statusService;
 

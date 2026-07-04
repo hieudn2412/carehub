@@ -41,7 +41,7 @@ public class MockDocumentQuestionGenerator implements DocumentQuestionGenerator 
 
         List<GeneratedQuestion> questions = new ArrayList<>();
         for (int i = 0; i < input.questionsPerChunk(); i++) {
-            String stem = "Theo tài liệu, nhận định nào sau đây phù hợp nhất với nội dung trong mục \"" + input.sectionPath() + "\"?";
+            String stem = "Nội dung nào mô tả đúng về " + topic(input.sectionPath()) + "?";
             questions.add(new GeneratedQuestion(
                     stem,
                     firstSentence(input.chunkText()),
@@ -90,6 +90,16 @@ public class MockDocumentQuestionGenerator implements DocumentQuestionGenerator 
         }
         String normalized = text.replaceAll("\\s+", " ").trim();
         return normalized.length() <= limit ? normalized : normalized.substring(0, limit).trim();
+    }
+
+    private String topic(String sectionPath) {
+        if (sectionPath == null || sectionPath.isBlank()) {
+            return "nội dung chuyên môn trong đoạn nguồn";
+        }
+        String[] parts = sectionPath.split(">");
+        String last = parts.length == 0 ? sectionPath : parts[parts.length - 1];
+        String normalized = last.replaceAll("^\\s*\\d+(?:\\.\\d+)*\\s*[.)-]?\\s*", "").trim();
+        return normalized.isBlank() ? "nội dung chuyên môn trong đoạn nguồn" : normalized;
     }
 
     private String toJson(Object value) {

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
@@ -44,6 +46,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DocumentQuestionJobService {
     private static final List<CandidateStatus> IDEMPOTENT_STATUSES = List.of(
             CandidateStatus.VALIDATED,
@@ -66,6 +69,7 @@ public class DocumentQuestionJobService {
     private final AiGenerationProperties generationProperties;
     private final DocumentProcessingProperties documentProperties;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public DocumentQuestionJobResponse createJob(Long documentId, CreateDocumentQuestionJobRequest request, String actor) {
@@ -80,6 +84,12 @@ public class DocumentQuestionJobService {
         if (chunks.isEmpty()) {
             throw new BadRequestException("Tài liệu chưa có chunk để tạo câu hỏi");
         }
+        long eligibleChunkCount = chunks.stream()
+                .filter(chunk -> DocumentChunkQualityRules.isGenerationEligible(parseQualityFlags(chunk.getQualityFlags())))
+                .count();
+        if (eligibleChunkCount == 0) {
+            throw new BadRequestException("Tài liệu không có chunk đủ điều kiện để tạo câu hỏi");
+        }
 
         int questionsPerChunk = request != null && request.questionsPerChunk() != null
                 ? request.questionsPerChunk()
@@ -89,7 +99,7 @@ public class DocumentQuestionJobService {
                 .provider(providerEnum())
                 .model(generationProperties.getModel())
                 .promptVersion(generationProperties.getPromptVersion())
-                .status(JobStatus.GENERATING)
+                .status(JobStatus.CREATED)
                 .questionsPerChunk(questionsPerChunk)
                 .chunkCount(chunks.size())
                 .completedChunkCount(0)
@@ -105,9 +115,43 @@ public class DocumentQuestionJobService {
                 .createdBy(actor)
                 .build();
         DocumentQuestionJob savedJob = jobRepository.save(job);
-        ProcessResult result = processChunks(savedJob, chunks);
-        applyResult(savedJob, result, true);
+        eventPublisher.publishEvent(new DocumentQuestionJobCreatedEvent(savedJob.getId()));
         return get(savedJob.getId());
+    }
+
+    @Transactional
+    public void processJob(Long jobId) {
+        DocumentQuestionJob job = findJob(jobId);
+        if (job.getStatus() == JobStatus.CANCELLED) {
+            log.info("Skip cancelled document question job jobId={}", jobId);
+            return;
+        }
+        if (job.getStatus() != JobStatus.CREATED) {
+            log.info("Skip document question job processing jobId={} status={}", jobId, job.getStatus());
+            return;
+        }
+        List<DocumentChunk> chunks = chunkRepository.findByDocumentOrderByChunkIndexAsc(job.getDocument());
+        job.setStatus(JobStatus.GENERATING);
+        job.setCompletedChunkCount(0);
+        job.setFailedChunkCount(0);
+        job.setCandidateCount(0);
+        job.setChunkErrors("[]");
+        job.setErrorMessage(null);
+        jobRepository.save(job);
+
+        ProcessResult result = processChunks(job, chunks);
+        applyResult(job, result, true);
+    }
+
+    @Transactional
+    public void failJob(Long jobId, String message) {
+        DocumentQuestionJob job = findJob(jobId);
+        if (job.getStatus() == JobStatus.CANCELLED) {
+            return;
+        }
+        job.setStatus(JobStatus.FAILED);
+        job.setErrorMessage(blankToFallback(message, "Lỗi khi xử lý phiên tạo câu hỏi"));
+        jobRepository.save(job);
     }
 
     @Transactional(readOnly = true)
@@ -131,6 +175,9 @@ public class DocumentQuestionJobService {
     @Transactional
     public DocumentQuestionJobResponse retryFailedChunks(Long jobId) {
         DocumentQuestionJob job = findJob(jobId);
+        if (job.getStatus() == JobStatus.CANCELLED) {
+            throw new BadRequestException("Không thể retry phiên tạo câu hỏi đã hủy");
+        }
         List<Long> chunkIds = failedChunkIds(job.getChunkErrors());
         if (chunkIds.isEmpty()) {
             return get(jobId);
@@ -146,11 +193,39 @@ public class DocumentQuestionJobService {
         return get(jobId);
     }
 
+    @Transactional
+    public DocumentQuestionJobResponse cancel(Long jobId) {
+        DocumentQuestionJob job = findJob(jobId);
+        if (!List.of(JobStatus.CREATED, JobStatus.GENERATING).contains(job.getStatus())) {
+            throw new BadRequestException("Chỉ có thể hủy phiên đang chờ hoặc đang tạo câu hỏi");
+        }
+        job.setStatus(JobStatus.CANCELLED);
+        job.setErrorMessage("Phiên tạo câu hỏi đã được hủy bởi người dùng");
+        return mapper.toJobResponse(
+                jobRepository.save(job),
+                knowledgePointRepository.findByJobOrderByIdAsc(job),
+                candidateRepository.findByJobOrderByIdAsc(job)
+        );
+    }
+
     private ProcessResult processChunks(DocumentQuestionJob job, List<DocumentChunk> chunks) {
         DocumentQuestionGenerator generator = generatorRouter.current();
         ProcessResult result = new ProcessResult();
         for (DocumentChunk chunk : chunks) {
+            if (isCancellationRequested(job.getId())) {
+                result.cancelled = true;
+                break;
+            }
+            long chunkStarted = System.nanoTime();
+            long generatorMs = 0;
+            CandidatePersistResult persistResult = CandidatePersistResult.empty();
             try {
+                List<String> qualityFlags = parseQualityFlags(chunk.getQualityFlags());
+                if (!DocumentChunkQualityRules.isGenerationEligible(qualityFlags)) {
+                    logChunkTiming(job, chunk, 0, 0, 0, 0, 0, "skipped_quality");
+                    result.completedChunks++;
+                    continue;
+                }
                 String firstKey = generationKeyService.candidateKey(
                         generator.provider(),
                         generationProperties.getModel(),
@@ -160,10 +235,14 @@ public class DocumentQuestionJobService {
                         "vi",
                         0
                 );
+                long duplicateCheckStarted = System.nanoTime();
                 if (candidateRepository.findFirstByGenerationKeyAndStatusIn(firstKey, IDEMPOTENT_STATUSES).isPresent()) {
+                    long duplicateCheckMs = elapsedMs(duplicateCheckStarted);
+                    logChunkTiming(job, chunk, 0, 0, duplicateCheckMs, 0, 0, "skipped_existing");
                     result.completedChunks++;
                     continue;
                 }
+                long generatorStarted = System.nanoTime();
                 GeneratedChunkResult generated = generator.generate(new GenerationInput(
                         job.getDocument().getId(),
                         job.getId(),
@@ -173,10 +252,24 @@ public class DocumentQuestionJobService {
                         job.getQuestionsPerChunk(),
                         "vi"
                 ));
+                generatorMs = elapsedMs(generatorStarted);
                 result.usage = result.usage.plus(generated.usage());
+                long persistKnowledgeStarted = System.nanoTime();
                 persistKnowledgePoints(job, chunk, generated.knowledgePoints());
-                result.createdCandidates += persistCandidates(job, chunk, generated.questions(), generator.provider());
+                long persistKnowledgeMs = elapsedMs(persistKnowledgeStarted);
+                persistResult = persistCandidates(job, chunk, generated.questions(), generator.provider());
+                result.createdCandidates += persistResult.createdCount();
                 result.completedChunks++;
+                logChunkTiming(
+                        job,
+                        chunk,
+                        generatorMs,
+                        persistKnowledgeMs + persistResult.persistCandidateMs(),
+                        persistResult.duplicateCheckMs(),
+                        persistResult.createdCount(),
+                        generated.usage().callCount(),
+                        "completed"
+                );
             } catch (Exception ex) {
                 result.failedChunks++;
                 result.errors.add(Map.of(
@@ -184,6 +277,18 @@ public class DocumentQuestionJobService {
                         "chunkIndex", chunk.getChunkIndex(),
                         "message", ex.getMessage() == null ? "Lỗi không xác định" : ex.getMessage()
                 ));
+                log.warn(
+                        "Document question chunk failed jobId={} chunkId={} chunkIndex={} tokenCount={} generatorMs={} persistCandidateMs={} duplicateCheckMs={} totalMs={} message={}",
+                        job.getId(),
+                        chunk.getId(),
+                        chunk.getChunkIndex(),
+                        chunk.getTokenCount(),
+                        generatorMs,
+                        persistResult.persistCandidateMs(),
+                        persistResult.duplicateCheckMs(),
+                        elapsedMs(chunkStarted),
+                        ex.getMessage()
+                );
             }
         }
         return result;
@@ -211,13 +316,15 @@ public class DocumentQuestionJobService {
         }
     }
 
-    private int persistCandidates(
+    private CandidatePersistResult persistCandidates(
             DocumentQuestionJob job,
             DocumentChunk chunk,
             List<GeneratedQuestion> questions,
             String provider
     ) {
         int created = 0;
+        long duplicateCheckMs = 0;
+        long persistCandidateMs = 0;
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
             String generationKey = generationKeyService.candidateKey(
@@ -229,11 +336,14 @@ public class DocumentQuestionJobService {
                     "vi",
                     i
             );
+            long duplicateStarted = System.nanoTime();
             if (candidateRepository.findFirstByGenerationKeyAndStatusIn(generationKey, IDEMPOTENT_STATUSES).isPresent()) {
+                duplicateCheckMs += elapsedMs(duplicateStarted);
                 continue;
             }
             CandidateValidationResult validation = validationService.validate(question, chunk.getText());
             DuplicateCheckResult duplicate = duplicateCheckService.check(question.stem());
+            duplicateCheckMs += elapsedMs(duplicateStarted);
             List<String> warnings = new ArrayList<>(validation.warnings());
             if (duplicate.warning() != null && !duplicate.warning().isBlank()) {
                 warnings.add(duplicate.warning());
@@ -283,13 +393,21 @@ public class DocumentQuestionJobService {
                     .duplicateQuestionId(duplicate.matchedQuestionId())
                     .duplicateQuestionStemSnapshot(duplicate.matchedQuestionStem())
                     .build();
+            long persistStarted = System.nanoTime();
             candidateRepository.save(candidate);
+            persistCandidateMs += elapsedMs(persistStarted);
             created++;
         }
-        return created;
+        return new CandidatePersistResult(created, duplicateCheckMs, persistCandidateMs);
     }
 
     private void applyResult(DocumentQuestionJob job, ProcessResult result, boolean resetCounts) {
+        if (result.cancelled || isCancellationRequested(job.getId())) {
+            job.setStatus(JobStatus.CANCELLED);
+            job.setErrorMessage("Phiên tạo câu hỏi đã được hủy bởi người dùng");
+            jobRepository.save(job);
+            return;
+        }
         job.setCompletedChunkCount((resetCounts ? 0 : job.getCompletedChunkCount()) + result.completedChunks);
         job.setFailedChunkCount(result.failedChunks);
         job.setCandidateCount((resetCounts ? 0 : job.getCandidateCount()) + result.createdCandidates);
@@ -310,6 +428,10 @@ public class DocumentQuestionJobService {
             job.setErrorMessage("Không xử lý thành công chunk nào");
         }
         jobRepository.save(job);
+    }
+
+    private boolean isCancellationRequested(Long jobId) {
+        return jobRepository.findStatusByIdOrNull(jobId) == JobStatus.CANCELLED;
     }
 
     private DocumentQuestionJob findJob(Long jobId) {
@@ -342,6 +464,23 @@ public class DocumentQuestionJobService {
         }
     }
 
+    private List<String> parseQualityFlags(String qualityFlags) {
+        try {
+            JsonNode root = objectMapper.readTree(qualityFlags == null || qualityFlags.isBlank() ? "[]" : qualityFlags);
+            List<String> flags = new ArrayList<>();
+            if (root.isArray()) {
+                root.forEach(item -> {
+                    if (item.isTextual()) {
+                        flags.add(item.asText());
+                    }
+                });
+            }
+            return flags;
+        } catch (Exception ex) {
+            return List.of();
+        }
+    }
+
     private String normalizeAnswer(String answer) {
         if (answer == null || !answer.trim().toUpperCase().matches("[ABCD]")) {
             return "A";
@@ -361,10 +500,46 @@ public class DocumentQuestionJobService {
         }
     }
 
+    private long elapsedMs(long startedNanos) {
+        return java.time.Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
+    }
+
+    private void logChunkTiming(
+            DocumentQuestionJob job,
+            DocumentChunk chunk,
+            long generatorMs,
+            long persistCandidateMs,
+            long duplicateCheckMs,
+            int candidateCount,
+            int llmCallCount,
+            String outcome
+    ) {
+        log.info(
+                "Document question chunk processed jobId={} chunkId={} chunkIndex={} tokenCount={} outcome={} generatorMs={} persistCandidateMs={} duplicateCheckMs={} candidateCount={} llmCallCount={}",
+                job.getId(),
+                chunk.getId(),
+                chunk.getChunkIndex(),
+                chunk.getTokenCount(),
+                outcome,
+                generatorMs,
+                persistCandidateMs,
+                duplicateCheckMs,
+                candidateCount,
+                llmCallCount
+        );
+    }
+
+    private record CandidatePersistResult(int createdCount, long duplicateCheckMs, long persistCandidateMs) {
+        private static CandidatePersistResult empty() {
+            return new CandidatePersistResult(0, 0, 0);
+        }
+    }
+
     private static class ProcessResult {
         private int completedChunks;
         private int failedChunks;
         private int createdCandidates;
+        private boolean cancelled;
         private LlmUsage usage = LlmUsage.empty();
         private final List<Map<String, Object>> errors = new ArrayList<>();
     }

@@ -28,3 +28,9 @@ export function getRolesFromAccessToken(token) {
 
   return Array.isArray(roles) ? roles.filter(Boolean) : []
 }
+
+export function getPermissionsFromAccessToken(token) {
+  const permissions = getJwtPayload(token)?.permissions
+
+  return Array.isArray(permissions) ? permissions.filter(Boolean) : []
+}

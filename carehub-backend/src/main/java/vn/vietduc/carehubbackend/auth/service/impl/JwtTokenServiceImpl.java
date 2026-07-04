@@ -36,9 +36,11 @@ public class JwtTokenServiceImpl implements JwtTokenService {
                 .stream()
                 .map(Role::getCode)
                 .toList();
+        List<String> permissionCodes = userRoleRepository.findPermissionCodesByUserId(user.getId());
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .subject(String.valueOf(user.getId()))
                 .claim("roles", roleCodes)
+                .claim("permissions", permissionCodes)
                 .claim("employeeCode", user.getEmployeeCode())
                 .issuedAt(now)
                 .expiresAt(now.plus(accessTokenExpiration, ChronoUnit.MINUTES))

@@ -14,7 +14,7 @@ import java.util.List;
 public class DocumentProcessingProperties {
     private Path storagePath = Path.of("storage", "documents");
     private List<String> supportedFileTypes = new ArrayList<>(List.of("pdf", "docx", "txt", "md"));
-    private int questionsPerChunk = 3;
+    private int questionsPerChunk = 1;
     private Chunk chunk = new Chunk();
 
     @Getter

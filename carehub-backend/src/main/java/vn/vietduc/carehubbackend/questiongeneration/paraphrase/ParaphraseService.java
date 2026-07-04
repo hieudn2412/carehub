@@ -8,8 +8,14 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchParaphraseCandidateActionRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateBatchParaphraseJobsRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateParaphraseJobRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateParaphraseCandidateRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchParaphraseCandidateActionErrorResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchParaphraseCandidateActionResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchParaphraseJobErrorResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchParaphraseJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ParaphraseCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ParaphraseJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
@@ -29,6 +35,8 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ParaphraseCandida
 import vn.vietduc.carehubbackend.questiongeneration.repository.ParaphraseJobRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @Service
@@ -47,6 +55,9 @@ public class ParaphraseService {
     @Transactional
     public ParaphraseJobResponse createJob(Long questionId, CreateParaphraseJobRequest request, String actor) {
         QuestionBankQuestion source = findQuestion(questionId);
+        if (source.getStatus() != QuestionBankStatus.APPROVED) {
+            throw new BadRequestException("Chỉ có thể diễn đạt lại câu hỏi đã duyệt");
+        }
         int requestedCount = request != null && request.requestedCount() != null
                 ? request.requestedCount()
                 : properties.getRequestedCountDefault();
@@ -90,6 +101,34 @@ public class ParaphraseService {
         }
         jobRepository.save(savedJob);
         return getJob(savedJob.getId());
+    }
+
+    @Transactional
+    public BatchParaphraseJobResponse createBatchJobs(CreateBatchParaphraseJobsRequest request, String actor) {
+        List<Long> questionIds = normalizedQuestionIds(request);
+        CreateParaphraseJobRequest jobRequest = new CreateParaphraseJobRequest(
+                request == null ? null : request.requestedCount(),
+                request == null ? null : request.changeStrength()
+        );
+        List<ParaphraseJobResponse> jobs = new ArrayList<>();
+        List<BatchParaphraseJobErrorResponse> errors = new ArrayList<>();
+        for (Long questionId : questionIds) {
+            try {
+                jobs.add(createJob(questionId, jobRequest, actor));
+            } catch (Exception ex) {
+                errors.add(new BatchParaphraseJobErrorResponse(
+                        questionId,
+                        ex.getMessage() == null ? "Không tạo được phiên diễn đạt lại" : ex.getMessage()
+                ));
+            }
+        }
+        return new BatchParaphraseJobResponse(
+                questionIds.size(),
+                jobs.size(),
+                errors.size(),
+                jobs,
+                errors
+        );
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +227,51 @@ public class ParaphraseService {
         return mapper.toCandidateResponse(candidateRepository.save(candidate));
     }
 
+    @Transactional
+    public BatchParaphraseCandidateActionResponse approveBatch(BatchParaphraseCandidateActionRequest request) {
+        return runCandidateBatch(request, candidateId -> approve(candidateId, request == null ? null : request.reviewerNotes()));
+    }
+
+    @Transactional
+    public BatchParaphraseCandidateActionResponse rejectBatch(BatchParaphraseCandidateActionRequest request) {
+        return runCandidateBatch(request, candidateId -> reject(candidateId, request == null ? null : request.reviewerNotes()));
+    }
+
+    @Transactional
+    public BatchParaphraseCandidateActionResponse saveBatch(BatchParaphraseCandidateActionRequest request, String actor) {
+        return runCandidateBatch(request, candidateId -> saveAsQuestion(candidateId, actor));
+    }
+
+    private BatchParaphraseCandidateActionResponse runCandidateBatch(
+            BatchParaphraseCandidateActionRequest request,
+            ParaphraseCandidateAction action
+    ) {
+        List<Long> candidateIds = normalizedCandidateIds(request);
+        List<Long> succeededIds = new ArrayList<>();
+        List<BatchParaphraseCandidateActionErrorResponse> errors = new ArrayList<>();
+        List<ParaphraseCandidateResponse> candidates = new ArrayList<>();
+        for (Long candidateId : candidateIds) {
+            try {
+                ParaphraseCandidateResponse response = action.apply(candidateId);
+                succeededIds.add(candidateId);
+                candidates.add(response);
+            } catch (Exception ex) {
+                errors.add(new BatchParaphraseCandidateActionErrorResponse(
+                        candidateId,
+                        ex.getMessage() == null ? "Thao tác candidate paraphrase thất bại" : ex.getMessage()
+                ));
+            }
+        }
+        return new BatchParaphraseCandidateActionResponse(
+                candidateIds.size(),
+                succeededIds.size(),
+                errors.size(),
+                succeededIds,
+                errors,
+                candidates
+        );
+    }
+
     private void persistCandidate(ParaphraseJob job, QuestionBankQuestion source, ParaphrasedMcq mcq) {
         ParaphraseValidationResult validation = validationService.validate(source, mcq);
         CandidateStatus status;
@@ -260,6 +344,20 @@ public class ParaphraseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi"));
     }
 
+    private List<Long> normalizedQuestionIds(CreateBatchParaphraseJobsRequest request) {
+        if (request == null || request.questionIds() == null || request.questionIds().isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ít nhất một câu hỏi để diễn đạt lại");
+        }
+        return new ArrayList<>(new LinkedHashSet<>(request.questionIds()));
+    }
+
+    private List<Long> normalizedCandidateIds(BatchParaphraseCandidateActionRequest request) {
+        if (request == null || request.candidateIds() == null || request.candidateIds().isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ít nhất một candidate paraphrase");
+        }
+        return new ArrayList<>(new LinkedHashSet<>(request.candidateIds()));
+    }
+
     private ParaphraseJob findJob(Long jobId) {
         return jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên paraphrase"));
@@ -288,5 +386,10 @@ public class ParaphraseService {
         } catch (JsonProcessingException ex) {
             return "[]";
         }
+    }
+
+    @FunctionalInterface
+    private interface ParaphraseCandidateAction {
+        ParaphraseCandidateResponse apply(Long candidateId);
     }
 }

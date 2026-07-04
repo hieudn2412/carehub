@@ -42,6 +42,15 @@ public class QuestionEmbeddingService {
         }
     }
 
+    @Transactional
+    public void refreshStemEmbedding(QuestionBankQuestion question) {
+        if (question == null || question.getId() == null) {
+            return;
+        }
+        embeddingRepository.deleteByQuestionAndTextType(question, STEM_TEXT_TYPE);
+        saveStemEmbedding(question);
+    }
+
     private PersistResult persistStemEmbedding(QuestionBankQuestion question) {
         if (!properties.isE5Provider() || question == null || question.getId() == null) {
             return PersistResult.SKIPPED;

@@ -42,6 +42,8 @@ function ParaphraseJobReviewPage() {
   const [editingCandidate, setEditingCandidate] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
+  const [isBatching, setIsBatching] = useState(false)
 
   const loadJob = useCallback(async () => {
     setIsLoading(true)
@@ -70,6 +72,16 @@ function ParaphraseJobReviewPage() {
     })
   }, [candidates, keyword, statusFilter])
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
+  const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
+  const selectedApprovableIds = selectedCandidates
+    .filter((candidate) => !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status))
+    .map((candidate) => candidate.id)
+  const selectedRejectableIds = selectedCandidates
+    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status))
+    .map((candidate) => candidate.id)
+  const selectedSavableIds = selectedCandidates
+    .filter((candidate) => candidate.status === 'APPROVED')
+    .map((candidate) => candidate.id)
 
   function replaceCandidate(updatedCandidate) {
     if (!updatedCandidate) return
@@ -80,6 +92,75 @@ function ParaphraseJobReviewPage() {
       ),
     }))
     setSelectedCandidateId(updatedCandidate.id)
+  }
+
+  function replaceCandidates(updatedCandidates) {
+    if (!updatedCandidates.length) return
+    const updatedById = new Map(updatedCandidates.map((candidate) => [candidate.id, candidate]))
+    setJobDetail((current) => ({
+      ...current,
+      candidates: (current?.candidates || []).map((candidate) => updatedById.get(candidate.id) || candidate),
+    }))
+    setSelectedCandidateId(updatedCandidates[0].id)
+  }
+
+  function toggleCandidateSelection(candidateId) {
+    setSelectedCandidateIds((current) =>
+      current.includes(candidateId)
+        ? current.filter((id) => id !== candidateId)
+        : [...current, candidateId]
+    )
+  }
+
+  function toggleFilteredSelection() {
+    const filteredIds = filteredCandidates.map((candidate) => candidate.id)
+    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedCandidateIds.includes(id))
+    setSelectedCandidateIds((current) => {
+      if (allSelected) {
+        return current.filter((id) => !filteredIds.includes(id))
+      }
+      return Array.from(new Set([...current, ...filteredIds]))
+    })
+  }
+
+  async function runBatchAction(action, candidateIds, successMessage, reviewerNotes = '') {
+    if (!candidateIds.length) {
+      showToast('Không có candidate phù hợp để thao tác hàng loạt.', 'warning')
+      return
+    }
+    setIsBatching(true)
+    try {
+      const response = await action(candidateIds, reviewerNotes)
+      const result = apiData(response, {})
+      replaceCandidates(result.candidates || [])
+      setSelectedCandidateIds((current) => current.filter((id) => !(result.succeededCandidateIds || []).includes(id)))
+      if (Number(result.failedCount || 0) > 0) {
+        showToast(`${successMessage}. ${result.failedCount} candidate lỗi.`, 'warning')
+      } else {
+        showToast(successMessage, 'success')
+      }
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsBatching(false)
+    }
+  }
+
+  async function approveSelected() {
+    await runBatchAction(questionBankApi.approveParaphraseCandidates, selectedApprovableIds, 'Đã duyệt hàng loạt candidate')
+  }
+
+  async function rejectSelected() {
+    const reviewerNotes = window.prompt('Ghi chú lý do từ chối nếu cần:', '') || ''
+    await runBatchAction(questionBankApi.rejectParaphraseCandidates, selectedRejectableIds, 'Đã từ chối hàng loạt candidate', reviewerNotes)
+  }
+
+  async function saveSelected() {
+    await runBatchAction(
+      (candidateIds) => questionBankApi.saveParaphraseCandidatesAsQuestions(candidateIds),
+      selectedSavableIds,
+      'Đã lưu hàng loạt candidate vào ngân hàng',
+    )
   }
 
   function openEditModal(candidate) {
@@ -238,6 +319,32 @@ function ParaphraseJobReviewPage() {
                     </select>
                   </section>
 
+                  {filteredCandidates.length > 0 && (
+                    <section className="qdoc-batch-bar">
+                      <label className="qdoc-checkline">
+                        <input
+                          type="checkbox"
+                          checked={filteredCandidates.every((candidate) => selectedCandidateIds.includes(candidate.id))}
+                          onChange={toggleFilteredSelection}
+                        />
+                        <span>Chọn tất cả trong bộ lọc</span>
+                      </label>
+                      <strong>{formatNumber(selectedCandidateIds.length)} đã chọn</strong>
+                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--success" onClick={approveSelected} disabled={isBatching || selectedApprovableIds.length === 0}>
+                        <CheckCircleOutlined />
+                        <span>Duyệt</span>
+                      </button>
+                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={rejectSelected} disabled={isBatching || selectedRejectableIds.length === 0}>
+                        <StopOutlined />
+                        <span>Từ chối</span>
+                      </button>
+                      <button type="button" className="qdoc-primary-btn" onClick={saveSelected} disabled={isBatching || selectedSavableIds.length === 0}>
+                        {isBatching ? <LoadingOutlined /> : <SaveOutlined />}
+                        <span>Lưu vào ngân hàng</span>
+                      </button>
+                    </section>
+                  )}
+
                   <section className="qdoc-review-layout">
                     <div className="qdoc-candidate-list">
                       {filteredCandidates.length === 0 ? (
@@ -248,8 +355,10 @@ function ParaphraseJobReviewPage() {
                             key={candidate.id}
                             candidate={candidate}
                             isSelected={candidate.id === selectedCandidate?.id}
+                            isChecked={selectedCandidateIds.includes(candidate.id)}
                             isBusy={candidateActionId === candidate.id}
                             onSelect={() => setSelectedCandidateId(candidate.id)}
+                            onToggleSelection={() => toggleCandidateSelection(candidate.id)}
                             onEdit={() => openEditModal(candidate)}
                             onApprove={() => approveCandidate(candidate)}
                             onReject={() => rejectCandidate(candidate)}
@@ -326,7 +435,18 @@ function ParaphraseJobReviewPage() {
   }
 }
 
-function ParaphraseCandidateCard({ candidate, isSelected, isBusy, onSelect, onEdit, onApprove, onReject, onSave }) {
+function ParaphraseCandidateCard({
+  candidate,
+  isSelected,
+  isChecked,
+  isBusy,
+  onSelect,
+  onToggleSelection,
+  onEdit,
+  onApprove,
+  onReject,
+  onSave,
+}) {
   const canEdit = candidate.status !== 'SAVED'
   const canApprove = !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status)
   const canReject = !['REJECTED', 'SAVED'].includes(candidate.status)
@@ -336,6 +456,9 @@ function ParaphraseCandidateCard({ candidate, isSelected, isBusy, onSelect, onEd
     <article className={`qdoc-candidate-card ${isSelected ? 'qdoc-candidate-card--active' : ''}`} onClick={onSelect}>
       <header className="qdoc-candidate-header">
         <div className="qdoc-candidate-badges">
+          <label className="qdoc-card-check" onClick={(event) => event.stopPropagation()}>
+            <input type="checkbox" checked={isChecked} onChange={onToggleSelection} />
+          </label>
           <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{candidateStatusText(candidate)}</span>
           {candidate.label && <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{candidateLabelText(candidate)}</span>}
           <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>

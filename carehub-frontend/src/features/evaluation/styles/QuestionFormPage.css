@@ -43,6 +43,67 @@
   font-weight: 600;
 }
 
+.qf-error-banner {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+}
+
+.qf-error-banner strong {
+  display: block;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.qf-error-banner p {
+  margin: 6px 0 12px;
+  color: #7f1d1d;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.qf-error-banner button {
+  border: none;
+  border-radius: 6px;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.qf-error-banner button:hover {
+  background: #b91c1c;
+}
+
+.qf-impact-banner {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+
+.qf-impact-banner strong {
+  display: block;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.qf-impact-banner p {
+  margin: 6px 0 0;
+  color: #78350f;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
 .qf-form {
   display: flex;
   flex-direction: column;

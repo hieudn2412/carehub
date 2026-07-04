@@ -3,112 +3,137 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { WarningOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { classificationRuleApi } from '../api/classificationRuleApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
+import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ClassificationRuleFormPage.css'
-
-const COLOR_OPTIONS = [
-  { name: 'Xanh lá', hex: '#10b981' },
-  { name: 'Xanh dương', hex: '#2563eb' },
-  { name: 'Vàng', hex: '#eab308' },
-  { name: 'Đỏ', hex: '#ef4444' },
-]
 
 function ClassificationRuleFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { showToast } = useToast()
   const isEditMode = Boolean(id)
 
   // Form State
   const [name, setName] = useState('')
-  const [active, setActive] = useState(true)
-  const [minOverall, setMinOverall] = useState('')
-  const [maxOverall, setMaxOverall] = useState('')
-  const [minKnowledge, setMinKnowledge] = useState('')
-  const [minPractice, setMinPractice] = useState('')
-  const [color, setColor] = useState('Vàng')
+  const [enabled, setEnabled] = useState(true)
+  const [categoryId, setCategoryId] = useState('')
+  const [keywords, setKeywords] = useState('')
+  const [sourcePattern, setSourcePattern] = useState('')
+  const [priority, setPriority] = useState(0)
+  const [categories, setCategories] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [testText, setTestText] = useState('')
+  const [testSource, setTestSource] = useState('')
+  const [testResult, setTestResult] = useState(null)
+  const [isTesting, setIsTesting] = useState(false)
 
   // Load existing rule details if edit mode
   useEffect(() => {
-    if (isEditMode) {
-      const stored = localStorage.getItem('carehub_classification_rules')
-      if (stored) {
-        try {
-          const list = JSON.parse(stored)
-          const found = list.find((r) => r.id === Number(id))
-          if (found) {
-            setName(found.name || '')
-            setActive(found.active !== undefined ? found.active : true)
-            setMinOverall(found.minOverall !== null && found.minOverall !== undefined ? found.minOverall : '')
-            setMaxOverall(found.maxOverall !== null && found.maxOverall !== undefined ? found.maxOverall : '')
-            setMinKnowledge(found.minKnowledge !== null && found.minKnowledge !== undefined ? found.minKnowledge : '')
-            setMinPractice(found.minPractice !== null && found.minPractice !== undefined ? found.minPractice : '')
-            setColor(found.color || 'Vàng')
-          }
-        } catch (e) {
-          console.error('Error loading classification rule details:', e)
+    let ignore = false
+
+    async function loadData() {
+      setIsLoading(true)
+      try {
+        const [categoryResponse, ruleResponse] = await Promise.all([
+          questionCategoryApi.listCategories({ status: 'ACTIVE' }),
+          isEditMode ? classificationRuleApi.getRule(id) : Promise.resolve(null),
+        ])
+        const categoryList = apiData(categoryResponse, [])
+        if (ignore) return
+        setCategories(categoryList)
+        if (!isEditMode && categoryList.length > 0) {
+          setCategoryId(String(categoryList[0].id))
+        }
+        if (ruleResponse) {
+          const rule = apiData(ruleResponse)
+          setName(rule.name || '')
+          setEnabled(rule.enabled !== false)
+          setCategoryId(rule.categoryId ? String(rule.categoryId) : '')
+          setKeywords(rule.keywords || '')
+          setSourcePattern(rule.sourcePattern || '')
+          setPriority(rule.priority || 0)
+        }
+      } catch (error) {
+        if (!ignore) {
+          showToast(apiErrorMessage(error), 'error')
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false)
         }
       }
     }
-  }, [id, isEditMode])
 
-  const handleSave = (e) => {
+    loadData()
+
+    return () => {
+      ignore = true
+    }
+  }, [id, isEditMode, showToast])
+
+  const handleSave = async (e) => {
     e.preventDefault()
 
     if (!name.trim()) {
-      alert('Vui lòng nhập tên xếp loại!')
+      showToast('Vui lòng nhập tên quy tắc.', 'warning')
       return
     }
 
-    if (minOverall === '') {
-      alert('Vui lòng nhập điểm tổng tối thiểu (%)!')
+    if (!categoryId) {
+      showToast('Vui lòng chọn danh mục câu hỏi.', 'warning')
       return
     }
 
-    const stored = localStorage.getItem('carehub_classification_rules')
-    let list = []
-    if (stored) {
-      try {
-        list = JSON.parse(stored)
-      } catch (err) {
-        console.error(err)
-      }
+    if (!keywords.trim()) {
+      showToast('Vui lòng nhập từ khóa phân loại.', 'warning')
+      return
     }
 
-    const ruleData = {
+    const payload = {
       name: name.trim(),
-      active,
-      minOverall: minOverall !== '' ? Number(minOverall) : 0,
-      maxOverall: maxOverall !== '' ? Number(maxOverall) : null,
-      minKnowledge: minKnowledge !== '' ? Number(minKnowledge) : null,
-      minPractice: minPractice !== '' ? Number(minPractice) : null,
-      color,
+      categoryId: Number(categoryId),
+      keywords: keywords.trim(),
+      sourcePattern: sourcePattern.trim(),
+      priority: Number(priority) || 0,
+      enabled,
     }
 
-    if (isEditMode) {
-      list = list.map((item) =>
-        item.id === Number(id)
-          ? {
-              ...item,
-              ...ruleData,
-            }
-          : item
-      )
-    } else {
-      const newRule = {
-        id: Date.now(),
-        ...ruleData,
+    setIsSaving(true)
+    try {
+      if (isEditMode) {
+        await classificationRuleApi.updateRule(id, payload)
+      } else {
+        await classificationRuleApi.createRule(payload)
       }
-      list = [...list, newRule]
+      showToast(isEditMode ? 'Đã cập nhật quy tắc phân loại.' : 'Đã tạo quy tắc phân loại.', 'success')
+      navigate('/admin/evaluation/classification-rules')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsSaving(false)
     }
-
-    localStorage.setItem('carehub_classification_rules', JSON.stringify(list))
-    navigate('/admin/evaluation/classification-rules')
   }
 
-  const getBadgeClass = (colorName) => {
-    if (colorName === 'Xanh lá') return 'crf-badge--green'
-    if (colorName === 'Xanh dương') return 'crf-badge--blue'
-    if (colorName === 'Vàng') return 'crf-badge--yellow'
-    return 'crf-badge--red'
+  const handleTestRule = async () => {
+    if (!testText.trim() && !testSource.trim()) {
+      showToast('Nhập nội dung hoặc nguồn tài liệu để kiểm tra.', 'warning')
+      return
+    }
+    setIsTesting(true)
+    try {
+      const response = await classificationRuleApi.testRule({
+        stem: testText,
+        sourceDocument: testSource,
+      })
+      setTestResult(apiData(response))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsTesting(false)
+    }
   }
 
   const breadcrumbs = [
@@ -131,7 +156,7 @@ function ClassificationRuleFormPage() {
                     {isEditMode ? 'Cập nhật quy tắc phân loại' : 'Thêm quy tắc phân loại'}
                   </h2>
                   <p className="crf-subtitle">
-                    Cấu hình ngưỡng điểm và nhãn cho mức xếp loại này
+                    Gán danh mục câu hỏi tự động theo từ khóa, nguồn tài liệu và mức ưu tiên
                   </p>
                 </div>
 
@@ -140,7 +165,7 @@ function ClassificationRuleFormPage() {
                   <div className="crf-form-row">
                     <div className="crf-form-group">
                       <label>
-                        Tên xếp loại (Classification name) <span className="crf-required-star">*</span>
+                        Tên quy tắc <span className="crf-required-star">*</span>
                       </label>
                       <input
                         type="text"
@@ -148,21 +173,27 @@ function ClassificationRuleFormPage() {
                         required
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Ví dụ: Xuất sắc, Giỏi..."
+                        placeholder="Ví dụ: Nhận diện người bệnh"
+                        disabled={isLoading || isSaving}
                       />
                     </div>
                     <div className="crf-form-group">
                       <label>
-                        Trạng thái (Status) <span className="crf-required-star">*</span>
+                        Danh mục câu hỏi <span className="crf-required-star">*</span>
                       </label>
                       <select
                         className="crf-input-red"
                         required
-                        value={active.toString()}
-                        onChange={(e) => setActive(e.target.value === 'true')}
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        disabled={isLoading || isSaving}
                       >
-                        <option value="true">Hoạt động (Active)</option>
-                        <option value="false">Ngưng hoạt động (Inactive)</option>
+                        <option value="">Chọn danh mục</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
@@ -171,29 +202,27 @@ function ClassificationRuleFormPage() {
                   <div className="crf-form-row">
                     <div className="crf-form-group">
                       <label>
-                        Điểm tổng tối thiểu (%) <span className="crf-required-star">*</span>
+                        Từ khóa phân loại <span className="crf-required-star">*</span>
                       </label>
-                      <input
-                        type="number"
+                      <textarea
                         className="crf-input-red"
                         required
-                        min="0"
-                        max="100"
-                        value={minOverall}
-                        onChange={(e) => setMinOverall(e.target.value)}
-                        placeholder="Ví dụ: 90"
+                        rows={4}
+                        value={keywords}
+                        onChange={(e) => setKeywords(e.target.value)}
+                        placeholder="Mỗi dòng hoặc dấu phẩy là một từ khóa. Ví dụ: nhận diện, vòng tay, mã người bệnh"
+                        disabled={isLoading || isSaving}
                       />
                     </div>
                     <div className="crf-form-group">
-                      <label>Điểm tổng tối đa (%)</label>
-                      <input
-                        type="number"
+                      <label>Nguồn tài liệu</label>
+                      <textarea
                         className="crf-input-red"
-                        min="0"
-                        max="100"
-                        value={maxOverall}
-                        onChange={(e) => setMaxOverall(e.target.value)}
-                        placeholder="Bỏ trống đối với bậc cao nhất"
+                        rows={4}
+                        value={sourcePattern}
+                        onChange={(e) => setSourcePattern(e.target.value)}
+                        placeholder="Ví dụ: an toàn người bệnh, quy trình nhận diện"
+                        disabled={isLoading || isSaving}
                       />
                     </div>
                   </div>
@@ -201,68 +230,76 @@ function ClassificationRuleFormPage() {
                   {/* Row 3 */}
                   <div className="crf-form-row">
                     <div className="crf-form-group">
-                      <label>Điểm lý thuyết tối thiểu (%)</label>
+                      <label>Ưu tiên</label>
                       <input
                         type="number"
                         className="crf-input-red"
-                        min="0"
-                        max="100"
-                        value={minKnowledge}
-                        onChange={(e) => setMinKnowledge(e.target.value)}
-                        placeholder="Ví dụ: 90"
+                        value={priority}
+                        onChange={(e) => setPriority(e.target.value)}
+                        placeholder="Số lớn hơn được ưu tiên trước"
+                        disabled={isLoading || isSaving}
                       />
                     </div>
                     <div className="crf-form-group">
-                      <label>Điểm thực hành tối thiểu (%)</label>
-                      <input
-                        type="number"
+                      <label>Trạng thái</label>
+                      <select
                         className="crf-input-red"
-                        min="0"
-                        max="100"
-                        value={minPractice}
-                        onChange={(e) => setMinPractice(e.target.value)}
-                        placeholder="Ví dụ: 90"
+                        value={enabled.toString()}
+                        onChange={(e) => setEnabled(e.target.value === 'true')}
+                        disabled={isLoading || isSaving}
+                      >
+                        <option value="true">Hoạt động</option>
+                        <option value="false">Tạm ngưng</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="crf-section-divider">
+                    <span className="crf-divider-title">KIỂM TRA NHANH</span>
+                  </div>
+
+                  <div className="crf-form-row">
+                    <div className="crf-form-group">
+                      <label>Nội dung câu hỏi thử</label>
+                      <textarea
+                        className="crf-input-red"
+                        rows={3}
+                        value={testText}
+                        onChange={(e) => setTestText(e.target.value)}
+                        placeholder="Dán nội dung câu hỏi hoặc trích đoạn nguồn..."
+                      />
+                    </div>
+                    <div className="crf-form-group">
+                      <label>Nguồn tài liệu thử</label>
+                      <input
+                        type="text"
+                        className="crf-input-red"
+                        value={testSource}
+                        onChange={(e) => setTestSource(e.target.value)}
+                        placeholder="Tên tài liệu hoặc section"
                       />
                     </div>
                   </div>
 
-                  {/* Badge Color Selector */}
-                  <div className="crf-section-divider">
-                    <span className="crf-divider-title">MÀU SẮC BADGE (BADGE COLOR)</span>
+                  <div className="crf-form-actions" style={{ justifyContent: 'flex-start' }}>
+                    <button type="button" className="crf-btn-cancel" onClick={handleTestRule} disabled={isTesting}>
+                      {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra'}
+                    </button>
                   </div>
 
-                  <div className="crf-color-selector">
-                    {COLOR_OPTIONS.map((opt) => {
-                      const isSelected = color === opt.name
-                      return (
-                        <div
-                          key={opt.name}
-                          className={`crf-color-card ${isSelected ? 'crf-color-card--selected' : ''}`}
-                          onClick={() => setColor(opt.name)}
-                        >
-                          <div className="crf-color-card-left">
-                            <span className="crf-color-card-dot" style={{ backgroundColor: opt.hex }} />
-                            <span className="crf-color-card-name">{opt.name}</span>
-                          </div>
-                          {isSelected && <span className="crf-color-card-check">✓</span>}
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Preview Area */}
-                  <div className="crf-section-divider">
-                    <span className="crf-divider-title">XEM TRƯỚC (PREVIEW)</span>
-                  </div>
-
-                  <div className="crf-preview-card">
-                    <span className="crf-preview-desc">
-                      Hiển thị trên các báo cáo năng lực và bảng điều khiển
-                    </span>
-                    <span className={`crl-badge ${getBadgeClass(color)}`}>
-                      {name || 'Xếp loại'}
-                    </span>
-                  </div>
+                  {testResult && (
+                    <div className="crf-preview-card">
+                      <span className="crf-preview-desc">
+                        Kết quả: {testResult.categoryName || 'Chưa phân loại'}
+                      </span>
+                      <span className="crf-result-badge">
+                        {testResult.ruleName || 'Không khớp'}
+                      </span>
+                      <span className="crf-preview-desc">
+                        Độ tin cậy: {Math.round(Number(testResult.confidence || 0) * 100)}% · {testResult.reason}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Warning Box */}
                   <div className="crf-warning-card">
@@ -270,14 +307,14 @@ function ClassificationRuleFormPage() {
                       <WarningOutlined />
                     </span>
                     <span className="crf-warning-text">
-                      Thay đổi chỉ áp dụng cho các đánh giá từ thời điểm lưu trở đi. Dữ liệu cũ không bị tính lại
+                      Quy tắc hoạt động sẽ được dùng để gợi ý danh mục cho câu hỏi mới và candidate được lưu vào ngân hàng.
                     </span>
                   </div>
 
                   {/* Actions Footer */}
                   <div className="crf-form-actions">
-                    <button type="submit" className="crf-btn-save">
-                      Lưu quy tắc
+                    <button type="submit" className="crf-btn-save" disabled={isLoading || isSaving}>
+                      {isSaving ? 'Đang lưu...' : 'Lưu quy tắc'}
                     </button>
                     <button
                       type="button"

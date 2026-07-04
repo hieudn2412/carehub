@@ -186,6 +186,19 @@ select.crf-input-red {
   padding: 16px 24px;
 }
 
+.crf-result-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+  min-width: 80px;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .crf-preview-desc {
   font-size: 13.5px;
   color: #64748b;

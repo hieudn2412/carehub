@@ -1,7 +1,11 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
-import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.ExtractedDocument;
 
@@ -13,10 +17,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentTextExtractor {
     private static final int MIN_PDF_TEXT_CHARS = 40;
+    private static final Pattern HEADING_STYLE = Pattern.compile(".*?(?:heading|title|tiêu đề|tieude)\\s*([1-6])?.*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     public ExtractedDocument extract(byte[] bytes, String filename) {
         String extension = extensionOf(filename);
@@ -70,11 +78,68 @@ public class DocumentTextExtractor {
     }
 
     private ExtractedDocument extractDocx(byte[] bytes) throws IOException {
-        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(bytes));
-             XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
-            String text = extractor.getText();
-            return new ExtractedDocument(List.of(text == null ? "" : text), 1, false, null);
+        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(bytes))) {
+            StringBuilder text = new StringBuilder();
+            for (IBodyElement element : document.getBodyElements()) {
+                if (element instanceof XWPFParagraph paragraph) {
+                    appendParagraph(text, paragraph);
+                } else if (element instanceof XWPFTable table) {
+                    appendTable(text, table);
+                }
+            }
+            return new ExtractedDocument(List.of(text.toString()), 1, false, null);
         }
+    }
+
+    private void appendParagraph(StringBuilder target, XWPFParagraph paragraph) {
+        String text = paragraph.getText();
+        if (text == null || text.isBlank()) {
+            target.append('\n');
+            return;
+        }
+        String normalized = text.trim();
+        int headingLevel = headingLevel(paragraph);
+        if (headingLevel > 0) {
+            target.append("#".repeat(headingLevel)).append(' ').append(normalized).append("\n\n");
+            return;
+        }
+        if (paragraph.getNumID() != null && !normalized.matches("^(?:[-*•]|\\d+[.)]|[a-zA-Z][.)])\\s+.+")) {
+            target.append("- ").append(normalized).append('\n');
+            return;
+        }
+        target.append(normalized).append('\n');
+    }
+
+    private void appendTable(StringBuilder target, XWPFTable table) {
+        target.append('\n');
+        for (XWPFTableRow row : table.getRows()) {
+            String rowText = row.getTableCells().stream()
+                    .map(XWPFTableCell::getText)
+                    .map(value -> value == null ? "" : value.replaceAll("\\s+", " ").trim())
+                    .filter(value -> !value.isBlank())
+                    .collect(Collectors.joining(" | "));
+            if (!rowText.isBlank()) {
+                target.append(rowText).append('\n');
+            }
+        }
+        target.append('\n');
+    }
+
+    private int headingLevel(XWPFParagraph paragraph) {
+        String style = paragraph.getStyle();
+        if (style == null || style.isBlank()) {
+            return 0;
+        }
+        String normalized = style.toLowerCase(Locale.ROOT).replaceAll("[_-]+", " ");
+        Matcher matcher = HEADING_STYLE.matcher(normalized);
+        if (!matcher.matches()) {
+            return 0;
+        }
+        String level = matcher.group(1);
+        if (level == null || level.isBlank()) {
+            return 1;
+        }
+        return Math.min(6, Math.max(1, Integer.parseInt(level)));
     }
 
     private ExtractedDocument extractText(byte[] bytes) {

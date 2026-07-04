@@ -56,6 +56,12 @@ export const documentQuestionApi = {
     })
   },
 
+  cancelQuestionJob(jobId) {
+    return httpClient.post(`/document-question-jobs/${jobId}/cancel`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   getCandidate(candidateId) {
     return httpClient.get(`/document-question-candidates/${candidateId}`, {
       headers: authHeaders(),
@@ -82,6 +88,24 @@ export const documentQuestionApi = {
 
   saveCandidateAsQuestion(candidateId) {
     return httpClient.post(`/document-question-candidates/${candidateId}/save-as-question`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  approveCandidates(candidateIds, reviewerNotes = '') {
+    return httpClient.post('/document-question-candidates/batch/approve', { candidateIds, reviewerNotes }, {
+      headers: authHeaders(),
+    })
+  },
+
+  rejectCandidates(candidateIds, reviewerNotes = '') {
+    return httpClient.post('/document-question-candidates/batch/reject', { candidateIds, reviewerNotes }, {
+      headers: authHeaders(),
+    })
+  },
+
+  saveCandidatesAsQuestions(candidateIds) {
+    return httpClient.post('/document-question-candidates/batch/save-as-questions', { candidateIds }, {
       headers: authHeaders(),
     })
   },
