@@ -64,6 +64,7 @@ import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
 import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
+import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
@@ -177,6 +178,7 @@ function AppRouter() {
       <Route path="/admin/training/evidence-review" element={adminElement(<ManagerEvidenceReviewListPage />)} />
       <Route path="/admin/training/evidence-review/:id" element={adminElement(<ManagerEvidenceReviewDetailPage />)} />
       <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />
+      <Route path="/admin/quality/history/forms/:formId/versions/:versionId" element={adminElement(<AdminQualityHistoryVersionPage />)} />
       <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
       <Route
         path="/admin/quality/formulas"

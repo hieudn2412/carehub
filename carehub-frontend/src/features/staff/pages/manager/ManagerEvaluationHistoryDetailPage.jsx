@@ -7,6 +7,20 @@ import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import '../../styles/ManagerPages.css'
 
+function formatScore(value) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) {
+    return '---'
+  }
+
+  const positiveValue = Math.max(numberValue, 0)
+  const roundedValue = Math.abs(positiveValue) < 0.00005 ? 0 : positiveValue
+  return roundedValue.toLocaleString('vi-VN', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })
+}
+
 function ManagerEvaluationHistoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -17,7 +31,6 @@ function ManagerEvaluationHistoryDetailPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    setLoading(true)
     staffApi.getFormSubmission(id)
       .then(res => {
         setEvaluation(res.data?.data)
@@ -63,7 +76,7 @@ function ManagerEvaluationHistoryDetailPage() {
   }
 
   const isPassed = evaluation.result === 'PASSED'
-  const resultText = evaluation.result === 'PASSED' ? 'Đạt' : (evaluation.result === 'FAILED_SCORE' ? 'Không đạt (Điểm)' : 'Không đạt (Then chốt)')
+  const resultText = evaluation.result === 'PASSED' ? 'Đạt' : (evaluation.result === 'FAILED_SCORE' ? 'Không đạt điểm' : 'Không đạt tiêu chí trọng yếu')
   const badgeColor = isPassed ? 'green' : 'red'
 
   return (
@@ -117,7 +130,7 @@ function ManagerEvaluationHistoryDetailPage() {
                 background: isPassed ? 'var(--mgr-green-bg)' : 'var(--mgr-red-bg)', 
                 color: isPassed ? 'var(--mgr-green)' : 'var(--mgr-red)' 
               }}>
-                {evaluation.convertedScore !== null ? `${Number(evaluation.convertedScore).toFixed(0)}%` : '---'}
+                {formatScore(evaluation.convertedScore)}
               </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>
@@ -167,7 +180,7 @@ function ManagerEvaluationHistoryDetailPage() {
                         {answeredOk ? 'ĐẠT' : 'KHÔNG ĐẠT'}
                       </span>
                       <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b', minWidth: 50, textAlign: 'right' }}>
-                        {ans.weightedScore !== null ? Number(ans.weightedScore).toFixed(1) : '---'} / {ans.maxScore} điểm
+                        {formatScore(ans.weightedScore)} / {formatScore(ans.maxScore)} điểm
                       </span>
                     </div>
                   </div>

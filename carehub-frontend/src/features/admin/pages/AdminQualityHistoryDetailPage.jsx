@@ -29,10 +29,15 @@ function formatDateTime(value) {
   }).format(new Date(value))
 }
 
-function formatScore(value, suffix = '%') {
+function formatScore(value) {
   const numberValue = Number(value)
   if (!Number.isFinite(numberValue)) return '--'
-  return `${numberValue.toFixed(numberValue % 1 === 0 ? 0 : 1)}${suffix}`
+  const positiveValue = Math.max(numberValue, 0)
+  const roundedValue = Math.abs(positiveValue) < 0.00005 ? 0 : positiveValue
+  return roundedValue.toLocaleString('vi-VN', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+  })
 }
 
 function getResultLabel(result) {
@@ -161,7 +166,7 @@ function AdminQualityHistoryDetailPage() {
                   <span>Điểm quy đổi</span>
                   <strong>{formatScore(submission.convertedScore)}</strong>
                   <small>
-                    Điểm thô: {formatScore(submission.rawScore, '')}
+                    Điểm thô: {formatScore(submission.rawScore)}
                   </small>
                 </article>
                 <article className={`admin-quality-history__summary-card admin-quality-history__summary-card--${resultClass}`}>
@@ -214,7 +219,7 @@ function AdminQualityHistoryDetailPage() {
                               {isPassed ? 'Đạt' : 'Cần xem lại'}
                             </span>
                             <strong>
-                              {formatScore(item.weightedScore, '')} / {formatScore(item.maxScore, '')}
+                              {formatScore(item.weightedScore)} / {formatScore(item.maxScore)}
                             </strong>
                           </div>
                         </article>

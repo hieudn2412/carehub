@@ -14,7 +14,6 @@ function ManagerEvaluationHistoryPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    setLoading(true)
     staffApi.getFormSubmissions({ size: 100 })
       .then(res => {
         // Lọc ra các phiếu đã nộp chính thức (SUBMITTED)
@@ -123,7 +122,7 @@ function ManagerEvaluationHistoryPage() {
                           color: getResultColor(item.result) === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                           fontSize: 14
                         }}>
-                          {item.convertedScore !== null ? `${Number(item.convertedScore).toFixed(0)}%` : '---'}
+                          {item.convertedScore !== null ? Number(item.convertedScore).toFixed(0) : '---'}
                         </strong>
                       </td>
                       <td>
