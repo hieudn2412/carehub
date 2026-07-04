@@ -18,6 +18,8 @@ import {
   CalculatorOutlined,
   AimOutlined,
   FileSearchOutlined,
+  ScheduleOutlined,
+  TrophyOutlined,
   BarChartOutlined,
   LineChartOutlined,
   DownloadOutlined,
@@ -27,6 +29,7 @@ import {
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
+import { EVALUATION_PERMISSION, getCurrentEvaluationAccess } from '../../evaluation/utils/evaluationPermissions.js'
 import logo from '../../../assets/logo.png'
 import '../styles/AdminSidebar.css'
 
@@ -73,12 +76,87 @@ const navSections = [
   {
     label: 'ĐÁNH GIÁ',
     items: [
-      { icon: <FileAddOutlined />, label: 'Tạo câu hỏi từ tài liệu', path: '/admin/evaluation/question-documents' },
-      { icon: <FileTextOutlined />, label: 'Ngân hàng câu hỏi', path: '/admin/evaluation/question-bank' },
-      { icon: <BookOutlined />, label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
-      { icon: <DatabaseOutlined />, label: 'Danh mục câu hỏi', path: '/admin/evaluation/categories' },
-      { icon: <AuditOutlined />, label: 'Quy tắc phân loại', path: '/admin/evaluation/classification-rules' },
-      { icon: <SlidersOutlined />, label: 'Cấu hình đề kiểm tra', path: '/admin/evaluation/configs' },
+      {
+        icon: <BarChartOutlined />,
+        label: 'Dashboard đánh giá',
+        path: '/admin/evaluation/dashboard',
+        requiredPermissions: [
+          EVALUATION_PERMISSION.resultViewer,
+          EVALUATION_PERMISSION.questionReviewer,
+          EVALUATION_PERMISSION.questionSetManager,
+          EVALUATION_PERMISSION.examPublisher,
+        ],
+      },
+      {
+        icon: <HistoryOutlined />,
+        label: 'Audit đánh giá',
+        path: '/admin/evaluation/audit-logs',
+        requiredPermissions: [EVALUATION_PERMISSION.auditViewer],
+      },
+      {
+        icon: <ImportOutlined />,
+        label: 'Lịch sử import',
+        path: '/admin/evaluation/imports',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
+      },
+      {
+        icon: <FileAddOutlined />,
+        label: 'Tạo câu hỏi từ tài liệu',
+        path: '/admin/evaluation/question-documents',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
+      },
+      {
+        icon: <FileTextOutlined />,
+        label: 'Ngân hàng câu hỏi',
+        path: '/admin/evaluation/question-bank',
+        requiredPermissions: [
+          EVALUATION_PERMISSION.questionAuthor,
+          EVALUATION_PERMISSION.questionReviewer,
+          EVALUATION_PERMISSION.questionSetManager,
+        ],
+      },
+      {
+        icon: <BookOutlined />,
+        label: 'Bộ câu hỏi',
+        path: '/admin/evaluation/question-sets',
+        requiredPermissions: [EVALUATION_PERMISSION.questionSetManager],
+      },
+      {
+        icon: <DatabaseOutlined />,
+        label: 'Danh mục câu hỏi',
+        path: '/admin/evaluation/categories',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
+      },
+      {
+        icon: <AuditOutlined />,
+        label: 'Quy tắc phân loại',
+        path: '/admin/evaluation/classification-rules',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
+      },
+      {
+        icon: <SlidersOutlined />,
+        label: 'Cấu hình đề kiểm tra',
+        path: '/admin/evaluation/configs',
+        requiredPermissions: [EVALUATION_PERMISSION.examConfigManager],
+      },
+      {
+        icon: <FileSearchOutlined />,
+        label: 'Bộ đề kiểm tra',
+        path: '/admin/evaluation/exam-papers',
+        requiredPermissions: [EVALUATION_PERMISSION.examPublisher],
+      },
+      {
+        icon: <ScheduleOutlined />,
+        label: 'Phân công kiểm tra',
+        path: '/admin/evaluation/exam-assignments',
+        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
+      },
+      {
+        icon: <TrophyOutlined />,
+        label: 'Kết quả kiểm tra',
+        path: '/admin/evaluation/exam-attempts',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
     ],
   },
   {
@@ -118,6 +196,7 @@ function AdminSidebar() {
   const location = useLocation()
   const currentPath = location.pathname
   const navRef = useRef(null)
+  const evaluationAccess = getCurrentEvaluationAccess()
 
   // Restore scroll position
   useEffect(() => {
@@ -154,10 +233,17 @@ function AdminSidebar() {
       </div>
 
       <nav ref={navRef} onScroll={handleScroll} className="admin-sidebar__nav">
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter((item) => (
+            !item.requiredPermissions || evaluationAccess.hasAny(item.requiredPermissions)
+          ))
+          if (visibleItems.length === 0) {
+            return null
+          }
+          return (
           <div key={section.label} className="admin-sidebar__section">
             <p className="admin-sidebar__section-label">{section.label}</p>
-            {section.items.map((item) => (
+            {visibleItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -170,7 +256,7 @@ function AdminSidebar() {
               </NavLink>
             ))}
           </div>
-        ))}
+        )})}
       </nav>
 
       <div className="admin-sidebar__footer">

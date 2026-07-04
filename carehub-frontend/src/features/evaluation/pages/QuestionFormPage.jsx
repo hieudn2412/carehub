@@ -5,12 +5,19 @@ import AdminHeader from '../../admin/components/AdminHeader'
 import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionFormPage.css'
 
 const CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'Quy trình lâm sàng', 'Cấp cứu', 'An toàn người bệnh']
 const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
 const ANSWER_LETTERS = ['A', 'B', 'C', 'D']
+
+function difficultyValue(label) {
+  if (label === 'Dễ') return 'EASY'
+  if (label === 'Khó') return 'HARD'
+  return 'MEDIUM'
+}
 
 function QuestionFormPage() {
   const navigate = useNavigate()
@@ -24,25 +31,52 @@ function QuestionFormPage() {
   const [difficulty, setDifficulty] = useState('Dễ')
   const [active, setActive] = useState(true)
   const [explanation, setExplanation] = useState('')
+  const [sourceDocument, setSourceDocument] = useState('')
   const [questionType, setQuestionType] = useState('single') // 'single' or 'multiple'
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false)
-  const [isBackendQuestion, setIsBackendQuestion] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [backendCategories, setBackendCategories] = useState([])
+  const [impactWarning, setImpactWarning] = useState(null)
+  const [loadError, setLoadError] = useState('')
   
   // Dynamic Options State
   const [options, setOptions] = useState(['', '', '', ''])
   const [correctOptionIndices, setCorrectOptionIndices] = useState([0])
 
   const categoryOptions = useMemo(() => {
-    if (category && !CATEGORIES.includes(category)) {
-      return [category, ...CATEGORIES]
+    const names = backendCategories.length > 0 ? backendCategories.map((item) => item.name) : CATEGORIES
+    if (category && !names.includes(category)) {
+      return [category, ...names]
     }
-    return CATEGORIES
-  }, [category])
+    return names
+  }, [backendCategories, category])
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadCategories() {
+      try {
+        const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
+        if (!ignore) {
+          setBackendCategories(apiData(response, []))
+        }
+      } catch (error) {
+        if (!ignore) {
+          showToast(apiErrorMessage(error), 'warning')
+        }
+      }
+    }
+
+    loadCategories()
+
+    return () => {
+      ignore = true
+    }
+  }, [showToast])
 
   // Load existing question details in edit mode
   useEffect(() => {
     if (!isEditMode) {
-      setIsBackendQuestion(false)
       return undefined
     }
 
@@ -50,11 +84,12 @@ function QuestionFormPage() {
 
     async function loadQuestion() {
       setIsLoadingQuestion(true)
+      setLoadError('')
       try {
         const response = await questionBankApi.getQuestion(id)
         const question = apiData(response)
         if (!question) {
-          throw new Error('Empty question response')
+          throw new Error('Không nhận được dữ liệu câu hỏi từ máy chủ')
         }
         if (ignore) return
 
@@ -63,57 +98,23 @@ function QuestionFormPage() {
         setDifficulty(difficultyText(question.difficulty))
         setActive(question.status === 'APPROVED')
         setExplanation(question.explanation || '')
+        setSourceDocument(question.sourceDocument || '')
         setQuestionType('single')
         setOptions([question.optionA || '', question.optionB || '', question.optionC || '', question.optionD || ''])
         setCorrectOptionIndices([Math.max(0, ANSWER_LETTERS.indexOf(String(question.correctAnswer || 'A').toUpperCase()))])
-        setIsBackendQuestion(true)
+        setImpactWarning(question.impactWarning || null)
       } catch (error) {
         if (ignore) return
-        setIsBackendQuestion(false)
-        const loadedLocal = loadLocalQuestion()
-        if (!loadedLocal) {
-          showToast(apiErrorMessage(error), 'warning')
-        }
+        const message = error?.message === 'Không nhận được dữ liệu câu hỏi từ máy chủ'
+          ? error.message
+          : apiErrorMessage(error)
+        setLoadError(message)
+        showToast(message, 'warning')
       } finally {
         if (!ignore) {
           setIsLoadingQuestion(false)
         }
       }
-    }
-
-    function loadLocalQuestion() {
-      const stored = localStorage.getItem('carehub_questions')
-      if (stored) {
-        try {
-          const list = JSON.parse(stored)
-          const found = list.find((q) => q.id === Number(id))
-          if (found) {
-            setContent(found.content || '')
-            setCategory(found.category || 'Kiểm soát nhiễm khuẩn')
-            setDifficulty(found.difficulty || 'Dễ')
-            setActive(found.active !== undefined ? found.active : true)
-            setExplanation(found.explanation || '')
-            setQuestionType(found.questionType || 'single')
-            
-            if (found.options && found.options.length >= 2) {
-              setOptions(found.options)
-            }
-            
-            // Backwards compatibility for single correct index
-            if (found.correctOptionIndices && found.correctOptionIndices.length > 0) {
-              setCorrectOptionIndices(found.correctOptionIndices)
-            } else if (found.correctOptionIndex !== undefined) {
-              setCorrectOptionIndices([found.correctOptionIndex])
-            } else {
-              setCorrectOptionIndices([0])
-            }
-            return true
-          }
-        } catch (e) {
-          console.error('Error loading question details:', e)
-        }
-      }
-      return false
     }
 
     loadQuestion()
@@ -152,12 +153,12 @@ function QuestionFormPage() {
   }
 
   const handleAddOption = () => {
-    setOptions((prev) => [...prev, ''])
+    setOptions((prev) => (prev.length >= 4 ? prev : [...prev, '']))
   }
 
   const handleDeleteOption = (indexToDelete) => {
-    if (options.length <= 2) {
-      alert('Câu hỏi trắc nghiệm phải có ít nhất 2 phương án trả lời!')
+    if (options.length <= 4) {
+      alert('Câu hỏi trắc nghiệm trong ngân hàng hiện cần đúng 4 phương án A-D.')
       return
     }
 
@@ -173,69 +174,67 @@ function QuestionFormPage() {
     })
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
-
-    if (isBackendQuestion) {
-      showToast('Chưa có API cập nhật câu hỏi backend trong phase này.', 'warning')
-      return
-    }
     
     if (!content.trim()) {
-      alert('Vui lòng nhập nội dung câu hỏi!')
+      showToast('Vui lòng nhập nội dung câu hỏi.', 'warning')
       return
     }
 
-    if (options.some(opt => !opt.trim())) {
-      alert('Vui lòng nhập đầy đủ nội dung cho tất cả các phương án trả lời!')
+    if (options.length !== 4 || options.some(opt => !opt.trim())) {
+      showToast('Vui lòng nhập đủ 4 phương án trả lời A-D.', 'warning')
       return
     }
 
-    if (correctOptionIndices.length === 0) {
-      alert('Vui lòng chọn ít nhất một đáp án đúng!')
+    if (questionType !== 'single' || correctOptionIndices.length !== 1) {
+      showToast('Ngân hàng câu hỏi hiện hỗ trợ một đáp án đúng cho mỗi câu.', 'warning')
       return
     }
 
-    const stored = localStorage.getItem('carehub_questions')
-    let list = []
-    if (stored) {
-      try {
-        list = JSON.parse(stored)
-      } catch (err) {
-        console.error(err)
-      }
-    }
-
-    const questionData = {
-      content: content.trim(),
-      category,
-      difficulty,
-      active,
+    const payload = {
+      stem: content.trim(),
+      optionA: options[0].trim(),
+      optionB: options[1].trim(),
+      optionC: options[2].trim(),
+      optionD: options[3].trim(),
+      correctAnswer: ANSWER_LETTERS[correctOptionIndices[0]],
       explanation: explanation.trim(),
-      questionType,
-      options: options.map(o => o.trim()),
-      correctOptionIndices,
+      topic: category,
+      difficulty: difficultyValue(difficulty),
+      language: 'vi',
+      sourceDocument: sourceDocument.trim(),
+      status: active ? 'APPROVED' : 'DRAFT',
     }
 
-    if (isEditMode) {
-      list = list.map((item) =>
-        item.id === Number(id)
-          ? {
-              ...item,
-              ...questionData,
-            }
-          : item
-      )
-    } else {
-      const newQuestion = {
-        id: Date.now(),
-        ...questionData,
+    if (isEditMode && !active && impactWarning?.blocksArchive) {
+      showToast(impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể chuyển về bản nháp.', 'warning')
+      return
+    }
+
+    if (isEditMode && impactWarning?.warning && !window.confirm(`${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi?`)) {
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const response = isEditMode
+        ? await questionBankApi.updateQuestion(id, payload)
+        : await questionBankApi.createQuestion(payload)
+      const saved = apiData(response)
+      if (saved?.duplicateWarning) {
+        showToast('Đã lưu câu hỏi, nhưng có cảnh báo gần trùng. Nên kiểm tra lại trong ngân hàng.', 'warning')
+      } else if (saved?.impactWarning?.warning) {
+        showToast('Đã lưu câu hỏi. Câu hỏi này đang được dùng trong bộ câu hỏi hoặc bộ đề.', 'warning')
+      } else {
+        showToast(isEditMode ? 'Đã cập nhật câu hỏi.' : 'Đã tạo câu hỏi.', 'success')
       }
-      list = [newQuestion, ...list]
+      navigate('/admin/evaluation/question-bank')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsSaving(false)
     }
-
-    localStorage.setItem('carehub_questions', JSON.stringify(list))
-    navigate('/admin/evaluation/question-bank')
   }
 
   const getOptionLetter = (idx) => String.fromCharCode(65 + idx)
@@ -260,21 +259,34 @@ function QuestionFormPage() {
                     {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
                   </h2>
                   <p className="qf-subtitle">
-                    {isBackendQuestion
-                      ? 'Đang hiển thị câu hỏi từ backend. API cập nhật sẽ bổ sung ở phase sau.'
-                      : 'Thêm hoặc chỉnh sửa câu hỏi trắc nghiệm trong ngân hàng'}
+                    Thêm hoặc chỉnh sửa câu hỏi trắc nghiệm trong ngân hàng
                   </p>
                 </div>
 
                 {isLoadingQuestion && (
                   <div className="qf-info-banner">Đang tải chi tiết câu hỏi...</div>
                 )}
+                {loadError && !isLoadingQuestion && (
+                  <div className="qf-error-banner">
+                    <strong>Không tải được câu hỏi</strong>
+                    <p>{loadError}</p>
+                    <button type="button" onClick={() => navigate('/admin/evaluation/question-bank')}>
+                      Quay lại ngân hàng câu hỏi
+                    </button>
+                  </div>
+                )}
+                {impactWarning?.warning && !isLoadingQuestion && (
+                  <div className="qf-impact-banner">
+                    <strong>Cảnh báo sử dụng</strong>
+                    <p>{impactWarning.warning}</p>
+                  </div>
+                )}
 
                 <form onSubmit={handleSave} className="qf-form">
                   {/* Question Text */}
                   <div className="qf-form-group">
                     <label>
-                      Nội dung câu hỏi (Question text) <span className="qf-required-star">*</span>
+                      Nội dung câu hỏi <span className="qf-required-star">*</span>
                     </label>
                     <textarea
                       className="qf-input-green"
@@ -283,7 +295,7 @@ function QuestionFormPage() {
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
-                      disabled={isLoadingQuestion || isBackendQuestion}
+                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     />
                   </div>
 
@@ -291,14 +303,14 @@ function QuestionFormPage() {
                   <div className="qf-form-row">
                     <div className="qf-form-group">
                       <label>
-                        Danh mục (Category) <span className="qf-required-star">*</span>
+                        Danh mục <span className="qf-required-star">*</span>
                       </label>
                       <select
                         className="qf-input-red"
                         required
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        disabled={isLoadingQuestion || isBackendQuestion}
+                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                       >
                         {categoryOptions.map((cat, idx) => (
                           <option key={idx} value={cat}>
@@ -310,14 +322,14 @@ function QuestionFormPage() {
 
                     <div className="qf-form-group">
                       <label>
-                        Độ khó (Difficulty) <span className="qf-required-star">*</span>
+                        Độ khó <span className="qf-required-star">*</span>
                       </label>
                       <select
                         className="qf-input-red"
                         required
                         value={difficulty}
                         onChange={(e) => setDifficulty(e.target.value)}
-                        disabled={isLoadingQuestion || isBackendQuestion}
+                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                       >
                         {DIFFICULTIES.map((diff, idx) => (
                           <option key={idx} value={diff}>
@@ -336,42 +348,53 @@ function QuestionFormPage() {
                         required
                         value={questionType}
                         onChange={(e) => handleQuestionTypeChange(e.target.value)}
-                        disabled={isLoadingQuestion || isBackendQuestion}
+                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                       >
-                        <option value="single">Một đáp án đúng (Single choice)</option>
-                        <option value="multiple">Nhiều đáp án đúng (Multiple choice)</option>
+                        <option value="single">Một đáp án đúng</option>
                       </select>
                     </div>
 
                     <div className="qf-form-group">
-                      <label>Trạng thái (Status)</label>
+                      <label>Trạng thái</label>
                       <select
                         className="qf-input-red"
                         value={active.toString()}
                         onChange={(e) => setActive(e.target.value === 'true')}
-                        disabled={isLoadingQuestion || isBackendQuestion}
+                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                       >
-                        <option value="true">Hoạt động (Active)</option>
-                        <option value="false">Ngưng hoạt động (Inactive)</option>
+                        <option value="true">Đã duyệt</option>
+                        <option value="false">Bản nháp</option>
                       </select>
                     </div>
                   </div>
 
                   <div className="qf-form-group">
-                    <label>Giải thích đáp án (Explanation - tùy chọn)</label>
+                    <label>Giải thích đáp án</label>
                     <input
                       type="text"
                       className="qf-input-red"
                       value={explanation}
                       onChange={(e) => setExplanation(e.target.value)}
                       placeholder="Nhập giải thích ngắn gọn cho đáp án đúng..."
-                      disabled={isLoadingQuestion || isBackendQuestion}
+                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                    />
+                  </div>
+
+                  <div className="qf-form-group">
+                    <label>Nguồn câu hỏi</label>
+                    <input
+                      type="text"
+                      className="qf-input-red"
+                      value={sourceDocument}
+                      onChange={(e) => setSourceDocument(e.target.value)}
+                      placeholder="Ví dụ: Tài liệu bệnh viện, file import, nhập thủ công..."
+                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     />
                   </div>
 
                   {/* Section Divider */}
                   <div className="qf-section-divider">
-                    <span className="qf-divider-title">CÁC PHƯƠNG ÁN TRẢ LỜI (ANSWER OPTIONS)</span>
+                    <span className="qf-divider-title">CÁC PHƯƠNG ÁN TRẢ LỜI</span>
                   </div>
 
                   {/* Options List */}
@@ -383,7 +406,7 @@ function QuestionFormPage() {
                           key={idx}
                           className={`qf-option-card ${isCorrect ? 'qf-option-card--correct' : ''}`}
                           onClick={() => {
-                            if (!isBackendQuestion && !isLoadingQuestion) {
+                            if (!isSaving && !isLoadingQuestion && !loadError) {
                               handleSelectCorrect(idx)
                             }
                           }}
@@ -396,7 +419,7 @@ function QuestionFormPage() {
                               onChange={() => handleSelectCorrect(idx)}
                               className="qf-option-control"
                               onClick={(e) => e.stopPropagation()} // Prevent double triggers
-                              disabled={isLoadingQuestion || isBackendQuestion}
+                              disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                             />
                             <span className="qf-option-letter">{getOptionLetter(idx)}</span>
                             <input
@@ -406,23 +429,23 @@ function QuestionFormPage() {
                               value={optionText}
                               onChange={(e) => handleOptionChange(idx, e.target.value)}
                               onClick={(e) => e.stopPropagation()} // Prevent selecting checkbox on text focus
-                              disabled={isLoadingQuestion || isBackendQuestion}
+                              disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                             />
                           </div>
 
                           <div className="qf-option-right" onClick={(e) => e.stopPropagation()}>
                             {isCorrect && (
                               <span className="qf-option-correct-badge">
-                                <CheckOutlined /> Đúng (Correct)
+                                <CheckOutlined /> Đúng
                               </span>
                             )}
-                            {!isBackendQuestion && options.length > 2 && (
+                            {options.length > 4 && (
                               <button
                                 type="button"
                                 className="qf-option-delete-btn"
                                 onClick={() => handleDeleteOption(idx)}
                                 title="Xóa phương án này"
-                                disabled={isLoadingQuestion}
+                                disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -434,12 +457,12 @@ function QuestionFormPage() {
                   </div>
 
                   {/* Add Option Button */}
-                  {!isBackendQuestion && (
+                  {options.length < 4 && (
                     <button
                       type="button"
                       className="qf-btn-add-option"
                       onClick={handleAddOption}
-                      disabled={isLoadingQuestion}
+                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     >
                       <PlusOutlined /> Thêm phương án trả lời
                     </button>
@@ -447,8 +470,8 @@ function QuestionFormPage() {
 
                   {/* Actions Footer */}
                   <div className="qf-form-actions">
-                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isBackendQuestion}>
-                      {isBackendQuestion ? 'Chưa hỗ trợ lưu backend' : 'Lưu câu hỏi'}
+                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
+                      {isSaving ? 'Đang lưu...' : 'Lưu câu hỏi'}
                     </button>
                     <button
                       type="button"

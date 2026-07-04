@@ -30,6 +30,15 @@ import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
 import ClassificationRuleFormPage from '../features/evaluation/pages/ClassificationRuleFormPage.jsx'
 import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
+import EvaluationDashboardPage from '../features/evaluation/pages/EvaluationDashboardPage.jsx'
+import EvaluationAuditLogPage from '../features/evaluation/pages/EvaluationAuditLogPage.jsx'
+import EvaluationImportHistoryPage from '../features/evaluation/pages/EvaluationImportHistoryPage.jsx'
+import ExamPaperListPage from '../features/evaluation/pages/ExamPaperListPage.jsx'
+import ExamPaperGeneratePage from '../features/evaluation/pages/ExamPaperGeneratePage.jsx'
+import ExamPaperDetailPage from '../features/evaluation/pages/ExamPaperDetailPage.jsx'
+import ExamAssignmentListPage from '../features/evaluation/pages/ExamAssignmentListPage.jsx'
+import ExamAssignmentFormPage from '../features/evaluation/pages/ExamAssignmentFormPage.jsx'
+import ExamAttemptListPage from '../features/evaluation/pages/ExamAttemptListPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
@@ -45,6 +54,8 @@ import TrainingHoursEvidenceScreen from '../features/staff/pages/training/Traini
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
+import ExamTakeListScreen from '../features/staff/pages/ExamTakeListScreen.jsx'
+import ExamTakeScreen from '../features/staff/pages/ExamTakeScreen.jsx'
 import AdminDashboard from '../features/admin/pages/AdminDashboard.jsx'
 import AdminAccountsScreen from '../features/admin/pages/AdminAccountsScreen.jsx'
 import ImportLogsListPage from '../features/admin/pages/ImportLogsListPage.jsx'
@@ -64,7 +75,7 @@ import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
-import { ADMIN_ROLES, AUTH_ROLE } from '../features/auth/utils/authNavigation.js'
+import { ADMIN_ROLES, AUTH_ROLE, EVALUATION_PERMISSIONS } from '../features/auth/utils/authNavigation.js'
 
 
 function protectedElement(element, options = {}) {
@@ -73,6 +84,13 @@ function protectedElement(element, options = {}) {
 
 function adminElement(element) {
   return protectedElement(element, { allowedRoles: ADMIN_ROLES })
+}
+
+function evaluationElement(element) {
+  return protectedElement(element, {
+    allowedRoles: ADMIN_ROLES,
+    allowedPermissions: EVALUATION_PERMISSIONS,
+  })
 }
 
 
@@ -142,21 +160,30 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
-      <Route path="/admin/evaluation/question-documents" element={adminElement(<QuestionDocumentListPage />)} />
-      <Route path="/admin/evaluation/question-documents/:documentId" element={adminElement(<QuestionDocumentDetailPage />)} />
-      <Route path="/admin/evaluation/document-question-jobs/:jobId" element={adminElement(<DocumentQuestionJobReviewPage />)} />
-      <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={adminElement(<ParaphraseJobReviewPage />)} />
-      <Route path="/admin/evaluation/categories" element={adminElement(<QuestionCategoryListPage />)} />
-      <Route path="/admin/evaluation/question-sets" element={adminElement(<QuestionSetListPage />)} />
-      <Route path="/admin/evaluation/question-sets/new" element={adminElement(<QuestionSetFormPage />)} />
-      <Route path="/admin/evaluation/question-sets/:id/edit" element={adminElement(<QuestionSetFormPage />)} />
-      <Route path="/admin/evaluation/question-bank" element={adminElement(<QuestionBankListPage />)} />
-      <Route path="/admin/evaluation/question-bank/new" element={adminElement(<QuestionFormPage />)} />
-      <Route path="/admin/evaluation/question-bank/:id/edit" element={adminElement(<QuestionFormPage />)} />
-      <Route path="/admin/evaluation/classification-rules" element={adminElement(<ClassificationRuleListPage />)} />
-      <Route path="/admin/evaluation/classification-rules/new" element={adminElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/classification-rules/:id/edit" element={adminElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/configs" element={adminElement(<TestConfigPage />)} />
+      <Route path="/admin/evaluation/question-documents" element={evaluationElement(<QuestionDocumentListPage />)} />
+      <Route path="/admin/evaluation/dashboard" element={evaluationElement(<EvaluationDashboardPage />)} />
+      <Route path="/admin/evaluation/audit-logs" element={evaluationElement(<EvaluationAuditLogPage />)} />
+      <Route path="/admin/evaluation/imports" element={evaluationElement(<EvaluationImportHistoryPage />)} />
+      <Route path="/admin/evaluation/question-documents/:documentId" element={evaluationElement(<QuestionDocumentDetailPage />)} />
+      <Route path="/admin/evaluation/document-question-jobs/:jobId" element={evaluationElement(<DocumentQuestionJobReviewPage />)} />
+      <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={evaluationElement(<ParaphraseJobReviewPage />)} />
+      <Route path="/admin/evaluation/categories" element={evaluationElement(<QuestionCategoryListPage />)} />
+      <Route path="/admin/evaluation/question-sets" element={evaluationElement(<QuestionSetListPage />)} />
+      <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
+      <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
+      <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
+      <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
+      <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
+      <Route path="/admin/evaluation/classification-rules" element={evaluationElement(<ClassificationRuleListPage />)} />
+      <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
+      <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
+      <Route path="/admin/evaluation/configs" element={evaluationElement(<TestConfigPage />)} />
+      <Route path="/admin/evaluation/exam-papers" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-papers/new" element={evaluationElement(<ExamPaperGeneratePage />)} />
+      <Route path="/admin/evaluation/exam-papers/:paperId" element={evaluationElement(<ExamPaperDetailPage />)} />
+      <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
+      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
+      <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
 
       {/* Placeholder routes — sidebar mới có mục này nhưng trang thật chưa được code, sẽ thay bằng trang thật khi xây xong */}
       <Route
@@ -251,6 +278,8 @@ function AppRouter() {
       <Route path="/staff/training/:id/edit" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
+      <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
+      <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />
 
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />

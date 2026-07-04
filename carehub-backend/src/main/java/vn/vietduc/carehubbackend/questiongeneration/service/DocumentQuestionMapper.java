@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentChunkResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentSectionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgePointResponse;
@@ -25,6 +26,16 @@ public class DocumentQuestionMapper {
             List<DocumentSection> sections,
             List<DocumentChunk> chunks
     ) {
+        return toDocumentResponse(document, sections, chunks, 0L, null);
+    }
+
+    public DocumentResponse toDocumentResponse(
+            QuestionDocument document,
+            List<DocumentSection> sections,
+            List<DocumentChunk> chunks,
+            long questionJobCount,
+            DocumentQuestionJob latestQuestionJob
+    ) {
         return new DocumentResponse(
                 document.getId(),
                 document.getFilename(),
@@ -35,10 +46,28 @@ public class DocumentQuestionMapper {
                 document.getChunkCount(),
                 document.getContentHash(),
                 document.getErrorMessage(),
+                questionJobCount,
+                latestQuestionJob == null ? null : toJobSummaryResponse(latestQuestionJob),
                 sections.stream().map(this::toSectionResponse).toList(),
                 chunks.stream().map(this::toChunkResponse).toList(),
                 document.getCreatedAt(),
                 document.getUpdatedAt()
+        );
+    }
+
+    public DocumentQuestionJobSummaryResponse toJobSummaryResponse(DocumentQuestionJob job) {
+        return new DocumentQuestionJobSummaryResponse(
+                job.getId(),
+                job.getStatus().name(),
+                QuestionGenerationLabels.jobStatus(job.getStatus()),
+                job.getProvider().name(),
+                job.getModel(),
+                job.getCandidateCount(),
+                job.getChunkCount(),
+                job.getCompletedChunkCount(),
+                job.getFailedChunkCount(),
+                job.getCreatedAt(),
+                job.getUpdatedAt()
         );
     }
 

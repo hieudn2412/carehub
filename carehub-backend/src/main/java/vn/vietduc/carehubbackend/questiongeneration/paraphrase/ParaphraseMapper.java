@@ -82,6 +82,9 @@ public class ParaphraseMapper {
                 question.getQuestionType().name(),
                 question.getParentQuestion() == null ? null : question.getParentQuestion().getId(),
                 question.getStatus().name(),
+                QuestionGenerationLabels.questionBankStatus(question.getStatus()),
+                null,
+                null,
                 question.getCreatedAt(),
                 question.getUpdatedAt()
         );

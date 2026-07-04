@@ -42,11 +42,15 @@ ai:
     model: ${GENERATION_MODEL:deepseek-v4-flash}
     fallback-model: ${GENERATION_FALLBACK_MODEL:deepseek-v4-pro}
     prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v1}
+    pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
     max-retries: ${GENERATION_MAX_RETRIES:1}
+    max-concurrent-calls: ${GENERATION_MAX_CONCURRENT_CALLS:2}
+    circuit-breaker-failure-threshold: ${GENERATION_CIRCUIT_BREAKER_FAILURE_THRESHOLD:5}
+    circuit-breaker-cooldown-seconds: ${GENERATION_CIRCUIT_BREAKER_COOLDOWN_SECONDS:60}
     temperature: ${GENERATION_TEMPERATURE:0.2}
     max-output-tokens: ${GENERATION_MAX_OUTPUT_TOKENS:1800}
-    llm-validation-enabled: ${GENERATION_LLM_VALIDATION_ENABLED:true}
+    llm-validation-enabled: ${GENERATION_LLM_VALIDATION_ENABLED:false}
   embedding:
     provider: ${EMBEDDING_PROVIDER:e5}
     model: ${EMBEDDING_MODEL:intfloat/multilingual-e5-small}
@@ -75,7 +79,7 @@ document:
     - docx
     - txt
     - md
-  questions-per-chunk: ${DOCUMENT_QUESTIONS_PER_CHUNK:3}
+  questions-per-chunk: ${DOCUMENT_QUESTIONS_PER_CHUNK:1}
   chunk:
     target-tokens: ${DOCUMENT_CHUNK_TARGET_TOKENS:750}
     max-tokens: ${DOCUMENT_CHUNK_MAX_TOKENS:1200}

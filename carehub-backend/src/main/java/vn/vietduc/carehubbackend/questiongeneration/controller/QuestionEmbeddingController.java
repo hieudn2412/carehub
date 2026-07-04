@@ -12,7 +12,7 @@ import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingS
 @RestController
 @RequestMapping("${app.api-prefix}/question-embeddings")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@evaluationSecurity.hasAny(authentication, 'QUESTION_AUTHOR', 'QUESTION_REVIEWER')")
 public class QuestionEmbeddingController {
     private final QuestionEmbeddingService embeddingService;
 

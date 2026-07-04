@@ -3,8 +3,16 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ParaphraseJobStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 
 public final class QuestionGenerationLabels {
     private QuestionGenerationLabels() {
@@ -71,6 +79,99 @@ public final class QuestionGenerationLabels {
             case VALIDATING -> "Đang kiểm tra";
             case COMPLETED -> "Hoàn tất";
             case FAILED -> "Thất bại";
+        };
+    }
+
+    public static String questionSetStatus(QuestionSetStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case DRAFT -> "Bản nháp";
+            case ACTIVE -> "Hoạt động";
+            case INACTIVE -> "Tạm ngưng";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String questionBankStatus(QuestionBankStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case DRAFT -> "Bản nháp";
+            case APPROVED -> "Đã duyệt";
+            case REJECTED -> "Đã từ chối";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String questionCategoryStatus(QuestionCategoryStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case ACTIVE -> "Hoạt động";
+            case INACTIVE -> "Tạm ngưng";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String examConfigStatus(ExamConfigStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case DRAFT -> "Bản nháp";
+            case ACTIVE -> "Đang hoạt động";
+            case INACTIVE -> "Tạm ngưng";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String examPaperStatus(ExamPaperStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case DRAFT -> "Bản nháp";
+            case PUBLISHED -> "Đã phát hành";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String examAssignmentStatus(ExamAssignmentStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case DRAFT -> "Bản nháp";
+            case OPEN -> "Đang mở";
+            case CLOSED -> "Đã đóng";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String examAttemptStatus(ExamAttemptStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case IN_PROGRESS -> "Đang làm";
+            case SUBMITTED -> "Đã nộp";
+            case GRADED -> "Đã chấm";
+            case EXPIRED -> "Quá hạn";
+            case CANCELLED -> "Đã hủy";
+        };
+    }
+
+    public static String examResultVisibility(ExamResultVisibility visibility) {
+        if (visibility == null) {
+            return "";
+        }
+        return switch (visibility) {
+            case SCORE_ONLY -> "Chỉ hiển thị điểm";
+            case SCORE_AND_ANSWERS -> "Hiển thị điểm, đáp án và giải thích";
         };
     }
 }

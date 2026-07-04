@@ -4,6 +4,7 @@ import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
   EditOutlined,
+  EyeOutlined,
   LoadingOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -30,6 +31,9 @@ import {
 } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
+const LIVE_JOB_STATUSES = new Set(['CREATED', 'GENERATING'])
+const STRONG_DUPLICATE_THRESHOLD = 0.93
+
 function DocumentQuestionJobReviewPage() {
   const { jobId } = useParams()
   const navigate = useNavigate()
@@ -44,16 +48,23 @@ function DocumentQuestionJobReviewPage() {
   const [editingCandidate, setEditingCandidate] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
+  const [isBatching, setIsBatching] = useState(false)
 
-  const loadJob = useCallback(async () => {
-    setIsLoading(true)
+  const loadJob = useCallback(async (options = {}) => {
+    const silent = options?.silent === true
+    if (!silent) {
+      setIsLoading(true)
+    }
     try {
       const response = await documentQuestionApi.getQuestionJob(jobId)
       setJobDetail(apiData(response))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
-      setIsLoading(false)
+      if (!silent) {
+        setIsLoading(false)
+      }
     }
   }, [jobId, showToast])
 
@@ -61,6 +72,16 @@ function DocumentQuestionJobReviewPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadJob()
   }, [loadJob])
+
+  useEffect(() => {
+    if (!LIVE_JOB_STATUSES.has(jobDetail?.status)) {
+      return undefined
+    }
+    const intervalId = window.setInterval(() => {
+      loadJob({ silent: true })
+    }, 3000)
+    return () => window.clearInterval(intervalId)
+  }, [jobDetail?.status, loadJob])
 
   const candidates = useMemo(() => jobDetail?.candidates || [], [jobDetail])
   const filteredCandidates = useMemo(() => {
@@ -72,8 +93,31 @@ function DocumentQuestionJobReviewPage() {
       return matchesKeyword && matchesStatus && matchesDifficulty
     })
   }, [candidates, keyword, statusFilter, difficultyFilter])
+  const benchmarkMetrics = useMemo(() => {
+    const total = candidates.length
+    const approved = candidates.filter((candidate) => ['APPROVED', 'SAVED'].includes(candidate.status)).length
+    const saved = candidates.filter((candidate) => candidate.status === 'SAVED').length
+    const duplicateWarnings = candidates.filter((candidate) => Number(candidate.duplicateMaxSimilarity || 0) >= 0.8).length
+    const completedChunks = Math.max(1, Number(jobDetail?.completedChunkCount || 0))
+    return {
+      latencyPerChunk: Math.round(Number(jobDetail?.usage?.latencyMs || 0) / completedChunks),
+      approveRate: total ? approved / total : 0,
+      saveRate: total ? saved / total : 0,
+      duplicateWarningRate: total ? duplicateWarnings / total : 0,
+    }
+  }, [candidates, jobDetail])
 
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
+  const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
+  const selectedApprovableIds = selectedCandidates
+    .filter((candidate) => !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status))
+    .map((candidate) => candidate.id)
+  const selectedRejectableIds = selectedCandidates
+    .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status))
+    .map((candidate) => candidate.id)
+  const selectedSavableIds = selectedCandidates
+    .filter((candidate) => candidate.status === 'APPROVED' && Number(candidate.duplicateMaxSimilarity || 0) < STRONG_DUPLICATE_THRESHOLD)
+    .map((candidate) => candidate.id)
 
   async function retryFailedChunks() {
     setIsRetrying(true)
@@ -86,6 +130,67 @@ function DocumentQuestionJobReviewPage() {
     } finally {
       setIsRetrying(false)
     }
+  }
+
+  async function cancelJob() {
+    if (!window.confirm('Hủy phiên tạo câu hỏi đang chạy? Các candidate đã tạo trước đó vẫn được giữ lại.')) return
+    try {
+      const response = await documentQuestionApi.cancelQuestionJob(jobId)
+      setJobDetail(apiData(response))
+      showToast('Đã hủy phiên tạo câu hỏi.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    }
+  }
+
+  async function runBatchAction(action, candidateIds, successMessage, reviewerNotes = '') {
+    if (!candidateIds.length) {
+      showToast('Không có candidate phù hợp để thao tác hàng loạt.', 'warning')
+      return
+    }
+    setIsBatching(true)
+    try {
+      const response = await action(candidateIds, reviewerNotes)
+      const result = apiData(response, {})
+      replaceCandidates(result.candidates || [])
+      setSelectedCandidateIds((current) => current.filter((id) => !(result.succeededCandidateIds || []).includes(id)))
+      if (Number(result.failedCount || 0) > 0) {
+        showToast(`${successMessage}. ${result.failedCount} candidate lỗi, kiểm tra lại trạng thái từng câu.`, 'warning')
+      } else {
+        showToast(successMessage, 'success')
+      }
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsBatching(false)
+    }
+  }
+
+  async function approveSelected() {
+    await runBatchAction(
+      documentQuestionApi.approveCandidates,
+      selectedApprovableIds,
+      'Đã duyệt hàng loạt câu hỏi đề xuất',
+      '',
+    )
+  }
+
+  async function rejectSelected() {
+    const reviewerNotes = window.prompt('Ghi chú lý do từ chối nếu cần:', '') || ''
+    await runBatchAction(
+      documentQuestionApi.rejectCandidates,
+      selectedRejectableIds,
+      'Đã từ chối hàng loạt câu hỏi đề xuất',
+      reviewerNotes,
+    )
+  }
+
+  async function saveSelected() {
+    await runBatchAction(
+      (candidateIds) => documentQuestionApi.saveCandidatesAsQuestions(candidateIds),
+      selectedSavableIds,
+      'Đã lưu hàng loạt câu hỏi vào ngân hàng',
+    )
   }
 
   function openEditModal(candidate) {
@@ -180,6 +285,35 @@ function DocumentQuestionJobReviewPage() {
     setSelectedCandidateId(updatedCandidate.id)
   }
 
+  function replaceCandidates(updatedCandidates) {
+    if (!updatedCandidates.length) return
+    const updatedById = new Map(updatedCandidates.map((candidate) => [candidate.id, candidate]))
+    setJobDetail((current) => ({
+      ...current,
+      candidates: (current?.candidates || []).map((candidate) => updatedById.get(candidate.id) || candidate),
+    }))
+    setSelectedCandidateId(updatedCandidates[0].id)
+  }
+
+  function toggleCandidateSelection(candidateId) {
+    setSelectedCandidateIds((current) =>
+      current.includes(candidateId)
+        ? current.filter((id) => id !== candidateId)
+        : [...current, candidateId]
+    )
+  }
+
+  function toggleFilteredSelection() {
+    const filteredIds = filteredCandidates.map((candidate) => candidate.id)
+    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedCandidateIds.includes(id))
+    setSelectedCandidateIds((current) => {
+      if (allSelected) {
+        return current.filter((id) => !filteredIds.includes(id))
+      }
+      return Array.from(new Set([...current, ...filteredIds]))
+    })
+  }
+
   const breadcrumbs = [
     { label: 'Đánh giá' },
     { label: 'Tạo câu hỏi từ tài liệu', link: '/admin/evaluation/question-documents' },
@@ -221,10 +355,18 @@ function DocumentQuestionJobReviewPage() {
                         </div>
                       </div>
                     </div>
-                    <button type="button" className="qdoc-secondary-btn" onClick={loadJob}>
-                      <ReloadOutlined />
-                      <span>Tải lại</span>
-                    </button>
+                    <div className="qdoc-title-actions">
+                      {LIVE_JOB_STATUSES.has(jobDetail.status) && (
+                        <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={cancelJob}>
+                          <StopOutlined />
+                          <span>Hủy phiên</span>
+                        </button>
+                      )}
+                      <button type="button" className="qdoc-secondary-btn" onClick={() => loadJob()}>
+                        <ReloadOutlined />
+                        <span>Tải lại</span>
+                      </button>
+                    </div>
                   </section>
 
                   <section className="qdoc-metric-grid qdoc-metric-grid--wide">
@@ -237,6 +379,20 @@ function DocumentQuestionJobReviewPage() {
                     <Metric label="Latency" value={`${formatNumber(jobDetail.usage?.latencyMs)} ms`} />
                     <Metric label="Chi phí" value={`$${Number(jobDetail.usage?.estimatedCostUsd || 0).toFixed(4)}`} />
                   </section>
+
+                  <section className="qdoc-metric-grid qdoc-metric-grid--wide">
+                    <Metric label="Độ trễ/chunk" value={`${formatNumber(benchmarkMetrics.latencyPerChunk)} ms`} />
+                    <Metric label="Tỷ lệ duyệt" value={formatPercent(benchmarkMetrics.approveRate)} />
+                    <Metric label="Tỷ lệ lưu" value={formatPercent(benchmarkMetrics.saveRate)} />
+                    <Metric label="Cảnh báo trùng" value={formatPercent(benchmarkMetrics.duplicateWarningRate)} />
+                  </section>
+
+                  {LIVE_JOB_STATUSES.has(jobDetail.status) && (
+                    <section className="qdoc-alert qdoc-alert--info">
+                      <LoadingOutlined />
+                      <span>Phiên tạo câu hỏi đang xử lý nền. Trang sẽ tự cập nhật sau vài giây.</span>
+                    </section>
+                  )}
 
                   {Number(jobDetail.failedChunkCount) > 0 && (
                     <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
@@ -314,6 +470,32 @@ function DocumentQuestionJobReviewPage() {
                     </select>
                   </section>
 
+                  {filteredCandidates.length > 0 && (
+                    <section className="qdoc-batch-bar">
+                      <label className="qdoc-checkline">
+                        <input
+                          type="checkbox"
+                          checked={filteredCandidates.every((candidate) => selectedCandidateIds.includes(candidate.id))}
+                          onChange={toggleFilteredSelection}
+                        />
+                        <span>Chọn tất cả trong bộ lọc</span>
+                      </label>
+                      <strong>{formatNumber(selectedCandidateIds.length)} đã chọn</strong>
+                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--success" onClick={approveSelected} disabled={isBatching || selectedApprovableIds.length === 0}>
+                        <CheckCircleOutlined />
+                        <span>Duyệt</span>
+                      </button>
+                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={rejectSelected} disabled={isBatching || selectedRejectableIds.length === 0}>
+                        <StopOutlined />
+                        <span>Từ chối</span>
+                      </button>
+                      <button type="button" className="qdoc-primary-btn" onClick={saveSelected} disabled={isBatching || selectedSavableIds.length === 0}>
+                        {isBatching ? <LoadingOutlined /> : <SaveOutlined />}
+                        <span>Lưu vào ngân hàng</span>
+                      </button>
+                    </section>
+                  )}
+
                   <section className="qdoc-review-layout">
                     <div className="qdoc-candidate-list">
                       {filteredCandidates.length === 0 ? (
@@ -324,12 +506,15 @@ function DocumentQuestionJobReviewPage() {
                             key={candidate.id}
                             candidate={candidate}
                             isSelected={candidate.id === selectedCandidate?.id}
+                            isChecked={selectedCandidateIds.includes(candidate.id)}
                             isBusy={candidateActionId === candidate.id}
                             onSelect={() => setSelectedCandidateId(candidate.id)}
+                            onToggleSelection={() => toggleCandidateSelection(candidate.id)}
                             onEdit={() => openEditModal(candidate)}
                             onApprove={() => approveCandidate(candidate)}
                             onReject={() => rejectCandidate(candidate)}
                             onSave={() => saveAsQuestion(candidate)}
+                            onOpenSavedQuestion={() => navigate(`/admin/evaluation/question-bank/${candidate.savedQuestionId}/edit`)}
                           />
                         ))
                       )}
@@ -420,16 +605,32 @@ function DocumentQuestionJobReviewPage() {
   }
 }
 
-function CandidateCard({ candidate, isSelected, isBusy, onSelect, onEdit, onApprove, onReject, onSave }) {
+function CandidateCard({
+  candidate,
+  isSelected,
+  isChecked,
+  isBusy,
+  onSelect,
+  onToggleSelection,
+  onEdit,
+  onApprove,
+  onReject,
+  onSave,
+  onOpenSavedQuestion,
+}) {
   const canEdit = candidate.status !== 'SAVED'
   const canApprove = !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status)
   const canReject = !['REJECTED', 'SAVED'].includes(candidate.status)
-  const canSave = candidate.status === 'APPROVED'
+  const hasStrongDuplicate = Number(candidate.duplicateMaxSimilarity || 0) >= STRONG_DUPLICATE_THRESHOLD
+  const canSave = candidate.status === 'APPROVED' && !hasStrongDuplicate
 
   return (
     <article className={`qdoc-candidate-card ${isSelected ? 'qdoc-candidate-card--active' : ''}`} onClick={onSelect}>
       <header className="qdoc-candidate-header">
         <div className="qdoc-candidate-badges">
+          <label className="qdoc-card-check" onClick={(event) => event.stopPropagation()}>
+            <input type="checkbox" checked={isChecked} onChange={onToggleSelection} />
+          </label>
           <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{candidateStatusText(candidate)}</span>
           {candidate.label && (
             <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{candidateLabelText(candidate)}</span>
@@ -476,7 +677,10 @@ function CandidateCard({ candidate, isSelected, isBusy, onSelect, onEdit, onAppr
       {candidate.duplicateMaxSimilarity >= 0.8 && (
         <div className="qdoc-alert qdoc-alert--warning">
           <WarningOutlined />
-          <span>Khả năng trùng: {Math.round(candidate.duplicateMaxSimilarity * 100)}% {candidate.duplicateQuestionStemSnapshot || ''}</span>
+          <span>
+            Khả năng trùng: {Math.round(candidate.duplicateMaxSimilarity * 100)}% {candidate.duplicateQuestionStemSnapshot || ''}
+            {hasStrongDuplicate ? ' Cần chỉnh sửa hoặc từ chối trước khi lưu.' : ''}
+          </span>
         </div>
       )}
 
@@ -493,6 +697,19 @@ function CandidateCard({ candidate, isSelected, isBusy, onSelect, onEdit, onAppr
         <div className="qdoc-soft-box">
           <strong>Ghi chú reviewer</strong>
           <p>{candidate.reviewerNotes}</p>
+        </div>
+      )}
+
+      {candidate.savedQuestionId && (
+        <div className="qdoc-saved-box">
+          <div>
+            <strong>Đã lưu vào ngân hàng</strong>
+            <p>Câu hỏi #{candidate.savedQuestionId}</p>
+          </div>
+          <button type="button" className="qdoc-secondary-btn" onClick={stopAnd(onOpenSavedQuestion)}>
+            <EyeOutlined />
+            <span>Mở câu hỏi</span>
+          </button>
         </div>
       )}
 
@@ -565,6 +782,10 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
     </div>
   )
+}
+
+function formatPercent(value) {
+  return `${Math.round(Number(value || 0) * 100)}%`
 }
 
 function FileBadge() {

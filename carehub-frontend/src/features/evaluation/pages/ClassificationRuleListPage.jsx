@@ -1,95 +1,69 @@
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
-import { EditOutlined, DeleteOutlined, PlusCircleOutlined } from '@ant-design/icons'
+import { EditOutlined, DeleteOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { classificationRuleApi } from '../api/classificationRuleApi.js'
+import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ClassificationRuleListPage.css'
-
-const INITIAL_RULES = [
-  { id: 1, name: 'Xuất sắc', minOverall: 90, maxOverall: null, minKnowledge: 90, minPractice: 90, color: 'Xanh lá', active: true },
-  { id: 2, name: 'Giỏi', minOverall: 75, maxOverall: 89, minKnowledge: 75, minPractice: 75, color: 'Xanh dương', active: true },
-  { id: 3, name: 'Trung bình', minOverall: 60, maxOverall: 74, minKnowledge: 60, minPractice: 60, color: 'Vàng', active: true },
-  { id: 4, name: 'Không đạt', minOverall: 0, maxOverall: 59, minKnowledge: null, minPractice: null, color: 'Đỏ', active: true },
-]
 
 function ClassificationRuleListPage() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
+  const [rules, setRules] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [keyword, setKeyword] = useState('')
+  const [enabledFilter, setEnabledFilter] = useState('')
   
-  const [rules, setRules] = useState(() => {
-    const stored = localStorage.getItem('carehub_classification_rules')
-    if (stored) {
-      try {
-        return JSON.parse(stored)
-      } catch (e) {
-        console.error('Error parsing stored classification rules:', e)
-      }
+  const loadRules = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await classificationRuleApi.listRules({})
+      setRules(apiData(response, []))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsLoading(false)
     }
-    localStorage.setItem('carehub_classification_rules', JSON.stringify(INITIAL_RULES))
-    return INITIAL_RULES
-  })
+  }, [showToast])
 
-  // Sync back to localStorage
   useEffect(() => {
-    localStorage.setItem('carehub_classification_rules', JSON.stringify(rules))
-  }, [rules])
+    loadRules()
+  }, [loadRules])
+
+  const filteredRules = useMemo(() => {
+    const normalized = keyword.trim().toLowerCase()
+    return rules.filter((rule) => {
+      const matchesKeyword = !normalized
+        || (rule.name || '').toLowerCase().includes(normalized)
+        || (rule.categoryName || '').toLowerCase().includes(normalized)
+        || (rule.keywords || '').toLowerCase().includes(normalized)
+        || (rule.sourcePattern || '').toLowerCase().includes(normalized)
+      const matchesStatus = enabledFilter === ''
+        || (enabledFilter === 'true' ? rule.enabled : !rule.enabled)
+      return matchesKeyword && matchesStatus
+    })
+  }, [enabledFilter, keyword, rules])
 
   const handleDelete = (item) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa quy tắc phân loại "${item.name}" không?`)) {
+    if (!window.confirm(`Tạm ngưng quy tắc phân loại "${item.name}"?`)) {
       return
     }
-    setRules((prev) => prev.filter((r) => r.id !== item.id))
+    classificationRuleApi.disableRule(item.id)
+      .then(() => {
+        showToast('Đã tạm ngưng quy tắc phân loại.', 'success')
+        loadRules()
+      })
+      .catch((error) => showToast(apiErrorMessage(error), 'error'))
   }
 
-  // Format Overall Score Range
-  const formatScoreRange = (rule) => {
-    const min = Number(rule.minOverall)
-    const max = rule.maxOverall !== null && rule.maxOverall !== '' ? Number(rule.maxOverall) : null
-
-    if (max === null) {
-      return `≥ ${min}%`
-    }
-    if (min === 0) {
-      return `< ${max + 1}%`
-    }
-    return `${min}–${max}%`
-  }
-
-  // Format Sub Score minimums
-  const formatMinScore = (val) => {
-    if (val === null || val === undefined || val === '') {
-      return '—'
-    }
-    return `≥ ${val}%`
-  }
-
-  // Get Color Indicator Dots & Labels
-  const getColorDot = (colorName) => {
-    let dotColor = '#10b981' // Xanh lá
-    let textColor = '#10b981'
-    if (colorName === 'Xanh dương') {
-      dotColor = '#2563eb'
-      textColor = '#2563eb'
-    } else if (colorName === 'Vàng') {
-      dotColor = '#eab308'
-      textColor = '#d97706'
-    } else if (colorName === 'Đỏ') {
-      dotColor = '#ef4444'
-      textColor = '#ef4444'
-    }
-
-    return (
-      <span className="crl-color-wrap" style={{ color: textColor }}>
-        <span className="crl-color-dot" style={{ backgroundColor: dotColor }} />
-        {colorName}
-      </span>
-    )
-  }
-
-  const getBadgeClass = (colorName) => {
-    if (colorName === 'Xanh lá') return 'crl-badge--green'
-    if (colorName === 'Xanh dương') return 'crl-badge--blue'
-    if (colorName === 'Vàng') return 'crl-badge--yellow'
-    return 'crl-badge--red'
+  const firstKeywords = (value) => {
+    const list = String(value || '')
+      .split(/[,;\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+    return list.length <= 3 ? list.join(', ') : `${list.slice(0, 3).join(', ')}...`
   }
 
   const breadcrumbs = [{ label: 'Quy tắc phân loại' }]
@@ -104,10 +78,42 @@ function ClassificationRuleListPage() {
             <div className="crl-page">
               {/* Title Card */}
               <div className="crl-title-card">
-                <h1 className="crl-title">Quy tắc phân loại năng lực</h1>
+                <h1 className="crl-title">Quy tắc phân loại câu hỏi</h1>
                 <p className="crl-subtitle">
-                  Định nghĩa ngưỡng điểm và các mức xếp loại năng lực của nhân viên
+                  Tự động gán danh mục cho câu hỏi theo từ khóa, nguồn tài liệu và mức ưu tiên
                 </p>
+              </div>
+
+              <div className="crl-filter-bar">
+                <div className="crl-filter-left">
+                  <div className="crl-search">
+                    <span className="crl-search-icon">
+                      <SearchOutlined />
+                    </span>
+                    <input
+                      type="text"
+                      className="crl-search-input"
+                      placeholder="Tìm quy tắc..."
+                      value={keyword}
+                      onChange={(event) => setKeyword(event.target.value)}
+                    />
+                  </div>
+                  <select
+                    className="crl-filter-select"
+                    value={enabledFilter}
+                    onChange={(event) => setEnabledFilter(event.target.value)}
+                  >
+                    <option value="">Trạng thái</option>
+                    <option value="true">Hoạt động</option>
+                    <option value="false">Tạm ngưng</option>
+                  </select>
+                </div>
+                <button 
+                  className="crl-btn-add" 
+                  onClick={() => navigate('/admin/evaluation/classification-rules/new')}
+                >
+                  <PlusCircleOutlined /> Thêm quy tắc
+                </button>
               </div>
 
               {/* Table Card */}
@@ -115,45 +121,43 @@ function ClassificationRuleListPage() {
                 <table className="crl-table">
                   <thead>
                     <tr>
-                      <th>Xếp loại</th>
-                      <th>Score range</th>
-                      <th>Knowledge min</th>
-                      <th>Practice min</th>
-                      <th>Color</th>
+                      <th>Tên quy tắc</th>
+                      <th>Danh mục</th>
+                      <th>Từ khóa</th>
+                      <th>Nguồn</th>
+                      <th>Ưu tiên</th>
                       <th>Trạng thái</th>
                       <th style={{ width: '120px', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {rules.length === 0 ? (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                          Đang tải quy tắc phân loại...
+                        </td>
+                      </tr>
+                    ) : filteredRules.length === 0 ? (
                       <tr>
                         <td colSpan="7" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                           Chưa có quy tắc phân loại nào được tạo.
                         </td>
                       </tr>
                     ) : (
-                      rules.map((item) => (
+                      filteredRules.map((item) => (
                         <tr key={item.id}>
                           <td>
-                            <span className={`crl-badge ${getBadgeClass(item.color)}`}>
+                            <span className="crl-badge crl-badge--blue">
                               {item.name}
                             </span>
                           </td>
-                          <td style={{ fontWeight: 600, color: '#334155' }}>
-                            {formatScoreRange(item)}
-                          </td>
-                          <td style={{ color: '#475569' }}>
-                            {formatMinScore(item.minKnowledge)}
-                          </td>
-                          <td style={{ color: '#475569' }}>
-                            {formatMinScore(item.minPractice)}
-                          </td>
+                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.categoryName}</td>
+                          <td style={{ color: '#475569' }}>{firstKeywords(item.keywords)}</td>
+                          <td style={{ color: '#475569' }}>{item.sourcePattern || '-'}</td>
+                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.priority || 0}</td>
                           <td>
-                            {getColorDot(item.color)}
-                          </td>
-                          <td>
-                            <span className={`crl-status-badge ${item.active ? 'crl-status-badge--active' : 'crl-status-badge--inactive'}`}>
-                              {item.active ? 'Hoạt động' : 'Ngưng'}
+                            <span className={`crl-status-badge ${item.enabled ? 'crl-status-badge--active' : 'crl-status-badge--inactive'}`}>
+                              {item.statusText || (item.enabled ? 'Hoạt động' : 'Tạm ngưng')}
                             </span>
                           </td>
                           <td>
@@ -170,7 +174,8 @@ function ClassificationRuleListPage() {
                                 type="button"
                                 className="crl-action-btn crl-action-btn--delete"
                                 onClick={() => handleDelete(item)}
-                                title="Xóa"
+                                title="Tạm ngưng"
+                                disabled={!item.enabled}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -181,16 +186,6 @@ function ClassificationRuleListPage() {
                     )}
                   </tbody>
                 </table>
-
-                {/* Footer action button directly inside the table card */}
-                <div className="crl-card-footer">
-                  <button 
-                    className="crl-btn-add" 
-                    onClick={() => navigate('/admin/evaluation/classification-rules/new')}
-                  >
-                    <PlusCircleOutlined /> Thêm phân loại
-                  </button>
-                </div>
               </div>
             </div>
           </main>

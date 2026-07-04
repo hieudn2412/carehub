@@ -30,6 +30,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
 
     @EntityGraph(attributePaths = {"department", "position"})
+    List<User> findByDepartment_IdInAndIsDeletedFalse(Collection<Long> departmentIds);
+
+    @EntityGraph(attributePaths = {"department", "position"})
     @Query("""
             SELECT u
             FROM User u

@@ -8,7 +8,9 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.NormalizedPara
 import vn.vietduc.carehubbackend.questiongeneration.service.model.SectionBlock;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ public class DocumentChunkingService {
         for (SectionBlock section : sections) {
             chunks.addAll(chunkSection(section));
         }
-        return chunks;
+        return flagDuplicateChunks(chunks);
     }
 
     private List<ChunkDraft> chunkSection(SectionBlock section) {
@@ -99,13 +101,19 @@ public class DocumentChunkingService {
         String text = String.join("\n\n", paragraphs).trim();
         List<String> flags = new ArrayList<>();
         if (text.length() < properties.getChunk().getMinUsefulTextLength()) {
-            flags.add("LOW_INFORMATION_DENSITY");
+            flags.add(DocumentChunkQualityRules.LOW_INFORMATION_DENSITY);
+        }
+        if (isHeadingOnly(text, tokenCount)) {
+            flags.add(DocumentChunkQualityRules.HEADING_ONLY);
+        }
+        if (isTableLikeLowConfidence(text, section.confidence())) {
+            flags.add(DocumentChunkQualityRules.TABLE_LIKE_LOW_CONFIDENCE);
         }
         if (tokenCount > properties.getChunk().getTargetTokens()) {
-            flags.add("ABOVE_TARGET_TOKEN_RANGE");
+            flags.add(DocumentChunkQualityRules.ABOVE_TARGET_TOKEN_RANGE);
         }
         if (section.confidence() < 0.5) {
-            flags.add("LOW_SECTION_CONFIDENCE");
+            flags.add(DocumentChunkQualityRules.LOW_SECTION_CONFIDENCE);
         }
         return new ChunkDraft(
                 section.orderIndex(),
@@ -117,6 +125,79 @@ public class DocumentChunkingService {
                 estimateTokens(text),
                 flags
         );
+    }
+
+    private List<ChunkDraft> flagDuplicateChunks(List<ChunkDraft> chunks) {
+        Set<String> seen = new HashSet<>();
+        List<ChunkDraft> flagged = new ArrayList<>();
+        for (ChunkDraft chunk : chunks) {
+            String normalized = normalizeForDuplicateCheck(chunk.text());
+            if (!normalized.isBlank() && !seen.add(normalized)) {
+                flagged.add(withFlag(chunk, DocumentChunkQualityRules.DUPLICATE_TEXT));
+            } else {
+                flagged.add(chunk);
+            }
+        }
+        return flagged;
+    }
+
+    private ChunkDraft withFlag(ChunkDraft chunk, String flag) {
+        if (chunk.qualityFlags().contains(flag)) {
+            return chunk;
+        }
+        List<String> flags = new ArrayList<>(chunk.qualityFlags());
+        flags.add(flag);
+        return new ChunkDraft(
+                chunk.sectionOrderIndex(),
+                chunk.sectionTitle(),
+                chunk.sectionPath(),
+                chunk.pageStart(),
+                chunk.pageEnd(),
+                chunk.text(),
+                chunk.tokenCount(),
+                flags
+        );
+    }
+
+    private boolean isHeadingOnly(String text, int tokenCount) {
+        if (text == null || text.isBlank() || tokenCount > 18) {
+            return false;
+        }
+        String[] lines = text.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .toArray(String[]::new);
+        if (lines.length > 2) {
+            return false;
+        }
+        String withoutNumbering = text.replaceFirst("^\\s*([0-9]+\\.)+\\s*", "");
+        return text.matches("(?s).*\\p{L}.*")
+                && !withoutNumbering.matches("(?s).*[.!?].*");
+    }
+
+    private boolean isTableLikeLowConfidence(String text, double sectionConfidence) {
+        if (text == null || sectionConfidence >= 0.65) {
+            return false;
+        }
+        long structuredLines = text.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .filter(line -> line.contains("|") || line.contains("\t") || line.matches(".*\\s{3,}.*"))
+                .count();
+        long lines = text.lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .count();
+        return lines >= 3 && structuredLines * 2 >= lines;
+    }
+
+    private String normalizeForDuplicateCheck(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.toLowerCase()
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     public int estimateTokens(String text) {

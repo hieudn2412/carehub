@@ -14,10 +14,13 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
+import vn.vietduc.carehubbackend.user.entity.Permission;
 import vn.vietduc.carehubbackend.user.entity.Role;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
+import vn.vietduc.carehubbackend.user.repository.PermissionRepository;
 import vn.vietduc.carehubbackend.user.repository.RoleRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
@@ -25,6 +28,9 @@ import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -37,6 +43,7 @@ public class DataSeeder implements CommandLineRunner {
     private static final String SYSTEM_JOB_ROLE_CODE = "SYSTEM_JOB";
 
     private final RoleRepository roleRepository;
+    private final PermissionRepository permissionRepository;
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -76,6 +83,7 @@ public class DataSeeder implements CommandLineRunner {
         Role userRole = seedRole(USER_ROLE_CODE, "User");
         Role managerRole = seedRole(MANAGER_ROLE_CODE, "Manager");
         Role systemJobRole = seedRole(SYSTEM_JOB_ROLE_CODE, "System Job");
+        seedEvaluationPermissions();
         seedAdminUser(adminRole);
         seedQuestionBank();
     }
@@ -123,6 +131,33 @@ public class DataSeeder implements CommandLineRunner {
                 .build());
 
         log.info("Seeded admin user: {} ({})", adminEmail, adminEmployeeCode);
+    }
+
+    private void seedEvaluationPermissions() {
+        Map<String, String> labels = Map.of(
+                EvaluationPermissions.QUESTION_AUTHOR, "Tạo và sửa câu hỏi",
+                EvaluationPermissions.QUESTION_REVIEWER, "Duyệt câu hỏi AI/paraphrase",
+                EvaluationPermissions.QUESTION_SET_MANAGER, "Quản lý bộ câu hỏi",
+                EvaluationPermissions.EXAM_CONFIG_MANAGER, "Quản lý cấu hình đề",
+                EvaluationPermissions.EXAM_PUBLISHER, "Sinh và phát hành bộ đề",
+                EvaluationPermissions.ASSIGNMENT_MANAGER, "Quản lý phân công kiểm tra",
+                EvaluationPermissions.RESULT_VIEWER, "Xem kết quả kiểm tra",
+                EvaluationPermissions.AUDIT_VIEWER, "Xem audit đánh giá"
+        );
+        Set<String> existingCodes = permissionRepository.findByCodeIn(EvaluationPermissions.ALL).stream()
+                .map(Permission::getCode)
+                .collect(Collectors.toSet());
+        List<Permission> missingPermissions = EvaluationPermissions.ALL.stream()
+                .filter(code -> !existingCodes.contains(code))
+                .map(code -> Permission.builder()
+                        .code(code)
+                        .name(labels.getOrDefault(code, code))
+                        .build())
+                .toList();
+        if (!missingPermissions.isEmpty()) {
+            permissionRepository.saveAll(missingPermissions);
+            log.info("Seeded {} evaluation permissions", missingPermissions.size());
+        }
     }
 
     private void seedQuestionBank() {

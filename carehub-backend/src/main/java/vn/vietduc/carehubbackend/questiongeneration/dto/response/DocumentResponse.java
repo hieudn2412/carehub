@@ -13,6 +13,8 @@ public record DocumentResponse(
         Integer chunkCount,
         String contentHash,
         String errorMessage,
+        Long questionJobCount,
+        DocumentQuestionJobSummaryResponse latestQuestionJob,
         List<DocumentSectionResponse> sections,
         List<DocumentChunkResponse> chunks,
         LocalDateTime createdAt,

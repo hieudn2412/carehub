@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 @Service
 public class DocumentSectionDetectionService {
     private static final Pattern CHAPTER = Pattern.compile("^(?:Chương|CHUONG|CHƯƠNG)\\s+\\S+.*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern MARKDOWN_HEADING = Pattern.compile("^(#{1,6})\\s+\\S.+");
     private static final Pattern NUMBERED = Pattern.compile("^(\\d+(?:\\.\\d+){0,3})[.)]?\\s+\\S.+");
     private static final Pattern ROMAN = Pattern.compile("^(?:[IVXLCDM]{1,6})[.)]\\s+\\S.+");
     private static final Pattern LETTER = Pattern.compile("^[A-Z][.)]\\s+\\S.+");
@@ -27,13 +28,14 @@ public class DocumentSectionDetectionService {
             String text = paragraph.text();
             if (looksLikeHeading(text)) {
                 int level = headingLevel(text);
+                String title = cleanHeadingTitle(text);
                 SectionAccumulator parent = nearestParent(stack, level);
                 current = new SectionAccumulator(
-                        text,
+                        title,
                         level,
                         sections.size(),
                         parent == null ? null : parent.orderIndex,
-                        parent == null ? text : parent.path + " > " + text,
+                        parent == null ? title : parent.path + " > " + title,
                         0.82
                 );
                 current.includePage(paragraph.pageNumber());
@@ -72,6 +74,7 @@ public class DocumentSectionDetectionService {
             return false;
         }
         return CHAPTER.matcher(value).matches()
+                || MARKDOWN_HEADING.matcher(value).matches()
                 || NUMBERED.matcher(value).matches()
                 || ROMAN.matcher(value).matches()
                 || LETTER.matcher(value).matches()
@@ -97,6 +100,10 @@ public class DocumentSectionDetectionService {
     }
 
     private int headingLevel(String text) {
+        Matcher markdown = MARKDOWN_HEADING.matcher(text);
+        if (markdown.matches()) {
+            return Math.min(3, markdown.group(1).length());
+        }
         if (CHAPTER.matcher(text).matches() || ROMAN.matcher(text).matches()) {
             return 1;
         }
@@ -108,6 +115,14 @@ public class DocumentSectionDetectionService {
             return 2;
         }
         return 2;
+    }
+
+    private String cleanHeadingTitle(String text) {
+        Matcher markdown = MARKDOWN_HEADING.matcher(text);
+        if (markdown.matches()) {
+            return text.replaceFirst("^#{1,6}\\s+", "").trim();
+        }
+        return text;
     }
 
     private SectionAccumulator nearestParent(Map<Integer, SectionAccumulator> stack, int level) {

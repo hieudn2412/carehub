@@ -19,6 +19,7 @@ import {
   documentStatusText,
   formatDateTime,
   formatNumber,
+  jobStatusText,
   normalizeText,
   statusTone,
 } from '../utils/documentQuestionUi.js'
@@ -38,7 +39,7 @@ function QuestionDocumentListPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(0)
   const [jobModalDocument, setJobModalDocument] = useState(null)
-  const [questionsPerChunk, setQuestionsPerChunk] = useState(3)
+  const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [isCreatingJob, setIsCreatingJob] = useState(false)
 
   const loadDocuments = useCallback(async () => {
@@ -108,12 +109,12 @@ function QuestionDocumentListPage() {
 
   function openCreateJob(document) {
     setJobModalDocument(document)
-    setQuestionsPerChunk(3)
+    setQuestionsPerChunk(1)
   }
 
   async function createJob() {
     if (!jobModalDocument) return
-    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 3))
+    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(jobModalDocument.id, {
@@ -216,6 +217,7 @@ function QuestionDocumentListPage() {
                       <th>Trạng thái</th>
                       <th>Số trang</th>
                       <th>Số chunk</th>
+                      <th>Phiên gần nhất</th>
                       <th>Ngày tải</th>
                       <th>Hành động</th>
                     </tr>
@@ -223,11 +225,11 @@ function QuestionDocumentListPage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="7" className="qdoc-empty-cell">Đang tải danh sách tài liệu...</td>
+                        <td colSpan="8" className="qdoc-empty-cell">Đang tải danh sách tài liệu...</td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="qdoc-empty-cell">Chưa có tài liệu nào. Tải tài liệu đầu tiên để bắt đầu tạo câu hỏi.</td>
+                        <td colSpan="8" className="qdoc-empty-cell">Chưa có tài liệu nào. Tải tài liệu đầu tiên để bắt đầu tạo câu hỏi.</td>
                       </tr>
                     ) : (
                       displayRows.map((document, index) => (
@@ -251,6 +253,23 @@ function QuestionDocumentListPage() {
                           </td>
                           <td>{formatNumber(document.pageCount)}</td>
                           <td>{formatNumber(document.chunkCount)}</td>
+                          <td>
+                            {document.latestQuestionJob ? (
+                              <button
+                                type="button"
+                                className="qdoc-job-link"
+                                onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
+                              >
+                                <span>#{document.latestQuestionJob.id}</span>
+                                <span className={`qdoc-mini-badge qdoc-mini-badge--${statusTone(document.latestQuestionJob.status)}`}>
+                                  {jobStatusText(document.latestQuestionJob)}
+                                </span>
+                                <small>{formatNumber(document.latestQuestionJob.candidateCount)} câu</small>
+                              </button>
+                            ) : (
+                              <span className="qdoc-muted-text">Chưa có phiên</span>
+                            )}
+                          </td>
                           <td>{formatDateTime(document.createdAt)}</td>
                           <td>
                             <div className="qdoc-table-actions">
@@ -309,6 +328,7 @@ function QuestionDocumentListPage() {
             </label>
             <div className="qdoc-note">
               Phiên tạo câu hỏi sẽ xử lý từng chunk riêng để giữ evidence và có thể retry phần lỗi.
+              Nên bắt đầu 1 câu/chunk để kiểm soát chất lượng và tốc độ.
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>

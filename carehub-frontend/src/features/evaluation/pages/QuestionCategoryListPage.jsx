@@ -1,28 +1,28 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
+import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionCategoryListPage.css'
-
-const INITIAL_CATEGORIES = [
-  { id: 1, name: 'Kiểm soát nhiễm khuẩn', description: 'Vệ sinh tay, trang thiết bị bảo hộ cá nhân (PPE), kỹ thuật vô trùng', questions: 24, active: true },
-  { id: 2, name: 'An toàn sử dụng thuốc', description: 'Cấp phát thuốc, nguyên tắc 6 đúng trong sử dụng thuốc', questions: 18, active: false },
-  { id: 3, name: 'An toàn người bệnh', description: 'Phòng ngừa té ngã, nhận diện chính xác bệnh nhân', questions: 15, active: true },
-  { id: 4, name: 'Quy trình lâm sàng', description: 'Kỹ thuật tiêm truyền tĩnh mạch, chăm sóc vết thương, đặt ống thông tiểu', questions: 30, active: true },
-]
 
 const EMPTY_FORM = {
   id: null,
+  code: '',
   name: '',
   description: '',
-  questions: 0,
-  active: true,
+  status: 'ACTIVE',
+  sortOrder: 0,
 }
 
 function QuestionCategoryListPage() {
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES)
+  const { showToast } = useToast()
+  const [categories, setCategories] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [keyword, setKeyword] = useState('')
-  const [status, setStatus] = useState('') // '', 'true', 'false'
+  const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
 
   // Modal State
@@ -30,15 +30,30 @@ function QuestionCategoryListPage() {
   const [modalMode, setModalMode] = useState('create') // 'create' or 'edit'
   const [modalForm, setModalForm] = useState(EMPTY_FORM)
 
-  // Filter Logic (Local Memory)
-  const filteredCategories = categories.filter((item) => {
+  const loadCategories = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await questionCategoryApi.listCategories({ status: '' })
+      setCategories(apiData(response, []))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [showToast])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
+
+  const filteredCategories = useMemo(() => categories.filter((item) => {
     const matchesKeyword =
       item.name.toLowerCase().includes(keyword.toLowerCase()) ||
-      item.description.toLowerCase().includes(keyword.toLowerCase())
-    const matchesStatus =
-      status === '' ? true : status === 'true' ? item.active : !item.active
+      (item.description || '').toLowerCase().includes(keyword.toLowerCase()) ||
+      (item.code || '').toLowerCase().includes(keyword.toLowerCase())
+    const matchesStatus = status === '' || item.status === status
     return matchesKeyword && matchesStatus
-  })
+  }), [categories, keyword, status])
 
   // Pagination calculations
   const pageSize = 10
@@ -57,10 +72,11 @@ function QuestionCategoryListPage() {
     setModalMode('edit')
     setModalForm({
       id: item.id,
+      code: item.code || '',
       name: item.name,
-      description: item.description,
-      questions: item.questions,
-      active: item.active,
+      description: item.description || '',
+      status: item.status || 'ACTIVE',
+      sortOrder: item.sortOrder || 0,
     })
     setIsModalOpen(true)
   }
@@ -77,47 +93,49 @@ function QuestionCategoryListPage() {
     }))
   }
 
-  const handleModalSubmit = (e) => {
+  const handleModalSubmit = async (e) => {
     e.preventDefault()
 
     if (modalForm.name.trim() === '') {
-      alert('Tên danh mục không được để trống!')
+      showToast('Tên danh mục không được để trống.', 'warning')
       return
     }
 
-    if (modalMode === 'create') {
-      const newCategory = {
-        id: Date.now(),
-        name: modalForm.name,
-        description: modalForm.description,
-        questions: Number(modalForm.questions) || 0,
-        active: modalForm.active,
-      }
-      setCategories((prev) => [newCategory, ...prev])
-    } else {
-      setCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === modalForm.id
-            ? {
-                ...cat,
-                name: modalForm.name,
-                description: modalForm.description,
-                questions: Number(modalForm.questions) || 0,
-                active: modalForm.active,
-              }
-            : cat
-        )
-      )
+    const payload = {
+      code: modalForm.code.trim() || null,
+      name: modalForm.name.trim(),
+      description: modalForm.description.trim(),
+      status: modalForm.status,
+      sortOrder: Number(modalForm.sortOrder) || 0,
     }
 
-    handleCloseModal()
+    setIsSaving(true)
+    try {
+      if (modalMode === 'create') {
+        await questionCategoryApi.createCategory(payload)
+      } else {
+        await questionCategoryApi.updateCategory(modalForm.id, payload)
+      }
+      showToast(modalMode === 'create' ? 'Đã tạo danh mục câu hỏi.' : 'Đã cập nhật danh mục câu hỏi.', 'success')
+      handleCloseModal()
+      loadCategories()
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleDeleteCategory = (item) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${item.name}" không?`)) {
+    if (!window.confirm(`Lưu trữ danh mục "${item.name}"?`)) {
       return
     }
-    setCategories((prev) => prev.filter((cat) => cat.id !== item.id))
+    questionCategoryApi.archiveCategory(item.id)
+      .then(() => {
+        showToast('Đã lưu trữ danh mục câu hỏi.', 'success')
+        loadCategories()
+      })
+      .catch((error) => showToast(apiErrorMessage(error), 'error'))
   }
 
   const breadcrumbs = [{ label: 'Danh mục câu hỏi' }]
@@ -166,8 +184,9 @@ function QuestionCategoryListPage() {
                     }}
                   >
                     <option value="">Trạng thái</option>
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="INACTIVE">Tạm ngưng</option>
+                    <option value="ARCHIVED">Đã lưu trữ</option>
                   </select>
                 </div>
 
@@ -189,7 +208,13 @@ function QuestionCategoryListPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {displayRows.length === 0 ? (
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                          Đang tải danh mục câu hỏi...
+                        </td>
+                      </tr>
+                    ) : displayRows.length === 0 ? (
                       <tr>
                         <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                           Không tìm thấy danh mục câu hỏi nào.
@@ -200,10 +225,10 @@ function QuestionCategoryListPage() {
                         <tr key={item.id}>
                           <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
                           <td style={{ color: '#475569' }}>{item.description || '-'}</td>
-                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.questions}</td>
+                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
                           <td>
-                            <span className={`qcl-badge ${item.active ? 'qcl-badge--active' : 'qcl-badge--inactive'}`}>
-                              {item.active ? 'Hoạt động' : 'Ngưng'}
+                            <span className={`qcl-badge ${item.status === 'ACTIVE' ? 'qcl-badge--active' : 'qcl-badge--inactive'}`}>
+                              {item.statusText || (item.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng')}
                             </span>
                           </td>
                           <td>
@@ -220,7 +245,8 @@ function QuestionCategoryListPage() {
                                 type="button"
                                 className="qcl-action-btn qcl-action-btn--delete"
                                 onClick={() => handleDeleteCategory(item)}
-                                title="Xóa"
+                                title="Lưu trữ"
+                                disabled={item.status === 'ARCHIVED'}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -292,6 +318,17 @@ function QuestionCategoryListPage() {
             <form onSubmit={handleModalSubmit} className="qcl-modal-form">
               <div className="qcl-modal-row">
                 <div className="qcl-modal-group">
+                  <label>Mã danh mục</label>
+                  <input
+                    type="text"
+                    className="qcl-input-red"
+                    value={modalForm.code}
+                    onChange={(e) => updateModalField('code', e.target.value)}
+                    placeholder="Tự sinh nếu bỏ trống"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="qcl-modal-group">
                   <label>Tên danh mục <span className="required-star">*</span></label>
                   <input
                     type="text"
@@ -300,18 +337,33 @@ function QuestionCategoryListPage() {
                     value={modalForm.name}
                     onChange={(e) => updateModalField('name', e.target.value)}
                     placeholder="Nhập tên danh mục câu hỏi..."
+                    disabled={isSaving}
                   />
                 </div>
+              </div>
+
+              <div className="qcl-modal-row">
                 <div className="qcl-modal-group">
                   <label>Trạng thái</label>
                   <select
                     className="qcl-input-red"
-                    value={modalForm.active.toString()}
-                    onChange={(e) => updateModalField('active', e.target.value === 'true')}
+                    value={modalForm.status}
+                    onChange={(e) => updateModalField('status', e.target.value)}
+                    disabled={isSaving}
                   >
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="INACTIVE">Tạm ngưng</option>
                   </select>
+                </div>
+                <div className="qcl-modal-group">
+                  <label>Thứ tự hiển thị</label>
+                  <input
+                    type="number"
+                    className="qcl-input-green"
+                    value={modalForm.sortOrder}
+                    onChange={(e) => updateModalField('sortOrder', e.target.value)}
+                    disabled={isSaving}
+                  />
                 </div>
               </div>
 
@@ -323,29 +375,16 @@ function QuestionCategoryListPage() {
                   value={modalForm.description}
                   onChange={(e) => updateModalField('description', e.target.value)}
                   placeholder="Nhập mô tả tóm tắt..."
+                  disabled={isSaving}
                 />
-              </div>
-
-              <div className="qcl-modal-row">
-                <div className="qcl-modal-group" style={{ gridColumn: 'span 2' }}>
-                  <label>Số lượng câu hỏi (tùy chọn)</label>
-                  <input
-                    type="number"
-                    className="qcl-input-green"
-                    min="0"
-                    value={modalForm.questions}
-                    onChange={(e) => updateModalField('questions', e.target.value)}
-                    placeholder="Ví dụ: 10"
-                  />
-                </div>
               </div>
 
               {/* Modal Actions */}
               <div className="qcl-modal-actions">
-                <button type="submit" className="qcl-btn-save">
-                  Lưu
+                <button type="submit" className="qcl-btn-save" disabled={isSaving}>
+                  {isSaving ? 'Đang lưu...' : 'Lưu'}
                 </button>
-                <button type="button" className="qcl-btn-cancel" onClick={handleCloseModal}>
+                <button type="button" className="qcl-btn-cancel" onClick={handleCloseModal} disabled={isSaving}>
                   Hủy
                 </button>
               </div>

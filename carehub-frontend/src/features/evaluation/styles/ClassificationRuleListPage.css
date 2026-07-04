@@ -26,6 +26,57 @@
   margin: 0;
 }
 
+.crl-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.crl-filter-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crl-search {
+  position: relative;
+  min-width: 260px;
+}
+
+.crl-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.crl-search-input,
+.crl-filter-select {
+  height: 40px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13.5px;
+}
+
+.crl-search-input {
+  width: 100%;
+  padding: 0 12px 0 36px;
+}
+
+.crl-filter-select {
+  padding: 0 12px;
+  min-width: 150px;
+}
+
 /* Table Card */
 .crl-table-card {
   background: #fff;

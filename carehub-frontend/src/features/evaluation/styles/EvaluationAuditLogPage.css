@@ -1,0 +1,267 @@
+.eal-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.eal-header,
+.eal-filter,
+.eal-table-panel,
+.eal-detail {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.eal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+}
+
+.eal-header h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 24px;
+}
+
+.eal-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 13.5px;
+}
+
+.eal-btn,
+.eal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eal-btn {
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.eal-btn--primary {
+  align-self: end;
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.eal-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.eal-icon-btn {
+  width: 34px;
+  height: 34px;
+}
+
+.eal-filter {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  padding: 16px;
+}
+
+.eal-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eal-filter input,
+.eal-filter select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.eal-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 14px;
+  align-items: start;
+}
+
+.eal-table-panel {
+  overflow: hidden;
+}
+
+.eal-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.eal-table th,
+.eal-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+  color: #334155;
+  font-size: 13px;
+}
+
+.eal-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.eal-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.eal-row--active td {
+  background: #eff6ff;
+}
+
+.eal-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.eal-detail {
+  padding: 16px;
+  position: sticky;
+  top: 16px;
+}
+
+.eal-detail-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: #1d4ed8;
+}
+
+.eal-detail-head h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 18px;
+}
+
+.eal-detail-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.eal-detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.eal-detail-list div {
+  display: grid;
+  gap: 4px;
+}
+
+.eal-detail-list dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.eal-detail-list dd {
+  margin: 0;
+  color: #0f172a;
+  font-size: 13px;
+  word-break: break-word;
+}
+
+.eal-json {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.eal-json-title {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.eal-json pre {
+  max-height: 320px;
+  margin: 0;
+  overflow: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.eal-empty {
+  padding: 28px;
+  color: #64748b;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .eal-filter,
+  .eal-content {
+    grid-template-columns: 1fr;
+  }
+
+  .eal-btn--primary {
+    align-self: auto;
+  }
+
+  .eal-detail {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .eal-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .eal-table-panel {
+    overflow-x: auto;
+  }
+
+  .eal-table {
+    min-width: 760px;
+  }
+}

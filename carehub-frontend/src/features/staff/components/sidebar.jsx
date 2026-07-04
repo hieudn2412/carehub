@@ -31,7 +31,7 @@ const navSections = [
   {
     label: 'Kiểm tra',
     items: [
-      { icon: <EditOutlined />, label: 'Làm bài thi', path: '/exam/take' },
+      { icon: <EditOutlined />, label: 'Làm bài thi', path: '/staff/exam/take' },
       { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
     ],
   },

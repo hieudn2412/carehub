@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentChunkType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentChunkRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentSectionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionDocumentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.ChunkDraft;
@@ -39,10 +41,12 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuestionDocumentService {
     private final QuestionDocumentRepository documentRepository;
     private final DocumentSectionRepository sectionRepository;
     private final DocumentChunkRepository chunkRepository;
+    private final DocumentQuestionJobRepository jobRepository;
     private final DocumentTextExtractor textExtractor;
     private final DocumentTextPreprocessor textPreprocessor;
     private final DocumentSectionDetectionService sectionDetectionService;
@@ -54,7 +58,13 @@ public class QuestionDocumentService {
     @Transactional(readOnly = true)
     public Page<DocumentResponse> list(Pageable pageable) {
         return documentRepository.findAll(pageable)
-                .map(document -> mapper.toDocumentResponse(document, List.of(), List.of()));
+                .map(document -> mapper.toDocumentResponse(
+                        document,
+                        List.of(),
+                        List.of(),
+                        jobRepository.countByDocument(document),
+                        jobRepository.findFirstByDocumentOrderByCreatedAtDesc(document).orElse(null)
+                ));
     }
 
     @Transactional(readOnly = true)
@@ -63,7 +73,9 @@ public class QuestionDocumentService {
         return mapper.toDocumentResponse(
                 document,
                 sectionRepository.findByDocumentOrderByOrderIndexAsc(document),
-                chunkRepository.findByDocumentOrderByChunkIndexAsc(document)
+                chunkRepository.findByDocumentOrderByChunkIndexAsc(document),
+                jobRepository.countByDocument(document),
+                jobRepository.findFirstByDocumentOrderByCreatedAtDesc(document).orElse(null)
         );
     }
 
@@ -78,7 +90,9 @@ public class QuestionDocumentService {
         String contentHash = sha256(bytes);
         String storagePath = storeOriginalFile(bytes, contentHash, filename);
 
+        long extractStarted = System.nanoTime();
         ExtractedDocument extracted = textExtractor.extract(bytes, filename);
+        long extractMs = elapsedMs(extractStarted);
         QuestionDocument document = QuestionDocument.builder()
                 .filename(filename)
                 .contentType(file.getContentType())
@@ -93,34 +107,75 @@ public class QuestionDocumentService {
         if (extracted.errorMessage() != null) {
             document.setStatus(DocumentStatus.FAILED);
             document.setErrorMessage(extracted.errorMessage());
-            return mapper.toDocumentResponse(documentRepository.save(document), List.of(), List.of());
+            long persistStarted = System.nanoTime();
+            QuestionDocument saved = documentRepository.save(document);
+            logUploadTiming(saved, extractMs, 0, 0, 0, elapsedMs(persistStarted), 0, 0, 0);
+            return mapper.toDocumentResponse(saved, List.of(), List.of());
         }
         if (extracted.ocrRequired()) {
             document.setStatus(DocumentStatus.OCR_REQUIRED);
             document.setErrorMessage("PDF chưa có text layer đủ tin cậy, cần OCR trước khi tạo câu hỏi");
-            return mapper.toDocumentResponse(documentRepository.save(document), List.of(), List.of());
+            long persistStarted = System.nanoTime();
+            QuestionDocument saved = documentRepository.save(document);
+            logUploadTiming(saved, extractMs, 0, 0, 0, elapsedMs(persistStarted), 0, 0, 0);
+            return mapper.toDocumentResponse(saved, List.of(), List.of());
         }
 
+        long preprocessStarted = System.nanoTime();
         List<NormalizedParagraph> paragraphs = textPreprocessor.preprocessPages(extracted.pages());
+        long preprocessMs = elapsedMs(preprocessStarted);
         if (paragraphs.isEmpty()) {
             document.setStatus(DocumentStatus.FAILED);
             document.setErrorMessage("Không tìm thấy nội dung văn bản hữu ích trong tài liệu");
-            return mapper.toDocumentResponse(documentRepository.save(document), List.of(), List.of());
+            long persistStarted = System.nanoTime();
+            QuestionDocument saved = documentRepository.save(document);
+            logUploadTiming(saved, extractMs, preprocessMs, 0, 0, elapsedMs(persistStarted), 0, 0, 0);
+            return mapper.toDocumentResponse(saved, List.of(), List.of());
         }
 
+        long sectionStarted = System.nanoTime();
         List<SectionBlock> sectionBlocks = sectionDetectionService.detectSections(paragraphs);
+        long sectionDetectMs = elapsedMs(sectionStarted);
+        long chunkingStarted = System.nanoTime();
         List<ChunkDraft> chunkDrafts = chunkingService.createGenerationChunks(sectionBlocks);
+        long chunkingMs = elapsedMs(chunkingStarted);
         if (chunkDrafts.isEmpty()) {
             document.setStatus(DocumentStatus.FAILED);
             document.setErrorMessage("Không tạo được chunk sinh câu hỏi từ nội dung tài liệu");
-            return mapper.toDocumentResponse(documentRepository.save(document), List.of(), List.of());
+            long persistStarted = System.nanoTime();
+            QuestionDocument saved = documentRepository.save(document);
+            logUploadTiming(
+                    saved,
+                    extractMs,
+                    preprocessMs,
+                    sectionDetectMs,
+                    chunkingMs,
+                    elapsedMs(persistStarted),
+                    paragraphs.size(),
+                    sectionBlocks.size(),
+                    0
+            );
+            return mapper.toDocumentResponse(saved, List.of(), List.of());
         }
 
+        long persistStarted = System.nanoTime();
         QuestionDocument saved = documentRepository.save(document);
         List<DocumentSection> sections = persistSections(saved, sectionBlocks);
         List<DocumentChunk> chunks = persistChunks(saved, sections, chunkDrafts);
         saved.setChunkCount(chunks.size());
         QuestionDocument updated = documentRepository.save(saved);
+        long persistMs = elapsedMs(persistStarted);
+        logUploadTiming(
+                updated,
+                extractMs,
+                preprocessMs,
+                sectionDetectMs,
+                chunkingMs,
+                persistMs,
+                paragraphs.size(),
+                sections.size(),
+                chunks.size()
+        );
         return mapper.toDocumentResponse(updated, sections, chunks);
     }
 
@@ -251,5 +306,36 @@ public class QuestionDocumentService {
         } catch (JsonProcessingException ex) {
             return "[]";
         }
+    }
+
+    private long elapsedMs(long startedNanos) {
+        return java.time.Duration.ofNanos(System.nanoTime() - startedNanos).toMillis();
+    }
+
+    private void logUploadTiming(
+            QuestionDocument document,
+            long extractMs,
+            long preprocessMs,
+            long sectionDetectMs,
+            long chunkingMs,
+            long persistMs,
+            int paragraphCount,
+            int sectionCount,
+            int chunkCount
+    ) {
+        log.info(
+                "Document upload pipeline documentId={} status={} pageCount={} paragraphCount={} sectionCount={} chunkCount={} extractMs={} preprocessMs={} sectionDetectMs={} chunkingMs={} persistMs={}",
+                document.getId(),
+                document.getStatus(),
+                document.getPageCount(),
+                paragraphCount,
+                sectionCount,
+                chunkCount,
+                extractMs,
+                preprocessMs,
+                sectionDetectMs,
+                chunkingMs,
+                persistMs
+        );
     }
 }

@@ -10,6 +10,7 @@
 .qdoc-table-card,
 .qdoc-tabs-card,
 .qdoc-detail-hero,
+.qdoc-batch-bar,
 .qdoc-candidate-card,
 .qdoc-evidence-panel {
   background: #fff;
@@ -61,6 +62,14 @@
   gap: 16px;
 }
 
+.qdoc-filter-bar--compact {
+  padding: 0;
+  margin-bottom: 14px;
+  border: 0;
+  box-shadow: none;
+  justify-content: flex-end;
+}
+
 .qdoc-upload-copy h2,
 .qdoc-section-header h2,
 .qdoc-evidence-panel h2,
@@ -88,6 +97,7 @@
 }
 
 .qdoc-upload-actions,
+.qdoc-title-actions,
 .qdoc-table-actions,
 .qdoc-modal-actions,
 .qdoc-candidate-actions,
@@ -99,6 +109,10 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.qdoc-title-actions {
+  justify-content: flex-end;
 }
 
 .qdoc-primary-btn,
@@ -339,6 +353,49 @@
   background: #fff7d6;
 }
 
+.qdoc-mini-badge--success {
+  color: #166534;
+  background: #e8f7ef;
+}
+
+.qdoc-mini-badge--danger {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.qdoc-mini-badge--info {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.qdoc-job-link {
+  align-items: flex-start;
+  background: transparent;
+  border: none;
+  color: #0f172a;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+}
+
+.qdoc-job-link > span:first-child {
+  color: #2563eb;
+  font-weight: 800;
+}
+
+.qdoc-job-link small,
+.qdoc-muted-text {
+  color: #64748b;
+  font-size: 12.5px;
+}
+
+.qdoc-job-link:hover > span:first-child {
+  text-decoration: underline;
+}
+
 .qdoc-icon-btn {
   width: 34px;
   height: 34px;
@@ -414,6 +471,12 @@
   background: #fffbeb;
   border-color: #fde68a;
   color: #854d0e;
+}
+
+.qdoc-alert--info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
 }
 
 .qdoc-alert--danger {
@@ -574,6 +637,38 @@
   font-size: 13px;
 }
 
+.qdoc-batch-bar {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qdoc-batch-bar strong {
+  margin-right: auto;
+  color: #334155;
+  font-size: 13.5px;
+}
+
+.qdoc-checkline,
+.qdoc-card-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.qdoc-checkline input,
+.qdoc-card-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
 .qdoc-review-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.75fr);
@@ -692,6 +787,33 @@
   margin-bottom: 6px;
   color: #0f172a;
   font-size: 13px;
+}
+
+.qdoc-saved-box {
+  align-items: center;
+  background: #e8f7ef;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.qdoc-saved-box strong {
+  color: #166534;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.qdoc-saved-box p {
+  color: #14532d;
+  font-size: 13.5px;
+  font-weight: 700;
+  margin: 4px 0 0;
 }
 
 .qdoc-warning-list {
@@ -816,6 +938,13 @@
   background: #eff6ff;
   color: #1d4ed8;
   font-size: 13.5px;
+}
+
+.qdoc-modal-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .qdoc-modal-actions {

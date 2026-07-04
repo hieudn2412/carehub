@@ -18,14 +18,18 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.common.response.PageResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentResponse;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionDocumentService;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("${app.api-prefix}/documents")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@evaluationSecurity.canAccess(authentication)")
 public class QuestionDocumentController {
     private final QuestionDocumentService documentService;
+    private final EvaluationAuditLogService auditLogService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<DocumentResponse>>> list(
@@ -46,13 +50,28 @@ public class QuestionDocumentController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@evaluationSecurity.canAuthor(authentication)")
     public ResponseEntity<ApiResponse<DocumentResponse>> upload(
             @RequestPart("file") MultipartFile file,
             Authentication authentication
     ) {
+        DocumentResponse response = documentService.upload(file, actor(authentication));
+        auditLogService.record(
+                "DOCUMENT_UPLOAD",
+                "QUESTION_DOCUMENT",
+                response.id(),
+                actor(authentication),
+                "Upload tài liệu #" + response.id(),
+                Map.of(
+                        "filename", response.filename(),
+                        "contentType", String.valueOf(response.contentType()),
+                        "status", response.status(),
+                        "chunkCount", response.chunkCount()
+                )
+        );
         return ResponseEntity.ok(ApiResponse.success(
                 "Tải tài liệu và tạo chunk thành công",
-                documentService.upload(file, actor(authentication))
+                response
         ));
     }
 
