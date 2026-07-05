@@ -77,6 +77,7 @@ import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.j
 import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
+import QualityDashboardPage from '../features/admin/pages/QualityDashboardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
@@ -236,12 +237,7 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/quality-dashboard"
-        element={adminElement(
-          <ComingSoonPage
-            title="Dashboard chất lượng"
-            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard chất lượng' }]}
-          />
-        )}
+        element={adminElement(<QualityDashboardPage />)}
       />
       <Route
         path="/admin/reports/export-training"
