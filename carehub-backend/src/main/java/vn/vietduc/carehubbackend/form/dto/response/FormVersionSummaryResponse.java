@@ -14,6 +14,7 @@ public record FormVersionSummaryResponse(
         String title,
         String schemaHash,
         Instant publishedAt,
+        FormVersionResponse.UserSummary publishedBy,
         Long lockVersion,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

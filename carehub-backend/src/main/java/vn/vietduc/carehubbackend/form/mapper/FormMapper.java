@@ -56,6 +56,14 @@ public class FormMapper {
     }
 
     public FormVersionSummaryResponse toSummaryResponse(FormVersion version) {
+        FormVersionResponse.UserSummary publisher = version.getPublishedBy() == null
+                ? null
+                : FormVersionResponse.UserSummary.builder()
+                .id(version.getPublishedBy().getId())
+                .employeeCode(version.getPublishedBy().getEmployeeCode())
+                .name(version.getPublishedBy().getName())
+                .build();
+
         return FormVersionSummaryResponse.builder()
                 .id(version.getId())
                 .versionNumber(version.getVersionNumber())
@@ -63,6 +71,7 @@ public class FormMapper {
                 .title(version.getTitle())
                 .schemaHash(version.getSchemaHash())
                 .publishedAt(version.getPublishedAt())
+                .publishedBy(publisher)
                 .lockVersion(version.getLockVersion())
                 .createdAt(version.getCreatedAt())
                 .updatedAt(version.getUpdatedAt())
