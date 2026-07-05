@@ -18,6 +18,9 @@ public record QuestionBankQuestionResponse(
         String questionType,
         Long parentQuestionId,
         String status,
+        String statusText,
+        QuestionDuplicateWarningResponse duplicateWarning,
+        QuestionImpactWarningResponse impactWarning,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

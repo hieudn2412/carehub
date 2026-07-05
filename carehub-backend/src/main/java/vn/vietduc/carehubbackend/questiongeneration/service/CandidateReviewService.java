@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchDocumentQuestionCandidateActionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDocumentQuestionCandidateRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchCandidateActionErrorResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchDocumentQuestionCandidateActionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
@@ -23,7 +26,9 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheck
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +40,7 @@ public class CandidateReviewService {
     private final QuestionEmbeddingService questionEmbeddingService;
     private final DocumentQuestionMapper mapper;
     private final ObjectMapper objectMapper;
+    private final QuestionClassificationRuleService classificationRuleService;
 
     @Transactional(readOnly = true)
     public DocumentQuestionCandidateResponse get(Long candidateId) {
@@ -90,6 +96,16 @@ public class CandidateReviewService {
         if (candidate.getStatus() != CandidateStatus.APPROVED) {
             throw new BadRequestException("Chỉ có thể lưu câu hỏi đã được duyệt vào ngân hàng câu hỏi");
         }
+        if (candidate.getSourceExcerpt() == null || candidate.getSourceExcerpt().isBlank()) {
+            throw new BadRequestException("Câu hỏi cần có trích dẫn nguồn trước khi lưu vào ngân hàng câu hỏi");
+        }
+        if (isGenericDocumentReferenceStem(candidate.getStem())) {
+            throw new BadRequestException("Câu hỏi cần tự đứng độc lập, không được dùng mẫu chung như 'Theo tài liệu...'");
+        }
+        DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem(), Set.of(), Set.of(candidate.getId()));
+        if (duplicate.strongDuplicate()) {
+            throw new BadRequestException("Câu hỏi trùng mạnh với câu đã có, vui lòng chỉnh sửa hoặc từ chối candidate");
+        }
         QuestionBankQuestion question = QuestionBankQuestion.builder()
                 .stem(candidate.getStem())
                 .optionA(candidate.getOptionA())
@@ -98,7 +114,7 @@ public class CandidateReviewService {
                 .optionD(candidate.getOptionD())
                 .correctAnswer(candidate.getCorrectAnswer())
                 .explanation(candidate.getExplanation())
-                .topic(candidate.getTopic())
+                .topic(resolveTopic(candidate))
                 .difficulty(candidate.getDifficulty())
                 .language("vi")
                 .sourceDocument(candidate.getDocument().getFilename())
@@ -112,6 +128,60 @@ public class CandidateReviewService {
         candidate.setSavedQuestionId(saved.getId());
         candidate.setStatus(CandidateStatus.SAVED);
         return mapper.toCandidateResponse(candidateRepository.save(candidate));
+    }
+
+    @Transactional
+    public BatchDocumentQuestionCandidateActionResponse approveBatch(
+            BatchDocumentQuestionCandidateActionRequest request
+    ) {
+        return runBatch(request, candidateId -> approve(candidateId, request == null ? null : request.reviewerNotes()));
+    }
+
+    @Transactional
+    public BatchDocumentQuestionCandidateActionResponse rejectBatch(
+            BatchDocumentQuestionCandidateActionRequest request
+    ) {
+        return runBatch(request, candidateId -> reject(candidateId, request == null ? null : request.reviewerNotes()));
+    }
+
+    @Transactional
+    public BatchDocumentQuestionCandidateActionResponse saveBatch(
+            BatchDocumentQuestionCandidateActionRequest request,
+            String actor
+    ) {
+        return runBatch(request, candidateId -> saveAsQuestion(candidateId, actor));
+    }
+
+    private BatchDocumentQuestionCandidateActionResponse runBatch(
+            BatchDocumentQuestionCandidateActionRequest request,
+            CandidateAction action
+    ) {
+        List<Long> candidateIds = normalizedCandidateIds(request);
+        List<Long> succeededIds = new ArrayList<>();
+        List<BatchCandidateActionErrorResponse> errors = new ArrayList<>();
+        List<DocumentQuestionCandidateResponse> candidates = new ArrayList<>();
+
+        for (Long candidateId : candidateIds) {
+            try {
+                DocumentQuestionCandidateResponse response = action.apply(candidateId);
+                succeededIds.add(candidateId);
+                candidates.add(response);
+            } catch (Exception ex) {
+                errors.add(new BatchCandidateActionErrorResponse(
+                        candidateId,
+                        ex.getMessage() == null ? "Thao tác candidate thất bại" : ex.getMessage()
+                ));
+            }
+        }
+
+        return new BatchDocumentQuestionCandidateActionResponse(
+                candidateIds.size(),
+                succeededIds.size(),
+                errors.size(),
+                succeededIds,
+                errors,
+                candidates
+        );
     }
 
     private void revalidate(DocumentQuestionCandidate candidate) {
@@ -165,11 +235,53 @@ public class CandidateReviewService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy câu hỏi đề xuất"));
     }
 
+    private List<Long> normalizedCandidateIds(BatchDocumentQuestionCandidateActionRequest request) {
+        if (request == null || request.candidateIds() == null || request.candidateIds().isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ít nhất một câu hỏi đề xuất");
+        }
+        return new ArrayList<>(new LinkedHashSet<>(request.candidateIds()));
+    }
+
     private String trimToNull(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
         }
         return value.trim();
+    }
+
+    private String resolveTopic(DocumentQuestionCandidate candidate) {
+        String explicitTopic = trimToNull(candidate.getTopic());
+        if (explicitTopic != null) {
+            return explicitTopic;
+        }
+        var classification = classificationRuleService.classifyQuestion(
+                candidate.getStem(),
+                candidate.getExplanation(),
+                candidate.getDocument() == null ? null : candidate.getDocument().getFilename(),
+                candidate.getChunk() == null ? null : candidate.getChunk().getSectionTitle(),
+                candidate.getSourceExcerpt()
+        );
+        return classification.categoryId() == null ? null : classification.categoryName();
+    }
+
+    private boolean isGenericDocumentReferenceStem(String stem) {
+        if (stem == null || stem.isBlank()) {
+            return true;
+        }
+        String normalized = stem.trim().toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("\\s+", " ");
+        return normalized.startsWith("theo tài liệu")
+                || normalized.startsWith("theo tai lieu")
+                || normalized.startsWith("dựa vào tài liệu")
+                || normalized.startsWith("dua vao tai lieu")
+                || normalized.startsWith("trong tài liệu")
+                || normalized.startsWith("trong tai lieu")
+                || normalized.startsWith("theo nội dung")
+                || normalized.startsWith("theo noi dung")
+                || normalized.contains("phù hợp nhất với nội dung trong mục")
+                || normalized.contains("phu hop nhat voi noi dung trong muc")
+                || normalized.contains("phù hợp với nội dung trong mục")
+                || normalized.contains("phu hop voi noi dung trong muc");
     }
 
     private String toJson(Object value) {
@@ -178,5 +290,10 @@ public class CandidateReviewService {
         } catch (JsonProcessingException ex) {
             return "[]";
         }
+    }
+
+    @FunctionalInterface
+    private interface CandidateAction {
+        DocumentQuestionCandidateResponse apply(Long candidateId);
     }
 }

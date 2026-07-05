@@ -1,215 +1,199 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import '../styles/ExamHistoryScreen.css'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
-import {
-    FileTextOutlined,
-    CheckCircleOutlined,
-    TrophyOutlined,
-    PieChartOutlined,
-    SearchOutlined,
-    EyeOutlined,
-    UndoOutlined,
-    LeftOutlined,
-    RightOutlined
-} from '@ant-design/icons'
-
-const MOCK_SUMMARY = {
-    total: 12,
-    passed: 9,
-    avgScore: 82,
-    passRate: 75,
-}
-
-const MOCK_EXAMS = [
-    { id: 1, name: 'Hồi sức tích cực', date: '2026-06-15', score: 92, duration: 42, attempts: 1 },
-    { id: 2, name: 'Kỹ năng điều dưỡng cơ bản', date: '2026-06-10', score: 48, duration: 55, attempts: 2 },
-    { id: 3, name: 'Kiểm soát nhiễm khuẩn', date: '2026-06-05', score: 85, duration: 38, attempts: 1 },
-    { id: 4, name: 'An toàn chuyển bệnh nhân', date: '2026-06-01', score: 55, duration: 60, attempts: 3 },
-    { id: 5, name: 'Cấp cứu cơ bản', date: '2026-05-25', score: 78, duration: 50, attempts: 1 },
-]
-
-const PASS_THRESHOLD = 60
-const PAGE_SIZE = 5
-
-const fmt = (dateStr) =>
-    new Date(dateStr).toLocaleDateString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-    })
+import { CheckCircleOutlined, EyeOutlined, FileTextOutlined, PieChartOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons'
+import { myExamApi } from '../../evaluation/api/myExamApi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
 
 function ExamHistoryScreen() {
-    const navigate = useNavigate()
-    const [search, setSearch] = useState('')
-    const [statusFilter, setStatusFilter] = useState('all')
-    const [page, setPage] = useState(1)
+  const { showToast } = useToast()
+  const [attempts, setAttempts] = useState([])
+  const [selectedAttempt, setSelectedAttempt] = useState(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
 
-    const filtered = useMemo(() => {
-        return MOCK_EXAMS.filter((e) => {
-            const passed = e.score >= PASS_THRESHOLD
-            const matchSearch = e.name.toLowerCase().includes(search.toLowerCase())
-            const matchStatus =
-                statusFilter === 'all' ||
-                (statusFilter === 'pass' && passed) ||
-                (statusFilter === 'fail' && !passed)
-            return matchSearch && matchStatus
-        })
-    }, [search, statusFilter])
+  useEffect(() => {
+    async function loadAttempts() {
+      setLoading(true)
+      try {
+        const response = await myExamApi.listAttempts()
+        setAttempts(apiData(response, []))
+      } catch (error) {
+        showToast(apiErrorMessage(error), 'error')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadAttempts()
+  }, [showToast])
 
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-    const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const completedAttempts = useMemo(
+    () => attempts.filter((attempt) => ['SUBMITTED', 'GRADED', 'EXPIRED'].includes(attempt.status)),
+    [attempts],
+  )
 
-    const handleSearch = (e) => { setSearch(e.target.value); setPage(1) }
-    const handleFilter = (e) => { setStatusFilter(e.target.value); setPage(1) }
+  const summary = useMemo(() => {
+    const passed = completedAttempts.filter((attempt) => attempt.passed).length
+    const scored = completedAttempts.filter((attempt) => attempt.score !== null && attempt.score !== undefined)
+    const avgScore = scored.length
+      ? Math.round(scored.reduce((sum, attempt) => sum + Number(attempt.score || 0), 0) / scored.length)
+      : 0
+    return {
+      total: completedAttempts.length,
+      passed,
+      avgScore,
+      passRate: completedAttempts.length ? Math.round((passed / completedAttempts.length) * 100) : 0,
+    }
+  }, [completedAttempts])
 
-    return (
-        <div className="dashboard-layout">
-            <Sidebar />
-            <div className="dashboard-layout__content">
-                <Header title="Lịch sử thi" />
-                <div className="dashboard-layout__body">
-                    <div className="eh-page">
-                        <div className="eh-header">
-                            <h2 className="eh-page-title">Lịch sử thi</h2>
-                            <p className="eh-page-sub">Kết quả các bài kiểm tra đã thực hiện</p>
-                        </div>
+  const filtered = useMemo(() => {
+    const normalized = search.trim().toLowerCase()
+    return completedAttempts.filter((attempt) => {
+      const matchesSearch = !normalized
+        || (attempt.examPaperName || '').toLowerCase().includes(normalized)
+        || (attempt.assignmentName || '').toLowerCase().includes(normalized)
+      const matchesStatus =
+        statusFilter === 'all'
+        || (statusFilter === 'pass' && attempt.passed)
+        || (statusFilter === 'fail' && !attempt.passed)
+      return matchesSearch && matchesStatus
+    })
+  }, [completedAttempts, search, statusFilter])
 
-                        {/* Summary cards */}
-                        <div className="eh-summary">
-                            {[
-                                { label: 'Tổng bài đã thi', value: MOCK_SUMMARY.total, mod: 'blue', icon: <FileTextOutlined /> },
-                                { label: 'Số bài đạt', value: MOCK_SUMMARY.passed, mod: 'green', icon: <CheckCircleOutlined /> },
-                                { label: 'Điểm TB', value: `${MOCK_SUMMARY.avgScore}%`, mod: 'amber', icon: <TrophyOutlined /> },
-                                { label: 'Tỉ lệ đạt', value: `${MOCK_SUMMARY.passRate}%`, mod: 'purple', icon: <PieChartOutlined /> },
-                            ].map(({ label, value, mod, icon }) => (
-                                <div key={label} className="eh-summary-card">
-                                    <div className={`eh-summary-card__icon eh-summary-card__icon--${mod}`}>
-                                        {icon}
-                                    </div>
-                                    <div>
-                                        <p className="eh-summary-card__label">{label}</p>
-                                        <p className="eh-summary-card__value">{value}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+  async function viewAttempt(attempt) {
+    try {
+      const response = await myExamApi.getAttempt(attempt.id)
+      setSelectedAttempt(apiData(response, null))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    }
+  }
 
-                        {/* Filters */}
-                        <div className="eh-filter-bar">
-                            <div className="eh-search">
-                                <span className="eh-search-icon">
-                                    <SearchOutlined />
-                                </span>
-                                <input
-                                    type="text"
-                                    className="eh-search-input"
-                                    placeholder="Tìm theo tên bài thi..."
-                                    value={search}
-                                    onChange={handleSearch}
-                                />
-                            </div>
-                            <select value={statusFilter} onChange={handleFilter}>
-                                <option value="all">Tất cả trạng thái</option>
-                                <option value="pass">Đạt</option>
-                                <option value="fail">Không đạt</option>
-                            </select>
-                        </div>
-
-                        {/* Table */}
-                        <div className="eh-table-card">
-                            <table className="eh-table">
-                                <thead>
-                                    <tr>
-                                        <th>Tên bài thi</th>
-                                        <th>Ngày thi</th>
-                                        <th>Điểm số</th>
-                                        <th>Trạng thái</th>
-                                        <th>Thời gian</th>
-                                        <th>Số lần thi</th>
-                                        <th>Hành động</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginated.map((exam) => {
-                                        const passed = exam.score >= PASS_THRESHOLD
-                                        return (
-                                            <tr key={exam.id}>
-                                                <td>{exam.name}</td>
-                                                <td>{fmt(exam.date)}</td>
-                                                <td>
-                                                    <span className={`eh-score ${passed ? 'eh-score--pass' : 'eh-score--fail'}`}>
-                                                        {exam.score}%
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className={`eh-badge ${passed ? 'eh-badge--pass' : 'eh-badge--fail'}`}>
-                                                        <span className="eh-badge__dot" />
-                                                        {passed ? 'Đạt' : 'Không đạt'}
-                                                    </span>
-                                                </td>
-                                                <td>{exam.duration} phút</td>
-                                                <td>
-                                                    <span className="eh-attempt">{exam.attempts}</span>
-                                                </td>
-                                                <td>
-                                                    <div className="eh-actions">
-                                                        <button
-                                                            className="eh-btn eh-btn--view"
-                                                            onClick={() => navigate(`/staff/exam/history/${exam.id}`)}
-                                                        >
-                                                            <EyeOutlined /> Chi tiết
-                                                        </button>
-                                                        <button
-                                                            className="eh-btn eh-btn--retry"
-                                                            disabled={passed}
-                                                            onClick={() => navigate(`/staff/exam/take/${exam.id}`)}
-                                                        >
-                                                            <UndoOutlined /> Thi lại
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-
-                            <div className="eh-pagination">
-                                <span>Hiển thị {paginated.length} trong tổng số {filtered.length} kết quả</span>
-                                <div className="eh-page-nums">
-                                    <button
-                                        className="eh-pn"
-                                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                                        disabled={page === 1}
-                                    >
-                                        <LeftOutlined />
-                                    </button>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                                        <button
-                                            key={n}
-                                            className={`eh-pn ${n === page ? 'eh-pn--active' : ''}`}
-                                            onClick={() => setPage(n)}
-                                        >
-                                            {n}
-                                        </button>
-                                    ))}
-                                    <button
-                                        className="eh-pn"
-                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                        disabled={page >= totalPages || totalPages === 0}
-                                    >
-                                        <RightOutlined />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  return (
+    <div className="dashboard-layout">
+      <Sidebar />
+      <div className="dashboard-layout__content">
+        <Header title="Lịch sử thi" />
+        <div className="dashboard-layout__body">
+          <div className="eh-page">
+            <div className="eh-header">
+              <h2 className="eh-page-title">Lịch sử thi</h2>
+              <p className="eh-page-sub">Kết quả các bài kiểm tra đã thực hiện</p>
             </div>
+
+            <div className="eh-summary">
+              {[
+                { label: 'Tổng bài đã thi', value: summary.total, mod: 'blue', icon: <FileTextOutlined /> },
+                { label: 'Số bài đạt', value: summary.passed, mod: 'green', icon: <CheckCircleOutlined /> },
+                { label: 'Điểm TB', value: `${summary.avgScore}%`, mod: 'amber', icon: <TrophyOutlined /> },
+                { label: 'Tỉ lệ đạt', value: `${summary.passRate}%`, mod: 'purple', icon: <PieChartOutlined /> },
+              ].map(({ label, value, mod, icon }) => (
+                <div key={label} className="eh-summary-card">
+                  <div className={`eh-summary-card__icon eh-summary-card__icon--${mod}`}>{icon}</div>
+                  <div>
+                    <p className="eh-summary-card__label">{label}</p>
+                    <p className="eh-summary-card__value">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="eh-filter-bar">
+              <div className="eh-search">
+                <span className="eh-search-icon"><SearchOutlined /></span>
+                <input className="eh-search-input" placeholder="Tìm theo tên bài thi..." value={search} onChange={(event) => setSearch(event.target.value)} />
+              </div>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pass">Đạt</option>
+                <option value="fail">Không đạt</option>
+              </select>
+            </div>
+
+            <div className="eh-table-card">
+              <table className="eh-table">
+                <thead>
+                  <tr>
+                    <th>Tên bài thi</th>
+                    <th>Ngày nộp</th>
+                    <th>Điểm số</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian</th>
+                    <th>Lượt</th>
+                    <th>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan="7">Đang tải lịch sử thi...</td></tr>
+                  ) : filtered.length === 0 ? (
+                    <tr><td colSpan="7">Chưa có lịch sử thi.</td></tr>
+                  ) : filtered.map((attempt) => (
+                    <tr key={attempt.id}>
+                      <td>{attempt.examPaperName}</td>
+                      <td>{formatDateTime(attempt.submittedAt)}</td>
+                      <td><span className={`eh-score ${attempt.passed ? 'eh-score--pass' : 'eh-score--fail'}`}>{attempt.score ?? '---'}%</span></td>
+                      <td>
+                        <span className={`eh-badge ${attempt.passed ? 'eh-badge--pass' : 'eh-badge--fail'}`}>
+                          <span className="eh-badge__dot" />
+                          {attempt.passed ? 'Đạt' : 'Không đạt'}
+                        </span>
+                      </td>
+                      <td>{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>
+                      <td><span className="eh-attempt">{attempt.attemptNumber}</span></td>
+                      <td>
+                        <button className="eh-btn eh-btn--view" onClick={() => viewAttempt(attempt)}>
+                          <EyeOutlined /> Chi tiết
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {selectedAttempt && (
+              <div className="eh-table-card eh-detail-card">
+                <div className="eh-detail-header">
+                  <strong>{selectedAttempt.examPaperName}</strong>
+                  <span>{selectedAttempt.score ?? '---'} điểm</span>
+                </div>
+                {(selectedAttempt.answers || []).length === 0 && (
+                  <div className="eh-answer-line">Phân công này chỉ hiển thị điểm, không hiển thị đáp án đúng và giải thích.</div>
+                )}
+                {(selectedAttempt.questions || []).map((question) => {
+                  const answer = (selectedAttempt.answers || []).find((item) => item.paperQuestionId === question.paperQuestionId)
+                  const selectedAnswer = answer?.selectedAnswer || question.selectedAnswer
+                  return (
+                    <div key={question.paperQuestionId} className="eh-question-review">
+                      <div className="eh-detail-header">
+                        <strong>Câu {question.position}</strong>
+                        {answer && (
+                          <span className={answer.correct ? 'eh-score--pass' : 'eh-score--fail'}>{answer.correct ? 'Đúng' : 'Sai'}</span>
+                        )}
+                      </div>
+                      <p>{question.stem}</p>
+                      <ol type="A">
+                        <li>{question.optionA}</li>
+                        <li>{question.optionB}</li>
+                        <li>{question.optionC}</li>
+                        <li>{question.optionD}</li>
+                      </ol>
+                      <div className="eh-answer-line">Đã chọn: {selectedAnswer || 'Chưa chọn'}{answer ? ` | Đáp án đúng: ${answer.correctAnswer || '---'}` : ''}</div>
+                      {answer?.explanation && <div className="eh-answer-line">Giải thích: {answer.explanation}</div>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
-
-
-    )
+      </div>
+    </div>
+  )
 }
 
 export default ExamHistoryScreen

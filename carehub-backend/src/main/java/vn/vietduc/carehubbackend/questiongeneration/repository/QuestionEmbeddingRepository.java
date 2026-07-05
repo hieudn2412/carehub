@@ -27,4 +27,6 @@ public interface QuestionEmbeddingRepository extends JpaRepository<QuestionEmbed
             String embeddingModel,
             QuestionBankStatus status
     );
+
+    void deleteByQuestionAndTextType(QuestionBankQuestion question, String textType);
 }

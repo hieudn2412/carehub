@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeftOutlined,
   LoadingOutlined,
   SaveOutlined,
-  SearchOutlined,
   SendOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
@@ -73,7 +72,7 @@ function ManagerChecklistEvaluationPage() {
     )
   }, [employees, employeeSearch])
 
-  const loadAssignedForm = () => {
+  const loadAssignedForm = useCallback(() => {
     setLoading(true)
     setErrorMessage('')
 
@@ -95,22 +94,28 @@ function ManagerChecklistEvaluationPage() {
       .finally(() => {
         setLoading(false)
       })
-  }
+  }, [id])
 
   useEffect(() => {
-    loadAssignedForm()
-    setEmployeesLoading(true)
-    trainingApi.getEmployeeTrainingStatuses({ size: 1000 })
-      .then((res) => {
-        setEmployees(res.data?.data?.content || [])
-      })
-      .catch((err) => {
-        console.error("Error loading employees for evaluation dropdown", err)
-      })
-      .finally(() => {
-        setEmployeesLoading(false)
-      })
-  }, [id])
+    const timer = window.setTimeout(() => {
+      loadAssignedForm()
+      setEmployeesLoading(true)
+      trainingApi.getEmployeeTrainingStatuses({ size: 1000 })
+        .then((res) => {
+          setEmployees(res.data?.data?.content || [])
+        })
+        .catch(() => {
+          setEmployees([])
+        })
+        .finally(() => {
+          setEmployeesLoading(false)
+        })
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [loadAssignedForm])
 
   const sections = useMemo(
     () => sortByDisplayOrder(assignedForm?.version?.sections || []),

@@ -15,12 +15,13 @@ import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import {
   apiData,
   apiErrorMessage,
+  chunkGenerationEligible,
+  chunkGenerationText,
   documentStatusText,
   formatDateTime,
   formatNumber,
   jobStatusText,
   qualityFlagsText,
-  shortHash,
   statusTone,
 } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
@@ -34,8 +35,9 @@ function QuestionDocumentDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
   const [showJobModal, setShowJobModal] = useState(false)
-  const [questionsPerChunk, setQuestionsPerChunk] = useState(3)
+  const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [isCreatingJob, setIsCreatingJob] = useState(false)
+  const [jobStatusFilter, setJobStatusFilter] = useState('')
 
   const loadDocument = useCallback(async () => {
     setIsLoading(true)
@@ -61,9 +63,17 @@ function QuestionDocumentDetailPage() {
   const sortedSections = useMemo(() => {
     return [...(documentDetail?.sections || [])].sort((left, right) => left.orderIndex - right.orderIndex)
   }, [documentDetail])
+  const chunks = useMemo(() => documentDetail?.chunks || [], [documentDetail])
+  const eligibleChunkCount = useMemo(() => {
+    return chunks.filter((chunk) => chunkGenerationEligible(chunk)).length
+  }, [chunks])
+  const skippedChunkCount = Math.max(0, chunks.length - eligibleChunkCount)
+  const filteredQuestionJobs = useMemo(() => {
+    return questionJobs.filter((job) => !jobStatusFilter || job.status === jobStatusFilter)
+  }, [questionJobs, jobStatusFilter])
 
   async function createJob() {
-    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 3))
+    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, {
@@ -80,7 +90,7 @@ function QuestionDocumentDetailPage() {
   }
 
   function canCreateJob() {
-    return documentDetail?.status === 'READY' && Number(documentDetail?.chunkCount) > 0
+    return documentDetail?.status === 'READY' && eligibleChunkCount > 0
   }
 
   const breadcrumbs = [
@@ -151,7 +161,7 @@ function QuestionDocumentDetailPage() {
                     <Metric label="Số trang" value={formatNumber(documentDetail.pageCount)} />
                     <Metric label="Số chunk" value={formatNumber(documentDetail.chunkCount)} />
                     <Metric label="Section" value={formatNumber(documentDetail.sections?.length || 0)} />
-                    <Metric label="Hash" value={shortHash(documentDetail.contentHash)} />
+                    <Metric label="Chunk tạo được" value={formatNumber(eligibleChunkCount)} />
                   </section>
 
                   <section className="qdoc-tabs-card">
@@ -211,6 +221,7 @@ function QuestionDocumentDetailPage() {
                               <th>Section</th>
                               <th>Trang</th>
                               <th>Tokens</th>
+                              <th>Khả năng</th>
                               <th>Cảnh báo</th>
                               <th>Preview</th>
                             </tr>
@@ -218,7 +229,7 @@ function QuestionDocumentDetailPage() {
                           <tbody>
                             {(documentDetail.chunks || []).length === 0 ? (
                               <tr>
-                                <td colSpan="6" className="qdoc-empty-cell">Chưa có chunk.</td>
+                                <td colSpan="7" className="qdoc-empty-cell">Chưa có chunk.</td>
                               </tr>
                             ) : (
                               documentDetail.chunks.map((chunk) => (
@@ -227,6 +238,11 @@ function QuestionDocumentDetailPage() {
                                   <td>{chunk.sectionPath || chunk.sectionTitle || 'Nội dung tài liệu'}</td>
                                   <td>{pageRange(chunk.pageStart, chunk.pageEnd)}</td>
                                   <td>{formatNumber(chunk.tokenCount)}</td>
+                                  <td>
+                                    <span className={`qdoc-mini-badge ${chunkGenerationEligible(chunk) ? 'qdoc-mini-badge--success' : 'qdoc-mini-badge--warning'}`}>
+                                      {chunkGenerationText(chunk)}
+                                    </span>
+                                  </td>
                                   <td>{qualityFlagsText(chunk.qualityFlags)}</td>
                                   <td className="qdoc-preview-cell">{chunk.textPreview}</td>
                                 </tr>
@@ -238,8 +254,20 @@ function QuestionDocumentDetailPage() {
                     )}
 
                     {activeTab === 'jobs' && (
-                      <div className="qdoc-tab-body qdoc-table-scroll">
-                        <table className="qdoc-table">
+                      <div className="qdoc-tab-body">
+                        <div className="qdoc-filter-bar qdoc-filter-bar--compact">
+                          <select className="qdoc-select" value={jobStatusFilter} onChange={(event) => setJobStatusFilter(event.target.value)}>
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="CREATED">Đã tạo</option>
+                            <option value="GENERATING">Đang tạo</option>
+                            <option value="GENERATED">Đã tạo xong</option>
+                            <option value="PARTIALLY_COMPLETED">Hoàn thành một phần</option>
+                            <option value="FAILED">Thất bại</option>
+                            <option value="CANCELLED">Đã hủy</option>
+                          </select>
+                        </div>
+                        <div className="qdoc-table-scroll">
+                          <table className="qdoc-table">
                           <thead>
                             <tr>
                               <th>Phiên</th>
@@ -253,12 +281,12 @@ function QuestionDocumentDetailPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {questionJobs.length === 0 ? (
+                            {filteredQuestionJobs.length === 0 ? (
                               <tr>
-                                <td colSpan="8" className="qdoc-empty-cell">Chưa có phiên tạo câu hỏi cho tài liệu này.</td>
+                                <td colSpan="8" className="qdoc-empty-cell">Không có phiên tạo câu hỏi phù hợp.</td>
                               </tr>
                             ) : (
-                              questionJobs.map((job) => (
+                              filteredQuestionJobs.map((job) => (
                                 <tr key={job.id}>
                                   <td>#{job.id}</td>
                                   <td>
@@ -292,7 +320,8 @@ function QuestionDocumentDetailPage() {
                               ))
                             )}
                           </tbody>
-                        </table>
+                          </table>
+                        </div>
                       </div>
                     )}
                   </section>
@@ -308,6 +337,11 @@ function QuestionDocumentDetailPage() {
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="detail-create-job-title">
             <h2 id="detail-create-job-title">Tạo phiên sinh câu hỏi</h2>
             <p className="qdoc-modal-subtitle">{documentDetail.filename}</p>
+            <div className="qdoc-modal-stats">
+              <InfoRow label="Tổng chunk" value={formatNumber(chunks.length)} />
+              <InfoRow label="Có thể tạo" value={formatNumber(eligibleChunkCount)} />
+              <InfoRow label="Bỏ qua" value={formatNumber(skippedChunkCount)} />
+            </div>
             <label className="qdoc-field">
               <span>Số câu mỗi chunk</span>
               <input
@@ -320,6 +354,7 @@ function QuestionDocumentDetailPage() {
             </label>
             <div className="qdoc-note">
               Phiên tạo câu hỏi sẽ xử lý từng chunk riêng để giữ evidence và có thể retry phần lỗi.
+              Nên bắt đầu 1 câu/chunk để kiểm soát chất lượng và tốc độ.
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setShowJobModal(false)} disabled={isCreatingJob}>

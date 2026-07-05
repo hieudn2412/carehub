@@ -11,6 +11,7 @@ import vn.vietduc.carehubbackend.auth.entity.UserPrincipal;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Component
 public class CustomJwtAuthenticationConverter
@@ -27,10 +28,15 @@ public class CustomJwtAuthenticationConverter
 
         List<String> roles = jwt.getClaimAsStringList("roles");
 
-        Collection<GrantedAuthority> authorities =
-                roles.stream()
-                        .<GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_" + role))
-                        .toList();
+        List<String> permissions = jwt.getClaimAsStringList("permissions");
+
+        Collection<GrantedAuthority> authorities = Stream.concat(
+                        safeList(roles).stream().map(role -> "ROLE_" + role),
+                        safeList(permissions).stream()
+                )
+                .distinct()
+                .<GrantedAuthority>map(SimpleGrantedAuthority::new)
+                .toList();
 
         UserPrincipal principal =
                 new UserPrincipal(
@@ -45,5 +51,9 @@ public class CustomJwtAuthenticationConverter
                 jwt,
                 authorities
         );
+    }
+
+    private List<String> safeList(List<String> values) {
+        return values == null ? List.of() : values;
     }
 }

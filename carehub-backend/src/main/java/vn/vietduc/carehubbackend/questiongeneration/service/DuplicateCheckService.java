@@ -39,15 +39,19 @@ public class DuplicateCheckService {
     private final ValidationRulesProperties properties;
 
     public DuplicateCheckResult check(String stem) {
-        return check(stem, Set.of());
+        return check(stem, Set.of(), Set.of());
     }
 
     public DuplicateCheckResult check(String stem, Set<Long> excludedQuestionIds) {
+        return check(stem, excludedQuestionIds, Set.of());
+    }
+
+    public DuplicateCheckResult check(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
         if (embeddingProperties.isE5Provider()) {
             try {
-                return semanticCheck(stem, excludedQuestionIds);
+                return semanticCheck(stem, excludedQuestionIds, excludedCandidateIds);
             } catch (RuntimeException ex) {
-                DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds);
+                DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
                 return new DuplicateCheckResult(
                         fallback.maxSimilarity(),
                         fallback.matchedQuestionId(),
@@ -59,10 +63,10 @@ public class DuplicateCheckService {
                 );
             }
         }
-        return lexicalCheck(stem, excludedQuestionIds);
+        return lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
     }
 
-    private DuplicateCheckResult semanticCheck(String stem, Set<Long> excludedQuestionIds) {
+    private DuplicateCheckResult semanticCheck(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
         double[] candidateVector = questionEmbeddingService.embedCandidateStem(stem);
         double best = 0;
         Long matchedId = null;
@@ -70,7 +74,7 @@ public class DuplicateCheckService {
 
         List<QuestionEmbeddingSnapshot> embeddings = questionEmbeddingService.approvedStemEmbeddings();
         if (embeddings.isEmpty()) {
-            DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds);
+            DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
             return new DuplicateCheckResult(
                     fallback.maxSimilarity(),
                     fallback.matchedQuestionId(),
@@ -94,7 +98,7 @@ public class DuplicateCheckService {
             }
         }
 
-        DuplicateCheckResult candidateBatchDuplicate = lexicalCandidateCheck(stem);
+        DuplicateCheckResult candidateBatchDuplicate = lexicalCandidateCheck(stem, excludedCandidateIds);
         if (candidateBatchDuplicate.maxSimilarity() > best) {
             return candidateBatchDuplicate;
         }
@@ -109,7 +113,7 @@ public class DuplicateCheckService {
         );
     }
 
-    private DuplicateCheckResult lexicalCheck(String stem, Set<Long> excludedQuestionIds) {
+    private DuplicateCheckResult lexicalCheck(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
@@ -126,6 +130,9 @@ public class DuplicateCheckService {
             }
         }
         for (DocumentQuestionCandidate candidate : candidateRepository.findTop100ByStatusIn(COMPARABLE_CANDIDATE_STATUSES)) {
+            if (excludedCandidateIds.contains(candidate.getId())) {
+                continue;
+            }
             double score = similarity(stem, candidate.getStem());
             if (score > best) {
                 best = score;
@@ -143,11 +150,14 @@ public class DuplicateCheckService {
         );
     }
 
-    private DuplicateCheckResult lexicalCandidateCheck(String stem) {
+    private DuplicateCheckResult lexicalCandidateCheck(String stem, Set<Long> excludedCandidateIds) {
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
         for (DocumentQuestionCandidate candidate : candidateRepository.findTop100ByStatusIn(COMPARABLE_CANDIDATE_STATUSES)) {
+            if (excludedCandidateIds.contains(candidate.getId())) {
+                continue;
+            }
             double score = similarity(stem, candidate.getStem());
             if (score > best) {
                 best = score;

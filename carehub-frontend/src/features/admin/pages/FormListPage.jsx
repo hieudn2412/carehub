@@ -488,6 +488,7 @@ function FormListPage() {
       setSuccessMessage(`Đã phân quyền ${selectedFormVersionIds.length} checklist cho ${manager?.fullName || manager?.employeeCode || 'manager'}.`)
       setShowRetiredShortcut(false)
       setAssignmentModalOpen(false)
+      setRefreshKey((current) => current + 1)
     } catch (error) {
       setAssignmentError(getAssignmentErrorMessage(error))
     } finally {

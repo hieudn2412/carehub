@@ -41,9 +41,19 @@ export const DIFFICULTY_LABELS = {
 
 export const QUALITY_FLAG_LABELS = {
   LOW_INFORMATION_DENSITY: 'Ít thông tin',
+  HEADING_ONLY: 'Chỉ có heading',
+  DUPLICATE_TEXT: 'Trùng nội dung',
+  TABLE_LIKE_LOW_CONFIDENCE: 'Bảng/layout chưa chắc chắn',
   LOW_SECTION_CONFIDENCE: 'Section chưa chắc chắn',
   ABOVE_TARGET_TOKEN_RANGE: 'Vượt target token',
 }
+
+const BLOCKING_CHUNK_FLAGS = new Set([
+  'LOW_INFORMATION_DENSITY',
+  'HEADING_ONLY',
+  'DUPLICATE_TEXT',
+  'TABLE_LIKE_LOW_CONFIDENCE',
+])
 
 export function apiData(response, fallback = null) {
   return response?.data?.data ?? fallback
@@ -116,9 +126,21 @@ export function parseJsonList(value) {
 }
 
 export function qualityFlagsText(value) {
-  const flags = parseJsonList(value)
+  const flags = chunkQualityFlags(value)
   if (!flags.length) return 'Không có'
   return flags.map((flag) => QUALITY_FLAG_LABELS[flag] || flag).join(', ')
+}
+
+export function chunkQualityFlags(value) {
+  return parseJsonList(value).filter((flag) => typeof flag === 'string' && flag.trim())
+}
+
+export function chunkGenerationEligible(chunk) {
+  return chunkQualityFlags(chunk?.qualityFlags).every((flag) => !BLOCKING_CHUNK_FLAGS.has(flag))
+}
+
+export function chunkGenerationText(chunk) {
+  return chunkGenerationEligible(chunk) ? 'Có thể tạo câu hỏi' : 'Bỏ qua'
 }
 
 export function normalizeText(value) {

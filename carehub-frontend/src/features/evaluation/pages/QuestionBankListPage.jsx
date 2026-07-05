@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  CheckCircleOutlined,
   CopyOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   EditOutlined,
   EyeOutlined,
   LoadingOutlined,
+  StopOutlined,
   PlusCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
@@ -20,7 +24,7 @@ import '../styles/QuestionBankListPage.css'
 const INITIAL_QUESTIONS = [
   {
     id: 1,
-    content: 'Correct hand hygiene technique before patient contact?',
+    content: 'Kỹ thuật vệ sinh tay đúng trước khi tiếp xúc người bệnh là gì?',
     category: 'Kiểm soát nhiễm khuẩn',
     difficulty: 'Dễ',
     active: true,
@@ -31,7 +35,7 @@ const INITIAL_QUESTIONS = [
   },
   {
     id: 2,
-    content: 'Steps for safe IV medication administration?',
+    content: 'Các bước đảm bảo an toàn khi dùng thuốc đường tĩnh mạch là gì?',
     category: 'Quy trình lâm sàng',
     difficulty: 'Khó',
     active: false,
@@ -44,6 +48,21 @@ const INITIAL_QUESTIONS = [
 
 const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
 
+const IMPORT_MAPPING_FIELDS = [
+  { key: 'stem', label: 'Câu hỏi' },
+  { key: 'optionA', label: 'Phương án A' },
+  { key: 'optionB', label: 'Phương án B' },
+  { key: 'optionC', label: 'Phương án C' },
+  { key: 'optionD', label: 'Phương án D' },
+  { key: 'correctAnswer', label: 'Đáp án đúng' },
+  { key: 'explanation', label: 'Giải thích' },
+  { key: 'topic', label: 'Chủ đề' },
+  { key: 'difficulty', label: 'Độ khó' },
+  { key: 'language', label: 'Ngôn ngữ' },
+  { key: 'sourceDocument', label: 'Nguồn' },
+  { key: 'status', label: 'Trạng thái' },
+]
+
 function mapBackendQuestion(question) {
   return {
     id: question.id,
@@ -52,6 +71,9 @@ function mapBackendQuestion(question) {
     difficulty: difficultyText(question.difficulty),
     active: question.status === 'APPROVED',
     status: question.status,
+    statusText: question.statusText,
+    duplicateWarning: question.duplicateWarning,
+    impactWarning: question.impactWarning,
     explanation: question.explanation,
     options: [question.optionA, question.optionB, question.optionC, question.optionD],
     correctOptionIndex: ['A', 'B', 'C', 'D'].indexOf(question.correctAnswer),
@@ -79,6 +101,14 @@ function QuestionBankListPage() {
   const [paraphraseForm, setParaphraseForm] = useState({ requestedCount: 3, changeStrength: 'medium' })
   const [modelStatus, setModelStatus] = useState(null)
   const [isModelStatusLoading, setIsModelStatusLoading] = useState(false)
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState([])
+  const [importFile, setImportFile] = useState(null)
+  const [importPreview, setImportPreview] = useState(null)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importDuplicateMode, setImportDuplicateMode] = useState('BLOCK')
+  const [importColumnMapping, setImportColumnMapping] = useState({})
+  const [isExporting, setIsExporting] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState('')
@@ -88,7 +118,7 @@ function QuestionBankListPage() {
   const loadQuestions = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await questionBankApi.listQuestions({ status: 'APPROVED' })
+      const response = await questionBankApi.listQuestions({ status: 'ALL' })
       const backendQuestions = apiData(response, []).map(mapBackendQuestion)
       setQuestions(backendQuestions)
       setApiAvailable(true)
@@ -117,7 +147,7 @@ function QuestionBankListPage() {
       const matchesKeyword = !normalizedKeyword || normalizeText(question.content).includes(normalizedKeyword)
       const matchesCategory = !categoryFilter || question.category === categoryFilter
       const matchesDifficulty = !difficultyFilter || question.difficulty === difficultyFilter
-      const matchesStatus = !statusFilter || (statusFilter === 'true' ? question.active : !question.active)
+      const matchesStatus = !statusFilter || question.status === statusFilter
       return matchesKeyword && matchesCategory && matchesDifficulty && matchesStatus
     })
   }, [questions, keyword, categoryFilter, difficultyFilter, statusFilter])
@@ -126,13 +156,72 @@ function QuestionBankListPage() {
   const totalElements = filteredQuestions.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = filteredQuestions.slice(page * pageSize, (page + 1) * pageSize)
+  const selectedApprovedQuestionIds = questions
+    .filter((question) => selectedQuestionIds.includes(question.id))
+    .filter((question) => question.backend && question.status === 'APPROVED')
+    .map((question) => question.id)
 
-  function handleDelete(item) {
+  async function handleDelete(item) {
     if (!item.backend) {
       setQuestions((prev) => prev.filter((question) => question.id !== item.id))
       return
     }
-    showToast('Chưa có API xóa câu hỏi backend trong phase này.', 'warning')
+    let impactWarning = item.impactWarning
+    try {
+      const response = await questionBankApi.getQuestion(item.id)
+      impactWarning = mapBackendQuestion(apiData(response)).impactWarning
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'warning')
+    }
+    if (impactWarning?.blocksArchive) {
+      window.alert(impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể lưu trữ.')
+      return
+    }
+    const impactText = impactWarning?.warning ? `${impactWarning.warning}\n\n` : ''
+    if (!window.confirm(`${impactText}Lưu trữ câu hỏi này? Câu hỏi sẽ không còn dùng để tạo bộ câu hỏi mới.`)) {
+      return
+    }
+
+    questionBankApi.archiveQuestion(item.id)
+      .then(() => {
+        showToast('Đã lưu trữ câu hỏi.', 'success')
+        loadQuestions()
+      })
+      .catch((error) => showToast(apiErrorMessage(error), 'error'))
+  }
+
+  function handleStatusAction(item) {
+    if (!item.backend) {
+      showToast('Dữ liệu demo không thể đổi trạng thái.', 'warning')
+      return
+    }
+    if (item.status === 'APPROVED') {
+      questionBankApi.getQuestion(item.id)
+        .then((response) => {
+          const detail = mapBackendQuestion(apiData(response))
+          if (detail.impactWarning?.blocksArchive) {
+            window.alert(detail.impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể chuyển về bản nháp.')
+            return
+          }
+          return questionBankApi.deactivateQuestion(item.id)
+        })
+        .then((response) => {
+          if (!response) return
+          showToast('Đã chuyển câu hỏi về bản nháp.', 'success')
+          loadQuestions()
+        })
+        .catch((error) => showToast(apiErrorMessage(error), 'error'))
+      return
+    }
+    const request = item.status === 'APPROVED'
+      ? questionBankApi.deactivateQuestion(item.id)
+      : questionBankApi.approveQuestion(item.id)
+    request
+      .then(() => {
+        showToast(item.status === 'APPROVED' ? 'Đã chuyển câu hỏi về bản nháp.' : 'Đã duyệt câu hỏi.', 'success')
+        loadQuestions()
+      })
+      .catch((error) => showToast(apiErrorMessage(error), 'error'))
   }
 
   async function openDetailModal(item) {
@@ -169,24 +258,181 @@ function QuestionBankListPage() {
     }
   }
 
+  async function openBatchParaphraseModal() {
+    if (selectedApprovedQuestionIds.length === 0) {
+      showToast('Vui lòng chọn ít nhất một câu hỏi đã duyệt để tạo biến thể.', 'warning')
+      return
+    }
+    setParaphraseTarget({
+      id: 'batch',
+      batch: true,
+      content: `Tạo biến thể cho ${selectedApprovedQuestionIds.length} câu hỏi đã duyệt`,
+      questionIds: selectedApprovedQuestionIds,
+    })
+    setParaphraseForm({ requestedCount: 3, changeStrength: 'medium' })
+    setIsModelStatusLoading(true)
+    try {
+      const response = await questionBankApi.getModelRuntimeStatus()
+      setModelStatus(apiData(response))
+    } catch (error) {
+      setModelStatus(null)
+      showToast(apiErrorMessage(error), 'warning')
+    } finally {
+      setIsModelStatusLoading(false)
+    }
+  }
+
   async function createParaphraseJob() {
     if (!paraphraseTarget) return
     const requestedCount = Math.min(10, Math.max(1, Number(paraphraseForm.requestedCount) || 3))
     setJobQuestionId(paraphraseTarget.id)
     try {
-      const response = await questionBankApi.createParaphraseJob(paraphraseTarget.id, {
-        requestedCount,
-        changeStrength: paraphraseForm.changeStrength,
-      })
-      const job = apiData(response)
+      const response = paraphraseTarget.batch
+        ? await questionBankApi.createBatchParaphraseJobs({
+          questionIds: paraphraseTarget.questionIds,
+          requestedCount,
+          changeStrength: paraphraseForm.changeStrength,
+        })
+        : await questionBankApi.createParaphraseJob(paraphraseTarget.id, {
+          requestedCount,
+          changeStrength: paraphraseForm.changeStrength,
+        })
+      const result = apiData(response)
+      const job = paraphraseTarget.batch ? result.jobs?.[0] : result
       setParaphraseTarget(null)
-      showToast('Tạo phiên diễn đạt lại thành công.', 'success')
-      navigate(`/admin/evaluation/paraphrase-jobs/${job.id}`)
+      setSelectedQuestionIds([])
+      if (paraphraseTarget.batch) {
+        showToast(`Đã tạo ${result.succeededCount || 0} phiên diễn đạt lại. ${result.failedCount || 0} lỗi.`, result.failedCount ? 'warning' : 'success')
+      } else {
+        showToast('Tạo phiên diễn đạt lại thành công.', 'success')
+      }
+      if (job?.id) {
+        navigate(`/admin/evaluation/paraphrase-jobs/${job.id}`)
+      }
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setJobQuestionId(null)
     }
+  }
+
+  async function exportQuestions() {
+    setIsExporting(true)
+    try {
+      const response = await questionBankApi.exportQuestions({ status: statusFilter || 'ALL', q: keyword || undefined })
+      const url = window.URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'question-bank.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      showToast('Đã export ngân hàng câu hỏi.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function downloadImportTemplate() {
+    setIsExporting(true)
+    try {
+      const response = await questionBankApi.downloadImportTemplate()
+      const url = window.URL.createObjectURL(response.data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'question-bank-import-template.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      showToast('Đã tải file mẫu import.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  async function previewImport() {
+    if (!importFile) {
+      showToast('Vui lòng chọn file XLSX/XLS/CSV.', 'warning')
+      return
+    }
+    setIsImporting(true)
+    try {
+      const response = await questionBankApi.previewImport(importFile, cleanedImportColumnMapping())
+      setImportPreview(apiData(response))
+      showToast('Đã preview file import.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  async function commitImport() {
+    const validRows = (importPreview?.rows || []).filter((row) => row.valid)
+    if (validRows.length === 0) {
+      showToast('Không có dòng hợp lệ để import.', 'warning')
+      return
+    }
+    setIsImporting(true)
+    try {
+      const response = await questionBankApi.commitImport(validRows, importPreview?.importJobId || null, importDuplicateMode)
+      const result = apiData(response)
+      showToast(`Đã import ${result.createdCount || 0} câu hỏi. ${result.skippedCount || 0} dòng bỏ qua. ${result.failedCount || 0} dòng lỗi.`, result.failedCount ? 'warning' : 'success')
+      setImportPreview(result)
+      await loadQuestions()
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsImporting(false)
+    }
+  }
+
+  function closeImportModal() {
+    setIsImportModalOpen(false)
+    setImportFile(null)
+    setImportPreview(null)
+    setIsImporting(false)
+    setImportDuplicateMode('BLOCK')
+    setImportColumnMapping({})
+  }
+
+  function updateImportColumnMapping(field, value) {
+    setImportColumnMapping((current) => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  function cleanedImportColumnMapping() {
+    const entries = Object.entries(importColumnMapping).filter(([, value]) => value)
+    return entries.length === 0 ? null : Object.fromEntries(entries)
+  }
+
+  function toggleQuestionSelection(questionId) {
+    setSelectedQuestionIds((current) =>
+      current.includes(questionId)
+        ? current.filter((id) => id !== questionId)
+        : [...current, questionId]
+    )
+  }
+
+  function togglePageSelection() {
+    const pageIds = displayRows
+      .filter((question) => question.backend && question.status === 'APPROVED')
+      .map((question) => question.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedQuestionIds.includes(id))
+    setSelectedQuestionIds((current) => {
+      if (allSelected) {
+        return current.filter((id) => !pageIds.includes(id))
+      }
+      return Array.from(new Set([...current, ...pageIds]))
+    })
   }
 
   function getDifficultyClass(diff) {
@@ -292,20 +538,49 @@ function QuestionBankListPage() {
                     }}
                   >
                     <option value="">Trạng thái</option>
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
+                    <option value="APPROVED">Đã duyệt</option>
+                    <option value="DRAFT">Bản nháp</option>
+                    <option value="REJECTED">Đã từ chối</option>
+                    <option value="ARCHIVED">Đã lưu trữ</option>
                   </select>
                 </div>
 
-                <button className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
-                  <PlusCircleOutlined /> Thêm câu hỏi
-                </button>
+                <div className="qbl-toolbar-actions">
+                  <button className="qbl-btn-secondary" onClick={exportQuestions} disabled={isExporting}>
+                    {isExporting ? <LoadingOutlined /> : <DownloadOutlined />} Export Excel
+                  </button>
+                  <button className="qbl-btn-secondary" onClick={() => setIsImportModalOpen(true)}>
+                    <UploadOutlined /> Import
+                  </button>
+                  <button className="qbl-btn-secondary" onClick={openBatchParaphraseModal} disabled={selectedApprovedQuestionIds.length === 0}>
+                    <CopyOutlined /> Tạo biến thể
+                  </button>
+                  <button className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
+                    <PlusCircleOutlined /> Thêm câu hỏi
+                  </button>
+                </div>
               </div>
+
+              {selectedQuestionIds.length > 0 && (
+                <div className="qbl-batch-bar">
+                  <span>{selectedApprovedQuestionIds.length} câu đã duyệt được chọn</span>
+                  <button type="button" className="qbl-btn-secondary" onClick={() => setSelectedQuestionIds([])}>
+                    Bỏ chọn
+                  </button>
+                </div>
+              )}
 
               <div className="qbl-table-card">
                 <table className="qbl-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '44px' }}>
+                        <input
+                          type="checkbox"
+                          checked={displayRows.some((item) => item.backend && item.status === 'APPROVED') && displayRows.filter((item) => item.backend && item.status === 'APPROVED').every((item) => selectedQuestionIds.includes(item.id))}
+                          onChange={togglePageSelection}
+                        />
+                      </th>
                       <th style={{ width: '60px' }}>#</th>
                       <th>Nội dung câu hỏi</th>
                       <th>Danh mục</th>
@@ -318,15 +593,23 @@ function QuestionBankListPage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="7" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
+                        <td colSpan="8" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="qbl-empty-cell">Không tìm thấy câu hỏi nào.</td>
+                        <td colSpan="8" className="qbl-empty-cell">Không tìm thấy câu hỏi nào.</td>
                       </tr>
                     ) : (
                       displayRows.map((item, idx) => (
                         <tr key={`${item.backend ? 'api' : 'demo'}-${item.id}`}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedQuestionIds.includes(item.id)}
+                              onChange={() => toggleQuestionSelection(item.id)}
+                              disabled={!item.backend || item.status !== 'APPROVED'}
+                            />
+                          </td>
                           <td style={{ color: '#64748b', fontWeight: 500 }}>{formatIndex(idx)}</td>
                           <td>
                             <button type="button" className="qbl-question-link" onClick={() => openDetailModal(item)}>
@@ -342,7 +625,7 @@ function QuestionBankListPage() {
                           </td>
                           <td>
                             <span className={`qbl-badge ${item.active ? 'qbl-badge--active' : 'qbl-badge--inactive'}`}>
-                              {item.active ? 'Hoạt động' : 'Ngưng'}
+                              {item.statusText || (item.active ? 'Đã duyệt' : 'Bản nháp')}
                             </span>
                           </td>
                           <td>
@@ -372,11 +655,22 @@ function QuestionBankListPage() {
                               >
                                 <EditOutlined />
                               </button>
+                              {item.status !== 'ARCHIVED' && (
+                                <button
+                                  type="button"
+                                  className="qbl-action-btn qbl-action-btn--view"
+                                  onClick={() => handleStatusAction(item)}
+                                  title={item.status === 'APPROVED' ? 'Chuyển về bản nháp' : 'Duyệt câu hỏi'}
+                                >
+                                  {item.status === 'APPROVED' ? <StopOutlined /> : <CheckCircleOutlined />}
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="qbl-action-btn qbl-action-btn--delete"
                                 onClick={() => handleDelete(item)}
                                 title="Xóa"
+                                disabled={item.status === 'ARCHIVED'}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -471,6 +765,125 @@ function QuestionBankListPage() {
           </div>
         </div>
       )}
+      {isImportModalOpen && (
+        <div className="qbl-modal-backdrop">
+          <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">
+            <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
+            <p className="qbl-modal-subtitle">File hỗ trợ XLSX/XLS/CSV với header hoặc DOCX theo mẫu cố định: Câu hỏi, A-D, Đáp án, Giải thích, Chủ đề, Độ khó, Nguồn, Trạng thái</p>
+
+            <label className="qbl-field">
+              <span>File import</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv,.docx"
+                onChange={(event) => {
+                  setImportFile(event.target.files?.[0] || null)
+                  setImportPreview(null)
+                  setImportColumnMapping({})
+                }}
+              />
+            </label>
+
+            <label className="qbl-field">
+              <span>Khi gặp câu hỏi trùng mạnh</span>
+              <select value={importDuplicateMode} onChange={(event) => setImportDuplicateMode(event.target.value)}>
+                <option value="BLOCK">Báo lỗi dòng trùng</option>
+                <option value="SKIP_DUPLICATES">Bỏ qua dòng trùng</option>
+                <option value="IMPORT_DUPLICATES_AS_DRAFT">Lưu dòng trùng thành bản nháp</option>
+              </select>
+            </label>
+
+            {(importPreview?.sourceHeaders || []).length > 0 && (
+              <div className="qbl-import-preview">
+                <p className="qbl-modal-subtitle">Mapping cột từ file nguồn. Chỉ cần chỉnh các cột chưa tự nhận đúng, rồi bấm Preview lại.</p>
+                <div className="qbl-detail-meta-grid">
+                  {IMPORT_MAPPING_FIELDS.map((field) => (
+                    <label key={field.key} className="qbl-field">
+                      <span>{field.label}</span>
+                      <select
+                        value={importColumnMapping[field.key] || ''}
+                        onChange={(event) => updateImportColumnMapping(field.key, event.target.value)}
+                      >
+                        <option value="">Tự nhận theo header</option>
+                        {(importPreview.sourceHeaders || []).map((header) => (
+                          <option key={`${field.key}-${header}`} value={header}>{header}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {importPreview && (
+              <>
+                <div className="qbl-import-summary">
+                  {importPreview.importJobId && <span>Mã import: #{importPreview.importJobId}</span>}
+                  <span>Tổng dòng: {importPreview.totalRows}</span>
+                  <span>Hợp lệ: {importPreview.validRows ?? importPreview.createdCount}</span>
+                  {(importPreview.skippedCount ?? 0) > 0 && <span>Bỏ qua: {importPreview.skippedCount}</span>}
+                  <span>Lỗi: {importPreview.invalidRows ?? importPreview.failedCount}</span>
+                </div>
+                <div className="qbl-import-preview">
+                  <table className="qbl-table">
+                    <thead>
+                      <tr>
+                        <th>Dòng</th>
+                        <th>Câu hỏi</th>
+                        <th>Đáp án đúng</th>
+                        <th>Trạng thái</th>
+                        <th>Kết quả</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(importPreview.rows || []).slice(0, 20).map((row) => (
+                        <tr key={`${row.rowNumber}-${row.stem}`}>
+                          <td>{row.rowNumber}</td>
+                          <td>{row.stem}</td>
+                          <td>{row.correctAnswer}</td>
+                          <td>{row.status}</td>
+                          <td>
+                            {row.createdQuestionId ? (
+                              <span className="qbl-badge qbl-badge--active">Đã lưu #{row.createdQuestionId}</span>
+                            ) : row.skipped ? (
+                              <span className="qbl-badge qbl-badge--inactive">Bỏ qua</span>
+                            ) : row.valid ? (
+                              <span className="qbl-badge qbl-badge--active">Hợp lệ</span>
+                            ) : (
+                              <span className="qbl-import-errors">{(row.errors || []).join(', ')}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {(importPreview.rows || []).length > 20 && (
+                    <p className="qbl-modal-subtitle">Chỉ hiển thị 20 dòng đầu trong preview.</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="qbl-modal-actions">
+              <button type="button" className="qbl-btn-secondary" onClick={downloadImportTemplate} disabled={isExporting || isImporting}>
+                {isExporting ? <LoadingOutlined /> : <DownloadOutlined />}
+                <span>Tải file mẫu</span>
+              </button>
+              <button type="button" className="qbl-btn-secondary" onClick={closeImportModal} disabled={isImporting}>
+                Đóng
+              </button>
+              <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
+                {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
+                <span>Preview</span>
+              </button>
+              <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).every((row) => !row.valid)}>
+                {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
+                <span>Commit dòng hợp lệ</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {detailQuestion && (
         <div className="qbl-modal-backdrop" onClick={closeDetailModal}>
           <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="question-detail-title" onClick={(event) => event.stopPropagation()}>
@@ -480,6 +893,13 @@ function QuestionBankListPage() {
             ) : (
               <>
                 <p className="qbl-modal-subtitle">{detailQuestion.content}</p>
+
+                {detailQuestion.impactWarning?.warning && (
+                  <div className="qbl-impact-warning">
+                    <strong>Cảnh báo sử dụng</strong>
+                    <p>{detailQuestion.impactWarning.warning}</p>
+                  </div>
+                )}
 
                 <div className="qbl-detail-meta-grid">
                   <DetailMeta label="Danh mục" value={detailQuestion.category} />

@@ -22,6 +22,15 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
             WHERE ur.user.id = :userId
             """)
     List<Role> findRolesByUserId(@Param("userId") Long userId);
+
+    @Query("""
+            SELECT DISTINCT rp.permission.code
+            FROM UserRole ur
+            JOIN RolePermission rp ON rp.role.id = ur.role.id
+            WHERE ur.user.id = :userId
+            """)
+    List<String> findPermissionCodesByUserId(@Param("userId") Long userId);
+
     void deleteByUser(User user);
     void deleteByUser_IdAndRole_Id(Long userId, Long roleId);
 }

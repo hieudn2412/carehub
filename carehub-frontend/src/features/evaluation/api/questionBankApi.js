@@ -20,6 +20,71 @@ export const questionBankApi = {
     })
   },
 
+  createQuestion(payload) {
+    return httpClient.post('/questions', payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateQuestion(questionId, payload) {
+    return httpClient.put(`/questions/${questionId}`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  approveQuestion(questionId) {
+    return httpClient.post(`/questions/${questionId}/approve`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  deactivateQuestion(questionId) {
+    return httpClient.post(`/questions/${questionId}/deactivate`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  archiveQuestion(questionId) {
+    return httpClient.delete(`/questions/${questionId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  exportQuestions(params) {
+    return httpClient.get('/questions/export', {
+      headers: authHeaders(),
+      params,
+      responseType: 'blob',
+    })
+  },
+
+  downloadImportTemplate() {
+    return httpClient.get('/questions/import/template', {
+      headers: authHeaders(),
+      responseType: 'blob',
+    })
+  },
+
+  previewImport(file, columnMapping = null) {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (columnMapping) {
+      formData.append('columnMapping', JSON.stringify(columnMapping))
+    }
+    return httpClient.post('/questions/import/preview', formData, {
+      headers: {
+        ...authHeaders(),
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+
+  commitImport(rows, importJobId = null, duplicateHandlingMode = 'BLOCK') {
+    return httpClient.post('/questions/import/commit', { importJobId, duplicateHandlingMode, rows }, {
+      headers: authHeaders(),
+    })
+  },
+
   getModelRuntimeStatus() {
     return httpClient.get('/ai-model-runtime/status', {
       headers: authHeaders(),
@@ -28,6 +93,12 @@ export const questionBankApi = {
 
   createParaphraseJob(questionId, payload) {
     return httpClient.post(`/questions/${questionId}/paraphrase-jobs`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  createBatchParaphraseJobs(payload) {
+    return httpClient.post('/paraphrase-jobs/batch', payload, {
       headers: authHeaders(),
     })
   },
@@ -70,6 +141,24 @@ export const questionBankApi = {
 
   saveParaphraseCandidateAsQuestion(candidateId) {
     return httpClient.post(`/paraphrase-candidates/${candidateId}/save-as-question`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
+  approveParaphraseCandidates(candidateIds, reviewerNotes = '') {
+    return httpClient.post('/paraphrase-candidates/batch/approve', { candidateIds, reviewerNotes }, {
+      headers: authHeaders(),
+    })
+  },
+
+  rejectParaphraseCandidates(candidateIds, reviewerNotes = '') {
+    return httpClient.post('/paraphrase-candidates/batch/reject', { candidateIds, reviewerNotes }, {
+      headers: authHeaders(),
+    })
+  },
+
+  saveParaphraseCandidatesAsQuestions(candidateIds) {
+    return httpClient.post('/paraphrase-candidates/batch/save-as-questions', { candidateIds }, {
       headers: authHeaders(),
     })
   },

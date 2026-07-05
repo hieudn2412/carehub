@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.exception.ValidationException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.*;
 import java.util.*;
 
@@ -49,7 +50,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardUserSummaryResponse userSummary(Long departmentId) {
-        MapSqlParameterSource params = new MapSqlParameterSource("departmentId", departmentId);
+        MapSqlParameterSource params = departmentParams(departmentId);
         Map<String, Object> row = jdbc.queryForMap("""
                 select
                     count(*) filter (where u.is_deleted = false) as total,
@@ -130,7 +131,7 @@ public class DashboardService {
     public DashboardFormSummaryResponse formSummary(LocalDate fromDate, LocalDate toDate, Long departmentId) {
         DashboardPeriod period = resolvePeriod(fromDate, toDate, 366);
         MapSqlParameterSource params = baseParams(period, departmentId);
-        params.addValue("nowInstant", Instant.now(clock));
+        params.addValue("nowInstant", dbInstant(Instant.now(clock)), Types.TIMESTAMP_WITH_TIMEZONE);
         Map<String, Object> forms = jdbc.queryForMap("""
                 select
                     count(*) as total,
@@ -379,9 +380,8 @@ public class DashboardService {
     }
 
     private DashboardOverviewResponse.Forms overviewForms(Long departmentId) {
-        MapSqlParameterSource params = new MapSqlParameterSource()
-                .addValue("departmentId", departmentId)
-                .addValue("nowInstant", Instant.now(clock));
+        MapSqlParameterSource params = departmentParams(departmentId)
+                .addValue("nowInstant", dbInstant(Instant.now(clock)), Types.TIMESTAMP_WITH_TIMEZONE);
         Map<String, Object> row = jdbc.queryForMap("""
                 select
                     count(*) filter (where f.deleted = false) as total,
@@ -550,12 +550,20 @@ public class DashboardService {
     }
 
     private MapSqlParameterSource baseParams(DashboardPeriod period, Long departmentId) {
+        return departmentParams(departmentId)
+                .addValue("fromInstant", dbInstant(period.fromInstant()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .addValue("toInstant", dbInstant(period.toInstant()), Types.TIMESTAMP_WITH_TIMEZONE)
+                .addValue("fromLocal", period.fromLocal(), Types.TIMESTAMP)
+                .addValue("toLocal", period.toLocal(), Types.TIMESTAMP);
+    }
+
+    private MapSqlParameterSource departmentParams(Long departmentId) {
         return new MapSqlParameterSource()
-                .addValue("departmentId", departmentId)
-                .addValue("fromInstant", period.fromInstant())
-                .addValue("toInstant", period.toInstant())
-                .addValue("fromLocal", period.fromLocal())
-                .addValue("toLocal", period.toLocal());
+                .addValue("departmentId", departmentId, Types.BIGINT);
+    }
+
+    private OffsetDateTime dbInstant(Instant instant) {
+        return OffsetDateTime.ofInstant(instant, ZoneOffset.UTC);
     }
 
     private String periodPredicate(String alias) {
