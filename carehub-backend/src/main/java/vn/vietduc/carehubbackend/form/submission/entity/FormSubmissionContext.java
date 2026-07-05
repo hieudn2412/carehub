@@ -13,7 +13,10 @@ import vn.vietduc.carehubbackend.user.entity.User;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "form_submission_contexts")
+@Table(name = "form_submission_contexts", indexes = {
+        @Index(name = "idx_form_submission_context_subject", columnList = "subject_user_id"),
+        @Index(name = "idx_form_submission_context_submission", columnList = "submission_id")
+})
 public class FormSubmissionContext extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "submission_id", nullable = false, unique = true)

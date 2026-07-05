@@ -14,7 +14,10 @@ import vn.vietduc.carehubbackend.user.entity.Department;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "form_templates")
+@Table(name = "form_templates", indexes = {
+        @Index(name = "idx_form_template_dashboard_status", columnList = "deleted,status,owner_department_id"),
+        @Index(name = "idx_form_template_updated", columnList = "updated_at,created_at")
+})
 public class Form extends BaseEntity {
 
     @Column(nullable = false, unique = true, length = 50)

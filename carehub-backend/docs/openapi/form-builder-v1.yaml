@@ -483,6 +483,68 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AssignedFormEnvelope' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /forms/{formId}/responses:
+    get:
+      tags: [Form Submission]
+      operationId: listFormResponses
+      summary: List submissions/responses for one form across all versions (ADMIN)
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/FormSubmissionStatus' }
+          example: SUBMITTED
+        - name: includeAnswers
+          in: query
+          schema: { type: boolean, default: false }
+          description: When true, each item includes answers and scoreBreakdown. Keep false for lightweight lists.
+      responses:
+        '200':
+          description: Paginated form responses
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormSubmissionPageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /forms/{formId}/versions/{versionId}/responses:
+    get:
+      tags: [Form Submission]
+      operationId: listFormVersionResponses
+      summary: List submissions/responses for one form version (ADMIN)
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: versionId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/FormSubmissionStatus' }
+          example: SUBMITTED
+        - name: includeAnswers
+          in: query
+          schema: { type: boolean, default: false }
+          description: When true, each item includes answers and scoreBreakdown. Keep false for lightweight lists.
+      responses:
+        '200':
+          description: Paginated form-version responses
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormSubmissionPageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /form-submissions:
     get:
       tags: [Form Submission]

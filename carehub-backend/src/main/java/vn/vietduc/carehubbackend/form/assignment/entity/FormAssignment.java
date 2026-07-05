@@ -17,7 +17,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "form_assignments", indexes = {
-        @Index(name = "idx_form_assignment_manager", columnList = "manager_user_id,status")
+        @Index(name = "idx_form_assignment_manager", columnList = "manager_user_id,status"),
+        @Index(name = "idx_form_assignment_dashboard_effective", columnList = "status,effective_from,effective_to"),
+        @Index(name = "idx_form_assignment_dashboard_assigned", columnList = "assigned_at")
 })
 public class FormAssignment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

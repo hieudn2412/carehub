@@ -22,7 +22,10 @@ import java.util.*;
 @AllArgsConstructor
 @Table(name = "form_submissions", indexes = {
         @Index(name = "idx_form_submission_owner", columnList = "submitted_by_user_id,status"),
-        @Index(name = "idx_form_submission_assignment_item", columnList = "assignment_item_id")
+        @Index(name = "idx_form_submission_assignment_item", columnList = "assignment_item_id"),
+        @Index(name = "idx_form_submission_dashboard_status_submitted", columnList = "status,submitted_at"),
+        @Index(name = "idx_form_submission_dashboard_status_created", columnList = "status,created_at"),
+        @Index(name = "idx_form_submission_dashboard_version", columnList = "form_version_id,status,submitted_at")
 })
 public class FormSubmission extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
