@@ -15,7 +15,9 @@ import vn.vietduc.carehubbackend.form.entity.FormVersion;
 @AllArgsConstructor
 @Table(name = "form_assignment_items", indexes = {
         @Index(name = "idx_form_assignment_item_version", columnList = "form_version_id"),
-        @Index(name = "idx_form_assignment_item_status", columnList = "assignment_id,status")
+        @Index(name = "idx_form_assignment_item_status", columnList = "assignment_id,status"),
+        @Index(name = "idx_form_assignment_item_dashboard_form", columnList = "form_template_id,status"),
+        @Index(name = "idx_form_assignment_item_dashboard_version", columnList = "form_version_id,status")
 })
 public class FormAssignmentItem extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

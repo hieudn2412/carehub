@@ -11,6 +11,8 @@ import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentItem;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.entity.*;
 import vn.vietduc.carehubbackend.form.entity.enums.*;
+import vn.vietduc.carehubbackend.form.repository.FormRepository;
+import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.submission.dto.*;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
@@ -30,6 +32,8 @@ public class FormSubmissionService {
     private static final int MAX_PAGE_SIZE = 100;
     private final FormSubmissionRepository submissionRepository;
     private final FormAssignmentAccessService assignmentAccessService;
+    private final FormRepository formRepository;
+    private final FormVersionRepository versionRepository;
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final FormScoreCalculator scoreCalculator;
@@ -122,6 +126,26 @@ public class FormSubmissionService {
                 ? submissionRepository.searchAll(status, normalized)
                 : submissionRepository.searchOwned(securityUtils.getCurrentUserId(), status, normalized);
         return page.map(submission -> toResponse(submission, false));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FormSubmissionResponse> searchByForm(Long formId, FormSubmissionStatus status,
+                                                     boolean includeAnswers, Pageable pageable) {
+        formRepository.findByIdAndDeletedFalse(formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        return submissionRepository.searchByFormId(formId, status, normalize(pageable))
+                .map(submission -> toResponse(submission, includeAnswers));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FormSubmissionResponse> searchByFormVersion(Long formId, Long versionId, FormSubmissionStatus status,
+                                                            boolean includeAnswers, Pageable pageable) {
+        formRepository.findByIdAndDeletedFalse(formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        versionRepository.findByIdAndForm_Id(versionId, formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
+        return submissionRepository.searchByFormVersionId(formId, versionId, status, normalize(pageable))
+                .map(submission -> toResponse(submission, includeAnswers));
     }
 
     @Transactional(readOnly = true)

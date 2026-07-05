@@ -15,7 +15,10 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "users")
+@Table(name = "users", indexes = {
+        @Index(name = "idx_users_dashboard_status_department", columnList = "is_deleted,status,department_id"),
+        @Index(name = "idx_users_dashboard_department_status", columnList = "department_id,is_deleted,status")
+})
 public class User extends BaseEntity {
     @Column(name = "employee_code", nullable = false)
     private String employeeCode;
