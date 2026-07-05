@@ -70,6 +70,7 @@ import EmailTemplateFormPage from '../features/admin/pages/EmailTemplateFormPage
 import ImportModal from '../features/admin/pages/ImportModal.jsx'
 import ChecklistCreatePage from '../features/admin/pages/ChecklistCreatePage.jsx'
 import FormListPage from '../features/admin/pages/FormListPage.jsx'
+import FormAssignmentManagementPage from '../features/admin/pages/FormAssignmentManagementPage.jsx'
 import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.jsx'
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
@@ -157,6 +158,7 @@ function AppRouter() {
       <Route path="/admin/quality/checklists" element={adminElement(<FormListPage />)} />
       <Route path="/admin/quality/checklists/new" element={adminElement(<ChecklistCreatePage />)} />
       <Route path="/admin/quality/checklists/:id/detail" element={adminElement(<ChecklistCreatePage />)} />
+      <Route path="/admin/quality/checklists/:id/assignments" element={adminElement(<FormAssignmentManagementPage />)} />
       <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />
