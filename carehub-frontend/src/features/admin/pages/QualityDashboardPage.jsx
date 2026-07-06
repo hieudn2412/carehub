@@ -37,17 +37,12 @@ const COMPLIANCE_TARGET = 90
 const WARNING_THRESHOLD = 80
 const PAGE_SIZE = 100
 
-const RESULT_LABELS = {
-  PASSED: 'Đạt',
-  FAILED_SCORE: 'Không đạt điểm',
-  FAILED_CRITICAL: 'Không đạt tiêu chí trọng yếu',
-}
-
 const RESULT_COLORS = {
   PASSED: '#16b889',
   FAILED_SCORE: '#f59e0b',
   FAILED_CRITICAL: '#ef4444',
-  UNGRADED: '#94a3b8',
+  DRAFT: '#94a3b8',
+  VOIDED: '#64748b',
 }
 
 const DEFAULT_DEPARTMENT = {
@@ -55,8 +50,12 @@ const DEFAULT_DEPARTMENT = {
   name: 'Toàn viện',
 }
 
+function getApiData(response) {
+  return response?.data?.data || null
+}
+
 function getPageContent(response) {
-  const data = response?.data?.data
+  const data = getApiData(response)
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.content)) return data.content
   return []
@@ -108,28 +107,25 @@ function getSubmittedAt(submission) {
   return date && Number.isFinite(date.getTime()) ? date : null
 }
 
-function formatDateLabel(date) {
-  if (!date) return 'Chưa rõ'
+function getDashboardParams(selectedDepartment) {
+  if (selectedDepartment === DEFAULT_DEPARTMENT.id) return {}
+  return { departmentId: selectedDepartment }
+}
+
+function formatDateLabel(period) {
+  if (!period) return 'Chưa rõ'
+  const date = new Date(period)
+  if (!Number.isFinite(date.getTime())) return period
+
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: '2-digit',
   }).format(date)
 }
 
-function formatDateTime(value) {
-  if (!value) return 'Chưa rõ thời gian'
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value))
-}
-
 function formatPercent(value) {
   const numberValue = Number(value)
-  if (!Number.isFinite(numberValue)) return '0%'
+  if (!Number.isFinite(numberValue)) return '0,0%'
   return `${numberValue.toLocaleString('vi-VN', {
     maximumFractionDigits: 1,
     minimumFractionDigits: 1,
@@ -145,26 +141,35 @@ function formatScore(value) {
   })
 }
 
-function getComplianceRate(items) {
-  if (!items.length) return 0
-  const passed = items.filter((item) => item.result === 'PASSED').length
-  return (passed / items.length) * 100
+function formatCount(value) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) return '0'
+  return numberValue.toLocaleString('vi-VN')
 }
 
-function getAverageScore(items) {
-  const scores = items
-    .map((item) => Number(item.convertedScore))
-    .filter((score) => Number.isFinite(score))
-
-  if (!scores.length) return null
-  return scores.reduce((total, score) => total + score, 0) / scores.length
+function getPassedFromRate(submitted, passRate) {
+  const submittedCount = Number(submitted) || 0
+  const rate = Number(passRate) || 0
+  return Math.round((submittedCount * rate) / 100)
 }
 
-function getResultLabel(result) {
-  return RESULT_LABELS[result] || 'Chưa chấm'
+function buildTrendData(trendResponse) {
+  return (trendResponse?.items || []).map((item) => {
+    const submitted = Number(item.submittedCount) || 0
+    const passed = Number(item.passedCount) || 0
+    const compliance = submitted > 0 ? (passed / submitted) * 100 : 0
+
+    return {
+      label: formatDateLabel(item.period),
+      compliance: Number(compliance.toFixed(1)),
+      qualityScore: Number((Number(item.averageConvertedScore) || 0).toFixed(2)),
+      total: submitted,
+      failed: Number(item.failedCount) || 0,
+    }
+  })
 }
 
-function buildTrendData(submissions) {
+function buildFallbackTrendData(submissions) {
   const groups = new Map()
 
   submissions.forEach((submission) => {
@@ -173,84 +178,193 @@ function buildTrendData(submissions) {
     const current = groups.get(key) || {
       key,
       label: formatDateLabel(date),
-      submissions: [],
+      submittedCount: 0,
+      passedCount: 0,
+      failedCount: 0,
+      scores: [],
     }
 
-    current.submissions.push(submission)
+    current.submittedCount += 1
+    if (submission.result === 'PASSED') {
+      current.passedCount += 1
+    } else if (submission.result) {
+      current.failedCount += 1
+    }
+
+    const score = Number(submission.convertedScore)
+    if (Number.isFinite(score)) current.scores.push(score)
     groups.set(key, current)
   })
 
   return [...groups.values()]
     .sort((left, right) => left.key.localeCompare(right.key))
     .slice(-10)
-    .map((group) => ({
-      label: group.label,
-      compliance: Number(getComplianceRate(group.submissions).toFixed(1)),
-      qualityScore: Number((getAverageScore(group.submissions) || 0).toFixed(2)),
-      total: group.submissions.length,
-    }))
+    .map((item) => {
+      const compliance = item.submittedCount > 0 ? (item.passedCount / item.submittedCount) * 100 : 0
+      const averageScore = item.scores.length
+        ? item.scores.reduce((total, score) => total + score, 0) / item.scores.length
+        : 0
+
+      return {
+        period: item.key,
+        submittedCount: item.submittedCount,
+        passedCount: item.passedCount,
+        failedCount: item.failedCount,
+        averageConvertedScore: Number(averageScore.toFixed(2)),
+        label: item.label,
+        compliance: Number(compliance.toFixed(1)),
+        qualityScore: Number(averageScore.toFixed(2)),
+      }
+    })
 }
 
-function buildDepartmentData(submissions) {
-  const groups = new Map()
+function buildResultData(summary, performanceItems) {
+  const responses = summary?.responses || {}
+  const submitted = Number(responses.submitted) || 0
+  const draft = Number(responses.draft) || 0
+  const voided = Number(responses.voided) || 0
+  const passed = performanceItems.reduce((total, item) => total + (Number(item.passedCount) || 0), 0)
+  const failedScore = performanceItems.reduce((total, item) => total + (Number(item.failedScoreCount) || 0), 0)
+  const failedCritical = performanceItems.reduce((total, item) => total + (Number(item.failedCriticalCount) || 0), 0)
+  const knownSubmitted = passed + failedScore + failedCritical
+  const estimatedPassed = knownSubmitted > 0 ? passed : getPassedFromRate(submitted, responses.passRate)
+  const estimatedFailed = Math.max(submitted - estimatedPassed, 0)
 
-  submissions.forEach((submission) => {
-    const departmentName = getSubmissionDepartmentName(submission)
-    const current = groups.get(departmentName) || []
-    current.push(submission)
-    groups.set(departmentName, current)
-  })
+  return [
+    { result: 'PASSED', name: 'Đạt', value: estimatedPassed },
+    { result: 'FAILED_SCORE', name: 'Không đạt', value: knownSubmitted > 0 ? failedScore : estimatedFailed },
+    { result: 'FAILED_CRITICAL', name: 'Cảnh báo đỏ', value: failedCritical },
+    { result: 'DRAFT', name: 'Bản nháp', value: draft },
+    { result: 'VOIDED', name: 'Đã hủy', value: voided },
+  ].filter((item) => item.value > 0)
+}
 
-  return [...groups.entries()]
-    .map(([departmentName, items]) => ({
-      departmentName,
-      compliance: Number(getComplianceRate(items).toFixed(1)),
-      qualityScore: Number((getAverageScore(items) || 0).toFixed(2)),
-      total: items.length,
-      failed: items.filter((item) => item.result && item.result !== 'PASSED').length,
+function buildPerformanceData(performanceItems) {
+  return performanceItems
+    .filter((item) => Number(item.responseCount) > 0 || Number(item.submittedCount) > 0)
+    .map((item) => ({
+      ...item,
+      chartLabel: item.formTitle || item.formCode || `Form #${item.formId}`,
+      compliance: Number(item.passRate) || 0,
+      responseCount: Number(item.responseCount) || 0,
+      averageScore: Number(item.averageConvertedScore) || 0,
+      failedCritical: Number(item.failedCriticalCount) || 0,
+      failedScore: Number(item.failedScoreCount) || 0,
     }))
-    .sort((left, right) => right.total - left.total)
+    .sort((left, right) => right.responseCount - left.responseCount)
     .slice(0, 8)
 }
 
-function buildResultData(submissions) {
-  const counts = submissions.reduce((accumulator, submission) => {
-    const key = submission.result || 'UNGRADED'
-    accumulator[key] = (accumulator[key] || 0) + 1
-    return accumulator
-  }, {})
+function buildAlerts(performanceItems) {
+  return performanceItems
+    .filter((item) => (
+      Number(item.failedCriticalCount) > 0
+      || (Number(item.submittedCount) > 0 && Number(item.passRate) < WARNING_THRESHOLD)
+    ))
+    .sort((left, right) => {
+      const criticalDiff = Number(right.failedCriticalCount) - Number(left.failedCriticalCount)
+      if (criticalDiff !== 0) return criticalDiff
+      return Number(left.passRate) - Number(right.passRate)
+    })
+    .slice(0, 6)
+    .map((item) => {
+      const criticalCount = Number(item.failedCriticalCount) || 0
+      const isCritical = criticalCount > 0
 
-  return Object.entries(counts).map(([result, value]) => ({
-    result,
-    name: getResultLabel(result),
-    value,
-  }))
+      return {
+        id: item.formId,
+        tone: isCritical ? 'danger' : 'warning',
+        title: isCritical ? 'Có tiêu chí trọng yếu không đạt' : 'Tỷ lệ tuân thủ dưới ngưỡng',
+        description: item.formTitle || item.formCode || 'Bảng kiểm cần kiểm tra',
+        meta: isCritical
+          ? `${criticalCount} response cảnh báo đỏ · ${formatPercent(item.passRate)} đạt`
+          : `${formatCount(item.submittedCount)} response · ${formatPercent(item.passRate)} đạt`,
+      }
+    })
 }
 
-function buildAlerts(submissions, departmentData) {
-  const criticalAlerts = submissions
-    .filter((submission) => submission.result === 'FAILED_CRITICAL')
-    .slice(0, 5)
-    .map((submission) => ({
-      id: `critical-${submission.id}`,
-      tone: 'danger',
-      title: 'Không đạt tiêu chí trọng yếu',
-      description: submission.subject?.fullName || submission.formTitle || 'Response cần kiểm tra',
-      meta: `${getSubmissionDepartmentName(submission)} · ${formatDateTime(submission.submittedAt || submission.updatedAt)}`,
-    }))
+function buildFallbackDashboard(submissions, forms) {
+  const submitted = submissions.length
+  const passed = submissions.filter((submission) => submission.result === 'PASSED').length
+  const scores = submissions
+    .map((submission) => Number(submission.convertedScore))
+    .filter((score) => Number.isFinite(score))
+  const averageConvertedScore = scores.length
+    ? scores.reduce((total, score) => total + score, 0) / scores.length
+    : 0
+  const passRate = submitted > 0 ? (passed / submitted) * 100 : 0
+  const groups = new Map()
 
-  const departmentAlerts = departmentData
-    .filter((department) => department.total > 0 && department.compliance < WARNING_THRESHOLD)
-    .slice(0, 4)
-    .map((department) => ({
-      id: `department-${department.departmentName}`,
-      tone: 'warning',
-      title: `${department.departmentName} dưới ngưỡng cảnh báo`,
-      description: `Tỷ lệ tuân thủ ${formatPercent(department.compliance)}`,
-      meta: `${department.total} response · ${department.failed} không đạt`,
-    }))
+  submissions.forEach((submission) => {
+    const formId = submission.formId || submission.formTemplateId || submission.formVersionId || submission.id
+    const current = groups.get(formId) || {
+      formId,
+      formCode: submission.formCode,
+      formTitle: submission.title || submission.formTitle,
+      currentVersionNumber: submission.versionNumber,
+      responseCount: 0,
+      submittedCount: 0,
+      passedCount: 0,
+      failedScoreCount: 0,
+      failedCriticalCount: 0,
+      scores: [],
+      lastSubmittedAt: null,
+    }
 
-  return [...criticalAlerts, ...departmentAlerts].slice(0, 6)
+    current.responseCount += 1
+    current.submittedCount += 1
+    if (submission.result === 'PASSED') current.passedCount += 1
+    if (submission.result === 'FAILED_SCORE') current.failedScoreCount += 1
+    if (submission.result === 'FAILED_CRITICAL') current.failedCriticalCount += 1
+
+    const score = Number(submission.convertedScore)
+    if (Number.isFinite(score)) current.scores.push(score)
+
+    const submittedAt = getSubmittedAt(submission)
+    if (submittedAt && (!current.lastSubmittedAt || submittedAt > current.lastSubmittedAt)) {
+      current.lastSubmittedAt = submittedAt
+    }
+
+    groups.set(formId, current)
+  })
+
+  const performanceItems = [...groups.values()].map((item) => {
+    const itemPassRate = item.submittedCount > 0 ? (item.passedCount / item.submittedCount) * 100 : 0
+    const itemAverageScore = item.scores.length
+      ? item.scores.reduce((total, score) => total + score, 0) / item.scores.length
+      : 0
+
+    return {
+      ...item,
+      passRate: Number(itemPassRate.toFixed(2)),
+      averageConvertedScore: Number(itemAverageScore.toFixed(4)),
+      lastSubmittedAt: item.lastSubmittedAt?.toISOString() || null,
+    }
+  })
+
+  return {
+    summary: {
+      forms: {
+        published: forms.length,
+      },
+      assignments: {
+        activeItems: 0,
+      },
+      responses: {
+        totalInPeriod: submitted,
+        submitted,
+        draft: 0,
+        voided: 0,
+        passRate: Number(passRate.toFixed(2)),
+        averageConvertedScore: Number(averageConvertedScore.toFixed(4)),
+      },
+    },
+    trend: {
+      bucket: 'DAY',
+      items: buildFallbackTrendData(submissions),
+    },
+    performanceItems,
+  }
 }
 
 function ChartTooltip({ active, payload, label }) {
@@ -262,7 +376,10 @@ function ChartTooltip({ active, payload, label }) {
       {payload.map((entry) => (
         <span key={entry.dataKey || entry.name}>
           <i style={{ background: entry.color }} />
-          {entry.name}: {entry.dataKey === 'qualityScore' ? formatScore(entry.value) : formatPercent(entry.value)}
+          {entry.name}:{' '}
+          {entry.dataKey === 'qualityScore' || entry.dataKey === 'averageScore'
+            ? `${formatScore(entry.value)} điểm`
+            : formatPercent(entry.value)}
         </span>
       ))}
     </div>
@@ -294,16 +411,19 @@ function QualityMetricCard({ icon, tone, label, value, helper }) {
 
 function QualityDashboardPage() {
   const requestIdRef = useRef(0)
-  const [submissions, setSubmissions] = useState([])
+  const [summary, setSummary] = useState(null)
+  const [trend, setTrend] = useState(null)
+  const [performanceItems, setPerformanceItems] = useState([])
   const [departments, setDepartments] = useState([])
-  const [forms, setForms] = useState([])
   const [selectedDepartment, setSelectedDepartment] = useState(DEFAULT_DEPARTMENT.id)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [noticeMessage, setNoticeMessage] = useState('')
 
   const loadDashboard = useCallback(async ({ refresh = false } = {}) => {
     const requestId = ++requestIdRef.current
+    const dashboardParams = getDashboardParams(selectedDepartment)
 
     if (refresh) {
       setRefreshing(true)
@@ -311,25 +431,64 @@ function QualityDashboardPage() {
       setLoading(true)
     }
     setErrorMessage('')
+    setNoticeMessage('')
 
     try {
-      const [nextSubmissions, departmentsResponse, nextForms] = await Promise.all([
-        fetchAllPages((params) => adminApi.getFormSubmissions(params), { status: 'SUBMITTED' }),
-        adminApi.getDepartments(),
-        fetchAllPages((params) => adminApi.getForms(params), { status: 'PUBLISHED' }),
-      ])
+      const departmentsResponse = await adminApi.getDepartments()
+      const departmentData = departmentsResponse.data?.data
+      const nextDepartments = Array.isArray(departmentData) ? departmentData : []
+
+      let nextSummary = null
+      let nextTrend = null
+      let nextPerformanceItems = []
+      let nextNotice = ''
+
+      try {
+        const [summaryResponse, trendResponse, performanceResponseItems] = await Promise.all([
+          adminApi.getDashboardFormSummary(dashboardParams),
+          adminApi.getDashboardFormTrend({ ...dashboardParams, bucket: 'DAY' }),
+          fetchAllPages((params) => adminApi.getDashboardFormPerformance(params), {
+            ...dashboardParams,
+            sort: 'responseCount,desc',
+          }),
+        ])
+
+        nextSummary = getApiData(summaryResponse)
+        nextTrend = getApiData(trendResponse)
+        nextPerformanceItems = performanceResponseItems
+      } catch {
+        const selectedDepartmentName = nextDepartments.find(
+          (department) => String(department.id) === selectedDepartment,
+        )?.name
+        const [submissions, forms] = await Promise.all([
+          fetchAllPages((params) => adminApi.getFormSubmissions(params), { status: 'SUBMITTED' }),
+          fetchAllPages((params) => adminApi.getForms(params), { status: 'PUBLISHED' }),
+        ])
+        const scopedSubmissions = selectedDepartment === DEFAULT_DEPARTMENT.id
+          ? submissions
+          : submissions.filter((submission) => getSubmissionDepartmentName(submission) === selectedDepartmentName)
+        const fallbackDashboard = buildFallbackDashboard(scopedSubmissions, forms)
+
+        nextSummary = fallbackDashboard.summary
+        nextTrend = fallbackDashboard.trend
+        nextPerformanceItems = fallbackDashboard.performanceItems
+        nextNotice = 'Dashboard API mới đang trả lỗi, tạm hiển thị dữ liệu dự phòng từ response đã nộp.'
+      }
 
       if (requestId !== requestIdRef.current) return
 
-      const departmentData = departmentsResponse.data?.data
-      setSubmissions(nextSubmissions)
-      setDepartments(Array.isArray(departmentData) ? departmentData : [])
-      setForms(nextForms)
+      setSummary(nextSummary)
+      setTrend(nextTrend)
+      setPerformanceItems(nextPerformanceItems)
+      setDepartments(nextDepartments)
+      setNoticeMessage(nextNotice)
     } catch (error) {
       if (requestId !== requestIdRef.current) return
-      setSubmissions([])
+      setSummary(null)
+      setTrend(null)
+      setPerformanceItems([])
       setDepartments([])
-      setForms([])
+      setNoticeMessage('')
       setErrorMessage(error?.response?.data?.message || 'Không thể tải dashboard chất lượng. Vui lòng thử lại.')
     } finally {
       if (requestId === requestIdRef.current) {
@@ -337,7 +496,7 @@ function QualityDashboardPage() {
         setRefreshing(false)
       }
     }
-  }, [])
+  }, [selectedDepartment])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -358,52 +517,40 @@ function QualityDashboardPage() {
       }))
       .filter((department) => department.name)
 
-    const submissionDepartments = [...new Set(submissions.map(getSubmissionDepartmentName))]
-      .filter(Boolean)
-      .map((name) => ({ id: name, name }))
+    return [DEFAULT_DEPARTMENT, ...apiDepartments]
+  }, [departments])
 
-    const optionMap = new Map()
-    ;[...apiDepartments, ...submissionDepartments].forEach((department) => {
-      if (!optionMap.has(department.name)) {
-        optionMap.set(department.name, department)
-      }
-    })
-
-    return [DEFAULT_DEPARTMENT, ...optionMap.values()]
-  }, [departments, submissions])
-
-  const filteredSubmissions = useMemo(() => {
-    if (selectedDepartment === DEFAULT_DEPARTMENT.id) return submissions
-    const selectedOption = departmentOptions.find((department) => department.id === selectedDepartment)
-    const selectedName = selectedOption?.name || selectedDepartment
-
-    return submissions.filter((submission) => getSubmissionDepartmentName(submission) === selectedName)
-  }, [departmentOptions, selectedDepartment, submissions])
-
-  const departmentData = useMemo(() => buildDepartmentData(submissions), [submissions])
-  const scopedDepartmentData = useMemo(() => buildDepartmentData(filteredSubmissions), [filteredSubmissions])
-  const trendData = useMemo(() => buildTrendData(filteredSubmissions), [filteredSubmissions])
-  const resultData = useMemo(() => buildResultData(filteredSubmissions), [filteredSubmissions])
-  const alerts = useMemo(() => buildAlerts(filteredSubmissions, scopedDepartmentData), [filteredSubmissions, scopedDepartmentData])
+  const trendData = useMemo(() => buildTrendData(trend), [trend])
+  const performanceData = useMemo(() => buildPerformanceData(performanceItems), [performanceItems])
+  const resultData = useMemo(() => buildResultData(summary, performanceItems), [performanceItems, summary])
+  const alerts = useMemo(() => buildAlerts(performanceItems), [performanceItems])
 
   const metrics = useMemo(() => {
-    const compliance = getComplianceRate(filteredSubmissions)
-    const averageScore = getAverageScore(filteredSubmissions)
-    const passed = filteredSubmissions.filter((item) => item.result === 'PASSED').length
-    const critical = filteredSubmissions.filter((item) => item.result === 'FAILED_CRITICAL').length
-    const targetGap = compliance - COMPLIANCE_TARGET
+    const responses = summary?.responses || {}
+    const forms = summary?.forms || {}
+    const submitted = Number(responses.submitted) || 0
+    const compliance = Number(responses.passRate) || 0
+    const critical = performanceItems.reduce((total, item) => total + (Number(item.failedCriticalCount) || 0), 0)
+    const hasResponses = submitted > 0
+    const targetGap = hasResponses ? compliance - COMPLIANCE_TARGET : 0
+    const targetGapAbs = Math.abs(targetGap)
 
     return {
-      total: filteredSubmissions.length,
-      passed,
+      total: submitted,
+      hasResponses,
+      passed: getPassedFromRate(submitted, compliance),
       critical,
       compliance,
-      averageScore,
+      averageScore: Number(responses.averageConvertedScore) || 0,
       targetGap,
+      targetGapAbs,
+      publishedForms: Number(forms.published) || 0,
+      activeAssignments: Number(summary?.assignments?.activeItems) || 0,
+      warningForms: performanceItems.filter((item) => (
+        Number(item.submittedCount) > 0 && Number(item.passRate) < COMPLIANCE_TARGET
+      )).length,
     }
-  }, [filteredSubmissions])
-
-  const departmentsUnderTarget = departmentData.filter((department) => department.compliance < COMPLIANCE_TARGET)
+  }, [performanceItems, summary])
 
   return (
     <div className="dashboard-layout quality-dashboard-page">
@@ -451,6 +598,13 @@ function QualityDashboardPage() {
             </div>
           )}
 
+          {noticeMessage && (
+            <div className="quality-dashboard-alert quality-dashboard-alert--warning" role="status">
+              <ExclamationCircleOutlined />
+              {noticeMessage}
+            </div>
+          )}
+
           {loading ? (
             <DashboardSkeleton />
           ) : (
@@ -461,7 +615,7 @@ function QualityDashboardPage() {
                   label="Tỷ lệ tuân thủ"
                   tone="primary"
                   value={formatPercent(metrics.compliance)}
-                  helper={`${metrics.passed}/${metrics.total} response đạt`}
+                  helper={`${formatCount(metrics.passed)}/${formatCount(metrics.total)} response đạt`}
                 />
                 <QualityMetricCard
                   icon={<BarChartOutlined />}
@@ -473,16 +627,20 @@ function QualityDashboardPage() {
                 <QualityMetricCard
                   icon={<RiseOutlined />}
                   label="So với mục tiêu"
-                  tone={metrics.targetGap >= 0 ? 'success' : 'warning'}
-                  value={`${metrics.targetGap >= 0 ? '+' : ''}${formatPercent(metrics.targetGap)}`}
-                  helper={`Mục tiêu tuân thủ ${COMPLIANCE_TARGET}%`}
+                  tone={metrics.hasResponses && metrics.targetGap >= 0 ? 'success' : 'warning'}
+                  value={metrics.hasResponses ? formatPercent(metrics.targetGapAbs) : '0,0%'}
+                  helper={
+                    metrics.hasResponses
+                      ? `${metrics.targetGap >= 0 ? 'Vượt' : 'Thiếu'} so với mục tiêu ${COMPLIANCE_TARGET}%`
+                      : 'Chưa có response để so sánh'
+                  }
                 />
                 <QualityMetricCard
                   icon={<AlertOutlined />}
                   label="Cảnh báo đỏ"
                   tone="danger"
-                  value={metrics.critical}
-                  helper={`${departmentsUnderTarget.length} khoa dưới mục tiêu`}
+                  value={formatCount(metrics.critical)}
+                  helper={`${metrics.warningForms} bảng kiểm dưới mục tiêu`}
                 />
               </section>
 
@@ -491,9 +649,9 @@ function QualityDashboardPage() {
                   <header className="quality-panel__header">
                     <div>
                       <h2>Tỷ lệ tuân thủ theo thời gian</h2>
-                      <p>Đường tuân thủ được vẽ từ trái sang phải khi mở dashboard.</p>
+                      <p>Dữ liệu lấy từ dashboard API theo ngày và bộ lọc khoa đang chọn.</p>
                     </div>
-                    <span>{filteredSubmissions.length} response</span>
+                    <span>{formatCount(metrics.total)} response</span>
                   </header>
 
                   {trendData.length ? (
@@ -564,7 +722,7 @@ function QualityDashboardPage() {
                   <header className="quality-panel__header">
                     <div>
                       <h2>Phân bố kết quả</h2>
-                      <p>Đạt, không đạt điểm và không đạt tiêu chí trọng yếu.</p>
+                      <p>Tổng hợp trạng thái response trong kỳ thống kê.</p>
                     </div>
                   </header>
                   {resultData.length ? (
@@ -584,10 +742,10 @@ function QualityDashboardPage() {
                           strokeWidth={2}
                         >
                           {resultData.map((entry) => (
-                            <Cell fill={RESULT_COLORS[entry.result] || RESULT_COLORS.UNGRADED} key={entry.result} />
+                            <Cell fill={RESULT_COLORS[entry.result] || RESULT_COLORS.DRAFT} key={entry.result} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip formatter={(value) => [`${formatCount(value)} response`, 'Số lượng']} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -602,21 +760,21 @@ function QualityDashboardPage() {
                 <article className="quality-panel quality-panel--wide">
                   <header className="quality-panel__header">
                     <div>
-                      <h2>So sánh tuân thủ theo khoa</h2>
-                      <p>Ưu tiên hiển thị các khoa có nhiều response nhất.</p>
+                      <h2>So sánh tuân thủ theo bảng kiểm</h2>
+                      <p>Hiển thị các bảng kiểm có response, kèm số response để nhìn mức độ sử dụng.</p>
                     </div>
                   </header>
-                  {departmentData.length ? (
+                  {performanceData.length ? (
                     <ResponsiveContainer height={280} width="100%">
                       <ComposedChart
                         barCategoryGap={28}
-                        data={departmentData}
+                        data={performanceData}
                         margin={{ top: 34, right: 22, left: -14, bottom: 24 }}
                       >
                         <CartesianGrid stroke="#edf3f8" strokeDasharray="4 8" vertical={false} />
                         <XAxis
                           axisLine={false}
-                          dataKey="departmentName"
+                          dataKey="chartLabel"
                           interval={0}
                           tick={{ fill: '#475569', fontSize: 11 }}
                           tickLine={false}
@@ -641,7 +799,7 @@ function QualityDashboardPage() {
                           cursor={{ fill: 'rgba(15, 159, 122, 0.06)' }}
                           formatter={(value, name) => (
                             name === 'Số response'
-                              ? [`${value} response`, name]
+                              ? [`${formatCount(value)} response`, name]
                               : [formatPercent(value), name]
                           )}
                         />
@@ -662,14 +820,14 @@ function QualityDashboardPage() {
                             formatter={(value) => formatPercent(value)}
                             position="top"
                           />
-                          {departmentData.map((entry) => (
-                            <Cell fill={entry.compliance >= COMPLIANCE_TARGET ? '#16b889' : '#f97316'} key={entry.departmentName} />
+                          {performanceData.map((entry) => (
+                            <Cell fill={entry.compliance >= COMPLIANCE_TARGET ? '#16b889' : '#f97316'} key={entry.formId} />
                           ))}
                         </Bar>
                         <Line
                           animationBegin={820}
                           animationDuration={1000}
-                          dataKey="total"
+                          dataKey="responseCount"
                           dot={{ fill: '#ffffff', r: 4, stroke: '#4d8dff', strokeWidth: 2 }}
                           name="Số response"
                           stroke="#4d8dff"
@@ -679,7 +837,7 @@ function QualityDashboardPage() {
                         >
                           <LabelList
                             className="quality-line-label"
-                            dataKey="total"
+                            dataKey="responseCount"
                             formatter={(value) => `${value}`}
                             position="top"
                           />
@@ -689,7 +847,7 @@ function QualityDashboardPage() {
                   ) : (
                     <div className="quality-empty-state">
                       <ApartmentOutlined />
-                      <span>Chưa có dữ liệu theo khoa.</span>
+                      <span>Chưa có bảng kiểm nào có response.</span>
                     </div>
                   )}
                 </article>
@@ -698,7 +856,7 @@ function QualityDashboardPage() {
                   <header className="quality-panel__header">
                     <div>
                       <h2>Danh sách cảnh báo đỏ</h2>
-                      <p>Các điểm cần admin ưu tiên xử lý.</p>
+                      <p>Các bảng kiểm cần admin ưu tiên kiểm tra.</p>
                     </div>
                   </header>
 
@@ -726,15 +884,15 @@ function QualityDashboardPage() {
 
               <section className="quality-dashboard-footer">
                 <article>
-                  <strong>{forms.length}</strong>
+                  <strong>{formatCount(metrics.publishedForms)}</strong>
                   <span>Bảng kiểm đã công bố</span>
                 </article>
                 <article>
-                  <strong>{departmentOptions.length - 1}</strong>
-                  <span>Khoa/phòng có dữ liệu</span>
+                  <strong>{formatCount(metrics.activeAssignments)}</strong>
+                  <span>Lượt phân quyền đang hiệu lực</span>
                 </article>
                 <article>
-                  <strong>{filteredSubmissions.length}</strong>
+                  <strong>{formatCount(metrics.total)}</strong>
                   <span>Response trong phạm vi lọc</span>
                 </article>
               </section>

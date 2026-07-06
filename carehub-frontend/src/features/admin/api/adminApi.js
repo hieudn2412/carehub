@@ -323,6 +323,13 @@ export const adminApi = {
     })
   },
 
+  getFormAssignmentsByForm(formId, params) {
+    return httpClient.get(`/forms/${formId}/assignments`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getFormAssignmentById(id) {
     return httpClient.get(`/form-assignments/${id}`, {
       headers: authHeaders(),
@@ -351,6 +358,28 @@ export const adminApi = {
   getFormSubmission(id) {
     return httpClient.get(`/form-submissions/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  // Dashboard
+  getDashboardFormSummary(params) {
+    return httpClient.get('/dashboard/forms/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getDashboardFormTrend(params) {
+    return httpClient.get('/dashboard/forms/trend', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getDashboardFormPerformance(params) {
+    return httpClient.get('/dashboard/forms/performance', {
+      headers: authHeaders(),
+      params,
     })
   },
 }
