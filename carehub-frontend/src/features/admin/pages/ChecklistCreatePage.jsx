@@ -9,6 +9,7 @@ import {
   LoadingOutlined,
   PlusCircleOutlined,
   SaveOutlined,
+  UserSwitchOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -763,6 +764,15 @@ function ChecklistCreatePage() {
                   <ArrowLeftOutlined /> Quay lại danh sách
                 </button>
                 <div className="ccp-topbar-actions">
+                  {isDetailMode && (
+                    <button
+                      className="ccp-manage-button"
+                      onClick={() => navigate(`/admin/quality/checklists/${id}/assignments`)}
+                      type="button"
+                    >
+                      <UserSwitchOutlined /> Quản lý phân quyền
+                    </button>
+                  )}
                   {isDetailMode && (
                     <button
                       className="ccp-manage-button"
