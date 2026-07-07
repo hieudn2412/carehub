@@ -7,6 +7,7 @@ import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.service.FormScoreCalculator;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,6 +50,26 @@ class FormScoreCalculatorTest {
     }
 
     @Test
+    void questionCoefficientControlsWeightWhenNoCriticalQuestions() {
+        FormQuestion important = question(1L, "IMPORTANT", false,
+                option(11L, "ACHIEVED", "1"), option(12L, "EXCELLENT", "1.5"));
+        important.setWeight(new BigDecimal("5"));
+        FormQuestion normal = question(2L, "NORMAL", false,
+                option(21L, "ACHIEVED", "1"), option(22L, "EXCELLENT", "1.5"));
+        normal.setWeight(BigDecimal.ONE);
+
+        var result = calculator.calculate(version(important, normal), List.of(
+                answer(important, important.getOptions().get(0)),
+                answer(normal, normal.getOptions().get(0))));
+
+        assertEquals(FormSubmissionResult.PASSED, result.result());
+        assertEquals("0.8333", display(result.breakdown().get(0).weight()));
+        assertEquals("0.1667", display(result.breakdown().get(1).weight()));
+        assertEquals("1.2500", display(result.breakdown().get(0).maxScore()));
+        assertEquals("0.2500", display(result.breakdown().get(1).maxScore()));
+    }
+
+    @Test
     void missingScoreConfigurationReturnsNotConfigured() {
         FormOption option = FormOption.builder().id(11L).value("UNKNOWN").label("Unknown").active(true).build();
         FormQuestion question = question(1L, "Q", false, option);
@@ -82,5 +103,9 @@ class FormScoreCalculatorTest {
 
     private FormAnswer answer(FormQuestion question, FormOption option) {
         return FormAnswer.builder().question(question).selectedOption(option).answerJson(Map.of()).build();
+    }
+
+    private String display(BigDecimal value) {
+        return value.setScale(4, RoundingMode.HALF_UP).toPlainString();
     }
 }

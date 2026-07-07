@@ -7,7 +7,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.form.assignment.entity.*;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -65,16 +64,16 @@ class FormSubjectServiceTest {
     }
 
     @Test
-    void returnsConflictWhenEmployeeIsInactive() {
+    void canLookupInactiveEmployee() {
         authenticate("ROLE_ADMIN");
         User target = User.builder().employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV03"))
                 .thenReturn(Optional.of(target));
 
-        ConflictException exception = assertThrows(ConflictException.class,
-                () -> service.findByEmployeeCode(null, "NV03"));
+        var response = service.findByEmployeeCode(null, "NV03");
 
-        assertEquals("Nhân viên chưa active", exception.getMessage());
+        assertEquals("NV03", response.employeeCode());
+        assertEquals("Inactive", response.fullName());
     }
 
     private void authenticate(String role) {

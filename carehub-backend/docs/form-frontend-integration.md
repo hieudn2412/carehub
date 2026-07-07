@@ -451,9 +451,10 @@ Luồng UI:
 
 1. Chỉ cho nhập `employeeCode`, gọi API khi người dùng nhấn Tìm.
 2. Gửi kèm `assignmentItemId` của form đang làm; manager có thể tìm nhân viên ở mọi khoa/phòng.
-3. Khi thành công, hiển thị đúng bốn field trong `displayFields` ở chế độ readonly.
-4. Khi người dùng sửa mã, xóa subject cũ trước khi tra cứu lại.
-5. `404` được hiển thị chung là “Không tìm thấy nhân viên” vì backend cố ý không phân biệt không tồn tại và không có quyền.
+3. Backend cho phép chọn nhân viên chưa active, miễn là nhân viên chưa bị xóa khỏi hệ thống.
+4. Khi thành công, hiển thị đúng bốn field trong `displayFields` ở chế độ readonly.
+5. Khi người dùng sửa mã, xóa subject cũ trước khi tra cứu lại.
+6. `404` được hiển thị chung là “Không tìm thấy nhân viên” vì backend cố ý không phân biệt không tồn tại và không có quyền.
 
 Hồ sơ không phải question, không được đưa vào `answers` và không tính điểm. Khi tạo submission, frontend chỉ gửi lại `employeeCode`; backend tự resolve và lưu snapshot.
 
@@ -590,7 +591,7 @@ GET /api/v1/forms/{formId}/versions/{versionId}/responses?status=SUBMITTED&inclu
 ```
 
 `includeAnswers=true` chỉ nên dùng cho page nhỏ hoặc màn chi tiết/export vì response sẽ nặng hơn.
-5. `MANAGER` chỉ tìm được người đang active, chưa xóa và cùng khoa/phòng; `ADMIN` tìm toàn hệ thống.
+5. `MANAGER` tìm được mọi nhân viên chưa xóa khi có assignment hợp lệ; không giới hạn active hoặc khoa/phòng. `ADMIN` tìm toàn hệ thống.
 6. Người đánh giá lấy từ tài khoản đăng nhập khi `evaluatorSource = CURRENT_USER`; không render input nhập người đánh giá.
 
 ## 11. Dashboard analytics API
