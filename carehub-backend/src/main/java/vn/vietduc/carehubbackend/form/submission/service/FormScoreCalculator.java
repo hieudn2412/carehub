@@ -23,6 +23,9 @@ public class FormScoreCalculator {
         List<FormQuestion> critical = scored.stream().filter(FormQuestion::isCritical).toList();
         List<FormQuestion> normal = scored.stream().filter(q -> !q.isCritical()).toList();
         BigDecimal criticalShare = criticalShare(version);
+        BigDecimal scoredCoefficientTotal = coefficientTotal(scored);
+        BigDecimal criticalCoefficientTotal = coefficientTotal(critical);
+        BigDecimal normalCoefficientTotal = coefficientTotal(normal);
         Map<Long, FormAnswer> byQuestion = answers.stream().collect(Collectors.toMap(
                 answer -> answer.getQuestion().getId(), Function.identity()));
         List<Breakdown> breakdown = new ArrayList<>();
@@ -32,7 +35,8 @@ public class FormScoreCalculator {
         boolean criticalFailure = false;
 
         for (FormQuestion question : scored) {
-            BigDecimal weight = weight(question, critical, normal, criticalShare);
+            BigDecimal weight = weight(question, critical, normal, criticalShare,
+                    scoredCoefficientTotal, criticalCoefficientTotal, normalCoefficientTotal);
             FormAnswer answer = byQuestion.get(question.getId());
             BigDecimal base = answer == null || answer.getSelectedOption() == null
                     ? BigDecimal.ZERO : answer.getSelectedOption().getScoreValue();
@@ -75,12 +79,27 @@ public class FormScoreCalculator {
     }
 
     private BigDecimal weight(FormQuestion question, List<FormQuestion> critical,
-                              List<FormQuestion> normal, BigDecimal criticalShare) {
-        if (critical.isEmpty() || normal.isEmpty()) return BigDecimal.ONE.divide(
-                BigDecimal.valueOf(critical.size() + normal.size()), MC);
+                              List<FormQuestion> normal, BigDecimal criticalShare,
+                              BigDecimal scoredCoefficientTotal, BigDecimal criticalCoefficientTotal,
+                              BigDecimal normalCoefficientTotal) {
+        BigDecimal coefficient = coefficient(question);
+        if (critical.isEmpty() || normal.isEmpty()) {
+            return coefficient.divide(scoredCoefficientTotal, MC);
+        }
         return question.isCritical()
-                ? criticalShare.divide(BigDecimal.valueOf(critical.size()), MC)
-                : BigDecimal.ONE.subtract(criticalShare, MC).divide(BigDecimal.valueOf(normal.size()), MC);
+                ? criticalShare.multiply(coefficient, MC).divide(criticalCoefficientTotal, MC)
+                : BigDecimal.ONE.subtract(criticalShare, MC).multiply(coefficient, MC).divide(normalCoefficientTotal, MC);
+    }
+
+    private BigDecimal coefficientTotal(List<FormQuestion> questions) {
+        return questions.stream()
+                .map(this::coefficient)
+                .reduce(BigDecimal.ZERO, (left, right) -> left.add(right, MC));
+    }
+
+    private BigDecimal coefficient(FormQuestion question) {
+        BigDecimal configured = question.getWeight();
+        return configured == null || configured.compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ONE : configured;
     }
 
     public record Breakdown(UUID questionKey, String code, String title, boolean critical,

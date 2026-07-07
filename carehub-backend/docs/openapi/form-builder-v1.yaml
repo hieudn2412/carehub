@@ -330,8 +330,8 @@ paths:
     get:
       tags: [Form Builder]
       operationId: findFormSubjectUser
-      summary: Resolve an active employee for form evaluation
-      description: ADMIN may search globally. MANAGER must own the active assignment item and may search across departments.
+      summary: Resolve an employee for form evaluation
+      description: ADMIN may search globally. MANAGER must own the active assignment item and may search across departments. Inactive employees are allowed when they are not deleted.
       parameters:
         - name: assignmentItemId
           in: query
