@@ -4,7 +4,6 @@ import {
   CheckCircleOutlined,
   FilterOutlined,
   LoadingOutlined,
-  ReloadOutlined,
   SearchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -20,6 +19,8 @@ const VERSION_OPTIONS = [
   { value: 'RETIRED', label: 'Đã retired' },
 ]
 const HISTORY_VERSION_STATUSES = new Set(['PUBLISHED', 'RETIRED'])
+const HISTORY_FORM_PAGE_SIZE = 10
+const HISTORY_VERSION_PAGE_SIZE = 10
 
 function getPageContent(response) {
   const data = response?.data?.data
@@ -61,6 +62,36 @@ async function fetchAllPages(fetcher, baseParams = {}) {
     ...firstContent,
     ...restResponses.flatMap((response) => getPageContent(response)),
   ]
+}
+
+async function fetchHistoryFormBatch(page, keyword = '') {
+  const formsResponse = await adminApi.getForms({
+    keyword: keyword || undefined,
+    sort: 'updatedAt,desc',
+    page,
+    size: HISTORY_FORM_PAGE_SIZE,
+  })
+  const nextForms = getPageContent(formsResponse)
+  const totalPages = getPageTotalPages(formsResponse)
+
+  const versionsEntries = await Promise.all(
+    nextForms.map(async (form) => {
+      try {
+        const versions = await fetchAllPages((params) => adminApi.getFormVersions(form.id, params), {
+          sort: 'versionNumber,desc',
+        })
+        return [form.id, versions]
+      } catch {
+        return [form.id, form.currentPublishedVersion ? [form.currentPublishedVersion] : []]
+      }
+    }),
+  )
+
+  return {
+    forms: nextForms,
+    hasMore: page + 1 < totalPages,
+    versionsByForm: Object.fromEntries(versionsEntries),
+  }
 }
 
 function getVersionStatusLabel(status) {
@@ -124,22 +155,23 @@ function AdminQualityHistoryPage() {
   const [search, setSearch] = useState('')
   const [versionFilter, setVersionFilter] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [formPage, setFormPage] = useState(0)
+  const [hasMoreForms, setHasMoreForms] = useState(false)
+  const [visibleVersionCount, setVisibleVersionCount] = useState(HISTORY_VERSION_PAGE_SIZE)
 
   useEffect(() => {
     let alive = true
+    const keyword = search.trim()
 
     const loadHistory = async () => {
       try {
         setLoading(true)
         setErrorMessage('')
 
-        const [nextForms, nextSubmissions, nextAssignments] = await Promise.all([
-          fetchAllPages((params) => adminApi.getForms(params), {
-            status: 'PUBLISHED',
-            sort: 'updatedAt,desc',
-          }),
+        const [formBatch, nextSubmissions, nextAssignments] = await Promise.all([
+          fetchHistoryFormBatch(0, keyword),
           fetchAllPages((params) => adminApi.getFormSubmissions(params), {
             status: 'SUBMITTED',
           }),
@@ -148,31 +180,22 @@ function AdminQualityHistoryPage() {
 
         if (!alive) return
 
-        const versionsEntries = await Promise.all(
-          nextForms.map(async (form) => {
-            try {
-              const versions = await fetchAllPages((params) => adminApi.getFormVersions(form.id, params), {
-                sort: 'versionNumber,desc',
-              })
-              return [form.id, versions]
-            } catch {
-              return [form.id, form.currentPublishedVersion ? [form.currentPublishedVersion] : []]
-            }
-          }),
-        )
-
-        if (!alive) return
-
-        setForms(nextForms)
+        setForms(formBatch.forms)
         setSubmissions(nextSubmissions)
         setAssignments(nextAssignments)
-        setVersionsByForm(Object.fromEntries(versionsEntries))
+        setVersionsByForm(formBatch.versionsByForm)
+        setFormPage(0)
+        setHasMoreForms(formBatch.hasMore)
+        setVisibleVersionCount(HISTORY_VERSION_PAGE_SIZE)
       } catch (error) {
         if (!alive) return
         setForms([])
         setVersionsByForm({})
         setSubmissions([])
         setAssignments([])
+        setFormPage(0)
+        setHasMoreForms(false)
+        setVisibleVersionCount(HISTORY_VERSION_PAGE_SIZE)
         setErrorMessage(getHistoryErrorMessage(error))
       } finally {
         if (alive) setLoading(false)
@@ -184,7 +207,7 @@ function AdminQualityHistoryPage() {
     return () => {
       alive = false
     }
-  }, [refreshKey])
+  }, [search])
 
   const versionCards = useMemo(() => (
     forms.flatMap((form) => (
@@ -208,7 +231,7 @@ function AdminQualityHistoryPage() {
 
   const searchedVersionCards = useMemo(() => {
     const keyword = search.trim().toLowerCase()
-    if (!keyword) return []
+    if (!keyword) return versionCards
 
     return versionCards.filter((version) => {
       const searchableText = [
@@ -231,6 +254,49 @@ function AdminQualityHistoryPage() {
   const filteredVersionCards = useMemo(() => (
     searchedVersionCards.filter((version) => !versionFilter || version.status === versionFilter)
   ), [searchedVersionCards, versionFilter])
+
+  const visibleVersionCards = useMemo(
+    () => filteredVersionCards.slice(0, visibleVersionCount),
+    [filteredVersionCards, visibleVersionCount],
+  )
+  const canLoadMoreVersions = visibleVersionCount < filteredVersionCards.length || hasMoreForms
+
+  const handleLoadMore = async () => {
+    if (loadingMore) return
+
+    if (visibleVersionCount < filteredVersionCards.length) {
+      setVisibleVersionCount((current) => current + HISTORY_VERSION_PAGE_SIZE)
+      return
+    }
+
+    if (!hasMoreForms) return
+
+    const nextPage = formPage + 1
+
+    try {
+      setLoadingMore(true)
+      setErrorMessage('')
+
+      const formBatch = await fetchHistoryFormBatch(nextPage, search.trim())
+
+      setForms((previousForms) => {
+        const existingIds = new Set(previousForms.map((form) => String(form.id)))
+        const uniqueForms = formBatch.forms.filter((form) => !existingIds.has(String(form.id)))
+        return [...previousForms, ...uniqueForms]
+      })
+      setVersionsByForm((previousVersions) => ({
+        ...previousVersions,
+        ...formBatch.versionsByForm,
+      }))
+      setFormPage(nextPage)
+      setHasMoreForms(formBatch.hasMore)
+      setVisibleVersionCount((current) => current + HISTORY_VERSION_PAGE_SIZE)
+    } catch (error) {
+      setErrorMessage(getHistoryErrorMessage(error))
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   return (
     <div className="dashboard-layout admin-quality-history-page">
@@ -258,15 +324,6 @@ function AdminQualityHistoryPage() {
                 placeholder="Nhập tiêu đề biểu mẫu..."
               />
             </label>
-            <button
-              className="aqh-refresh-button"
-              disabled={loading}
-              onClick={() => setRefreshKey((value) => value + 1)}
-              type="button"
-            >
-              {loading ? <LoadingOutlined /> : <ReloadOutlined />}
-              Làm mới
-            </button>
           </section>
 
           {errorMessage && (
@@ -281,12 +338,6 @@ function AdminQualityHistoryPage() {
               <LoadingOutlined />
               <span>Đang tải kho lịch sử bảng kiểm...</span>
             </section>
-          ) : !search.trim() ? (
-            <section className="aqh-empty-state">
-              <SearchOutlined />
-              <strong>Bắt đầu bằng cách tìm tên bảng kiểm</strong>
-              <span>Ví dụ: Tiêm bắp, Thụt tháo, Rửa tay ngoại khoa...</span>
-            </section>
           ) : filteredVersionCards.length === 0 ? (
             <section className="aqh-empty-state">
               <CheckCircleOutlined />
@@ -297,7 +348,7 @@ function AdminQualityHistoryPage() {
             <>
               <section className="aqh-version-toolbar">
                 <div>
-                  <strong>{versionCards.length}</strong> phiên bản tìm thấy
+                  <strong>{visibleVersionCards.length}</strong>/{filteredVersionCards.length} phiên bản đã tải
                   {searchedVersionCards.length > 0 && (
                     <span> trong {new Set(searchedVersionCards.map((version) => version.form.id)).size} bảng kiểm</span>
                   )}
@@ -318,7 +369,7 @@ function AdminQualityHistoryPage() {
               </section>
 
               <section className="aqh-version-grid" aria-label="Danh sách phiên bản bảng kiểm">
-                {filteredVersionCards.map((version) => (
+                {visibleVersionCards.map((version) => (
                   <button
                     className="aqh-version-card"
                     key={version.id}
@@ -343,6 +394,19 @@ function AdminQualityHistoryPage() {
                   </button>
                 ))}
               </section>
+
+              {canLoadMoreVersions && (
+                <div className="aqh-load-more">
+                  <button
+                    disabled={loadingMore}
+                    onClick={handleLoadMore}
+                    type="button"
+                  >
+                    {loadingMore && <LoadingOutlined />}
+                    {loadingMore ? 'Đang tải thêm...' : 'Xem thêm 10 phiên bản'}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </main>

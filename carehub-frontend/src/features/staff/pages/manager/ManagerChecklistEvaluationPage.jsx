@@ -10,7 +10,6 @@ import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
-import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function sortByDisplayOrder(items = []) {
@@ -52,25 +51,13 @@ function ManagerChecklistEvaluationPage() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [employeeCode, setEmployeeCode] = useState('')
+  const [subjectSuggestion, setSubjectSuggestion] = useState(null)
   const [subjectDetails, setSubjectDetails] = useState(null)
   const [subjectLoading, setSubjectLoading] = useState(false)
   const [subjectError, setSubjectError] = useState('')
   const [answers, setAnswers] = useState({})
   const [submission, setSubmission] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [employees, setEmployees] = useState([])
-  const [employeesLoading, setEmployeesLoading] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [employeeSearch, setEmployeeSearch] = useState('')
-
-  const filteredEmployees = useMemo(() => {
-    if (!employeeSearch.trim()) return employees
-    const q = employeeSearch.toLowerCase().trim()
-    return employees.filter(emp => 
-      (emp.employeeName || '').toLowerCase().includes(q) ||
-      (emp.employeeCode || '').toLowerCase().includes(q)
-    )
-  }, [employees, employeeSearch])
 
   const loadAssignedForm = useCallback(() => {
     setLoading(true)
@@ -86,6 +73,8 @@ function ManagerChecklistEvaluationPage() {
         setAssignedForm(data)
         setAnswers({})
         setSubmission(null)
+        setSubjectSuggestion(null)
+        setSubjectDetails(null)
       })
       .catch((error) => {
         setAssignedForm(null)
@@ -99,17 +88,6 @@ function ManagerChecklistEvaluationPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       loadAssignedForm()
-      setEmployeesLoading(true)
-      trainingApi.getEmployeeTrainingStatuses({ size: 1000 })
-        .then((res) => {
-          setEmployees(res.data?.data?.content || [])
-        })
-        .catch(() => {
-          setEmployees([])
-        })
-        .finally(() => {
-          setEmployeesLoading(false)
-        })
     }, 0)
 
     return () => {
@@ -141,12 +119,13 @@ function ManagerChecklistEvaluationPage() {
     const normalizedEmployeeCode = (codeToLookup || employeeCode).trim()
 
     if (!normalizedEmployeeCode) {
-      setSubjectError('Vui lòng chọn nhân viên được giám sát.')
+      setSubjectError('Vui lòng nhập mã nhân viên được giám sát.')
       return
     }
 
     setSubjectLoading(true)
     setSubjectError('')
+    setSubjectSuggestion(null)
     setSubjectDetails(null)
 
     staffApi.findAssignedFormSubject({
@@ -159,7 +138,8 @@ function ManagerChecklistEvaluationPage() {
           throw new Error('SUBJECT_NOT_FOUND')
         }
 
-        setSubjectDetails(data)
+        setEmployeeCode(data.employeeCode || normalizedEmployeeCode)
+        setSubjectSuggestion(data)
         setSubmission(null)
       })
       .catch((error) => {
@@ -170,6 +150,14 @@ function ManagerChecklistEvaluationPage() {
       .finally(() => {
         setSubjectLoading(false)
       })
+  }
+
+  const handleConfirmSubject = (subject) => {
+    setSubjectDetails(subject)
+    setSubjectSuggestion(null)
+    setEmployeeCode(subject.employeeCode || employeeCode)
+    setSubmission(null)
+    setSubjectError('')
   }
 
   const toAnswerRequest = (question) => {
@@ -448,145 +436,114 @@ function ManagerChecklistEvaluationPage() {
                   Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
-                  <div style={{ position: 'relative', width: '100%', maxWidth: 400 }}>
-                    {/* Backdrop for closing dropdown */}
-                    {dropdownOpen && (
-                      <div 
-                        onClick={() => setDropdownOpen(false)}
-                        style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
-                      />
-                    )}
-
-                    {/* Selected Header */}
-                    <div 
-                      onClick={() => !employeesLoading && !subjectLoading && setDropdownOpen(!dropdownOpen)}
-                      style={{
-                        width: '100%',
-                        height: 38,
-                        padding: '0 12px',
-                        borderRadius: 8,
-                        border: '1px solid #cbd5e1',
-                        background: (employeesLoading || subjectLoading) ? '#f8fafc' : '#fff',
-                        color: (employeesLoading || subjectLoading) ? '#94a3b8' : '#0f172a',
-                        fontSize: 13.5,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: (employeesLoading || subjectLoading) ? 'not-allowed' : 'pointer',
-                        userSelect: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    >
-                      <span>
-                        {employeeCode 
-                          ? `${employees.find(e => e.employeeCode === employeeCode)?.employeeName || employeeCode} (${employeeCode})`
-                          : '-- Chọn nhân viên được giám sát --'
-                        }
-                      </span>
-                      <span style={{ fontSize: 10, color: '#64748b' }}>▼</span>
-                    </div>
-
-                    {/* Dropdown Menu */}
-                    {dropdownOpen && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        zIndex: 1000,
-                        background: '#fff',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: 8,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        marginTop: 4,
-                        padding: 8,
-                        boxSizing: 'border-box'
-                      }}>
-                        {/* Search Input */}
-                        <input
-                          type="text"
-                          placeholder="Nhập mã hoặc tên để tìm..."
-                          value={employeeSearch}
-                          onChange={(e) => setEmployeeSearch(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            width: '100%',
-                            height: 34,
-                            padding: '0 10px',
-                            borderRadius: 6,
-                            border: '1px solid #cbd5e1',
-                            fontSize: 13,
-                            marginBottom: 8,
-                            boxSizing: 'border-box',
-                            outline: 'none'
-                          }}
-                        />
-
-                        {/* List Items */}
-                        <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {filteredEmployees.length === 0 ? (
-                            <div style={{ padding: '8px 12px', fontSize: 13, color: '#64748b', textAlign: 'center' }}>
-                              Không tìm thấy nhân viên
-                            </div>
-                          ) : (
-                            filteredEmployees.map((emp) => (
-                              <div
-                                key={emp.employeeCode}
-                                onClick={() => {
-                                  setEmployeeCode(emp.employeeCode)
-                                  setSubjectDetails(null)
-                                  setSubmission(null)
-                                  handleSubjectLookup(emp.employeeCode)
-                                  setDropdownOpen(false)
-                                  setEmployeeSearch('')
-                                }}
-                                style={{
-                                  padding: '8px 12px',
-                                  borderRadius: 6,
-                                  fontSize: 13.5,
-                                  cursor: 'pointer',
-                                  background: employeeCode === emp.employeeCode ? '#eff6ff' : 'transparent',
-                                  color: employeeCode === emp.employeeCode ? '#2563eb' : '#0f172a',
-                                  fontWeight: employeeCode === emp.employeeCode ? 600 : 400,
-                                  transition: 'all 0.15s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (employeeCode !== emp.employeeCode) {
-                                    e.target.style.background = '#f8fafc'
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (employeeCode !== emp.employeeCode) {
-                                    e.target.style.background = 'transparent'
-                                  }
-                                }}
-                              >
-                                {emp.employeeName} ({emp.employeeCode})
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  {(employeesLoading || subjectLoading) && (
+                  <input
+                    className="mgr-select"
+                    disabled={subjectLoading}
+                    onChange={(event) => {
+                      setEmployeeCode(event.target.value)
+                      setSubjectSuggestion(null)
+                      setSubjectDetails(null)
+                      setSubmission(null)
+                      setSubjectError('')
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        handleSubjectLookup()
+                      }
+                    }}
+                    placeholder="Nhập mã nhân viên, ví dụ: NV001"
+                    style={{ cursor: 'text', maxWidth: 320, width: '100%' }}
+                    type="text"
+                    value={employeeCode}
+                  />
+                  <button
+                    className="training-button training-button--primary"
+                    disabled={subjectLoading || !employeeCode.trim()}
+                    onClick={() => handleSubjectLookup()}
+                    style={{
+                      borderRadius: 8,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      height: 38,
+                      fontSize: 13.5,
+                    }}
+                    type="button"
+                  >
+                    {subjectLoading ? <LoadingOutlined spin /> : null}
+                    Tìm nhân viên
+                  </button>
+                  {subjectLoading && (
                     <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <LoadingOutlined spin /> Đang xử lý...
+                      Đang tra cứu...
                     </span>
                   )}
                 </div>
                 {subjectError && (
                   <p style={{ color: '#ef4444', margin: '8px 0 0', fontSize: 13 }}>{subjectError}</p>
                 )}
+                {subjectSuggestion && (
+                  <button
+                    onClick={() => handleConfirmSubject(subjectSuggestion)}
+                    style={{
+                      alignItems: 'center',
+                      background: '#f0fdf4',
+                      border: '1px solid #34d399',
+                      borderRadius: 10,
+                      boxShadow: '0 10px 24px rgba(16, 185, 129, 0.12)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginTop: 12,
+                      padding: '12px 14px',
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                    type="button"
+                  >
+                    <span style={{ display: 'grid', gap: 3 }}>
+                      <span style={{ color: '#00866b', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' }}>
+                        Kết quả tìm thấy
+                      </span>
+                      <strong style={{ color: '#0f172a', fontSize: 14 }}>
+                        {subjectSuggestion.fullName || 'Chưa có tên'} ({subjectSuggestion.employeeCode})
+                      </strong>
+                      <span style={{ color: '#64748b', fontSize: 13 }}>
+                        {subjectSuggestion.department || 'Chưa có khoa/phòng'}
+                      </span>
+                    </span>
+                    <span style={{
+                      background: '#00866b',
+                      borderRadius: 999,
+                      boxShadow: '0 8px 18px rgba(0, 134, 107, 0.18)',
+                      color: '#ffffff',
+                      fontSize: 12,
+                      fontWeight: 800,
+                      padding: '8px 12px',
+                    }}>
+                      Chọn nhân viên này
+                    </span>
+                  </button>
+                )}
                 {subjectDetails && (
-                  <div className="mgr-kv-grid" style={{ marginTop: 14 }}>
-                    <div className="mgr-kv-item">
-                      <span className="mgr-kv-label">Họ tên</span>
-                      <span className="mgr-kv-val">{subjectDetails.fullName}</span>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ color: '#00866b', fontSize: 12, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>
+                      Đã chọn nhân viên
                     </div>
-                    <div className="mgr-kv-item">
-                      <span className="mgr-kv-label">Khoa phòng</span>
-                      <span className="mgr-kv-val">{subjectDetails.department || 'Chưa có'}</span>
+                    <div className="mgr-kv-grid">
+                      <div className="mgr-kv-item">
+                        <span className="mgr-kv-label">Họ tên</span>
+                        <span className="mgr-kv-val">{subjectDetails.fullName}</span>
+                      </div>
+                      <div className="mgr-kv-item">
+                        <span className="mgr-kv-label">Mã nhân viên</span>
+                        <span className="mgr-kv-val">{subjectDetails.employeeCode}</span>
+                      </div>
+                      <div className="mgr-kv-item">
+                        <span className="mgr-kv-label">Khoa phòng</span>
+                        <span className="mgr-kv-val">{subjectDetails.department || 'Chưa có'}</span>
+                      </div>
                     </div>
                   </div>
                 )}

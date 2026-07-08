@@ -182,6 +182,53 @@
   background: #f8fafc;
 }
 
+.mgr-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--mgr-border-light);
+  background: #fafbfc;
+  padding: 16px 20px;
+}
+
+.mgr-pagination-summary {
+  color: var(--mgr-text-soft);
+  font-size: 12.5px;
+}
+
+.mgr-pagination-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mgr-pg-btn {
+  border: 1px solid var(--mgr-border);
+  border-radius: var(--mgr-radius-sm);
+  background: #ffffff;
+  color: var(--mgr-text-soft);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  padding: 6px 12px;
+  transition: all 0.15s ease;
+}
+
+.mgr-pg-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  color: var(--mgr-text);
+}
+
+.mgr-pg-btn.active {
+  background: var(--mgr-navy);
+  border-color: var(--mgr-navy);
+  color: #ffffff;
+}
+
+.mgr-pg-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* Toolbar controls */
 .mgr-toolbar {
   display: flex;

@@ -225,6 +225,42 @@
   color: var(--ccp-muted);
 }
 
+.ccp-subject-config {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 26px;
+  padding: 14px 16px;
+  border: 1px solid #d9efe7;
+  border-radius: 10px;
+  background: #f3fffb;
+  color: var(--ccp-text);
+  cursor: pointer;
+}
+
+.ccp-subject-config input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--ccp-accent-dark);
+}
+
+.ccp-subject-config strong,
+.ccp-subject-config small {
+  display: block;
+}
+
+.ccp-subject-config strong {
+  font-size: 14px;
+}
+
+.ccp-subject-config small {
+  margin-top: 4px;
+  color: var(--ccp-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .ccp-description-input::placeholder,
 .ccp-question-title::placeholder,
 .ccp-option-input::placeholder {

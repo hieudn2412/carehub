@@ -82,25 +82,6 @@
   font-size: 17px;
 }
 
-.aqh-refresh-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  border: 0;
-  background: transparent;
-  color: #00866b;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.aqh-refresh-button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
 .aqh-empty-state {
   display: grid;
   min-height: 180px;
@@ -155,6 +136,40 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.aqh-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.aqh-load-more button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #b9e5dc;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #00866b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 20px;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.aqh-load-more button:hover:not(:disabled) {
+  border-color: #00a884;
+  background: #f0fffb;
+  transform: translateY(-1px);
+}
+
+.aqh-load-more button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .aqh-version-card,

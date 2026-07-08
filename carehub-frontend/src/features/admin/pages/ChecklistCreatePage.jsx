@@ -22,6 +22,12 @@ import '../styles/ChecklistCreatePage.css'
 const CHOICE_FIELD_TYPES = ['DROPDOWN', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE']
 const PENDING_DRAFT_STORAGE_KEY = 'carehub.pendingChecklistDraft'
 const DEFAULT_FORM_SUBJECT_TYPE = 'USER'
+const EMPLOYEE_CODE_SUBJECT_SELECTOR = {
+  lookupBy: 'employeeCode',
+  required: true,
+  displayFields: ['employeeCode', 'fullName', 'position', 'department'],
+  readOnly: true,
+}
 
 const QUESTION_TYPES = [
   { value: 'DROPDOWN', label: 'Menu thả xuống' },
@@ -208,6 +214,18 @@ function clearPendingDraft() {
   window.sessionStorage.removeItem(PENDING_DRAFT_STORAGE_KEY)
 }
 
+function buildVersionSettings(enableEmployeeCodeLookup) {
+  return {
+    source: 'manual-simple-builder',
+    ...(enableEmployeeCodeLookup
+      ? {
+          subjectSelector: EMPLOYEE_CODE_SUBJECT_SELECTOR,
+          evaluatorSource: 'CURRENT_USER',
+        }
+      : {}),
+  }
+}
+
 function mapVersionToSimpleEditor(version) {
   const sections = [...(version?.sections || [])]
     .sort((left, right) => left.displayOrder - right.displayOrder)
@@ -272,6 +290,9 @@ function ChecklistCreatePage() {
   )
   const [questions, setQuestions] = useState(
     () => pendingDraft?.editor?.questions || [createQuestion()],
+  )
+  const [enableEmployeeCodeLookup, setEnableEmployeeCodeLookup] = useState(
+    () => Boolean(pendingDraft?.editor?.enableEmployeeCodeLookup),
   )
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(isDetailMode)
@@ -342,6 +363,7 @@ function ChecklistCreatePage() {
       setLoadedVersion(version)
       setSectionKey(editor.sectionKey)
       setQuestions(editor.questions.length ? editor.questions : [createQuestion()])
+      setEnableEmployeeCodeLookup(Boolean(version.settings?.subjectSelector))
       setSimpleEditable(editor.compatible)
       setIsEditing(false)
 
@@ -480,9 +502,7 @@ function ChecklistCreatePage() {
   const buildVersionPayload = (resolvedTitle, resolvedDescription) => ({
     title: resolvedTitle,
     description: resolvedDescription || null,
-    settings: {
-      source: 'manual-simple-builder',
-    },
+    settings: buildVersionSettings(enableEmployeeCodeLookup),
     sections: [
       {
         sectionKey: sectionKey || createId(),
@@ -698,6 +718,7 @@ function ChecklistCreatePage() {
           title,
           description,
           questions,
+          enableEmployeeCodeLookup,
         },
       }
       persistPendingDraft(nextPendingDraft)
@@ -881,6 +902,20 @@ function ChecklistCreatePage() {
                     placeholder="Mô tả biểu mẫu"
                     value={description}
                   />
+                  <label className="ccp-subject-config">
+                    <input
+                      checked={enableEmployeeCodeLookup}
+                      disabled={!formControlsEnabled}
+                      onChange={(event) => setEnableEmployeeCodeLookup(event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>Tra cứu đối tượng bằng mã nhân viên</strong>
+                      <small>
+                        Khi manager thực hiện đánh giá, hệ thống yêu cầu nhập mã nhân viên và tự lấy họ tên, chức vụ, khoa/phòng.
+                      </small>
+                    </span>
+                  </label>
                 </div>
 
                 {simpleEditable && (
