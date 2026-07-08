@@ -118,6 +118,43 @@
   color: var(--text-soft);
 }
 
+.fbp-subject-setting {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #d9efe7;
+  border-radius: 12px;
+  background: #f3fffb;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.fbp-subject-setting input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: #00866b;
+}
+
+.fbp-subject-setting strong,
+.fbp-subject-setting small {
+  display: block;
+}
+
+.fbp-subject-setting strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.fbp-subject-setting small {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .fbp-input,
 .fbp-select-control,
 .fbp-textarea {

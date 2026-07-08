@@ -54,6 +54,13 @@ const QUESTION_FIELD_OPTIONS = [
   { value: 'DROPDOWN', label: FIELD_TYPE_LABELS.DROPDOWN, icon: 'dropdown' },
 ]
 
+const EMPLOYEE_CODE_SUBJECT_SELECTOR = {
+  lookupBy: 'employeeCode',
+  required: true,
+  displayFields: ['employeeCode', 'fullName', 'position', 'department'],
+  readOnly: true,
+}
+
 function QuestionTypeSelect({ value, onChange }) {
   const [open, setOpen] = useState(false)
   const selected = QUESTION_FIELD_OPTIONS.find((option) => option.value === value)
@@ -155,6 +162,26 @@ function createDefaultQuestion() {
   }
 }
 
+function buildSubjectSelectorSettings(currentSettings, enabled) {
+  const nextSettings = currentSettings && typeof currentSettings === 'object'
+    ? { ...currentSettings }
+    : {}
+
+  if (!enabled) {
+    delete nextSettings.subjectSelector
+    if (nextSettings.evaluatorSource === 'CURRENT_USER') {
+      delete nextSettings.evaluatorSource
+    }
+    return Object.keys(nextSettings).length > 0 ? nextSettings : null
+  }
+
+  return {
+    ...nextSettings,
+    subjectSelector: EMPLOYEE_CODE_SUBJECT_SELECTOR,
+    evaluatorSource: 'CURRENT_USER',
+  }
+}
+
 function FormBuilderPage() {
   const { showToast } = useToast()
   const { id, versionId } = useParams()
@@ -236,6 +263,13 @@ function FormBuilderPage() {
 
   const updateSections = (nextSections) => {
     setSections(nextSections)
+    setDirty(true)
+  }
+
+  const subjectLookupEnabled = Boolean(settings?.subjectSelector)
+
+  const handleSubjectLookupSettingChange = (enabled) => {
+    setSettings((currentSettings) => buildSubjectSelectorSettings(currentSettings, enabled))
     setDirty(true)
   }
 
@@ -545,7 +579,7 @@ function FormBuilderPage() {
     const payload = {
       title,
       description: description || null,
-      settings: settings,
+      settings: settings || null,
       sections: cleanedSections,
       lockVersion: lockVersion,
     }
@@ -725,6 +759,19 @@ function FormBuilderPage() {
                         placeholder="Mô tả hướng dẫn chung..."
                       />
                     </div>
+                    <label className="fbp-subject-setting">
+                      <input
+                        checked={subjectLookupEnabled}
+                        onChange={(event) => handleSubjectLookupSettingChange(event.target.checked)}
+                        type="checkbox"
+                      />
+                      <span>
+                        <strong>Tra cứu đối tượng bằng mã nhân viên</strong>
+                        <small>
+                          Manager nhập mã nhân viên khi đánh giá; hệ thống tự lấy mã, họ tên, chức vụ và khoa/phòng.
+                        </small>
+                      </span>
+                    </label>
                   </div>
 
                   {/* Sections list */}
