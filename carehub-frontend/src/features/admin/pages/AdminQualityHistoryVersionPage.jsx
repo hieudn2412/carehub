@@ -225,9 +225,9 @@ function AdminQualityHistoryVersionPage() {
         />
 
         <main className="admin-quality-history admin-quality-history--version">
-          <button className="admin-quality-history__back" onClick={() => navigate('/admin/quality/history')} type="button">
+          <button className="admin-quality-history__back" onClick={() => navigate(`/admin/quality/history?formId=${encodeURIComponent(formId)}`)} type="button">
             <ArrowLeftOutlined />
-            Quay lại tìm kiếm
+            Quay lại danh sách version
           </button>
 
           {loading ? (
