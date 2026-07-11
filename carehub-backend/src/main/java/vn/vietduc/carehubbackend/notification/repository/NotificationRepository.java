@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 import vn.vietduc.carehubbackend.notification.entity.Notification;
 
@@ -13,6 +14,21 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Optional<Notification> findByIdAndUser_Id(Long id, Long userId);
 
     boolean existsByDedupKey(String dedupKey);
+
+    long countByUser_IdAndReadFalse(Long userId);
+
+    @Modifying
+    @Query("""
+            UPDATE Notification n
+            SET n.read = :read,
+                n.readAt = :readAt
+            WHERE n.user.id = :userId
+            """)
+    int updateReadStatusForUser(
+            @Param("userId") Long userId,
+            @Param("read") boolean read,
+            @Param("readAt") java.time.LocalDateTime readAt
+    );
 
     @Query("""
             SELECT n

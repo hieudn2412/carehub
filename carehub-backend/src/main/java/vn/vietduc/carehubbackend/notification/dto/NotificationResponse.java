@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.notification.dto;
 
 import lombok.Builder;
 import vn.vietduc.carehubbackend.notification.entity.Notification;
+import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 
 import java.time.LocalDateTime;
 
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 public record NotificationResponse(
         Long id,
         String type,
+        NotificationEventType eventType,
         String title,
         String content,
         String deepLink,
@@ -20,6 +22,7 @@ public record NotificationResponse(
         return NotificationResponse.builder()
                 .id(notification.getId())
                 .type(notification.getType())
+                .eventType(notification.getEventType())
                 .title(notification.getTitle())
                 .content(notification.getContent())
                 .deepLink(notification.getDeepLink())

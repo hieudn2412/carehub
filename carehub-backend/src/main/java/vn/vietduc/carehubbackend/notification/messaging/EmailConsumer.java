@@ -9,7 +9,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.config.RabbitMQConfig;
 import vn.vietduc.carehubbackend.notification.service.EmailService;
-import vn.vietduc.carehubbackend.notification.service.NotificationService;
 
 import java.io.IOException;
 
@@ -20,7 +19,6 @@ public class EmailConsumer {
     private static final int MAX_EMAIL_ATTEMPTS = 5;
 
     private final EmailService emailService;
-    private final NotificationService notificationService;
     private final RabbitTemplate rabbitTemplate;
 
     @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
@@ -32,34 +30,13 @@ public class EmailConsumer {
         long deliveryTag = amqpMessage.getMessageProperties().getDeliveryTag();
 
         try {
-            createInAppNotification(message);
-            if (notificationService.isEmailEnabled()) {
-                emailService.send(message.getTo(), message.getSubject(), message.getContent());
-            }
+            emailService.send(message.getTo(), message.getSubject(), message.getContent());
             channel.basicAck(deliveryTag, false);
         } catch (Exception ex) {
             log.warn("Email dispatch failed for {}, attempt {}", message.getTo(), message.getAttempts() + 1, ex);
             retryOrDlq(message);
             channel.basicAck(deliveryTag, false);
         }
-    }
-
-    private void createInAppNotification(EmailMessage message) {
-        if (message.getUserId() == null) {
-            return;
-        }
-
-        String dedupKey = notificationService.defaultDedupKey(message);
-        message.setDedupKey(dedupKey);
-
-        notificationService.createInAppNotification(
-                message.getUserId(),
-                message.getType(),
-                message.getSubject(),
-                message.getContent(),
-                message.getDeepLink(),
-                dedupKey
-        );
     }
 
     private void retryOrDlq(EmailMessage message) {

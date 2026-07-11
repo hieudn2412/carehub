@@ -16,6 +16,10 @@ import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.submission.dto.*;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
+import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
+import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
+import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
+import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
@@ -39,6 +43,7 @@ public class FormSubmissionService {
     private final FormScoreCalculator scoreCalculator;
     private final EntityManager entityManager;
     private final Clock clock;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     @Transactional
     public FormSubmissionResponse create(CreateFormSubmissionRequest request) {
@@ -106,7 +111,43 @@ public class FormSubmissionService {
         applyScore(submission, score);
         submission.setStatus(FormSubmissionStatus.SUBMITTED);
         submission.setSubmittedAt(Instant.now(clock));
-        return toResponse(submissionRepository.saveAndFlush(submission), true);
+        FormSubmission saved = submissionRepository.saveAndFlush(submission);
+        publishPersonalComplianceIssue(saved);
+        return toResponse(saved, true);
+    }
+
+    private void publishPersonalComplianceIssue(FormSubmission submission) {
+        if (submission.getResult() != FormSubmissionResult.FAILED_SCORE
+                && submission.getResult() != FormSubmissionResult.FAILED_CRITICAL) {
+            return;
+        }
+        FormSubmissionContext context = submission.getSubjectContext();
+        User employee = context == null ? null : context.getSubjectUser();
+        if (employee == null) {
+            return;
+        }
+        String formName = submission.getAssignmentItem().getForm().getTitle();
+        BigDecimal displayedScore = submission.getConvertedScore() == null
+                ? submission.getTotalScore()
+                : submission.getConvertedScore();
+        Map<String, String> variables = new LinkedHashMap<>();
+        variables.put("employee_name", employee.getName());
+        variables.put("employee_code", employee.getEmployeeCode());
+        variables.put("form_name", formName);
+        variables.put("result", submission.getResult().name());
+        variables.put("score", displayedScore == null ? "N/A" : displayedScore.stripTrailingZeros().toPlainString());
+        variables.put("submitted_at", submission.getSubmittedAt().toString());
+        notificationEventPublisher.publish(new NotificationDispatchEvent(
+                NotificationEventType.PERSONAL_COMPLIANCE_ISSUE,
+                employee.getId(),
+                NotificationAudience.EMPLOYEE,
+                "WARNING",
+                "Kết quả tuân thủ cần lưu ý",
+                "Kết quả đánh giá '" + formName + "' của bạn chưa đạt yêu cầu.",
+                null,
+                "PERSONAL_COMPLIANCE:" + submission.getId(),
+                variables
+        ));
     }
 
     @Transactional

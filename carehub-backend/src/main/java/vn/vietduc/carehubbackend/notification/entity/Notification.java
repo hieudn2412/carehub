@@ -2,10 +2,11 @@ package vn.vietduc.carehubbackend.notification.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -41,6 +42,10 @@ public class Notification extends BaseEntity {
     @Column(nullable = false, length = 60)
     private String type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_type", length = 80)
+    private NotificationEventType eventType;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -54,5 +59,6 @@ public class Notification extends BaseEntity {
 
     private LocalDateTime readAt;
 
+    @Column(length = 220)
     private String dedupKey;
 }

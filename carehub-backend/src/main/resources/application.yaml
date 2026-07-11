@@ -2,6 +2,12 @@ server:
   port: 8080
 
 app:
+  notification:
+    seed-enabled: ${APP_NOTIFICATION_SEED_ENABLED:true}
+    scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:true}
+    scan-cron: ${APP_NOTIFICATION_SCAN_CRON:0 0 7 * * *}
+    zone: ${APP_NOTIFICATION_ZONE:Asia/Bangkok}
+
   form-import:
     max-batch-size: 25
     google-public:
@@ -105,10 +111,9 @@ spring:
       - optional:file:env.properties
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    addresses: ${CLOUDAMQP_URL}
+    connection-timeout: 10s
+    requested-heartbeat: 30s
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/carehub}
     username: ${DB_USERNAME:postgres}
@@ -116,6 +121,7 @@ spring:
     hikari:
       data-source-properties:
         TimeZone: Asia/Ho_Chi_Minh
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
