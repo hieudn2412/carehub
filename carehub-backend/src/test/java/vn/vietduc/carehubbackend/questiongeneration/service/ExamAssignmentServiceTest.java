@@ -19,6 +19,7 @@ import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
@@ -30,6 +31,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ExamAssignmentServiceTest {
@@ -39,6 +42,7 @@ class ExamAssignmentServiceTest {
     private final ExamPaperRepository examPaperRepository = mock(ExamPaperRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final DepartmentRepository departmentRepository = mock(DepartmentRepository.class);
+    private final NotificationEventPublisher notificationEventPublisher = mock(NotificationEventPublisher.class);
     private ExamAssignmentService service;
 
     @BeforeEach
@@ -49,7 +53,8 @@ class ExamAssignmentServiceTest {
                 attemptRepository,
                 examPaperRepository,
                 userRepository,
-                departmentRepository
+                departmentRepository,
+                notificationEventPublisher
         );
     }
 
@@ -177,6 +182,7 @@ class ExamAssignmentServiceTest {
         assertThat(savedTargets)
                 .extracting(target -> target.getUser().getId())
                 .containsExactly(explicitUser.getId(), departmentUser.getId());
+        verify(notificationEventPublisher, times(2)).publish(any());
     }
 
     private ExamAssignmentTarget target(ExamAssignment assignment, User user) {

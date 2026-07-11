@@ -211,8 +211,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
               </div>
 
               <div className="notify-popover__body">
-                {renderGroup('Hôm nay', notifications.filter(n => n.group === 'Hôm nay'))}
-                {renderGroup('Tuần này', notifications.filter(n => n.group === 'Tuần này'))}
+                {renderNotificationContent()}
               </div>
             </div>
           )}

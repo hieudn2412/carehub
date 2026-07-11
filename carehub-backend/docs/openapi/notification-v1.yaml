@@ -1,0 +1,498 @@
+openapi: 3.1.0
+info:
+  title: CareHub Notification API
+  version: 1.0.0
+  description: API quản lý inbox, chính sách thông báo và email template theo danh mục sự kiện được hỗ trợ.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Notification inbox
+  - name: Notification policy
+  - name: Email template
+paths:
+  /me/notifications:
+    get:
+      tags: [Notification inbox]
+      summary: Danh sách thông báo của người dùng hiện tại
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: read
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPageEnvelope'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/notifications/unread-count:
+    get:
+      tags: [Notification inbox]
+      summary: Số thông báo chưa đọc
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UnreadCount'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/notifications/read-status:
+    patch:
+      tags: [Notification inbox]
+      summary: Đổi trạng thái đọc của toàn bộ inbox
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReadRequest' }
+      responses:
+        '200':
+          description: Số bản ghi đã cập nhật
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /me/notifications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Notification inbox]
+      summary: Xem chi tiết (không tự đổi trạng thái đọc)
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Notification inbox]
+      summary: Đổi trạng thái đọc của một thông báo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReadRequest' }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Notification inbox]
+      summary: Xóa một thông báo khỏi inbox
+      responses:
+        '204': { description: Đã xóa }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /notifications/config:
+    get:
+      tags: [Notification policy]
+      summary: Lấy toàn bộ chính sách thông báo
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyConfigEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    put:
+      tags: [Notification policy]
+      summary: Cập nhật toàn bộ chính sách thông báo
+      description: Payload phải chứa đúng một policy cho mỗi eventType được hỗ trợ.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PolicyConfigRequest' }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyConfigEnvelope' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /notification-events:
+    get:
+      tags: [Notification policy]
+      summary: Metadata các sự kiện để dựng form email template
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/NotificationEventDefinition' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /notifications/config/defaults:
+    put:
+      tags: [Notification policy]
+      summary: Khôi phục chính sách mặc định
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyConfigEnvelope' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /email/templates:
+    get:
+      tags: [Email template]
+      summary: Danh sách email template
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { $ref: '#/components/schemas/NotificationCategory' }
+        - name: eventType
+          in: query
+          schema: { $ref: '#/components/schemas/NotificationEventType' }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailTemplatePageEnvelope' }
+    post:
+      tags: [Email template]
+      summary: Tạo email template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailTemplateRequest' }
+      responses:
+        '201':
+          description: Đã tạo
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailTemplateEnvelope' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /email/templates/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Email template]
+      summary: Chi tiết email template
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailTemplateEnvelope' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Email template]
+      summary: Cập nhật email template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailTemplateRequest' }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmailTemplateEnvelope' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      tags: [Email template]
+      summary: Xóa template tự tạo
+      description: Template hệ thống (systemManaged=true) không thể xóa.
+      responses:
+        '204': { description: Đã xóa }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /email/template-previews:
+    post:
+      tags: [Email template]
+      summary: Render thử template với dữ liệu mẫu
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EmailTemplatePreviewRequest' }
+      responses:
+        '200':
+          description: Thành công
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [subject, body]
+                        properties:
+                          subject: { type: string }
+                          body: { type: string }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 0, default: 0 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Sort:
+      name: sort
+      in: query
+      schema: { type: string, example: updatedAt,desc }
+  responses:
+    Unauthorized:
+      description: Chưa xác thực
+    Forbidden:
+      description: Không đủ quyền
+    NotFound:
+      description: Không tìm thấy tài nguyên trong phạm vi người dùng
+    Conflict:
+      description: Xung đột mã hoặc phiên bản dữ liệu
+    UnprocessableEntity:
+      description: Binding hoặc biến template không hợp lệ
+  schemas:
+    ApiEnvelope:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string }
+        data: {}
+    NotificationEventType:
+      type: string
+      enum:
+        - CME_HOURS_BELOW_REQUIREMENT
+        - EXAM_ASSIGNED
+        - QUALITY_COMPLIANCE_BELOW_TARGET
+        - PERSONAL_COMPLIANCE_ISSUE
+    NotificationCategory:
+      type: string
+      enum: [TRAINING, EVALUATION, QUALITY]
+    NotificationAudience:
+      type: string
+      enum: [EMPLOYEE, MANAGER, ADMIN]
+    NotificationCadence:
+      type: string
+      enum: [IMMEDIATE, DAILY, WEEKLY, MONTHLY]
+    NotificationEventDefinition:
+      type: object
+      required: [eventType, displayName, category, audiences, defaultCadence, allowedVariables]
+      properties:
+        eventType: { $ref: '#/components/schemas/NotificationEventType' }
+        displayName: { type: string }
+        category: { $ref: '#/components/schemas/NotificationCategory' }
+        audiences:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/NotificationAudience' }
+        defaultCadence: { $ref: '#/components/schemas/NotificationCadence' }
+        allowedVariables:
+          type: array
+          uniqueItems: true
+          items: { type: string, pattern: '^[a-z][a-z0-9_]*$' }
+    Notification:
+      type: object
+      required: [id, type, title, content, read, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        type: { type: string, example: WARNING }
+        eventType:
+          oneOf:
+            - $ref: '#/components/schemas/NotificationEventType'
+            - type: 'null'
+        title: { type: string }
+        content: { type: string }
+        deepLink:
+          type: [string, 'null']
+        read: { type: boolean }
+        readAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+    ReadRequest:
+      type: object
+      required: [read]
+      properties:
+        read: { type: boolean }
+    UnreadCount:
+      type: object
+      required: [unreadCount]
+      properties:
+        unreadCount: { type: integer, format: int64, minimum: 0 }
+    Policy:
+      type: object
+      required: [eventType, enabled, inAppEnabled, emailEnabled, cadence]
+      properties:
+        eventType: { $ref: '#/components/schemas/NotificationEventType' }
+        enabled: { type: boolean }
+        inAppEnabled: { type: boolean }
+        emailEnabled: { type: boolean }
+        cadence: { $ref: '#/components/schemas/NotificationCadence' }
+        thresholdPercent: { type: [number, 'null'], minimum: 0, maximum: 100 }
+        version: { type: [integer, 'null'], format: int64 }
+    PolicyConfigRequest:
+      type: object
+      required: [policies]
+      properties:
+        policies:
+          type: array
+          minItems: 4
+          maxItems: 4
+          items: { $ref: '#/components/schemas/Policy' }
+    PolicyConfig:
+      type: object
+      required: [policies]
+      properties:
+        policies:
+          type: array
+          items: { $ref: '#/components/schemas/Policy' }
+    EmailTemplateRequest:
+      type: object
+      required: [code, name, category, eventType, audience, subject, body, active]
+      properties:
+        code: { type: string, pattern: '^[A-Z0-9_]+$', maxLength: 80 }
+        name: { type: string, maxLength: 160 }
+        category: { $ref: '#/components/schemas/NotificationCategory' }
+        eventType: { $ref: '#/components/schemas/NotificationEventType' }
+        audience: { $ref: '#/components/schemas/NotificationAudience' }
+        subject: { type: string, maxLength: 200 }
+        body: { type: string }
+        active: { type: boolean }
+        version: { type: [integer, 'null'], format: int64 }
+    EmailTemplate:
+      allOf:
+        - $ref: '#/components/schemas/EmailTemplateRequest'
+        - type: object
+          required: [id, triggerLabel, mandatory, systemManaged, editable, deletable, allowedVariables]
+          properties:
+            id: { type: integer, format: int64 }
+            triggerLabel: { type: string }
+            mandatory: { type: boolean }
+            systemManaged: { type: boolean }
+            editable: { type: boolean }
+            deletable: { type: boolean }
+            allowedVariables:
+              type: array
+              uniqueItems: true
+              items: { type: string, pattern: '^[a-z][a-z0-9_]*$' }
+            createdAt: { type: [string, 'null'], format: date-time }
+            updatedAt: { type: [string, 'null'], format: date-time }
+    EmailTemplatePreviewRequest:
+      type: object
+      required: [eventType, audience, subject, body, variables]
+      properties:
+        eventType: { $ref: '#/components/schemas/NotificationEventType' }
+        audience: { $ref: '#/components/schemas/NotificationAudience' }
+        subject: { type: string }
+        body: { type: string }
+        variables:
+          type: object
+          additionalProperties: { type: string }
+    PageMetadata:
+      type: object
+      required: [content, page, size, totalElements, totalPages, sort]
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer, format: int64 }
+        totalPages: { type: integer }
+        sort:
+          type: array
+          items: { type: string }
+    NotificationEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/Notification' }
+    NotificationPageEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageMetadata'
+                - type: object
+                  properties:
+                    content:
+                      type: array
+                      items: { $ref: '#/components/schemas/Notification' }
+    PolicyConfigEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/PolicyConfig' }
+    EmailTemplateEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data: { $ref: '#/components/schemas/EmailTemplate' }
+    EmailTemplatePageEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/ApiEnvelope'
+        - type: object
+          properties:
+            data:
+              allOf:
+                - $ref: '#/components/schemas/PageMetadata'
+                - type: object
+                  properties:
+                    content:
+                      type: array
+                      items: { $ref: '#/components/schemas/EmailTemplate' }

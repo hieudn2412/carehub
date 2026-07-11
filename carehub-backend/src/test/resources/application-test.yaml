@@ -2,6 +2,9 @@ server:
   port: 0
 
 app:
+  notification:
+    seed-enabled: false
+    scheduling-enabled: false
   import:
     default-password: test-password
   api-prefix: /api/v1

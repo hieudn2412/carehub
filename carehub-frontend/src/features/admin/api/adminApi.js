@@ -159,6 +159,18 @@ export const adminApi = {
     })
   },
 
+  getNotificationEvents() {
+    return httpClient.get('/notification-events', {
+      headers: authHeaders(),
+    })
+  },
+
+  resetNotificationConfig() {
+    return httpClient.put('/notifications/config/defaults', {}, {
+      headers: authHeaders(),
+    })
+  },
+
   getEmailTemplates(params) {
     return httpClient.get('/email/templates', {
       headers: authHeaders(),
@@ -186,6 +198,12 @@ export const adminApi = {
 
   deleteEmailTemplate(id) {
     return httpClient.delete(`/email/templates/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  previewEmailTemplate(data) {
+    return httpClient.post('/email/template-previews', data, {
       headers: authHeaders(),
     })
   },

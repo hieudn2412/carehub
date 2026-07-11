@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BellOutlined,
   SearchOutlined,
   DeleteOutlined,
   CheckOutlined,
@@ -64,7 +63,7 @@ function NotificationsStaffScreen() {
   }, [searchQuery])
 
   // Hàm tải thông báo từ API
-  const fetchNotifications = () => {
+  const fetchNotifications = useCallback(() => {
     setLoading(true)
     const token = tokenStorage.getAccessToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
@@ -73,7 +72,7 @@ function NotificationsStaffScreen() {
       page,
       size,
       sort: 'createdAt,desc',
-      q: debouncedQuery.trim() || '%',
+      q: debouncedQuery.trim() || undefined,
     }
     
     if (activeTab === 'unread') {
@@ -82,27 +81,12 @@ function NotificationsStaffScreen() {
       params.read = true
     }
 
-    Promise.all([
-      httpClient.get('/me/notifications', { headers, params }),
-      httpClient.get('/me', { headers })
-    ])
-      .then(([notifRes, profileRes]) => {
-        const profile = profileRes.data?.data
-        const currentName = profile?.fullName || ''
-        const data = notifRes.data?.data
-        const content = data?.content || []
-
-        const filtered = content.filter(n => {
-          // Filter out self-submit notifications for managers
-          if (n.title === 'Hồ sơ CME mới chờ duyệt' && currentName && n.content.includes(currentName)) {
-            return false
-          }
-          return true
-        })
-
-        setNotifications(filtered)
+    httpClient.get('/me/notifications', { headers, params })
+      .then((response) => {
+        const data = response.data?.data
+        setNotifications(data?.content || [])
         setTotalPages(data?.totalPages || 0)
-        setTotalElements(filtered.length)
+        setTotalElements(data?.totalElements || 0)
         setError(null)
       })
       .catch(err => {
@@ -112,11 +96,12 @@ function NotificationsStaffScreen() {
       .finally(() => {
         setLoading(false)
       })
-  }
+  }, [activeTab, debouncedQuery, page])
 
   useEffect(() => {
-    fetchNotifications()
-  }, [activeTab, debouncedQuery, page])
+    const timer = window.setTimeout(() => fetchNotifications(), 0)
+    return () => window.clearTimeout(timer)
+  }, [fetchNotifications])
 
   // Tải chi tiết một thông báo (gắn API GET /api/v1/me/notifications/{id})
   const handleOpenDetail = async (notif) => {
@@ -135,7 +120,7 @@ function NotificationsStaffScreen() {
 
       // Tự động đánh dấu đã đọc khi xem chi tiết
       if (!notif.read) {
-        handleMarkAsRead(notif.id, true)
+        await handleMarkAsRead(notif.id, true)
       }
     } catch (err) {
       console.error("Lỗi khi tải chi tiết thông báo:", err)
@@ -145,14 +130,14 @@ function NotificationsStaffScreen() {
     }
   }
 
-  // Đánh dấu đã đọc một thông báo (gắn API POST /api/v1/me/notifications/{id}/action)
+  // Đánh dấu đã đọc một thông báo
   const handleMarkAsRead = async (id, silent = false) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
     
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await httpClient.post(`/me/notifications/${id}/action`, { action: 'MARK_READ' }, { headers })
+      await httpClient.patch(`/me/notifications/${id}`, { read: true }, { headers })
       if (!silent) {
         showToast("Đã đánh dấu là đã đọc.", "success")
       }
@@ -189,11 +174,7 @@ function NotificationsStaffScreen() {
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await Promise.all(
-        unread.map(n =>
-          httpClient.post(`/me/notifications/${n.id}/action`, { action: 'MARK_READ' }, { headers })
-        )
-      )
+      await httpClient.patch('/me/notifications/read-status', { read: true }, { headers })
       showToast("Đã đánh dấu đọc tất cả thông báo.", "success")
     } catch (err) {
       console.error("Lỗi khi đánh dấu tất cả đã đọc:", err)
@@ -228,17 +209,14 @@ function NotificationsStaffScreen() {
 
   const formatDateTime = (dateStr) => {
     if (!dateStr) return ''
-    try {
-      const date = new Date(dateStr)
-      const d = String(date.getDate()).padStart(2, '0')
-      const m = String(date.getMonth() + 1).padStart(2, '0')
-      const y = date.getFullYear()
-      const hh = String(date.getHours()).padStart(2, '0')
-      const mm = String(date.getMinutes()).padStart(2, '0')
-      return `${d}/${m}/${y} ${hh}:${mm}`
-    } catch (e) {
-      return dateStr
-    }
+    const date = new Date(dateStr)
+    if (Number.isNaN(date.getTime())) return dateStr
+    const d = String(date.getDate()).padStart(2, '0')
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const y = date.getFullYear()
+    const hh = String(date.getHours()).padStart(2, '0')
+    const mm = String(date.getMinutes()).padStart(2, '0')
+    return `${d}/${m}/${y} ${hh}:${mm}`
   }
 
   const hasUnread = notifications.some(n => !n.read)

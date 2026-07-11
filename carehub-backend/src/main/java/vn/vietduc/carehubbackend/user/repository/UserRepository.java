@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.custom.UserRepositoryCustom;
 
 import java.util.Collection;
@@ -16,6 +17,9 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
     Optional<User> findByEmailAndIsDeletedFalse(String email);
     Optional<User> findByEmployeeCodeAndIsDeletedFalse(String employeeCode);
+
+    @EntityGraph(attributePaths = {"department"})
+    Optional<User> findByIdAndIsDeletedFalse(Long id);
 
     @EntityGraph(attributePaths = {"department", "position", "educationLevel"})
     Optional<User> findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(String employeeCode);
@@ -34,6 +38,9 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
 
     @EntityGraph(attributePaths = {"department", "position"})
     List<User> findByDepartment_IdInAndIsDeletedFalse(Collection<Long> departmentIds);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    List<User> findByIsDeletedFalseAndStatus(UserStatus status);
 
     @EntityGraph(attributePaths = {"department", "position"})
     @Query("""

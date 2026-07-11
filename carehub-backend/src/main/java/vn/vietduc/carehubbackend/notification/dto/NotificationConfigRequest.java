@@ -1,22 +1,44 @@
 package vn.vietduc.carehubbackend.notification.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+import vn.vietduc.carehubbackend.notification.entity.NotificationCadence;
+import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
 public class NotificationConfigRequest {
-    private boolean inAppEnabled;
+    @Valid
+    @NotEmpty(message = "At least one notification policy is required")
+    private List<PolicyRequest> policies;
 
-    private boolean emailEnabled;
+    @Getter
+    @Setter
+    public static class PolicyRequest {
+        @NotNull(message = "Event type is required")
+        private NotificationEventType eventType;
 
-    @Min(value = 1, message = "Dedup window must be at least 1 minute")
-    @Max(value = 1440, message = "Dedup window must be at most 1440 minutes")
-    private int dedupWindowMinutes;
+        private boolean enabled;
 
-    @NotBlank(message = "Alert schedule is required")
-    private String alertSchedule;
+        private boolean inAppEnabled = true;
+
+        private boolean emailEnabled = true;
+
+        @NotNull(message = "Cadence is required")
+        private NotificationCadence cadence;
+
+        @DecimalMin(value = "0", message = "Threshold must be at least 0")
+        @DecimalMax(value = "100", message = "Threshold must be at most 100")
+        private BigDecimal thresholdPercent;
+
+        private Long version;
+    }
 }

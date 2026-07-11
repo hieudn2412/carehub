@@ -35,7 +35,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    private static final int PASSWORD_LENGTH = 12;
+    private static final int PASSWORD_LENGTH = 6;
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
@@ -167,7 +167,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private String createRandomPassword() {
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%";
+        String characters = "0123456789";
         SecureRandom random = new SecureRandom();
         StringBuilder password = new StringBuilder();
         for (int i = 0; i < PASSWORD_LENGTH; i++) {

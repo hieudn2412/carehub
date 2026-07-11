@@ -1,31 +1,30 @@
 package vn.vietduc.carehubbackend.notification.dto;
 
-import lombok.Builder;
-import vn.vietduc.carehubbackend.notification.entity.EmailTemplate;
+import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
+import vn.vietduc.carehubbackend.notification.entity.NotificationCategory;
+import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
-@Builder
 public record EmailTemplateResponse(
         Long id,
         String code,
+        String name,
+        NotificationCategory category,
+        NotificationEventType eventType,
+        NotificationAudience audience,
+        String triggerLabel,
         String subject,
         String body,
-        boolean mandatory,
         boolean active,
+        boolean mandatory,
+        boolean systemManaged,
+        boolean editable,
+        boolean deletable,
+        Set<String> allowedVariables,
+        Long version,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static EmailTemplateResponse from(EmailTemplate template) {
-        return EmailTemplateResponse.builder()
-                .id(template.getId())
-                .code(template.getCode())
-                .subject(template.getSubject())
-                .body(template.getBody())
-                .mandatory(template.isMandatory())
-                .active(template.isActive())
-                .createdAt(template.getCreatedAt())
-                .updatedAt(template.getUpdatedAt())
-                .build();
-    }
 }

@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
+import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
+import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
+import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateExamAssignmentRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultRowResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
@@ -61,6 +65,7 @@ public class ExamAssignmentService {
     private final ExamPaperRepository examPaperRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     @Transactional(readOnly = true)
     public List<ExamAssignmentResponse> list(String query, String status) {
@@ -255,12 +260,16 @@ public class ExamAssignmentService {
                 .assignment(assignment)
                 .user(user)
                 .build()));
+        if (status == ExamAssignmentStatus.OPEN) {
+            users.forEach(user -> publishExamAssigned(assignment, user));
+        }
         return toResponse(assignment, true);
     }
 
     @Transactional
     public ExamAssignmentResponse open(Long assignmentId) {
         ExamAssignment assignment = find(assignmentId);
+        boolean wasOpen = assignment.getStatus() == ExamAssignmentStatus.OPEN;
         if (assignment.getStatus() == ExamAssignmentStatus.ARCHIVED) {
             throw new BadRequestException("Không thể mở phân công đã lưu trữ");
         }
@@ -270,7 +279,33 @@ public class ExamAssignmentService {
         assignment.setStatus(ExamAssignmentStatus.OPEN);
         assignment.setOpenedAt(assignment.getOpenedAt() == null ? LocalDateTime.now() : assignment.getOpenedAt());
         assignment.setClosedAt(null);
-        return toResponse(assignmentRepository.save(assignment), true);
+        ExamAssignment saved = assignmentRepository.save(assignment);
+        if (!wasOpen) {
+            targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(saved).stream()
+                    .map(ExamAssignmentTarget::getUser)
+                    .forEach(user -> publishExamAssigned(saved, user));
+        }
+        return toResponse(saved, true);
+    }
+
+    private void publishExamAssigned(ExamAssignment assignment, User user) {
+        Map<String, String> variables = new LinkedHashMap<>();
+        variables.put("employee_name", user.getName());
+        variables.put("employee_code", user.getEmployeeCode());
+        variables.put("exam_name", assignment.getName());
+        variables.put("due_at", assignment.getDueAt() == null ? "Không giới hạn" : assignment.getDueAt().toString());
+        variables.put("max_attempts", String.valueOf(assignment.getMaxAttempts()));
+        notificationEventPublisher.publish(new NotificationDispatchEvent(
+                NotificationEventType.EXAM_ASSIGNED,
+                user.getId(),
+                NotificationAudience.EMPLOYEE,
+                "INFO",
+                "Bạn được giao bài thi mới",
+                "Bài thi '" + assignment.getName() + "' đã được giao cho bạn.",
+                "/staff/exam/take",
+                "EXAM_ASSIGNED:" + assignment.getId() + ":" + user.getId(),
+                variables
+        ));
     }
 
     @Transactional
