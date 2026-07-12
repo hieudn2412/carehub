@@ -59,9 +59,6 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'
   }
-  if (lbl.includes('duyệt minh chứng')) {
-    return isAdm ? '/admin/training/evidence-review' : '/manager/evidence-review'
-  }
   if (lbl === 'trang chủ' || lbl === 'home') {
     return isAdm ? '/admin/dashboard' : (isMgr ? '/manager/dashboard' : '/staff/dashboard')
   }

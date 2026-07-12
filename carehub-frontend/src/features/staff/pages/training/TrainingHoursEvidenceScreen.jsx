@@ -36,8 +36,8 @@ function TrainingHoursEvidenceScreen() {
     evidenceId: null
   })
 
-  // Editable constraint: only DRAFT or REJECTED records can modify evidence
-  const isEditable = record && (record.workflowStatus === 'DRAFT' || record.workflowStatus === 'REJECTED')
+  // Editable constraint: only DRAFT records can modify evidence
+  const isEditable = record && record.workflowStatus === 'DRAFT'
 
   const fetchRecordAndEvidence = () => {
     setLoading(true)
@@ -193,9 +193,8 @@ function TrainingHoursEvidenceScreen() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'APPROVED': return 'Đã phê duyệt'
-      case 'PENDING_REVIEW': return 'Chờ phê duyệt'
-      case 'REJECTED': return 'Bị từ chối'
+      case 'SUBMITTED': return 'Đã nộp'
+      case 'CANCELLED': return 'Đã hủy'
       case 'DRAFT': return 'Bản nháp'
       default: return status
     }
@@ -203,9 +202,8 @@ function TrainingHoursEvidenceScreen() {
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'APPROVED': return 'training-badge--approved'
-      case 'PENDING_REVIEW': return 'training-badge--pending'
-      case 'REJECTED': return 'training-badge--rejected'
+      case 'SUBMITTED': return 'training-badge--approved'
+      case 'CANCELLED': return 'training-badge--rejected'
       case 'DRAFT': return 'training-badge--pending'
       default: return 'training-badge--pending'
     }

@@ -28,7 +28,7 @@ function TrainingHoursListScreen() {
   const [loading, setLoading] = useState(false)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
-  const [totalApprovedHours, setTotalApprovedHours] = useState(0)
+  const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
   const [requiredHours, setRequiredHours] = useState(120)
   const [cmeConfigured, setCmeConfigured] = useState(false)
   const [trigger, setTrigger] = useState(0)
@@ -42,7 +42,7 @@ function TrainingHoursListScreen() {
         if (statusData) {
           const configured = statusData.status !== 'NOT_CONFIGURED'
           setCmeConfigured(configured)
-          setTotalApprovedHours(statusData.approvedHours || 0)
+          setTotalSubmittedHours(statusData.submittedHours || 0)
           setRequiredHours(configured ? (statusData.requiredHours ?? 0) : 0)
         }
       })
@@ -56,7 +56,7 @@ function TrainingHoursListScreen() {
       const params = {
         page,
         size,
-        keyword: search || '%',
+        keyword: search || undefined,
         workflowStatus: status || undefined,
       }
       trainingApi.listRecords(params)
@@ -78,23 +78,19 @@ function TrainingHoursListScreen() {
   const handleDirectSubmit = (recordId) => {
     trainingApi.submitRecord(recordId)
       .then(() => {
-        showToast("Gửi duyệt hồ sơ thành công!", "success")
+        showToast("Nộp hồ sơ thành công!", "success")
         setTrigger(t => t + 1)
       })
       .catch(err => {
         console.error("Error submitting record", err)
-        showToast("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.", "error")
+        showToast("Nộp hồ sơ thất bại. Vui lòng kiểm tra lại.", "error")
       })
   }
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'APPROVED':
-        return 'Duyệt'
-      case 'PENDING_REVIEW':
-        return 'Chờ'
-      case 'REJECTED':
-        return 'Từ chối'
+      case 'SUBMITTED':
+        return 'Đã nộp'
       case 'DRAFT':
         return 'Nháp'
       case 'CANCELLED':
@@ -106,11 +102,9 @@ function TrainingHoursListScreen() {
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'APPROVED':
+      case 'SUBMITTED':
         return 'training-badge--approved'
-      case 'PENDING_REVIEW':
-        return 'training-badge--pending'
-      case 'REJECTED':
+      case 'CANCELLED':
         return 'training-badge--rejected'
       case 'DRAFT':
         return 'training-badge--pending'
@@ -153,7 +147,7 @@ function TrainingHoursListScreen() {
                 <ExclamationCircleOutlined style={{ color: '#dc2626', fontSize: 18 }} />
                 <span>
                   {cmeConfigured
-                    ? <>Tổng số giờ CME: <strong>{totalApprovedHours} / {requiredHours} giờ</strong> — {totalApprovedHours >= requiredHours ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${requiredHours - totalApprovedHours} giờ.`}</>
+                    ? <>Tổng số giờ CME: <strong>{totalSubmittedHours} / {requiredHours} giờ</strong> — {totalSubmittedHours >= requiredHours ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${requiredHours - totalSubmittedHours} giờ.`}</>
                     : <>Phòng ban của bạn không áp dụng yêu cầu CME. Hồ sơ đào tạo vẫn được lưu bình thường.</>}
                 </span>
               </div>
@@ -185,10 +179,9 @@ function TrainingHoursListScreen() {
                 className="training-select"
               >
                 <option value="">Trạng thái</option>
-                <option value="APPROVED">Duyệt</option>
-                <option value="PENDING_REVIEW">Chờ</option>
-                <option value="REJECTED">Từ chối</option>
+                <option value="SUBMITTED">Đã nộp</option>
                 <option value="DRAFT">Nháp</option>
+                <option value="CANCELLED">Đã hủy</option>
               </select>
 
               <div className="training-date-trigger">
@@ -257,12 +250,12 @@ function TrainingHoursListScreen() {
                           </td>
                           <td>
                             <div className="training-actions">
-                              {['DRAFT', 'REJECTED'].includes(r.workflowStatus) && (
+                              {r.workflowStatus === 'DRAFT' && (
                                 <button
                                   onClick={() => handleDirectSubmit(r.id)}
                                   className="training-action-btn"
                                   style={{ color: '#16a34a', borderColor: '#16a34a' }}
-                                  title="Gửi duyệt"
+                                  title="Nộp hồ sơ"
                                 >
                                   <SendOutlined />
                                 </button>

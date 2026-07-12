@@ -170,14 +170,8 @@ function ActivityTypeListPage() {
   const totalElements = data?.totalElements ?? 0
   const totalPages = data?.totalPages ?? 1
 
-  const displayRows = rows.length > 0 ? rows : [
-    { id: 'mock-1', name: 'Workshop', description: 'Structured training sessions with attendance', defaultDurationUnit: 'HOUR', maxCreditedHoursPerRecord: null, active: true },
-    { id: 'mock-2', name: 'Conference', description: 'External medical conferences', defaultDurationUnit: 'HOUR', maxCreditedHoursPerRecord: null, active: false },
-    { id: 'mock-3', name: 'Self-directed', description: 'Independent reading and e-learning', defaultDurationUnit: 'HOUR', maxCreditedHoursPerRecord: null, active: true },
-    { id: 'mock-4', name: 'Research', description: 'Clinical research participation', defaultDurationUnit: 'HOUR', maxCreditedHoursPerRecord: null, active: true },
-  ]
-
-  const displayTotal = rows.length > 0 ? totalElements : 74
+  const displayRows = rows
+  const displayTotal = totalElements
 
   const breadcrumbs = [{ label: 'Các hình thức đào tạo' }]
 

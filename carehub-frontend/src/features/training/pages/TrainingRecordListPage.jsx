@@ -4,7 +4,7 @@ import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import '../styles/training.css'
 
-const STATUS_OPTIONS = ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED']
+const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'CANCELLED']
 
 function TrainingRecordListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -12,6 +12,7 @@ function TrainingRecordListPage() {
   const [options, setOptions] = useState({ activityTypes: [], professionalFields: [] })
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [keywordInput, setKeywordInput] = useState(searchParams.get('keyword') ?? '')
 
   const filters = useMemo(() => ({
     keyword: searchParams.get('keyword') ?? '',
@@ -23,6 +24,22 @@ function TrainingRecordListPage() {
     page: Number(searchParams.get('page') ?? 0),
     size: Number(searchParams.get('size') ?? 10),
   }), [searchParams])
+
+  // Debounce keyword before updating URL params
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = new URLSearchParams(searchParams)
+      if (keywordInput) {
+        next.set('keyword', keywordInput)
+      } else {
+        next.delete('keyword')
+      }
+      next.set('page', '0')
+      setSearchParams(next)
+    }, 300)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keywordInput])
 
   useEffect(() => {
     let mounted = true
@@ -93,9 +110,9 @@ function TrainingRecordListPage() {
           <label>
             Keyword
             <input
-              onChange={(event) => updateFilter('keyword', event.target.value)}
+              onChange={(event) => setKeywordInput(event.target.value)}
               placeholder="Title, provider, employee"
-              value={filters.keyword}
+              value={keywordInput}
             />
           </label>
           <label>
@@ -184,15 +201,13 @@ function TrainingRecordListPage() {
                       </td>
                       <td>
                         Declared: {record.declaredHours ?? '-'}
-                        <br />
-                        Approved: {record.approvedHours ?? '-'}
                       </td>
                       <td>
                         {record.evidenceCount}
                         {record.failedEvidenceCount > 0 ? <span className="training-danger"> / failed</span> : null}
                       </td>
                       <td>
-                        <span className={`training-badge ${record.workflowStatus === 'APPROVED' ? 'is-active' : 'is-inactive'}`}>
+                        <span className={`training-badge ${record.workflowStatus === 'SUBMITTED' ? 'is-active' : 'is-inactive'}`}>
                           {record.workflowStatus}
                         </span>
                       </td>
@@ -200,7 +215,7 @@ function TrainingRecordListPage() {
                       <td>
                         <div className="training-actions">
                           <Link to={`/training/records/${record.id}`}>View</Link>
-                          {['DRAFT', 'REJECTED'].includes(record.workflowStatus) ? (
+                          {record.workflowStatus === 'DRAFT' ? (
                             <>
                               <Link to={`/training/records/${record.id}/edit`}>Edit</Link>
                               <Link to={`/training/records/${record.id}/evidence`}>Evidence</Link>

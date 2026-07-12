@@ -65,7 +65,7 @@ function DashboardStaffScreen() {
           ...prev,
           cmeConfigured: configured,
           cmeStatusLoaded: true,
-          cmeHours: configured ? (status.approvedHours ?? 0) : 0,
+          cmeHours: configured ? (status.submittedHours ?? 0) : 0,
           requiredCmeHours: configured ? (status.requiredHours ?? 0) : 0,
           missingCmeHours: configured ? (status.remainingHours ?? 0) : 0,
           cmeCycleYears: configured ? status.cycleYears : null,

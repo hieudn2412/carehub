@@ -36,8 +36,8 @@ function TrainingRecordEvidencePage() {
     evidenceId: null
   })
 
-  // Editable check: only DRAFT or REJECTED records can modify evidence
-  const isEditable = record && (record.workflowStatus === 'DRAFT' || record.workflowStatus === 'REJECTED')
+  // Editable check: only DRAFT records can modify evidence
+  const isEditable = record && record.workflowStatus === 'DRAFT'
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -178,7 +178,7 @@ function TrainingRecordEvidencePage() {
     try {
       const response = await trainingApi.submitRecord(id, { version: record.version })
       setRecord(response.data.data)
-      showToast('Đã nộp hồ sơ đào tạo lên Trưởng khoa phê duyệt.', 'success')
+      showToast('Đã nộp hồ sơ đào tạo.', 'success')
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Không thể nộp hồ sơ đào tạo'), 'error')
     } finally {
@@ -219,9 +219,8 @@ function TrainingRecordEvidencePage() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'APPROVED': return 'Đã phê duyệt'
-      case 'PENDING_REVIEW': return 'Chờ phê duyệt'
-      case 'REJECTED': return 'Bị từ chối'
+      case 'SUBMITTED': return 'Đã nộp'
+      case 'CANCELLED': return 'Đã hủy'
       case 'DRAFT': return 'Bản nháp'
       default: return status
     }
@@ -259,12 +258,12 @@ function TrainingRecordEvidencePage() {
                 <dt>Trạng thái</dt>
                 <dd>
                   <span className={`training-badge ${
-                    record?.workflowStatus === 'APPROVED' ? 'is-active' : 
-                    record?.workflowStatus === 'REJECTED' ? 'is-inactive' : 'is-warning'
+                    record?.workflowStatus === 'SUBMITTED' ? 'is-active' :
+                    record?.workflowStatus === 'CANCELLED' ? 'is-inactive' : 'is-warning'
                   }`}>
-                    {record?.workflowStatus === 'APPROVED' ? 'Đã phê duyệt' :
-                     record?.workflowStatus === 'REJECTED' ? 'Bị từ chối' : 
-                     record?.workflowStatus === 'SUBMITTED' ? 'Chờ phê duyệt' : 'Bản nháp'}
+                    {record?.workflowStatus === 'SUBMITTED' ? 'Đã nộp' :
+                     record?.workflowStatus === 'CANCELLED' ? 'Đã hủy' :
+                     'Bản nháp'}
                   </span>
                 </dd>
                 <dt>Loại hình</dt>
@@ -315,7 +314,7 @@ function TrainingRecordEvidencePage() {
               <div className="evidence-info-box" style={{ background: '#f8fafc', borderColor: '#cbd5e1', color: '#64748b', padding: 20, borderRadius: 12, border: '1px solid #cbd5e1', display: 'flex', alignItems: 'center', gap: 10, height: '100%' }}>
                 <InfoCircleOutlined style={{ fontSize: 18, color: '#64748b' }} />
                 <p style={{ margin: 0, fontSize: 13.5 }}>
-                  Hồ sơ đang ở trạng thái <strong>{getStatusLabel(record?.workflowStatus)}</strong>. Bạn không thể thêm hoặc sửa đổi minh chứng trong trạng thái này.
+                  Hồ sơ đang ở trạng thái <strong>{getStatusLabel(record?.workflowStatus)}</strong>. Không thể thêm hoặc sửa đổi minh chứng.
                 </p>
               </div>
             )}
@@ -346,7 +345,7 @@ function TrainingRecordEvidencePage() {
                 type="button"
                 style={{ borderRadius: '8px', padding: '8px 18px', background: '#f8fafc', fontWeight: 600 }}
               >
-                Nộp hồ sơ duyệt
+                Nộp hồ sơ
               </button>
             </div>
           </form>
