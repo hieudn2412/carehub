@@ -127,7 +127,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .durationUnit(DurationUnit.HOUR)
                 .durationRawText("2h30")
                 .declaredHours(BigDecimal.valueOf(2.5))
-                .workflowStatus(TrainingRecordStatus.PENDING_REVIEW)
+                .workflowStatus(TrainingRecordStatus.DRAFT)
                 .createdByUser(admin)
                 .build());
     }
@@ -180,7 +180,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .filter(record -> record.getSourceType() == TrainingSourceType.LEGACY_IMPORT)
                 .toList();
         assertThat(importedRecords).hasSize(3);
-        assertThat(importedRecords).allMatch(record -> record.getWorkflowStatus() == TrainingRecordStatus.PENDING_REVIEW);
+        assertThat(importedRecords).allMatch(record -> record.getWorkflowStatus() == TrainingRecordStatus.DRAFT);
         assertThat(importedRecords)
                 .filteredOn(record -> record.getDurationUnit() == DurationUnit.LESSON)
                 .singleElement()

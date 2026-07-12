@@ -84,22 +84,21 @@ class TrainingRepositoryIntegrationTest {
                 .title("Khóa an toàn gây mê")
                 .startDate(LocalDate.of(2026, 3, 10))
                 .declaredHours(BigDecimal.valueOf(8))
-                .approvedHours(BigDecimal.valueOf(8))
-                .workflowStatus(TrainingRecordStatus.APPROVED)
+                .workflowStatus(TrainingRecordStatus.SUBMITTED)
                 .createdByUser(employee)
                 .build());
         recordRepository.save(TrainingRecord.builder()
                 .employee(employee)
                 .employeeDepartmentSnapshot(department)
                 .activityType(activityType)
-                .title("Khóa chờ duyệt")
+                .title("Khóa nháp")
                 .startDate(LocalDate.of(2026, 4, 10))
                 .declaredHours(BigDecimal.valueOf(20))
-                .workflowStatus(TrainingRecordStatus.PENDING_REVIEW)
+                .workflowStatus(TrainingRecordStatus.DRAFT)
                 .createdByUser(employee)
                 .build());
 
-        BigDecimal approvedHours = recordRepository.sumApprovedHoursForEmployee(
+        BigDecimal submittedHours = recordRepository.sumApprovedHoursForEmployee(
                 employee.getId(),
                 LocalDate.of(2021, 6, 16),
                 LocalDate.of(2026, 6, 16)
@@ -112,7 +111,7 @@ class TrainingRepositoryIntegrationTest {
         );
 
         assertThat(activityTypeRepository.findByCode("CME")).contains(activityType);
-        assertThat(approvedHours).isEqualByComparingTo("8");
+        assertThat(submittedHours).isEqualByComparingTo("8");
         assertThat(candidates).contains(requirement);
     }
 }

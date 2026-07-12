@@ -18,11 +18,9 @@ import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecordReview;
 import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
-import vn.vietduc.carehubbackend.training.enums.ReviewDecision;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordChangeType;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
@@ -31,7 +29,6 @@ import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeReposit
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRecordReviewRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
@@ -92,9 +89,6 @@ class TrainingEmployeeHoursControllerIntegrationTest {
     private TrainingEvidenceFileRepository evidenceFileRepository;
 
     @Autowired
-    private TrainingRecordReviewRepository reviewRepository;
-
-    @Autowired
     private TrainingRecordChangeLogRepository changeLogRepository;
 
     private Department anesthesia;
@@ -108,152 +102,146 @@ class TrainingEmployeeHoursControllerIntegrationTest {
     private User nurseEmployee;
     private User otherDepartmentDoctor;
     private TrainingActivityType activityType;
-    private TrainingRecord approvedRecord;
-    private TrainingRecord pendingRecord;
-    private TrainingRecord rejectedRecord;
+    private TrainingRecord submittedRecord1;
+    private TrainingRecord draftRecord;
+    private TrainingRecord cancelledRecord;
 
     @BeforeEach
     void setUp() {
         anesthesia = departmentRepository.save(Department.builder()
-                .departmentCode("P6_AN")
-                .name("Phase 6 Anesthesia")
+                .departmentCode("P9_AN")
+                .name("Phase 9 Anesthesia")
                 .build());
         surgery = departmentRepository.save(Department.builder()
-                .departmentCode("P6_SU")
-                .name("Phase 6 Surgery")
+                .departmentCode("P9_SU")
+                .name("Phase 9 Surgery")
                 .build());
         cmeScopeConfigurationRepository.saveAndFlush(CmeScopeConfiguration.builder()
                 .scopeKey(CmeScopeConfiguration.CME_SCOPE_KEY)
                 .departments(new LinkedHashSet<>(List.of(anesthesia)))
                 .build());
-        doctor = positionRepository.save(Position.builder().name("Phase 6 Doctor").build());
-        nurse = positionRepository.save(Position.builder().name("Phase 6 Nurse").build());
+        doctor = positionRepository.save(Position.builder().name("Phase 9 Doctor").build());
+        nurse = positionRepository.save(Position.builder().name("Phase 9 Nurse").build());
         intensiveCare = professionalFieldRepository.save(ProfessionalField.builder()
-                .code("P6_ICU")
-                .name("Phase 6 ICU")
+                .code("P9_ICU")
+                .name("Phase 9 ICU")
                 .active(true)
                 .build());
-        admin = saveUser("P6_ADMIN", "p6-admin@example.com", "Phase 6 Admin", anesthesia, doctor);
-        manager = saveUser("P6_MANAGER", "p6-manager@example.com", "Phase 6 Manager", anesthesia, doctor);
-        doctorEmployee = saveUser("P6_EMP1", "p6-emp1@example.com", "Phase 6 Doctor Employee", anesthesia, doctor);
-        nurseEmployee = saveUser("P6_NURSE", "p6-nurse@example.com", "Phase 6 Nurse Employee", anesthesia, nurse);
-        otherDepartmentDoctor = saveUser("P6_OTHER", "p6-other@example.com", "Phase 6 Other Doctor", surgery, doctor);
+        admin = saveUser("P9_ADMIN", "p9-admin@example.com", "Phase 9 Admin", anesthesia, doctor);
+        manager = saveUser("P9_MANAGER", "p9-manager@example.com", "Phase 9 Manager", anesthesia, doctor);
+        doctorEmployee = saveUser("P9_EMP1", "p9-emp1@example.com", "Phase 9 Doctor Employee", anesthesia, doctor);
+        nurseEmployee = saveUser("P9_NURSE", "p9-nurse@example.com", "Phase 9 Nurse Employee", anesthesia, nurse);
+        otherDepartmentDoctor = saveUser("P9_OTHER", "p9-other@example.com", "Phase 9 Other Doctor", surgery, doctor);
         activityType = activityTypeRepository.save(TrainingActivityType.builder()
-                .code("P6_TYPE")
-                .name("Phase 6 Type")
+                .code("P9_TYPE")
+                .name("Phase 9 Type")
                 .defaultDurationUnit(DurationUnit.HOUR)
                 .requiresEvidence(false)
                 .active(true)
                 .build());
 
-        saveRequirement("P6_DOCTOR_GLOBAL", "Doctor Global Requirement", BigDecimal.valueOf(100), doctor, null);
-        saveRequirement("P6_AN_DOCTOR", "Anesthesia Doctor Requirement", BigDecimal.valueOf(120), doctor, anesthesia);
+        saveRequirement("P9_DOCTOR_GLOBAL", "Doctor Global Requirement", BigDecimal.valueOf(100), doctor, null);
+        saveRequirement("P9_AN_DOCTOR", "Anesthesia Doctor Requirement", BigDecimal.valueOf(120), doctor, anesthesia);
 
-        approvedRecord = saveRecord(
+        submittedRecord1 = saveRecord(
                 doctorEmployee,
-                "Approved Phase 6 Course",
+                "Submitted Phase 9 Course",
                 LocalDate.of(2024, 1, 1),
-                TrainingRecordStatus.APPROVED,
-                BigDecimal.valueOf(60),
+                TrainingRecordStatus.SUBMITTED,
                 BigDecimal.valueOf(60)
         );
-        pendingRecord = saveRecord(
+        draftRecord = saveRecord(
                 doctorEmployee,
-                "Pending Phase 6 Course",
+                "Draft Phase 9 Course",
                 LocalDate.of(2025, 6, 1),
-                TrainingRecordStatus.PENDING_REVIEW,
-                BigDecimal.valueOf(20),
-                null
+                TrainingRecordStatus.DRAFT,
+                BigDecimal.valueOf(20)
         );
-        rejectedRecord = saveRecord(
+        cancelledRecord = saveRecord(
                 doctorEmployee,
-                "Rejected Phase 6 Course",
+                "Cancelled Phase 9 Course",
                 LocalDate.of(2025, 7, 1),
-                TrainingRecordStatus.REJECTED,
-                BigDecimal.valueOf(5),
-                null
+                TrainingRecordStatus.CANCELLED,
+                BigDecimal.valueOf(5)
         );
         saveRecord(
                 doctorEmployee,
-                "Old Phase 6 Course",
+                "Old Phase 9 Course",
                 LocalDate.of(2020, 1, 1),
-                TrainingRecordStatus.APPROVED,
-                BigDecimal.valueOf(200),
+                TrainingRecordStatus.SUBMITTED,
                 BigDecimal.valueOf(200)
         );
         saveRecord(
                 doctorEmployee,
-                "Draft Phase 6 Course",
+                "Draft Phase 9 Course 2",
                 LocalDate.of(2026, 4, 1),
                 TrainingRecordStatus.DRAFT,
-                BigDecimal.valueOf(9),
-                null
+                BigDecimal.valueOf(9)
         );
         saveRecord(
                 nurseEmployee,
                 "Unconfigured Nurse Course",
                 LocalDate.of(2025, 3, 1),
-                TrainingRecordStatus.APPROVED,
-                BigDecimal.valueOf(10),
+                TrainingRecordStatus.SUBMITTED,
                 BigDecimal.valueOf(10)
         );
         saveRecord(
                 otherDepartmentDoctor,
                 "Other Department Course",
                 LocalDate.of(2025, 3, 1),
-                TrainingRecordStatus.APPROVED,
-                BigDecimal.valueOf(30),
+                TrainingRecordStatus.SUBMITTED,
                 BigDecimal.valueOf(30)
         );
-        saveEvidence(approvedRecord, EvidenceModerationStatus.PASSED);
-        saveEvidence(pendingRecord, EvidenceModerationStatus.ERROR);
-        saveReviewAndChangeHistory(approvedRecord);
+        saveEvidence(submittedRecord1, EvidenceModerationStatus.PASSED);
+        saveEvidence(draftRecord, EvidenceModerationStatus.ERROR);
+        saveChangeHistory(submittedRecord1);
     }
 
     @Test
     void employeeStatusListAggregatesScopesFiltersAndRequirementPriority() throws Exception {
+        // Manager scoped to own department - should not see other department employees
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(manager, "MANAGER"))
                         .param("asOf", "2026-06-20"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(not(containsString("P6_OTHER"))));
+                .andExpect(content().string(not(containsString("P9_OTHER"))));
 
+        // Keyword filter finds specific employee with requirement
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(manager, "MANAGER"))
-                        .param("keyword", "P6_EMP1")
+                        .param("keyword", "P9_EMP1")
                         .param("asOf", "2026-06-20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].employeeCode").value("P6_EMP1"))
+                .andExpect(jsonPath("$.data.content[0].employeeCode").value("P9_EMP1"))
                 .andExpect(jsonPath("$.data.content[0].requirementName").value("Anesthesia Doctor Requirement"))
                 .andExpect(jsonPath("$.data.content[0].requiredHours").value(120))
-                .andExpect(jsonPath("$.data.content[0].approvedHours").value(60.0))
-                .andExpect(jsonPath("$.data.content[0].pendingHours").value(20))
-                .andExpect(jsonPath("$.data.content[0].rejectedHours").value(5))
+                .andExpect(jsonPath("$.data.content[0].submittedHours").value(60.0))
                 .andExpect(jsonPath("$.data.content[0].remainingHours").value(60.0))
                 .andExpect(jsonPath("$.data.content[0].complianceStatus").value("NON_COMPLIANT"))
-                .andExpect(jsonPath("$.data.content[0].lastTrainingDate").value("2025-07-01"))
-                .andExpect(jsonPath("$.data.content[0].pendingReviewCount").value(1));
+                .andExpect(jsonPath("$.data.content[0].lastTrainingDate").value("2026-04-01"));
 
+        // NOT_CONFIGURED filter for nurse (no matching requirement)
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(admin, "ADMIN"))
-                        .param("keyword", "P6_NURSE")
+                        .param("keyword", "P9_NURSE")
                         .param("requirementConfigured", "false")
                         .param("asOf", "2026-06-20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
                 .andExpect(jsonPath("$.data.content[0].complianceStatus").value("NOT_CONFIGURED"));
 
+        // Filter by submitted hours range + sort
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(admin, "ADMIN"))
-                        .param("hasPendingReview", "true")
-                        .param("approvedHoursMin", "50")
-                        .param("approvedHoursMax", "70")
+                        .param("submittedHoursMin", "50")
+                        .param("submittedHoursMax", "70")
                         .param("asOf", "2026-06-20")
-                        .param("sort", "approvedHours,desc"))
+                        .param("sort", "submittedHours,desc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content[0].employeeCode").value("P6_EMP1"));
+                .andExpect(jsonPath("$.data.content[0].employeeCode").value("P9_EMP1"));
 
+        // Pagination
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(admin, "ADMIN"))
                         .param("asOf", "2026-06-20")
@@ -262,6 +250,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.size").value(1));
 
+        // Regular USER cannot access
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(doctorEmployee, "USER"))
                         .param("asOf", "2026-06-20"))
@@ -270,34 +259,37 @@ class TrainingEmployeeHoursControllerIntegrationTest {
 
     @Test
     void employeeDetailRecordsMatchStatusWindowAndScope() throws Exception {
+        // Employee detail status
         mockMvc.perform(get("/api/v1/training/employees/{employeeId}/status", doctorEmployee.getId())
                         .with(jwtFor(manager, "MANAGER"))
                         .param("asOf", "2026-06-20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.approvedHours").value(60.0))
-                .andExpect(jsonPath("$.data.pendingHours").value(20))
-                .andExpect(jsonPath("$.data.rejectedHours").value(5));
+                .andExpect(jsonPath("$.data.submittedHours").value(60.0));
 
+        // Employee ledger records - shows SUBMITTED, DRAFT, CANCELLED records in window
+        // (4 records in window: 2024-01-01 SUBMITTED 60h, 2025-06-01 DRAFT 20h, 2025-07-01 CANCELLED 5h, 2026-04-01 DRAFT 9h)
         mockMvc.perform(get("/api/v1/training/employees/{employeeId}/records", doctorEmployee.getId())
                         .with(jwtFor(manager, "MANAGER"))
                         .param("asOf", "2026-06-20")
                         .param("sort", "startDate,asc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(3))
-                .andExpect(jsonPath("$.data.content[0].id").value(approvedRecord.getId()))
-                .andExpect(jsonPath("$.data.content[0].workflowStatus").value("APPROVED"))
-                .andExpect(jsonPath("$.data.content[0].runningApprovedHours").value(60.0))
+                .andExpect(jsonPath("$.data.totalElements").value(4))
+                .andExpect(jsonPath("$.data.content[0].id").value(submittedRecord1.getId()))
+                .andExpect(jsonPath("$.data.content[0].workflowStatus").value("SUBMITTED"))
+                .andExpect(jsonPath("$.data.content[0].runningSubmittedHours").value(60.0))
                 .andExpect(jsonPath("$.data.content[0].evidenceCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].passedEvidenceCount").value(1))
-                .andExpect(jsonPath("$.data.content[0].reviewCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].changeLogCount").value(1))
-                .andExpect(jsonPath("$.data.content[1].id").value(pendingRecord.getId()))
-                .andExpect(jsonPath("$.data.content[1].workflowStatus").value("PENDING_REVIEW"))
-                .andExpect(jsonPath("$.data.content[1].runningApprovedHours").value(60.0))
-                .andExpect(jsonPath("$.data.content[2].id").value(rejectedRecord.getId()))
-                .andExpect(jsonPath("$.data.content[2].workflowStatus").value("REJECTED"))
-                .andExpect(jsonPath("$.data.content[2].runningApprovedHours").value(60.0));
+                // DRAFT record: running stays at 60 (draft doesn't add)
+                .andExpect(jsonPath("$.data.content[1].id").value(draftRecord.getId()))
+                .andExpect(jsonPath("$.data.content[1].workflowStatus").value("DRAFT"))
+                .andExpect(jsonPath("$.data.content[1].runningSubmittedHours").value(60.0))
+                // CANCELLED record: running stays at 60 (cancelled doesn't add)
+                .andExpect(jsonPath("$.data.content[2].id").value(cancelledRecord.getId()))
+                .andExpect(jsonPath("$.data.content[2].workflowStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.content[2].runningSubmittedHours").value(60.0));
 
+        // Forbidden for out-of-scope employee
         mockMvc.perform(get("/api/v1/training/employees/{employeeId}/records", otherDepartmentDoctor.getId())
                         .with(jwtFor(manager, "MANAGER"))
                         .param("asOf", "2026-06-20"))
@@ -341,8 +333,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
             String title,
             LocalDate startDate,
             TrainingRecordStatus status,
-            BigDecimal declaredHours,
-            BigDecimal approvedHours
+            BigDecimal declaredHours
     ) {
         return recordRepository.save(TrainingRecord.builder()
                 .employee(employee)
@@ -350,14 +341,13 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .activityType(activityType)
                 .professionalField(intensiveCare)
                 .title(title)
-                .provider("Phase 6 Provider")
+                .provider("Phase 9 Provider")
                 .startDate(startDate)
                 .endDate(startDate)
                 .durationUnit(DurationUnit.HOUR)
                 .declaredHours(declaredHours)
-                .approvedHours(approvedHours)
                 .workflowStatus(status)
-                .submittedAt(status == TrainingRecordStatus.DRAFT ? null : LocalDateTime.of(2026, 1, 10, 9, 0))
+                .submittedAt(status == TrainingRecordStatus.SUBMITTED ? LocalDateTime.of(2026, 1, 10, 9, 0) : null)
                 .createdByUser(employee)
                 .updatedByUser(employee)
                 .build());
@@ -366,8 +356,8 @@ class TrainingEmployeeHoursControllerIntegrationTest {
     private void saveEvidence(TrainingRecord record, EvidenceModerationStatus status) {
         evidenceFileRepository.save(TrainingEvidenceFile.builder()
                 .trainingRecord(record)
-                .originalFilename("phase6-certificate.jpg")
-                .objectKey("phase6-secret-key")
+                .originalFilename("phase9-certificate.jpg")
+                .objectKey("phase9-secret-key")
                 .mimeType(MediaType.IMAGE_JPEG_VALUE)
                 .fileSizeBytes(1024L)
                 .checksumSha256("b".repeat(64))
@@ -381,22 +371,13 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .build());
     }
 
-    private void saveReviewAndChangeHistory(TrainingRecord record) {
-        reviewRepository.save(TrainingRecordReview.builder()
-                .trainingRecord(record)
-                .decision(ReviewDecision.APPROVED)
-                .declaredHoursSnapshot(record.getDeclaredHours())
-                .approvedHours(record.getApprovedHours())
-                .reason("Approved")
-                .reviewedByUser(manager)
-                .reviewedAt(LocalDateTime.of(2026, 1, 11, 9, 0))
-                .build());
+    private void saveChangeHistory(TrainingRecord record) {
         changeLogRepository.save(TrainingRecordChangeLog.builder()
                 .trainingRecord(record)
                 .versionNo(record.getVersion())
-                .changeType(TrainingRecordChangeType.UPDATED)
-                .beforeData(Map.of("title", "Before"))
-                .afterData(Map.of("title", record.getTitle()))
+                .changeType(TrainingRecordChangeType.SUBMITTED)
+                .beforeData(Map.of("workflowStatus", "DRAFT"))
+                .afterData(Map.of("workflowStatus", "SUBMITTED"))
                 .changedByUser(record.getEmployee())
                 .changedAt(LocalDateTime.of(2026, 1, 9, 9, 0))
                 .build());
