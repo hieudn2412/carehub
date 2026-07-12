@@ -11,9 +11,8 @@ public record EmployeeTrainingStatusSearchRequest(
         Long jobPositionId,
         Long professionalFieldId,
         ComplianceStatus complianceStatus,
-        Boolean hasPendingReview,
-        BigDecimal approvedHoursMin,
-        BigDecimal approvedHoursMax,
+        BigDecimal submittedHoursMin,
+        BigDecimal submittedHoursMax,
         Boolean requirementConfigured,
         LocalDate asOf
 ) {

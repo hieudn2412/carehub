@@ -2,7 +2,10 @@ package vn.vietduc.carehubbackend.training.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -27,7 +30,10 @@ import java.util.Map;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "training_evidence_files")
+@Table(name = "training_evidence_files", indexes = {
+    @Index(columnList = "training_record_id, is_active"),
+    @Index(columnList = "moderation_status")
+})
 public class TrainingEvidenceFile extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "training_record_id", nullable = false)
@@ -51,6 +57,7 @@ public class TrainingEvidenceFile extends BaseEntity {
     @Column(name = "checksum_sha256", length = 64)
     private String checksumSha256;
 
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "moderation_status", nullable = false, length = 30)
     private EvidenceModerationStatus moderationStatus = EvidenceModerationStatus.NOT_REQUESTED;

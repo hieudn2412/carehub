@@ -13,6 +13,12 @@ public class DurationUnitConverter implements AttributeConverter<DurationUnit, S
 
     @Override
     public DurationUnit convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : DurationUnit.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return DurationUnit.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum DurationUnit");
+        }
     }
 }

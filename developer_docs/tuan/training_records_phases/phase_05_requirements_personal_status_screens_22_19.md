@@ -111,9 +111,7 @@ KPI cards:
 - Requirement đang áp dụng.
 - Chu kỳ.
 - Window start/end.
-- Approved hours.
-- Pending hours.
-- Rejected hours.
+- Declared hours (từ record SUBMITTED).
 - Remaining hours.
 - Progress percentage.
 - Compliance status.
@@ -124,7 +122,6 @@ Charts/list:
 - Giờ theo năm.
 - Giờ theo activity type.
 - Record gần đây.
-- Các record pending/rejected cần xử lý.
 
 #### Manager/Admin view
 
@@ -135,20 +132,20 @@ Charts/list:
 #### Compliance calculation
 
 ```text
-approved_hours =
-  SUM(training_records.approved_hours)
+submitted_hours =
+  SUM(training_records.declared_hours)
   WHERE employee_id = target
-    AND workflow_status = 'APPROVED'
+    AND workflow_status = 'SUBMITTED'
     AND start_date BETWEEN window_start AND window_end
 ```
 
 ```text
-remaining_hours = MAX(required_hours - approved_hours, 0)
+remaining_hours = MAX(required_hours - submitted_hours, 0)
 ```
 
 ```text
-COMPLIANT      khi approved_hours >= required_hours
-NON_COMPLIANT  khi approved_hours < required_hours
+COMPLIANT      khi submitted_hours >= required_hours
+NON_COMPLIANT  khi submitted_hours < required_hours
 NOT_CONFIGURED khi không tìm thấy requirement
 AT_RISK        chỉ khi đã có rule threshold được chốt
 ```
@@ -162,12 +159,12 @@ GET /api/v1/training/employees/{employeeId}/status
 
 #### Acceptance criteria
 
-- Pending đủ 120 giờ nhưng approved chưa đủ vẫn là non-compliant.
-- Đúng 120/120 là compliant.
-- Không có requirement không hiển thị compliant.
+- SUBMITTED hours đủ requirement là compliant.
+- Đúng bằng requirement là compliant.
+- Không có requirement hiển thị `NOT_CONFIGURED`.
 - Warning nêu chính xác số giờ còn thiếu.
 - Hiển thị rolling 5-year window rõ ràng.
-- Status cập nhật ngay sau approve.
+- Status cập nhật ngay sau submit.
 
 #### Tests
 

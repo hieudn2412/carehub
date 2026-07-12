@@ -11,11 +11,10 @@
 
 ### Notification hooks
 
-- Khi submit → notify review queue.
-- Khi approve → notify employee.
-- Khi reject → notify employee kèm lý do.
 - Khi compliance thiếu giờ → module notification xử lý.
 - Suppress duplicate alert theo business rule.
+
+> **Đã bỏ**: Notification submit-to-review-queue, approve, reject — không còn review workflow.
 
 ### Audit events
 
@@ -26,15 +25,14 @@ TRAINING_RECORD_SUBMITTED
 TRAINING_RECORD_CANCELLED
 TRAINING_EVIDENCE_UPLOADED
 TRAINING_EVIDENCE_REMOVED
-TRAINING_EVIDENCE_MODERATION_FAILED
-TRAINING_RECORD_APPROVED
-TRAINING_RECORD_REJECTED
 TRAINING_REQUIREMENT_CREATED
 TRAINING_REQUIREMENT_UPDATED
 TRAINING_ACTIVITY_TYPE_CREATED
 TRAINING_ACTIVITY_TYPE_UPDATED
 TRAINING_ACTIVITY_TYPE_DEACTIVATED
 ```
+
+> **Đã bỏ**: `TRAINING_RECORD_APPROVED`, `TRAINING_RECORD_REJECTED`, `TRAINING_EVIDENCE_MODERATION_FAILED` — không còn review workflow.
 
 ### Logging
 

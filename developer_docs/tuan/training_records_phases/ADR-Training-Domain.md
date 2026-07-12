@@ -10,7 +10,7 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Job position maps to the existing `positions` table.
 - Department maps to the existing `departments` table.
 - `professional_fields` is added as a foundation table because the current codebase had no equivalent table.
-- Only `APPROVED` records are counted by the compliance calculator.
+- Only `SUBMITTED` records are counted by the compliance calculator.
 - `AT_RISK` is returned only when a requirement has `warning_threshold_hours`.
 - Direct/manual records are validated with the SRS 24-hour upper limit; legacy import can bypass that limit for later review.
 - No conversion is performed for `LESSON`, `CREDIT`, `DAY`, `MONTH`, or `YEAR`.
@@ -22,7 +22,7 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Duplicate records are surfaced as a warning on the response DTO instead of being hard-blocked for every role.
 - The local Phase 03 evidence adapter validates extension, declared MIME type, magic bytes, size, checksum, and mock moderation metadata; PDF moderation remains metadata-only until the hospital policy is confirmed.
 - Local evidence storage writes to `target/local-evidence-storage` by default and is a development/test adapter, not a production object-storage decision.
-- Submit writes the `TRAINING_RECORD_SUBMITTED` audit event and leaves reviewer notification delivery to Phase 08, where notification hooks, reviewer routing, duplicate suppression, and transport policy are defined.
+- Submit writes the `TRAINING_RECORD_SUBMITTED` audit event. No reviewer notification needed (review workflow removed).
 
 ## Implemented Stance For Phase 04
 
@@ -37,7 +37,7 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Requirement CRUD is admin-only and uses optimistic `version` checks; active requirements cannot overlap another active requirement with the exact same department, job position, professional field, and effective period.
 - Requirement codes are normalized to uppercase on write. Requirement list search supports keyword, active status, scope filters, effective date, paging, and bounded sort fields.
 - Applicable employee count is derived from the employee's department and position because the current HR schema does not store professional field on employees; professional field remains a requirement/status selector rather than an employee attribute.
-- Personal compliance uses an inclusive rolling window ending at `asOf` or the current date. Only `APPROVED` records contribute to `approvedHours`; `PENDING_REVIEW` and `REJECTED` are returned separately for visibility and never satisfy compliance.
+- Personal compliance uses an inclusive rolling window ending at `asOf` or the current date. Only `SUBMITTED` records contribute to compliance hours.
 - Requirement priority follows specificity, then newest `effective_from`: department + position + professional field, department + position, position + professional field, position/global variants, then global fallback. The status endpoints accept optional `professionalFieldId` to opt into professional-field-specific rules.
 - `AT_RISK` remains disabled unless a requirement has `warning_threshold_hours`; otherwise non-compliant users remain `NON_COMPLIANT`.
 - The Phase 05 frontend for requirement configuration and training status is intentionally minimal and exists to test the API flows.
@@ -47,8 +47,8 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Employee training hours list is Manager/Admin/System Job only. Admin can filter across departments; Manager scope is constrained to the manager's current department server-side.
 - The Phase 06 list avoids per-employee database queries: scoped employee candidates, active requirements, and training records for the maximum active requirement cycle are fetched in batches, then each employee is evaluated with the same Phase 05 requirement priority and per-requirement rolling window. A database view/materialized view remains a future optimization if production volume requires it.
 - The only date-window input exposed for Phase 06 is `asOf`; arbitrary custom date windows are not implemented because the business rule is not confirmed.
-- `/training/employees/{employeeId}/records` uses the employee's selected requirement window and returns only `APPROVED`, `PENDING_REVIEW`, and `REJECTED` ledger rows. If no requirement is configured, the status response explains `NOT_CONFIGURED` and the compliance ledger is empty.
-- Ledger running total counts `APPROVED` hours only; pending and rejected rows remain visible but never increase compliance totals.
+- `/training/employees/{employeeId}/records` uses the employee's selected requirement window and returns `SUBMITTED` ledger rows. If no requirement is configured, the status response explains `NOT_CONFIGURED` and the compliance ledger is empty.
+- Ledger running total counts `SUBMITTED` hours (declared_hours); this is the only active state that contributes to compliance.
 - Evidence, review, and change timeline data on the Phase 06 ledger is summarized as counts per record; full record detail and download URLs remain delegated to the Phase 04/03 endpoints.
 - The Phase 06 frontend for employee list/detail is intentionally minimal and exists to test the API flows.
 
@@ -60,9 +60,25 @@ Phase 01 implements the database, domain foundation, and shared security scope f
 - Employee code normalization trims, uppercases, removes whitespace, and prefixes numeric-only codes with `VD`; suspicious/non-matching codes stay failed/manual-review and are not auto-corrected.
 - Duration parsing stores raw text, parsed value, parsed unit, normalized hours, confidence, and warnings. Explicit hour values are normalized to hours. `LESSON`, `CREDIT`, `MONTH`, and `YEAR` are parsed without converting to hours because conversion rules are still open decisions.
 - Rows with no evidence, Google Drive evidence, duplicate candidates, ambiguous numeric duration, snapshot mismatches, or unconfirmed units are warnings, not auto-applied. Invalid employee, missing title/date, unsafe date range, and unparseable duration block the row.
-- Committed legacy rows create `PENDING_REVIEW` training records with `sourceType=LEGACY_IMPORT`; they do not become approved or counted automatically.
+- Committed legacy rows create `SUBMITTED` training records with `sourceType=LEGACY_IMPORT`.
 - Google Drive/legacy evidence is saved only in `legacy_external_url`; `object_key` remains null until a separate object-storage migration/download process is approved.
 - The Phase 07 frontend is intentionally minimal and exists to upload, preview, confirm, and apply batches for API testing.
+
+## Implemented Stance For Review Removal (Post-Phase-09)
+
+- Review workflow (`PENDING_REVIEW`, `APPROVED`, `REJECTED`) is removed. Admin and Manager no longer review training records or evidence.
+- Users self-manage their training hours and evidence. They are responsible for their own data.
+- `SUBMITTED` is the final active state; `SUBMITTED` hours count toward compliance (using `declared_hours`).
+- Evidence moderation still validates file format/size/magic bytes but does **not** block submission. Evidence is optional.
+- The `training_record_reviews` table and `ReviewDecision` enum are removed.
+- `approved_hours`, `latest_reviewed_by_user_id`, `latest_reviewed_at`, `latest_rejection_reason` columns are removed from `training_records`.
+- `declared_hours` is used for compliance calculation instead of `approved_hours`.
+- `app.training.records.review-enabled` property gates the legacy review workflow (default: `false` — self-managed).
+- Audit events `APPROVED` and `REJECTED` are removed from `TrainingRecordChangeType`.
+- Notification hooks for submit-to-review-queue, approve, and reject are removed.
+- Manager review pages (`/manager/evidence-review`) are removed.
+- State machine simplified to: `DRAFT → SUBMITTED → (optional) CANCELLED`.
+- `requireEditable()` check simplified: only `DRAFT` records are editable (no more `REJECTED` resubmit).
 
 ## Open Decisions
 

@@ -7,13 +7,11 @@ import vn.vietduc.carehubbackend.training.dto.response.EvidenceMetadataResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordChangeLogResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordDetailResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
-import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordReviewTimelineResponse;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecordReview;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -63,7 +61,6 @@ public class TrainingRecordMapper {
                 entity.getStartDate(),
                 entity.getEndDate(),
                 entity.getDeclaredHours(),
-                entity.getApprovedHours(),
                 entity.getWorkflowStatus(),
                 entity.getSourceType(),
                 entity.getSubmittedAt(),
@@ -78,7 +75,6 @@ public class TrainingRecordMapper {
     public TrainingRecordDetailResponse toDetailResponse(
             TrainingRecord entity,
             List<TrainingEvidenceFile> evidenceFiles,
-            List<TrainingRecordReview> reviews,
             List<TrainingRecordChangeLog> changeLogs,
             long duplicateCandidateCount
     ) {
@@ -89,9 +85,6 @@ public class TrainingRecordMapper {
         List<EvidenceMetadataResponse> evidences = evidenceFiles == null
                 ? List.of()
                 : evidenceFiles.stream().map(evidenceMapper::toMetadataResponse).toList();
-        List<TrainingRecordReviewTimelineResponse> reviewTimeline = reviews == null
-                ? List.of()
-                : reviews.stream().map(this::toReviewTimelineResponse).toList();
         List<TrainingRecordChangeLogResponse> changeHistory = changeLogs == null
                 ? List.of()
                 : changeLogs.stream().map(this::toChangeLogResponse).toList();
@@ -118,18 +111,13 @@ public class TrainingRecordMapper {
                 entity.getDurationUnit(),
                 entity.getDurationRawText(),
                 entity.getDeclaredHours(),
-                entity.getApprovedHours(),
                 entity.getWorkflowStatus(),
                 entity.getEditCount(),
                 entity.getSubmittedAt(),
-                idOf(entity.getLatestReviewedByUser()),
-                entity.getLatestReviewedAt(),
-                entity.getLatestRejectionReason(),
                 entity.getSourceType(),
                 entity.getSourceReference(),
                 entity.getSourceSubmittedAt(),
                 evidences,
-                reviewTimeline,
                 changeHistory,
                 duplicateCandidateCount > 0,
                 duplicateCandidateCount,
@@ -144,21 +132,7 @@ public class TrainingRecordMapper {
             List<TrainingEvidenceFile> evidenceFiles,
             long duplicateCandidateCount
     ) {
-        return toDetailResponse(entity, evidenceFiles, List.of(), List.of(), duplicateCandidateCount);
-    }
-
-    private TrainingRecordReviewTimelineResponse toReviewTimelineResponse(TrainingRecordReview review) {
-        User reviewer = review.getReviewedByUser();
-        return new TrainingRecordReviewTimelineResponse(
-                review.getId(),
-                review.getDecision(),
-                review.getDeclaredHoursSnapshot(),
-                review.getApprovedHours(),
-                review.getReason(),
-                idOf(reviewer),
-                reviewer == null ? null : reviewer.getName(),
-                review.getReviewedAt()
-        );
+        return toDetailResponse(entity, evidenceFiles, List.of(), duplicateCandidateCount);
     }
 
     private TrainingRecordChangeLogResponse toChangeLogResponse(TrainingRecordChangeLog changeLog) {

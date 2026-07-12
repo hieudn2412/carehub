@@ -122,7 +122,7 @@ components:
   schemas:
     TrainingRecordStatus:
       type: string
-      enum: [DRAFT, PENDING_REVIEW, APPROVED, REJECTED, CANCELLED]
+      enum: [DRAFT, SUBMITTED, CANCELLED]
     EvidenceModerationStatus:
       type: string
       enum: [NOT_REQUESTED, PENDING, PASSED, FAILED, ERROR]
@@ -214,9 +214,6 @@ components:
           nullable: true
         declaredHours:
           type: number
-        approvedHours:
-          type: number
-          nullable: true
         workflowStatus:
           $ref: '#/components/schemas/TrainingRecordStatus'
         sourceType:
@@ -284,10 +281,6 @@ components:
               format: date-time
               nullable: true
             evidences:
-              type: array
-              items:
-                type: object
-            reviewTimeline:
               type: array
               items:
                 type: object

@@ -2,7 +2,10 @@ package vn.vietduc.carehubbackend.training.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -31,7 +34,13 @@ import java.time.LocalTime;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "training_records")
+@Table(name = "training_records", indexes = {
+    @Index(columnList = "employee_id, start_date DESC"),
+    @Index(columnList = "workflow_status, submitted_at"),
+    @Index(columnList = "activity_type_id, start_date"),
+    @Index(columnList = "professional_field_id, start_date"),
+    @Index(columnList = "employee_department_id_snapshot, start_date")
+})
 public class TrainingRecord extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
@@ -72,6 +81,7 @@ public class TrainingRecord extends BaseEntity {
     @Column(name = "duration_value", precision = 10, scale = 2)
     private BigDecimal durationValue;
 
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "duration_unit", nullable = false, length = 20)
     private DurationUnit durationUnit = DurationUnit.HOUR;
@@ -82,9 +92,7 @@ public class TrainingRecord extends BaseEntity {
     @Column(name = "declared_hours", precision = 8, scale = 2)
     private BigDecimal declaredHours;
 
-    @Column(name = "approved_hours", precision = 8, scale = 2)
-    private BigDecimal approvedHours;
-
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "workflow_status", nullable = false, length = 30)
     private TrainingRecordStatus workflowStatus = TrainingRecordStatus.DRAFT;
@@ -96,16 +104,7 @@ public class TrainingRecord extends BaseEntity {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "latest_reviewed_by_user_id")
-    private User latestReviewedByUser;
-
-    @Column(name = "latest_reviewed_at")
-    private LocalDateTime latestReviewedAt;
-
-    @Column(name = "latest_rejection_reason", columnDefinition = "text")
-    private String latestRejectionReason;
-
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(name = "source_type", nullable = false, length = 30)
     private TrainingSourceType sourceType = TrainingSourceType.MANUAL;

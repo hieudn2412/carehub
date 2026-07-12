@@ -50,8 +50,8 @@ Tạo nền tảng dùng chung cho tất cả màn 15–25.
 - [ ] User không đọc được record người khác.
 - [ ] Manager không đọc được nhân viên ngoài khoa.
 - [ ] Admin đọc được toàn viện.
-- [ ] State transition không hợp lệ bị chặn.
-- [ ] Chỉ `APPROVED` được tính giờ.
+- [ ] State transition không hợp lệ bị chặn (DRAFT → SUBMITTED → CANCELLED).
+- [ ] Chỉ `SUBMITTED` được tính giờ.
 - [ ] Requirement không tồn tại trả `NOT_CONFIGURED`.
 - [ ] Optimistic locking trả conflict.
 

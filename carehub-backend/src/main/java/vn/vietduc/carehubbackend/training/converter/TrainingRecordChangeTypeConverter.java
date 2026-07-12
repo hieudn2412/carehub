@@ -13,6 +13,12 @@ public class TrainingRecordChangeTypeConverter implements AttributeConverter<Tra
 
     @Override
     public TrainingRecordChangeType convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : TrainingRecordChangeType.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return TrainingRecordChangeType.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum TrainingRecordChangeType");
+        }
     }
 }

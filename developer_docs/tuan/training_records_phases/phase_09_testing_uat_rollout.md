@@ -12,12 +12,16 @@
 ### 9.1 Unit tests
 
 - Domain validation.
-- State machine.
+- State machine (DRAFT → SUBMITTED → CANCELLED).
 - Access policy.
-- Compliance calculator.
+- Compliance calculator (SUBMITTED hours only).
 - Requirement resolver.
 - Duration parser.
 - Duplicate detector.
+- **New**: Submit record → status = SUBMITTED.
+- **New**: SUBMITTED hours counted in compliance.
+- **New**: Evidence upload không block submit.
+- **New**: Approve/reject endpoints không tồn tại (trả 404).
 - Edit limit.
 - File validation.
 - Review logic.

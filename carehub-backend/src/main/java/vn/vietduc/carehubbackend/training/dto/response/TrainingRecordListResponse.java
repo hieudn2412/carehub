@@ -23,7 +23,6 @@ public record TrainingRecordListResponse(
         LocalDate startDate,
         LocalDate endDate,
         BigDecimal declaredHours,
-        BigDecimal approvedHours,
         TrainingRecordStatus workflowStatus,
         TrainingSourceType sourceType,
         LocalDateTime submittedAt,

@@ -42,9 +42,9 @@ Module này phải hỗ trợ đầy đủ các luồng:
 3. User xem dữ liệu của chính mình.
 4. Manager xem dữ liệu nhân viên thuộc khoa được phân quyền.
 5. Admin xem toàn viện và cấu hình dữ liệu nền.
-6. Hệ thống chỉ cộng giờ đã được phê duyệt.
+6. Hệ thống chỉ cộng giờ từ record đã SUBMITTED.
 7. Hệ thống tính trạng thái tuân thủ theo yêu cầu đào tạo đang có hiệu lực.
-8. Hệ thống lưu được lịch sử chỉnh sửa, phê duyệt và dữ liệu nhập từ nguồn cũ.
+8. Hệ thống lưu được lịch sử chỉnh sửa và dữ liệu nhập từ nguồn cũ.
 9. Giao diện phải hoạt động tốt trên desktop và mobile web.
 
 ### Các màn hình thuộc phạm vi
@@ -121,7 +121,7 @@ File Excel có **948 dòng dữ liệu** và 9 cột:
   - Giá trị thời lượng khai báo.
   - Đơn vị thời lượng.
   - Số giờ chuẩn hóa.
-  - Số giờ được phê duyệt.
+  - Số giờ đã khai báo (tính vào compliance).
 - Dữ liệu dài ngày hoặc tín chỉ phải qua quy tắc chuyển đổi được bệnh viện xác nhận.
 - Link Google Drive cũ phải được đánh dấu là minh chứng legacy; không giả định đó là file nội bộ.
 - Cần cơ chế phát hiện trùng trước khi tạo record.
@@ -145,12 +145,12 @@ Database hiện tại là một khung ban đầu hợp lý, nhưng **chưa đủ
 
 | Vấn đề | Hiện tại | Thay đổi cần làm |
 |---|---|---|
-| Trạng thái record | `COUNTED` | Thay bằng workflow: `DRAFT`, `PENDING_REVIEW`, `APPROVED`, `REJECTED`, `CANCELLED` |
-| Giờ được cộng | `hours` duy nhất | Tách `declared_hours` và `approved_hours` |
+| Trạng thái record | `COUNTED` | Thay bằng workflow: `DRAFT`, `SUBMITTED`, `CANCELLED` |
+| Giờ được cộng | `hours` duy nhất | Dùng `declared_hours` để tính compliance |
 | Đơn vị thời lượng | Không có | Thêm `duration_value`, `duration_unit`, `duration_raw_text` |
 | Khoảng ngày | Chỉ có `training_date` | Dùng `start_date`, `end_date`; thời gian bắt đầu/kết thúc là optional |
-| Review | Đặt `review_status` ở file | Review nghiệp vụ áp dụng cho cả record; tạo `training_record_reviews` |
-| AI moderation | Chưa tách | File có `moderation_status`, không dùng chung với trạng thái duyệt |
+| Review | Đặt `review_status` ở file | **Đã bỏ review workflow** — User tự quản lý, không cần duyệt |
+| AI moderation | Chưa tách | File có `moderation_status`, validate định dạng nhưng không block submit |
 | Yêu cầu theo vai trò | Chỉ có department | Thêm `job_position_id` hoặc FK tương đương |
 | Lịch sử sửa | Chưa có | Thêm `edit_count`, `version`, change log/audit |
 | Dữ liệu legacy | Chưa có | Thêm source/import metadata hoặc staging tables |
@@ -158,15 +158,13 @@ Database hiện tại là một khung ban đầu hợp lý, nhưng **chưa đủ
 | Soft delete | Chưa có | Dùng `is_active`, `deleted_at`; không hard delete dữ liệu đã tham chiếu |
 | Audit | Thiếu created/updated user ở nhiều bảng | Bổ sung trường audit đầy đủ |
 
-### 3.3 Không nên giữ `review_status` ở từng file làm trạng thái phê duyệt chính
+### 3.3 Workflow đơn giản hóa — không còn review
 
-Một record có thể có nhiều file. Manager phê duyệt **nội dung đào tạo và tổng số giờ**, không chỉ duyệt riêng từng file.
+Theo quyết định nghiệp vụ mới, **Admin và Manager không còn duyệt hồ sơ đào tạo**. User tự quản lý và chịu trách nhiệm với số giờ + minh chứng của mình.
 
-Phân biệt:
-
-- `training_records.workflow_status`: trạng thái nghiệp vụ.
-- `training_evidence_files.moderation_status`: kết quả kiểm tra file/AI.
-- `training_record_reviews.decision`: quyết định duyệt của Manager/Admin.
+- `training_records.workflow_status`: `DRAFT` → `SUBMITTED` → (optional) `CANCELLED`.
+- `training_evidence_files.moderation_status`: kiểm tra định dạng file (JPG/PNG/PDF, size, magic bytes) — cảnh báo nhưng không block submit.
+- Không còn bảng `training_record_reviews` và `ReviewDecision` enum.
 
 ---
 
@@ -179,9 +177,7 @@ Phân biệt:
 ```text
 TrainingRecordStatus:
 - DRAFT
-- PENDING_REVIEW
-- APPROVED
-- REJECTED
+- SUBMITTED
 - CANCELLED
 
 DurationUnit:
@@ -200,10 +196,6 @@ EvidenceModerationStatus:
 - FAILED
 - ERROR
 
-ReviewDecision:
-- APPROVED
-- REJECTED
-
 TrainingSourceType:
 - MANUAL
 - LEGACY_IMPORT
@@ -215,6 +207,8 @@ ComplianceStatus:
 - AT_RISK
 - NON_COMPLIANT
 ```
+
+> **Ghi chú**: `ReviewDecision` enum và các trạng thái `PENDING_REVIEW`, `APPROVED`, `REJECTED` đã bị loại bỏ theo quyết định bỏ review workflow. User tự quản lý và chịu trách nhiệm với giờ đào tạo + minh chứng của mình. Admin/Manager không còn duyệt hồ sơ.
 
 ### 4.2 DBML đề xuất
 
@@ -284,15 +278,10 @@ Table training_records {
   duration_raw_text varchar(100)
 
   declared_hours numeric(8,2)
-  approved_hours numeric(8,2)
 
   workflow_status varchar(30) [not null, default: 'DRAFT']
   edit_count int [not null, default: 0]
   submitted_at timestamptz
-
-  latest_reviewed_by_user_id bigint
-  latest_reviewed_at timestamptz
-  latest_rejection_reason text
 
   source_type varchar(30) [not null, default: 'MANUAL']
   source_reference varchar(255)
@@ -328,19 +317,6 @@ Table training_evidence_files {
 
   is_active boolean [not null, default: true]
   deleted_at timestamptz
-}
-
-Table training_record_reviews {
-  id bigint [primary key, increment]
-  training_record_id bigint [not null]
-
-  decision varchar(30) [not null]
-  declared_hours_snapshot numeric(8,2)
-  approved_hours numeric(8,2)
-  reason text
-
-  reviewed_by_user_id bigint [not null]
-  reviewed_at timestamptz [not null, default: `CURRENT_TIMESTAMP`]
 }
 
 Table training_record_change_logs {
@@ -387,13 +363,9 @@ Ref: training_records.activity_type_id > training_activity_types.id
 Ref: training_records.professional_field_id > professional_fields.id
 Ref: training_records.created_by_user_id > users.id
 Ref: training_records.updated_by_user_id > users.id
-Ref: training_records.latest_reviewed_by_user_id > users.id
 
 Ref: training_evidence_files.training_record_id > training_records.id
 Ref: training_evidence_files.uploaded_by_user_id > users.id
-
-Ref: training_record_reviews.training_record_id > training_records.id
-Ref: training_record_reviews.reviewed_by_user_id > users.id
 
 Ref: training_record_change_logs.training_record_id > training_records.id
 Ref: training_record_change_logs.changed_by_user_id > users.id
@@ -410,17 +382,16 @@ Ref: training_import_rows.training_record_id > training_records.id
 4. `end_date IS NULL OR end_date >= start_date`.
 5. Nếu có đủ start/end time trong cùng ngày, `end_time >= start_time`.
 6. `declared_hours IS NULL OR declared_hours > 0`.
-7. `approved_hours IS NULL OR approved_hours >= 0`.
-8. `approved_hours` chỉ được có giá trị khi record được review.
-9. Chỉ record `APPROVED` mới được cộng vào compliance.
-10. Không hard delete `training_activity_types` đã được tham chiếu.
-11. Không cho tồn tại hai yêu cầu active bị chồng lấn cùng scope và cùng giai đoạn hiệu lực.
-12. File upload:
+7. Chỉ record `SUBMITTED` mới được cộng vào compliance.
+8. Không hard delete `training_activity_types` đã được tham chiếu.
+9. Không cho tồn tại hai yêu cầu active bị chồng lấn cùng scope và cùng giai đoạn hiệu lực.
+10. File upload:
     - Kích thước lớn hơn 0 và không quá 5 MB.
     - Chỉ JPG, PNG, PDF.
     - Kiểm tra cả extension, MIME type và magic bytes.
-13. Mỗi lần cập nhật sau khi submit phải tăng `edit_count`.
-14. Dùng optimistic locking bằng `version` để tránh ghi đè dữ liệu đồng thời.
+11. Mỗi lần cập nhật sau khi submit phải tăng `edit_count`.
+12. Dùng optimistic locking bằng `version` để tránh ghi đè dữ liệu đồng thời.
+13. Evidence là optional — user tự quản lý và chịu trách nhiệm với minh chứng. Moderation vẫn chạy để kiểm tra định dạng file nhưng không block submit.
 
 ### 4.4 Index đề xuất
 
@@ -432,7 +403,6 @@ training_records(professional_field_id, start_date)
 training_records(employee_department_id_snapshot, start_date)
 training_evidence_files(training_record_id, is_active)
 training_evidence_files(moderation_status)
-training_record_reviews(training_record_id, reviewed_at desc)
 training_requirements(job_position_id, department_id, effective_from, effective_to)
 training_activity_types(is_active, sort_order, name)
 ```
@@ -445,21 +415,17 @@ training_activity_types(is_active, sort_order, name)
 
 ```text
 DRAFT
-  ├─ submit hợp lệ ─> PENDING_REVIEW
-  └─ cancel ────────> CANCELLED
+  ├─ submit ──> SUBMITTED
+  └─ cancel ──> CANCELLED
 
-PENDING_REVIEW
-  ├─ approve ───────> APPROVED
-  ├─ reject ────────> REJECTED
-  └─ admin cancel ──> CANCELLED
+SUBMITTED
+  ├─ chỉnh sửa (trong giới hạn edit_count) → giữ SUBMITTED, tăng edit_count
+  └─ cancel (Admin only) → CANCELLED
 
-REJECTED
-  ├─ user chỉnh sửa + submit lại ─> PENDING_REVIEW
-  └─ cancel ──────────────────────> CANCELLED
-
-APPROVED
-  └─ không cho User sửa trực tiếp; chỉ Admin mở lại theo nghiệp vụ có audit
+CANCELLED (terminal)
 ```
+
+> **Thay đổi quan trọng**: Bỏ review workflow. User tự submit record → `SUBMITTED`. Không còn `PENDING_REVIEW`, `APPROVED`, `REJECTED`. Admin/Manager không duyệt hồ sơ. User tự chịu trách nhiệm với giờ đào tạo và minh chứng.
 
 ### 5.2 Business rules bắt buộc
 
@@ -467,35 +433,33 @@ APPROVED
 2. Manager chỉ xem nhân viên trong khoa được phân quyền.
 3. Admin xem toàn bộ.
 4. Khi Manager/Admin tạo record thay người khác, server phải xác minh phạm vi quyền.
-5. Chỉ giờ `APPROVED` được cộng vào tổng.
-6. Pending không được dùng để đánh dấu đạt.
-7. Reject bắt buộc có lý do.
-8. Evidence qua moderation mới được submit nếu moderation được bật.
-9. SRS giới hạn tối đa 2 lần edit; cần xác nhận:
-   - Tính từ sau lần submit đầu tiên.
-   - Hay tính mọi lần update kể từ lúc tạo.
-10. Màn tạo trực tiếp áp dụng giới hạn 0,5–24 giờ/record theo SRS.
-11. Dữ liệu legacy lớn hơn 24 giờ không tự động bị xóa:
+5. Chỉ giờ `SUBMITTED` được cộng vào tổng compliance.
+6. **Bỏ review workflow**: Admin và Manager không duyệt hồ sơ đào tạo. User tự quản lý và chịu trách nhiệm với số giờ + minh chứng của mình.
+7. Evidence là optional — moderation vẫn validate định dạng file nhưng không block submit.
+8. SRS giới hạn tối đa 2 lần edit; tính từ sau lần submit đầu tiên (configurable qua `app.training.records.max-edit-count`).
+9. Màn tạo trực tiếp áp dụng giới hạn 0,5–24 giờ/record theo SRS.
+10. Dữ liệu legacy lớn hơn 24 giờ không tự động bị xóa:
     - Đưa vào trạng thái cần rà soát.
     - Hoặc tách thành nhiều record.
     - Hoặc áp dụng rule riêng do bệnh viện xác nhận.
-12. Chu kỳ 5 năm:
+11. Chu kỳ 5 năm:
     - `window_end = ngày hiện tại`.
     - `window_start = window_end - cycle_years`.
     - Cần thống nhất có tính cả hai ngày biên hay không; đề xuất inclusive.
-13. Nếu không có requirement phù hợp: `NOT_CONFIGURED`, không được coi là đạt.
-14. Nếu nhiều requirement cùng khớp, đề xuất ưu tiên:
+12. Nếu không có requirement phù hợp: `NOT_CONFIGURED`, không được coi là đạt.
+13. Nếu nhiều requirement cùng khớp, đề xuất ưu tiên:
     1. Department + Job Position + Professional Field.
     2. Department + Job Position.
     3. Job Position + Professional Field.
     4. Job Position toàn viện.
     5. Requirement global.
-15. Trạng thái `AT_RISK` chỉ bật khi có định nghĩa threshold. Nếu chưa thống nhất, MVP dùng:
+14. Trạng thái `AT_RISK` chỉ bật khi có định nghĩa threshold. Nếu chưa thống nhất, MVP dùng:
     - `COMPLIANT`
     - `NON_COMPLIANT`
     - `NOT_CONFIGURED`
-16. Pre-signed URL chỉ tạo khi đọc file; không lưu pre-signed URL vào database.
-17. Mọi thao tác tạo, sửa, submit, upload, xóa file, approve/reject phải có audit log.
+15. Pre-signed URL chỉ tạo khi đọc file; không lưu pre-signed URL vào database.
+16. Mọi thao tác tạo, sửa, submit, upload, xóa file phải có audit log.
+17. Workflow có thể cấu hình qua `app.training.records.review-enabled` (default: `false` — self-managed). Khi `true`, dùng legacy review workflow.
 
 ---
 
@@ -531,7 +495,6 @@ POST   /api/v1/training/records
 GET    /api/v1/training/records/{id}
 PUT    /api/v1/training/records/{id}
 POST   /api/v1/training/records/{id}/submit
-POST   /api/v1/training/records/{id}/cancel
 
 Evidence
 GET    /api/v1/training/records/{id}/evidences
@@ -613,7 +576,7 @@ Một màn chỉ được coi là hoàn thành khi:
 5. Không hard delete activity type, requirement, record hoặc evidence đã sử dụng.
 6. Không lưu pre-signed URL trong database.
 7. Không lưu họ tên/ngày sinh từ Excel vào record như dữ liệu nhân sự chính.
-8. Không cho client tự set `workflow_status`, `approved_hours`, `reviewed_by`.
+8. Không cho client tự set `workflow_status`; server kiểm soát state transition.
 9. Không cho User truyền `employeeId` để tạo record cho người khác.
 10. Không import thẳng dòng lỗi vào bảng nghiệp vụ.
 11. Không sửa dữ liệu lịch sử khi requirement mới có hiệu lực.

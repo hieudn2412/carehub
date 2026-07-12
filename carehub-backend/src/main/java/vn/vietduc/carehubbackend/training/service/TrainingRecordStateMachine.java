@@ -10,7 +10,6 @@ import java.util.Set;
 @Component
 public class TrainingRecordStateMachine {
     private static final Set<TrainingRecordStatus> TERMINAL_STATUSES = EnumSet.of(
-            TrainingRecordStatus.APPROVED,
             TrainingRecordStatus.CANCELLED
     );
 
@@ -20,12 +19,9 @@ public class TrainingRecordStateMachine {
         }
 
         return switch (from) {
-            case DRAFT -> to == TrainingRecordStatus.PENDING_REVIEW || to == TrainingRecordStatus.CANCELLED;
-            case PENDING_REVIEW -> to == TrainingRecordStatus.APPROVED
-                    || to == TrainingRecordStatus.REJECTED
-                    || (adminActor && to == TrainingRecordStatus.CANCELLED);
-            case REJECTED -> to == TrainingRecordStatus.PENDING_REVIEW || to == TrainingRecordStatus.CANCELLED;
-            case APPROVED, CANCELLED -> false;
+            case DRAFT -> to == TrainingRecordStatus.SUBMITTED || to == TrainingRecordStatus.CANCELLED;
+            case SUBMITTED -> adminActor && to == TrainingRecordStatus.CANCELLED;
+            case CANCELLED -> false;
         };
     }
 
@@ -35,9 +31,13 @@ public class TrainingRecordStateMachine {
         }
     }
 
-    public void requireRejectReason(String reason) {
-        if (reason == null || reason.isBlank()) {
-            throw new BadRequestException("Reject reason is required");
+    public boolean isEditable(TrainingRecordStatus status) {
+        return status == TrainingRecordStatus.DRAFT;
+    }
+
+    public void requireEditable(TrainingRecordStatus status) {
+        if (!isEditable(status)) {
+            throw new BadRequestException("Training record with status " + status + " cannot be edited");
         }
     }
 }

@@ -20,7 +20,6 @@ import vn.vietduc.carehubbackend.common.response.PageResponse;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSearchRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordSubmitRequest;
-import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordReviewRequest;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordDetailResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordOptionsResponse;
@@ -28,11 +27,8 @@ import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
-import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
-import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.LocalDate;
-import java.util.Set;
 
 @RestController
 @RequestMapping("${app.api-prefix}/training/records")
@@ -40,7 +36,6 @@ import java.util.Set;
 @PreAuthorize("isAuthenticated()")
 public class TrainingRecordController {
     private final TrainingRecordService recordService;
-    private final TrainingAccessPolicy accessPolicy;
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TrainingRecordListResponse>>> list(
@@ -122,57 +117,6 @@ public class TrainingRecordController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Submit training record successfully",
                 recordService.submit(id, request)
-        ));
-    }
-
-    @GetMapping("/pending")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<PageResponse<TrainingRecordListResponse>>> listPending(
-            @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        User actor = accessPolicy.currentActor();
-        Set<String> roles = accessPolicy.currentRoleCodes();
-        
-        TrainingRecordSearchRequest searchRequest = new TrainingRecordSearchRequest(
-                null,
-                null,
-                null,
-                null,
-                null,
-                TrainingRecordStatus.PENDING_REVIEW,
-                null,
-                null,
-                null,
-                roles.contains(TrainingAccessPolicy.ROLE_ADMIN) ? null : (actor.getDepartment() != null ? actor.getDepartment().getId() : -1L),
-                null
-        );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Get pending training records successfully",
-                PageResponse.from(recordService.search(searchRequest, pageable))
-        ));
-    }
-
-    @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<TrainingRecordDetailResponse>> approve(
-            @PathVariable Long id,
-            @RequestBody(required = false) TrainingRecordReviewRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                "Approve training record successfully",
-                recordService.approve(id, request)
-        ));
-    }
-
-    @PostMapping("/{id}/reject")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<TrainingRecordDetailResponse>> reject(
-            @PathVariable Long id,
-            @RequestBody(required = false) TrainingRecordReviewRequest request
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                "Reject training record successfully",
-                recordService.reject(id, request)
         ));
     }
 }

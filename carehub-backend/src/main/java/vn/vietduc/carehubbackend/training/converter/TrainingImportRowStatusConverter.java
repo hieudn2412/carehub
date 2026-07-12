@@ -13,6 +13,12 @@ public class TrainingImportRowStatusConverter implements AttributeConverter<Trai
 
     @Override
     public TrainingImportRowStatus convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : TrainingImportRowStatus.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return TrainingImportRowStatus.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum TrainingImportRowStatus");
+        }
     }
 }

@@ -19,7 +19,7 @@ Phase này không phải một màn 15–25 nhưng cần để dữ liệu thậ
 4. Chuẩn hóa.
 5. Validate.
 6. Hiển thị preview/report lỗi.
-7. Chỉ commit dòng hợp lệ hoặc đã được người quản lý xác nhận.
+7. Chỉ commit dòng hợp lệ hoặc đã được người quản lý xác nhận → record được tạo với `workflow_status = SUBMITTED`.
 8. Lưu mapping từ row nguồn sang record đích.
 
 ### 7.2 Mapping
