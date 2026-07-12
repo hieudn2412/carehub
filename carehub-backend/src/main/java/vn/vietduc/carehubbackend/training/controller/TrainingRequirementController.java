@@ -19,11 +19,14 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.common.response.PageResponse;
 import vn.vietduc.carehubbackend.training.dto.request.RequirementFormRequest;
+import vn.vietduc.carehubbackend.training.dto.request.CmeApplicableDepartmentsRequest;
 import vn.vietduc.carehubbackend.training.dto.request.RequirementSearchRequest;
 import vn.vietduc.carehubbackend.training.dto.request.RequirementStatusRequest;
+import vn.vietduc.carehubbackend.training.dto.response.CmeApplicableDepartmentsResponse;
 import vn.vietduc.carehubbackend.training.dto.response.RequirementDetailResponse;
 import vn.vietduc.carehubbackend.training.dto.response.RequirementListResponse;
 import vn.vietduc.carehubbackend.training.service.TrainingRequirementService;
+import vn.vietduc.carehubbackend.training.service.CmeScopeService;
 
 import java.time.LocalDate;
 
@@ -33,6 +36,25 @@ import java.time.LocalDate;
 @PreAuthorize("hasRole('ADMIN')")
 public class TrainingRequirementController {
     private final TrainingRequirementService requirementService;
+    private final CmeScopeService cmeScopeService;
+
+    @GetMapping("/applicable-departments")
+    public ResponseEntity<ApiResponse<CmeApplicableDepartmentsResponse>> getApplicableDepartments() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Get CME applicable departments successfully",
+                cmeScopeService.getConfiguration()
+        ));
+    }
+
+    @PutMapping("/applicable-departments")
+    public ResponseEntity<ApiResponse<CmeApplicableDepartmentsResponse>> updateApplicableDepartments(
+            @Valid @RequestBody CmeApplicableDepartmentsRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Update CME applicable departments successfully",
+                cmeScopeService.updateConfiguration(request)
+        ));
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<RequirementListResponse>>> list(

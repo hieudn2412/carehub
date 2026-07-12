@@ -20,6 +20,7 @@ import vn.vietduc.carehubbackend.training.mapper.TrainingRequirementMapper;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
+import vn.vietduc.carehubbackend.training.service.CmeScopeService;
 import vn.vietduc.carehubbackend.training.service.TrainingRequirementService;
 import vn.vietduc.carehubbackend.training.validation.TrainingDomainValidator;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -44,6 +45,7 @@ public class TrainingRequirementServiceImpl implements TrainingRequirementServic
     private final TrainingRequirementMapper mapper;
     private final TrainingDomainValidator validator;
     private final TrainingAccessPolicy accessPolicy;
+    private final CmeScopeService cmeScopeService;
 
     @Override
     @Transactional(readOnly = true)
@@ -178,9 +180,17 @@ public class TrainingRequirementServiceImpl implements TrainingRequirementServic
     }
 
     private long applicableEmployeeCount(TrainingRequirement requirement) {
+        var applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
+        if (applicableDepartmentIds.isEmpty()) {
+            return 0;
+        }
         Long departmentId = requirement.getDepartment() == null ? null : requirement.getDepartment().getId();
         Long positionId = requirement.getJobPosition() == null ? null : requirement.getJobPosition().getId();
-        return userRepository.countActiveTrainingRequirementCandidates(departmentId, positionId);
+        return userRepository.countScopedTrainingRequirementCandidates(
+                applicableDepartmentIds,
+                departmentId,
+                positionId
+        );
     }
 
     private void requireFreshVersion(TrainingRequirement requirement, Long requestVersion) {

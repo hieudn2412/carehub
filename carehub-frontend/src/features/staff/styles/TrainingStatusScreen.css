@@ -145,3 +145,19 @@
 .ts-badge--pass       { background: #e8f5f0; color: #0f6e56; }
 .ts-badge--fail-amber { background: #fff3e0; color: #b7791f; }
 .ts-badge--fail-red   { background: #fdecea; color: #c0392b; }
+
+.ts-not-configured {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 24px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  color: #1e3a8a;
+  background: #eff6ff;
+}
+
+.ts-not-configured span {
+  color: #475569;
+  font-size: 13px;
+}

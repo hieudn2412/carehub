@@ -80,7 +80,7 @@ function TrainingEmployeeStatusListPage() {
           employeeName: item.employeeName,
           departmentName: item.departmentName || 'Chưa xác định',
           approvedHours: item.approvedHours || 0,
-          requiredHours: item.requiredHours || 120,
+          requiredHours: item.requiredHours ?? 0,
           complianceStatus: item.complianceStatus
         }))
         setEmployees(mapped)
@@ -223,16 +223,24 @@ function TrainingEmployeeStatusListPage() {
                               <td>{item.employeeName}</td>
                               <td>{item.departmentName}</td>
                               <td style={{ fontWeight: 600 }}>{item.approvedHours}h</td>
-                              <td style={{ color: '#64748b' }}>{item.requiredHours}h</td>
+                              <td style={{ color: '#64748b' }}>
+                                {item.complianceStatus === 'NOT_CONFIGURED' ? '—' : `${item.requiredHours}h`}
+                              </td>
                               <td>
                                 <span className={`tes-badge ${
                                   item.complianceStatus === 'COMPLIANT' 
                                     ? 'tes-badge--compliant' 
-                                    : item.complianceStatus === 'NON_COMPLIANT' 
+                                    : item.complianceStatus === 'NON_COMPLIANT'
                                       ? 'tes-badge--non-compliant' 
                                       : 'tes-badge--at-risk'
                                 }`}>
-                                  {item.complianceStatus === 'COMPLIANT' ? 'Đạt' : item.complianceStatus === 'NON_COMPLIANT' ? 'Không đạt' : 'Đang theo dõi'}
+                                  {item.complianceStatus === 'COMPLIANT'
+                                    ? 'Đạt'
+                                    : item.complianceStatus === 'NON_COMPLIANT'
+                                      ? 'Không đạt'
+                                      : item.complianceStatus === 'NOT_CONFIGURED'
+                                        ? 'Chưa áp dụng'
+                                        : 'Đang theo dõi'}
                                 </span>
                               </td>
                               <td>

@@ -25,6 +25,7 @@ import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
+import vn.vietduc.carehubbackend.training.service.CmeScopeService;
 import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
@@ -60,6 +61,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     private final TrainingRecordRepository recordRepository;
     private final TrainingRequirementRepository requirementRepository;
     private final UserRepository userRepository;
+    private final CmeScopeService cmeScopeService;
 
     @Override
     @Transactional(readOnly = true)
@@ -109,6 +111,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         }
 
         List<TrainingRequirement> activeRequirements = requirementRepository.findActiveRequirementsAsOf(asOfDate);
+        Set<Long> applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
         int maxCycleYears = activeRequirements.stream()
                 .map(TrainingRequirement::getCycleYears)
                 .filter(years -> years != null && years > 0)
@@ -126,7 +129,8 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                         criteria.professionalFieldId(),
                         asOfDate,
                         activeRequirements,
-                        recordsByEmployee.getOrDefault(employee.getId(), List.of())
+                        recordsByEmployee.getOrDefault(employee.getId(), List.of()),
+                        applicableDepartmentIds
                 ))
                 .filter(summary -> matchesStatusFilters(summary, criteria))
                 .sorted(summaryComparator(normalizedPageable.getSort()))
@@ -236,12 +240,14 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             Long professionalFieldId,
             LocalDate asOf,
             List<TrainingRequirement> activeRequirements,
-            List<TrainingRecord> records
+            List<TrainingRecord> records,
+            Set<Long> applicableDepartmentIds
     ) {
         Optional<TrainingRequirement> selectedRequirement = complianceCalculator.selectRequirementFromCandidates(
                 employee,
                 professionalFieldId,
-                activeRequirements
+                activeRequirements,
+                applicableDepartmentIds
         );
         Department department = employee.getDepartment();
         Position position = employee.getPosition();

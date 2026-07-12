@@ -15,6 +15,7 @@ function TrainingStatusScreen() {
     requiredHours: 120,
     remainingHours: 120,
     completionPercent: 0,
+    configured: false,
   })
 
   const [yearsData, setYearsData] = useState([])
@@ -28,9 +29,10 @@ function TrainingStatusScreen() {
         if (statusData) {
           setSummary({
             totalHours: statusData.approvedHours || 0,
-            requiredHours: statusData.requiredHours || 120,
+            requiredHours: statusData.requiredHours ?? 0,
             remainingHours: statusData.remainingHours || 0,
             completionPercent: statusData.progressPercentage ? Math.round(statusData.progressPercentage) : 0,
+            configured: statusData.status !== 'NOT_CONFIGURED',
           })
 
           const yearlyList = statusData.yearlyHours || []
@@ -72,6 +74,11 @@ function TrainingStatusScreen() {
           {loading ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
               <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin trạng thái...
+            </div>
+          ) : !summary.configured ? (
+            <div className="ts-not-configured" role="status">
+              <strong>Phòng ban của bạn không áp dụng yêu cầu CME.</strong>
+              <span>Bạn vẫn có thể khai báo và lưu hồ sơ đào tạo, nhưng hệ thống không đánh giá thiếu giờ.</span>
             </div>
           ) : (
             <>

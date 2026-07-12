@@ -17,40 +17,38 @@ import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class TrainingComplianceCalculator {
     private final TrainingRequirementRepository requirementRepository;
     private final TrainingRecordRepository recordRepository;
+    private final CmeScopeService cmeScopeService;
 
     public PersonalTrainingStatusResponse calculate(User employee, Long professionalFieldId, LocalDate asOf) {
+        return calculate(employee, professionalFieldId, asOf, cmeScopeService.getApplicableDepartmentIds());
+    }
+
+    public PersonalTrainingStatusResponse calculate(
+            User employee,
+            Long professionalFieldId,
+            LocalDate asOf,
+            Set<Long> applicableDepartmentIds
+    ) {
         LocalDate windowEnd = asOf == null ? LocalDate.now() : asOf;
-        Optional<TrainingRequirement> requirement = selectRequirement(employee, professionalFieldId, windowEnd);
+        if (!cmeScopeService.isApplicable(employee, applicableDepartmentIds)) {
+            return notConfigured(employee, windowEnd, "CME requirements are not configured for this department");
+        }
+        Optional<TrainingRequirement> requirement = selectRequirement(
+                employee,
+                professionalFieldId,
+                windowEnd,
+                applicableDepartmentIds
+        );
 
         if (requirement.isEmpty()) {
-            return new PersonalTrainingStatusResponse(
-                    employee.getId(),
-                    employee.getEmployeeCode(),
-                    employee.getName(),
-                    ComplianceStatus.NOT_CONFIGURED,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    null,
-                    null,
-                    windowEnd,
-                    null,
-                    null,
-                    "No active training requirement is configured",
-                    List.of(),
-                    List.of(),
-                    List.of(),
-                    List.of()
-            );
+            return notConfigured(employee, windowEnd, "No active training requirement is configured");
         }
 
         TrainingRequirement matchedRequirement = requirement.get();
@@ -117,6 +115,18 @@ public class TrainingComplianceCalculator {
     }
 
     public Optional<TrainingRequirement> selectRequirement(User employee, Long professionalFieldId, LocalDate asOf) {
+        return selectRequirement(employee, professionalFieldId, asOf, cmeScopeService.getApplicableDepartmentIds());
+    }
+
+    public Optional<TrainingRequirement> selectRequirement(
+            User employee,
+            Long professionalFieldId,
+            LocalDate asOf,
+            Set<Long> applicableDepartmentIds
+    ) {
+        if (!cmeScopeService.isApplicable(employee, applicableDepartmentIds)) {
+            return Optional.empty();
+        }
         Long departmentId = employee.getDepartment() == null ? null : employee.getDepartment().getId();
         Long positionId = employee.getPosition() == null ? null : employee.getPosition().getId();
         List<TrainingRequirement> candidates = requirementRepository.findActiveCandidates(
@@ -125,7 +135,7 @@ public class TrainingComplianceCalculator {
                 professionalFieldId,
                 asOf
         );
-        return selectRequirementFromCandidates(employee, professionalFieldId, candidates);
+        return selectRequirementFromCandidates(employee, professionalFieldId, candidates, applicableDepartmentIds);
     }
 
     public Optional<TrainingRequirement> selectRequirementFromCandidates(
@@ -133,6 +143,23 @@ public class TrainingComplianceCalculator {
             Long professionalFieldId,
             List<TrainingRequirement> candidates
     ) {
+        return selectRequirementFromCandidates(
+                employee,
+                professionalFieldId,
+                candidates,
+                cmeScopeService.getApplicableDepartmentIds()
+        );
+    }
+
+    public Optional<TrainingRequirement> selectRequirementFromCandidates(
+            User employee,
+            Long professionalFieldId,
+            List<TrainingRequirement> candidates,
+            Set<Long> applicableDepartmentIds
+    ) {
+        if (!cmeScopeService.isApplicable(employee, applicableDepartmentIds)) {
+            return Optional.empty();
+        }
         return candidates.stream()
                 .filter(requirement -> matchesEmployee(requirement, employee, professionalFieldId))
                 .max(Comparator.comparingInt((TrainingRequirement requirement) -> specificityScore(requirement, professionalFieldId))
@@ -168,6 +195,31 @@ public class TrainingComplianceCalculator {
 
     private BigDecimal safe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private PersonalTrainingStatusResponse notConfigured(User employee, LocalDate windowEnd, String message) {
+        return new PersonalTrainingStatusResponse(
+                employee.getId(),
+                employee.getEmployeeCode(),
+                employee.getName(),
+                ComplianceStatus.NOT_CONFIGURED,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO,
+                null,
+                null,
+                windowEnd,
+                null,
+                null,
+                message,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()
+        );
     }
 
     private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal approvedHours) {
