@@ -170,8 +170,7 @@ public class TrainingEvidenceServiceImpl implements TrainingEvidenceService {
     }
 
     private void requireEditable(TrainingRecord record) {
-        if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT
-                && record.getWorkflowStatus() != TrainingRecordStatus.REJECTED) {
+        if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT) {
             throw new ConflictException("Training record evidence is not editable in status " + record.getWorkflowStatus());
         }
     }

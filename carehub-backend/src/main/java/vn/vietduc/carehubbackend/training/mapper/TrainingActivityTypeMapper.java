@@ -91,7 +91,6 @@ public class TrainingActivityTypeMapper {
                 employee == null ? null : employee.getName(),
                 record.getStartDate(),
                 record.getDeclaredHours(),
-                record.getApprovedHours(),
                 record.getWorkflowStatus()
         );
     }

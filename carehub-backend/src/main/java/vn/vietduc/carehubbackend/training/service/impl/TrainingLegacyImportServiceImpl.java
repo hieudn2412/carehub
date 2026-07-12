@@ -222,7 +222,7 @@ public class TrainingLegacyImportServiceImpl implements TrainingLegacyImportServ
                 .durationUnit(DurationUnit.valueOf(requiredString(data, "durationUnit")))
                 .durationRawText(stringValue(data.get("durationRawText")))
                 .declaredHours(bigDecimalValue(data.get("declaredHours")))
-                .workflowStatus(TrainingRecordStatus.PENDING_REVIEW)
+                .workflowStatus(TrainingRecordStatus.DRAFT)
                 .sourceType(TrainingSourceType.LEGACY_IMPORT)
                 .sourceReference("training-import-row-" + row.getId())
                 .sourceSubmittedAt(localDateTimeValue(data.get("sourceSubmittedAt")))

@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.training.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -48,12 +50,14 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class TrainingStatusServiceImpl implements TrainingStatusService {
+    private static final Logger log = LoggerFactory.getLogger(TrainingStatusServiceImpl.class);
     private static final int DEFAULT_WINDOW_YEARS = 5;
     private static final int MAX_PAGE_SIZE = 100;
+
     private static final List<TrainingRecordStatus> LEDGER_STATUSES = List.of(
-            TrainingRecordStatus.APPROVED,
-            TrainingRecordStatus.PENDING_REVIEW,
-            TrainingRecordStatus.REJECTED
+            TrainingRecordStatus.SUBMITTED,
+            TrainingRecordStatus.DRAFT,
+            TrainingRecordStatus.CANCELLED
     );
 
     private final TrainingAccessPolicy accessPolicy;
@@ -92,7 +96,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         }
 
         EmployeeTrainingStatusSearchRequest criteria = request == null
-                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null)
+                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null)
                 : request;
         Pageable normalizedPageable = normalizePageable(pageable, Sort.by(Sort.Order.asc("employeeCode")));
         LocalDate asOfDate = criteria.asOf() == null ? LocalDate.now() : criteria.asOf();
@@ -100,6 +104,8 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 ? null
                 : idOf(actor.getDepartment());
 
+        // Fetch candidates — pagination is handled via DB for the user list,
+        // but compliance scoring must run across all candidates before filtering/sorting.
         List<User> candidates = userRepository.searchTrainingEmployeeCandidates(
                 scopeDepartmentId,
                 normalizeKeywordPattern(criteria.keyword()),
@@ -173,12 +179,14 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 status.windowEnd(),
                 statuses
         );
-        List<EmployeeTrainingRecordLedgerResponse> withRunningTotals = withRunningApprovedTotals(ledgerRows).stream()
+        List<EmployeeTrainingRecordLedgerResponse> withRunningTotals = withRunningSubmittedTotals(ledgerRows).stream()
                 .sorted(ledgerComparator(normalizedPageable.getSort()))
                 .toList();
 
         return page(withRunningTotals, normalizedPageable);
     }
+
+    // ── Private helpers ──────────────────────────────────────────
 
     private PersonalTrainingStatusResponse statusFor(User employee, Long professionalFieldId, LocalDate asOf) {
         PersonalTrainingStatusResponse base = complianceCalculator.calculate(employee, professionalFieldId, asOf);
@@ -191,8 +199,6 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 base.windowStart(),
                 base.windowEnd()
         );
-        BigDecimal pendingHours = sumDeclared(records, TrainingRecordStatus.PENDING_REVIEW);
-        BigDecimal rejectedHours = sumDeclared(records, TrainingRecordStatus.REJECTED);
 
         return new PersonalTrainingStatusResponse(
                 base.employeeId(),
@@ -200,9 +206,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 base.employeeName(),
                 base.status(),
                 base.requiredHours(),
-                base.approvedHours(),
-                pendingHours,
-                rejectedHours,
+                base.submittedHours(),
                 base.remainingHours(),
                 base.progressPercentage(),
                 base.cycleYears(),
@@ -267,14 +271,11 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
                     BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
                     null,
                     null,
                     asOf,
                     ComplianceStatus.NOT_CONFIGURED,
                     null,
-                    0,
                     "No active training requirement is configured"
             );
         }
@@ -285,20 +286,15 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 .filter(record -> !record.getStartDate().isBefore(windowStart))
                 .filter(record -> !record.getStartDate().isAfter(asOf))
                 .toList();
-        BigDecimal approvedHours = sumApproved(windowRecords);
-        BigDecimal pendingHours = sumDeclared(windowRecords, TrainingRecordStatus.PENDING_REVIEW);
-        BigDecimal rejectedHours = sumDeclared(windowRecords, TrainingRecordStatus.REJECTED);
+        BigDecimal submittedHours = sumSubmitted(windowRecords);
         BigDecimal requiredHours = safe(requirement.getRequiredHours());
-        BigDecimal remainingHours = requiredHours.subtract(approvedHours).max(BigDecimal.ZERO);
-        BigDecimal progressPercentage = progressPercentage(requiredHours, approvedHours);
-        ComplianceStatus status = complianceCalculator.resolveStatus(requirement, approvedHours);
+        BigDecimal remainingHours = requiredHours.subtract(submittedHours).max(BigDecimal.ZERO);
+        BigDecimal progressPercentage = progressPercentage(requiredHours, submittedHours);
+        ComplianceStatus status = complianceCalculator.resolveStatus(requirement, submittedHours);
         LocalDate lastTrainingDate = windowRecords.stream()
                 .map(TrainingRecord::getStartDate)
                 .max(LocalDate::compareTo)
                 .orElse(null);
-        long pendingReviewCount = windowRecords.stream()
-                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.PENDING_REVIEW)
-                .count();
 
         return new EmployeeTrainingStatusSummaryResponse(
                 employee.getId(),
@@ -311,9 +307,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 requirement.getId(),
                 requirement.getName(),
                 requiredHours,
-                approvedHours,
-                pendingHours,
-                rejectedHours,
+                submittedHours,
                 remainingHours,
                 progressPercentage,
                 requirement.getCycleYears(),
@@ -321,7 +315,6 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 asOf,
                 status,
                 lastTrainingDate,
-                pendingReviewCount,
                 warningMessage(status, remainingHours)
         );
     }
@@ -333,51 +326,44 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         if (criteria.complianceStatus() != null && summary.complianceStatus() != criteria.complianceStatus()) {
             return false;
         }
-        if (criteria.hasPendingReview() != null
-                && (summary.pendingReviewCount() > 0) != criteria.hasPendingReview()) {
+        if (criteria.submittedHoursMin() != null
+                && summary.submittedHours().compareTo(criteria.submittedHoursMin()) < 0) {
             return false;
         }
-        if (criteria.approvedHoursMin() != null
-                && summary.approvedHours().compareTo(criteria.approvedHoursMin()) < 0) {
-            return false;
-        }
-        if (criteria.approvedHoursMax() != null
-                && summary.approvedHours().compareTo(criteria.approvedHoursMax()) > 0) {
+        if (criteria.submittedHoursMax() != null
+                && summary.submittedHours().compareTo(criteria.submittedHoursMax()) > 0) {
             return false;
         }
         return criteria.requirementConfigured() == null
                 || (summary.requirementId() != null) == criteria.requirementConfigured();
     }
 
-    private List<EmployeeTrainingRecordLedgerResponse> withRunningApprovedTotals(
+    private List<EmployeeTrainingRecordLedgerResponse> withRunningSubmittedTotals(
             List<EmployeeTrainingRecordLedgerResponse> rows
     ) {
-        BigDecimal runningApprovedHours = BigDecimal.ZERO;
+        BigDecimal running = BigDecimal.ZERO;
         List<EmployeeTrainingRecordLedgerResponse> result = new ArrayList<>();
         for (EmployeeTrainingRecordLedgerResponse row : rows) {
-            if (row.workflowStatus() == TrainingRecordStatus.APPROVED) {
-                runningApprovedHours = runningApprovedHours.add(safe(row.approvedHours()));
+            if (row.workflowStatus() == TrainingRecordStatus.SUBMITTED) {
+                running = running.add(safe(row.declaredHours()));
             }
-            result.add(row.withRunningApprovedHours(runningApprovedHours));
+            result.add(row.withRunningSubmittedHours(running));
         }
         return result;
     }
 
     private List<TrainingStatusYearlyHoursResponse> yearlyHours(List<TrainingRecord> records) {
-        Map<Integer, Totals> totals = new LinkedHashMap<>();
+        Map<Integer, BigDecimal> totals = new LinkedHashMap<>();
         records.stream()
                 .sorted(Comparator.comparing(TrainingRecord::getStartDate))
-                .forEach(record -> totals
-                        .computeIfAbsent(record.getStartDate().getYear(), ignored -> new Totals())
-                        .add(record));
+                .forEach(record -> totals.merge(
+                        record.getStartDate().getYear(),
+                        safeSubmittedHours(record),
+                        BigDecimal::add
+                ));
         return totals.entrySet()
                 .stream()
-                .map(entry -> new TrainingStatusYearlyHoursResponse(
-                        entry.getKey(),
-                        entry.getValue().approvedHours,
-                        entry.getValue().pendingHours,
-                        entry.getValue().rejectedHours
-                ))
+                .map(entry -> new TrainingStatusYearlyHoursResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }
 
@@ -394,15 +380,14 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 .map(total -> new TrainingStatusActivityTypeHoursResponse(
                         total.activityTypeId,
                         total.activityTypeName,
-                        total.approvedHours,
-                        total.pendingHours,
-                        total.rejectedHours
+                        total.submittedHours
                 ))
                 .toList();
     }
 
     private List<TrainingStatusRecordSummaryResponse> recentRecords(List<TrainingRecord> records) {
         return records.stream()
+                .sorted(Comparator.comparing(TrainingRecord::getStartDate).reversed())
                 .limit(10)
                 .map(this::recordSummary)
                 .toList();
@@ -410,8 +395,8 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
 
     private List<TrainingStatusRecordSummaryResponse> attentionRecords(List<TrainingRecord> records) {
         return records.stream()
-                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.PENDING_REVIEW
-                        || record.getWorkflowStatus() == TrainingRecordStatus.REJECTED)
+                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.CANCELLED)
+                .sorted(Comparator.comparing(TrainingRecord::getStartDate).reversed())
                 .limit(10)
                 .map(this::recordSummary)
                 .toList();
@@ -424,36 +409,34 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 record.getActivityType() == null ? null : record.getActivityType().getName(),
                 record.getStartDate(),
                 record.getDeclaredHours(),
-                record.getApprovedHours(),
                 record.getWorkflowStatus()
         );
     }
 
-    private BigDecimal sumDeclared(List<TrainingRecord> records, TrainingRecordStatus status) {
+    private BigDecimal sumSubmitted(List<TrainingRecord> records) {
         return records.stream()
-                .filter(record -> record.getWorkflowStatus() == status)
+                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.SUBMITTED)
                 .map(TrainingRecord::getDeclaredHours)
                 .map(this::safe)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal sumApproved(List<TrainingRecord> records) {
-        return records.stream()
-                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.APPROVED)
-                .map(TrainingRecord::getApprovedHours)
-                .map(this::safe)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private BigDecimal safeSubmittedHours(TrainingRecord record) {
+        if (record.getWorkflowStatus() == TrainingRecordStatus.SUBMITTED) {
+            return safe(record.getDeclaredHours());
+        }
+        return BigDecimal.ZERO;
     }
 
     private BigDecimal safe(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal approvedHours) {
+    private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal submittedHours) {
         if (requiredHours == null || requiredHours.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.valueOf(100);
         }
-        return approvedHours
+        return submittedHours
                 .multiply(BigDecimal.valueOf(100))
                 .divide(requiredHours, 2, RoundingMode.HALF_UP)
                 .min(BigDecimal.valueOf(100));
@@ -464,7 +447,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             case NOT_CONFIGURED -> "No active training requirement is configured";
             case COMPLIANT -> "Training requirement is met";
             case AT_RISK, NON_COMPLIANT -> remainingHours.stripTrailingZeros().toPlainString()
-                    + " approved hours remaining";
+                    + " submitted hours remaining";
         };
     }
 
@@ -491,12 +474,10 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 case "jobPositionName", "positionName" -> comparingValue(EmployeeTrainingStatusSummaryResponse::jobPositionName, order.getDirection());
                 case "requirementName" -> comparingValue(EmployeeTrainingStatusSummaryResponse::requirementName, order.getDirection());
                 case "requiredHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::requiredHours, order.getDirection());
-                case "approvedHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::approvedHours, order.getDirection());
-                case "pendingHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::pendingHours, order.getDirection());
+                case "submittedHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::submittedHours, order.getDirection());
                 case "remainingHours" -> comparingValue(EmployeeTrainingStatusSummaryResponse::remainingHours, order.getDirection());
                 case "status", "complianceStatus" -> comparingValue(EmployeeTrainingStatusSummaryResponse::complianceStatus, order.getDirection());
                 case "lastTrainingDate" -> comparingValue(EmployeeTrainingStatusSummaryResponse::lastTrainingDate, order.getDirection());
-                case "pendingReviewCount" -> comparingValue(EmployeeTrainingStatusSummaryResponse::pendingReviewCount, order.getDirection());
                 default -> throw new IllegalArgumentException("Unsupported employee training status sort property: " + order.getProperty());
             };
             comparator = comparator == null ? next : comparator.thenComparing(next);
@@ -516,8 +497,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 case "startDate" -> comparingValue(EmployeeTrainingRecordLedgerResponse::startDate, order.getDirection());
                 case "endDate" -> comparingValue(EmployeeTrainingRecordLedgerResponse::endDate, order.getDirection());
                 case "declaredHours" -> comparingValue(EmployeeTrainingRecordLedgerResponse::declaredHours, order.getDirection());
-                case "approvedHours" -> comparingValue(EmployeeTrainingRecordLedgerResponse::approvedHours, order.getDirection());
-                case "runningApprovedHours" -> comparingValue(EmployeeTrainingRecordLedgerResponse::runningApprovedHours, order.getDirection());
+                case "runningSubmittedHours" -> comparingValue(EmployeeTrainingRecordLedgerResponse::runningSubmittedHours, order.getDirection());
                 case "workflowStatus" -> comparingValue(EmployeeTrainingRecordLedgerResponse::workflowStatus, order.getDirection());
                 case "sourceType" -> comparingValue(EmployeeTrainingRecordLedgerResponse::sourceType, order.getDirection());
                 case "evidenceCount" -> comparingValue(EmployeeTrainingRecordLedgerResponse::evidenceCount, order.getDirection());
@@ -564,29 +544,21 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         return false;
     }
 
-    private class Totals {
-        protected BigDecimal approvedHours = BigDecimal.ZERO;
-        protected BigDecimal pendingHours = BigDecimal.ZERO;
-        protected BigDecimal rejectedHours = BigDecimal.ZERO;
-
-        protected void add(TrainingRecord record) {
-            if (record.getWorkflowStatus() == TrainingRecordStatus.APPROVED) {
-                approvedHours = approvedHours.add(safe(record.getApprovedHours()));
-            } else if (record.getWorkflowStatus() == TrainingRecordStatus.PENDING_REVIEW) {
-                pendingHours = pendingHours.add(safe(record.getDeclaredHours()));
-            } else if (record.getWorkflowStatus() == TrainingRecordStatus.REJECTED) {
-                rejectedHours = rejectedHours.add(safe(record.getDeclaredHours()));
-            }
-        }
-    }
-
-    private class ActivityTotals extends Totals {
+    private static class ActivityTotals {
         private final Long activityTypeId;
         private final String activityTypeName;
+        private BigDecimal submittedHours = BigDecimal.ZERO;
 
         private ActivityTotals(Long activityTypeId, String activityTypeName) {
             this.activityTypeId = activityTypeId;
             this.activityTypeName = activityTypeName;
+        }
+
+        private void add(TrainingRecord record) {
+            if (record.getWorkflowStatus() == TrainingRecordStatus.SUBMITTED
+                    && record.getDeclaredHours() != null) {
+                submittedHours = submittedHours.add(record.getDeclaredHours());
+            }
         }
     }
 }

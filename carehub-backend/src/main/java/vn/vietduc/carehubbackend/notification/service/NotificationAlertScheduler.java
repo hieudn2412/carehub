@@ -186,7 +186,7 @@ public class NotificationAlertScheduler {
         variables.put("employee_name", employee.getName());
         variables.put("employee_code", employee.getEmployeeCode());
         variables.put("department", employee.getDepartment() == null ? "" : employee.getDepartment().getName());
-        variables.put("current_hours", decimal(status.approvedHours()));
+        variables.put("current_hours", decimal(status.submittedHours()));
         variables.put("required_hours", decimal(status.requiredHours()));
         variables.put("missing_hours", decimal(status.remainingHours()));
         variables.put("deadline", status.windowEnd() == null ? "" : status.windowEnd().toString());

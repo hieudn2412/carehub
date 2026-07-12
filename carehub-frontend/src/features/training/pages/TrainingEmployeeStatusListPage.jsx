@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
@@ -12,8 +12,16 @@ import { SearchOutlined, EyeOutlined, DownloadOutlined } from '@ant-design/icons
 import '../styles/TrainingEmployeeStatusListPage.css'
 
 function TrainingEmployeeStatusListPage() {
-  const accessToken = tokenStorage.getAccessToken()
-  const roles = getRolesFromAccessToken(accessToken)
+  const [roles, setRoles] = useState([])
+
+  // Resolve roles from current access token (avoids stale token at module scope)
+  useEffect(() => {
+    const accessToken = tokenStorage.getAccessToken()
+    if (accessToken) {
+      setRoles(getRolesFromAccessToken(accessToken))
+    }
+  }, [])
+
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
 
   const [employees, setEmployees] = useState([])
