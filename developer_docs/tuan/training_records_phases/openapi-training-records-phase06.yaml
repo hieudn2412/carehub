@@ -33,15 +33,11 @@ paths:
           in: query
           schema:
             $ref: '#/components/schemas/ComplianceStatus'
-        - name: hasPendingReview
-          in: query
-          schema:
-            type: boolean
-        - name: approvedHoursMin
+        - name: submittedHoursMin
           in: query
           schema:
             type: number
-        - name: approvedHoursMax
+        - name: submittedHoursMax
           in: query
           schema:
             type: number
@@ -102,7 +98,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [APPROVED, PENDING_REVIEW, REJECTED]
+            enum: [SUBMITTED]
         - name: page
           in: query
           schema:
@@ -169,11 +165,7 @@ components:
           nullable: true
         requiredHours:
           type: number
-        approvedHours:
-          type: number
-        pendingHours:
-          type: number
-        rejectedHours:
+        submittedHours:
           type: number
         remainingHours:
           type: number
@@ -183,9 +175,6 @@ components:
           type: string
           format: date
           nullable: true
-        pendingReviewCount:
-          type: integer
-          format: int64
     EmployeeTrainingRecordLedger:
       type: object
       properties:
@@ -201,14 +190,14 @@ components:
           format: date
         declaredHours:
           type: number
-        approvedHours:
+        declaredHours:
           type: number
           nullable: true
-        runningApprovedHours:
+        runningSubmittedHours:
           type: number
         workflowStatus:
           type: string
-          enum: [APPROVED, PENDING_REVIEW, REJECTED]
+          enum: [SUBMITTED]
         evidenceCount:
           type: integer
           format: int64

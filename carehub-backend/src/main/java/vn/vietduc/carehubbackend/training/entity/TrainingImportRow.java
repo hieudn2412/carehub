@@ -2,6 +2,8 @@ package vn.vietduc.carehubbackend.training.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -41,6 +43,7 @@ public class TrainingImportRow extends BaseEntity {
     @Column(name = "normalized_data", columnDefinition = "jsonb")
     private Map<String, Object> normalizedData;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "validation_status", nullable = false, length = 30)
     private TrainingImportRowStatus validationStatus;
 

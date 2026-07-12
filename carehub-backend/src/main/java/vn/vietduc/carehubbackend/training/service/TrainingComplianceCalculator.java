@@ -53,15 +53,15 @@ public class TrainingComplianceCalculator {
 
         TrainingRequirement matchedRequirement = requirement.get();
         LocalDate windowStart = windowEnd.minusYears(matchedRequirement.getCycleYears());
-        BigDecimal approvedHours = safe(recordRepository.sumApprovedHoursForEmployee(
+        BigDecimal submittedHours = safe(recordRepository.sumApprovedHoursForEmployee(
                 employee.getId(),
                 windowStart,
                 windowEnd
         ));
         BigDecimal requiredHours = safe(matchedRequirement.getRequiredHours());
-        BigDecimal remainingHours = requiredHours.subtract(approvedHours).max(BigDecimal.ZERO);
-        ComplianceStatus status = resolveStatus(matchedRequirement, approvedHours);
-        BigDecimal progressPercentage = progressPercentage(requiredHours, approvedHours);
+        BigDecimal remainingHours = requiredHours.subtract(submittedHours).max(BigDecimal.ZERO);
+        ComplianceStatus status = resolveStatus(matchedRequirement, submittedHours);
+        BigDecimal progressPercentage = progressPercentage(requiredHours, submittedHours);
 
         return new PersonalTrainingStatusResponse(
                 employee.getId(),
@@ -69,9 +69,7 @@ public class TrainingComplianceCalculator {
                 employee.getName(),
                 status,
                 requiredHours,
-                approvedHours,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
+                submittedHours,
                 remainingHours,
                 progressPercentage,
                 matchedRequirement.getCycleYears(),
@@ -87,29 +85,29 @@ public class TrainingComplianceCalculator {
         );
     }
 
-    public ComplianceStatus resolveStatus(TrainingRequirement requirement, BigDecimal approvedHours) {
+    public ComplianceStatus resolveStatus(TrainingRequirement requirement, BigDecimal submittedHours) {
         if (requirement == null) {
             return ComplianceStatus.NOT_CONFIGURED;
         }
-        BigDecimal approved = safe(approvedHours);
+        BigDecimal submitted = safe(submittedHours);
         BigDecimal required = safe(requirement.getRequiredHours());
-        if (approved.compareTo(required) >= 0) {
+        if (submitted.compareTo(required) >= 0) {
             return ComplianceStatus.COMPLIANT;
         }
         BigDecimal warningThreshold = requirement.getWarningThresholdHours();
-        if (warningThreshold != null && approved.compareTo(warningThreshold) >= 0) {
+        if (warningThreshold != null && submitted.compareTo(warningThreshold) >= 0) {
             return ComplianceStatus.AT_RISK;
         }
         return ComplianceStatus.NON_COMPLIANT;
     }
 
-    public BigDecimal sumApprovedHours(List<TrainingRecord> records) {
+    public BigDecimal sumSubmittedHours(List<TrainingRecord> records) {
         if (records == null || records.isEmpty()) {
             return BigDecimal.ZERO;
         }
         return records.stream()
-                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.APPROVED)
-                .map(TrainingRecord::getApprovedHours)
+                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.SUBMITTED)
+                .map(TrainingRecord::getDeclaredHours)
                 .map(this::safe)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
@@ -207,8 +205,6 @@ public class TrainingComplianceCalculator {
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
-                BigDecimal.ZERO,
-                BigDecimal.ZERO,
                 null,
                 null,
                 windowEnd,
@@ -222,11 +218,11 @@ public class TrainingComplianceCalculator {
         );
     }
 
-    private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal approvedHours) {
+    private BigDecimal progressPercentage(BigDecimal requiredHours, BigDecimal submittedHours) {
         if (requiredHours == null || requiredHours.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.valueOf(100);
         }
-        return approvedHours
+        return submittedHours
                 .multiply(BigDecimal.valueOf(100))
                 .divide(requiredHours, 2, RoundingMode.HALF_UP)
                 .min(BigDecimal.valueOf(100));
@@ -237,7 +233,7 @@ public class TrainingComplianceCalculator {
             case NOT_CONFIGURED -> "No active training requirement is configured";
             case COMPLIANT -> "Training requirement is met";
             case AT_RISK, NON_COMPLIANT -> remainingHours.stripTrailingZeros().toPlainString()
-                    + " approved hours remaining";
+                    + " submitted hours remaining";
         };
     }
 }

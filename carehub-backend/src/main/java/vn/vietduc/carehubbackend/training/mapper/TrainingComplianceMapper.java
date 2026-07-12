@@ -22,7 +22,7 @@ public class TrainingComplianceMapper {
                 position == null ? null : position.getName(),
                 status.status(),
                 status.requiredHours(),
-                status.approvedHours(),
+                status.submittedHours(),
                 status.remainingHours()
         );
     }

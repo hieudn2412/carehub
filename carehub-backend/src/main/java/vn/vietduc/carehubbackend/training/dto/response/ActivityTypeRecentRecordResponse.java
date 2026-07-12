@@ -13,7 +13,6 @@ public record ActivityTypeRecentRecordResponse(
         String employeeName,
         LocalDate startDate,
         BigDecimal declaredHours,
-        BigDecimal approvedHours,
         TrainingRecordStatus workflowStatus
 ) {
 }

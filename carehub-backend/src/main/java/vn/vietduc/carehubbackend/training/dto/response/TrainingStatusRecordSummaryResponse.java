@@ -11,7 +11,6 @@ public record TrainingStatusRecordSummaryResponse(
         String activityTypeName,
         LocalDate startDate,
         BigDecimal declaredHours,
-        BigDecimal approvedHours,
         TrainingRecordStatus workflowStatus
 ) {
 }

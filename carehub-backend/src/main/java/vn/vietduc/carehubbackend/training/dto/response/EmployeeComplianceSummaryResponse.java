@@ -14,7 +14,7 @@ public record EmployeeComplianceSummaryResponse(
         String positionName,
         ComplianceStatus status,
         BigDecimal requiredHours,
-        BigDecimal approvedHours,
+        BigDecimal submittedHours,
         BigDecimal remainingHours
 ) {
 }

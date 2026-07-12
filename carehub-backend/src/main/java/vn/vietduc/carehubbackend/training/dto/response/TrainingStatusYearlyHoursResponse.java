@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 
 public record TrainingStatusYearlyHoursResponse(
         Integer year,
-        BigDecimal approvedHours,
-        BigDecimal pendingHours,
-        BigDecimal rejectedHours
+        BigDecimal submittedHours
 ) {
 }

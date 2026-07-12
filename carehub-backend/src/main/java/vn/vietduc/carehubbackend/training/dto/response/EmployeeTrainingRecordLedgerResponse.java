@@ -18,8 +18,7 @@ public record EmployeeTrainingRecordLedgerResponse(
         LocalDate startDate,
         LocalDate endDate,
         BigDecimal declaredHours,
-        BigDecimal approvedHours,
-        BigDecimal runningApprovedHours,
+        BigDecimal runningSubmittedHours,
         TrainingRecordStatus workflowStatus,
         TrainingSourceType sourceType,
         String sourceReference,
@@ -27,12 +26,10 @@ public record EmployeeTrainingRecordLedgerResponse(
         long evidenceCount,
         long passedEvidenceCount,
         long failedEvidenceCount,
-        long reviewCount,
         long changeLogCount,
-        String latestRejectionReason,
         Long version
 ) {
-    public EmployeeTrainingRecordLedgerResponse withRunningApprovedHours(BigDecimal nextRunningApprovedHours) {
+    public EmployeeTrainingRecordLedgerResponse withRunningSubmittedHours(BigDecimal nextRunningSubmittedHours) {
         return new EmployeeTrainingRecordLedgerResponse(
                 id,
                 title,
@@ -44,8 +41,7 @@ public record EmployeeTrainingRecordLedgerResponse(
                 startDate,
                 endDate,
                 declaredHours,
-                approvedHours,
-                nextRunningApprovedHours,
+                nextRunningSubmittedHours,
                 workflowStatus,
                 sourceType,
                 sourceReference,
@@ -53,9 +49,7 @@ public record EmployeeTrainingRecordLedgerResponse(
                 evidenceCount,
                 passedEvidenceCount,
                 failedEvidenceCount,
-                reviewCount,
                 changeLogCount,
-                latestRejectionReason,
                 version
         );
     }

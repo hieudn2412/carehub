@@ -39,9 +39,8 @@ public class TrainingStatusController {
             @RequestParam(required = false) Long jobPositionId,
             @RequestParam(required = false) Long professionalFieldId,
             @RequestParam(required = false) ComplianceStatus complianceStatus,
-            @RequestParam(required = false) Boolean hasPendingReview,
-            @RequestParam(required = false) BigDecimal approvedHoursMin,
-            @RequestParam(required = false) BigDecimal approvedHoursMax,
+            @RequestParam(required = false) BigDecimal submittedHoursMin,
+            @RequestParam(required = false) BigDecimal submittedHoursMax,
             @RequestParam(required = false) Boolean requirementConfigured,
             @RequestParam(required = false) LocalDate asOf,
             @PageableDefault(size = 20, sort = "employeeCode", direction = Sort.Direction.ASC)
@@ -53,9 +52,8 @@ public class TrainingStatusController {
                 jobPositionId,
                 professionalFieldId,
                 complianceStatus,
-                hasPendingReview,
-                approvedHoursMin,
-                approvedHoursMax,
+                submittedHoursMin,
+                submittedHoursMax,
                 requirementConfigured,
                 asOf
         );

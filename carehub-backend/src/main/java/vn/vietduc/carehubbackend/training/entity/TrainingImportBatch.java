@@ -2,6 +2,8 @@ package vn.vietduc.carehubbackend.training.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -29,6 +31,7 @@ public class TrainingImportBatch extends BaseEntity {
     @Column(name = "original_filename", nullable = false, length = 500)
     private String originalFilename;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private TrainingImportBatchStatus status;
 

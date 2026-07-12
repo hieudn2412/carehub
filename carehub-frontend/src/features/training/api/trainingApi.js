@@ -173,7 +173,6 @@ export const trainingApi = {
     return httpClient.post(`/training/records/${recordId}/evidences`, formData, {
       headers: {
         ...authHeaders(),
-        'Content-Type': 'multipart/form-data',
       },
     })
   },
@@ -242,7 +241,6 @@ export const trainingApi = {
     return httpClient.post('/training/imports/legacy/preview', formData, {
       headers: {
         ...authHeaders(),
-        'Content-Type': 'multipart/form-data',
       },
     })
   },

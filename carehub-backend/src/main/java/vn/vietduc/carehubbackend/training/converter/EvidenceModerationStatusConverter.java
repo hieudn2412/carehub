@@ -13,6 +13,12 @@ public class EvidenceModerationStatusConverter implements AttributeConverter<Evi
 
     @Override
     public EvidenceModerationStatus convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : EvidenceModerationStatus.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return EvidenceModerationStatus.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum EvidenceModerationStatus");
+        }
     }
 }

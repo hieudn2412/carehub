@@ -16,9 +16,7 @@ public record EmployeeTrainingStatusSummaryResponse(
         Long requirementId,
         String requirementName,
         BigDecimal requiredHours,
-        BigDecimal approvedHours,
-        BigDecimal pendingHours,
-        BigDecimal rejectedHours,
+        BigDecimal submittedHours,
         BigDecimal remainingHours,
         BigDecimal progressPercentage,
         Integer cycleYears,
@@ -26,7 +24,6 @@ public record EmployeeTrainingStatusSummaryResponse(
         LocalDate windowEnd,
         ComplianceStatus complianceStatus,
         LocalDate lastTrainingDate,
-        long pendingReviewCount,
         String warningMessage
 ) {
 }

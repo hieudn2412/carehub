@@ -2,6 +2,8 @@ package vn.vietduc.carehubbackend.training.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -36,6 +38,7 @@ public class TrainingRecordChangeLog extends BaseEntity {
     @Column(name = "version_no", nullable = false)
     private Long versionNo;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "change_type", nullable = false, length = 30)
     private TrainingRecordChangeType changeType;
 

@@ -74,8 +74,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                 r.startDate,
                 r.endDate,
                 r.declaredHours,
-                r.approvedHours,
-                r.approvedHours,
+                r.declaredHours,
                 r.workflowStatus,
                 r.sourceType,
                 r.sourceReference,
@@ -96,13 +95,9 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                        vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus.FAILED,
                        vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus.ERROR
                    )),
-                (SELECT COUNT(review.id)
-                 FROM TrainingRecordReview review
-                 WHERE review.trainingRecord.id = r.id),
                 (SELECT COUNT(changeLog.id)
                  FROM TrainingRecordChangeLog changeLog
                  WHERE changeLog.trainingRecord.id = r.id),
-                r.latestRejectionReason,
                 r.version
             )
             FROM TrainingRecord r
@@ -139,7 +134,6 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                         r.startDate,
                         r.endDate,
                         r.declaredHours,
-                        r.approvedHours,
                         r.workflowStatus,
                         r.sourceType,
                         r.submittedAt,
@@ -296,10 +290,10 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     );
 
     @Query("""
-            SELECT COALESCE(SUM(r.approvedHours), 0)
+            SELECT COALESCE(SUM(r.declaredHours), 0)
             FROM TrainingRecord r
             WHERE r.employee.id = :employeeId
-              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.APPROVED
+              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
               AND r.startDate >= :windowStart
               AND r.startDate <= :windowEnd
             """)
@@ -313,7 +307,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
             SELECT r
             FROM TrainingRecord r
             WHERE r.employee.id = :employeeId
-              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.APPROVED
+              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
               AND r.startDate >= :windowStart
               AND r.startDate <= :windowEnd
             ORDER BY r.startDate DESC

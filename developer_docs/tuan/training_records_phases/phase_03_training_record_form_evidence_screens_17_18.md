@@ -66,7 +66,7 @@
 
 - Save Draft.
 - Save Changes.
-- Submit for Review.
+- Submit.
 - Cancel.
 
 #### Validation
@@ -79,9 +79,8 @@
 - Manual entry declared hours:
   - Min 0,5.
   - Max 24 theo SRS.
-- Nếu activity type yêu cầu evidence, submit phải có ít nhất một file active đã qua validation.
-- Không cho submit nếu file moderation failed.
-- Không cho User sửa record `APPROVED`.
+- Evidence là optional — user tự quản lý và chịu trách nhiệm. Moderation vẫn validate định dạng file nhưng không block submit.
+- Không cho User sửa record `SUBMITTED` (chỉ Admin mở lại nếu cần).
 - Không cho vượt edit limit.
 - Kiểm tra duplicate candidate:
   - Cùng employee.
@@ -127,20 +126,18 @@ version
 6. Persist draft.
 7. Write audit.
 8. Khi submit:
-   - Validate required evidence.
-   - Validate moderation result.
-   - Set `PENDING_REVIEW`.
+   - Set `SUBMITTED`.
    - Set `submitted_at`.
-   - Queue review notification.
+   - Write audit event `SUBMITTED`.
 
 #### Acceptance criteria
 
 - User tạo được draft của chính mình.
 - Manager không tạo cho khoa khác.
-- Submit hợp lệ tạo `PENDING_REVIEW`.
+- Submit hợp lệ tạo `SUBMITTED`.
 - Missing mandatory field không gọi moderation.
 - Lần edit vượt giới hạn trả 409.
-- Approved record không bị User chỉnh sửa.
+- SUBMITTED record không bị User chỉnh sửa (chỉ Admin).
 
 #### Tests
 
@@ -193,19 +190,13 @@ version
 
 1. Validate client-side.
 2. Validate lại server-side.
-3. Upload vào temporary object path.
-4. Gọi `EvidenceModerationService`.
-5. Nếu PASSED:
-   - Chuyển sang permanent object path.
-   - Persist metadata.
-6. Nếu FAILED:
-   - Xóa temp file.
-   - Không gắn file vào record.
-   - Trả lý do phù hợp.
-7. Nếu ERROR:
-   - Có retry policy.
-   - Không tự coi là passed.
+3. Upload file.
+4. Gọi `EvidenceModerationService` để kiểm tra định dạng, MIME, magic bytes, size.
+5. Kết quả moderation hiển thị cho user nhưng **không block submit**.
+6. Nếu ERROR: có retry policy, không tự coi là passed.
 
+> **Thay đổi**: Moderation chỉ để cảnh báo, không block submit hay upload. User tự chịu trách nhiệm với chất lượng minh chứng.
+>
 > Với PDF, cần ADR riêng: bỏ qua moderation, scan malware, hoặc render trang đầu để kiểm tra.
 
 #### API
@@ -219,9 +210,9 @@ POST   /api/v1/training/records/{id}/evidences/{evidenceId}/download-url
 
 #### Permission
 
-- User chỉ thao tác evidence của record mình và record còn editable.
+- User chỉ thao tác evidence của record mình và record còn editable (DRAFT).
 - Manager/Admin theo scope.
-- Approved record không được thay file nếu chưa mở lại workflow.
+- SUBMITTED record không được thay file (chỉ Admin mở lại nếu cần).
 
 #### Acceptance criteria
 

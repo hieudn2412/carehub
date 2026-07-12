@@ -18,15 +18,16 @@ Loại bỏ các điểm mơ hồ có thể làm phải sửa database hoặc AP
 - [ ] Một “tiết” tương đương bao nhiêu giờ?
 - [ ] “Tín chỉ” có được quy đổi sang giờ hay chỉ lưu minh chứng?
 - [ ] Khóa dài ngày, tháng, năm được nhập một record hay tách record?
-- [ ] Manager có được sửa số giờ phê duyệt khác số giờ khai báo không?
-- [ ] Evidence có bắt buộc cho mọi activity type không?
-- [ ] Hai lần edit được tính như thế nào?
-- [ ] Record đã approved có được mở lại không?
+- [x] ~~Manager có được sửa số giờ phê duyệt khác số giờ khai báo không?~~ **KHÔNG ÁP DỤNG — Đã bỏ review workflow (xem ADR)**
+- [x] ~~Evidence có bắt buộc cho mọi activity type không?~~ **KHÔNG — User tự quản lý minh chứng (xem ADR)**
+- [x] ~~Hai lần edit được tính như thế nào?~~ **Đã chốt: tính từ sau lần submit đầu tiên (configurable)**
+- [x] ~~Record đã approved có được mở lại không?~~ **KHÔNG ÁP DỤNG — Không còn trạng thái approved**
 - [ ] `AT_RISK` được tính theo thiếu bao nhiêu giờ hay theo thời gian còn lại?
 - [ ] Requirement áp dụng theo chức danh, vị trí việc làm hay role hệ thống?
 - [ ] Khi nhân viên chuyển khoa, lịch sử đào tạo được tính cho khoa cũ hay khoa mới?
 - [ ] PDF được moderation theo cách nào?
 - [ ] Có cần tải toàn bộ file Google Drive cũ về Object Storage không?
+- [x] **Bỏ review workflow: User tự quản lý giờ đào tạo và minh chứng. Admin/Manager không duyệt.** (Đã chốt — xem ADR Post-Phase-09)
 
 ### Deliverables
 
@@ -39,6 +40,6 @@ Loại bỏ các điểm mơ hồ có thể làm phải sửa database hoặc AP
 
 ### Điều kiện hoàn thành
 
-Không bắt đầu migration production trước khi các quyết định về đơn vị thời lượng, requirement scope và review workflow được chốt.
+Không bắt đầu migration production trước khi các quyết định về đơn vị thời lượng và requirement scope được chốt. Review workflow đã được chốt: **bỏ hoàn toàn**.
 
 ---

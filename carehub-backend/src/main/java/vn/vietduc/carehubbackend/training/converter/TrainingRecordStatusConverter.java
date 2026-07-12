@@ -13,6 +13,12 @@ public class TrainingRecordStatusConverter implements AttributeConverter<Trainin
 
     @Override
     public TrainingRecordStatus convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : TrainingRecordStatus.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return TrainingRecordStatus.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum TrainingRecordStatus");
+        }
     }
 }

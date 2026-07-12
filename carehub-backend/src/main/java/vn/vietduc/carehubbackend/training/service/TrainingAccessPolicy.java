@@ -61,16 +61,6 @@ public class TrainingAccessPolicy {
         return actor.getId() != null && actor.getId().equals(targetEmployee.getId());
     }
 
-    public boolean canReviewRecord(User actor, Collection<String> roleCodes, TrainingRecord record) {
-        if (actor == null || record == null || record.getEmployee() == null) {
-            return false;
-        }
-        if (hasAnyRole(roleCodes, ROLE_ADMIN, ROLE_SYSTEM_JOB)) {
-            return true;
-        }
-        return hasRole(roleCodes, ROLE_MANAGER) && sameDepartment(actor, record.getEmployee());
-    }
-
     public void requireCanReadRecord(User actor, Collection<String> roleCodes, TrainingRecord record) {
         if (!canReadRecord(actor, roleCodes, record)) {
             throw new ForbiddenException("You do not have access to this training record");
@@ -85,6 +75,9 @@ public class TrainingAccessPolicy {
 
     public User currentActor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ForbiddenException("Missing authenticated user");
+        }
         Object principal = authentication.getPrincipal();
         Long userId;
         if (!(principal instanceof UserPrincipal userPrincipal)) {

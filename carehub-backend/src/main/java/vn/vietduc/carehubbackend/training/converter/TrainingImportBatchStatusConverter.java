@@ -13,6 +13,12 @@ public class TrainingImportBatchStatusConverter implements AttributeConverter<Tr
 
     @Override
     public TrainingImportBatchStatus convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : TrainingImportBatchStatus.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return TrainingImportBatchStatus.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum TrainingImportBatchStatus");
+        }
     }
 }

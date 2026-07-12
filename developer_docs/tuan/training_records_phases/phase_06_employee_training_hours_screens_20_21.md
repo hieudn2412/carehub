@@ -31,12 +31,10 @@ Manager, Admin.
 - Job position.
 - Requirement name.
 - Required hours.
-- Approved hours.
-- Pending hours.
+- Submitted hours.
 - Remaining hours.
 - Compliance status.
 - Last training date.
-- Pending review count.
 - Action: View detail.
 
 #### Filters
@@ -97,15 +95,14 @@ GET /api/v1/training/employees/status
 
 1. Employee profile header.
 2. Current requirement.
-3. Compliance KPI cards.
-4. Approved/pending/rejected totals.
-5. Ledger danh sách record.
-6. Evidence summary.
-7. Breakdown theo năm.
-8. Breakdown theo activity type.
-9. Review/change timeline.
-10. Source/import warnings.
-11. Link từng record sang màn 16.
+3. Compliance KPI cards (submitted hours, remaining, progress).
+4. Ledger danh sách record (SUBMITTED).
+5. Evidence summary.
+6. Breakdown theo năm.
+7. Breakdown theo activity type.
+8. Change history.
+9. Source/import warnings.
+10. Link từng record sang màn 16.
 
 #### API
 
@@ -116,8 +113,8 @@ GET /api/v1/training/employees/{employeeId}/records
 
 #### Acceptance criteria
 
-- Ledger gồm approved/pending/rejected.
-- Running total chỉ cộng approved.
+- Ledger gồm các record SUBMITTED.
+- Running total cộng dồn `declared_hours`.
 - Manager ngoài khoa nhận 403.
 - Totals đồng nhất màn 19 và 20.
 - Có thông báo rõ khi requirement chưa cấu hình.

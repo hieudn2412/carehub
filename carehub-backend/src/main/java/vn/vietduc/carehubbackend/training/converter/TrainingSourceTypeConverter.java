@@ -13,6 +13,12 @@ public class TrainingSourceTypeConverter implements AttributeConverter<TrainingS
 
     @Override
     public TrainingSourceType convertToEntityAttribute(String dbData) {
-        return dbData == null ? null : TrainingSourceType.valueOf(dbData);
+        if (dbData == null) return null;
+        try {
+            return TrainingSourceType.valueOf(dbData);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                    "Unknown value '" + dbData + "' for enum TrainingSourceType");
+        }
     }
 }

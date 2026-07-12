@@ -32,7 +32,6 @@
 - Activity type.
 - Start date/end date.
 - Declared hours.
-- Approved hours.
 - Evidence count.
 - Workflow status.
 - Submitted/updated date.
@@ -57,9 +56,7 @@
 | Status | User | Manager/Admin |
 |---|---|---|
 | DRAFT | View, Edit, Evidence, Submit | Theo scope |
-| PENDING_REVIEW | View | View |
-| REJECTED | View, Edit, Evidence, Resubmit | View |
-| APPROVED | View | View |
+| SUBMITTED | View | View |
 | CANCELLED | View | View |
 
 #### API
@@ -118,15 +115,13 @@ GET /api/v1/training/records
 1. Employee information.
 2. Program information.
 3. Dates and duration.
-4. Declared vs approved hours.
+4. Declared hours.
 5. Activity type and professional field.
 6. Evidence gallery/list.
 7. Moderation status.
-8. Review status and rejection reason.
-9. Review timeline.
-10. Edit/change history.
-11. Source/import metadata.
-12. Action buttons according to state.
+8. Edit/change history.
+9. Source/import metadata.
+10. Action buttons according to state.
 
 #### API
 
@@ -136,18 +131,17 @@ GET /api/v1/training/records/{id}
 
 #### Actions
 
-- Edit.
-- Update evidence.
-- Submit/resubmit.
+- Edit (DRAFT only).
+- Update evidence (DRAFT only).
+- Submit.
 - Cancel draft.
 - Download evidence.
-- Admin-only open/review override nếu được phê duyệt trong Phase 0.
 
 #### Acceptance criteria
 
 - Không trả storage internal path cho client.
 - Dùng download URL có thời hạn.
-- Detail hiển thị đủ approved/pending/rejected history.
+- Detail hiển thị đủ thông tin record và evidence.
 - Dữ liệu legacy hiển thị raw source và cảnh báo chưa chuẩn hóa nếu có.
 - 403 khi actor không có scope.
 - 404 khi không tồn tại.
