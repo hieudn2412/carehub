@@ -24,10 +24,8 @@ function TrainingEmployeeStatusDetailPage() {
   const [employeeInfo, setEmployeeInfo] = useState({
     employeeName: '',
     employeeCode: '',
-    approvedHours: 0,
+    submittedHours: 0,
     requiredHours: 120,
-    pendingHours: 0,
-    totalHours: 0,
     complianceStatus: 'NON_COMPLIANT'
   })
 
@@ -50,10 +48,8 @@ function TrainingEmployeeStatusDetailPage() {
           setEmployeeInfo({
             employeeName: statusData.employeeName || '---',
             employeeCode: statusData.employeeCode || '---',
-            approvedHours: statusData.approvedHours || 0,
+            submittedHours: statusData.submittedHours || 0,
             requiredHours: statusData.requiredHours ?? 0,
-            pendingHours: statusData.pendingHours || 0,
-            totalHours: (statusData.approvedHours || 0) + (statusData.pendingHours || 0),
             complianceStatus: statusData.status || 'NOT_CONFIGURED'
           })
         }
@@ -62,7 +58,7 @@ function TrainingEmployeeStatusDetailPage() {
           const mappedRecords = recordsData.map(item => ({
             id: item.id,
             title: item.title,
-            hours: item.approvedHours || item.declaredHours || 0,
+            hours: item.declaredHours || 0,
             date: item.startDate || '---',
             workflowStatus: item.workflowStatus,
             evidenceUrl: item.evidenceCount > 0 ? `/training/records/${item.id}/evidence` : null
@@ -123,13 +119,13 @@ function TrainingEmployeeStatusDetailPage() {
                         <h2 className="ted-profile-name">{employeeInfo.employeeName} ({employeeInfo.employeeCode})</h2>
                       </div>
                       <div className={`ted-profile-badge ${
-                        employeeInfo.complianceStatus === 'COMPLIANT' 
-                          ? 'ted-profile-badge--compliant' 
+                        employeeInfo.complianceStatus === 'COMPLIANT'
+                          ? 'ted-profile-badge--compliant'
                           : ''
                       }`}>
                         {employeeInfo.complianceStatus === 'NOT_CONFIGURED'
                           ? 'Chưa áp dụng yêu cầu CME'
-                          : `${employeeInfo.totalHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}`}
+                          : `${employeeInfo.submittedHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}`}
                       </div>
                     </div>
 
@@ -137,42 +133,16 @@ function TrainingEmployeeStatusDetailPage() {
                     <div style={{ marginTop: 24 }}>
                       <h3 className="ted-section-title">TỔNG HỢP GIỜ ĐÀO TẠO</h3>
                       <div className="ted-summary-grid">
-                        
-                        {/* Card 1: Total */}
+
+                        {/* Card: Submitted Hours */}
                         <div className="ted-summary-card ted-summary-card--total">
                           <div className="ted-card-icon ted-card-icon--total">
                             <ClockCircleOutlined />
                           </div>
                           <div className="ted-card-info">
-                            <span className="ted-card-label">Tổng (5 năm)</span>
+                            <span className="ted-card-label">Số giờ đã nộp</span>
                             <span className="ted-card-value ted-card-value--total">
-                              {employeeInfo.totalHours}h
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Card 2: Approved */}
-                        <div className="ted-summary-card ted-summary-card--approved">
-                          <div className="ted-card-icon ted-card-icon--approved">
-                            <ClockCircleOutlined />
-                          </div>
-                          <div className="ted-card-info">
-                            <span className="ted-card-label">Được duyệt</span>
-                            <span className="ted-card-value ted-card-value--approved">
-                              {employeeInfo.approvedHours}h
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Card 3: Pending */}
-                        <div className="ted-summary-card ted-summary-card--pending">
-                          <div className="ted-card-icon ted-card-icon--pending">
-                            <ClockCircleOutlined />
-                          </div>
-                          <div className="ted-card-info">
-                            <span className="ted-card-label">Đang chờ duyệt</span>
-                            <span className="ted-card-value ted-card-value--pending">
-                              {employeeInfo.pendingHours}h
+                              {employeeInfo.submittedHours}h
                             </span>
                           </div>
                         </div>
@@ -209,16 +179,16 @@ function TrainingEmployeeStatusDetailPage() {
                                   <td>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}</td>
                                   <td>
                                     <span className={`ted-status-badge ${
-                                      item.workflowStatus === 'APPROVED' 
-                                        ? 'ted-status-badge--approved' 
+                                      item.workflowStatus === 'SUBMITTED'
+                                        ? 'ted-status-badge--approved'
                                         : 'ted-status-badge--pending'
                                     }`}>
                                       <span className={`ted-status-dot ${
-                                        item.workflowStatus === 'APPROVED' 
-                                          ? 'ted-status-dot--approved' 
+                                        item.workflowStatus === 'SUBMITTED'
+                                          ? 'ted-status-dot--approved'
                                           : 'ted-status-dot--pending'
                                       }`} />
-                                      {item.workflowStatus === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
+                                      {item.workflowStatus === 'SUBMITTED' ? 'Đã nộp' : item.workflowStatus === 'DRAFT' ? 'Bản nháp' : item.workflowStatus === 'CANCELLED' ? 'Đã hủy' : item.workflowStatus}
                                     </span>
                                   </td>
                                   <td>

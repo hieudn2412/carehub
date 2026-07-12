@@ -3,7 +3,7 @@ import {
   DashboardOutlined,
   ClockCircleOutlined,
   BarChartOutlined,
-  PaperClipOutlined,
+
   EditOutlined,
   HistoryOutlined,
   BellOutlined,
@@ -45,7 +45,6 @@ function Sidebar() {
       items: [
         { icon: <TeamOutlined />, label: 'Nhân sự trong khoa', path: '/manager/employees' },
         { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo nhân sự', path: '/training/employees' },
-        { icon: <PaperClipOutlined />, label: 'Duyệt minh chứng', path: '/manager/evidence-review' },
         { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },

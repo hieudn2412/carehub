@@ -59,7 +59,6 @@ const navSections = [
     label: 'ĐÀO TẠO',
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
-      { icon: <FileSearchOutlined />, label: 'Duyệt minh chứng', path: '/admin/training/evidence-review' },
       { icon: <AuditOutlined />, label: 'Cấu hình yêu cầu', path: '/admin/training/requirements' },
       { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
     ],

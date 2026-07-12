@@ -41,15 +41,16 @@ function TrainingHoursDetailScreen() {
   }, [id])
 
   const handleSubmit = () => {
+    if (!record) return
     setSubmitting(true)
-    trainingApi.submitRecord(id)
+    trainingApi.submitRecord(id, { version: record.version })
       .then(() => {
-        showToast("Gửi duyệt hồ sơ thành công!", "success")
+        showToast("Nộp hồ sơ thành công!", "success")
         fetchRecord()
       })
       .catch(err => {
         console.error("Error submitting record", err)
-        showToast("Gửi duyệt thất bại! Bạn cần tải lên ít nhất 1 file minh chứng hợp lệ trước khi gửi duyệt.", "error")
+        showToast("Nộp hồ sơ thất bại. Vui lòng kiểm tra lại.", "error")
       })
       .finally(() => {
         setSubmitting(false)
@@ -58,12 +59,8 @@ function TrainingHoursDetailScreen() {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'APPROVED':
-        return 'Duyệt'
-      case 'PENDING_REVIEW':
-        return 'Chờ'
-      case 'REJECTED':
-        return 'Từ chối'
+      case 'SUBMITTED':
+        return 'Đã nộp'
       case 'DRAFT':
         return 'Nháp'
       case 'CANCELLED':
@@ -75,11 +72,9 @@ function TrainingHoursDetailScreen() {
 
   const getStatusClass = (status) => {
     switch (status) {
-      case 'APPROVED':
+      case 'SUBMITTED':
         return 'training-badge--approved'
-      case 'PENDING_REVIEW':
-        return 'training-badge--pending'
-      case 'REJECTED':
+      case 'CANCELLED':
         return 'training-badge--rejected'
       case 'DRAFT':
         return 'training-badge--pending'
@@ -95,16 +90,6 @@ function TrainingHoursDetailScreen() {
     const month = String(d.getMonth() + 1).padStart(2, '0')
     const year = d.getFullYear()
     return `${day}/${month}/${year}`
-  }
-
-  const getApproverName = (record) => {
-    if (!record) return '-'
-    if (record.reviewTimeline && record.reviewTimeline.length > 0) {
-      // Timeline might contain multiple reviews, let's get the latest decision maker
-      const lastReview = record.reviewTimeline[record.reviewTimeline.length - 1]
-      return lastReview.reviewedByUserName || 'Quản lý'
-    }
-    return '-'
   }
 
   return (
@@ -164,10 +149,6 @@ function TrainingHoursDetailScreen() {
                       <label className="detail-field__label">Đơn vị tổ chức</label>
                       <div className="detail-field__value">{record.provider || '-'}</div>
                     </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Người duyệt</label>
-                      <div className="detail-field__value">{getApproverName(record)}</div>
-                    </div>
                     <div className="detail-field detail-field--full">
                       <label className="detail-field__label">Ghi chú / Mô tả</label>
                       <div className="detail-field__value" style={{ minHeight: 80 }}>{record.description || '-'}</div>
@@ -194,7 +175,7 @@ function TrainingHoursDetailScreen() {
                     >
                       <ArrowLeftOutlined /> Quay lại
                     </button>
-                    {['DRAFT', 'REJECTED'].includes(record.workflowStatus) && (
+                    {record.workflowStatus === 'DRAFT' && (
                       <button
                         onClick={() => navigate(`/staff/training/${record.id}/edit`)}
                         style={{
@@ -232,7 +213,7 @@ function TrainingHoursDetailScreen() {
                     >
                       <PaperClipOutlined /> Quản lý minh chứng
                     </button>
-                    {['DRAFT', 'REJECTED'].includes(record.workflowStatus) && (
+                    {record.workflowStatus === 'DRAFT' && (
                       <button
                         onClick={handleSubmit}
                         disabled={submitting}
@@ -250,7 +231,7 @@ function TrainingHoursDetailScreen() {
                           cursor: 'pointer',
                         }}
                       >
-                        <SendOutlined /> {submitting ? 'Đang gửi...' : 'Gửi duyệt'}
+                        <SendOutlined /> {submitting ? 'Đang nộp...' : 'Nộp hồ sơ'}
                       </button>
                     )}
                   </div>

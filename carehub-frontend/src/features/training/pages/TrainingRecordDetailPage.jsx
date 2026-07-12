@@ -43,7 +43,7 @@ function TrainingRecordDetailPage() {
           <h1>{record?.title ?? 'Training Record'}</h1>
         </div>
         <div className="training-header-actions">
-          {record && ['DRAFT', 'REJECTED'].includes(record.workflowStatus) ? (
+          {record && record.workflowStatus === 'DRAFT' ? (
             <>
               <Link className="training-button" to={`/training/records/${record.id}/edit`}>
                 Edit
@@ -81,7 +81,7 @@ function TrainingRecordDetailPage() {
             <dl className="training-definition">
               <dt>Status</dt>
               <dd>
-                <span className={`training-badge ${record.workflowStatus === 'APPROVED' ? 'is-active' : 'is-inactive'}`}>
+                <span className={`training-badge ${record.workflowStatus === 'SUBMITTED' ? 'is-active' : 'is-inactive'}`}>
                   {record.workflowStatus}
                 </span>
               </dd>
@@ -101,10 +101,8 @@ function TrainingRecordDetailPage() {
               <dd>{formatDate(record.startDate)} {record.startTime ?? ''}</dd>
               <dt>End</dt>
               <dd>{formatDate(record.endDate)} {record.endTime ?? ''}</dd>
-              <dt>Declared</dt>
+              <dt>Declared Hours</dt>
               <dd>{record.declaredHours ?? '-'}</dd>
-              <dt>Approved</dt>
-              <dd>{record.approvedHours ?? '-'}</dd>
             </dl>
           </article>
 
@@ -152,24 +150,6 @@ function TrainingRecordDetailPage() {
                   ))}
                 </tbody>
               </table>
-            )}
-          </article>
-
-          <article className="training-panel">
-            <h2>Review Timeline</h2>
-            {record.reviewTimeline.length === 0 ? (
-              <div className="training-empty">No reviews.</div>
-            ) : (
-              <ul className="training-timeline">
-                {record.reviewTimeline.map((item) => (
-                  <li key={item.id}>
-                    <strong>{item.decision}</strong>
-                    <span>{item.reviewedByUserName ?? '-'}</span>
-                    <span>{formatDateTime(item.reviewedAt)}</span>
-                    <span>{item.reason ?? '-'}</span>
-                  </li>
-                ))}
-              </ul>
             )}
           </article>
 

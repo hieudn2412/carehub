@@ -25,7 +25,6 @@ function ManagerDashboard() {
   const [nonCompliantCount, setNonCompliantCount] = useState(0)
   const [metrics, setMetrics] = useState({
     totalEmployees: 0,
-    pendingEvidences: 0,
     examPassRate: 74,
     qualityCompliance: 81
   })
@@ -34,19 +33,16 @@ function ManagerDashboard() {
     Promise.all([
       staffApi.getProfile(),
       trainingApi.getEmployeeTrainingStatuses({ size: 1 }),
-      trainingApi.getEmployeeTrainingStatuses({ size: 1, complianceStatus: 'NON_COMPLIANT' }),
-      trainingApi.getPendingRecords({ size: 1 })
+      trainingApi.getEmployeeTrainingStatuses({ size: 1, complianceStatus: 'NON_COMPLIANT' })
     ])
-      .then(([profileRes, statusRes, nonCompliantRes, pendingRes]) => {
+      .then(([profileRes, statusRes, nonCompliantRes]) => {
         setProfile(profileRes.data?.data)
         const totalEmp = statusRes.data?.data?.totalElements || 0
         const nonComp = nonCompliantRes.data?.data?.totalElements || 0
-        const pendingEv = pendingRes.data?.data?.totalElements || 0
 
         setMetrics(current => ({
           ...current,
-          totalEmployees: totalEmp,
-          pendingEvidences: pendingEv
+          totalEmployees: totalEmp
         }))
         setNonCompliantCount(nonComp)
         setLoading(false)
@@ -58,8 +54,8 @@ function ManagerDashboard() {
   }, [])
 
   const actions = [
-    { title: 'Minh chứng chờ duyệt', route: '/manager/evidence-review', desc: `${metrics.pendingEvidences} minh chứng đang chờ phê duyệt`, status: 'Cần duyệt', color: 'amber' },
-    { title: 'Nhân sự chưa đạt chuẩn giờ đào tạo', route: '/training/employees', desc: `${nonCompliantCount} nhân sự chưa đạt chuẩn giờ`, status: 'Xem', color: 'red' },
+
+{ title: 'Nhân sự chưa đạt chuẩn giờ đào tạo', route: '/training/employees', desc: `${nonCompliantCount} nhân sự chưa đạt chuẩn giờ`, status: 'Xem', color: 'red' },
     { title: 'Kết quả thi chưa đạt', route: '/manager/exam-results', desc: '3 nhân sự cần thi lại', status: 'Xem', color: 'red' },
     { title: 'Chất lượng chăm sóc dưới mục tiêu', route: '/manager/quality/checklists', desc: 'Tiêm truyền TM đạt 88% (mục tiêu 90%)', status: 'Cần chấm', color: 'amber' },
   ]
@@ -95,15 +91,6 @@ function ManagerDashboard() {
               <div className="mgr-metric-sub">
                 <span style={{ color: '#ef4444', fontWeight: 600 }}>{nonCompliantCount}</span> chưa đạt chuẩn giờ
               </div>
-            </div>
-
-            <div className="mgr-metric-card" onClick={() => navigate('/manager/evidence-review')}>
-              <div className="mgr-metric-label">
-                <span>Minh chứng chờ duyệt</span>
-                <ClockCircleOutlined style={{ color: '#f59e0b' }} />
-              </div>
-              <div className="mgr-metric-val" style={{ color: '#d97706' }}>{metrics.pendingEvidences}</div>
-              <div className="mgr-metric-sub">cần xem xét phê duyệt</div>
             </div>
 
             <div className="mgr-metric-card" onClick={() => navigate('/manager/exam-results')}>

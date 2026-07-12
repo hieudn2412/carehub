@@ -84,8 +84,7 @@ import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
 import ManagerEmployeeListPage from '../features/staff/pages/manager/ManagerEmployeeListPage.jsx'
 import ManagerEmployeeDetailPage from '../features/staff/pages/manager/ManagerEmployeeDetailPage.jsx'
-import ManagerEvidenceReviewListPage from '../features/staff/pages/manager/ManagerEvidenceReviewListPage.jsx'
-import ManagerEvidenceReviewDetailPage from '../features/staff/pages/manager/ManagerEvidenceReviewDetailPage.jsx'
+
 import ManagerExamResultsPage from '../features/staff/pages/manager/ManagerExamResultsPage.jsx'
 import ManagerExamResultDetailPage from '../features/staff/pages/manager/ManagerExamResultDetailPage.jsx'
 import ManagerChecklistListPage from '../features/staff/pages/manager/ManagerChecklistListPage.jsx'
@@ -205,8 +204,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
 
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
-      <Route path="/admin/training/evidence-review" element={adminElement(<ManagerEvidenceReviewListPage />)} />
-      <Route path="/admin/training/evidence-review/:id" element={adminElement(<ManagerEvidenceReviewDetailPage />)} />
+
       <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />
       <Route path="/admin/quality/history/forms/:formId/versions/:versionId" element={adminElement(<AdminQualityHistoryVersionPage />)} />
       <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
@@ -273,8 +271,7 @@ function AppRouter() {
       <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
       <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
-      <Route path="/manager/evidence-review" element={managerOrAdminElement(<ManagerEvidenceReviewListPage />)} />
-      <Route path="/manager/evidence-review/:id" element={managerOrAdminElement(<ManagerEvidenceReviewDetailPage />)} />
+
       <Route path="/manager/exam-results" element={managerOrAdminElement(<ManagerExamResultsPage />)} />
       <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
       <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />

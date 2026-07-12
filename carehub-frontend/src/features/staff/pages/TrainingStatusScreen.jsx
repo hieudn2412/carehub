@@ -28,7 +28,7 @@ function TrainingStatusScreen() {
         const statusData = res.data?.data
         if (statusData) {
           setSummary({
-            totalHours: statusData.approvedHours || 0,
+            totalHours: statusData.submittedHours || 0,
             requiredHours: statusData.requiredHours ?? 0,
             remainingHours: statusData.remainingHours || 0,
             completionPercent: statusData.progressPercentage ? Math.round(statusData.progressPercentage) : 0,
@@ -42,7 +42,7 @@ function TrainingStatusScreen() {
 
           const updatedYears = yearlyList.map(y => {
             const target = yearlyTargets[y.year] || 30
-            const hrs = y.approvedHours || 0
+            const hrs = y.submittedHours || 0
             return {
               year: y.year,
               hours: hrs,

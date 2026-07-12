@@ -139,7 +139,7 @@ function TrainingRecordFormPage() {
       const submitted = response.data.data
       setRecord(submitted)
       setForm(fromRecord(submitted))
-      setSuccessMessage('Submitted for review.')
+      setSuccessMessage('Đã nộp hồ sơ.')
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Cannot submit training record'))
     } finally {

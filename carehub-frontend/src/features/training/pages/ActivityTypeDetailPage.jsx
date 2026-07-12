@@ -166,7 +166,6 @@ function ActivityTypeDetailPage() {
                             <th>Nhân viên</th>
                             <th>Ngày bắt đầu</th>
                             <th>Số giờ khai báo</th>
-                            <th>Số giờ phê duyệt</th>
                             <th>Trạng thái</th>
                           </tr>
                         </thead>
@@ -177,7 +176,6 @@ function ActivityTypeDetailPage() {
                               <td>{record.employeeCode} - {record.employeeName}</td>
                               <td>{record.startDate}</td>
                               <td>{record.declaredHours ?? '-'}</td>
-                              <td>{record.approvedHours ?? '-'}</td>
                               <td>{record.workflowStatus}</td>
                             </tr>
                           ))}

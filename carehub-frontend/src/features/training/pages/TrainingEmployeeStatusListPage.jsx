@@ -79,7 +79,7 @@ function TrainingEmployeeStatusListPage() {
           employeeCode: item.employeeCode,
           employeeName: item.employeeName,
           departmentName: item.departmentName || 'Chưa xác định',
-          approvedHours: item.approvedHours || 0,
+          submittedHours: item.submittedHours || 0,
           requiredHours: item.requiredHours ?? 0,
           complianceStatus: item.complianceStatus
         }))
@@ -203,7 +203,7 @@ function TrainingEmployeeStatusListPage() {
                           <th>Mã nhân viên</th>
                           <th>Họ và tên</th>
                           <th>Khoa/Phòng</th>
-                          <th>Tổng số giờ (5 năm)</th>
+                          <th>Số giờ đã nộp</th>
                           <th>Yêu cầu</th>
                           <th>Trạng thái</th>
                           <th>Hành động</th>
@@ -222,7 +222,7 @@ function TrainingEmployeeStatusListPage() {
                               <td style={{ fontWeight: 500 }}>{item.employeeCode}</td>
                               <td>{item.employeeName}</td>
                               <td>{item.departmentName}</td>
-                              <td style={{ fontWeight: 600 }}>{item.approvedHours}h</td>
+                              <td style={{ fontWeight: 600 }}>{item.submittedHours}h</td>
                               <td style={{ color: '#64748b' }}>
                                 {item.complianceStatus === 'NOT_CONFIGURED' ? '—' : `${item.requiredHours}h`}
                               </td>

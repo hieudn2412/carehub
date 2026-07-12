@@ -150,7 +150,7 @@ function ManagerEmployeeListPage() {
                           color: getStatusColor(emp.complianceStatus) === 'green' ? 'var(--mgr-green)' : getStatusColor(emp.complianceStatus) === 'red' ? 'var(--mgr-red)' : 'var(--mgr-amber)',
                           fontSize: 14
                         }}>
-                          {emp.approvedHours || 0}h / {emp.requiredHours || 0}h
+                          {emp.submittedHours || 0}h / {emp.requiredHours || 0}h
                         </strong>
                       </td>
                       <td>

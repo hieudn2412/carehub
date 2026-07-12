@@ -55,8 +55,8 @@ function TrainingHoursFormScreen() {
         .then(res => {
           const record = res.data?.data
           if (record) {
-            if (record.workflowStatus !== 'DRAFT' && record.workflowStatus !== 'REJECTED') {
-              showToast("Chỉ có thể chỉnh sửa hồ sơ ở trạng thái Bản nháp hoặc Bị từ chối.", "warning")
+            if (record.workflowStatus !== 'DRAFT') {
+              showToast("Chỉ có thể chỉnh sửa hồ sơ ở trạng thái Bản nháp.", "warning")
               navigate('/staff/training')
               return
             }
@@ -109,7 +109,7 @@ function TrainingHoursFormScreen() {
       title: form.name,
       startDate: form.date,
       declaredHours: parseFloat(form.hours),
-      activityTypeId: parseInt(form.type),
+      activityTypeId: form.type ? parseInt(form.type, 10) : null,
       provider: form.organizer || null,
       description: form.notes || null,
       durationValue: parseFloat(form.hours),
@@ -126,15 +126,14 @@ function TrainingHoursFormScreen() {
         const savedRecord = res.data?.data
         showToast(isEditMode ? "Cập nhật thành công!" : "Tạo mới thành công!", "success")
         
-        // If creating a new record, automatically submit it to move from DRAFT to PENDING_REVIEW
+        // If creating a new record, automatically submit it to move from DRAFT to SUBMITTED
         if (!isEditMode && savedRecord && savedRecord.id) {
-          trainingApi.submitRecord(savedRecord.id)
+          trainingApi.submitRecord(savedRecord.id, { version: savedRecord.version })
             .then(() => {
               navigate('/staff/training')
             })
             .catch(err => {
               console.error("Error submitting record", err)
-              // Go to list anyway
               navigate('/staff/training')
             })
         } else {

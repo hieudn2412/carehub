@@ -128,9 +128,7 @@ function TrainingStatusPage() {
               note={status.cycleYears ? `${status.cycleYears} năm` : '-'}
             />
             <StatusCard label="Window" value={status.windowStart || '-'} note={status.windowEnd || '-'} />
-            <StatusCard label="Approved" value={`${status.approvedHours ?? 0}h`} note={`Required ${status.requiredHours ?? 0}h`} />
-            <StatusCard label="Pending" value={`${status.pendingHours ?? 0}h`} note="Không tính vào compliance" />
-            <StatusCard label="Rejected" value={`${status.rejectedHours ?? 0}h`} note="Không tính vào compliance" />
+            <StatusCard label="Submitted" value={`${status.submittedHours ?? 0}h`} note={`Required ${status.requiredHours ?? 0}h`} />
             <StatusCard label="Remaining" value={`${status.remainingHours ?? 0}h`} note={`${status.progressPercentage ?? 0}%`} />
           </section>
 
@@ -144,13 +142,13 @@ function TrainingStatusPage() {
           <section className="training-detail-grid">
             <div className="training-panel">
               <h2>Giờ theo năm</h2>
-              <StatusTable rows={status.yearlyHours ?? []} columns={['year', 'approvedHours', 'pendingHours', 'rejectedHours']} />
+              <StatusTable rows={status.yearlyHours ?? []} columns={['year', 'submittedHours']} />
             </div>
             <div className="training-panel">
               <h2>Giờ theo activity type</h2>
               <StatusTable
                 rows={status.activityTypeHours ?? []}
-                columns={['activityTypeName', 'approvedHours', 'pendingHours', 'rejectedHours']}
+                columns={['activityTypeName', 'submittedHours']}
               />
             </div>
             <div className="training-panel training-panel--wide">
@@ -221,7 +219,6 @@ function RecordTable({ rows }) {
             <th>Activity</th>
             <th>Date</th>
             <th>Declared</th>
-            <th>Approved</th>
             <th>Status</th>
           </tr>
         </thead>
@@ -232,7 +229,6 @@ function RecordTable({ rows }) {
               <td>{record.activityTypeName}</td>
               <td>{record.startDate}</td>
               <td>{record.declaredHours ?? '-'}</td>
-              <td>{record.approvedHours ?? '-'}</td>
               <td>{record.workflowStatus}</td>
             </tr>
           ))}
