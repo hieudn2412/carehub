@@ -30,6 +30,7 @@ function TrainingHoursListScreen() {
   const [page, setPage] = useState(0)
   const [totalApprovedHours, setTotalApprovedHours] = useState(0)
   const [requiredHours, setRequiredHours] = useState(120)
+  const [cmeConfigured, setCmeConfigured] = useState(false)
   const [trigger, setTrigger] = useState(0)
   const size = 10
 
@@ -39,8 +40,10 @@ function TrainingHoursListScreen() {
       .then(res => {
         const statusData = res.data?.data
         if (statusData) {
+          const configured = statusData.status !== 'NOT_CONFIGURED'
+          setCmeConfigured(configured)
           setTotalApprovedHours(statusData.approvedHours || 0)
-          setRequiredHours(statusData.requiredHours || 120)
+          setRequiredHours(configured ? (statusData.requiredHours ?? 0) : 0)
         }
       })
       .catch(err => console.error("Error fetching approved hours", err))
@@ -149,7 +152,9 @@ function TrainingHoursListScreen() {
               <div className="training-alert">
                 <ExclamationCircleOutlined style={{ color: '#dc2626', fontSize: 18 }} />
                 <span>
-                  Tổng số giờ CME: <strong>{totalApprovedHours} / {requiredHours} giờ</strong> — {totalApprovedHours >= requiredHours ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${requiredHours - totalApprovedHours} giờ.`}
+                  {cmeConfigured
+                    ? <>Tổng số giờ CME: <strong>{totalApprovedHours} / {requiredHours} giờ</strong> — {totalApprovedHours >= requiredHours ? 'Đã hoàn thành mục tiêu!' : `Còn thiếu ${requiredHours - totalApprovedHours} giờ.`}</>
+                    : <>Phòng ban của bạn không áp dụng yêu cầu CME. Hồ sơ đào tạo vẫn được lưu bình thường.</>}
                 </span>
               </div>
             </div>

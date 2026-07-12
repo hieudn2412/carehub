@@ -80,6 +80,18 @@ export const trainingApi = {
     })
   },
 
+  getApplicableDepartments() {
+    return httpClient.get('/training/requirements/applicable-departments', {
+      headers: authHeaders(),
+    })
+  },
+
+  updateApplicableDepartments(payload) {
+    return httpClient.put('/training/requirements/applicable-departments', payload, {
+      headers: authHeaders(),
+    })
+  },
+
   getDepartments() {
     return httpClient.get('/departments', {
       headers: authHeaders(),

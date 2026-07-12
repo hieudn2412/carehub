@@ -51,10 +51,10 @@ function TrainingEmployeeStatusDetailPage() {
             employeeName: statusData.employeeName || '---',
             employeeCode: statusData.employeeCode || '---',
             approvedHours: statusData.approvedHours || 0,
-            requiredHours: statusData.requiredHours || 120,
+            requiredHours: statusData.requiredHours ?? 0,
             pendingHours: statusData.pendingHours || 0,
             totalHours: (statusData.approvedHours || 0) + (statusData.pendingHours || 0),
-            complianceStatus: statusData.complianceStatus || 'NON_COMPLIANT'
+            complianceStatus: statusData.status || 'NOT_CONFIGURED'
           })
         }
 
@@ -127,9 +127,9 @@ function TrainingEmployeeStatusDetailPage() {
                           ? 'ted-profile-badge--compliant' 
                           : ''
                       }`}>
-                        {employeeInfo.totalHours}/{employeeInfo.requiredHours}h - {
-                          employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'
-                        }
+                        {employeeInfo.complianceStatus === 'NOT_CONFIGURED'
+                          ? 'Chưa áp dụng yêu cầu CME'
+                          : `${employeeInfo.totalHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}`}
                       </div>
                     </div>
 

@@ -14,12 +14,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.entity.CmeScopeConfiguration;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
+import vn.vietduc.carehubbackend.training.repository.CmeScopeConfigurationRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
@@ -33,6 +35,7 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -78,6 +81,9 @@ class TrainingRequirementStatusControllerIntegrationTest {
     @Autowired
     private TrainingRequirementRepository requirementRepository;
 
+    @Autowired
+    private CmeScopeConfigurationRepository cmeScopeConfigurationRepository;
+
     private Department anesthesia;
     private Department surgery;
     private Position doctor;
@@ -98,6 +104,10 @@ class TrainingRequirementStatusControllerIntegrationTest {
         surgery = departmentRepository.save(Department.builder()
                 .departmentCode("P5_SU")
                 .name("Phase 5 Surgery")
+                .build());
+        cmeScopeConfigurationRepository.saveAndFlush(CmeScopeConfiguration.builder()
+                .scopeKey(CmeScopeConfiguration.CME_SCOPE_KEY)
+                .departments(new LinkedHashSet<>(List.of(anesthesia, surgery)))
                 .build());
         doctor = positionRepository.save(Position.builder().name("Phase 5 Doctor").build());
         nurse = positionRepository.save(Position.builder().name("Phase 5 Nurse").build());
@@ -236,6 +246,65 @@ class TrainingRequirementStatusControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].code", is("REQ_ZERO")));
 
         mockMvc.perform(get("/api/v1/training/requirements")
+                        .with(jwtFor(user, "USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanConfigureApplicableDepartmentsWithOptimisticLocking() throws Exception {
+        String currentResponse = mockMvc.perform(get("/api/v1/training/requirements/applicable-departments")
+                        .with(jwtFor(admin, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.departmentIds.length()", is(2)))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long currentVersion = objectMapper.readTree(currentResponse).path("data").path("version").asLong();
+
+        String updateResponse = mockMvc.perform(put("/api/v1/training/requirements/applicable-departments")
+                        .with(jwtFor(admin, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "departmentIds", List.of(anesthesia.getId()),
+                                "version", currentVersion
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.departmentIds.length()", is(1)))
+                .andExpect(jsonPath("$.data.departmentIds[0]", is(anesthesia.getId().intValue())))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long nextVersion = objectMapper.readTree(updateResponse).path("data").path("version").asLong();
+
+        mockMvc.perform(put("/api/v1/training/requirements/applicable-departments")
+                        .with(jwtFor(admin, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "departmentIds", List.of(surgery.getId()),
+                                "version", currentVersion
+                        ))))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(put("/api/v1/training/requirements/applicable-departments")
+                        .with(jwtFor(admin, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "departmentIds", List.of(Long.MAX_VALUE),
+                                "version", nextVersion
+                        ))))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(put("/api/v1/training/requirements/applicable-departments")
+                        .with(jwtFor(admin, "ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "departmentIds", List.of(),
+                                "version", nextVersion
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.departmentIds.length()", is(0)));
+
+        mockMvc.perform(get("/api/v1/training/requirements/applicable-departments")
                         .with(jwtFor(user, "USER")))
                 .andExpect(status().isForbidden());
     }

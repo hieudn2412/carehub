@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.service;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
@@ -14,9 +15,11 @@ import vn.vietduc.carehubbackend.user.entity.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -24,10 +27,22 @@ import static org.mockito.Mockito.when;
 class TrainingComplianceCalculatorTest {
     private final TrainingRequirementRepository requirementRepository = mock(TrainingRequirementRepository.class);
     private final TrainingRecordRepository recordRepository = mock(TrainingRecordRepository.class);
+    private final CmeScopeService cmeScopeService = mock(CmeScopeService.class);
     private final TrainingComplianceCalculator calculator = new TrainingComplianceCalculator(
             requirementRepository,
-            recordRepository
+            recordRepository,
+            cmeScopeService
     );
+
+    @BeforeEach
+    void setUpScope() {
+        when(cmeScopeService.getApplicableDepartmentIds()).thenReturn(Set.of(10L));
+        when(cmeScopeService.isApplicable(any(User.class), anySet())).thenAnswer(invocation -> {
+            User employee = invocation.getArgument(0);
+            Set<Long> departmentIds = invocation.getArgument(1);
+            return employee.getDepartment() != null && departmentIds.contains(employee.getDepartment().getId());
+        });
+    }
 
     @Test
     void missingRequirementReturnsNotConfigured() {
@@ -67,6 +82,16 @@ class TrainingComplianceCalculatorTest {
         ComplianceStatus status = calculator.resolveStatus(requirement, BigDecimal.valueOf(90));
 
         assertThat(status).isEqualTo(ComplianceStatus.AT_RISK);
+    }
+
+    @Test
+    void employeeOutsideConfiguredDepartmentsIsNotConfigured() {
+        when(cmeScopeService.getApplicableDepartmentIds()).thenReturn(Set.of(999L));
+
+        var status = calculator.calculate(employee(), null, LocalDate.of(2026, 6, 16));
+
+        assertThat(status.status()).isEqualTo(ComplianceStatus.NOT_CONFIGURED);
+        assertThat(status.requirementId()).isNull();
     }
 
     private User employee() {

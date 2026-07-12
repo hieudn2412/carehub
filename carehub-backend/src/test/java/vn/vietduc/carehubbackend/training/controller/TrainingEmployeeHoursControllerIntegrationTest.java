@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.entity.CmeScopeConfiguration;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
@@ -25,6 +26,7 @@ import vn.vietduc.carehubbackend.training.enums.ReviewDecision;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordChangeType;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
+import vn.vietduc.carehubbackend.training.repository.CmeScopeConfigurationRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
@@ -42,6 +44,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -80,6 +83,9 @@ class TrainingEmployeeHoursControllerIntegrationTest {
     private TrainingRequirementRepository requirementRepository;
 
     @Autowired
+    private CmeScopeConfigurationRepository cmeScopeConfigurationRepository;
+
+    @Autowired
     private TrainingRecordRepository recordRepository;
 
     @Autowired
@@ -115,6 +121,10 @@ class TrainingEmployeeHoursControllerIntegrationTest {
         surgery = departmentRepository.save(Department.builder()
                 .departmentCode("P6_SU")
                 .name("Phase 6 Surgery")
+                .build());
+        cmeScopeConfigurationRepository.saveAndFlush(CmeScopeConfiguration.builder()
+                .scopeKey(CmeScopeConfiguration.CME_SCOPE_KEY)
+                .departments(new LinkedHashSet<>(List.of(anesthesia)))
                 .build());
         doctor = positionRepository.save(Position.builder().name("Phase 6 Doctor").build());
         nurse = positionRepository.save(Position.builder().name("Phase 6 Nurse").build());

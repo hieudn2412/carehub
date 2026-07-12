@@ -33,6 +33,10 @@ function DashboardStaffScreen() {
     pendingExams: 0,
     missingCmeHours: 0,
     cmeHours: 0,
+    requiredCmeHours: 0,
+    cmeCycleYears: null,
+    cmeConfigured: false,
+    cmeStatusLoaded: false,
     avgScore: 0,
     totalExamsDone: 0,
   })
@@ -51,19 +55,26 @@ function DashboardStaffScreen() {
       })
       .catch(err => console.error("Error loading dashboard profile", err))
 
-    // 2. Fetch approved CME hours
-    trainingApi.listRecords({ size: 1000, workflowStatus: 'APPROVED', keyword: '%' })
+    // 2. Fetch CME compliance status so department scope is respected
+    trainingApi.getMyTrainingStatus()
       .then(res => {
-        const content = res.data?.data?.content || []
-        const total = content.reduce((sum, r) => sum + (r.approvedHours || 0), 0)
-        const missing = Math.max(0, 120 - total)
+        const status = res.data?.data
+        if (!status) return
+        const configured = status.status !== 'NOT_CONFIGURED'
         setSummary(prev => ({
           ...prev,
-          cmeHours: total,
-          missingCmeHours: missing,
+          cmeConfigured: configured,
+          cmeStatusLoaded: true,
+          cmeHours: configured ? (status.approvedHours ?? 0) : 0,
+          requiredCmeHours: configured ? (status.requiredHours ?? 0) : 0,
+          missingCmeHours: configured ? (status.remainingHours ?? 0) : 0,
+          cmeCycleYears: configured ? status.cycleYears : null,
         }))
       })
-      .catch(err => console.error("Error loading dashboard CME hours", err))
+      .catch(err => {
+        console.error("Error loading dashboard CME status", err)
+        setSummary(prev => ({ ...prev, cmeStatusLoaded: true }))
+      })
   }, [])
 
   return (

@@ -63,6 +63,20 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("positionId") Long positionId
     );
 
+    @Query("""
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.department.id IN :applicableDepartmentIds
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:positionId IS NULL OR u.position.id = :positionId)
+            """)
+    long countScopedTrainingRequirementCandidates(
+            @Param("applicableDepartmentIds") Collection<Long> applicableDepartmentIds,
+            @Param("departmentId") Long departmentId,
+            @Param("positionId") Long positionId
+    );
+
     @EntityGraph(attributePaths = {"department", "position"})
     @Query("""
             SELECT u

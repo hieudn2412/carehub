@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
@@ -18,6 +18,11 @@ function TrainingRequirementPage() {
   const [deletedOverrideIds, setDeletedOverrideIds] = useState([])
 
   const [positions, setPositions] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState([])
+  const [savedDepartmentIds, setSavedDepartmentIds] = useState([])
+  const [scopeVersion, setScopeVersion] = useState(null)
+  const [departmentQuery, setDepartmentQuery] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -42,16 +47,24 @@ function TrainingRequirementPage() {
     setMessage('')
 
     try {
-      const [requirementsResponse, positionsResponse] = await Promise.all([
+      const [requirementsResponse, positionsResponse, departmentsResponse, scopeResponse] = await Promise.all([
         trainingApi.getRequirements({
           size: 100,
         }),
         trainingApi.getPositions(),
+        trainingApi.getDepartments(),
+        trainingApi.getApplicableDepartments(),
       ])
 
       const allReqs = requirementsResponse.data?.data?.content || []
       const posList = positionsResponse.data?.data || []
+      const departmentList = departmentsResponse.data?.data || []
+      const scope = scopeResponse.data?.data || { departmentIds: [], version: null }
       setPositions(posList)
+      setDepartments(departmentList)
+      setSelectedDepartmentIds(scope.departmentIds || [])
+      setSavedDepartmentIds(scope.departmentIds || [])
+      setScopeVersion(scope.version ?? null)
 
       // 1. Find default requirement (no department, position, or professional field)
       const defaultReq = allReqs.find(
@@ -101,6 +114,27 @@ function TrainingRequirementPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData()
   }, [])
+
+  const filteredDepartments = useMemo(() => {
+    const query = departmentQuery.trim().toLocaleLowerCase('vi')
+    if (!query) return departments
+    return departments.filter((department) => (
+      department.name?.toLocaleLowerCase('vi').includes(query)
+      || department.departmentCode?.toLocaleLowerCase('vi').includes(query)
+    ))
+  }, [departmentQuery, departments])
+
+  const removedDepartmentCount = useMemo(() => (
+    savedDepartmentIds.filter((id) => !selectedDepartmentIds.includes(id)).length
+  ), [savedDepartmentIds, selectedDepartmentIds])
+
+  const toggleDepartment = (departmentId) => {
+    setSelectedDepartmentIds((current) => (
+      current.includes(departmentId)
+        ? current.filter((id) => id !== departmentId)
+        : [...current, departmentId]
+    ))
+  }
 
   const handleOpenAddModal = () => {
     setModalMode('add')
@@ -192,6 +226,8 @@ function TrainingRequirementPage() {
     setErrorMessage('')
     setMessage('')
 
+    let requirementsSaved = false
+    let scopeSaved = false
     try {
       // 1. Save default requirement
       const defaultPayload = {
@@ -247,11 +283,28 @@ function TrainingRequirementPage() {
         }
       }
 
-      setMessage('Đã lưu cấu hình thành công!')
+      requirementsSaved = true
+      await trainingApi.updateApplicableDepartments({
+        departmentIds: selectedDepartmentIds,
+        version: scopeVersion,
+      })
+      scopeSaved = true
+
       setDeletedOverrideIds([])
       await fetchData()
+      setMessage('Đã lưu yêu cầu và phạm vi phòng ban áp dụng CME!')
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không thể lưu cấu hình'))
+      const apiMessage = error.response?.status === 409
+        ? 'Cấu hình phòng ban đã được người khác cập nhật. Dữ liệu mới nhất đã được tải lại.'
+        : getApiErrorMessage(error, 'Không thể lưu cấu hình')
+      await fetchData()
+      if (scopeSaved) {
+        setErrorMessage(`Cấu hình đã được lưu nhưng không thể tải lại dữ liệu: ${apiMessage}`)
+      } else if (requirementsSaved) {
+        setErrorMessage(`Yêu cầu CME đã được lưu nhưng phạm vi phòng ban chưa lưu: ${apiMessage}`)
+      } else {
+        setErrorMessage(apiMessage)
+      }
     } finally {
       setIsSaving(false)
     }
@@ -304,9 +357,9 @@ function TrainingRequirementPage() {
         await trainingApi.createRequirement(defaultPayload)
       }
 
-      setMessage('Đã khôi phục cấu hình mặc định thành công!')
       setDeletedOverrideIds([])
       await fetchData()
+      setMessage('Đã khôi phục định mức mặc định và giữ nguyên phạm vi phòng ban!')
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Không thể khôi phục cấu hình mặc định'))
     } finally {
@@ -346,6 +399,95 @@ function TrainingRequirementPage() {
 
               {/* Main Configuration Card */}
               <div className="tr-config-card">
+                {/* APPLICABLE DEPARTMENTS */}
+                <div className="tr-config-section">
+                  <div className="tr-scope-heading">
+                    <div>
+                      <h3 className="tr-section-label">PHÒNG BAN ÁP DỤNG CME</h3>
+                      <p className="tr-default-desc">
+                        Chỉ nhân viên thuộc các phòng được chọn mới được tính yêu cầu và nhận cảnh báo thiếu giờ CME.
+                      </p>
+                    </div>
+                    <span className="tr-scope-count" aria-live="polite">
+                      {isLoading ? 'Đang tải...' : `${selectedDepartmentIds.length}/${departments.length} phòng`}
+                    </span>
+                  </div>
+
+                  <div className="tr-scope-toolbar">
+                    <label className="tr-scope-search-label">
+                      <span className="tr-sr-only">Tìm phòng ban</span>
+                      <input
+                        className="tr-scope-search"
+                        type="search"
+                        placeholder="Tìm theo tên hoặc mã phòng..."
+                        value={departmentQuery}
+                        onChange={(event) => setDepartmentQuery(event.target.value)}
+                        disabled={isLoading}
+                      />
+                    </label>
+                    <div className="tr-scope-actions">
+                      <button
+                        type="button"
+                        className="tr-scope-action"
+                        onClick={() => setSelectedDepartmentIds(departments.map((department) => department.id))}
+                        disabled={isLoading || departments.length === 0}
+                      >
+                        Chọn tất cả
+                      </button>
+                      <button
+                        type="button"
+                        className="tr-scope-action"
+                        onClick={() => setSelectedDepartmentIds([])}
+                        disabled={isLoading || selectedDepartmentIds.length === 0}
+                      >
+                        Bỏ chọn tất cả
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="tr-department-grid" role="group" aria-label="Phòng ban áp dụng CME">
+                    {isLoading ? (
+                      <p className="tr-scope-empty">Đang tải danh sách phòng ban...</p>
+                    ) : filteredDepartments.length === 0 ? (
+                      <p className="tr-scope-empty">
+                        {departments.length === 0 ? 'Chưa có phòng ban.' : 'Không tìm thấy phòng ban phù hợp.'}
+                      </p>
+                    ) : filteredDepartments.map((department) => {
+                      const checked = selectedDepartmentIds.includes(department.id)
+                      return (
+                        <label
+                          className={`tr-department-option${checked ? ' tr-department-option--selected' : ''}`}
+                          key={department.id}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleDepartment(department.id)}
+                          />
+                          <span className="tr-department-copy">
+                            <strong>{department.name}</strong>
+                            {department.departmentCode && <small>{department.departmentCode}</small>}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+
+                  {!isLoading && selectedDepartmentIds.length === 0 && (
+                    <div className="tr-scope-warning" role="status">
+                      Chưa chọn phòng ban: hệ thống sẽ không áp dụng yêu cầu hoặc gửi cảnh báo CME.
+                    </div>
+                  )}
+                  {!isLoading && removedDepartmentCount > 0 && (
+                    <div className="tr-scope-warning" role="alert">
+                      {removedDepartmentCount} phòng đã bị bỏ chọn. Sau khi lưu, nhân viên tại đó sẽ chuyển sang
+                      {' '}NOT_CONFIGURED và ngừng nhận cảnh báo; dữ liệu CME vẫn được giữ nguyên.
+                    </div>
+                  )}
+                </div>
+
+                <div className="tr-divider"></div>
+
                 {/* DEFAULT REQUIREMENT */}
                 <div className="tr-config-section">
                   <h3 className="tr-section-label">YÊU CẦU MẶC ĐỊNH</h3>

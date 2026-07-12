@@ -20,6 +20,7 @@ import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
 import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
+import vn.vietduc.carehubbackend.notification.service.NotificationVariableFormatter;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
@@ -44,6 +45,7 @@ public class FormSubmissionService {
     private final EntityManager entityManager;
     private final Clock clock;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final NotificationVariableFormatter notificationVariableFormatter;
 
     @Transactional
     public FormSubmissionResponse create(CreateFormSubmissionRequest request) {
@@ -135,8 +137,8 @@ public class FormSubmissionService {
         variables.put("employee_code", employee.getEmployeeCode());
         variables.put("form_name", formName);
         variables.put("result", submission.getResult().name());
-        variables.put("score", displayedScore == null ? "N/A" : displayedScore.stripTrailingZeros().toPlainString());
-        variables.put("submitted_at", submission.getSubmittedAt().toString());
+        variables.put("score", notificationVariableFormatter.formatScore(displayedScore));
+        variables.put("submitted_at", notificationVariableFormatter.formatDateTime(submission.getSubmittedAt()));
         notificationEventPublisher.publish(new NotificationDispatchEvent(
                 NotificationEventType.PERSONAL_COMPLIANCE_ISSUE,
                 employee.getId(),

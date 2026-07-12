@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEven
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
+import vn.vietduc.carehubbackend.training.service.CmeScopeService;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -29,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -40,6 +42,7 @@ public class NotificationAlertScheduler {
     private final TrainingComplianceCalculator complianceCalculator;
     private final UserRepository userRepository;
     private final NamedParameterJdbcTemplate jdbc;
+    private final CmeScopeService cmeScopeService;
 
     @Value("${app.notification.zone:Asia/Bangkok}")
     private String notificationZone;
@@ -59,14 +62,26 @@ public class NotificationAlertScheduler {
         }
     }
 
-    private void scanCme(LocalDate today) {
+    void scanCme(LocalDate today) {
         NotificationConfig policy = policyService.getPolicy(NotificationEventType.CME_HOURS_BELOW_REQUIREMENT);
         if (!policy.isEnabled() || !isDue(policy.getCadence(), today)) {
             return;
         }
+        Set<Long> applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
+        if (applicableDepartmentIds.isEmpty()) {
+            return;
+        }
         for (User employee : userRepository.findByIsDeletedFalseAndStatus(UserStatus.ACTIVE)) {
+            if (!cmeScopeService.isApplicable(employee, applicableDepartmentIds)) {
+                continue;
+            }
             try {
-                PersonalTrainingStatusResponse status = complianceCalculator.calculate(employee, null, today);
+                PersonalTrainingStatusResponse status = complianceCalculator.calculate(
+                        employee,
+                        null,
+                        today,
+                        applicableDepartmentIds
+                );
                 if (status.status() != ComplianceStatus.AT_RISK
                         && status.status() != ComplianceStatus.NON_COMPLIANT) {
                     continue;
