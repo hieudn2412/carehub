@@ -14,41 +14,86 @@ class TrainingRecordStateMachineTest {
     void draftCanBeSubmitted() {
         assertThat(stateMachine.canTransition(
                 TrainingRecordStatus.DRAFT,
-                TrainingRecordStatus.PENDING_REVIEW,
+                TrainingRecordStatus.SUBMITTED,
                 false
         )).isTrue();
     }
 
     @Test
-    void approvedCannotBeChangedByDefault() {
+    void draftCanBeCancelledByAnyone() {
+        // Users can cancel their own DRAFT records
         assertThat(stateMachine.canTransition(
-                TrainingRecordStatus.APPROVED,
-                TrainingRecordStatus.PENDING_REVIEW,
+                TrainingRecordStatus.DRAFT,
+                TrainingRecordStatus.CANCELLED,
+                false
+        )).isTrue();
+
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.DRAFT,
+                TrainingRecordStatus.CANCELLED,
                 true
-        )).isFalse();
+        )).isTrue();
     }
 
     @Test
-    void pendingCancelRequiresAdmin() {
+    void submittedCanBeCancelledByAdminOnly() {
         assertThat(stateMachine.canTransition(
-                TrainingRecordStatus.PENDING_REVIEW,
+                TrainingRecordStatus.SUBMITTED,
                 TrainingRecordStatus.CANCELLED,
                 false
         )).isFalse();
 
         assertThat(stateMachine.canTransition(
-                TrainingRecordStatus.PENDING_REVIEW,
+                TrainingRecordStatus.SUBMITTED,
                 TrainingRecordStatus.CANCELLED,
                 true
         )).isTrue();
+    }
+
+    @Test
+    void submittedCannotBeChangedToDraft() {
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.SUBMITTED,
+                TrainingRecordStatus.DRAFT,
+                false
+        )).isFalse();
+    }
+
+    @Test
+    void cancelledIsTerminal() {
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.CANCELLED,
+                TrainingRecordStatus.DRAFT,
+                true
+        )).isFalse();
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.CANCELLED,
+                TrainingRecordStatus.SUBMITTED,
+                true
+        )).isFalse();
     }
 
     @Test
     void invalidTransitionThrowsBadRequest() {
         assertThatThrownBy(() -> stateMachine.requireTransition(
+                TrainingRecordStatus.CANCELLED,
                 TrainingRecordStatus.DRAFT,
-                TrainingRecordStatus.APPROVED,
+                true
+        )).isInstanceOf(BadRequestException.class);
+
+        assertThatThrownBy(() -> stateMachine.requireTransition(
+                TrainingRecordStatus.SUBMITTED,
+                TrainingRecordStatus.DRAFT,
                 false
         )).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void draftSubmitRequiresNotCancelled() {
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.DRAFT,
+                TrainingRecordStatus.SUBMITTED,
+                false
+        )).isTrue();
     }
 }

@@ -16,10 +16,8 @@ import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecordReview;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
-import vn.vietduc.carehubbackend.training.enums.ReviewDecision;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordChangeType;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
@@ -27,7 +25,6 @@ import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeReposit
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRecordReviewRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
@@ -72,9 +69,6 @@ class TrainingRecordListDetailControllerIntegrationTest {
     private TrainingEvidenceFileRepository evidenceFileRepository;
 
     @Autowired
-    private TrainingRecordReviewRepository reviewRepository;
-
-    @Autowired
     private TrainingRecordChangeLogRepository changeLogRepository;
 
     private Department anesthesia;
@@ -85,41 +79,39 @@ class TrainingRecordListDetailControllerIntegrationTest {
     private User otherDepartmentEmployee;
     private TrainingActivityType activityType;
     private TrainingRecord ownDraft;
-    private TrainingRecord ownApprovedWithEvidence;
-    private TrainingRecord sameDepartmentPending;
+    private TrainingRecord ownSubmittedWithEvidence;
+    private TrainingRecord sameDepartmentSubmitted;
     private TrainingRecord otherDepartmentRecord;
 
     @BeforeEach
     void setUp() {
         anesthesia = departmentRepository.save(Department.builder()
-                .departmentCode("P4_AN")
-                .name("Phase 4 Anesthesia")
+                .departmentCode("P9_AN")
+                .name("Phase 9 Anesthesia")
                 .build());
         surgery = departmentRepository.save(Department.builder()
-                .departmentCode("P4_SU")
-                .name("Phase 4 Surgery")
+                .departmentCode("P9_SU")
+                .name("Phase 9 Surgery")
                 .build());
-        user = saveUser("P4_USER", "p4-user@example.com", "Phase 4 User", anesthesia);
-        manager = saveUser("P4_MANAGER", "p4-manager@example.com", "Phase 4 Manager", anesthesia);
-        sameDepartmentEmployee = saveUser("P4_SAME", "p4-same@example.com", "Same Department", anesthesia);
-        otherDepartmentEmployee = saveUser("P4_OTHER", "p4-other@example.com", "Other Department", surgery);
+        user = saveUser("P9_USER", "p9-user@example.com", "Phase 9 User", anesthesia);
+        manager = saveUser("P9_MANAGER", "p9-manager@example.com", "Phase 9 Manager", anesthesia);
+        sameDepartmentEmployee = saveUser("P9_SAME", "p9-same@example.com", "Same Department", anesthesia);
+        otherDepartmentEmployee = saveUser("P9_OTHER", "p9-other@example.com", "Other Department", surgery);
         activityType = activityTypeRepository.save(TrainingActivityType.builder()
-                .code("P4_TYPE")
-                .name("Phase 4 Type")
+                .code("P9_TYPE")
+                .name("Phase 9 Type")
                 .defaultDurationUnit(DurationUnit.HOUR)
                 .requiresEvidence(false)
                 .active(true)
                 .build());
 
         ownDraft = saveRecord(user, "Own Draft Course", "Internal", LocalDate.of(2026, 3, 1), TrainingRecordStatus.DRAFT);
-        ownApprovedWithEvidence = saveRecord(user, "Approved Ultrasound", "Hospital Provider", LocalDate.of(2026, 3, 10), TrainingRecordStatus.APPROVED);
-        ownApprovedWithEvidence.setApprovedHours(BigDecimal.valueOf(4));
-        recordRepository.save(ownApprovedWithEvidence);
-        saveEvidence(ownApprovedWithEvidence, EvidenceModerationStatus.PASSED, true);
-        saveReviewAndChangeHistory(ownApprovedWithEvidence);
+        ownSubmittedWithEvidence = saveRecord(user, "Submitted Ultrasound", "Hospital Provider", LocalDate.of(2026, 3, 10), TrainingRecordStatus.SUBMITTED);
+        saveEvidence(ownSubmittedWithEvidence, EvidenceModerationStatus.PASSED, true);
+        saveChangeHistory(ownSubmittedWithEvidence);
 
-        sameDepartmentPending = saveRecord(sameDepartmentEmployee, "Same Dept Pending", "Hospital Provider", LocalDate.of(2026, 3, 12), TrainingRecordStatus.PENDING_REVIEW);
-        saveEvidence(sameDepartmentPending, EvidenceModerationStatus.ERROR, true);
+        sameDepartmentSubmitted = saveRecord(sameDepartmentEmployee, "Same Dept Submitted", "Hospital Provider", LocalDate.of(2026, 3, 12), TrainingRecordStatus.SUBMITTED);
+        saveEvidence(sameDepartmentSubmitted, EvidenceModerationStatus.ERROR, true);
         otherDepartmentRecord = saveRecord(otherDepartmentEmployee, "Other Dept Course", "External", LocalDate.of(2026, 3, 15), TrainingRecordStatus.DRAFT);
     }
 
@@ -160,7 +152,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                         .queryParam("dateFrom", "2026-03-01")
                         .queryParam("dateTo", "2026-03-31")
                         .queryParam("activityTypeId", activityType.getId().toString())
-                        .queryParam("workflowStatus", "APPROVED")
+                        .queryParam("workflowStatus", "SUBMITTED")
                         .queryParam("hasEvidence", "true")
                         .queryParam("moderationStatus", "PASSED")
                         .queryParam("sourceType", "MANUAL")
@@ -170,7 +162,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                         .with(jwtFor(manager, "ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].id").value(ownApprovedWithEvidence.getId()))
+                .andExpect(jsonPath("$.data.content[0].id").value(ownSubmittedWithEvidence.getId()))
                 .andExpect(jsonPath("$.data.content[0].evidenceCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].passedEvidenceCount").value(1))
                 .andExpect(jsonPath("$.data.sort[0]").value("startDate,asc"));
@@ -191,13 +183,12 @@ class TrainingRecordListDetailControllerIntegrationTest {
     }
 
     @Test
-    void detailIncludesEvidenceReviewTimelineAndChangeHistoryWithoutInternalObjectKey() throws Exception {
-        mockMvc.perform(get("/api/v1/training/records/{id}", ownApprovedWithEvidence.getId())
+    void detailIncludesEvidenceChangeHistoryAndDuplicateWarningWithoutInternalObjectKey() throws Exception {
+        mockMvc.perform(get("/api/v1/training/records/{id}", ownSubmittedWithEvidence.getId())
                         .with(jwtFor(user, "USER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(ownApprovedWithEvidence.getId()))
+                .andExpect(jsonPath("$.data.id").value(ownSubmittedWithEvidence.getId()))
                 .andExpect(jsonPath("$.data.evidences.length()").value(1))
-                .andExpect(jsonPath("$.data.reviewTimeline.length()").value(1))
                 .andExpect(jsonPath("$.data.changeHistory.length()").value(1))
                 .andExpect(content().string(not(containsString("object-key-secret"))));
     }
@@ -235,7 +226,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .durationUnit(DurationUnit.HOUR)
                 .declaredHours(BigDecimal.valueOf(4))
                 .workflowStatus(status)
-                .submittedAt(status == TrainingRecordStatus.DRAFT ? null : LocalDateTime.of(2026, 3, 20, 9, 0))
+                .submittedAt(status == TrainingRecordStatus.SUBMITTED ? LocalDateTime.of(2026, 3, 20, 9, 0) : null)
                 .sourceType(TrainingSourceType.MANUAL)
                 .createdByUser(employee)
                 .updatedByUser(employee)
@@ -260,24 +251,15 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .build());
     }
 
-    private void saveReviewAndChangeHistory(TrainingRecord record) {
-        reviewRepository.save(TrainingRecordReview.builder()
-                .trainingRecord(record)
-                .decision(ReviewDecision.APPROVED)
-                .declaredHoursSnapshot(record.getDeclaredHours())
-                .approvedHours(record.getApprovedHours())
-                .reason("Looks good")
-                .reviewedByUser(manager)
-                .reviewedAt(LocalDateTime.of(2026, 3, 21, 9, 0))
-                .build());
+    private void saveChangeHistory(TrainingRecord record) {
         changeLogRepository.save(TrainingRecordChangeLog.builder()
                 .trainingRecord(record)
                 .versionNo(record.getVersion())
-                .changeType(TrainingRecordChangeType.UPDATED)
-                .beforeData(Map.of("title", "Before"))
-                .afterData(Map.of("title", record.getTitle()))
+                .changeType(TrainingRecordChangeType.SUBMITTED)
+                .beforeData(Map.of("workflowStatus", "DRAFT"))
+                .afterData(Map.of("workflowStatus", "SUBMITTED"))
                 .changedByUser(record.getEmployee())
-                .changedAt(LocalDateTime.of(2026, 3, 19, 9, 0))
+                .changedAt(LocalDateTime.of(2026, 3, 21, 9, 0))
                 .build());
     }
 

@@ -57,17 +57,21 @@ class TrainingComplianceCalculatorTest {
     }
 
     @Test
-    void onlyApprovedRecordsAreSummed() {
-        TrainingRecord approved = TrainingRecord.builder()
-                .workflowStatus(TrainingRecordStatus.APPROVED)
-                .approvedHours(BigDecimal.valueOf(5))
+    void onlySubmittedRecordsAreSummed() {
+        TrainingRecord submitted = TrainingRecord.builder()
+                .workflowStatus(TrainingRecordStatus.SUBMITTED)
+                .declaredHours(BigDecimal.valueOf(5))
                 .build();
-        TrainingRecord pending = TrainingRecord.builder()
-                .workflowStatus(TrainingRecordStatus.PENDING_REVIEW)
-                .approvedHours(BigDecimal.valueOf(100))
+        TrainingRecord draft = TrainingRecord.builder()
+                .workflowStatus(TrainingRecordStatus.DRAFT)
+                .declaredHours(BigDecimal.valueOf(100))
+                .build();
+        TrainingRecord cancelled = TrainingRecord.builder()
+                .workflowStatus(TrainingRecordStatus.CANCELLED)
+                .declaredHours(BigDecimal.valueOf(50))
                 .build();
 
-        BigDecimal total = calculator.sumApprovedHours(List.of(approved, pending));
+        BigDecimal total = calculator.sumSubmittedHours(List.of(submitted, draft, cancelled));
 
         assertThat(total).isEqualByComparingTo("5");
     }
@@ -82,6 +86,30 @@ class TrainingComplianceCalculatorTest {
         ComplianceStatus status = calculator.resolveStatus(requirement, BigDecimal.valueOf(90));
 
         assertThat(status).isEqualTo(ComplianceStatus.AT_RISK);
+    }
+
+    @Test
+    void compliantWhenSubmittedHoursMeetRequired() {
+        TrainingRequirement requirement = TrainingRequirement.builder()
+                .requiredHours(BigDecimal.valueOf(120))
+                .warningThresholdHours(BigDecimal.valueOf(80))
+                .build();
+
+        ComplianceStatus status = calculator.resolveStatus(requirement, BigDecimal.valueOf(120));
+
+        assertThat(status).isEqualTo(ComplianceStatus.COMPLIANT);
+    }
+
+    @Test
+    void nonCompliantBelowWarningThreshold() {
+        TrainingRequirement requirement = TrainingRequirement.builder()
+                .requiredHours(BigDecimal.valueOf(120))
+                .warningThresholdHours(BigDecimal.valueOf(80))
+                .build();
+
+        ComplianceStatus status = calculator.resolveStatus(requirement, BigDecimal.valueOf(50));
+
+        assertThat(status).isEqualTo(ComplianceStatus.NON_COMPLIANT);
     }
 
     @Test

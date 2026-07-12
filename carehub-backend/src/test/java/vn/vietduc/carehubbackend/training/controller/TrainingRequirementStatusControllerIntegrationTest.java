@@ -34,6 +34,7 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -310,7 +311,7 @@ class TrainingRequirementStatusControllerIntegrationTest {
     }
 
     @Test
-    void statusUsesRequirementPriorityFutureRulesAndApprovedHoursOnly() throws Exception {
+    void statusUsesRequirementPriorityFutureRulesAndSubmittedHoursOnly() throws Exception {
         saveRequirement("REQ_GLOBAL", "Global", BigDecimal.valueOf(120), null, null, null,
                 LocalDate.of(2021, 1, 1), null);
         saveRequirement("REQ_POSITION", "Position", BigDecimal.valueOf(100), doctor, null, null,
@@ -322,11 +323,11 @@ class TrainingRequirementStatusControllerIntegrationTest {
         saveRequirement("REQ_FUTURE", "Future Specific", BigDecimal.valueOf(40), doctor, anesthesia, ultrasound,
                 LocalDate.of(2027, 1, 1), null);
 
-        saveRecord(user, LocalDate.of(2024, 1, 1), TrainingRecordStatus.APPROVED, BigDecimal.valueOf(80), BigDecimal.valueOf(80));
-        saveRecord(user, LocalDate.of(2026, 2, 1), TrainingRecordStatus.APPROVED, BigDecimal.valueOf(40), BigDecimal.valueOf(40));
-        saveRecord(user, LocalDate.of(2026, 3, 1), TrainingRecordStatus.PENDING_REVIEW, BigDecimal.valueOf(120), null);
-        saveRecord(user, LocalDate.of(2026, 4, 1), TrainingRecordStatus.REJECTED, BigDecimal.valueOf(9), null);
-        saveRecord(user, LocalDate.of(2020, 1, 1), TrainingRecordStatus.APPROVED, BigDecimal.valueOf(200), BigDecimal.valueOf(200));
+        saveRecord(user, LocalDate.of(2024, 1, 1), TrainingRecordStatus.SUBMITTED, BigDecimal.valueOf(80));
+        saveRecord(user, LocalDate.of(2026, 2, 1), TrainingRecordStatus.SUBMITTED, BigDecimal.valueOf(40));
+        saveRecord(user, LocalDate.of(2026, 3, 1), TrainingRecordStatus.DRAFT, BigDecimal.valueOf(120));
+        saveRecord(user, LocalDate.of(2026, 4, 1), TrainingRecordStatus.CANCELLED, BigDecimal.valueOf(9));
+        saveRecord(user, LocalDate.of(2020, 1, 1), TrainingRecordStatus.SUBMITTED, BigDecimal.valueOf(200));
 
         mockMvc.perform(get("/api/v1/training/status/me")
                         .with(jwtFor(user, "USER"))
@@ -336,14 +337,12 @@ class TrainingRequirementStatusControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.status", is("COMPLIANT")))
                 .andExpect(jsonPath("$.data.requirementName", is("Specific")))
                 .andExpect(jsonPath("$.data.requiredHours", is(120)))
-                .andExpect(jsonPath("$.data.approvedHours", is(120.0)))
-                .andExpect(jsonPath("$.data.pendingHours", is(120)))
-                .andExpect(jsonPath("$.data.rejectedHours", is(9)))
+                .andExpect(jsonPath("$.data.submittedHours", is(120.0)))
                 .andExpect(jsonPath("$.data.remainingHours", is(0.0)))
                 .andExpect(jsonPath("$.data.progressPercentage", is(100.0)))
                 .andExpect(jsonPath("$.data.windowStart", is("2021-06-20")))
                 .andExpect(jsonPath("$.data.yearlyHours.length()", is(2)))
-                .andExpect(jsonPath("$.data.attentionRecords.length()", is(2)));
+                .andExpect(jsonPath("$.data.attentionRecords.length()", is(1)));
 
         mockMvc.perform(get("/api/v1/training/status/me")
                         .with(jwtFor(user, "USER"))
@@ -415,8 +414,7 @@ class TrainingRequirementStatusControllerIntegrationTest {
             User employee,
             LocalDate startDate,
             TrainingRecordStatus status,
-            BigDecimal declaredHours,
-            BigDecimal approvedHours
+            BigDecimal declaredHours
     ) {
         return recordRepository.save(TrainingRecord.builder()
                 .employee(employee)
@@ -428,8 +426,8 @@ class TrainingRequirementStatusControllerIntegrationTest {
                 .endDate(startDate)
                 .durationUnit(DurationUnit.HOUR)
                 .declaredHours(declaredHours)
-                .approvedHours(approvedHours)
                 .workflowStatus(status)
+                .submittedAt(status == TrainingRecordStatus.SUBMITTED ? LocalDateTime.of(2026, 1, 10, 9, 0) : null)
                 .createdByUser(employee)
                 .build());
     }
