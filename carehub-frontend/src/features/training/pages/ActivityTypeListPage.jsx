@@ -34,12 +34,22 @@ function generateCodeFromName(name) {
 
 function ActivityTypeListPage() {
   const [keyword, setKeyword] = useState('')
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('') // '', 'true', 'false'
   const [page, setPage] = useState(0)
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+
+  // Debounce keyword search
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedKeyword(keyword)
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(handler)
+  }, [keyword])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,7 +63,7 @@ function ActivityTypeListPage() {
 
     try {
       const response = await trainingApi.getActivityTypes({
-        keyword: keyword || undefined,
+        keyword: debouncedKeyword || undefined,
         isActive: status === '' ? undefined : status === 'true',
         page,
         size: 10,
@@ -69,14 +79,7 @@ function ActivityTypeListPage() {
 
   useEffect(() => {
     fetchActivityTypes()
-  }, [page, status])
-
-  const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      setPage(0)
-      fetchActivityTypes()
-    }
-  }
+  }, [page, status, debouncedKeyword])
 
   const handleStatusChange = (e) => {
     setPage(0)
@@ -204,7 +207,6 @@ function ActivityTypeListPage() {
                       placeholder="Tìm theo hình thức..."
                       value={keyword}
                       onChange={(e) => setKeyword(e.target.value)}
-                      onKeyDown={handleSearchKeyPress}
                     />
                   </div>
 

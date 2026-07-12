@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.training.service.EvidenceStorageService;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
@@ -14,18 +16,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.UUID;
 
 @Service
 public class LocalEvidenceStorageService implements EvidenceStorageService {
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
+
     private final Path storageRoot;
+    private final byte[] signingKey;
 
     public LocalEvidenceStorageService(
-            @Value("${app.training.evidence.storage-dir:target/local-evidence-storage}") String storageDir
+            @Value("${app.training.evidence.storage-dir:target/local-evidence-storage}") String storageDir,
+            @Value("${app.jwt.secret}") String jwtSecret
     ) {
         this.storageRoot = Path.of(storageDir).toAbsolutePath().normalize();
+        this.signingKey = jwtSecret.getBytes(StandardCharsets.UTF_8);
     }
 
     @Override
@@ -44,7 +54,9 @@ public class LocalEvidenceStorageService implements EvidenceStorageService {
     @Override
     public String createDownloadUrl(String objectKey, Duration ttl) {
         long expiresAt = Instant.now().plus(ttl).getEpochSecond();
-        String token = URLEncoder.encode(objectKey + ":" + expiresAt, StandardCharsets.UTF_8);
+        String payload = objectKey + ":" + expiresAt;
+        String signature = hmacSign(payload);
+        String token = URLEncoder.encode(payload + ":" + signature, StandardCharsets.UTF_8);
         return "/api/v1/training/evidence-download/" + token;
     }
 
@@ -66,15 +78,29 @@ public class LocalEvidenceStorageService implements EvidenceStorageService {
 
     public LocalEvidenceDownload loadByDownloadToken(String token) {
         String decodedToken = URLDecoder.decode(token, StandardCharsets.UTF_8);
-        int separatorIndex = decodedToken.lastIndexOf(':');
-        if (separatorIndex < 1 || separatorIndex == decodedToken.length() - 1) {
+
+        // Token format: objectKey:expiresAt:signature
+        int sigSeparator = decodedToken.lastIndexOf(':');
+        if (sigSeparator < 1 || sigSeparator == decodedToken.length() - 1) {
+            throw new ResourceNotFoundException("Evidence download URL not found");
+        }
+        String payload = decodedToken.substring(0, sigSeparator);
+        String expectedSignature = decodedToken.substring(sigSeparator + 1);
+
+        // Verify HMAC signature
+        if (!hmacSign(payload).equals(expectedSignature)) {
             throw new ResourceNotFoundException("Evidence download URL not found");
         }
 
-        String objectKey = decodedToken.substring(0, separatorIndex);
+        // Parse payload: objectKey:expiresAt
+        int payloadSeparator = payload.lastIndexOf(':');
+        if (payloadSeparator < 1 || payloadSeparator == payload.length() - 1) {
+            throw new ResourceNotFoundException("Evidence download URL not found");
+        }
+        String objectKey = payload.substring(0, payloadSeparator);
         long expiresAt;
         try {
-            expiresAt = Long.parseLong(decodedToken.substring(separatorIndex + 1));
+            expiresAt = Long.parseLong(payload.substring(payloadSeparator + 1));
         } catch (NumberFormatException ex) {
             throw new ResourceNotFoundException("Evidence download URL not found");
         }
@@ -87,6 +113,17 @@ public class LocalEvidenceStorageService implements EvidenceStorageService {
             throw new ResourceNotFoundException("Evidence file not found");
         }
         return new LocalEvidenceDownload(objectKey, target, mediaTypeOf(objectKey));
+    }
+
+    private String hmacSign(String payload) {
+        try {
+            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+            mac.init(new SecretKeySpec(signingKey, HMAC_ALGORITHM));
+            byte[] hash = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeyException ex) {
+            throw new IllegalStateException("HMAC signing failed", ex);
+        }
     }
 
     private MediaType mediaTypeOf(String objectKey) {

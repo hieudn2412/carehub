@@ -6,6 +6,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ public class TrainingEvidenceDownloadController {
     private final LocalEvidenceStorageService storageService;
 
     @GetMapping("/{token}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Resource> download(@PathVariable String token) {
         LocalEvidenceStorageService.LocalEvidenceDownload download = storageService.loadByDownloadToken(token);
         return ResponseEntity.ok()

@@ -10,6 +10,7 @@ function TrainingRecordListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [pageData, setPageData] = useState(null)
   const [options, setOptions] = useState({ activityTypes: [], professionalFields: [] })
+  const [optionsLoaded, setOptionsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [keywordInput, setKeywordInput] = useState(searchParams.get('keyword') ?? '')
@@ -41,6 +42,18 @@ function TrainingRecordListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [keywordInput])
 
+  // Load reference data (activity types, professional fields) once on mount
+  useEffect(() => {
+    if (!optionsLoaded) {
+      trainingApi.getRecordOptions()
+        .then(res => {
+          setOptions(res.data.data)
+          setOptionsLoaded(true)
+        })
+        .catch(err => console.error('Error loading record options', err))
+    }
+  }, [optionsLoaded])
+
   useEffect(() => {
     let mounted = true
 
@@ -49,13 +62,9 @@ function TrainingRecordListPage() {
       setErrorMessage('')
       try {
         const params = toApiParams(filters)
-        const [recordsResponse, optionsResponse] = await Promise.all([
-          trainingApi.listRecords(params),
-          trainingApi.getRecordOptions(),
-        ])
+        const recordsResponse = await trainingApi.listRecords(params)
         if (!mounted) return
         setPageData(recordsResponse.data.data)
-        setOptions(optionsResponse.data.data)
       } catch (error) {
         if (!mounted) return
         setErrorMessage(getApiErrorMessage(error, 'Cannot load training records'))
