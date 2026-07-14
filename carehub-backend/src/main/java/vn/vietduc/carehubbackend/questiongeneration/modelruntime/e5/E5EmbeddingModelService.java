@@ -19,9 +19,12 @@ import vn.vietduc.carehubbackend.questiongeneration.modelruntime.EmbeddingModelS
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -64,6 +67,74 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
     @Override
     public double[] embedPassage(String text) {
         return embed(E5TextPreprocessor.passage(text));
+    }
+
+    @Override
+    public List<double[]> embedPassageBatch(List<String> texts, Consumer<Integer> progressCallback) {
+        if (texts == null || texts.isEmpty()) {
+            return List.of();
+        }
+
+        RuntimeHandle handle = ensureRuntime();
+        int batchSize = Math.max(1, Math.min(properties.getBatchSize(), texts.size()));
+        List<double[]> results = new ArrayList<>(texts.size());
+
+        for (int offset = 0; offset < texts.size(); offset += batchSize) {
+            int end = Math.min(offset + batchSize, texts.size());
+            List<String> batch = texts.subList(offset, end);
+
+            // Tokenize tất cả texts trong batch
+            List<long[]> batchInputIds = new ArrayList<>(batch.size());
+            List<long[]> batchAttentionMasks = new ArrayList<>(batch.size());
+            int maxSeqLen = 0;
+
+            for (String text : batch) {
+                String prepared = E5TextPreprocessor.passage(text);
+                Encoding encoding = handle.tokenizer().encode(prepared);
+                long[] inputIds = truncate(encoding.getIds());
+                long[] attentionMask = truncate(encoding.getAttentionMask());
+                if (attentionMask.length != inputIds.length) {
+                    attentionMask = filled(inputIds.length, 1);
+                }
+                maxSeqLen = Math.max(maxSeqLen, inputIds.length);
+                batchInputIds.add(inputIds);
+                batchAttentionMasks.add(attentionMask);
+            }
+
+            // Pad tất cả sequences về cùng length
+            long[][] paddedInputIds = new long[batch.size()][maxSeqLen];
+            long[][] paddedAttentionMask = new long[batch.size()][maxSeqLen];
+            for (int i = 0; i < batch.size(); i++) {
+                System.arraycopy(batchInputIds.get(i), 0, paddedInputIds[i], 0, batchInputIds.get(i).length);
+                System.arraycopy(batchAttentionMasks.get(i), 0, paddedAttentionMask[i], 0, batchAttentionMasks.get(i).length);
+            }
+
+            // Batch ONNX inference
+            Map<String, OnnxTensor> tensors = new LinkedHashMap<>();
+            try {
+                addTensorIfExpected(handle, tensors, "input_ids", paddedInputIds);
+                addTensorIfExpected(handle, tensors, "attention_mask", paddedAttentionMask);
+
+                // token_type_ids padding với 0
+                long[][] paddedTypeIds = new long[batch.size()][maxSeqLen];
+                addTensorIfExpected(handle, tensors, "token_type_ids", paddedTypeIds);
+
+                try (OrtSession.Result result = handle.session().run(tensors)) {
+                    Object value = result.get(0).getValue();
+                    List<double[]> batchResults = toBatchVectors(value, batchAttentionMasks);
+                    results.addAll(batchResults);
+                }
+            } catch (Exception ex) {
+                throw new EmbeddingModelException("Không tạo được batch embedding E5", ex);
+            } finally {
+                OnnxValue.close(tensors.values());
+            }
+
+            if (progressCallback != null) {
+                progressCallback.accept(end);
+            }
+        }
+        return results;
     }
 
     private double[] embed(String preparedText) {
@@ -109,6 +180,37 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
         }
     }
 
+    private void addTensorIfExpected(
+            RuntimeHandle handle,
+            Map<String, OnnxTensor> tensors,
+            String name,
+            long[][] values
+    ) throws OrtException {
+        if (handle.session().getInputNames().contains(name)) {
+            tensors.put(name, OnnxTensor.createTensor(handle.environment(), values));
+        }
+    }
+
+    private List<double[]> toBatchVectors(Object value, List<long[]> attentionMasks) {
+        if (value instanceof float[][][] tokenEmbeddings) {
+            List<double[]> result = new ArrayList<>(tokenEmbeddings.length);
+            for (int b = 0; b < tokenEmbeddings.length; b++) {
+                double[] pooled = meanPool(tokenEmbeddings[b], attentionMasks.get(b));
+                result.add(l2Normalize(pooled));
+            }
+            return result;
+        }
+        if (value instanceof double[][][] tokenEmbeddings) {
+            List<double[]> result = new ArrayList<>(tokenEmbeddings.length);
+            for (int b = 0; b < tokenEmbeddings.length; b++) {
+                double[] pooled = meanPool(tokenEmbeddings[b], attentionMasks.get(b));
+                result.add(l2Normalize(pooled));
+            }
+            return result;
+        }
+        throw new EmbeddingModelException("Batch output E5 không hỗ trợ: " + value.getClass().getName());
+    }
+
     private RuntimeHandle ensureRuntime() {
         if (!properties.isE5Provider()) {
             throw new EmbeddingModelException("Embedding provider hiện tại không phải E5");
@@ -134,9 +236,17 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
             OrtEnvironment environment = OrtEnvironment.getEnvironment();
             OrtSession.SessionOptions options = new OrtSession.SessionOptions();
             options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+
+            int numThreads = properties.getIntraOpThreads();
+            if (numThreads <= 0) {
+                numThreads = Math.max(1, Runtime.getRuntime().availableProcessors() - 1);
+            }
+            options.setIntraOpNumThreads(numThreads);
+            options.setInterOpNumThreads(Math.max(1, properties.getInterOpThreads()));
+
             OrtSession session = environment.createSession(onnxModel.toString(), options);
             options.close();
-            log.info("Đã load E5 model {} từ {}", properties.getModel(), onnxModel);
+            log.info("Đã load E5 model {} từ {} (intraOpThreads={})", properties.getModel(), onnxModel, numThreads);
             return new RuntimeHandle(environment, session, tokenizer);
         } catch (Exception ex) {
             throw new EmbeddingModelException("Không load được E5 model từ " + properties.getModelPath(), ex);

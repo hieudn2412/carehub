@@ -24,6 +24,8 @@ public record ExamAttemptResponse(
         Integer correctCount,
         Integer totalQuestions,
         Boolean passed,
+        String classification,
+        String classificationText,
         Integer timeSpentSeconds,
         List<ExamAttemptQuestionResponse> questions,
         List<ExamAttemptAnswerResponse> answers

@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.paraphrase;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import vn.vietduc.carehubbackend.common.util.CosineUtil;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
@@ -134,7 +135,7 @@ public class ParaphraseValidationService {
         try {
             double[] sourceVector = embeddingService.embedSourceStem(source.getStem());
             double[] candidateVector = embeddingService.embedCandidateStem(candidate.stem());
-            return cosine(sourceVector, candidateVector);
+            return CosineUtil.cosine(sourceVector, candidateVector);
         } catch (RuntimeException ex) {
             warnings.add("Không chạy được E5 để so ngữ nghĩa với câu gốc");
             return null;
@@ -159,25 +160,6 @@ public class ParaphraseValidationService {
                 safe(candidate.optionC()),
                 safe(candidate.optionD())
         );
-    }
-
-    private double cosine(double[] left, double[] right) {
-        int size = Math.min(left.length, right.length);
-        if (size == 0) {
-            return 0;
-        }
-        double dot = 0;
-        double leftNorm = 0;
-        double rightNorm = 0;
-        for (int i = 0; i < size; i++) {
-            dot += left[i] * right[i];
-            leftNorm += left[i] * left[i];
-            rightNorm += right[i] * right[i];
-        }
-        if (leftNorm == 0 || rightNorm == 0) {
-            return 0;
-        }
-        return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
     }
 
     private boolean containsBannedOptionPattern(String option) {

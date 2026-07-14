@@ -1,10 +1,12 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.questiongeneration.event.ExamAttemptPassedEvent;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveExamAttemptAnswersRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptAnswerResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptQuestionResponse;
@@ -51,6 +53,8 @@ public class ExamAttemptService {
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
     private final UserRepository userRepository;
+    private final CompetencyClassificationService classificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status) {
@@ -180,9 +184,17 @@ public class ExamAttemptService {
         attempt.setCorrectCount(correctCount);
         attempt.setTotalQuestions(totalQuestions);
         attempt.setScore(score);
-        attempt.setPassed(score.compareTo(BigDecimal.valueOf(attempt.getExamPaper().getPassingScore())) >= 0);
+        boolean passed = score.compareTo(BigDecimal.valueOf(attempt.getExamPaper().getPassingScore())) >= 0;
+        attempt.setPassed(passed);
+        attempt.setClassification(classificationService.classifyOverall(score));
         attempt.setTimeSpentSeconds(Math.toIntExact(Math.max(0, Duration.between(attempt.getStartedAt(), submittedAt).toSeconds())));
-        return toResponse(attemptRepository.save(attempt), true, canRevealAnswers(attempt));
+        ExamAttempt saved = attemptRepository.save(attempt);
+
+        if (passed) {
+            eventPublisher.publishEvent(new ExamAttemptPassedEvent(saved));
+        }
+
+        return toResponse(saved, true, canRevealAnswers(saved));
     }
 
     private void upsertAnswers(ExamAttempt attempt, SaveExamAttemptAnswersRequest request) {
@@ -247,6 +259,8 @@ public class ExamAttemptService {
                 attempt.getCorrectCount(),
                 attempt.getTotalQuestions(),
                 attempt.getPassed(),
+                attempt.getClassification() == null ? null : attempt.getClassification().name(),
+                attempt.getClassification() == null ? null : QuestionGenerationLabels.competencyLevel(attempt.getClassification()),
                 attempt.getTimeSpentSeconds(),
                 questions,
                 answers

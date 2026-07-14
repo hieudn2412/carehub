@@ -1,6 +1,9 @@
 package vn.vietduc.carehubbackend.questiongeneration.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -12,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 @Entity
@@ -33,4 +37,14 @@ public class ExamAssignmentTarget extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_type", length = 24)
+    private AssignmentTargetType targetType;
+
+    @Column(name = "source_position_id")
+    private Long sourcePositionId;
+
+    @Column(name = "source_group_id")
+    private Long sourceGroupId;
 }

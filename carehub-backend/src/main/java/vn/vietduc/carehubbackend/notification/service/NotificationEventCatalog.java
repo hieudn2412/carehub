@@ -24,6 +24,10 @@ public class NotificationEventCatalog {
     private static final Set<String> QUALITY_VARIABLES = Set.of(
             "recipient_name", "manager_name", "department", "compliance_rate", "target_rate", "period"
     );
+    private static final Set<String> EXAM_PASSED_VARIABLES = Set.of(
+            "recipient_name", "employee_name", "employee_code", "exam_name", "score",
+            "classification", "compliance_percent", "department"
+    );
     private static final Set<String> PERSONAL_VARIABLES = Set.of(
             "recipient_name", "employee_name", "employee_code", "form_name", "result", "score", "submitted_at"
     );
@@ -46,6 +50,14 @@ public class NotificationEventCatalog {
                 true,
                 null,
                 EXAM_VARIABLES
+        ));
+        definitions.put(NotificationEventType.EXAM_PASSED, new Definition(
+                NotificationCategory.EVALUATION,
+                Set.of(NotificationAudience.EMPLOYEE),
+                NotificationCadence.IMMEDIATE,
+                true,
+                null,
+                EXAM_PASSED_VARIABLES
         ));
         definitions.put(NotificationEventType.QUALITY_COMPLIANCE_BELOW_TARGET, new Definition(
                 NotificationCategory.QUALITY,
@@ -95,6 +107,7 @@ public class NotificationEventCatalog {
             throw new UnprocessableEntityException("Notification cadence is required");
         }
         boolean immediateEvent = eventType == NotificationEventType.EXAM_ASSIGNED
+                || eventType == NotificationEventType.EXAM_PASSED
                 || eventType == NotificationEventType.PERSONAL_COMPLIANCE_ISSUE;
         if (immediateEvent && cadence != NotificationCadence.IMMEDIATE) {
             throw new UnprocessableEntityException(eventType + " must use IMMEDIATE cadence");
@@ -107,6 +120,7 @@ public class NotificationEventCatalog {
     public String triggerLabel(NotificationEventType eventType, NotificationCadence cadence) {
         return switch (eventType) {
             case EXAM_ASSIGNED -> "Tự động · khi được giao";
+            case EXAM_PASSED -> "Tự động · khi đạt bài kiểm tra";
             case PERSONAL_COMPLIANCE_ISSUE -> "Tự động · khi không tuân thủ";
             case CME_HOURS_BELOW_REQUIREMENT, QUALITY_COMPLIANCE_BELOW_TARGET -> "Tự động · " + switch (cadence) {
                 case DAILY -> "hàng ngày";
@@ -121,6 +135,7 @@ public class NotificationEventCatalog {
         return switch (eventType) {
             case CME_HOURS_BELOW_REQUIREMENT -> "Cảnh báo thiếu giờ CME";
             case EXAM_ASSIGNED -> "Thông báo giao bài thi";
+            case EXAM_PASSED -> "Thông báo đạt bài kiểm tra";
             case QUALITY_COMPLIANCE_BELOW_TARGET -> "Cảnh báo tỷ lệ tuân thủ thấp";
             case PERSONAL_COMPLIANCE_ISSUE -> "Vấn đề tuân thủ cá nhân";
         };

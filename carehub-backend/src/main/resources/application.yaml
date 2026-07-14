@@ -50,6 +50,8 @@ ai:
     prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v1}
     pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
+    connect-timeout-seconds: ${GENERATION_CONNECT_TIMEOUT_SECONDS:10}
+    max-connections: ${GENERATION_MAX_CONNECTIONS:10}
     max-retries: ${GENERATION_MAX_RETRIES:1}
     max-concurrent-calls: ${GENERATION_MAX_CONCURRENT_CALLS:2}
     circuit-breaker-failure-threshold: ${GENERATION_CIRCUIT_BREAKER_FAILURE_THRESHOLD:5}
@@ -57,6 +59,12 @@ ai:
     temperature: ${GENERATION_TEMPERATURE:0.2}
     max-output-tokens: ${GENERATION_MAX_OUTPUT_TOKENS:1800}
     llm-validation-enabled: ${GENERATION_LLM_VALIDATION_ENABLED:false}
+    parallel-chunk-processing: ${GENERATION_PARALLEL_CHUNKS:true}
+    chunk-parallelism: ${GENERATION_CHUNK_PARALLELISM:-1}
+    input-price-per-million: ${GENERATION_INPUT_PRICE:0.14}
+    output-price-per-million: ${GENERATION_OUTPUT_PRICE:0.56}
+    fallback-input-price-per-million: ${GENERATION_FALLBACK_INPUT_PRICE:0.55}
+    fallback-output-price-per-million: ${GENERATION_FALLBACK_OUTPUT_PRICE:2.20}
 
   training:
     records:
@@ -72,16 +80,33 @@ ai:
     max-length: ${E5_MAX_LENGTH:512}
     timeout-seconds: ${E5_TIMEOUT_SECONDS:30}
     fallback-provider: ${E5_FALLBACK_PROVIDER:lexical}
+    dedup-page-size: ${E5_DEDUP_PAGE_SIZE:500}
+    lexical-page-size: ${E5_LEXICAL_PAGE_SIZE:500}
+    cache-ttl-minutes: ${E5_CACHE_TTL_MINUTES:30}
+    cache-warmup-enabled: ${E5_CACHE_WARMUP_ENABLED:true}
+    ann-enabled: ${E5_ANN_ENABLED:true}
+    ann-lsh-bits: ${E5_ANN_LSH_BITS:16}
+    ann-search-k: ${E5_ANN_SEARCH_K:50}
+    ann-neighbor-buckets: ${E5_ANN_NEIGHBOR_BUCKETS:true}
+    batch-size: ${E5_BATCH_SIZE:32}
+    batch-enabled: ${E5_BATCH_ENABLED:true}
+    backfill-async: ${E5_BACKFILL_ASYNC:true}
+    intra-op-threads: ${E5_INTRA_OP_THREADS:-1}
+    inter-op-threads: ${E5_INTER_OP_THREADS:1}
   paraphrase:
     provider: ${PARAPHRASE_PROVIDER:vietquill}
     model: ${PARAPHRASE_MODEL:ngwgsang/vietquill-vit5-base-tsubaki}
     model-path: ${VIETQUILL_MODEL_PATH:models/ngwgsang/vietquill-vit5-base-tsubaki}
-    preload: ${VIETQUILL_PRELOAD:false}
+    preload: ${VIETQUILL_PRELOAD:true}
     max-input-length: ${VIETQUILL_MAX_INPUT_LENGTH:512}
-    max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:512}
+    max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:128}
     timeout-seconds: ${VIETQUILL_TIMEOUT_SECONDS:60}
-    num-beams: ${VIETQUILL_NUM_BEAMS:4}
+    num-beams: ${VIETQUILL_NUM_BEAMS:2}
     requested-count-default: ${VIETQUILL_REQUESTED_COUNT_DEFAULT:3}
+    single-pass-enabled: ${VIETQUILL_SINGLE_PASS:true}
+    pool-size: ${VIETQUILL_POOL_SIZE:2}
+    acquire-timeout-ms: ${VIETQUILL_ACQUIRE_TIMEOUT_MS:30000}
+    kv-cache-enabled: ${VIETQUILL_KV_CACHE_ENABLED:false}
 
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:storage/documents}

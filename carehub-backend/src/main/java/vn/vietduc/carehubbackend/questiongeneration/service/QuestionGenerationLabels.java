@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
@@ -172,6 +173,32 @@ public final class QuestionGenerationLabels {
         return switch (visibility) {
             case SCORE_ONLY -> "Chỉ hiển thị điểm";
             case SCORE_AND_ANSWERS -> "Hiển thị điểm, đáp án và giải thích";
+        };
+    }
+
+    public static String competencyLevel(CompetencyLevel level) {
+        if (level == null) {
+            return "";
+        }
+        return switch (level) {
+            case NOT_COMPETENT -> "Chưa đạt năng lực";
+            case BEGINNER -> "Sơ cấp";
+            case BASIC -> "Cơ bản";
+            case PROFICIENT -> "Thành thạo";
+            case ADVANCED -> "Chuyên sâu";
+        };
+    }
+
+    public static String competencyLevelColor(CompetencyLevel level) {
+        if (level == null) {
+            return "#6B7280";
+        }
+        return switch (level) {
+            case NOT_COMPETENT -> "#EF4444";
+            case BEGINNER -> "#F59E0B";
+            case BASIC -> "#3B82F6";
+            case PROFICIENT -> "#10B981";
+            case ADVANCED -> "#8B5CF6";
         };
     }
 }

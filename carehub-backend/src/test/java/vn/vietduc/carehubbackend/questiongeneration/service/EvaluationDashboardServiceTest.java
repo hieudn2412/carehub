@@ -8,6 +8,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankSta
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.QuestionItemAnalysisProjection;
@@ -23,11 +24,12 @@ class EvaluationDashboardServiceTest {
     private final QuestionBankQuestionRepository questionRepository = mock(QuestionBankQuestionRepository.class);
     private final ExamAttemptRepository attemptRepository = mock(ExamAttemptRepository.class);
     private final ExamAttemptAnswerRepository answerRepository = mock(ExamAttemptAnswerRepository.class);
+    private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
     private EvaluationDashboardService service;
 
     @BeforeEach
     void setUp() {
-        service = new EvaluationDashboardService(questionRepository, attemptRepository, answerRepository);
+        service = new EvaluationDashboardService(questionRepository, attemptRepository, answerRepository, snapshotRepository);
         when(questionRepository.count()).thenReturn(10L);
         when(questionRepository.countByStatus(QuestionBankStatus.APPROVED)).thenReturn(6L);
         when(questionRepository.countByStatus(QuestionBankStatus.DRAFT)).thenReturn(2L);

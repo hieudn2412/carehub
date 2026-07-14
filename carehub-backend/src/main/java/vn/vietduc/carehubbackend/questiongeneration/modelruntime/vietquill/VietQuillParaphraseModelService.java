@@ -27,7 +27,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -45,7 +49,11 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     private final AiParaphraseProperties properties;
     private final ObjectMapper objectMapper;
-    private volatile RuntimeHandle runtime;
+    private final VietQuillPromptBuilder promptBuilder;
+    private final VietQuillMcqParser mcqParser;
+    private final VietQuillHandlePool handlePool;
+
+    private volatile boolean initialized = false;
 
     @PostConstruct
     void preload() {
@@ -53,17 +61,37 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             return;
         }
         try {
-            ensureRuntime();
+            ensureInitialized();
+            warmup();
+            log.info("VietQuill model preloaded and warmed up successfully (pool size={})", handlePool.poolSize());
         } catch (RuntimeException ex) {
             log.warn("Không preload được VietQuill model tại {}: {}", properties.getModelPath(), ex.getMessage());
         }
     }
 
+    private void warmup() {
+        // Warmup từng handle trong pool để trigger JIT compilation trong ONNX Runtime
+        String warmupPrompt = "paraphrase mcq:\nCâu hỏi: test\nA. test\nB. test\nC. test\nD. test\nĐáp án đúng: A\nYêu cầu: giữ nguyên.";
+        // Warmup handle đầu tiên
+        RuntimeHandle warmupHandle = null;
+        try {
+            warmupHandle = handlePool.acquire(properties.getAcquireTimeoutMs());
+            generate(warmupHandle.question(), warmupPrompt, 0);
+            generate(warmupHandle.sentence(), "test", 0);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("VietQuill warmup bị ngắt");
+            return;
+        } finally {
+            handlePool.release(warmupHandle);
+        }
+        log.info("VietQuill warmup inference completed");
+    }
+
     @PreDestroy
     void close() {
-        RuntimeHandle handle = runtime;
-        if (handle != null) {
-            handle.close();
+        if (handlePool != null) {
+            handlePool.close();
         }
     }
 
@@ -86,7 +114,71 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         if (!properties.isVietQuillProvider()) {
             throw new ParaphraseModelException("Provider paraphrase chưa được hỗ trợ: " + properties.getProvider());
         }
-        RuntimeHandle handle = ensureRuntime();
+
+        ensureInitialized();
+        RuntimeHandle handle = null;
+        try {
+            handle = handlePool.acquire(properties.getAcquireTimeoutMs());
+            RuntimeHandle finalHandle = handle;
+            return CompletableFuture
+                    .supplyAsync(() -> doParaphrase(finalHandle, input, count))
+                    .get(properties.getTimeoutSeconds(), TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ParaphraseModelException("Bị ngắt khi chờ VietQuill handle", ex);
+        } catch (TimeoutException ex) {
+            throw new ParaphraseModelException(
+                    "Paraphrase timeout sau " + properties.getTimeoutSeconds() + "s", ex);
+        } catch (Exception ex) {
+            throw new ParaphraseModelException("Paraphrase thất bại", ex);
+        } finally {
+            handlePool.release(handle);
+        }
+    }
+
+    private List<ParaphrasedMcq> doParaphrase(RuntimeHandle handle, ParaphraseModelInput input, int count) {
+        if (properties.isSinglePassEnabled()) {
+            return paraphraseSinglePass(handle, input, count);
+        }
+        return paraphrasePerField(handle, input, count);
+    }
+
+    /**
+     * Single-pass: 1 lần encode+decode cho toàn bộ MCQ.
+     */
+    private List<ParaphrasedMcq> paraphraseSinglePass(RuntimeHandle handle, ParaphraseModelInput input, int count) {
+        String prompt = promptBuilder.buildFullMcq(input);
+        List<ParaphrasedMcq> results = new ArrayList<>();
+
+        for (int index = 0; index < count; index++) {
+            String rawOutput = generate(handle.question(), prompt, index);
+            if (rawOutput.isBlank()) {
+                // Fallback: generate từng field nếu single-pass fail
+                rawOutput = generatePerFieldAndCombine(handle, input, index);
+            }
+            ParaphrasedMcq mcq = mcqParser.parseFullMcq(rawOutput);
+            results.add(new ParaphrasedMcq(
+                    fallbackIfBlank(mcq.stem(), input.stem()),
+                    fallbackIfBlank(mcq.optionA(), input.optionA()),
+                    fallbackIfBlank(mcq.optionB(), input.optionB()),
+                    fallbackIfBlank(mcq.optionC(), input.optionC()),
+                    fallbackIfBlank(mcq.optionD(), input.optionD()),
+                    rawMcq(
+                            fallbackIfBlank(mcq.stem(), input.stem()),
+                            fallbackIfBlank(mcq.optionA(), input.optionA()),
+                            fallbackIfBlank(mcq.optionB(), input.optionB()),
+                            fallbackIfBlank(mcq.optionC(), input.optionC()),
+                            fallbackIfBlank(mcq.optionD(), input.optionD())
+                    )
+            ));
+        }
+        return results;
+    }
+
+    /**
+     * Per-field: generate từng field riêng lẻ (logic cũ, giữ lại làm fallback).
+     */
+    private List<ParaphrasedMcq> paraphrasePerField(RuntimeHandle handle, ParaphraseModelInput input, int count) {
         List<ParaphrasedMcq> results = new ArrayList<>();
         for (int index = 0; index < count; index++) {
             String stem = fallbackIfBlank(generate(handle.question(), input.stem(), index), input.stem());
@@ -106,25 +198,45 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         return results;
     }
 
-    private String generate(Seq2SeqHandle handle, String prompt, int variantIndex) {
-        synchronized (handle) {
-            try {
-                Encoding encoding = handle.tokenizer().encode(prompt);
-                long[] inputIds = truncate(encoding.getIds(), properties.getMaxInputLength());
-                long[] attentionMask = truncate(encoding.getAttentionMask(), properties.getMaxInputLength());
-                if (attentionMask.length != inputIds.length) {
-                    attentionMask = filled(inputIds.length, 1);
-                }
+    /**
+     * Fallback: generate từng field riêng lẻ rồi combine lại thành raw output string
+     * để parser có thể parse được. Dùng khi single-pass trả về blank.
+     */
+    private String generatePerFieldAndCombine(RuntimeHandle handle, ParaphraseModelInput input, int index) {
+        String stem = fallbackIfBlank(generate(handle.question(), input.stem(), index), input.stem());
+        String optionA = fallbackIfBlank(generate(handle.sentence(), input.optionA(), index), input.optionA());
+        String optionB = fallbackIfBlank(generate(handle.sentence(), input.optionB(), index), input.optionB());
+        String optionC = fallbackIfBlank(generate(handle.sentence(), input.optionC(), index), input.optionC());
+        String optionD = fallbackIfBlank(generate(handle.sentence(), input.optionD(), index), input.optionD());
+        return rawMcq(stem, optionA, optionB, optionC, optionD);
+    }
 
-                float[][][] encoderHiddenStates = encode(handle, inputIds, attentionMask);
-                List<String> decoded = beamDecode(handle, encoderHiddenStates, attentionMask);
-                if (decoded.isEmpty()) {
-                    return "";
-                }
-                return decoded.get(Math.min(variantIndex, decoded.size() - 1));
-            } catch (Exception ex) {
-                throw new ParaphraseModelException("Không sinh được paraphrase bằng VietQuill ONNX", ex);
+    /**
+     * Generate text from a Seq2SeqHandle.
+     * KHÔNG còn synchronized — mỗi thread có handle riêng từ pool nên thread-safe.
+     */
+    private String generate(Seq2SeqHandle handle, String prompt, int variantIndex) {
+        try {
+            Encoding encoding = handle.tokenizer().encode(prompt);
+            long[] inputIds = truncate(encoding.getIds(), properties.getMaxInputLength());
+            long[] attentionMask = truncate(encoding.getAttentionMask(), properties.getMaxInputLength());
+            if (attentionMask.length != inputIds.length) {
+                attentionMask = filled(inputIds.length, 1);
             }
+
+            float[][][] encoderHiddenStates = encode(handle, inputIds, attentionMask);
+            List<String> decoded;
+            if (properties.isKvCacheEnabled() && handle.kvCacheSupported()) {
+                decoded = beamDecodeWithKvCache(handle, encoderHiddenStates, attentionMask);
+            } else {
+                decoded = beamDecode(handle, encoderHiddenStates, attentionMask);
+            }
+            if (decoded.isEmpty()) {
+                return "";
+            }
+            return decoded.get(Math.min(variantIndex, decoded.size() - 1));
+        } catch (Exception ex) {
+            throw new ParaphraseModelException("Không sinh được paraphrase bằng VietQuill ONNX", ex);
         }
     }
 
@@ -154,7 +266,7 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             long[] attentionMask
     ) throws OrtException {
         int beamWidth = Math.max(1, Math.min(6, properties.getNumBeams()));
-        int maxTokens = Math.max(8, Math.min(properties.getMaxOutputLength(), 96));
+        int maxTokens = Math.max(8, Math.min(properties.getMaxOutputLength(), properties.getMaxDecodeLength()));
         List<Beam> beams = List.of(new Beam(
                 List.of((long) handle.modelConfig().decoderStartTokenId()),
                 0,
@@ -248,20 +360,18 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         }
     }
 
-    private RuntimeHandle ensureRuntime() {
-        RuntimeHandle existing = runtime;
-        if (existing != null) {
-            return existing;
+    private synchronized void ensureInitialized() {
+        if (initialized) {
+            return;
         }
-        synchronized (this) {
-            if (runtime == null) {
-                runtime = loadRuntime();
-            }
-            return runtime;
-        }
+        handlePool.initialize(index -> {
+            log.info("Loading VietQuill handle {}/{}", index + 1, handlePool.poolSize());
+            return loadSingleRuntime();
+        });
+        initialized = true;
     }
 
-    private RuntimeHandle loadRuntime() {
+    private RuntimeHandle loadSingleRuntime() {
         try {
             Path root = properties.getModelPath();
             OrtEnvironment environment = OrtEnvironment.getEnvironment();
@@ -290,7 +400,60 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         OrtSession encoder = environment.createSession(encoderModel.toString(), options);
         OrtSession decoder = environment.createSession(decoderModel.toString(), options);
         options.close();
-        return new Seq2SeqHandle(environment, encoder, decoder, tokenizer, modelConfig);
+        List<String> kvCacheInputNames = detectKvCacheInputs(decoder);
+        List<String> kvCacheOutputNames = detectKvCacheOutputs(decoder);
+        if (!kvCacheInputNames.isEmpty()) {
+            log.info("Detected KV-cache support in decoder: {} inputs, {} outputs",
+                    kvCacheInputNames.size(), kvCacheOutputNames.size());
+        }
+        return new Seq2SeqHandle(environment, encoder, decoder, tokenizer, modelConfig,
+                kvCacheInputNames, kvCacheOutputNames);
+    }
+
+    /**
+     * Detect past_key_values input names from decoder, sorted by index.
+     */
+    private List<String> detectKvCacheInputs(OrtSession decoder) {
+        Set<String> inputNames = decoder.getInputNames();
+        return inputNames.stream()
+                .filter(name -> name.startsWith("past_key_values"))
+                .sorted(this::compareKvCacheName)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Detect present key/value output names from decoder, sorted by index.
+     */
+    private List<String> detectKvCacheOutputs(OrtSession decoder) {
+        Set<String> outputNames = decoder.getOutputNames();
+        return outputNames.stream()
+                .filter(name -> name.startsWith("present"))
+                .sorted(this::compareKvCacheName)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Sort KV-cache names by their numeric index (e.g. past_key_values.0.key < past_key_values.1.key).
+     */
+    private int compareKvCacheName(String a, String b) {
+        int idxA = extractKvCacheIndex(a);
+        int idxB = extractKvCacheIndex(b);
+        int cmp = Integer.compare(idxA, idxB);
+        if (cmp != 0) {
+            return cmp;
+        }
+        // Within same index, key comes before value
+        boolean aKey = a.endsWith(".key") || a.contains(".key");
+        boolean bKey = b.endsWith(".key") || b.contains(".key");
+        if (aKey && !bKey) return -1;
+        if (!aKey && bKey) return 1;
+        return a.compareTo(b);
+    }
+
+    private int extractKvCacheIndex(String name) {
+        // Extract the first number from the name
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(name);
+        return m.find() ? Integer.parseInt(m.group()) : 0;
     }
 
     private Path resolveSeq2SeqRoot(Path root, String childName) throws IOException {
@@ -534,62 +697,240 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         return trimmed.substring(0, 1).toLowerCase() + trimmed.substring(1);
     }
 
-    private record ModelConfig(int decoderStartTokenId, int eosTokenId, int padTokenId) {
-    }
+    // ──────────────────────────────────────────────
+    // KV-Cache Beam Search (Phase 4)
+    // ──────────────────────────────────────────────
 
-    private record RuntimeHandle(
-            Seq2SeqHandle question,
-            Seq2SeqHandle sentence
-    ) implements AutoCloseable {
-        private RuntimeHandle {
-            Objects.requireNonNull(question);
-            Objects.requireNonNull(sentence);
+    /**
+     * Beam search decode WITH KV-cache.
+     * Chỉ truyền 1 token mới mỗi step + past_key_values → O(n) thay vì O(n²).
+     */
+    private List<String> beamDecodeWithKvCache(
+            Seq2SeqHandle handle,
+            float[][][] encoderHiddenStates,
+            long[] encoderAttentionMask
+    ) throws OrtException {
+        int beamWidth = Math.max(1, Math.min(6, properties.getNumBeams()));
+        int maxTokens = Math.max(8, Math.min(properties.getMaxOutputLength(), properties.getMaxDecodeLength()));
+
+        // Mỗi beam có KV-cache riêng (null ở step 0)
+        List<BeamKv> beams = List.of(new BeamKv(
+                List.of((long) handle.modelConfig().decoderStartTokenId()),
+                null,   // KV-cache ban đầu null → decoder sẽ không nhận past_key_values
+                0,
+                false
+        ));
+
+        for (int step = 0; step < maxTokens; step++) {
+            List<BeamKv> candidates = new ArrayList<>();
+            for (BeamKv beam : beams) {
+                if (beam.done()) {
+                    candidates.add(beam);
+                    continue;
+                }
+
+                // Chỉ truyền token MỚI NHẤT + KV-cache cũ
+                long lastTokenId = beam.tokenIds().get(beam.tokenIds().size() - 1);
+                KvDecodeResult decodeResult = decodeLogitsWithKvCache(
+                        handle,
+                        lastTokenId,              // ← Chỉ 1 token!
+                        beam.pastKV(),            // ← KV-cache từ step trước
+                        encoderHiddenStates,
+                        encoderAttentionMask
+                );
+
+                List<float[][][]> sharedNextCache = decodeResult.nextPastKV();
+                for (TopToken token : topTokens(decodeResult.logits(), beamWidth)) {
+                    boolean done = token.id() == handle.modelConfig().eosTokenId();
+                    List<Long> nextIds = new ArrayList<>(beam.tokenIds());
+                    if (!done) {
+                        nextIds.add(token.id());
+                    }
+                    // Clone KV-cache cho mỗi candidate beam để tránh sharing mutable state
+                    List<float[][][]> clonedCache = sharedNextCache != null
+                            ? clonePastKV(sharedNextCache)
+                            : null;
+                    candidates.add(new BeamKv(
+                            nextIds,
+                            clonedCache,
+                            beam.score() + token.logProbability(),
+                            done
+                    ));
+                }
+            }
+            beams = candidates.stream()
+                    .sorted((left, right) -> Double.compare(right.rankScore(), left.rankScore()))
+                    .limit(beamWidth)
+                    .toList();
+            if (beams.stream().allMatch(BeamKv::done)) {
+                break;
+            }
         }
 
-        @Override
-        public void close() {
-            question.close();
-            if (sentence != question) {
-                sentence.close();
+        return beams.stream()
+                .map(beam -> decodeTokens(handle, beam.tokenIds()))
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    /**
+     * Single decode step with KV-cache.
+     * Input:  1 token mới + past KV cache + encoder hidden states
+     * Output: logits cho token tiếp theo + KV cache mới
+     */
+    private KvDecodeResult decodeLogitsWithKvCache(
+            Seq2SeqHandle handle,
+            long lastTokenId,
+            List<float[][][]> pastKeyValues,  // null hoặc empty ở step 0
+            float[][][] encoderHiddenStates,
+            long[] encoderAttentionMask
+    ) throws OrtException {
+        Map<String, OnnxTensor> tensors = new LinkedHashMap<>();
+        try {
+            // 1. Chỉ truyền 1 token mới nhất
+            addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "input_ids", new long[]{lastTokenId});
+            addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "decoder_input_ids", new long[]{lastTokenId});
+
+            // 2. Encoder hidden states (giữ nguyên)
+            addFloatTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "encoder_hidden_states", encoderHiddenStates);
+            addFloatTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "encoder_outputs", encoderHiddenStates);
+            addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "encoder_attention_mask", encoderAttentionMask);
+            addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors,
+                    "attention_mask", encoderAttentionMask);
+
+            // 3. Past key values từ các step trước (nếu có)
+            if (pastKeyValues != null && !pastKeyValues.isEmpty()) {
+                addPastKeyValues(handle, tensors, pastKeyValues);
+            }
+
+            try (OrtSession.Result result = handle.decoder().run(tensors)) {
+                // Output 0: logits
+                double[] logits = extractLogitsFromResult(result);
+
+                // Output 1+: present key values (KV-cache mới cho step sau)
+                List<float[][][]> nextKvCache = extractPastKeyValues(result, handle.kvCacheOutputNames().size());
+
+                return new KvDecodeResult(logits, nextKvCache);
+            }
+        } finally {
+            OnnxValue.close(tensors.values());
+        }
+    }
+
+    private double[] extractLogitsFromResult(OrtSession.Result result) throws OrtException {
+        Object value = result.get(0).getValue();
+        if (value instanceof float[][][] logits) {
+            return lastTokenLogits(logits[0]);
+        }
+        if (value instanceof double[][][] logits) {
+            return lastTokenLogits(logits[0]);
+        }
+        throw new ParaphraseModelException("Output decoder VietQuill không hỗ trợ: " + value.getClass().getName());
+    }
+
+    /**
+     * Add past key values as decoder inputs.
+     * Maps stored float[][][] arrays to ONNX tensor inputs by matching kvCacheInputNames order.
+     */
+    private void addPastKeyValues(
+            Seq2SeqHandle handle,
+            Map<String, OnnxTensor> tensors,
+            List<float[][][]> pastKeyValues
+    ) throws OrtException {
+        List<String> inputNames = handle.kvCacheInputNames();
+        for (int i = 0; i < pastKeyValues.size() && i < inputNames.size(); i++) {
+            String name = inputNames.get(i);
+            if (handle.decoder().getInputNames().contains(name)) {
+                tensors.put(name, OnnxTensor.createTensor(handle.environment(), pastKeyValues.get(i)));
             }
         }
     }
 
-    private record Seq2SeqHandle(
-            OrtEnvironment environment,
-            OrtSession encoder,
-            OrtSession decoder,
-            HuggingFaceTokenizer tokenizer,
-            ModelConfig modelConfig
-    ) implements AutoCloseable {
-        private Seq2SeqHandle {
-            Objects.requireNonNull(environment);
-            Objects.requireNonNull(encoder);
-            Objects.requireNonNull(decoder);
-            Objects.requireNonNull(tokenizer);
-            Objects.requireNonNull(modelConfig);
-        }
-
-        @Override
-        public void close() {
+    /**
+     * Extract present key values from decoder outputs.
+     * Returns a list of float[][][] matching kvCacheOutputNames order.
+     */
+    private List<float[][][]> extractPastKeyValues(OrtSession.Result result, int expectedCount) throws OrtException {
+        List<float[][][]> entries = new ArrayList<>();
+        // Output 0 is logits, outputs 1+ are present key values
+        for (int i = 1; i < expectedCount + 1 && i < result.size(); i++) {
             try {
-                encoder.close();
-            } catch (Exception ignored) {
-                // Best effort shutdown only.
+                Object value = result.get(i).getValue();
+                if (value instanceof float[][][] floats) {
+                    entries.add(clone3D(floats));
+                } else if (value instanceof double[][][] doubles) {
+                    entries.add(toFloat(doubles));
+                }
+            } catch (OrtException ignored) {
+                break; // No more present outputs
             }
-            try {
-                decoder.close();
-            } catch (Exception ignored) {
-                // Best effort shutdown only.
-            }
-            tokenizer.close();
         }
+        return entries.isEmpty() ? null : entries;
     }
+
+    /**
+     * Deep clone a list of float[][][] arrays (KV-cache entries).
+     * Cần thiết khi fork beams để mỗi beam có cache riêng.
+     */
+    private List<float[][][]> clonePastKV(List<float[][][]> source) {
+        List<float[][][]> cloned = new ArrayList<>(source.size());
+        for (float[][][] entry : source) {
+            cloned.add(clone3D(entry));
+        }
+        return cloned;
+    }
+
+    /**
+     * Deep clone a 3D float array.
+     */
+    private float[][][] clone3D(float[][][] source) {
+        float[][][] result = new float[source.length][][];
+        for (int i = 0; i < source.length; i++) {
+            result[i] = new float[source[i].length][];
+            for (int j = 0; j < source[i].length; j++) {
+                result[i][j] = source[i][j].clone();
+            }
+        }
+        return result;
+    }
+
+    // ──────────────────────────────────────────────
+    // Inner records
+    // ──────────────────────────────────────────────
 
     private record Beam(List<Long> tokenIds, double score, boolean done) {
         private double rankScore() {
             return score / Math.pow(Math.max(1, tokenIds.size()), 0.7);
         }
+    }
+
+    /**
+     * Beam entry with KV-cache.
+     */
+    private record BeamKv(
+            List<Long> tokenIds,
+            List<float[][][]> pastKV,  // null = step 0 (no cache yet)
+            double score,
+            boolean done
+    ) {
+        private double rankScore() {
+            return score / Math.pow(Math.max(1, tokenIds.size()), 0.7);
+        }
+    }
+
+    /**
+     * Result of one decode step with KV-cache.
+     */
+    private record KvDecodeResult(
+            double[] logits,
+            List<float[][][]> nextPastKV  // null nếu model không output KV cache
+    ) {
     }
 
     private record TopToken(long id, double logProbability) {

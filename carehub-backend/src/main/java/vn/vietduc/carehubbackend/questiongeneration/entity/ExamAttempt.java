@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -71,6 +72,10 @@ public class ExamAttempt extends BaseEntity {
     private Integer totalQuestions;
 
     private Boolean passed;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "classification", length = 24)
+    private CompetencyLevel classification;
 
     @Column(name = "time_spent_seconds")
     private Integer timeSpentSeconds;

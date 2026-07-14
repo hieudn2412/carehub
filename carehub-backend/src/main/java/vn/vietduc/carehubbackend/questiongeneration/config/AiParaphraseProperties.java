@@ -17,8 +17,14 @@ public class AiParaphraseProperties {
     private int maxInputLength = 512;
     private int maxOutputLength = 512;
     private int timeoutSeconds = 60;
+    private int generateTimeoutSeconds = 30;
     private int numBeams = 4;
+    private int maxDecodeLength = 96;
     private int requestedCountDefault = 3;
+    private boolean singlePassEnabled = true;
+    private int poolSize = 2;
+    private long acquireTimeoutMs = 30_000;
+    private boolean kvCacheEnabled = false;
 
     public boolean isVietQuillProvider() {
         return "vietquill".equalsIgnoreCase(provider) || "local".equalsIgnoreCase(provider);

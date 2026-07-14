@@ -15,9 +15,11 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRep
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
+import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
+import vn.vietduc.carehubbackend.user.repository.PositionRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
 
@@ -42,6 +44,8 @@ class ExamAssignmentServiceTest {
     private final ExamPaperRepository examPaperRepository = mock(ExamPaperRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final DepartmentRepository departmentRepository = mock(DepartmentRepository.class);
+    private final PositionRepository positionRepository = mock(PositionRepository.class);
+    private final TrainingGroupRepository trainingGroupRepository = mock(TrainingGroupRepository.class);
     private final NotificationEventPublisher notificationEventPublisher = mock(NotificationEventPublisher.class);
     private ExamAssignmentService service;
 
@@ -54,6 +58,8 @@ class ExamAssignmentServiceTest {
                 examPaperRepository,
                 userRepository,
                 departmentRepository,
+                positionRepository,
+                trainingGroupRepository,
                 notificationEventPublisher
         );
     }
@@ -171,6 +177,9 @@ class ExamAssignmentServiceTest {
                 paper.getId(),
                 List.of(explicitUser.getId()),
                 List.of(department.getId()),
+                null,
+                null,
+                false,
                 null,
                 2,
                 "SCORE_AND_ANSWERS",

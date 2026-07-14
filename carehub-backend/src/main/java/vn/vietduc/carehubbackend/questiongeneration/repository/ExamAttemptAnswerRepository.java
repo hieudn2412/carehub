@@ -44,4 +44,31 @@ public interface ExamAttemptAnswerRepository extends JpaRepository<ExamAttemptAn
             ORDER BY COUNT(answer) DESC
             """)
     List<QuestionItemAnalysisProjection> analyzeQuestionItems(@Param("statuses") Collection<ExamAttemptStatus> statuses);
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM ExamAttemptAnswer a
+            JOIN a.paperQuestion pq
+            JOIN pq.question q
+            WHERE q.id = :questionId
+              AND a.attempt.id IN :attemptIds
+              AND a.correct = true
+            """)
+    long countByPaperQuestionQuestionIdAndAttemptIdInAndCorrectTrue(
+            @Param("questionId") Long questionId,
+            @Param("attemptIds") java.util.Set<Long> attemptIds);
+
+    @Query("""
+            SELECT COUNT(a)
+            FROM ExamAttemptAnswer a
+            JOIN a.paperQuestion pq
+            JOIN pq.question q
+            WHERE q.id = :questionId
+              AND a.attempt.id IN :attemptIds
+              AND a.selectedAnswer = :selectedAnswer
+            """)
+    long countByPaperQuestionQuestionIdAndAttemptIdInAndSelectedAnswer(
+            @Param("questionId") Long questionId,
+            @Param("attemptIds") java.util.Set<Long> attemptIds,
+            @Param("selectedAnswer") String selectedAnswer);
 }
