@@ -1,9 +1,14 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import vn.vietduc.carehubbackend.common.util.CosineUtil;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
+import vn.vietduc.carehubbackend.questiongeneration.embedding.AnnEmbeddingIndex;
+import vn.vietduc.carehubbackend.questiongeneration.embedding.EmbeddingCache;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
@@ -35,6 +40,8 @@ public class DuplicateCheckService {
     private final DocumentQuestionCandidateRepository candidateRepository;
     private final QuestionBankQuestionRepository questionRepository;
     private final QuestionEmbeddingService questionEmbeddingService;
+    private final EmbeddingCache embeddingCache;
+    private final AnnEmbeddingIndex annIndex;
     private final AiEmbeddingProperties embeddingProperties;
     private final ValidationRulesProperties properties;
 
@@ -71,8 +78,9 @@ public class DuplicateCheckService {
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
+        String checker = "e5";
 
-        List<QuestionEmbeddingSnapshot> embeddings = questionEmbeddingService.approvedStemEmbeddings();
+        List<QuestionEmbeddingSnapshot> embeddings = embeddingCache.approvedStemEmbeddings();
         if (embeddings.isEmpty()) {
             DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
             return new DuplicateCheckResult(
@@ -86,15 +94,53 @@ public class DuplicateCheckService {
             );
         }
 
-        for (QuestionEmbeddingSnapshot embedding : embeddings) {
-            if (excludedQuestionIds.contains(embedding.questionId())) {
-                continue;
+        // Thử ANN search trước nếu index sẵn sàng
+        if (annIndex.isReady()) {
+            AnnEmbeddingIndex.SearchResult annBest = annIndex.searchBestMatch(
+                    candidateVector,
+                    properties.getDuplicate().getReviewMin(),
+                    embeddingProperties.getAnnSearchK()
+            );
+            if (annBest != null && !excludedQuestionIds.contains(annBest.questionId())) {
+                best = annBest.similarity();
+                matchedId = annBest.questionId();
+                matchedStem = annBest.stem();
+                checker = "e5-ann";
             }
-            double score = cosine(candidateVector, embedding.vector());
-            if (score > best) {
-                best = score;
-                matchedId = embedding.questionId();
-                matchedStem = embedding.stem();
+
+            // Nếu ANN không tìm thấy strong match, fallback về exact search
+            if (best < properties.getDuplicate().getStrongMin()) {
+                for (QuestionEmbeddingSnapshot embedding : embeddings) {
+                    if (excludedQuestionIds.contains(embedding.questionId())) {
+                        continue;
+                    }
+                    double score = CosineUtil.cosine(candidateVector, embedding.vector());
+                    if (score > best) {
+                        best = score;
+                        matchedId = embedding.questionId();
+                        matchedStem = embedding.stem();
+                    }
+                    if (best >= properties.getDuplicate().getStrongMin()) {
+                        checker = "e5-exact";
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Exact search (ANN chưa sẵn sàng)
+            for (QuestionEmbeddingSnapshot embedding : embeddings) {
+                if (excludedQuestionIds.contains(embedding.questionId())) {
+                    continue;
+                }
+                double score = CosineUtil.cosine(candidateVector, embedding.vector());
+                if (score > best) {
+                    best = score;
+                    matchedId = embedding.questionId();
+                    matchedStem = embedding.stem();
+                }
+                if (best >= properties.getDuplicate().getStrongMin()) {
+                    break;
+                }
             }
         }
 
@@ -109,7 +155,7 @@ public class DuplicateCheckService {
                 best >= properties.getDuplicate().getStrongMin(),
                 best >= properties.getDuplicate().getReviewMin(),
                 null,
-                "e5"
+                checker
         );
     }
 
@@ -117,28 +163,54 @@ public class DuplicateCheckService {
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
+        int page = 0;
+        int pageSize = Math.max(1, embeddingProperties.getLexicalPageSize());
 
-        for (QuestionBankQuestion question : questionRepository.findTop100ByStatus(QuestionBankStatus.APPROVED)) {
-            if (excludedQuestionIds.contains(question.getId())) {
-                continue;
+        // Paginate qua toàn bộ approved questions
+        List<QuestionBankQuestion> questionPage;
+        do {
+            questionPage = questionRepository.findByStatus(
+                    QuestionBankStatus.APPROVED, PageRequest.of(page++, pageSize));
+            for (QuestionBankQuestion question : questionPage) {
+                if (excludedQuestionIds.contains(question.getId())) {
+                    continue;
+                }
+                double score = similarity(stem, question.getStem());
+                if (score > best) {
+                    best = score;
+                    matchedId = question.getId();
+                    matchedStem = question.getStem();
+                }
+                if (best >= properties.getDuplicate().getStrongMin()) {
+                    break;
+                }
             }
-            double score = similarity(stem, question.getStem());
-            if (score > best) {
-                best = score;
-                matchedId = question.getId();
-                matchedStem = question.getStem();
-            }
-        }
-        for (DocumentQuestionCandidate candidate : candidateRepository.findTop100ByStatusIn(COMPARABLE_CANDIDATE_STATUSES)) {
-            if (excludedCandidateIds.contains(candidate.getId())) {
-                continue;
-            }
-            double score = similarity(stem, candidate.getStem());
-            if (score > best) {
-                best = score;
-                matchedId = candidate.getId();
-                matchedStem = candidate.getStem();
-            }
+        } while (!questionPage.isEmpty() && questionPage.size() == pageSize
+                && best < properties.getDuplicate().getStrongMin());
+
+        // Paginate qua toàn bộ comparable candidates
+        if (best < properties.getDuplicate().getStrongMin()) {
+            int candidatePage = 0;
+            List<DocumentQuestionCandidate> candidatePageResult;
+            do {
+                candidatePageResult = candidateRepository.findByStatusIn(
+                        COMPARABLE_CANDIDATE_STATUSES, PageRequest.of(candidatePage++, pageSize));
+                for (DocumentQuestionCandidate candidate : candidatePageResult) {
+                    if (excludedCandidateIds.contains(candidate.getId())) {
+                        continue;
+                    }
+                    double score = similarity(stem, candidate.getStem());
+                    if (score > best) {
+                        best = score;
+                        matchedId = candidate.getId();
+                        matchedStem = candidate.getStem();
+                    }
+                    if (best >= properties.getDuplicate().getStrongMin()) {
+                        break;
+                    }
+                }
+            } while (!candidatePageResult.isEmpty() && candidatePageResult.size() == pageSize
+                    && best < properties.getDuplicate().getStrongMin());
         }
 
         return new DuplicateCheckResult(
@@ -154,17 +226,30 @@ public class DuplicateCheckService {
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
-        for (DocumentQuestionCandidate candidate : candidateRepository.findTop100ByStatusIn(COMPARABLE_CANDIDATE_STATUSES)) {
-            if (excludedCandidateIds.contains(candidate.getId())) {
-                continue;
+        int page = 0;
+        int pageSize = Math.max(1, embeddingProperties.getLexicalPageSize());
+
+        List<DocumentQuestionCandidate> candidatePage;
+        do {
+            candidatePage = candidateRepository.findByStatusIn(
+                    COMPARABLE_CANDIDATE_STATUSES, PageRequest.of(page++, pageSize));
+            for (DocumentQuestionCandidate candidate : candidatePage) {
+                if (excludedCandidateIds.contains(candidate.getId())) {
+                    continue;
+                }
+                double score = similarity(stem, candidate.getStem());
+                if (score > best) {
+                    best = score;
+                    matchedId = candidate.getId();
+                    matchedStem = candidate.getStem();
+                }
+                if (best >= properties.getDuplicate().getStrongMin()) {
+                    break;
+                }
             }
-            double score = similarity(stem, candidate.getStem());
-            if (score > best) {
-                best = score;
-                matchedId = candidate.getId();
-                matchedStem = candidate.getStem();
-            }
-        }
+        } while (!candidatePage.isEmpty() && candidatePage.size() == pageSize
+                && best < properties.getDuplicate().getStrongMin());
+
         return new DuplicateCheckResult(
                 best,
                 matchedId,
@@ -191,25 +276,6 @@ public class DuplicateCheckService {
         Set<String> union = new HashSet<>(a);
         union.addAll(b);
         return (double) intersection.size() / union.size();
-    }
-
-    private double cosine(double[] left, double[] right) {
-        int size = Math.min(left.length, right.length);
-        if (size == 0) {
-            return 0;
-        }
-        double dot = 0;
-        double leftNorm = 0;
-        double rightNorm = 0;
-        for (int i = 0; i < size; i++) {
-            dot += left[i] * right[i];
-            leftNorm += left[i] * left[i];
-            rightNorm += right[i] * right[i];
-        }
-        if (leftNorm == 0 || rightNorm == 0) {
-            return 0;
-        }
-        return dot / (Math.sqrt(leftNorm) * Math.sqrt(rightNorm));
     }
 
     private Set<String> tokenSet(String text) {

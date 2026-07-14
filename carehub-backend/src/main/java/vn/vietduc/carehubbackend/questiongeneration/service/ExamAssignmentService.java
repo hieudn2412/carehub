@@ -24,6 +24,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
@@ -32,9 +33,14 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRep
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
+import vn.vietduc.carehubbackend.training.entity.TrainingGroup;
+import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
+import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
+import vn.vietduc.carehubbackend.user.repository.PositionRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.io.ByteArrayOutputStream;
@@ -65,6 +71,8 @@ public class ExamAssignmentService {
     private final ExamPaperRepository examPaperRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
+    private final TrainingGroupRepository trainingGroupRepository;
     private final NotificationEventPublisher notificationEventPublisher;
 
     @Transactional(readOnly = true)
@@ -223,9 +231,39 @@ public class ExamAssignmentService {
                 : request.departmentIds().stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        if (uniqueUserIds.isEmpty() && uniqueDepartmentIds.isEmpty()) {
-            throw new BadRequestException("Vui lòng chọn ít nhất một nhân viên hoặc khoa/phòng");
+        Set<Long> uniquePositionIds = request.positionIds() == null
+                ? new LinkedHashSet<>()
+                : request.positionIds().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> uniqueGroupIds = request.groupIds() == null
+                ? new LinkedHashSet<>()
+                : request.groupIds().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        boolean allEmployees = Boolean.TRUE.equals(request.allEmployees());
+
+        if (uniqueUserIds.isEmpty() && uniqueDepartmentIds.isEmpty()
+                && uniquePositionIds.isEmpty() && uniqueGroupIds.isEmpty() && !allEmployees) {
+            throw new BadRequestException("Vui lòng chọn ít nhất một nhân viên, khoa/phòng, chức danh, nhóm hoặc toàn bệnh viện");
         }
+
+        // Track source type for each user
+        Map<Long, AssignmentTargetType> targetTypeByUserId = new LinkedHashMap<>();
+        Map<Long, Long> sourceIdByUserId = new LinkedHashMap<>();
+
+        // ALL_EMPLOYEES: get all active users
+        if (allEmployees) {
+            userRepository.findByIsDeletedFalseAndStatus(UserStatus.ACTIVE).stream()
+                    .map(User::getId)
+                    .filter(Objects::nonNull)
+                    .forEach(id -> {
+                        uniqueUserIds.add(id);
+                        targetTypeByUserId.put(id, AssignmentTargetType.ALL_EMPLOYEES);
+                    });
+        }
+
+        // Department expansion
         if (!uniqueDepartmentIds.isEmpty()) {
             List<Department> departments = departmentRepository.findAllById(uniqueDepartmentIds);
             if (departments.size() != uniqueDepartmentIds.size()) {
@@ -234,11 +272,54 @@ public class ExamAssignmentService {
             userRepository.findByDepartment_IdInAndIsDeletedFalse(uniqueDepartmentIds).stream()
                     .map(User::getId)
                     .filter(Objects::nonNull)
-                    .forEach(uniqueUserIds::add);
-            if (uniqueUserIds.isEmpty()) {
-                throw new BadRequestException("Không tìm thấy nhân viên thuộc khoa/phòng đã chọn");
+                    .forEach(id -> {
+                        uniqueUserIds.add(id);
+                        targetTypeByUserId.putIfAbsent(id, AssignmentTargetType.EMPLOYEE);
+                    });
+        }
+
+        // Position expansion
+        if (!uniquePositionIds.isEmpty()) {
+            List<Position> positions = positionRepository.findAllById(uniquePositionIds);
+            if (positions.size() != uniquePositionIds.size()) {
+                throw new BadRequestException("Danh sách chức danh phân công không hợp lệ");
+            }
+            List<User> allActive = userRepository.findByIsDeletedFalseAndStatus(UserStatus.ACTIVE);
+            Set<Long> positionIdSet = new LinkedHashSet<>(uniquePositionIds);
+            for (User u : allActive) {
+                if (u.getPosition() != null && positionIdSet.contains(u.getPosition().getId())) {
+                    Long uid = u.getId();
+                    if (uid != null) {
+                        uniqueUserIds.add(uid);
+                        targetTypeByUserId.putIfAbsent(uid, AssignmentTargetType.POSITION);
+                        sourceIdByUserId.putIfAbsent(uid, u.getPosition().getId());
+                    }
+                }
             }
         }
+
+        // Group expansion
+        if (!uniqueGroupIds.isEmpty()) {
+            List<TrainingGroup> groups = trainingGroupRepository.findByIdInAndActiveTrue(uniqueGroupIds);
+            if (groups.size() != uniqueGroupIds.size()) {
+                throw new BadRequestException("Danh sách nhóm đào tạo phân công không hợp lệ");
+            }
+            for (TrainingGroup group : groups) {
+                group.getMembers().stream()
+                        .map(User::getId)
+                        .filter(Objects::nonNull)
+                        .forEach(id -> {
+                            uniqueUserIds.add(id);
+                            targetTypeByUserId.putIfAbsent(id, AssignmentTargetType.GROUP);
+                            sourceIdByUserId.putIfAbsent(id, group.getId());
+                        });
+            }
+        }
+
+        if (uniqueUserIds.isEmpty()) {
+            throw new BadRequestException("Không tìm thấy nhân viên nào để phân công");
+        }
+
         List<User> users = userRepository.findAllById(uniqueUserIds);
         if (users.size() != uniqueUserIds.size()) {
             throw new BadRequestException("Danh sách nhân viên phân công không hợp lệ");
@@ -256,10 +337,18 @@ public class ExamAssignmentService {
                 .createdBy(actor)
                 .openedAt(status == ExamAssignmentStatus.OPEN ? now : null)
                 .build());
-        users.forEach(user -> targetRepository.save(ExamAssignmentTarget.builder()
-                .assignment(assignment)
-                .user(user)
-                .build()));
+        for (User user : users) {
+            AssignmentTargetType targetType = targetTypeByUserId.getOrDefault(user.getId(), AssignmentTargetType.EMPLOYEE);
+            Long sourcePositionId = targetType == AssignmentTargetType.POSITION ? sourceIdByUserId.get(user.getId()) : null;
+            Long sourceGroupId = targetType == AssignmentTargetType.GROUP ? sourceIdByUserId.get(user.getId()) : null;
+            targetRepository.save(ExamAssignmentTarget.builder()
+                    .assignment(assignment)
+                    .user(user)
+                    .targetType(targetType)
+                    .sourcePositionId(sourcePositionId)
+                    .sourceGroupId(sourceGroupId)
+                    .build());
+        }
         if (status == ExamAssignmentStatus.OPEN) {
             users.forEach(user -> publishExamAssigned(assignment, user));
         }

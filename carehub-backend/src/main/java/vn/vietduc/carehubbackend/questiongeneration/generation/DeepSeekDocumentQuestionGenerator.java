@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
@@ -23,10 +23,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenerator {
     private static final String PIPELINE_SINGLE_CALL = "single_call";
@@ -34,32 +34,127 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
 
     private final AiGenerationProperties properties;
     private final ObjectMapper objectMapper;
-    private final AtomicInteger consecutiveFailures = new AtomicInteger();
-    private volatile Instant circuitOpenUntil = Instant.EPOCH;
+    private volatile CircuitState circuitState = CircuitState.CLOSED;
+    private final AtomicInteger failureCount = new AtomicInteger();
+    private final AtomicInteger halfOpenProbeCount = new AtomicInteger();
+    private volatile Instant stateChangedAt = Instant.now();
     private volatile Semaphore callSemaphore;
     private volatile int callSemaphorePermits;
+    private volatile RestClient restClient;
+
+    private enum CircuitState { CLOSED, OPEN, HALF_OPEN }
+
+    private enum DeepSeekErrorType {
+        AUTHENTICATION, RATE_LIMIT, SERVER_ERROR, TIMEOUT, PARSE_ERROR, UNKNOWN
+    }
+
+    public DeepSeekDocumentQuestionGenerator(AiGenerationProperties properties, ObjectMapper objectMapper) {
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public String provider() {
         return "api";
     }
 
+    private RestClient restClient() {
+        RestClient client = this.restClient;
+        if (client == null) {
+            synchronized (this) {
+                if (this.restClient == null) {
+                    this.restClient = buildRestClient();
+                }
+                client = this.restClient;
+            }
+        }
+        return client;
+    }
+
+    private RestClient buildRestClient() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(properties.getConnectTimeoutSeconds()));
+        factory.setReadTimeout(Duration.ofSeconds(properties.getTimeoutSeconds()));
+
+        return RestClient.builder()
+                .baseUrl(properties.getApiBaseUrl())
+                .requestFactory(factory)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
     @Override
     public GeneratedChunkResult generate(GenerationInput input) {
         requireApiKey();
-        RestClient client = RestClient.builder()
-                .baseUrl(properties.getApiBaseUrl())
-                .build();
+        RestClient client = restClient();
 
-        if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
-            return generateSingleCall(client, input);
+        try {
+            if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
+                return generateSingleCallWithModel(client, input, properties.getModel());
+            }
+            return generateMultiStageWithModel(client, input, properties.getModel());
+        } catch (RuntimeException ex) {
+            String fallbackModel = properties.getFallbackModel();
+            if (fallbackModel == null || fallbackModel.isBlank()
+                    || fallbackModel.equals(properties.getModel())) {
+                throw ex;
+            }
+            log.warn("Primary model {} failed, trying fallback model {}: {}",
+                    properties.getModel(), fallbackModel, ex.getMessage());
+            try {
+                if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
+                    return generateSingleCallWithModel(client, input, fallbackModel);
+                }
+                return generateMultiStageWithModel(client, input, fallbackModel);
+            } catch (RuntimeException fallbackEx) {
+                throw new IllegalStateException(
+                        "Cả primary model " + properties.getModel()
+                                + " và fallback model " + fallbackModel + " đều thất bại", fallbackEx);
+            }
         }
-        return generateMultiStage(client, input);
     }
 
-    private GeneratedChunkResult generateSingleCall(RestClient client, GenerationInput input) {
-        DeepSeekCall call = callDeepSeek("single_call", client, singleCallMessages(input));
+    private GeneratedChunkResult generateSingleCallWithModel(RestClient client, GenerationInput input, String model) {
+        DeepSeekCall call = callDeepSeek("single_call", client, singleCallMessages(input), model);
         return parseSingleCallResult(call.content(), call.usage());
+    }
+
+    private GeneratedChunkResult generateMultiStageWithModel(RestClient client, GenerationInput input, String model) {
+        DeepSeekCall knowledgeCall = callDeepSeek("knowledge", client, knowledgeMessages(input), model);
+        List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(knowledgeCall.content());
+        if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
+            return new GeneratedChunkResult(
+                    provider(),
+                    model,
+                    properties.getPromptVersion(),
+                    knowledgeCall.usage(),
+                    knowledgePoints,
+                    List.of()
+            );
+        }
+
+        DeepSeekCall questionCall = callDeepSeek("questions", client, questionMessages(input, knowledgePoints), model);
+        List<GeneratedQuestion> questions = parseQuestions(questionCall.content());
+        LlmUsage usage = knowledgeCall.usage().plus(questionCall.usage());
+
+        if (properties.isLlmValidationEnabled()) {
+            List<GeneratedQuestion> validated = new ArrayList<>();
+            for (GeneratedQuestion question : questions) {
+                DeepSeekCall validationCall = callDeepSeek("validation", client, validationMessages(input, question), model);
+                usage = usage.plus(validationCall.usage());
+                validated.add(withValidation(question, validationCall.content()));
+            }
+            questions = validated;
+        }
+
+        return new GeneratedChunkResult(
+                provider(),
+                model,
+                properties.getPromptVersion(),
+                usage,
+                knowledgePoints,
+                questions
+        );
     }
 
     GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage) {
@@ -68,48 +163,6 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
             questions = List.of();
         }
-        return new GeneratedChunkResult(
-                provider(),
-                properties.getModel(),
-                properties.getPromptVersion(),
-                usage,
-                knowledgePoints,
-                questions
-        );
-    }
-
-    private GeneratedChunkResult generateMultiStage(RestClient client, GenerationInput input) {
-        if (!PIPELINE_MULTI_STAGE.equalsIgnoreCase(properties.getPipelineMode())) {
-            log.warn("Unknown DeepSeek pipelineMode={}, falling back to multi_stage", properties.getPipelineMode());
-        }
-
-        DeepSeekCall knowledgeCall = callDeepSeek("knowledge", client, knowledgeMessages(input));
-        List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(knowledgeCall.content());
-        if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
-            return new GeneratedChunkResult(
-                    provider(),
-                    properties.getModel(),
-                    properties.getPromptVersion(),
-                    knowledgeCall.usage(),
-                    knowledgePoints,
-                    List.of()
-            );
-        }
-
-        DeepSeekCall questionCall = callDeepSeek("questions", client, questionMessages(input, knowledgePoints));
-        List<GeneratedQuestion> questions = parseQuestions(questionCall.content());
-        LlmUsage usage = knowledgeCall.usage().plus(questionCall.usage());
-
-        if (properties.isLlmValidationEnabled()) {
-            List<GeneratedQuestion> validated = new ArrayList<>();
-            for (GeneratedQuestion question : questions) {
-                DeepSeekCall validationCall = callDeepSeek("validation", client, validationMessages(input, question));
-                usage = usage.plus(validationCall.usage());
-                validated.add(withValidation(question, validationCall.content()));
-            }
-            questions = validated;
-        }
-
         return new GeneratedChunkResult(
                 provider(),
                 properties.getModel(),
@@ -298,13 +351,17 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         );
     }
 
-    private DeepSeekCall callDeepSeek(String stage, RestClient client, List<Map<String, String>> messages) {
+    private DeepSeekCall callDeepSeek(String stage, RestClient client,
+                                        List<Map<String, String>> messages, String model) {
         checkCircuitBreaker();
         Semaphore semaphore = callSemaphore();
         acquirePermit(semaphore, stage);
+        DeepSeekErrorType lastErrorType = DeepSeekErrorType.UNKNOWN;
         RuntimeException lastError = null;
+        int httpStatus = 0;
         try {
-            for (int attempt = 0; attempt <= properties.getMaxRetries(); attempt++) {
+            int maxRetries = properties.getMaxRetries();
+            for (int attempt = 0; attempt <= maxRetries; attempt++) {
                 Instant started = Instant.now();
                 try {
                     DeepSeekResponse response = client.post()
@@ -312,7 +369,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             .contentType(MediaType.APPLICATION_JSON)
                             .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
                             .body(Map.of(
-                                    "model", properties.getModel(),
+                                    "model", model,
                                     "messages", messages,
                                     "temperature", properties.getTemperature(),
                                     "max_tokens", properties.getMaxOutputTokens(),
@@ -327,9 +384,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                     }
                     String content = response.choices().get(0).message().content();
                     Usage usage = response.usage();
-                    consecutiveFailures.set(0);
+                    recordSuccess();
                     log.info(
-                            "DeepSeek call completed stage={} attempt={} latencyMs={} promptTokens={} completionTokens={} totalTokens={}",
+                            "DeepSeek call completed model={} stage={} attempt={} latencyMs={} promptTokens={} completionTokens={} totalTokens={}",
+                            model,
                             stage,
                             attempt + 1,
                             latencyMs,
@@ -349,17 +407,32 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                     );
                 } catch (RuntimeException ex) {
                     long latencyMs = Duration.between(started, Instant.now()).toMillis();
+                    lastErrorType = classifyError(ex, httpStatus);
                     log.warn(
-                            "DeepSeek call failed stage={} attempt={} latencyMs={} message={}",
-                            stage,
-                            attempt + 1,
-                            latencyMs,
-                            ex.getMessage()
+                            "DeepSeek call failed model={} stage={} attempt={} latencyMs={} errorType={} message={}",
+                            model, stage, attempt + 1, latencyMs, lastErrorType, ex.getMessage()
                     );
                     lastError = ex;
+                    // Auth errors → không retry
+                    if (lastErrorType == DeepSeekErrorType.AUTHENTICATION) {
+                        break;
+                    }
+                    // Adaptive retry per error type
+                    int typeRetries = retryCountFor(lastErrorType);
+                    if (attempt >= typeRetries) {
+                        break;
+                    }
+                    // Backoff
+                    Duration backoff = retryBackoffFor(lastErrorType, attempt);
+                    try {
+                        Thread.sleep(backoff.toMillis());
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
                 }
             }
-            recordFailure();
+            recordFailure(lastErrorType);
             throw lastError == null ? new IllegalStateException("Không gọi được DeepSeek") : lastError;
         } finally {
             semaphore.release();
@@ -368,41 +441,143 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
 
     private Semaphore callSemaphore() {
         int permits = Math.max(1, properties.getMaxConcurrentCalls());
-        Semaphore current = callSemaphore;
-        if (current == null || callSemaphorePermits != permits) {
-            synchronized (this) {
-                if (callSemaphore == null || callSemaphorePermits != permits) {
-                    callSemaphore = new Semaphore(permits);
-                    callSemaphorePermits = permits;
-                }
-                current = callSemaphore;
-            }
+        Semaphore current = this.callSemaphore;
+        if (current != null && this.callSemaphorePermits == permits) {
+            return current;
         }
-        return current;
+        synchronized (this) {
+            if (this.callSemaphore == null || this.callSemaphorePermits != permits) {
+                this.callSemaphore = new Semaphore(permits);
+                this.callSemaphorePermits = permits;
+            }
+            return this.callSemaphore;
+        }
     }
 
     private void acquirePermit(Semaphore semaphore, String stage) {
         try {
-            semaphore.acquire();
+            long acquireTimeoutSeconds = Math.max(1, properties.getTimeoutSeconds() * 2L);
+            boolean acquired = semaphore.tryAcquire(acquireTimeoutSeconds, TimeUnit.SECONDS);
+            if (!acquired) {
+                throw new IllegalStateException(
+                        "Không acquire được DeepSeek semaphore sau " + acquireTimeoutSeconds
+                                + "s. Tất cả " + properties.getMaxConcurrentCalls() + " permits đang bận. Stage=" + stage);
+            }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Bị ngắt khi chờ giới hạn gọi DeepSeek stage=" + stage, ex);
         }
     }
 
+    // ── Half-open Circuit Breaker ──
+
+    private static final int HALF_OPEN_MAX_PROBES = 2;
+
     private void checkCircuitBreaker() {
-        if (Instant.now().isBefore(circuitOpenUntil)) {
-            throw new IllegalStateException("DeepSeek circuit breaker đang mở đến " + circuitOpenUntil);
+        CircuitState state = circuitState;
+        Instant now = Instant.now();
+
+        switch (state) {
+            case CLOSED:
+                return;
+
+            case OPEN:
+                long cooldownSeconds = Math.max(1, properties.getCircuitBreakerCooldownSeconds());
+                if (now.isAfter(stateChangedAt.plusSeconds(cooldownSeconds))) {
+                    circuitState = CircuitState.HALF_OPEN;
+                    halfOpenProbeCount.set(0);
+                    stateChangedAt = now;
+                    log.info("DeepSeek circuit breaker: OPEN → HALF_OPEN");
+                    return;
+                }
+                throw new IllegalStateException(
+                        "DeepSeek circuit breaker OPEN đến "
+                                + stateChangedAt.plusSeconds(cooldownSeconds));
+
+            case HALF_OPEN:
+                if (halfOpenProbeCount.incrementAndGet() <= HALF_OPEN_MAX_PROBES) {
+                    return;
+                }
+                throw new IllegalStateException(
+                        "DeepSeek circuit breaker HALF_OPEN, đã đạt max probes=" + HALF_OPEN_MAX_PROBES);
         }
     }
 
-    private void recordFailure() {
-        int failures = consecutiveFailures.incrementAndGet();
-        if (failures >= Math.max(1, properties.getCircuitBreakerFailureThreshold())) {
-            circuitOpenUntil = Instant.now().plusSeconds(Math.max(1, properties.getCircuitBreakerCooldownSeconds()));
-            consecutiveFailures.set(0);
-            log.warn("DeepSeek circuit breaker opened until={}", circuitOpenUntil);
+    private void recordSuccess() {
+        CircuitState state = circuitState;
+        if (state == CircuitState.HALF_OPEN) {
+            circuitState = CircuitState.CLOSED;
+            failureCount.set(0);
+            stateChangedAt = Instant.now();
+            log.info("DeepSeek circuit breaker: HALF_OPEN → CLOSED (probe succeeded)");
+        } else if (state == CircuitState.CLOSED) {
+            failureCount.set(0);
         }
+    }
+
+    private void recordFailure(DeepSeekErrorType errorType) {
+        if (errorType == DeepSeekErrorType.AUTHENTICATION) {
+            log.error("DeepSeek authentication error — check API key");
+            return;
+        }
+        if (errorType == DeepSeekErrorType.RATE_LIMIT) {
+            log.warn("DeepSeek rate limited, backing off");
+        }
+
+        CircuitState state = circuitState;
+        if (state == CircuitState.HALF_OPEN) {
+            circuitState = CircuitState.OPEN;
+            stateChangedAt = Instant.now();
+            log.warn("DeepSeek circuit breaker: HALF_OPEN → OPEN (probe failed)");
+            return;
+        }
+
+        int failures = failureCount.incrementAndGet();
+        if (state == CircuitState.CLOSED
+                && failures >= Math.max(1, properties.getCircuitBreakerFailureThreshold())) {
+            circuitState = CircuitState.OPEN;
+            stateChangedAt = Instant.now();
+            log.warn("DeepSeek circuit breaker: CLOSED → OPEN ({} consecutive failures)", failures);
+        }
+    }
+
+    // ── Error Classification ──
+
+    private DeepSeekErrorType classifyError(Throwable ex, int httpStatus) {
+        return switch (httpStatus) {
+            case 401, 403 -> DeepSeekErrorType.AUTHENTICATION;
+            case 429 -> DeepSeekErrorType.RATE_LIMIT;
+            case 500, 502, 503, 504 -> DeepSeekErrorType.SERVER_ERROR;
+            default -> {
+                if (ex instanceof java.net.SocketTimeoutException
+                        || ex instanceof java.util.concurrent.TimeoutException) {
+                    yield DeepSeekErrorType.TIMEOUT;
+                }
+                if (ex instanceof IllegalStateException
+                        && ex.getMessage() != null
+                        && ex.getMessage().contains("JSON")) {
+                    yield DeepSeekErrorType.PARSE_ERROR;
+                }
+                yield DeepSeekErrorType.UNKNOWN;
+            }
+        };
+    }
+
+    private int retryCountFor(DeepSeekErrorType errorType) {
+        return switch (errorType) {
+            case AUTHENTICATION -> 0;
+            case RATE_LIMIT -> 3;
+            case SERVER_ERROR, TIMEOUT, UNKNOWN -> properties.getMaxRetries();
+            case PARSE_ERROR -> 1;
+        };
+    }
+
+    private Duration retryBackoffFor(DeepSeekErrorType errorType, int attempt) {
+        return switch (errorType) {
+            case RATE_LIMIT -> Duration.ofSeconds((long) Math.pow(2, attempt + 2));  // 4s, 8s, 16s
+            case SERVER_ERROR -> Duration.ofMillis(500L * (long) Math.pow(2, attempt));
+            default -> Duration.ofMillis(200L * (long) Math.pow(2, attempt));
+        };
     }
 
     private List<GeneratedKnowledgePoint> parseKnowledgePoints(String json) {

@@ -34,12 +34,15 @@ class QuestionEmbeddingServiceTest {
     void setUp() {
         properties.setProvider("e5");
         properties.setModel("intfloat/multilingual-e5-small");
+        properties.setBatchEnabled(false); // Dùng sequential để test đơn giản
+        EmbeddingCache embeddingCache = mock(EmbeddingCache.class);
         service = new QuestionEmbeddingService(
                 embeddingRepository,
                 questionRepository,
                 embeddingModelService,
                 properties,
-                new ObjectMapper()
+                new ObjectMapper(),
+                embeddingCache
         );
         when(embeddingRepository.findFirstByQuestionAndTextTypeAndEmbeddingModelAndInputTextHash(
                 any(QuestionBankQuestion.class),

@@ -34,10 +34,15 @@ class VietQuillParaphraseModelSmokeTest {
         properties.setPreload(false);
         properties.setMaxOutputLength(256);
         properties.setNumBeams(1);
+        properties.setPoolSize(1);
 
+        VietQuillHandlePool handlePool = new VietQuillHandlePool(properties);
         VietQuillParaphraseModelService service = new VietQuillParaphraseModelService(
                 properties,
-                new ObjectMapper()
+                new ObjectMapper(),
+                new VietQuillPromptBuilder(),
+                new VietQuillMcqParser(),
+                handlePool
         );
         String sourceStem = "Khi xác định người bệnh trước khi tiêm thuốc, điều dưỡng cần làm gì?";
         String sourceOptionA = "Đối chiếu ít nhất hai thông tin nhận diện.";

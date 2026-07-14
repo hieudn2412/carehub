@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
@@ -17,5 +18,9 @@ public interface DocumentQuestionCandidateRepository extends JpaRepository<Docum
             Collection<CandidateStatus> statuses
     );
 
+    /** @deprecated use {@link #findByStatusIn(Collection, Pageable)} with pagination instead */
+    @Deprecated
     List<DocumentQuestionCandidate> findTop100ByStatusIn(Collection<CandidateStatus> statuses);
+
+    List<DocumentQuestionCandidate> findByStatusIn(Collection<CandidateStatus> statuses, Pageable pageable);
 }

@@ -83,6 +83,9 @@ public class DocumentQuestionJob extends BaseEntity {
     @Column(name = "error_message", columnDefinition = "text")
     private String errorMessage;
 
+    @Column(name = "trace_id", length = 16)
+    private String traceId;
+
     @Column(name = "created_by", length = 100)
     private String createdBy;
 }

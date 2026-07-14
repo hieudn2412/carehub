@@ -19,6 +19,19 @@ public class AiEmbeddingProperties {
     private int maxLength = 512;
     private int timeoutSeconds = 30;
     private String fallbackProvider = "lexical";
+    private int dedupPageSize = 500;
+    private int lexicalPageSize = 500;
+    private int cacheTtlMinutes = 30;
+    private boolean cacheWarmupEnabled = true;
+    private boolean annEnabled = true;
+    private int annLshBits = 16;
+    private int annSearchK = 50;
+    private boolean annNeighborBuckets = true;
+    private int batchSize = 32;
+    private boolean batchEnabled = true;
+    private boolean backfillAsync = true;
+    private int intraOpThreads = -1;
+    private int interOpThreads = 1;
 
     public boolean isE5Provider() {
         return "e5".equalsIgnoreCase(provider);

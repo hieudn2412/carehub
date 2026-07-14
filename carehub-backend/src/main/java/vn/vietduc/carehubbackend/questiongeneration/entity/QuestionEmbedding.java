@@ -50,4 +50,7 @@ public class QuestionEmbedding extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "text")
     private String vectorJson;
+
+    @Column(columnDefinition = "bytea")
+    private byte[] vector;
 }

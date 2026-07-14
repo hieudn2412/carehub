@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
@@ -10,7 +11,11 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountB
 import java.util.List;
 
 public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBankQuestion, Long> {
+    /** @deprecated use {@link #findByStatus(QuestionBankStatus, Pageable)} with pagination instead */
+    @Deprecated
     List<QuestionBankQuestion> findTop100ByStatus(QuestionBankStatus status);
+
+    List<QuestionBankQuestion> findByStatus(QuestionBankStatus status, Pageable pageable);
 
     List<QuestionBankQuestion> findTop500ByStatusOrderByIdAsc(QuestionBankStatus status);
 

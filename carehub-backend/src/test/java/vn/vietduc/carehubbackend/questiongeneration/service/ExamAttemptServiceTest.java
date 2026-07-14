@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.springframework.context.ApplicationEventPublisher;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -46,6 +48,8 @@ class ExamAttemptServiceTest {
     private final ExamPaperQuestionRepository paperQuestionRepository = mock(ExamPaperQuestionRepository.class);
     private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
+    private final CompetencyClassificationService classificationService = mock(CompetencyClassificationService.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final AtomicLong ids = new AtomicLong(500);
     private final List<ExamAttemptAnswer> savedAnswers = new ArrayList<>();
     private ExamAttemptService service;
@@ -65,7 +69,9 @@ class ExamAttemptServiceTest {
                 targetRepository,
                 paperQuestionRepository,
                 snapshotRepository,
-                userRepository
+                userRepository,
+                classificationService,
+                eventPublisher
         );
         user = User.builder()
                 .id(10L)
