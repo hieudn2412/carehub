@@ -1,65 +1,113 @@
 import { useEffect, useState } from 'react'
+import { myExamApi } from '../../evaluation/api/myExamApi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
+import { httpClient } from '../../../shared/api/httpClient.js'
+import { tokenStorage } from '../../auth/services/tokenStorage.js'
 
-// Dữ liệu giả lập (Mock data) khớp chính xác với thiết kế mockup
-const MOCK_DASHBOARD_DATA = {
-  summary: {
-    userName: 'Phạm Quốc Bảo',
-    cmeHours: 98,
-    cmeTarget: 120,
-    missingCmeHours: 22,
-    averageScore: 99,
-    examsCompleted: 5,
-    upcomingExamsCount: 1,
-  },
-  upcomingExams: [
-    { id: 1, name: 'Kỹ năng điều dưỡng cơ bản', startDate: '25/06/2026', endDate: '25/06/2026' },
-    { id: 2, name: 'Kiểm soát nhiễm khuẩn', startDate: '25/06/2026', endDate: '25/06/2026' },
-    { id: 3, name: 'Cấp cứu cơ bản', startDate: '25/06/2026', endDate: '25/06/2026' },
-    { id: 4, name: 'Năng lực lâm sàng', startDate: '25/06/2026', endDate: '25/06/2026' },
-  ],
-  activities: [
-    { id: 1, type: 'exam', content: 'Hoàn thành bài thi "Hồi sức tích cực"', time: '1 phút' },
-    { id: 2, type: 'login', content: 'Đăng nhập', time: '9 phút' },
-    { id: 3, type: 'password', content: 'Đổi mật khẩu', time: '1 giờ' },
-    { id: 4, type: 'upload', content: 'Upload minh chứng', time: '5 giờ' },
-  ],
+function authHeaders() {
+  const token = tokenStorage.getAccessToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const now = Date.now()
+  const then = new Date(dateStr).getTime()
+  if (Number.isNaN(then)) return ''
+  const diffMs = now - then
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'vừa xong'
+  if (diffMin < 60) return `${diffMin} phút`
+  const diffHour = Math.floor(diffMin / 60)
+  if (diffHour < 24) return `${diffHour} giờ`
+  const diffDay = Math.floor(diffHour / 24)
+  if (diffDay < 30) return `${diffDay} ngày`
+  const diffMonth = Math.floor(diffDay / 30)
+  return `${diffMonth} tháng`
+}
+
+const ACTIVITY_TYPE_MAP = {
+  EXAM_PASSED: 'EXAM_COMPLETED',
+  EXAM_ASSIGNED: 'EXAM_COMPLETED',
+  CME_HOURS_BELOW_REQUIREMENT: 'UPLOAD',
+  PERSONAL_COMPLIANCE_ISSUE: 'UPLOAD',
 }
 
 export function useDashboard() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // ⚠️ LƯU Ý: Hiện tại Backend chưa viết các API này,
-    // nên ta dùng dữ liệu giả lập (Mock) với độ trễ 500ms để test hiệu ứng Loading.
-    const timer = setTimeout(() => {
-      setData(MOCK_DASHBOARD_DATA)
-      setLoading(false)
-    }, 500)
+    let cancelled = false
 
-    return () => clearTimeout(timer)
+    async function load() {
+      try {
+        const headers = authHeaders()
 
-    /* 
-    // SAU NÀY KHI BACKEND ĐÃ CÓ API, BẠN CHỈ CẦN MỞ COMMENT ĐOẠN CODE DƯỚI ĐÂY:
-    const token = tokenStorage.getAccessToken()
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+        const [assignRes, attemptsRes, notifRes] = await Promise.all([
+          myExamApi.listAssignments().catch(() => ({ data: { data: { content: [] } } })),
+          myExamApi.listAttempts().catch(() => ({ data: { data: { content: [] } } })),
+          httpClient.get('/me/notifications', { headers, params: { page: 0, size: 10 } }).catch(() => ({ data: { data: { content: [] } } })),
+        ])
 
-    Promise.all([
-      httpClient.get('/dashboard/summary', { headers }).then(r => r.data.data),
-      httpClient.get('/dashboard/upcoming-exams', { headers }).then(r => r.data.data),
-      httpClient.get('/dashboard/activities', { headers }).then(r => r.data.data),
-    ])
-      .then(([summary, upcomingExams, activities]) => {
-        setData({ summary, upcomingExams, activities })
-      })
-      .catch(err => {
-        setError(err.message || 'Đã xảy ra lỗi khi tải dữ liệu từ server')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-    */
+        if (cancelled) return
+
+        // Parse assignments
+        const assignments = assignRes.data?.data?.content || assignRes.data?.data || []
+        const openAssignments = Array.isArray(assignments)
+          ? assignments.filter(a => a.status === 'OPEN')
+          : []
+
+        // Parse attempts
+        const attempts = attemptsRes.data?.data?.content || attemptsRes.data?.data || []
+        const attemptList = Array.isArray(attempts) ? attempts : []
+        const gradedAttempts = attemptList.filter(a => a.status === 'GRADED' || a.status === 'SUBMITTED')
+        const avgScore = gradedAttempts.length > 0
+          ? Math.round(gradedAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / gradedAttempts.length)
+          : 0
+        const totalExamsDone = attemptList.length
+
+        // Parse notifications → activities
+        const notifications = notifRes.data?.data?.content || notifRes.data?.data || []
+        const notifList = Array.isArray(notifications) ? notifications : []
+        const activities = notifList.slice(0, 5).map(n => ({
+          id: n.id,
+          type: ACTIVITY_TYPE_MAP[n.eventType] || 'LOGIN',
+          description: n.content || n.title || '',
+          timeAgo: timeAgo(n.createdAt),
+        }))
+
+        // Upcoming exams from open assignments
+        const upcomingExams = openAssignments.slice(0, 4).map(a => ({
+          id: a.id,
+          title: a.examPaperName || a.name || '',
+          startDate: a.createdAt || '',
+          dueDate: a.dueAt || '',
+        }))
+
+        setData({
+          summary: {
+            pendingExams: openAssignments.length,
+            avgScore,
+            totalExamsDone,
+          },
+          upcomingExams,
+          activities,
+        })
+        setError(null)
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading dashboard data', err)
+          setError(err.message || 'Đã xảy ra lỗi khi tải dữ liệu')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { cancelled = true }
   }, [])
 
   return { data, loading, error }

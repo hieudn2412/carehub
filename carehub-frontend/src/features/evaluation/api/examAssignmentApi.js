@@ -6,6 +6,24 @@ function authHeaders() {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
 }
 
+export const competencyApi = {
+  getEmployeeClassification(employeeId) {
+    return httpClient.get(`/competency/employees/${employeeId}`, { headers: authHeaders() })
+  },
+
+  getDepartmentClassification(departmentId) {
+    return httpClient.get(`/competency/departments/${departmentId}`, { headers: authHeaders() })
+  },
+
+  getThresholds() {
+    return httpClient.get('/competency/thresholds', { headers: authHeaders() })
+  },
+
+  updateThresholds(payload) {
+    return httpClient.put('/competency/thresholds', payload, { headers: authHeaders() })
+  },
+}
+
 export const examAssignmentApi = {
   listAssignments(params) {
     return httpClient.get('/exam-assignments', {

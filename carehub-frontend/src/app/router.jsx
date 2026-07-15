@@ -43,11 +43,18 @@ import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocum
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
 import ParaphraseJobReviewPage from '../features/evaluation/pages/ParaphraseJobReviewPage.jsx'
-
+import CompetencyThresholdPage from '../features/evaluation/pages/CompetencyThresholdPage.jsx'
+import CompetencyDepartmentPage from '../features/evaluation/pages/CompetencyDepartmentPage.jsx'
+import PromptTemplateListPage from '../features/evaluation/pages/PromptTemplateListPage.jsx'
+import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateFormPage.jsx'
+import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
+import AdminProfilePage from '../features/admin/pages/AdminProfilePage.jsx'
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
+import ChecklistListScreen from '../features/staff/pages/ChecklistListScreen.jsx'
+import ChecklistFormScreen from '../features/staff/pages/ChecklistFormScreen.jsx'
 import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
 import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
@@ -202,6 +209,12 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
       <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
+      <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
+      <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
+      <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
+      <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
+      <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
+      <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
 
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
 
@@ -259,12 +272,7 @@ function AppRouter() {
       />
       <Route
         path="/admin/profile"
-        element={adminElement(
-          <ComingSoonPage
-            title="Hồ sơ cá nhân"
-            breadcrumbs={[{ label: 'Tài khoản tôi' }, { label: 'Hồ sơ cá nhân' }]}
-          />
-        )}
+        element={adminElement(<AdminProfilePage />)}
       />
 
       {/* Manager Specific Routes */}
@@ -293,6 +301,8 @@ function AppRouter() {
 
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={protectedElement(<StaffDashboard />)} />
+      <Route path="/staff/checklists" element={protectedElement(<ChecklistListScreen />)} />
+      <Route path="/staff/checklists/:id" element={protectedElement(<ChecklistFormScreen />)} />
       <Route path="/staff/profile" element={protectedElement(<ProfileStaffScreen />)} />
       <Route path="/staff/notifications" element={protectedElement(<NotificationsStaffScreen />)} />
       <Route path="*" element={<Navigate to={AUTH_ROUTES.login} replace />} />

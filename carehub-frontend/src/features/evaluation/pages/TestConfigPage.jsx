@@ -19,6 +19,7 @@ const DEFAULT_FORM = {
   maxRetakes: 3,
   shuffleQuestions: true,
   shuffleOptions: true,
+  selectionStrategy: 'RANDOM',
   questionSetId: '',
   distributions: [],
 }
@@ -58,6 +59,7 @@ function TestConfigPage() {
       maxRetakes: config.maxRetakes ?? 3,
       shuffleQuestions: config.shuffleQuestions !== false,
       shuffleOptions: config.shuffleOptions !== false,
+      selectionStrategy: config.selectionStrategy || 'RANDOM',
       questionSetId: config.questionSetId ? String(config.questionSetId) : '',
       distributions: (config.distributions || []).map((item, index) => ({
         id: item.id || `${item.categoryId || 'all'}-${index}`,
@@ -119,6 +121,7 @@ function TestConfigPage() {
       maxRetakes: Number(form.maxRetakes),
       shuffleQuestions: form.shuffleQuestions,
       shuffleOptions: form.shuffleOptions,
+      selectionStrategy: form.selectionStrategy,
       status: nextStatus,
       distributions: form.distributions.map((item) => ({
         categoryId: item.categoryId ? Number(item.categoryId) : null,
@@ -353,6 +356,17 @@ function TestConfigPage() {
                         <span className="tcf-field-label">Số lần thi lại tối đa</span>
                       </div>
                       <input type="number" className="tcf-field-input" min="0" required value={form.maxRetakes} onChange={(event) => updateForm('maxRetakes', event.target.value)} />
+                    </div>
+
+                    <div className="tcf-field-row">
+                      <div className="tcf-field-left">
+                        <span className="tcf-field-label">Chiến lược chọn câu hỏi</span>
+                        <span className="tcf-field-subtext">RANDOM: chọn ngẫu nhiên. MIXED: câu bắt buộc + random bổ sung</span>
+                      </div>
+                      <select className="tcf-field-select" value={form.selectionStrategy} onChange={(event) => updateForm('selectionStrategy', event.target.value)}>
+                        <option value="RANDOM">RANDOM - Ngẫu nhiên</option>
+                        <option value="MIXED">MIXED - Kết hợp (bắt buộc + ngẫu nhiên)</option>
+                      </select>
                     </div>
                   </div>
 
