@@ -10,6 +10,7 @@ import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import '../styles/AdminHeader.css'
 
 function getFallbackLink(label, roles = []) {
@@ -214,15 +215,12 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
           )}
         </div>
 
-        <div className="dashboard-header__profile">
-          <div className="dashboard-header__avatar">
-            {avatarLetter}
-          </div>
-          <div className="dashboard-header__info">
-            <p className="dashboard-header__name">{displayName}</p>
-            <span className="dashboard-header__role">{displayRole}</span>
-          </div>
-        </div>
+        <AccountDropdown
+          avatarLetter={avatarLetter}
+          displayName={displayName}
+          displayRole={displayRole}
+          profilePath="/admin/profile"
+        />
       </div>
     </header>
   )

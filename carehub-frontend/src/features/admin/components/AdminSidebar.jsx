@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -16,16 +16,16 @@ import {
   BookOutlined,
   AuditOutlined,
   CalculatorOutlined,
-  AimOutlined,
   FileSearchOutlined,
   ScheduleOutlined,
   TrophyOutlined,
   BarChartOutlined,
   LineChartOutlined,
   DownloadOutlined,
-  BellOutlined,
   MailOutlined,
   UserOutlined,
+  AppstoreOutlined,
+  DownOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -69,35 +69,11 @@ const navSections = [
       { icon: <CheckSquareOutlined />, label: 'Bảng kiểm', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
-      { icon: <AimOutlined />, label: 'Mục tiêu chất lượng', path: '/admin/quality/targets' },
     ],
   },
   {
     label: 'ĐÁNH GIÁ',
     items: [
-      {
-        icon: <BarChartOutlined />,
-        label: 'Dashboard đánh giá',
-        path: '/admin/evaluation/dashboard',
-        requiredPermissions: [
-          EVALUATION_PERMISSION.resultViewer,
-          EVALUATION_PERMISSION.questionReviewer,
-          EVALUATION_PERMISSION.questionSetManager,
-          EVALUATION_PERMISSION.examPublisher,
-        ],
-      },
-      {
-        icon: <HistoryOutlined />,
-        label: 'Audit đánh giá',
-        path: '/admin/evaluation/audit-logs',
-        requiredPermissions: [EVALUATION_PERMISSION.auditViewer],
-      },
-      {
-        icon: <ImportOutlined />,
-        label: 'Lịch sử import',
-        path: '/admin/evaluation/imports',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
-      },
       {
         icon: <FileAddOutlined />,
         label: 'Tạo câu hỏi từ tài liệu',
@@ -128,25 +104,25 @@ const navSections = [
       },
       {
         icon: <AuditOutlined />,
-        label: 'Quy tắc phân loại',
+        label: 'Cấu hình hiển thị kết quả',
         path: '/admin/evaluation/classification-rules',
         requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
       },
       {
         icon: <SlidersOutlined />,
-        label: 'Cấu hình đề kiểm tra',
+        label: 'Cấu hình bài kiểm tra',
         path: '/admin/evaluation/configs',
         requiredPermissions: [EVALUATION_PERMISSION.examConfigManager],
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Bộ đề kiểm tra',
+        label: 'Đề kiểm tra',
         path: '/admin/evaluation/exam-papers',
         requiredPermissions: [EVALUATION_PERMISSION.examPublisher],
       },
       {
         icon: <ScheduleOutlined />,
-        label: 'Phân công kiểm tra',
+        label: 'Giao bài kiểm tra',
         path: '/admin/evaluation/exam-assignments',
         requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
       },
@@ -195,14 +171,23 @@ const navSections = [
     label: 'HỆ THỐNG',
     items: [
       { icon: <SettingOutlined />, label: 'Cấu hình hệ thống', path: '/admin/system-settings' },
-      { icon: <FileTextOutlined />, label: 'System logs', path: '/admin/system-logs' },
-      { icon: <ImportOutlined />, label: 'Import logs', path: '/admin/system/import-logs' },
+      {
+        icon: <HistoryOutlined />,
+        label: 'Audit đánh giá',
+        path: '/admin/evaluation/audit-logs',
+        requiredPermissions: [EVALUATION_PERMISSION.auditViewer],
+      },
+      {
+        icon: <ImportOutlined />,
+        label: 'Lịch sử import đánh giá',
+        path: '/admin/evaluation/imports',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor, EVALUATION_PERMISSION.questionReviewer],
+      },
     ],
   },
   {
     label: 'THÔNG BÁO',
     items: [
-      { icon: <BellOutlined />, label: 'Thông báo của tôi', path: '/staff/notifications' },
       { icon: <SettingOutlined />, label: 'Cấu hình thông báo', path: '/admin/notifications/settings' },
       { icon: <MailOutlined />, label: 'Mẫu email', path: '/admin/notifications/email-templates' },
     ],
@@ -215,12 +200,65 @@ const navSections = [
   },
 ]
 
+const navGroups = [
+  {
+    id: 'management',
+    label: 'Quản lý',
+    icon: <AppstoreOutlined />,
+    sections: navSections.slice(0, 7),
+  },
+  {
+    id: 'system',
+    label: 'Hệ thống',
+    icon: <SettingOutlined />,
+    sections: navSections.slice(7),
+  },
+]
+
 function AdminSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
   const navRef = useRef(null)
   const evaluationAccess = getCurrentEvaluationAccess()
+
+  const isLinkActive = (itemPath) => {
+    if (itemPath === '/admin/dashboard') {
+      return currentPath === itemPath
+    }
+    return currentPath === itemPath || currentPath.startsWith(itemPath)
+  }
+
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      sections: group.sections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => (
+            !item.requiredPermissions || evaluationAccess.hasAny(item.requiredPermissions)
+          )),
+        }))
+        .filter((section) => section.items.length > 0),
+    }))
+    .filter((group) => group.sections.length > 0)
+
+  const activeNavigation = visibleGroups
+    .flatMap((group) => group.sections.map((section) => ({ group, section })))
+    .find(({ section }) => section.items.some((item) => isLinkActive(item.path)))
+
+  const getSectionKey = (groupId, sectionLabel) => `${groupId}:${sectionLabel}`
+  const [selectedGroupId, setSelectedGroupId] = useState(
+    activeNavigation?.group.id || visibleGroups[0]?.id || 'management',
+  )
+  const [expandedSectionKey, setExpandedSectionKey] = useState(
+    activeNavigation
+      ? getSectionKey(activeNavigation.group.id, activeNavigation.section.label)
+      : null,
+  )
+
+  const selectedGroup = visibleGroups.find((group) => group.id === selectedGroupId)
+    || visibleGroups[0]
 
   // Restore scroll position
   useEffect(() => {
@@ -239,11 +277,22 @@ function AdminSidebar() {
     navigate(AUTH_ROUTES.login, { replace: true })
   }
 
-  const isLinkActive = (itemPath) => {
-    if (itemPath === '/admin/dashboard') {
-      return currentPath === itemPath
-    }
-    return currentPath === itemPath || currentPath.startsWith(itemPath)
+  const handleGroupSelect = (group) => {
+    setSelectedGroupId(group.id)
+
+    const activeSection = group.sections.find((section) => (
+      section.items.some((item) => isLinkActive(item.path))
+    ))
+    const nextSection = activeSection || group.sections[0]
+    setExpandedSectionKey(
+      nextSection ? getSectionKey(group.id, nextSection.label) : null,
+    )
+  }
+
+  const handleSectionToggle = (sectionKey) => {
+    setExpandedSectionKey((currentKey) => (
+      currentKey === sectionKey ? null : sectionKey
+    ))
   }
 
   return (
@@ -257,30 +306,69 @@ function AdminSidebar() {
       </div>
 
       <nav ref={navRef} onScroll={handleScroll} className="admin-sidebar__nav">
-        {navSections.map((section) => {
-          const visibleItems = section.items.filter((item) => (
-            !item.requiredPermissions || evaluationAccess.hasAny(item.requiredPermissions)
-          ))
-          if (visibleItems.length === 0) {
-            return null
-          }
-          return (
-          <div key={section.label} className="admin-sidebar__section">
-            <p className="admin-sidebar__section-label">{section.label}</p>
-            {visibleItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={() =>
-                  `admin-sidebar__item ${isLinkActive(item.path) ? 'admin-sidebar__item--active' : ''}`
-                }
+        <div className="admin-sidebar__group-switch" role="tablist" aria-label="Nhóm điều hướng">
+          {visibleGroups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedGroup?.id === group.id}
+              className={`admin-sidebar__group-button ${
+                selectedGroup?.id === group.id ? 'admin-sidebar__group-button--active' : ''
+              }`}
+              onClick={() => handleGroupSelect(group)}
+            >
+              <span className="admin-sidebar__group-icon">{group.icon}</span>
+              <span>{group.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="admin-sidebar__group-panel" role="tabpanel">
+          {selectedGroup?.sections.map((section) => {
+            const sectionKey = getSectionKey(selectedGroup.id, section.label)
+            const isExpanded = expandedSectionKey === sectionKey
+            const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
+
+            return (
+              <div
+                key={sectionKey}
+                className={`admin-sidebar__section ${
+                  containsActiveItem ? 'admin-sidebar__section--active' : ''
+                }`}
               >
-                <span className="admin-sidebar__item-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
-        )})}
+                <button
+                  type="button"
+                  className="admin-sidebar__section-trigger"
+                  aria-expanded={isExpanded}
+                  onClick={() => handleSectionToggle(sectionKey)}
+                >
+                  <span>{section.label}</span>
+                  <DownOutlined className="admin-sidebar__section-chevron" />
+                </button>
+
+                <div className={`admin-sidebar__section-items ${
+                  isExpanded ? 'admin-sidebar__section-items--open' : ''
+                }`}>
+                  <div className="admin-sidebar__section-items-inner">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={() =>
+                          `admin-sidebar__item ${isLinkActive(item.path) ? 'admin-sidebar__item--active' : ''}`
+                        }
+                      >
+                        <span className="admin-sidebar__item-icon">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </nav>
 
       <div className="admin-sidebar__footer">

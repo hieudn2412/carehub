@@ -909,6 +909,8 @@
 
   .admin-dashboard-page .admin-sidebar__logo > div,
   .admin-dashboard-page .admin-sidebar__section-label,
+  .admin-dashboard-page .admin-sidebar__group-button > span:last-child,
+  .admin-dashboard-page .admin-sidebar__section-trigger,
   .admin-dashboard-page .admin-sidebar__item > span:last-child,
   .admin-dashboard-page .admin-sidebar__logout > span {
     display: none;
@@ -920,6 +922,28 @@
 
   .admin-dashboard-page .admin-sidebar__section {
     display: contents;
+  }
+
+  .admin-dashboard-page .admin-sidebar__group-switch {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .admin-dashboard-page .admin-sidebar__group-button {
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  .admin-dashboard-page .admin-sidebar__section-items {
+    display: block;
+  }
+
+  .admin-dashboard-page .admin-sidebar__section-items-inner,
+  .admin-dashboard-page .admin-sidebar__section-items--open .admin-sidebar__section-items-inner {
+    padding: 0;
   }
 
   .admin-dashboard-page .admin-sidebar__item,

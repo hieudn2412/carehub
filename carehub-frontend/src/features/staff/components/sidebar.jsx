@@ -6,7 +6,6 @@ import {
 
   EditOutlined,
   HistoryOutlined,
-  BellOutlined,
   UserOutlined,
   LogoutOutlined,
   TeamOutlined,
@@ -77,7 +76,6 @@ function Sidebar() {
     {
       label: 'Tài khoản',
       items: [
-        { icon: <BellOutlined />, label: 'Thông báo', path: '/staff/notifications' },
         { icon: <UserOutlined />, label: 'Hồ sơ cá nhân', path: '/staff/profile' },
       ],
     }
