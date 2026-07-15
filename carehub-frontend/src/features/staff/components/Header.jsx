@@ -10,6 +10,7 @@ import { useNotifications } from '../hooks/useNotifications'
 import { staffApi } from '../api/staffApi'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 
 function getFallbackLink(label, roles = []) {
   const isAdm = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
@@ -214,15 +215,12 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
           )}
         </div>
 
-        <div className="dashboard-header__profile">
-          <div className="dashboard-header__avatar">
-            {avatarLetter}
-          </div>
-          <div className="dashboard-header__info">
-            <p className="dashboard-header__name">{displayName}</p>
-            <span className="dashboard-header__role">{displayRole}</span>
-          </div>
-        </div>
+        <AccountDropdown
+          avatarLetter={avatarLetter}
+          displayName={displayName}
+          displayRole={displayRole}
+          profilePath="/staff/profile"
+        />
       </div>
     </header>
   )
