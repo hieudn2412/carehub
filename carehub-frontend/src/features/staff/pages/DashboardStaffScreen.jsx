@@ -7,27 +7,11 @@ import UpcomingExams from '../components/UpcomingExams'
 import RecentActivities from '../components/RecentActivities'
 import { staffApi } from '../api/staffApi'
 import { trainingApi } from '../../training/api/trainingApi'
+import { useDashboard } from '../hooks/useDashboard'
 import '../styles/StaffDashBoardScreen.css'
 
-// ── Mock data, xoá khi có API ──────────────────────────────
-const MOCK = {
-  upcomingExams: [
-    { id: 1, title: 'Kỹ năng điều dưỡng cơ bản', startDate: '2026-06-25', dueDate: '2026-06-25' },
-    { id: 2, title: 'Kiểm soát nhiễm khuẩn',     startDate: '2026-06-25', dueDate: '2026-06-25' },
-    { id: 3, title: 'Cấp cứu cơ bản',             startDate: '2026-06-25', dueDate: '2026-06-25' },
-    { id: 4, title: 'Năng lực lâm sàng',          startDate: '2026-06-25', dueDate: '2026-06-25' },
-  ],
-  activities: [
-    { id: 1, type: 'EXAM_COMPLETED',  description: 'Hoàn thành bài thi "Hồi sức tích cực"', timeAgo: '1 phút' },
-    { id: 2, type: 'LOGIN',           description: 'Đăng nhập',    timeAgo: '9 phút' },
-    { id: 3, type: 'PASSWORD_CHANGE', description: 'Đổi mật khẩu', timeAgo: '1 giờ'  },
-    { id: 4, type: 'UPLOAD',          description: 'Upload minh chứng', timeAgo: '5 giờ' },
-  ],
-}
-// ───────────────────────────────────────────────────────────
-
 function DashboardStaffScreen() {
-  const { upcomingExams, activities } = MOCK
+  const { data: dashboardData, loading: dashboardLoading } = useDashboard()
   const [summary, setSummary] = useState({
     fullName: '',
     pendingExams: 0,
@@ -40,6 +24,18 @@ function DashboardStaffScreen() {
     avgScore: 0,
     totalExamsDone: 0,
   })
+
+  // Merge dashboard hook data into summary
+  useEffect(() => {
+    if (dashboardData?.summary) {
+      setSummary(prev => ({
+        ...prev,
+        pendingExams: dashboardData.summary.pendingExams ?? 0,
+        avgScore: dashboardData.summary.avgScore ?? 0,
+        totalExamsDone: dashboardData.summary.totalExamsDone ?? 0,
+      }))
+    }
+  }, [dashboardData])
 
   useEffect(() => {
     // 1. Fetch user profile
@@ -77,6 +73,9 @@ function DashboardStaffScreen() {
       })
   }, [])
 
+  const upcomingExams = dashboardData?.upcomingExams || []
+  const activities = dashboardData?.activities || []
+
   return (
     <div className="dashboard-layout">
       <Sidebar />
@@ -87,8 +86,17 @@ function DashboardStaffScreen() {
             <WelcomeBanner summary={summary} />
             <StatCards summary={summary} />
             <div className="dashboard__bottom">
-              <UpcomingExams exams={upcomingExams} />
-              <RecentActivities activities={activities} />
+              {dashboardLoading ? (
+                <>
+                  <div className="dashboard-panel"><h3>Đang tải...</h3></div>
+                  <div className="dashboard-panel"><h3>Đang tải...</h3></div>
+                </>
+              ) : (
+                <>
+                  <UpcomingExams exams={upcomingExams} />
+                  <RecentActivities activities={activities} />
+                </>
+              )}
             </div>
           </div>
         </div>

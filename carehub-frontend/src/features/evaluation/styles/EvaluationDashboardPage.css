@@ -51,6 +51,17 @@
   cursor: pointer;
 }
 
+.evd-btn--primary {
+  background: #1e293b;
+  color: #fff;
+  border-color: #1e293b;
+}
+
+.evd-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .evd-metric-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -200,6 +211,22 @@
   padding: 24px;
   text-align: center;
   color: #94a3b8;
+}
+
+.evd-filter-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.evd-filter-input {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 13px;
+  min-width: 160px;
 }
 
 @media (max-width: 1200px) {

@@ -7,9 +7,10 @@ function authHeaders() {
 }
 
 export const evaluationDashboardApi = {
-  getDashboard() {
+  getDashboard(params = {}) {
     return httpClient.get('/evaluation-dashboard', {
       headers: authHeaders(),
+      params,
     })
   },
 
@@ -25,9 +26,24 @@ export const evaluationDashboardApi = {
     })
   },
 
-  getQuestionItemAnalysis() {
+  getQuestionItemAnalysis(params = {}) {
     return httpClient.get('/evaluation-dashboard/question-item-analysis', {
       headers: authHeaders(),
+      params,
+    })
+  },
+
+  getDiscriminationIndex(params = {}) {
+    return httpClient.get('/evaluation-dashboard/discrimination-index', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getWrongAnswerDistribution(params = {}) {
+    return httpClient.get('/evaluation-dashboard/wrong-answer-distribution', {
+      headers: authHeaders(),
+      params,
     })
   },
 }

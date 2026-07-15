@@ -1,0 +1,27 @@
+.cfs-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+.cfs-loading { text-align: center; padding: 60px; color: #64748b; }
+.cfs-error { text-align: center; padding: 60px; }
+.cfs-error p { color: #b91c1c; margin-bottom: 16px; }
+.cfs-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+.cfs-header h2 { margin: 0; color: #0f172a; }
+.cfs-subtitle { margin: 4px 0 0; color: #64748b; font-size: 14px; }
+.cfs-actions { margin-left: auto; display: flex; gap: 8px; }
+.cfs-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.cfs-section-title { margin: 0 0 4px; color: #1e293b; font-size: 16px; }
+.cfs-section-desc { margin: 0 0 16px; color: #94a3b8; font-size: 13px; }
+.cfs-question { padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+.cfs-question--answered { border-left: 3px solid #10b981; padding-left: 13px; }
+.cfs-question-header { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.cfs-question-num { font-weight: 700; color: #475569; }
+.cfs-question-stem { flex: 1; color: #1e293b; font-weight: 500; }
+.cfs-required { color: #ef4444; font-weight: 700; }
+.cfs-answered-badge { color: #10b981; font-weight: 700; }
+.cfs-options { display: flex; flex-direction: column; gap: 6px; margin-left: 24px; }
+.cfs-option { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.cfs-option:hover { background: #f8fafc; }
+.cfs-option--selected { background: #eff6ff; border-color: #3b82f6; }
+.cfs-option input { margin: 0; }
+.cfs-input, .cfs-select, .cfs-textarea { margin-left: 24px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; width: calc(100% - 40px); max-width: 400px; }
+.cfs-textarea { max-width: 600px; resize: vertical; }
+.cfs-readonly-answer { margin-left: 24px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; color: #475569; font-size: 14px; }
+.cfs-empty { text-align: center; padding: 40px; color: #94a3b8; }

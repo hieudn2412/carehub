@@ -69,6 +69,12 @@ function Sidebar() {
       ],
     },
     {
+      label: 'Phiếu kiểm tra',
+      items: [
+        { icon: <CheckSquareOutlined />, label: 'Phiếu được giao', path: '/staff/checklists' },
+      ],
+    },
+    {
       label: 'Tài khoản',
       items: [
         { icon: <BellOutlined />, label: 'Thông báo', path: '/staff/notifications' },

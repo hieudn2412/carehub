@@ -156,6 +156,30 @@ const navSections = [
         path: '/admin/evaluation/exam-attempts',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
+      {
+        icon: <CalculatorOutlined />,
+        label: 'Ngưỡng phân loại',
+        path: '/admin/evaluation/competency-thresholds',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
+      {
+        icon: <BarChartOutlined />,
+        label: 'Phân loại theo khoa',
+        path: '/admin/evaluation/competency',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
+      {
+        icon: <AuditOutlined />,
+        label: 'Prompt Templates',
+        path: '/admin/evaluation/prompt-templates',
+        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
+      },
+      {
+        icon: <TeamOutlined />,
+        label: 'Nhóm đào tạo',
+        path: '/admin/evaluation/training-groups',
+        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
+      },
     ],
   },
   {

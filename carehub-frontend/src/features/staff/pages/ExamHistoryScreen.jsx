@@ -7,6 +7,18 @@ import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 
+const COMPETENCY_COLORS = {
+  NOT_COMPETENT: ['#ef4444', '#fef2f2'],
+  BEGINNER: ['#f59e0b', '#fffbeb'],
+  BASIC: ['#3b82f6', '#eff6ff'],
+  PROFICIENT: ['#10b981', '#ecfdf5'],
+  ADVANCED: ['#8b5cf6', '#f5f3ff'],
+}
+
+function clsColor(level) {
+  return COMPETENCY_COLORS[level] || ['#6b7280', '#f3f4f6']
+}
+
 function ExamHistoryScreen() {
   const { showToast } = useToast()
   const [attempts, setAttempts] = useState([])
@@ -120,6 +132,7 @@ function ExamHistoryScreen() {
                     <th>Tên bài thi</th>
                     <th>Ngày nộp</th>
                     <th>Điểm số</th>
+                    <th>Phân loại</th>
                     <th>Trạng thái</th>
                     <th>Thời gian</th>
                     <th>Lượt</th>
@@ -128,14 +141,29 @@ function ExamHistoryScreen() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="7">Đang tải lịch sử thi...</td></tr>
+                    <tr><td colSpan="8">Đang tải lịch sử thi...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan="7">Chưa có lịch sử thi.</td></tr>
+                    <tr><td colSpan="8">Chưa có lịch sử thi.</td></tr>
                   ) : filtered.map((attempt) => (
                     <tr key={attempt.id}>
                       <td>{attempt.examPaperName}</td>
                       <td>{formatDateTime(attempt.submittedAt)}</td>
                       <td><span className={`eh-score ${attempt.passed ? 'eh-score--pass' : 'eh-score--fail'}`}>{attempt.score ?? '---'}%</span></td>
+                      <td>
+                        {attempt.classification ? (
+                          <span style={{
+                            display: 'inline-block',
+                            padding: '2px 10px',
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: clsColor(attempt.classification)[1],
+                            color: clsColor(attempt.classification)[0],
+                          }}>
+                            {attempt.classificationText || attempt.classification}
+                          </span>
+                        ) : <span style={{ color: '#9ca3af' }}>--</span>}
+                      </td>
                       <td>
                         <span className={`eh-badge ${attempt.passed ? 'eh-badge--pass' : 'eh-badge--fail'}`}>
                           <span className="eh-badge__dot" />

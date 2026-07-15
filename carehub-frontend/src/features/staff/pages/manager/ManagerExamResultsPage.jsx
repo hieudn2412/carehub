@@ -1,26 +1,34 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SearchOutlined, EyeOutlined } from '@ant-design/icons'
+import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [assignments, setAssignments] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  const [examResults] = useState([
-    { id: 1, employeeId: 'NV-001', employeeName: 'Nguyễn Văn An', examTitle: 'Kiểm tra Kỹ năng điều dưỡng cơ bản Q2', date: '02/06/2026', score: 76, result: 'Đạt', color: 'green' },
-    { id: 2, employeeId: 'NV-002', employeeName: 'Trần Thị Bích', examTitle: 'Đánh giá Kiểm soát nhiễm khuẩn định kỳ', date: '01/06/2026', score: 85, result: 'Đạt', color: 'green' },
-    { id: 3, employeeId: 'NV-003', employeeName: 'Lê Văn Cường', examTitle: 'Tập huấn Cấp cứu ngừng tuần hoàn cơ bản', date: '28/05/2026', score: 52, result: 'Chưa đạt', color: 'red' },
-    { id: 5, employeeId: 'NV-005', employeeName: 'Hoàng Minh Đức', examTitle: 'Đánh giá Kiểm soát nhiễm khuẩn định kỳ', date: '25/05/2026', score: 40, result: 'Chưa đạt', color: 'red' },
-  ])
+  useEffect(() => {
+    setLoading(true)
+    examAssignmentApi.listAssignments()
+      .then(res => {
+        const data = res.data?.data?.content || res.data?.data || []
+        setAssignments(Array.isArray(data) ? data : [])
+      })
+      .catch(err => {
+        console.error("Error fetching exam assignments", err)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
-  const filteredResults = examResults.filter(item => 
-    item.examTitle.toLowerCase().includes(search.toLowerCase()) ||
-    item.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-    item.employeeId.toLowerCase().includes(search.toLowerCase())
-  )
+  const filteredResults = assignments.filter(item => {
+    const title = (item.title || item.examTitle || '').toLowerCase()
+    return title.includes(search.toLowerCase())
+  })
 
   return (
     <div className="dashboard-layout">
@@ -48,38 +56,42 @@ function ManagerExamResultsPage() {
             </div>
           </div>
 
-          {/* Table Card */}
+          {/* Loading */}
+          {loading ? (
+            <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
+              <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
+              <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
+            </div>
+          ) : filteredResults.length === 0 ? (
+            <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
+              <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
+            </div>
+          ) : (
           <div className="mgr-card" style={{ padding: 0, overflow: 'hidden' }}>
             <table className="mgr-table">
               <thead>
                 <tr>
-                  <th>Tên bài thi</th>
-                  <th>Nhân viên thực hiện</th>
-                  <th>Ngày hoàn thành</th>
-                  <th>Điểm thi</th>
-                  <th>Kết quả xếp loại</th>
+                  <th>Tên kỳ thi</th>
+                  <th>Ngày tạo</th>
+                  <th>Trạng thái</th>
+                  <th>Hạn nộp</th>
                   <th style={{ width: 80, textAlign: 'center' }}>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredResults.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.examTitle}</td>
-                    <td>
-                      <div style={{ fontWeight: 500 }}>{item.employeeName}</div>
-                      <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeId}</div>
-                    </td>
-                    <td style={{ color: '#475569' }}>{item.date}</td>
-                    <td>
-                      <strong style={{ 
-                        color: item.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
-                        fontSize: 14
-                      }}>
-                        {item.score}%
-                      </strong>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
+                    <td style={{ color: '#475569' }}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
                     </td>
                     <td>
-                      <span className={`mgr-badge mgr-badge--${item.color}`}>{item.result}</span>
+                      <span className={`mgr-badge mgr-badge--${item.status === 'OPEN' ? 'green' : item.status === 'CLOSED' ? 'red' : 'amber'}`}>
+                        {item.status === 'OPEN' ? 'Đang mở' : item.status === 'CLOSED' ? 'Đã đóng' : item.status || '--'}
+                      </span>
+                    </td>
+                    <td style={{ color: '#475569' }}>
+                      {item.dueDate ? new Date(item.dueDate).toLocaleDateString('vi-VN') : '--'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button 
@@ -93,7 +105,7 @@ function ManagerExamResultsPage() {
                           color: '#475569',
                           transition: 'all 0.15s'
                         }}
-                        title="Xem chi tiết bài làm"
+                        title="Xem kết quả"
                         onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
                         onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
                       >
@@ -105,6 +117,7 @@ function ManagerExamResultsPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </div>

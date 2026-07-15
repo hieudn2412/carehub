@@ -114,7 +114,7 @@ public class ExamPassedTrainingListener {
                 "Chúc mừng! Bạn đã đạt bài kiểm tra \"" + examName
                         + "\" với điểm số " + score
                         + " - Phân loại: " + classification + ".",
-                "/staff/exam/results",
+                "/staff/exam/history",
                 "EXAM_PASSED:" + attempt.getId() + ":" + user.getId(),
                 variables
         ));

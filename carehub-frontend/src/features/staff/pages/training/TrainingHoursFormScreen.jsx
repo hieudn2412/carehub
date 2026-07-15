@@ -101,7 +101,7 @@ function TrainingHoursFormScreen() {
     return Object.keys(e).length === 0;
   }
 
-  const handleSave = () => {
+  const saveRecord = (shouldSubmit) => {
     if (!validate()) return
 
     setSaving(true)
@@ -114,6 +114,7 @@ function TrainingHoursFormScreen() {
       description: form.notes || null,
       durationValue: parseFloat(form.hours),
       durationUnit: 'HOUR',
+      status: shouldSubmit ? 'SUBMITTED' : 'DRAFT',
       version: isEditMode ? recordVersion : undefined,
     }
 
@@ -124,19 +125,17 @@ function TrainingHoursFormScreen() {
     apiCall
       .then((res) => {
         const savedRecord = res.data?.data
-        showToast(isEditMode ? "Cập nhật thành công!" : "Tạo mới thành công!", "success")
-        
-        // If creating a new record, automatically submit it to move from DRAFT to SUBMITTED
-        if (!isEditMode && savedRecord && savedRecord.id) {
-          trainingApi.submitRecord(savedRecord.id, { version: savedRecord.version })
+        const recordId = savedRecord?.id || id
+        const recordVer = savedRecord?.version
+
+        if (shouldSubmit) {
+          return trainingApi.submitRecord(recordId, { version: recordVer })
             .then(() => {
-              navigate('/staff/training')
-            })
-            .catch(err => {
-              console.error("Error submitting record", err)
+              showToast("Nộp hồ sơ thành công!", "success")
               navigate('/staff/training')
             })
         } else {
+          showToast(isEditMode ? "Cập nhật bản nháp thành công!" : "Lưu bản nháp thành công!", "success")
           navigate('/staff/training')
         }
       })
@@ -148,6 +147,9 @@ function TrainingHoursFormScreen() {
         setSaving(false)
       })
   }
+
+  const handleSaveDraft = () => saveRecord(false)
+  const handleSaveAndSubmit = () => saveRecord(true)
 
   const fieldStyle = (key) => ({
     width: '100%',
@@ -312,7 +314,24 @@ function TrainingHoursFormScreen() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleSave}
+                      onClick={handleSaveDraft}
+                      style={{
+                        padding: '10px 24px',
+                        border: '1px solid #d1d5db',
+                        borderRadius: 8,
+                        background: '#fff',
+                        color: '#374151',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                      }}
+                      disabled={saving}
+                    >
+                      <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu nháp'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveAndSubmit}
                       style={{
                         padding: '10px 24px',
                         border: 'none',
@@ -325,7 +344,7 @@ function TrainingHoursFormScreen() {
                       }}
                       disabled={saving}
                     >
-                      <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu biểu mẫu'}
+                      <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu và nộp'}
                     </button>
                   </div>
                 </div>
