@@ -21,4 +21,6 @@ public interface TrainingRecordService {
     TrainingRecordDetailResponse update(Long id, TrainingRecordFormRequest request);
 
     TrainingRecordDetailResponse submit(Long id, TrainingRecordSubmitRequest request);
+
+    TrainingRecordDetailResponse returnToDraft(Long id);
 }

@@ -69,7 +69,7 @@ function TrainingStatusScreen() {
         <Header title="Trạng thái đào tạo" />
         <div className="ts-page">
           <p className="ts-page__title">Trạng thái đào tạo</p>
-          <p className="ts-page__sub">Tổng quan về việc tuân thủ CME · Chu kỳ 5 năm</p>
+          <p className="ts-page__sub">Tổng quan về việc tuân thủ giờ đào tạo · Chu kỳ 5 năm</p>
 
           {loading ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
@@ -77,7 +77,7 @@ function TrainingStatusScreen() {
             </div>
           ) : !summary.configured ? (
             <div className="ts-not-configured" role="status">
-              <strong>Phòng ban của bạn không áp dụng yêu cầu CME.</strong>
+              <strong>Phòng ban của bạn không áp dụng yêu cầu giờ đào tạo.</strong>
               <span>Bạn vẫn có thể khai báo và lưu hồ sơ đào tạo, nhưng hệ thống không đánh giá thiếu giờ.</span>
             </div>
           ) : (

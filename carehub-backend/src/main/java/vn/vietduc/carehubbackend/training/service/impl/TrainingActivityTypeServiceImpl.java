@@ -256,7 +256,7 @@ public class TrainingActivityTypeServiceImpl implements TrainingActivityTypeServ
         );
         String property = allowedSorts.get(order.getProperty());
         if (property == null) {
-            throw ValidationException.field("sort", "Unsupported sort field: " + order.getProperty());
+            throw ValidationException.field("sort", "Trường sắp xếp không được hỗ trợ: " + order.getProperty());
         }
         return new Sort.Order(order.getDirection(), property);
     }

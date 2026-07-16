@@ -15,10 +15,10 @@ function WelcomeBanner({ summary }) {
         <h2>Chào mừng trở lại, {summary.fullName} 👋</h2>
         <p>
           {!summary.cmeStatusLoaded
-            ? `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành. Đang tải trạng thái CME...`
+            ? `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành. Đang tải trạng thái giờ đào tạo...`
             : summary.cmeConfigured
-            ? `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành và còn thiếu ${summary.missingCmeHours} giờ CME`
-            : `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành. Phòng ban của bạn không áp dụng yêu cầu CME.`}
+            ? `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành và còn thiếu ${summary.missingCmeHours} giờ đào tạo`
+            : `Hôm nay bạn có ${summary.pendingExams} bài kiểm tra cần hoàn thành. Phòng ban của bạn không áp dụng yêu cầu giờ đào tạo.`}
         </p>
         <span className="welcome-banner__sub">
           Cùng hoàn thành từng bước để duy trì năng lực chuyên môn
@@ -26,7 +26,7 @@ function WelcomeBanner({ summary }) {
         <div className="welcome-banner__badges">
           {summary.cmeConfigured && summary.missingCmeHours > 0 && (
             <span className="badge badge--danger">
-              ⚠ Cảnh báo thiếu giờ CME: {summary.missingCmeHours} giờ
+              ⚠ Cảnh báo thiếu giờ đào tạo: {summary.missingCmeHours} giờ
             </span>
           )}
           {summary.pendingExams > 0 && (

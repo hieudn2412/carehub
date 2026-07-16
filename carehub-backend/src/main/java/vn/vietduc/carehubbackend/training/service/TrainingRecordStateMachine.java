@@ -20,14 +20,15 @@ public class TrainingRecordStateMachine {
 
         return switch (from) {
             case DRAFT -> to == TrainingRecordStatus.SUBMITTED || to == TrainingRecordStatus.CANCELLED;
-            case SUBMITTED -> adminActor && to == TrainingRecordStatus.CANCELLED;
+            case SUBMITTED -> to == TrainingRecordStatus.DRAFT
+                           || (adminActor && to == TrainingRecordStatus.CANCELLED);
             case CANCELLED -> false;
         };
     }
 
     public void requireTransition(TrainingRecordStatus from, TrainingRecordStatus to, boolean adminActor) {
         if (!canTransition(from, to, adminActor)) {
-            throw new BadRequestException("Invalid training record status transition: " + from + " -> " + to);
+            throw new BadRequestException("Không thể chuyển trạng thái hồ sơ đào tạo: " + from + " -> " + to);
         }
     }
 
@@ -37,7 +38,7 @@ public class TrainingRecordStateMachine {
 
     public void requireEditable(TrainingRecordStatus status) {
         if (!isEditable(status)) {
-            throw new BadRequestException("Training record with status " + status + " cannot be edited");
+            throw new BadRequestException("Hồ sơ đào tạo ở trạng thái " + status + " không thể chỉnh sửa");
         }
     }
 }

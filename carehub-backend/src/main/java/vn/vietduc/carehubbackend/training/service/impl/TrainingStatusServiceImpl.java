@@ -92,7 +92,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         User actor = accessPolicy.currentActor();
         Set<String> roleCodes = accessPolicy.currentRoleCodes();
         if (!hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_MANAGER, TrainingAccessPolicy.ROLE_SYSTEM_JOB)) {
-            throw new ForbiddenException("You do not have access to employee training status list");
+            throw new ForbiddenException("Bạn không có quyền truy cập danh sách trạng thái đào tạo nhân viên");
         }
 
         EmployeeTrainingStatusSearchRequest criteria = request == null
@@ -501,7 +501,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 case "workflowStatus" -> comparingValue(EmployeeTrainingRecordLedgerResponse::workflowStatus, order.getDirection());
                 case "sourceType" -> comparingValue(EmployeeTrainingRecordLedgerResponse::sourceType, order.getDirection());
                 case "evidenceCount" -> comparingValue(EmployeeTrainingRecordLedgerResponse::evidenceCount, order.getDirection());
-                default -> throw new IllegalArgumentException("Unsupported employee training records sort property: " + order.getProperty());
+                default -> throw new IllegalArgumentException("Thuộc tính sắp xếp hồ sơ đào tạo không được hỗ trợ: " + order.getProperty());
             };
             comparator = comparator == null ? next : comparator.thenComparing(next);
         }

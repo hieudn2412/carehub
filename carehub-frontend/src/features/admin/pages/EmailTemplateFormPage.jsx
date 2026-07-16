@@ -9,7 +9,7 @@ import '../styles/EmailTemplateFormPage.css'
 
 const EVENT_OPTIONS = {
   CME_HOURS_BELOW_REQUIREMENT: {
-    label: 'Cảnh báo thiếu giờ CME',
+    label: 'Cảnh báo thiếu giờ đào tạo',
     category: 'TRAINING',
     audiences: ['EMPLOYEE', 'MANAGER'],
     variables: ['recipient_name', 'manager_name', 'employee_name', 'employee_code', 'current_hours', 'required_hours', 'missing_hours', 'deadline', 'department'],

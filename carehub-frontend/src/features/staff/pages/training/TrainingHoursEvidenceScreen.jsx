@@ -261,7 +261,7 @@ function TrainingHoursEvidenceScreen() {
                 <div>
                   <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Minh chứng đào tạo</h1>
                   <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 20px' }}>
-                    {record.title} · Quản lý và tải lên tệp minh chứng CME
+                    {record.title} · Quản lý và tải lên tệp minh chứng giờ đào tạo
                   </p>
                 </div>
 

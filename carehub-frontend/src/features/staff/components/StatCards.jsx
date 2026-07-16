@@ -1,5 +1,5 @@
 const STATS_CONFIG = [
-  { key: 'cmeHours',      label: 'Giờ CME',                         mod: 'blue'  },
+  { key: 'cmeHours',      label: 'Giờ đào tạo',                   mod: 'blue'  },
   { key: 'avgScore',      label: 'Điểm TB (năm nay)',  unit: '%',     mod: 'green' },
   { key: 'totalExamsDone',label: 'Số bài thi đã làm',               mod: 'amber' },
 ]
@@ -12,7 +12,7 @@ function StatCards({ summary }) {
         const cmeConfigured = !isCme || summary.cmeConfigured
         const cmeLoading = isCme && !summary.cmeStatusLoaded
         const displayLabel = isCme && summary.cmeCycleYears
-          ? `Giờ CME (${summary.cmeCycleYears} năm)`
+          ? `Giờ đào tạo (${summary.cmeCycleYears} năm)`
           : label
         const displayValue = cmeLoading ? '…' : (cmeConfigured ? summary[key] : '—')
         const displaySub = isCme

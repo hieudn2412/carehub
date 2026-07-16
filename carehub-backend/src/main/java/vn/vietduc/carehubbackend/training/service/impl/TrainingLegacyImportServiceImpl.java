@@ -309,7 +309,7 @@ public class TrainingLegacyImportServiceImpl implements TrainingLegacyImportServ
 
         LocalDate trainingDate = parseDate(stringValue(raw.get("trainingDate")));
         if (trainingDate == null) {
-            errors.add("Training date is missing or invalid");
+            errors.add("Ngày đào tạo bị thiếu hoặc không hợp lệ");
         } else if (isTrainingDateOutOfRange(trainingDate)) {
             errors.add("Training date is outside the accepted legacy migration range");
         } else {
@@ -690,7 +690,7 @@ public class TrainingLegacyImportServiceImpl implements TrainingLegacyImportServ
     private String requiredString(Map<String, Object> data, String key) {
         String value = stringValue(data.get(key));
         if (value == null || value.isBlank()) {
-            throw new BadRequestException("Import row is missing normalized field: " + key);
+            throw new BadRequestException("Dòng import thiếu trường đã chuẩn hóa: " + key);
         }
         return value;
     }

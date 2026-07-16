@@ -51,7 +51,7 @@ function DashboardStaffScreen() {
       })
       .catch(err => console.error("Error loading dashboard profile", err))
 
-    // 2. Fetch CME compliance status so department scope is respected
+    // 2. Fetch training compliance status so department scope is respected
     trainingApi.getMyTrainingStatus()
       .then(res => {
         const status = res.data?.data
@@ -68,7 +68,7 @@ function DashboardStaffScreen() {
         }))
       })
       .catch(err => {
-        console.error("Error loading dashboard CME status", err)
+        console.error("Error loading dashboard training status", err)
         setSummary(prev => ({ ...prev, cmeStatusLoaded: true }))
       })
   }, [])

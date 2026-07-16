@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   CalendarOutlined,
   SaveOutlined,
-  CloseOutlined,
-  ArrowLeftOutlined
+  PaperClipOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursFormScreen() {
@@ -31,6 +31,18 @@ function TrainingHoursFormScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [recordVersion, setRecordVersion] = useState(null)
+
+  // Evidence states
+  const fileInputRef = useRef(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [existingEvidences, setExistingEvidences] = useState([])
+  const [evidencesToDelete, setEvidencesToDelete] = useState([])
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [fileError, setFileError] = useState('')
+
+  const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg']
+  const ALLOWED_EXTS = ['.pdf', '.jpg', '.jpeg', '.png']
+  const MAX_FILE_SIZE = 5 * 1024 * 1024
 
   // Fetch options (activity types) on mount
   useEffect(() => {
@@ -69,6 +81,12 @@ function TrainingHoursFormScreen() {
               notes: record.description || '',
             })
             setRecordVersion(record.version)
+            // Fetch existing evidence
+            trainingApi.listEvidence(id)
+              .then(res => {
+                setExistingEvidences(res.data?.data || [])
+              })
+              .catch(() => {})
           }
         })
         .catch(err => {
@@ -101,55 +119,130 @@ function TrainingHoursFormScreen() {
     return Object.keys(e).length === 0;
   }
 
-  const saveRecord = (shouldSubmit) => {
+  const saveRecord = async (shouldSubmit) => {
     if (!validate()) return
 
     setSaving(true)
-    const payload = {
-      title: form.name,
-      startDate: form.date,
-      declaredHours: parseFloat(form.hours),
-      activityTypeId: form.type ? parseInt(form.type, 10) : null,
-      provider: form.organizer || null,
-      description: form.notes || null,
-      durationValue: parseFloat(form.hours),
-      durationUnit: 'HOUR',
-      status: shouldSubmit ? 'SUBMITTED' : 'DRAFT',
-      version: isEditMode ? recordVersion : undefined,
+
+    // Bước 1: Lưu/cập nhật bản nháp
+    let savedRecord, recordId, recordVer
+    try {
+      const payload = {
+        title: form.name,
+        startDate: form.date,
+        declaredHours: parseFloat(form.hours),
+        activityTypeId: form.type ? parseInt(form.type, 10) : null,
+        provider: form.organizer || null,
+        description: form.notes || null,
+        durationValue: parseFloat(form.hours),
+        durationUnit: 'HOUR',
+        version: isEditMode ? recordVersion : undefined,
+      }
+
+      const res = isEditMode
+        ? await trainingApi.updateRecord(id, payload)
+        : await trainingApi.createRecord(payload)
+
+      savedRecord = res.data?.data
+      recordId = savedRecord?.id || id
+      recordVer = savedRecord?.version
+    } catch (saveErr) {
+      console.error("Error saving record", saveErr)
+      showToast(getApiErrorMessage(saveErr, "Lưu biểu mẫu thất bại. Vui lòng kiểm tra lại thông tin."), "error")
+      setSaving(false)
+      return
     }
 
-    const apiCall = isEditMode
-      ? trainingApi.updateRecord(id, payload)
-      : trainingApi.createRecord(payload)
+    // Bước 2: Xử lý minh chứng (evidence)
+    let failedDeletes = 0
+    for (const ev of evidencesToDelete) {
+      try { await trainingApi.deleteEvidence(recordId, ev.id) } catch (e) { failedDeletes++ }
+    }
 
-    apiCall
-      .then((res) => {
-        const savedRecord = res.data?.data
-        const recordId = savedRecord?.id || id
-        const recordVer = savedRecord?.version
+    let failedUploads = 0
+    if (selectedFiles.length > 0) {
+      for (const file of selectedFiles) {
+        try { await trainingApi.uploadEvidence(recordId, file) } catch (e) { failedUploads++ }
+      }
+    }
 
-        if (shouldSubmit) {
-          return trainingApi.submitRecord(recordId, { version: recordVer })
-            .then(() => {
-              showToast("Nộp hồ sơ thành công!", "success")
-              navigate('/staff/training')
-            })
+    // Bước 3: Nộp hồ sơ nếu cần
+    if (shouldSubmit) {
+      try {
+        const detail = await trainingApi.getRecord(recordId)
+        recordVer = detail.data?.data?.version
+        await trainingApi.submitRecord(recordId, { version: recordVer })
+
+        if (failedUploads > 0) {
+          showToast(`Nộp hồ sơ thành công! (${failedUploads} file minh chứng tải lên thất bại)`, "warning")
         } else {
-          showToast(isEditMode ? "Cập nhật bản nháp thành công!" : "Lưu bản nháp thành công!", "success")
-          navigate('/staff/training')
+          showToast("Nộp hồ sơ thành công!", "success")
         }
-      })
-      .catch(err => {
-        console.error("Error saving record", err)
-        showToast("Lưu biểu mẫu thất bại. Vui lòng kiểm tra lại thông tin.", "error")
-      })
-      .finally(() => {
-        setSaving(false)
-      })
+        navigate('/staff/training')
+      } catch (submitErr) {
+        console.error("Error submitting record", submitErr)
+        // Bản nháp đã được lưu, nhưng nộp thất bại
+        const reason = getApiErrorMessage(submitErr, "lỗi không xác định")
+        showToast(
+          `Đã lưu bản nháp nhưng nộp hồ sơ thất bại: ${reason}. Vui lòng thử lại từ danh sách hồ sơ.`,
+          "error"
+        )
+        navigate('/staff/training')
+      }
+    } else {
+      const uploadedCount = selectedFiles.length - failedUploads
+      if (failedUploads > 0 || failedDeletes > 0) {
+        showToast(`Đã lưu bản nháp (${uploadedCount} file tải lên, ${failedUploads + failedDeletes} thất bại)`, "warning")
+      } else {
+        showToast(isEditMode ? "Cập nhật bản nháp thành công!" : "Lưu bản nháp thành công!", "success")
+      }
+      navigate('/staff/training')
+    }
+
+    setSaving(false)
   }
 
   const handleSaveDraft = () => saveRecord(false)
   const handleSaveAndSubmit = () => saveRecord(true)
+
+  // ── Evidence handlers ──
+  const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); setIsDragOver(true) }
+  const handleDragLeave = () => setIsDragOver(false)
+  const handleDrop = (e) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragOver(false)
+    addFiles(Array.from(e.dataTransfer.files))
+  }
+  const handleFileSelect = (e) => {
+    addFiles(Array.from(e.target.files))
+    e.target.value = ''
+  }
+
+  const addFiles = (files) => {
+    setFileError('')
+    const valid = []
+    for (const file of files) {
+      const ext = '.' + file.name.split('.').pop().toLowerCase()
+      if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
+        setFileError(`File "${file.name}" không đúng định dạng (PDF, JPG, PNG)`)
+        continue
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`File "${file.name}" vượt quá 5MB`)
+        continue
+      }
+      valid.push(file)
+    }
+    setSelectedFiles(prev => [...prev, ...valid])
+  }
+
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeExistingEvidence = (ev) => {
+    setExistingEvidences(prev => prev.filter(e => e.id !== ev.id))
+    setEvidencesToDelete(prev => [...prev, ev])
+  }
 
   const fieldStyle = (key) => ({
     width: '100%',
@@ -224,17 +317,21 @@ function TrainingHoursFormScreen() {
                     </div>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                        Số giờ CME <span style={{ color: '#ef4444' }}>*</span>
+                        Số giờ đào tạo <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         value={form.hours}
                         onChange={e => setForm({ ...form, hours: e.target.value })}
-                        placeholder="Ví dụ: 8"
+                        placeholder="Ví dụ: 1.5, 8, 12.5"
                         style={fieldStyle('hours')}
                       />
-                      {errors.hours && (
+                      {errors.hours ? (
                         <span style={{ color: '#ef4444', fontSize: 12 }}>
                           {typeof errors.hours === 'string' ? errors.hours : 'Bắt buộc nhập số giờ'}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#6b7280', fontSize: 11, marginTop: 4, display: 'block' }}>
+                          Nhập số thập phân, tối thiểu 0.5 giờ
                         </span>
                       )}
                     </div>
@@ -280,7 +377,7 @@ function TrainingHoursFormScreen() {
                   </div>
 
                   {/* Notes */}
-                  <div style={{ marginBottom: 28 }}>
+                  <div style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                       Ghi chú / Mô tả
                     </label>
@@ -293,57 +390,107 @@ function TrainingHoursFormScreen() {
                     />
                   </div>
 
+                  {/* Evidence Section */}
+                  <div style={{ marginBottom: 24 }}>
+                    <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
+                      <PaperClipOutlined style={{ marginRight: 6 }} />Minh chứng đào tạo
+                    </label>
+                    <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>
+                      Kéo thả file vào đây hoặc click để chọn. Hỗ trợ PDF, JPG, PNG (tối đa 5MB/file)
+                    </p>
+
+                    {/* Existing evidences (edit mode) */}
+                    {existingEvidences.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                          File đã tải lên ({existingEvidences.length}):
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {existingEvidences.map(ev => (
+                            <div key={ev.id} className="evidence-chip">
+                              <PaperClipOutlined style={{ fontSize: 12 }} />
+                              <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {ev.originalFilename}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeExistingEvidence(ev)}
+                                className="evidence-chip__remove"
+                                title="Xoá"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* New files preview */}
+                    {selectedFiles.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <p style={{ fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
+                          File sẽ tải lên ({selectedFiles.length}):
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {selectedFiles.map((file, i) => (
+                            <div key={i} className="evidence-chip evidence-chip--new">
+                              <PaperClipOutlined style={{ fontSize: 12 }} />
+                              <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {file.name}
+                              </span>
+                              <span style={{ color: '#6b7280', fontSize: 11 }}>
+                                ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeSelectedFile(i)}
+                                className="evidence-chip__remove"
+                                title="Xoá"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Dropzone */}
+                    <div
+                      className={`evidence-dropzone${isDragOver ? ' evidence-dropzone--active' : ''}`}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: 'none' }}
+                        onChange={handleFileSelect}
+                      />
+                      <PaperClipOutlined style={{ fontSize: 22, color: isDragOver ? '#1aaa84' : '#9ca3af', marginBottom: 8 }} />
+                      <p style={{ margin: 0, fontSize: 13, color: isDragOver ? '#1aaa84' : '#6b7280' }}>
+                        Kéo thả file hoặc <span style={{ color: '#2563eb', fontWeight: 500 }}>click để chọn</span>
+                      </p>
+                    </div>
+                    {fileError && (
+                      <span style={{ color: '#ef4444', fontSize: 12, marginTop: 6, display: 'block' }}>{fileError}</span>
+                    )}
+                  </div>
+
                   {/* Form Actions */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/staff/training')}
-                      style={{
-                        padding: '10px 24px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        background: '#fff',
-                        color: '#374151',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                      disabled={saving}
-                    >
-                      <CloseOutlined /> Huỷ bỏ
+                  <div className="th-form-actions">
+                    <button type="button" className="th-btn-cancel" onClick={() => navigate('/staff/training')} disabled={saving}>
+                      Huỷ bỏ
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveDraft}
-                      style={{
-                        padding: '10px 24px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        background: '#fff',
-                        color: '#374151',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                      disabled={saving}
-                    >
+                    <button type="button" className="th-btn-secondary" onClick={handleSaveDraft} disabled={saving}>
                       <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu nháp'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleSaveAndSubmit}
-                      style={{
-                        padding: '10px 24px',
-                        border: 'none',
-                        borderRadius: 8,
-                        background: '#1aaa84',
-                        color: '#fff',
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                      disabled={saving}
-                    >
+                    <button type="button" className="th-btn-primary" onClick={handleSaveAndSubmit} disabled={saving}>
                       <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu và nộp'}
                     </button>
                   </div>

@@ -69,7 +69,7 @@ function SystemSettingsScreen() {
 
                   <div className="ss-row">
                     <div className="ss-row__text">
-                      <strong>Yêu cầu về số giờ CME mặc định (số giờ / 5 năm)</strong>
+                      <strong>Yêu cầu về số giờ đào tạo mặc định (số giờ / 5 năm)</strong>
                       <span>Áp dụng cho tất cả các khoa phòng, trừ khi có cấu hình riêng cho từng khoa.</span>
                     </div>
                     <input

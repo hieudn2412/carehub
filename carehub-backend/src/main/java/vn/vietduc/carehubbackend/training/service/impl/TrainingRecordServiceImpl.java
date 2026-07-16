@@ -169,7 +169,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         record.setUpdatedByUser(actor);
 
         TrainingRecord saved = recordRepository.save(record);
-        auditService.logRecordChange(saved, TrainingRecordChangeType.CREATED, null, snapshot(saved), actor);
+        safeAuditLog(saved, TrainingRecordChangeType.CREATED, null, actor);
         return detailResponse(saved, duplicateCount);
     }
 
@@ -206,20 +206,56 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     @Override
     @Transactional
     public TrainingRecordDetailResponse submit(Long id, TrainingRecordSubmitRequest request) {
-        TrainingRecord record = findScopedRecord(id);
-        requireEditable(record);
-        requireFreshVersion(record, request == null ? null : request.version());
-        User actor = accessPolicy.currentActor();
-        Map<String, Object> before = snapshot(record);
+        log.info("Bắt đầu nộp hồ sơ id={}", id);
+        try {
+            TrainingRecord record = findScopedRecord(id);
+            log.info("Đã tìm thấy hồ sơ id={}, status={}", id, record.getWorkflowStatus());
+            requireEditable(record);
+            log.info("Hồ sơ đang ở trạng thái có thể chỉnh sửa");
+            requireFreshVersion(record, request == null ? null : request.version());
+            User actor = accessPolicy.currentActor();
+            log.info("Người nộp: userId={}", actor.getId());
+            Map<String, Object> before = snapshot(record);
+            log.info("Đã tạo snapshot trước khi nộp");
 
-        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.SUBMITTED, isAdmin());
-        record.setWorkflowStatus(TrainingRecordStatus.SUBMITTED);
-        record.setSubmittedAt(LocalDateTime.now());
+            stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.SUBMITTED, isAdmin());
+            log.info("Chuyển trạng thái thành công");
+            record.setWorkflowStatus(TrainingRecordStatus.SUBMITTED);
+            record.setSubmittedAt(LocalDateTime.now());
+            record.setUpdatedByUser(actor);
+
+            TrainingRecord saved = recordRepository.save(record);
+            log.info("Đã lưu hồ sơ, version={}", saved.getVersion());
+            safeAuditLog(saved, TrainingRecordChangeType.SUBMITTED, before, actor);
+            log.info("Bắt đầu build detailResponse");
+            TrainingRecordDetailResponse response = detailResponse(saved, 0);
+            log.info("Nộp hồ sơ thành công id={}", id);
+            return response;
+        } catch (Exception e) {
+            log.error("Lỗi khi nộp hồ sơ id={}: {}", id, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse returnToDraft(Long id) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        boolean isAdminUser = isAdmin();
+
+        if (!isAdminUser && !record.getEmployee().getId().equals(actor.getId())) {
+            throw new ForbiddenException("Bạn không có quyền trả hồ sơ này về nháp");
+        }
+
+        Map<String, Object> before = snapshot(record);
+        stateMachine.requireTransition(record.getWorkflowStatus(), TrainingRecordStatus.DRAFT, isAdminUser);
+        record.setWorkflowStatus(TrainingRecordStatus.DRAFT);
+        record.setSubmittedAt(null);
         record.setUpdatedByUser(actor);
 
         TrainingRecord saved = recordRepository.save(record);
-        auditService.logRecordChange(saved, TrainingRecordChangeType.SUBMITTED, before, snapshot(saved), actor);
-
+        safeAuditLog(saved, TrainingRecordChangeType.RETURNED_TO_DRAFT, before, actor);
         return detailResponse(saved, 0);
     }
 
@@ -322,7 +358,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         );
         String property = allowedSorts.get(order.getProperty());
         if (property == null) {
-            throw new BadRequestException("Unsupported sort property: " + order.getProperty());
+            throw new BadRequestException("Thuộc tính sắp xếp không được hỗ trợ: " + order.getProperty());
         }
         return new Sort.Order(order.getDirection(), property);
     }
@@ -363,5 +399,14 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         data.put("editCount", record.getEditCount());
         data.put("version", record.getVersion());
         return data;
+    }
+
+    private void safeAuditLog(TrainingRecord record, TrainingRecordChangeType changeType,
+                              Map<String, Object> before, User actor) {
+        try {
+            auditService.logRecordChange(record, changeType, before, snapshot(record), actor);
+        } catch (Exception e) {
+            log.warn("Không thể ghi nhật ký thay đổi hồ sơ {}: {}", record.getId(), e.getMessage());
+        }
     }
 }

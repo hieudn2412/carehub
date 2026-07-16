@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   EditOutlined,
   PaperClipOutlined,
   ArrowLeftOutlined,
-  SendOutlined
+  SendOutlined,
+  ClockCircleOutlined,
+  EnvironmentOutlined,
+  DownloadOutlined,
+  RollbackOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
@@ -18,78 +22,64 @@ function TrainingHoursDetailScreen() {
   const { showToast } = useToast()
   const [record, setRecord] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [returningToDraft, setReturningToDraft] = useState(false)
 
   const fetchRecord = () => {
     setLoading(true)
     trainingApi.getRecord(id)
-      .then(res => {
-        setRecord(res.data?.data)
-      })
-      .catch(err => {
-        console.error("Error fetching training record", err)
-        setError("Không thể tải thông tin hồ sơ đào tạo.")
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      .then(res => setRecord(res.data?.data))
+      .catch(() => showToast("Không thể tải hồ sơ.", "error"))
+      .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    fetchRecord()
-  }, [id])
+  useEffect(() => { fetchRecord() }, [id])
 
   const handleSubmit = () => {
     if (!record) return
     setSubmitting(true)
     trainingApi.submitRecord(id, { version: record.version })
-      .then(() => {
-        showToast("Nộp hồ sơ thành công!", "success")
-        fetchRecord()
-      })
-      .catch(err => {
-        console.error("Error submitting record", err)
-        showToast("Nộp hồ sơ thất bại. Vui lòng kiểm tra lại.", "error")
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
+      .then(() => { showToast("Nộp hồ sơ thành công!", "success"); fetchRecord() })
+      .catch(() => showToast("Nộp hồ sơ thất bại.", "error"))
+      .finally(() => setSubmitting(false))
   }
 
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'SUBMITTED':
-        return 'Đã nộp'
-      case 'DRAFT':
-        return 'Nháp'
-      case 'CANCELLED':
-        return 'Đã hủy'
-      default:
-        return status
+  const handleDownloadEvidence = async (evidenceId) => {
+    try {
+      const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
+      const url = res.data?.data?.url
+      if (url) {
+        window.open(url, '_blank')
+      }
+    } catch (err) {
+      showToast("Không thể tải minh chứng.", "error")
     }
   }
 
-  const getStatusClass = (status) => {
-    switch (status) {
-      case 'SUBMITTED':
-        return 'training-badge--approved'
-      case 'CANCELLED':
-        return 'training-badge--rejected'
-      case 'DRAFT':
-        return 'training-badge--pending'
-      default:
-        return 'training-badge--pending'
+  const handleReturnToDraft = async () => {
+    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
+    setReturningToDraft(true)
+    try {
+      await trainingApi.returnToDraft(id)
+      showToast("Đã trả hồ sơ về nháp!", "success")
+      fetchRecord()
+    } catch (err) {
+      showToast("Không thể trả hồ sơ về nháp.", "error")
+    } finally {
+      setReturningToDraft(false)
     }
   }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
     const d = new Date(dateStr)
-    const day = String(d.getDate()).padStart(2, '0')
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const year = d.getFullYear()
-    return `${day}/${month}/${year}`
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  }
+
+  const statusCfg = {
+    SUBMITTED: { label: 'Đã nộp', cls: 'th-badge--success' },
+    DRAFT: { label: 'Nháp', cls: 'th-badge--warning' },
+    CANCELLED: { label: 'Đã hủy', cls: 'th-badge--danger' },
   }
 
   return (
@@ -104,139 +94,129 @@ function TrainingHoursDetailScreen() {
           <div className="training-page">
 
             {loading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Đang tải thông tin chi tiết...</div>
-            ) : error || !record ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>{error || 'Không tìm thấy hồ sơ.'}</div>
+              <div className="th-table-state">Đang tải thông tin...</div>
+            ) : !record ? (
+              <div className="th-table-state">Không tìm thấy hồ sơ.</div>
             ) : (
-              <div>
-                <div>
-                  <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết hồ sơ đào tạo</h1>
-                  <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>{record.title} · {formatDate(record.startDate)}</p>
+              <>
+                {/* Back link + Title */}
+                <button className="th-back-link" onClick={() => navigate('/staff/training')}>
+                  <ArrowLeftOutlined /> Quay lại danh sách
+                </button>
+
+                <div className="th-detail-header">
+                  <div className="th-detail-header__left">
+                    <h1 className="th-detail-title">{record.title}</h1>
+                    <div className="th-detail-meta">
+                      <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
+                      {record.provider && <span><EnvironmentOutlined /> {record.provider}</span>}
+                      <span className={`th-badge ${(statusCfg[record.workflowStatus] || statusCfg.DRAFT).cls}`}>
+                        {(statusCfg[record.workflowStatus] || statusCfg.DRAFT).label}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="th-detail-header__right">
+                    <div className="th-detail-hours-ring">
+                      <span className="th-detail-hours-value">{record.declaredHours}h</span>
+                      <span className="th-detail-hours-label">Giờ đào tạo</span>
+                    </div>
+                    <div className="th-detail-evidence-ring">
+                      <span className="th-detail-evidence-value">
+                        <PaperClipOutlined /> {record.evidences?.length || 0}
+                      </span>
+                      <span className="th-detail-evidence-label">Minh chứng</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="detail-card">
-                  {/* Card Header */}
-                  <div className="detail-card__header">
-                    <div>
-                      <h2 className="detail-card__title">{record.title}</h2>
-                      <p className="detail-card__sub">{formatDate(record.startDate)} · {record.declaredHours}h</p>
-                    </div>
-                    <span className={`training-badge ${getStatusClass(record.workflowStatus)}`}>
-                      <span className="training-badge__dot" />
-                      {getStatusLabel(record.workflowStatus)}
-                    </span>
+                {/* Info Grid */}
+                <div className="th-detail-grid">
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Tên khoá đào tạo</label>
+                    <div className="th-detail-text">{record.title}</div>
                   </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Số giờ đào tạo</label>
+                    <div className="th-detail-text th-detail-text--em">{record.declaredHours} giờ</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Ngày bắt đầu</label>
+                    <div className="th-detail-text">{formatDate(record.startDate)}</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Hình thức đào tạo</label>
+                    <div className="th-detail-text">{record.activityTypeName || '-'}</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Đơn vị tổ chức</label>
+                    <div className="th-detail-text">{record.provider || '-'}</div>
+                  </div>
+                  <div className="th-detail-block th-detail-block--full">
+                    <label className="th-detail-label">Ghi chú</label>
+                    <div className="th-detail-text">{record.description || 'Không có ghi chú'}</div>
+                  </div>
+                </div>
 
-                  {/* Detail Fields Grid */}
-                  <div className="detail-grid">
-                    <div className="detail-field">
-                      <label className="detail-field__label">Tên khoá đào tạo</label>
-                      <div className="detail-field__value">{record.title}</div>
-                    </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Giờ</label>
-                      <div className="detail-field__value">{record.declaredHours}h</div>
-                    </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Ngày bắt đầu</label>
-                      <div className="detail-field__value">{formatDate(record.startDate)}</div>
-                    </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Hình thức đào tạo</label>
-                      <div className="detail-field__value">{record.activityTypeName}</div>
-                    </div>
-                    <div className="detail-field">
-                      <label className="detail-field__label">Đơn vị tổ chức</label>
-                      <div className="detail-field__value">{record.provider || '-'}</div>
-                    </div>
-                    <div className="detail-field detail-field--full">
-                      <label className="detail-field__label">Ghi chú / Mô tả</label>
-                      <div className="detail-field__value" style={{ minHeight: 80 }}>{record.description || '-'}</div>
+                {/* Evidence Preview */}
+                {record.evidences && record.evidences.length > 0 && (
+                  <div className="th-detail-section">
+                    <h3 className="th-detail-section-title">
+                      <PaperClipOutlined /> Minh chứng ({record.evidences.length})
+                    </h3>
+                    <div className="th-evidence-grid">
+                      {record.evidences.map(ev => (
+                        <div key={ev.id} className="th-evidence-item">
+                          <PaperClipOutlined className="th-evidence-item__icon" />
+                          <span className="th-evidence-item__name">{ev.originalFilename}</span>
+                          <span className={`th-badge th-badge--${
+                            ev.moderationStatus === 'PASSED' ? 'success'
+                              : ev.moderationStatus === 'FAILED' || ev.moderationStatus === 'ERROR' ? 'danger'
+                              : 'warning'
+                          } th-badge--sm`}>
+                            {ev.moderationStatus === 'PASSED' ? 'Đã duyệt'
+                              : ev.moderationStatus === 'FAILED' ? 'Từ chối'
+                              : ev.moderationStatus === 'ERROR' ? 'Lỗi'
+                              : 'Chờ duyệt'}
+                          </span>
+                          <button
+                            className="th-detail-btn"
+                            onClick={() => handleDownloadEvidence(ev.id)}
+                            style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: '0.8rem' }}
+                          >
+                            <DownloadOutlined /> Tải
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
+                )}
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 28 }}>
-                    <button
-                      onClick={() => navigate('/staff/training')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '10px 20px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        background: '#fff',
-                        color: '#374151',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <ArrowLeftOutlined /> Quay lại
-                    </button>
-                    {record.workflowStatus === 'DRAFT' && (
-                      <button
-                        onClick={() => navigate(`/staff/training/${record.id}/edit`)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 7,
-                          padding: '10px 20px',
-                          border: '1px solid #2563eb',
-                          borderRadius: 8,
-                          background: '#fff',
-                          color: '#2563eb',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <EditOutlined /> Chỉnh sửa
-                      </button>
-                    )}
-                    <button
-                      onClick={() => navigate(`/staff/training/${record.id}/evidence`)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 7,
-                        padding: '10px 20px',
-                        border: '1px solid #374151',
-                        borderRadius: 8,
-                        background: '#fff',
-                        color: '#374151',
-                        fontSize: 14,
-                        fontWeight: 500,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <PaperClipOutlined /> Quản lý minh chứng
-                    </button>
-                    {record.workflowStatus === 'DRAFT' && (
-                      <button
-                        onClick={handleSubmit}
-                        disabled={submitting}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 7,
-                          padding: '10px 20px',
-                          border: 'none',
-                          borderRadius: 8,
-                          background: '#16a34a',
-                          color: '#fff',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                        }}
-                      >
+                {/* Actions */}
+                <div className="th-detail-actions">
+                  {record.workflowStatus === 'DRAFT' && (
+                    <>
+                      <button className="th-detail-btn th-detail-btn--primary" onClick={handleSubmit} disabled={submitting}>
                         <SendOutlined /> {submitting ? 'Đang nộp...' : 'Nộp hồ sơ'}
                       </button>
-                    )}
-                  </div>
+                      <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/edit`)}>
+                        <EditOutlined /> Chỉnh sửa
+                      </button>
+                    </>
+                  )}
+                  {record.workflowStatus === 'SUBMITTED' && (
+                    <button
+                      className="th-detail-btn"
+                      onClick={handleReturnToDraft}
+                      disabled={returningToDraft}
+                    >
+                      <RollbackOutlined /> {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
+                    </button>
+                  )}
+                  <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/evidence`)}>
+                    <PaperClipOutlined /> Quản lý minh chứng
+                  </button>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

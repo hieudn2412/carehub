@@ -19,7 +19,7 @@ const SECTIONS = [
     title: 'Đào tạo',
     items: [{
       eventType: EVENT.cme,
-      title: 'Cảnh báo khi số giờ CME thấp dưới ngưỡng quy định',
+      title: 'Cảnh báo khi số giờ đào tạo thấp dưới ngưỡng quy định',
       description: 'Thông báo cho cả nhân viên và quản lý.',
       cadence: true,
     }],

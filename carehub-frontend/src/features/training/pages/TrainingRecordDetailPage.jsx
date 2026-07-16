@@ -9,6 +9,7 @@ function TrainingRecordDetailPage() {
   const [record, setRecord] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [returningToDraft, setReturningToDraft] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -35,108 +36,144 @@ function TrainingRecordDetailPage() {
     }
   }, [id])
 
+  const handleDownloadEvidence = async (evidenceId) => {
+    try {
+      const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
+      const url = res.data?.data?.url
+      if (url) {
+        window.open(url, '_blank')
+      }
+    } catch (err) {
+      alert('Không thể tải minh chứng')
+    }
+  }
+
+  const handleReturnToDraft = async () => {
+    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
+    setReturningToDraft(true)
+    try {
+      await trainingApi.returnToDraft(id)
+      const response = await trainingApi.getRecord(id)
+      setRecord(response.data.data)
+    } catch (err) {
+      alert(getApiErrorMessage(err, 'Không thể trả hồ sơ về nháp'))
+    } finally {
+      setReturningToDraft(false)
+    }
+  }
+
   return (
     <main className="training-page">
       <section className="training-header">
         <div>
-          <p className="training-eyebrow">Training</p>
-          <h1>{record?.title ?? 'Training Record'}</h1>
+          <p className="training-eyebrow">Đào tạo</p>
+          <h1>{record?.title ?? 'Hồ sơ đào tạo'}</h1>
         </div>
         <div className="training-header-actions">
           {record && record.workflowStatus === 'DRAFT' ? (
             <>
               <Link className="training-button" to={`/training/records/${record.id}/edit`}>
-                Edit
+                Chỉnh sửa
               </Link>
               <Link className="training-button" to={`/training/records/${record.id}/evidence`}>
-                Evidence
+                Minh chứng
               </Link>
             </>
           ) : null}
+          {record && record.workflowStatus === 'SUBMITTED' ? (
+            <button
+              className="training-button"
+              onClick={handleReturnToDraft}
+              disabled={returningToDraft}
+            >
+              {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
+            </button>
+          ) : null}
           <Link className="training-button" to="/training/records">
-            Back
+            Quay lại
           </Link>
         </div>
       </section>
 
-      {isLoading ? <div className="training-panel training-skeleton">Loading record...</div> : null}
+      {isLoading ? <div className="training-panel training-skeleton">Đang tải hồ sơ...</div> : null}
       {errorMessage ? <section className="training-panel training-message training-message--error">{errorMessage}</section> : null}
 
       {record ? (
         <section className="training-detail-grid">
           <article className="training-panel">
-            <h2>Employee</h2>
+            <h2>Nhân viên</h2>
             <dl className="training-definition">
-              <dt>Code</dt>
+              <dt>Mã</dt>
               <dd>{record.employeeCode}</dd>
-              <dt>Name</dt>
+              <dt>Tên</dt>
               <dd>{record.employeeName}</dd>
-              <dt>Department</dt>
+              <dt>Phòng ban</dt>
               <dd>{record.employeeDepartmentNameSnapshot ?? '-'}</dd>
             </dl>
           </article>
 
           <article className="training-panel">
-            <h2>Program</h2>
+            <h2>Chương trình</h2>
             <dl className="training-definition">
-              <dt>Status</dt>
+              <dt>Trạng thái</dt>
               <dd>
                 <span className={`training-badge ${record.workflowStatus === 'SUBMITTED' ? 'is-active' : 'is-inactive'}`}>
-                  {record.workflowStatus}
+                  {record.workflowStatus === 'SUBMITTED' ? 'Đã nộp' : record.workflowStatus === 'DRAFT' ? 'Nháp' : record.workflowStatus}
                 </span>
               </dd>
-              <dt>Activity</dt>
+              <dt>Hình thức</dt>
               <dd>{record.activityTypeName}</dd>
-              <dt>Field</dt>
+              <dt>Lĩnh vực</dt>
               <dd>{record.professionalFieldName ?? '-'}</dd>
-              <dt>Provider</dt>
+              <dt>Đơn vị tổ chức</dt>
               <dd>{record.provider ?? '-'}</dd>
             </dl>
           </article>
 
           <article className="training-panel">
-            <h2>Dates & Hours</h2>
+            <h2>Ngày & Giờ</h2>
             <dl className="training-definition">
-              <dt>Start</dt>
+              <dt>Bắt đầu</dt>
               <dd>{formatDate(record.startDate)} {record.startTime ?? ''}</dd>
-              <dt>End</dt>
+              <dt>Kết thúc</dt>
               <dd>{formatDate(record.endDate)} {record.endTime ?? ''}</dd>
-              <dt>Declared Hours</dt>
+              <dt>Giờ khai báo</dt>
               <dd>{record.declaredHours ?? '-'}</dd>
             </dl>
           </article>
 
           <article className="training-panel">
-            <h2>Source</h2>
+            <h2>Nguồn</h2>
             <dl className="training-definition">
-              <dt>Type</dt>
+              <dt>Loại</dt>
               <dd>{record.sourceType}</dd>
-              <dt>Reference</dt>
+              <dt>Tham chiếu</dt>
               <dd>{record.sourceReference ?? '-'}</dd>
-              <dt>Submitted</dt>
+              <dt>Ngày nộp</dt>
               <dd>{formatDateTime(record.submittedAt)}</dd>
-              <dt>Version</dt>
+              <dt>Phiên bản</dt>
               <dd>{record.version}</dd>
             </dl>
           </article>
 
           <article className="training-panel training-panel--wide">
-            <h2>Description</h2>
+            <h2>Mô tả</h2>
             <p>{record.description || '-'}</p>
           </article>
 
           <article className="training-panel training-panel--wide">
-            <h2>Evidence</h2>
-            {record.evidences.length === 0 ? (
-              <div className="training-empty">No evidence.</div>
+            <h2>Minh chứng</h2>
+            {!record.evidences || record.evidences.length === 0 ? (
+              <div className="training-empty">Không có minh chứng.</div>
             ) : (
               <table className="training-table training-table--compact">
                 <thead>
                   <tr>
-                    <th>File</th>
-                    <th>Type</th>
-                    <th>Size</th>
-                    <th>Moderation</th>
+                    <th>Tệp</th>
+                    <th>Loại</th>
+                    <th>Kích thước</th>
+                    <th>Kiểm duyệt</th>
+                    <th>Tải xuống</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -146,6 +183,15 @@ function TrainingRecordDetailPage() {
                       <td>{item.mimeType}</td>
                       <td>{formatSize(item.fileSizeBytes)}</td>
                       <td>{item.moderationStatus}</td>
+                      <td>
+                        <button
+                          className="training-button"
+                          onClick={() => handleDownloadEvidence(item.id)}
+                          style={{ padding: '2px 10px', fontSize: '0.85rem' }}
+                        >
+                          Tải xuống
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -154,9 +200,9 @@ function TrainingRecordDetailPage() {
           </article>
 
           <article className="training-panel">
-            <h2>Change History</h2>
-            {record.changeHistory.length === 0 ? (
-              <div className="training-empty">No changes.</div>
+            <h2>Lịch sử thay đổi</h2>
+            {!record.changeHistory || record.changeHistory.length === 0 ? (
+              <div className="training-empty">Không có thay đổi.</div>
             ) : (
               <ul className="training-timeline">
                 {record.changeHistory.map((item) => (

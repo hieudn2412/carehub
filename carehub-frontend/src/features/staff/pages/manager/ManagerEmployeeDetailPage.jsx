@@ -125,7 +125,7 @@ function ManagerEmployeeDetailPage() {
                 className="training-button"
                 style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
               >
-                <BookOutlined /> Hồ sơ đào tạo CME
+                <BookOutlined /> Hồ sơ đào tạo
               </button>
               <button 
                 onClick={() => navigate(`/manager/exam-results/${employee.id}`)}
