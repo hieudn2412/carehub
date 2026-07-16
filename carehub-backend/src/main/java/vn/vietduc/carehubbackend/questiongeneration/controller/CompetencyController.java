@@ -8,12 +8,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveCompetencyThresholdsRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByFieldResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyClassificationResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByFieldResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyLevelCountResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.CompetencyThresholdConfig;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
@@ -24,6 +30,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.CompetencyThresho
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.CompetencyClassificationService;
+import vn.vietduc.carehubbackend.questiongeneration.service.CompetencyService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionGenerationLabels;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
@@ -31,6 +38,7 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -50,6 +58,7 @@ public class CompetencyController {
     private final CompetencyClassificationService classificationService;
     private final CompetencyThresholdConfigRepository thresholdRepository;
     private final QuestionCategoryRepository categoryRepository;
+    private final CompetencyService competencyService;
 
     @GetMapping("/employees/{id}")
     @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
@@ -163,6 +172,58 @@ public class CompetencyController {
                         employees
                 )
         ));
+    }
+
+    @GetMapping("/by-field")
+    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencyByFieldResponse>> getByField(
+            @RequestParam Long departmentId,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+        CompetencyByFieldResponse data = competencyService.getByField(departmentId, categoryId, fromDate, toDate);
+        return ResponseEntity.ok(ApiResponse.success("Lấy năng lực theo lĩnh vực thành công", data));
+    }
+
+    @GetMapping("/employees/{employeeId}/by-field")
+    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencyEmployeeByFieldResponse>> getEmployeeByField(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+        CompetencyEmployeeByFieldResponse data = competencyService.getEmployeeByField(employeeId, fromDate, toDate);
+        return ResponseEntity.ok(ApiResponse.success("Lấy năng lực cá nhân theo lĩnh vực thành công", data));
+    }
+
+    @GetMapping("/by-technique")
+    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencyByTechniqueResponse>> getByTechnique(
+            @RequestParam Long departmentId,
+            @RequestParam(required = false) Long formId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+        CompetencyByTechniqueResponse data = competencyService.getByTechnique(departmentId, formId, fromDate, toDate);
+        return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật thành công", data));
+    }
+
+    @GetMapping("/employees/{employeeId}/by-technique")
+    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencyEmployeeByTechniqueResponse>> getEmployeeByTechnique(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+        CompetencyEmployeeByTechniqueResponse data = competencyService.getEmployeeByTechnique(employeeId, fromDate, toDate);
+        return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật cá nhân thành công", data));
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencySummaryResponse>> getSummary(
+            @RequestParam Long departmentId,
+            @RequestParam(required = false) LocalDate fromDate,
+            @RequestParam(required = false) LocalDate toDate) {
+        CompetencySummaryResponse data = competencyService.getSummary(departmentId, fromDate, toDate);
+        return ResponseEntity.ok(ApiResponse.success("Lấy tổng hợp năng lực thành công", data));
     }
 
     @GetMapping("/thresholds")
