@@ -230,7 +230,7 @@ function TrainingRecordEvidencePage() {
     <main className="training-page">
       <section className="training-header">
         <div>
-          <p className="training-eyebrow">Đào tạo liên tục CME</p>
+          <p className="training-eyebrow">Đào tạo liên tục</p>
           <h1>Minh chứng khóa học</h1>
         </div>
         <div className="training-header-actions">

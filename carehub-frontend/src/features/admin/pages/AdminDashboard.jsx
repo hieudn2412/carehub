@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ApartmentOutlined,
+  BookOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   FileDoneOutlined,
@@ -765,6 +766,16 @@ export default function AdminDashboard() {
                 <button onClick={() => navigate('/admin/form-imports/new')} type="button">
                   <span className="is-purple"><ImportOutlined /></span>
                   <div><strong>Import Google Form</strong><small>Đưa biểu mẫu có sẵn vào hệ thống</small></div>
+                  <RightOutlined />
+                </button>
+                <button onClick={() => navigate('/training/employees')} type="button">
+                  <span className="is-blue"><BookOutlined /></span>
+                  <div><strong>Quản lý giờ đào tạo NV</strong><small>Theo dõi và kiểm tra giờ đào tạo nhân viên</small></div>
+                  <RightOutlined />
+                </button>
+                <button onClick={() => navigate('/staff/training')} type="button">
+                  <span className="is-mint"><ClockCircleOutlined /></span>
+                  <div><strong>Giờ đào tạo của tôi</strong><small>Xem và nộp giờ đào tạo cá nhân</small></div>
                   <RightOutlined />
                 </button>
                 <button onClick={() => navigate('/admin/accounts')} type="button">

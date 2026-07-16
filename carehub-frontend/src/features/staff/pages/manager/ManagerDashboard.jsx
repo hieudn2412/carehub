@@ -63,7 +63,7 @@ function ManagerDashboard() {
   const activities = [
     { icon: '✅', text: 'Hệ thống đã đồng bộ danh sách nhân sự thực tế', time: 'Vừa xong' },
     { icon: '📝', text: 'Bài thi KSNK Q2/2026 có 12 lượt làm mới', time: '19/06/2026 08:35' },
-    { icon: '⚠️', text: 'Hệ thống tự động theo dõi tiến độ hoàn thành CME', time: 'Hôm nay' },
+    { icon: '⚠️', text: 'Hệ thống tự động theo dõi tiến độ hoàn thành giờ đào tạo', time: 'Hôm nay' },
     { icon: '✔', text: 'Lịch sử chấm điểm chất lượng tự động cập nhật', time: 'Hôm nay' },
   ]
 
@@ -114,10 +114,17 @@ function ManagerDashboard() {
 
           {/* Navigation Dashboards Grid */}
           <div className="mgr-dashboard-grid" style={{ marginBottom: 24 }}>
-            <div className="mgr-metric-card" style={{ padding: 16 }} onClick={() => navigate('/manager/reports/training')}>
+            <div className="mgr-metric-card" style={{ padding: 16 }} onClick={() => navigate('/training/employees')}>
               <div className="mgr-metric-label" style={{ margin: 0 }}>
-                <span style={{ fontSize: 13.5 }}><BarChartOutlined style={{ marginRight: 8, color: '#3b82f6' }} /> Dashboard Đào tạo</span>
+                <span style={{ fontSize: 13.5 }}><BarChartOutlined style={{ marginRight: 8, color: '#3b82f6' }} /> Giờ đào tạo nhân sự</span>
                 <span className="mgr-badge mgr-badge--blue" style={{ fontSize: 11 }}>78% đạt</span>
+              </div>
+            </div>
+
+            <div className="mgr-metric-card" style={{ padding: 16 }} onClick={() => navigate('/staff/training')}>
+              <div className="mgr-metric-label" style={{ margin: 0 }}>
+                <span style={{ fontSize: 13.5 }}><ClockCircleOutlined style={{ marginRight: 8, color: '#10b981' }} /> Giờ đào tạo của tôi</span>
+                <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Cá nhân</span>
               </div>
             </div>
 

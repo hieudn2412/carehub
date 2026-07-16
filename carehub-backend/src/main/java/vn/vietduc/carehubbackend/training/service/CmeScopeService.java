@@ -1,6 +1,9 @@
 package vn.vietduc.carehubbackend.training.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.ConflictException;
@@ -52,7 +55,7 @@ public class CmeScopeService {
                 .filter(id -> !foundIds.contains(id))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         if (!missingIds.isEmpty()) {
-            throw new ResourceNotFoundException("Departments not found: " + missingIds);
+            throw new ResourceNotFoundException("Không tìm thấy phòng ban: " + missingIds);
         }
 
         if (configuration == null) {
@@ -77,10 +80,17 @@ public class CmeScopeService {
     }
 
     public boolean isApplicable(User employee, Set<Long> applicableDepartmentIds) {
-        return employee != null
-                && employee.getDepartment() != null
-                && applicableDepartmentIds != null
+        if (employee == null || applicableDepartmentIds == null) return false;
+        if (isAdmin(employee)) return true;
+        return employee.getDepartment() != null
                 && applicableDepartmentIds.contains(employee.getDepartment().getId());
+    }
+
+    private boolean isAdmin(User employee) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 
     private CmeApplicableDepartmentsResponse toResponse(CmeScopeConfiguration configuration) {

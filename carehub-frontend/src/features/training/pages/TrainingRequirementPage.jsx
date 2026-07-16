@@ -292,7 +292,7 @@ function TrainingRequirementPage() {
 
       setDeletedOverrideIds([])
       await fetchData()
-      setMessage('Đã lưu yêu cầu và phạm vi phòng ban áp dụng CME!')
+      setMessage('Đã lưu yêu cầu và phạm vi phòng ban áp dụng giờ đào tạo!')
     } catch (error) {
       const apiMessage = error.response?.status === 409
         ? 'Cấu hình phòng ban đã được người khác cập nhật. Dữ liệu mới nhất đã được tải lại.'
@@ -301,7 +301,7 @@ function TrainingRequirementPage() {
       if (scopeSaved) {
         setErrorMessage(`Cấu hình đã được lưu nhưng không thể tải lại dữ liệu: ${apiMessage}`)
       } else if (requirementsSaved) {
-        setErrorMessage(`Yêu cầu CME đã được lưu nhưng phạm vi phòng ban chưa lưu: ${apiMessage}`)
+        setErrorMessage(`Yêu cầu giờ đào tạo đã được lưu nhưng phạm vi phòng ban chưa lưu: ${apiMessage}`)
       } else {
         setErrorMessage(apiMessage)
       }
@@ -403,9 +403,9 @@ function TrainingRequirementPage() {
                 <div className="tr-config-section">
                   <div className="tr-scope-heading">
                     <div>
-                      <h3 className="tr-section-label">PHÒNG BAN ÁP DỤNG CME</h3>
+                      <h3 className="tr-section-label">PHÒNG BAN ÁP DỤNG GIỜ ĐÀO TẠO</h3>
                       <p className="tr-default-desc">
-                        Chỉ nhân viên thuộc các phòng được chọn mới được tính yêu cầu và nhận cảnh báo thiếu giờ CME.
+                        Chỉ nhân viên thuộc các phòng được chọn mới được tính yêu cầu và nhận cảnh báo thiếu giờ đào tạo.
                       </p>
                     </div>
                     <span className="tr-scope-count" aria-live="polite">
@@ -445,7 +445,7 @@ function TrainingRequirementPage() {
                     </div>
                   </div>
 
-                  <div className="tr-department-grid" role="group" aria-label="Phòng ban áp dụng CME">
+                  <div className="tr-department-grid" role="group" aria-label="Phòng ban áp dụng giờ đào tạo">
                     {isLoading ? (
                       <p className="tr-scope-empty">Đang tải danh sách phòng ban...</p>
                     ) : filteredDepartments.length === 0 ? (
@@ -475,13 +475,13 @@ function TrainingRequirementPage() {
 
                   {!isLoading && selectedDepartmentIds.length === 0 && (
                     <div className="tr-scope-warning" role="status">
-                      Chưa chọn phòng ban: hệ thống sẽ không áp dụng yêu cầu hoặc gửi cảnh báo CME.
+                      Chưa chọn phòng ban: hệ thống sẽ không áp dụng yêu cầu hoặc gửi cảnh báo giờ đào tạo.
                     </div>
                   )}
                   {!isLoading && removedDepartmentCount > 0 && (
                     <div className="tr-scope-warning" role="alert">
                       {removedDepartmentCount} phòng đã bị bỏ chọn. Sau khi lưu, nhân viên tại đó sẽ chuyển sang
-                      {' '}NOT_CONFIGURED và ngừng nhận cảnh báo; dữ liệu CME vẫn được giữ nguyên.
+                      {' '}NOT_CONFIGURED và ngừng nhận cảnh báo; dữ liệu giờ đào tạo vẫn được giữ nguyên.
                     </div>
                   )}
                 </div>
@@ -494,7 +494,7 @@ function TrainingRequirementPage() {
                   
                   <div className="tr-default-row">
                     <div className="tr-default-info">
-                      <div className="tr-default-title">Số giờ CME tối thiểu mỗi chu kỳ {defaultCycle} năm</div>
+                      <div className="tr-default-title">Số giờ đào tạo tối thiểu mỗi chu kỳ {defaultCycle} năm</div>
                       <div className="tr-default-desc">Áp dụng cho toàn bộ nhân viên trừ khi được ghi đè bên dưới</div>
                     </div>
                     <div className="tr-default-input-wrap">

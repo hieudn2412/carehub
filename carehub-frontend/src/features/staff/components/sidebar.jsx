@@ -25,6 +25,7 @@ function Sidebar() {
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
 
   // Base items for all staff members
@@ -32,7 +33,7 @@ function Sidebar() {
     {
       label: 'Trang chủ',
       items: [
-        { icon: <DashboardOutlined />, label: 'Dashboard', path: isManager ? '/manager/dashboard' : '/staff/dashboard' },
+        { icon: <DashboardOutlined />, label: 'Dashboard', path: isAdmin ? '/admin/dashboard' : isManager ? '/manager/dashboard' : '/staff/dashboard' },
       ],
     },
   ]
@@ -59,20 +60,29 @@ function Sidebar() {
         { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/staff/training' },
         { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/staff/training-status' },
       ],
-    },
-    {
-      label: 'Kiểm tra',
-      items: [
-        { icon: <EditOutlined />, label: 'Làm bài thi', path: '/staff/exam/take' },
-        { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
-      ],
-    },
-    {
-      label: 'Phiếu kiểm tra',
-      items: [
-        { icon: <CheckSquareOutlined />, label: 'Phiếu được giao', path: '/staff/checklists' },
-      ],
-    },
+    }
+  )
+
+  // Admin không cần Kiểm tra và Phiếu kiểm tra
+  if (!isAdmin) {
+    navSections.push(
+      {
+        label: 'Kiểm tra',
+        items: [
+          { icon: <EditOutlined />, label: 'Làm bài thi', path: '/staff/exam/take' },
+          { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
+        ],
+      },
+      {
+        label: 'Phiếu kiểm tra',
+        items: [
+          { icon: <CheckSquareOutlined />, label: 'Phiếu được giao', path: '/staff/checklists' },
+        ],
+      }
+    )
+  }
+
+  navSections.push(
     {
       label: 'Tài khoản',
       items: [
@@ -93,7 +103,7 @@ function Sidebar() {
         <div>
           <p className="sidebar__logo-name">VietDuc Care</p>
           <span className="sidebar__logo-sub">
-            {isManager ? 'Trưởng khoa / Phòng' : 'Nhân viên y tế'}
+            {isAdmin ? 'Quản trị viên' : isManager ? 'Trưởng khoa / Phòng' : 'Nhân viên y tế'}
           </span>
         </div>
       </div>

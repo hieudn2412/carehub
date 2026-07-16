@@ -119,4 +119,14 @@ public class TrainingRecordController {
                 recordService.submit(id, request)
         ));
     }
+
+    @PostMapping("/{id}/return-to-draft")
+    public ResponseEntity<ApiResponse<TrainingRecordDetailResponse>> returnToDraft(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Trả hồ sơ về nháp thành công",
+                recordService.returnToDraft(id)
+        ));
+    }
 }

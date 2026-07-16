@@ -11,7 +11,7 @@ import java.util.Set;
 @Component
 public class TrainingDomainValidator {
     private static final BigDecimal MIN_DIRECT_RECORD_HOURS = BigDecimal.valueOf(0.5);
-    private static final BigDecimal MAX_DIRECT_RECORD_HOURS = BigDecimal.valueOf(24);
+    private static final BigDecimal MAX_DIRECT_RECORD_HOURS = BigDecimal.valueOf(999);
     private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
             "image/jpeg",
             "image/png",
@@ -50,7 +50,7 @@ public class TrainingDomainValidator {
             throw new BadRequestException("Evidence file size must be greater than 0 and not exceed 5 MB");
         }
         if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
-            throw new BadRequestException("Evidence file type must be JPG, PNG, or PDF");
+            throw new BadRequestException("Loại file minh chứng phải là JPG, PNG hoặc PDF");
         }
     }
 }

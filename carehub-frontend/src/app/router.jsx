@@ -287,7 +287,7 @@ function AppRouter() {
       <Route path="/manager/quality/history" element={managerOrAdminElement(<ManagerEvaluationHistoryPage />)} />
       <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
 
-      {/* Staff CME / Training Hours routes */}
+      {/* Staff Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />
       <Route path="/staff/training/new" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id" element={protectedElement(<TrainingHoursDetailScreen />)} />

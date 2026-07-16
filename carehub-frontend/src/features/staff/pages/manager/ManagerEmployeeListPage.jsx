@@ -37,7 +37,7 @@ function ManagerEmployeeListPage() {
         setLoading(false)
       })
       .catch(err => {
-        console.error("Error loading employee CME status list", err)
+        console.error("Error loading employee training status list", err)
         setError("Không thể tải danh sách nhân sự trong khoa.")
         setLoading(false)
       })
@@ -80,7 +80,7 @@ function ManagerEmployeeListPage() {
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Nhân sự trong khoa</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Danh sách và tiến độ đào tạo CME của nhân sự trong khoa
+              Danh sách và tiến độ đào tạo của nhân sự trong khoa
             </p>
           </div>
 
@@ -170,7 +170,7 @@ function ManagerEmployeeListPage() {
                             color: '#475569',
                             transition: 'all 0.15s'
                           }}
-                          title="Xem hồ sơ đào tạo CME chi tiết"
+                          title="Xem hồ sơ đào tạo chi tiết"
                           className="mgr-view-btn"
                           onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
                           onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}

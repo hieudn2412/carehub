@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Check;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
@@ -94,6 +95,8 @@ public class TrainingRecord extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
+    @Check(name = "training_records_workflow_status_check",
+           constraints = "workflow_status IN ('DRAFT', 'SUBMITTED', 'CANCELLED')")
     @Column(name = "workflow_status", nullable = false, length = 30)
     private TrainingRecordStatus workflowStatus = TrainingRecordStatus.DRAFT;
 

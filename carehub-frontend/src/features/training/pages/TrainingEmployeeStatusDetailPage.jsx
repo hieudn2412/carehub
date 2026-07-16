@@ -9,7 +9,7 @@ import Header from '../../staff/components/Header'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
-import { ClockCircleOutlined, FileTextOutlined, LoadingOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined, FileTextOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/TrainingEmployeeStatusDetailPage.css'
 
 function TrainingEmployeeStatusDetailPage() {
@@ -94,7 +94,7 @@ function TrainingEmployeeStatusDetailPage() {
               <div className="ted-title-card">
                 <h1 className="ted-title">Chi tiết đào tạo nhân viên</h1>
                 <p className="ted-subtitle">
-                  Hồ sơ đào tạo CME chi tiết của nhân sự
+                  Hồ sơ đào tạo chi tiết của nhân sự
                 </p>
               </div>
 
@@ -124,7 +124,7 @@ function TrainingEmployeeStatusDetailPage() {
                           : ''
                       }`}>
                         {employeeInfo.complianceStatus === 'NOT_CONFIGURED'
-                          ? 'Chưa áp dụng yêu cầu CME'
+                          ? 'Chưa áp dụng yêu cầu giờ đào tạo'
                           : `${employeeInfo.submittedHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}`}
                       </div>
                     </div>
@@ -152,7 +152,7 @@ function TrainingEmployeeStatusDetailPage() {
 
                     {/* Training Records */}
                     <div style={{ marginTop: 24 }}>
-                      <h3 className="ted-section-title">LỊCH SỬ KHAI BÁO CME</h3>
+                      <h3 className="ted-section-title">LỊCH SỬ KHAI BÁO GIỜ ĐÀO TẠO</h3>
                       <div className="ted-table-wrap">
                         <table className="ted-table">
                           <thead>
@@ -161,13 +161,14 @@ function TrainingEmployeeStatusDetailPage() {
                               <th>Số giờ</th>
                               <th>Ngày bắt đầu</th>
                               <th>Trạng thái</th>
+                              <th>Xem</th>
                               <th>Minh chứng</th>
                             </tr>
                           </thead>
                           <tbody>
                             {recordsList.length === 0 ? (
                               <tr>
-                                <td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                <td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
                                   Không có lịch sử khai báo nào.
                                 </td>
                               </tr>
@@ -175,6 +176,15 @@ function TrainingEmployeeStatusDetailPage() {
                               recordsList.map((item, idx) => (
                                 <tr key={item.id || idx}>
                                   <td style={{ fontWeight: 500 }}>{item.title}</td>
+                                  <td>
+                                    <Link
+                                      to={`/training/records/${item.id}`}
+                                      className="ted-evidence-link ted-evidence-link--blue"
+                                      title="Xem chi tiết hồ sơ"
+                                    >
+                                      <EyeOutlined />
+                                    </Link>
+                                  </td>
                                   <td>{item.hours}h</td>
                                   <td>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}</td>
                                   <td>

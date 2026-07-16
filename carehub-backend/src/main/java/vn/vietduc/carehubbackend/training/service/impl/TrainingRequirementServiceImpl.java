@@ -220,7 +220,7 @@ public class TrainingRequirementServiceImpl implements TrainingRequirementServic
         );
         String property = allowedSorts.get(order.getProperty());
         if (property == null) {
-            throw new IllegalArgumentException("Unsupported sort property: " + order.getProperty());
+            throw new IllegalArgumentException("Thuộc tính sắp xếp không được hỗ trợ: " + order.getProperty());
         }
         return new Sort.Order(order.getDirection(), property);
     }

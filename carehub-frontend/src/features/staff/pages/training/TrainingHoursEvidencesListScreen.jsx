@@ -73,7 +73,7 @@ function TrainingHoursEvidencesListScreen() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
               <div>
                 <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quản lý minh chứng</h1>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Tải lên và theo dõi các tệp chứng chỉ, tài liệu CME</p>
+                <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Tải lên và theo dõi các tệp chứng chỉ, tài liệu giờ đào tạo</p>
               </div>
             </div>
 

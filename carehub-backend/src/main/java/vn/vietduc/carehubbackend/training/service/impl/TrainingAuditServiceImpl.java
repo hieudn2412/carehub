@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.training.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
@@ -19,7 +20,7 @@ public class TrainingAuditServiceImpl implements TrainingAuditService {
     private final TrainingRecordChangeLogRepository changeLogRepository;
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logRecordChange(
             TrainingRecord record,
             TrainingRecordChangeType changeType,

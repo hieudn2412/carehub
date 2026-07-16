@@ -92,7 +92,7 @@ public class TrainingAccessPolicy {
             userId = userPrincipal.getId();
         }
         return userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Current user not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng hiện tại"));
     }
 
     public Set<String> currentRoleCodes() {

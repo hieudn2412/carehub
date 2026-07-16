@@ -142,6 +142,12 @@ export const trainingApi = {
     })
   },
 
+  returnToDraft(id) {
+    return httpClient.post(`/training/records/${id}/return-to-draft`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   listEvidence(recordId) {
     return httpClient.get(`/training/records/${recordId}/evidences`, {
       headers: authHeaders(),
@@ -154,6 +160,7 @@ export const trainingApi = {
 
     return httpClient.post(`/training/records/${recordId}/evidences`, formData, {
       headers: {
+        'Content-Type': 'multipart/form-data',
         ...authHeaders(),
       },
     })

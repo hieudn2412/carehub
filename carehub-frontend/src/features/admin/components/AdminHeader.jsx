@@ -5,6 +5,8 @@ import {
   WarningOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
+  BookOutlined,
+  DashboardOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
@@ -182,6 +184,15 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
       ) : (
         <h1 className="dashboard-header__title">{title}</h1>
       )}
+
+      <div className="dashboard-header__quick-nav">
+        <Link to="/admin/dashboard" className="dashboard-header__quick-link" title="Dashboard">
+          <DashboardOutlined />
+        </Link>
+        <Link to="/training/employees" className="dashboard-header__quick-link" title="Giờ đào tạo nhân viên">
+          <BookOutlined />
+        </Link>
+      </div>
 
       <div className="dashboard-header__right">
         <div className="dashboard-header__notify-container">

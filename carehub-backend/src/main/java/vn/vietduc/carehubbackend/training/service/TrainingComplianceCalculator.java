@@ -48,7 +48,7 @@ public class TrainingComplianceCalculator {
         );
 
         if (requirement.isEmpty()) {
-            return notConfigured(employee, windowEnd, "No active training requirement is configured");
+            return notConfigured(employee, windowEnd, "Chưa có yêu cầu đào tạo đang hoạt động");
         }
 
         TrainingRequirement matchedRequirement = requirement.get();
@@ -230,10 +230,10 @@ public class TrainingComplianceCalculator {
 
     private String warningMessage(ComplianceStatus status, BigDecimal remainingHours) {
         return switch (status) {
-            case NOT_CONFIGURED -> "No active training requirement is configured";
+            case NOT_CONFIGURED -> "Chưa có yêu cầu đào tạo đang hoạt động";
             case COMPLIANT -> "Training requirement is met";
             case AT_RISK, NON_COMPLIANT -> remainingHours.stripTrailingZeros().toPlainString()
-                    + " submitted hours remaining";
+                    + " giờ còn thiếu";
         };
     }
 }
