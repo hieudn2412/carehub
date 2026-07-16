@@ -20,6 +20,12 @@ app:
     default-password: ${DEFAULT_PASSWORD:ChangeMe123@}
 
   api-prefix: /api/v1
+  competency:
+    weight:
+      knowledge: ${COMPETENCY_WEIGHT_KNOWLEDGE:0.5}
+      skill: ${COMPETENCY_WEIGHT_SKILL:0.5}
+    compliance:
+      default-target: ${COMPETENCY_DEFAULT_TARGET:80.0}
   cors:
     allowed-origin-patterns:
       - http://localhost:*
