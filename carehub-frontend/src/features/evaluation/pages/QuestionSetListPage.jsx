@@ -4,9 +4,12 @@ import {
   CheckCircleOutlined,
   CopyOutlined,
   DeleteOutlined,
-  DownloadOutlined,
   EditOutlined,
+  ExportOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
   FileTextOutlined,
+  FileWordOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   PrinterOutlined,
@@ -36,12 +39,21 @@ const EXPORT_MIME_TYPES = {
   pdf: 'application/pdf',
 }
 
+const EXPORT_ACTIONS = [
+  { key: 'xlsx', label: 'Excel', icon: <FileExcelOutlined /> },
+  { key: 'csv', label: 'CSV', icon: <FileTextOutlined /> },
+  { key: 'docx', label: 'Word', icon: <FileWordOutlined /> },
+  { key: 'pdf', label: 'PDF', icon: <FilePdfOutlined /> },
+  { key: 'print', label: 'In', icon: <PrinterOutlined /> },
+]
+
 function QuestionSetListPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [sets, setSets] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [actionId, setActionId] = useState(null)
+  const [exportMenuId, setExportMenuId] = useState(null)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -66,6 +78,23 @@ function QuestionSetListPage() {
   useEffect(() => {
     loadSets()
   }, [loadSets])
+
+  useEffect(() => {
+    if (exportMenuId === null) return undefined
+
+    const closeMenu = () => setExportMenuId(null)
+    const closeMenuOnEscape = (event) => {
+      if (event.key === 'Escape') closeMenu()
+    }
+
+    document.addEventListener('click', closeMenu)
+    document.addEventListener('keydown', closeMenuOnEscape)
+
+    return () => {
+      document.removeEventListener('click', closeMenu)
+      document.removeEventListener('keydown', closeMenuOnEscape)
+    }
+  }, [exportMenuId])
 
   const categories = useMemo(() => {
     return Array.from(new Set([...DEFAULT_CATEGORIES, ...sets.map((item) => item.category).filter(Boolean)]))
@@ -221,7 +250,7 @@ function QuestionSetListPage() {
                       <th>Số câu hỏi</th>
                       <th>Độ khó</th>
                       <th>Trạng thái</th>
-                      <th style={{ width: '330px', textAlign: 'center' }}>Hành động</th>
+                      <th style={{ width: '230px', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,7 +283,7 @@ function QuestionSetListPage() {
                             </span>
                           </td>
                           <td>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            <div className="qsl-actions">
                               <button
                                 type="button"
                                 className="qsl-action-btn qsl-action-btn--edit"
@@ -272,51 +301,46 @@ function QuestionSetListPage() {
                               >
                                 <CopyOutlined />
                               </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => exportSet(item, 'xlsx')}
-                                title="Xuất XLSX"
-                                disabled={actionId === item.id}
+                              <div
+                                className={`qsl-export-radial${exportMenuId === item.id ? ' qsl-export-radial--open' : ''}`}
+                                onClick={(event) => event.stopPropagation()}
                               >
-                                <DownloadOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => exportSet(item, 'csv')}
-                                title="Xuất CSV"
-                                disabled={actionId === item.id}
-                              >
-                                <FileTextOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => exportSet(item, 'docx')}
-                                title="Xuất DOCX"
-                                disabled={actionId === item.id}
-                              >
-                                <FileTextOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => exportSet(item, 'pdf')}
-                                title="Xuất PDF"
-                                disabled={actionId === item.id}
-                              >
-                                <DownloadOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => printSet(item)}
-                                title="In bộ câu hỏi"
-                                disabled={actionId === item.id}
-                              >
-                                <PrinterOutlined />
-                              </button>
+                                <button
+                                  type="button"
+                                  className="qsl-action-btn qsl-action-btn--export"
+                                  onClick={() => setExportMenuId((currentId) => currentId === item.id ? null : item.id)}
+                                  title="Chọn định dạng xuất"
+                                  aria-label="Chọn định dạng xuất"
+                                  aria-haspopup="menu"
+                                  aria-expanded={exportMenuId === item.id}
+                                  disabled={actionId === item.id}
+                                >
+                                  {actionId === item.id ? <LoadingOutlined /> : <ExportOutlined />}
+                                </button>
+
+                                <div className="qsl-export-radial__menu" role="menu" aria-label={`Xuất ${item.name}`}>
+                                  {EXPORT_ACTIONS.map((exportAction) => (
+                                    <button
+                                      key={exportAction.key}
+                                      type="button"
+                                      className={`qsl-export-radial__item qsl-export-radial__item--${exportAction.key}`}
+                                      onClick={() => {
+                                        setExportMenuId(null)
+                                        if (exportAction.key === 'print') {
+                                          printSet(item)
+                                        } else {
+                                          exportSet(item, exportAction.key)
+                                        }
+                                      }}
+                                      role="menuitem"
+                                      tabIndex={exportMenuId === item.id ? 0 : -1}
+                                    >
+                                      <span aria-hidden="true">{exportAction.icon}</span>
+                                      <span>{exportAction.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                               {item.status === 'ACTIVE' ? (
                                 <button
                                   type="button"
