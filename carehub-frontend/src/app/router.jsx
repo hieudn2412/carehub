@@ -45,6 +45,8 @@ import DocumentQuestionJobReviewPage from '../features/evaluation/pages/Document
 import ParaphraseJobReviewPage from '../features/evaluation/pages/ParaphraseJobReviewPage.jsx'
 import CompetencyThresholdPage from '../features/evaluation/pages/CompetencyThresholdPage.jsx'
 import CompetencyDepartmentPage from '../features/evaluation/pages/CompetencyDepartmentPage.jsx'
+import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFieldPage.jsx'
+import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/CompetencyEmployeeFieldDetailPage.jsx'
 import PromptTemplateListPage from '../features/evaluation/pages/PromptTemplateListPage.jsx'
 import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateFormPage.jsx'
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
@@ -212,6 +214,8 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
+      <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
+      <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
       <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
@@ -287,6 +291,8 @@ function AppRouter() {
       <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
       <Route path="/manager/quality/history" element={managerOrAdminElement(<ManagerEvaluationHistoryPage />)} />
       <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
+      <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />
+      <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
 
       {/* Staff Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />

@@ -147,6 +147,12 @@ const navSections = [
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       {
+        icon: <BarChartOutlined />,
+        label: 'Năng lực theo lĩnh vực',
+        path: '/admin/evaluation/competency-by-field',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
+      {
         icon: <AuditOutlined />,
         label: 'Prompt Templates',
         path: '/admin/evaluation/prompt-templates',
