@@ -22,6 +22,22 @@
   margin: 0 0 24px;
 }
 
+.profile-card__state {
+  padding: 40px 0;
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+}
+
+.profile-card__state--error {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 /* ── Header ── */
 .profile-card__header {
   display: flex;
@@ -76,11 +92,20 @@
 .profile-badge--role   { background: #f0e8fb; color: #534AB7; }
 .profile-badge--status { background: #e8f5f0; color: #0f6e56; }
 
+.profile-badge--status-inactive {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .profile-badge__dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: #1aaa84;
+}
+
+.profile-badge--status-inactive .profile-badge__dot {
+  background: #dc2626;
 }
 
 .profile-change-pw-btn {
@@ -462,4 +487,40 @@
 .change-password-modal .form-field__input:focus {
   border-color: #1aaa84;
   box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
+}
+
+@media (max-width: 720px) {
+  .profile-card {
+    padding: 22px 18px;
+  }
+
+  .profile-card__header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .profile-change-pw-btn {
+    align-self: flex-start;
+  }
+
+  .profile-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-info-item:nth-child(even) {
+    padding-left: 0;
+  }
+
+  .profile-info-item:nth-last-child(-n+2) {
+    border-bottom: 0.5px solid #f0f0f0;
+  }
+
+  .profile-info-item:last-child {
+    border-bottom: none;
+  }
+
+  .modal-container {
+    width: min(440px, calc(100vw - 28px));
+  }
 }

@@ -1,13 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowDownOutlined,
   ArrowLeftOutlined,
-  ArrowUpOutlined,
+  CheckOutlined,
   CloseOutlined,
   CopyOutlined,
+  FilterOutlined,
+  HolderOutlined,
   LockOutlined,
   LoadingOutlined,
+  PlusOutlined,
   SaveOutlined,
   SearchOutlined,
   ThunderboltOutlined,
@@ -37,6 +39,7 @@ function QuestionSetFormPage() {
   const { id } = useParams()
   const { showToast } = useToast()
   const isEditMode = Boolean(id)
+  const selectedListRef = useRef(null)
 
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
@@ -45,6 +48,8 @@ function QuestionSetFormPage() {
   const [status, setStatus] = useState('DRAFT')
   const [description, setDescription] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
+  const [draggedQuestionId, setDraggedQuestionId] = useState(null)
+  const [dragOverQuestionId, setDragOverQuestionId] = useState(null)
   const [questionsList, setQuestionsList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -179,6 +184,104 @@ function QuestionSetFormPage() {
     })
   }
 
+  function handleDragStart(event, questionId) {
+    if (isActiveLocked) {
+      event.preventDefault()
+      return
+    }
+    setDraggedQuestionId(questionId)
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(questionId))
+    const row = event.currentTarget.closest('.qsf-selected-row')
+    if (row) {
+      event.dataTransfer.setDragImage(row, 24, Math.min(row.offsetHeight / 2, 32))
+    }
+  }
+
+  function handleDragOver(event, questionId) {
+    if (isActiveLocked || !draggedQuestionId || draggedQuestionId === questionId) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setDragOverQuestionId((current) => current === questionId ? current : questionId)
+  }
+
+  function handleSelectedListDragOver(event) {
+    if (isActiveLocked || !draggedQuestionId || !selectedListRef.current) return
+    event.preventDefault()
+
+    const list = selectedListRef.current
+    const bounds = list.getBoundingClientRect()
+    const edgeSize = 64
+    const maxSpeed = 22
+    let scrollAmount = 0
+
+    if (event.clientY < bounds.top + edgeSize) {
+      const intensity = (bounds.top + edgeSize - event.clientY) / edgeSize
+      scrollAmount = -Math.ceil(maxSpeed * Math.min(1, intensity))
+    } else if (event.clientY > bounds.bottom - edgeSize) {
+      const intensity = (event.clientY - (bounds.bottom - edgeSize)) / edgeSize
+      scrollAmount = Math.ceil(maxSpeed * Math.min(1, intensity))
+    }
+
+    if (scrollAmount !== 0) {
+      list.scrollTop += scrollAmount
+    }
+  }
+
+  function handleDrop(event, targetQuestionId) {
+    event.preventDefault()
+    event.stopPropagation()
+    if (isActiveLocked || !draggedQuestionId || draggedQuestionId === targetQuestionId) {
+      handleDragEnd()
+      return
+    }
+
+    setSelectedIds((current) => {
+      const sourceIndex = current.indexOf(draggedQuestionId)
+      const targetIndex = current.indexOf(targetQuestionId)
+      if (sourceIndex < 0 || targetIndex < 0) return current
+
+      const next = [...current]
+      const [movedQuestionId] = next.splice(sourceIndex, 1)
+      next.splice(targetIndex, 0, movedQuestionId)
+      return next
+    })
+    handleDragEnd()
+  }
+
+  function handleSelectedListDrop(event) {
+    if (dragOverQuestionId) {
+      handleDrop(event, dragOverQuestionId)
+      return
+    }
+    handleDragEnd()
+  }
+
+  function handleDragEnd() {
+    setDraggedQuestionId(null)
+    setDragOverQuestionId(null)
+  }
+
+  function getDragGapClass(questionId) {
+    if (!draggedQuestionId || !dragOverQuestionId || questionId !== dragOverQuestionId) return ''
+    const sourceIndex = selectedIds.indexOf(draggedQuestionId)
+    const targetIndex = selectedIds.indexOf(dragOverQuestionId)
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return ''
+    return sourceIndex < targetIndex ? 'qsf-selected-row--gap-after' : 'qsf-selected-row--gap-before'
+  }
+
+  function handleDragHandleKeyDown(event, questionId) {
+    if (isActiveLocked || !event.altKey) return
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      moveSelected(questionId, -1)
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      moveSelected(questionId, 1)
+    }
+  }
+
   async function handleSave(event) {
     event.preventDefault()
     if (isActiveLocked) {
@@ -279,6 +382,8 @@ function QuestionSetFormPage() {
     { label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
     { label: isEditMode ? 'Chỉnh sửa' : 'Tạo mới' },
   ]
+  const paginationItems = getPaginationItems(qPage, qTotalPages)
+  const activeQuestionFilterCount = [qCategory, qDifficulty, qSource, qType].filter(Boolean).length
 
   return (
     <div className="dashboard-layout">
@@ -290,7 +395,7 @@ function QuestionSetFormPage() {
             <div className="qsf-page">
               <div className="qsf-container">
                 <div className="qsf-header">
-                  <button type="button" className="qsf-btn-cancel" onClick={() => navigate('/admin/evaluation/question-sets')}>
+                  <button type="button" className="qsf-back-btn" onClick={() => navigate('/admin/evaluation/question-sets')}>
                     <ArrowLeftOutlined /> Quay lại
                   </button>
                   <div>
@@ -316,8 +421,16 @@ function QuestionSetFormPage() {
                         </button>
                       </section>
                     )}
-                    <div className="qsf-form-row">
-                      <div className="qsf-form-group">
+                    <section className="qsf-section-card qsf-metadata-card">
+                      <div className="qsf-section-heading">
+                        <div>
+                          <h3>Thông tin bộ câu hỏi</h3>
+                          <p>Thiết lập thông tin nhận diện và trạng thái sử dụng.</p>
+                        </div>
+                        <span className="qsf-selected-count">{selectedIds.length} câu đã chọn</span>
+                      </div>
+
+                    <div className="qsf-form-group">
                         <label>Tên bộ câu hỏi <span className="qsf-required-star">*</span></label>
                         <input
                           type="text"
@@ -328,21 +441,21 @@ function QuestionSetFormPage() {
                           placeholder="Nhập tên bộ câu hỏi..."
                           disabled={isActiveLocked}
                         />
-                      </div>
-                      <div className="qsf-form-group">
-                        <label>Mã bộ câu hỏi</label>
-                        <input
-                          type="text"
-                          className="qsf-input-green"
-                          value={code}
-                          onChange={(event) => setCode(event.target.value)}
-                          placeholder="Ví dụ: IC_BASIC_2026"
-                          disabled={isActiveLocked}
-                        />
-                      </div>
                     </div>
 
-                    <div className="qsf-form-row">
+                    <div className="qsf-form-group">
+                      <label>Mô tả</label>
+                      <textarea
+                        className="qsf-input-green"
+                        rows={3}
+                        value={description}
+                        onChange={(event) => setDescription(event.target.value)}
+                        placeholder="Mô tả ngắn để người quản trị khác hiểu mục đích của bộ câu hỏi..."
+                        disabled={isActiveLocked}
+                      />
+                    </div>
+
+                    <div className="qsf-form-row qsf-form-row--three">
                       <div className="qsf-form-group">
                         <label>Danh mục</label>
                         <input
@@ -365,9 +478,6 @@ function QuestionSetFormPage() {
                           ))}
                         </select>
                       </div>
-                    </div>
-
-                    <div className="qsf-form-row">
                       <div className="qsf-form-group">
                         <label>Trạng thái</label>
                         <select className="qsf-input-red" value={status} onChange={(event) => setStatus(event.target.value)} disabled={isActiveLocked}>
@@ -376,26 +486,24 @@ function QuestionSetFormPage() {
                           ))}
                         </select>
                       </div>
-                      <div className="qsf-form-group">
-                        <label>Số câu đã chọn</label>
-                        <input className="qsf-input-green" value={`${selectedIds.length} câu hỏi`} readOnly />
-                      </div>
                     </div>
 
-                    <div className="qsf-form-group">
-                      <label>Mô tả</label>
-                      <textarea
-                        className="qsf-input-green"
-                        rows={3}
-                        value={description}
-                        onChange={(event) => setDescription(event.target.value)}
-                        placeholder="Mô tả tóm tắt về bộ câu hỏi này..."
-                        disabled={isActiveLocked}
-                      />
-                    </div>
+                    </section>
 
                     {isEditMode && (
-                      <div className="qsf-version-card">
+                      <details className="qsf-disclosure qsf-version-card">
+                        <summary className="qsf-disclosure__summary">
+                          <div>
+                            <strong>Thông tin phiên bản</strong>
+                            <span>
+                              {snapshotInfo.activeVersion
+                                ? `Đang hoạt động: v${snapshotInfo.activeVersion}`
+                                : 'Chưa có phiên bản hoạt động'}
+                            </span>
+                          </div>
+                          <span>{snapshotInfo.versions.length} phiên bản</span>
+                        </summary>
+                        <div className="qsf-disclosure__content">
                         <div className="qsf-version-head">
                           <div>
                             <strong>Phiên bản đang hoạt động</strong>
@@ -430,14 +538,19 @@ function QuestionSetFormPage() {
                             ))}
                           </div>
                         )}
-                      </div>
+                        </div>
+                      </details>
                     )}
 
-                    <div className="qsf-section-divider">
-                      <span className="qsf-divider-title">TẠO NHANH THEO CẤU HÌNH</span>
-                    </div>
-
-                    <div className="qsf-questions-card">
+                    <details className="qsf-disclosure qsf-advanced-tools">
+                      <summary className="qsf-disclosure__summary">
+                        <div>
+                          <strong>Tạo nhanh theo cấu hình</strong>
+                          <span>Tự động gợi ý câu hỏi theo độ khó và nguồn tài liệu.</span>
+                        </div>
+                        <ThunderboltOutlined />
+                      </summary>
+                      <div className="qsf-disclosure__content qsf-advanced-tools__content">
                       <div className="qsf-form-row">
                         {DIFFICULTY_OPTIONS.map((option) => (
                           <div className="qsf-form-group" key={option.value}>
@@ -487,38 +600,70 @@ function QuestionSetFormPage() {
                           ))}
                         </div>
                       )}
-                    </div>
+                      </div>
+                    </details>
 
                     <div className="qsf-section-divider">
                       <span className="qsf-divider-title">CÂU HỎI TRONG BỘ</span>
                     </div>
 
                     <div className="qsf-selected-card">
-                      <h3>Câu đã chọn</h3>
+                      <div className="qsf-card-heading">
+                        <div>
+                          <h3>Câu đã chọn</h3>
+                          <p>Kéo tay nắm để sắp xếp. Danh sách sẽ tự cuộn khi kéo sát mép.</p>
+                        </div>
+                        <span>{selectedIds.length}</span>
+                      </div>
                       {selectedQuestions.length === 0 ? (
                         <p className="qsf-empty-text">Chưa có câu hỏi nào trong bộ.</p>
                       ) : (
-                        selectedQuestions.map((question, index) => (
-                          <div className="qsf-selected-row" key={question.id}>
+                        <div
+                          className="qsf-selected-list"
+                          ref={selectedListRef}
+                          onDragOver={handleSelectedListDragOver}
+                          onDrop={handleSelectedListDrop}
+                        >
+                        {selectedQuestions.map((question, index) => (
+                          <div
+                            className={`qsf-selected-row ${draggedQuestionId === question.id ? 'qsf-selected-row--dragging' : ''} ${dragOverQuestionId === question.id ? 'qsf-selected-row--drag-over' : ''} ${getDragGapClass(question.id)}`}
+                            key={question.id}
+                            onDragOver={(event) => handleDragOver(event, question.id)}
+                            onDrop={(event) => handleDrop(event, question.id)}
+                          >
+                            <button
+                              type="button"
+                              className="qsf-drag-handle"
+                              draggable={!isActiveLocked}
+                              disabled={isActiveLocked}
+                              onDragStart={(event) => handleDragStart(event, question.id)}
+                              onDragEnd={handleDragEnd}
+                              onKeyDown={(event) => handleDragHandleKeyDown(event, question.id)}
+                              aria-label={`Kéo để sắp xếp câu ${index + 1}`}
+                              title="Kéo để sắp xếp. Dùng Alt + mũi tên khi thao tác bằng bàn phím."
+                            >
+                              <HolderOutlined />
+                            </button>
                             <span>{index + 1}</span>
                             <strong>{question.stem}</strong>
                             <div>
-                              <button type="button" onClick={() => moveSelected(question.id, -1)} disabled={index === 0 || isActiveLocked} title="Đưa lên">
-                                <ArrowUpOutlined />
-                              </button>
-                              <button type="button" onClick={() => moveSelected(question.id, 1)} disabled={index === selectedQuestions.length - 1 || isActiveLocked} title="Đưa xuống">
-                                <ArrowDownOutlined />
-                              </button>
                               <button type="button" onClick={() => toggleQuestion(question.id)} title="Bỏ khỏi bộ" disabled={isActiveLocked}>
                                 <CloseOutlined />
                               </button>
                             </div>
                           </div>
-                        ))
+                        ))}
+                        </div>
                       )}
                     </div>
 
                     <div className="qsf-questions-card">
+                      <div className="qsf-bank-heading">
+                        <div>
+                          <h3>Ngân hàng câu hỏi</h3>
+                          <p>Tìm và chọn các câu hỏi đã được phê duyệt.</p>
+                        </div>
+                      </div>
                       <div className="qsf-qfilter-bar">
                         <div className="qsf-qsearch">
                           <span className="qsf-qsearch-icon"><SearchOutlined /></span>
@@ -533,68 +678,92 @@ function QuestionSetFormPage() {
                             }}
                           />
                         </div>
-                        <select className="qsf-qfilter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
-                          <option value="">Danh mục</option>
-                          {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
-                        </select>
-                        <select className="qsf-qfilter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
-                          <option value="">Độ khó</option>
-                          {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                        <select className="qsf-qfilter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
-                          <option value="">Nguồn</option>
-                          {sources.map((source) => <option key={source} value={source}>{source}</option>)}
-                        </select>
-                        <select className="qsf-qfilter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
-                          <option value="">Loại</option>
-                          <option value="ORIGINAL">Gốc</option>
-                          <option value="PARAPHRASE">Diễn đạt lại</option>
-                        </select>
+                        <details className="qsf-filter-disclosure">
+                          <summary>
+                            <FilterOutlined /> Bộ lọc
+                            {activeQuestionFilterCount > 0 && <span className="qsf-filter-count">{activeQuestionFilterCount}</span>}
+                          </summary>
+                          <div className="qsf-filter-panel">
+                            <select className="qsf-qfilter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
+                              <option value="">Tất cả danh mục</option>
+                              {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+                            </select>
+                            <select className="qsf-qfilter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
+                              <option value="">Tất cả độ khó</option>
+                              {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            </select>
+                            <select className="qsf-qfilter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
+                              <option value="">Tất cả nguồn</option>
+                              {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+                            </select>
+                            <select className="qsf-qfilter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
+                              <option value="">Tất cả loại câu hỏi</option>
+                              <option value="ORIGINAL">Gốc</option>
+                              <option value="PARAPHRASE">Diễn đạt lại</option>
+                            </select>
+                          </div>
+                        </details>
                       </div>
 
-                      <table className="qsf-qtable">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '50px', textAlign: 'center' }}>
-                              <input type="checkbox" checked={isAllDisplayChecked} onChange={toggleSelectAllDisplay} disabled={isActiveLocked} />
-                            </th>
-                            <th>Nội dung câu hỏi</th>
-                            <th>Danh mục</th>
-                            <th>Độ khó</th>
-                            <th>Nguồn</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {displayQuestions.length === 0 ? (
-                            <tr>
-                              <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0' }}>
-                                Không tìm thấy câu hỏi nào.
-                              </td>
-                            </tr>
-                          ) : (
-                            displayQuestions.map((question) => (
-                              <tr key={question.id} onClick={() => toggleQuestion(question.id)} style={{ cursor: isActiveLocked ? 'default' : 'pointer' }}>
-                                <td style={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+                      <div className="qsf-bank-selection-bar">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={isAllDisplayChecked}
+                            onChange={toggleSelectAllDisplay}
+                            disabled={isActiveLocked || displayQuestions.length === 0}
+                          />
+                          Chọn tất cả {displayQuestions.length} câu trên trang này
+                        </label>
+                        <span>{selectedIds.length} câu trong bộ</span>
+                      </div>
+
+                      <div className="qsf-bank-list">
+                        {displayQuestions.length === 0 ? (
+                          <div className="qsf-bank-empty">
+                            <SearchOutlined />
+                            <strong>Không tìm thấy câu hỏi phù hợp</strong>
+                            <span>Thử thay đổi từ khóa hoặc bộ lọc đang sử dụng.</span>
+                          </div>
+                        ) : (
+                          displayQuestions.map((question) => {
+                            const isSelected = selectedIds.includes(question.id)
+                            return (
+                              <article className={`qsf-bank-item ${isSelected ? 'qsf-bank-item--selected' : ''}`} key={question.id}>
+                                <label className="qsf-bank-checkbox" aria-label={isSelected ? 'Bỏ chọn câu hỏi' : 'Chọn câu hỏi'}>
                                   <input
                                     type="checkbox"
-                                    checked={selectedIds.includes(question.id)}
+                                    checked={isSelected}
                                     onChange={() => toggleQuestion(question.id)}
                                     disabled={isActiveLocked}
                                   />
-                                </td>
-                                <td style={{ fontWeight: 500, color: '#1e293b' }}>{question.stem}</td>
-                                <td style={{ color: '#475569' }}>{question.topic || '---'}</td>
-                                <td>
-                                  <span className={`qsf-diff-badge ${getDifficultyClass(question.difficulty)}`}>
-                                    {difficultyText(question.difficulty)}
-                                  </span>
-                                </td>
-                                <td style={{ color: '#64748b' }}>{question.sourceDocument || question.questionType || '---'}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                                </label>
+                                <div className="qsf-bank-item__content">
+                                  <h4>{question.stem}</h4>
+                                  <div className="qsf-bank-item__meta">
+                                    {question.topic && <span className="qsf-meta-chip">{question.topic}</span>}
+                                    <span className={`qsf-diff-badge ${getDifficultyClass(question.difficulty)}`}>
+                                      {difficultyText(question.difficulty)}
+                                    </span>
+                                    <span className="qsf-source-text" title={question.sourceDocument || question.questionType || ''}>
+                                      {question.sourceDocument || question.questionType || 'Nguồn nội bộ'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  className={`qsf-bank-action ${isSelected ? 'qsf-bank-action--selected' : ''}`}
+                                  onClick={() => toggleQuestion(question.id)}
+                                  disabled={isActiveLocked}
+                                >
+                                  {isSelected ? <CheckOutlined /> : <PlusOutlined />}
+                                  {isSelected ? 'Đã chọn' : 'Thêm'}
+                                </button>
+                              </article>
+                            )
+                          })
+                        )}
+                      </div>
 
                       <div className="qsf-qpagination-bar">
                         <div className="qsf-qpagination-info">
@@ -602,15 +771,19 @@ function QuestionSetFormPage() {
                         </div>
                         <div className="qsf-qpagination-buttons">
                           <button type="button" className="qsf-page-btn" disabled={qPage <= 0} onClick={() => setQPage(qPage - 1)}>&lt;</button>
-                          {Array.from({ length: qTotalPages }).map((_, index) => (
-                            <button
-                              type="button"
-                              key={index}
-                              className={`qsf-page-btn ${qPage === index ? 'qsf-page-btn--active' : ''}`}
-                              onClick={() => setQPage(index)}
-                            >
-                              {index + 1}
-                            </button>
+                          {paginationItems.map((item, index) => (
+                            item === 'ellipsis' ? (
+                              <span className="qsf-page-ellipsis" key={`ellipsis-${index}`}>...</span>
+                            ) : (
+                              <button
+                                type="button"
+                                key={item}
+                                className={`qsf-page-btn ${qPage === item ? 'qsf-page-btn--active' : ''}`}
+                                onClick={() => setQPage(item)}
+                              >
+                                {item + 1}
+                              </button>
+                            )
                           ))}
                           <button type="button" className="qsf-page-btn" disabled={qPage + 1 >= qTotalPages} onClick={() => setQPage(qPage + 1)}>&gt;</button>
                         </div>
@@ -654,6 +827,22 @@ function difficultyText(value) {
 
 function normalize(value) {
   return String(value || '').toLowerCase().trim()
+}
+
+function getPaginationItems(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index)
+  }
+
+  if (currentPage <= 3) {
+    return [0, 1, 2, 3, 4, 'ellipsis', totalPages - 1]
+  }
+
+  if (currentPage >= totalPages - 4) {
+    return [0, 'ellipsis', totalPages - 5, totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1]
+  }
+
+  return [0, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages - 1]
 }
 
 export default QuestionSetFormPage
