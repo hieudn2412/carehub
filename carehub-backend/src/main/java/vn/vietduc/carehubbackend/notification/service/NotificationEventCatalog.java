@@ -110,7 +110,7 @@ public class NotificationEventCatalog {
                 || eventType == NotificationEventType.EXAM_PASSED
                 || eventType == NotificationEventType.PERSONAL_COMPLIANCE_ISSUE;
         if (immediateEvent && cadence != NotificationCadence.IMMEDIATE) {
-            throw new UnprocessableEntityException(eventType + " must use IMMEDIATE cadence");
+            throw new UnprocessableEntityException(eventType + " phải sử dụng tần suất IMMEDIATE");
         }
         if (!immediateEvent && cadence == NotificationCadence.IMMEDIATE) {
             throw new UnprocessableEntityException(eventType + " must use DAILY, WEEKLY or MONTHLY cadence");

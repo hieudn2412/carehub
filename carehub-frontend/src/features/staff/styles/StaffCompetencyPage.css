@@ -1,0 +1,261 @@
+.sc-page {
+  padding: 24px;
+  max-width: 1200px;
+}
+
+.sc-header {
+  margin-bottom: 24px;
+}
+
+.sc-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sc-header__icon {
+  font-size: 28px;
+  color: #3b82f6;
+}
+
+.sc-header__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.sc-header__desc {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.sc-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.sc-filter__label {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.sc-filter__input {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.sc-filter__input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.sc-filter__btn {
+  padding: 6px 16px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sc-filter__btn:hover {
+  background: #2563eb;
+}
+
+.sc-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.sc-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.sc-tab:hover {
+  color: #3b82f6;
+}
+
+.sc-tab--active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.sc-content {
+  min-height: 300px;
+}
+
+.sc-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.sc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+  text-align: center;
+}
+
+.sc-empty__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 8px;
+}
+
+.sc-empty__desc {
+  font-size: 14px;
+  color: #9ca3af;
+  margin: 0;
+  max-width: 400px;
+}
+
+.sc-summary-card {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.sc-summary-card__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sc-summary-card__label {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sc-summary-card__value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sc-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.sc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sc-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: #f9fafb;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sc-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.sc-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.sc-row--danger {
+  background: #fef2f2 !important;
+}
+
+.sc-row--danger:hover {
+  background: #fee2e2 !important;
+}
+
+.sc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.sc-summary-panel {
+  padding: 0;
+}
+
+.sc-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.sc-summary-card--highlight {
+  border: 2px solid;
+  background: #fff;
+}
+
+.sc-warning {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.sc-meta {
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: right;
+}

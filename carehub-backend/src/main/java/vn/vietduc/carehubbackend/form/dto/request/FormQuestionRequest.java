@@ -19,7 +19,7 @@ public record FormQuestionRequest(
         UUID questionKey,
 
         @NotBlank(message = "Question code is required")
-        @Size(max = 100, message = "Question code must not exceed 100 characters")
+        @Size(max = 100, message = "Mã câu hỏi không được vượt quá 100 ký tự")
         @Pattern(regexp = "[A-Za-z0-9_.-]+", message = "Question code contains unsupported characters")
         String code,
 

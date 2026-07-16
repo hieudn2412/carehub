@@ -61,6 +61,9 @@ postgres-env.txt
 postgres-logs.txt
 **/node_modules/
 
+### Local file storage ###
+storage/
+
 ### Runtime dumps / temp ###
 *.hprof
 hs_err_pid*

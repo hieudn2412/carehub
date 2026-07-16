@@ -133,7 +133,7 @@ public class NotificationService {
     private Pageable normalizePageable(Pageable pageable) {
         int size = pageable.getPageSize();
         if (size < 1 || size > MAX_PAGE_SIZE) {
-            throw ValidationException.field("size", "Page size must be between 1 and " + MAX_PAGE_SIZE);
+            throw ValidationException.field("size", "Kích thước trang phải nằm trong khoảng từ 1 đến " + MAX_PAGE_SIZE);
         }
         return PageRequest.of(Math.max(0, pageable.getPageNumber()), size, Sort.by(Sort.Order.desc("createdAt")));
     }

@@ -38,7 +38,7 @@ public class FirstLoginServiceImpl implements FirstLoginService {
         String email = request.getEmail();
 
         if (userRepository.existsByEmailAndIsDeletedFalse(email)) {
-            throw new BadRequestException("Email already exists");
+            throw new BadRequestException("Email này đã được sử dụng");
         }
 
         User user = getCurrentUserRequiringFirstLoginSetup();
@@ -73,25 +73,25 @@ public class FirstLoginServiceImpl implements FirstLoginService {
         PasswordResetOtp otp = passwordResetRepository
                 .findTopByEmailAndUserIdAndOtpAndEmailVerificationTrueOrderByCreatedAtDesc(
                         request.getEmail(), userId, request.getOtp())
-                .orElseThrow(() -> new BadRequestException("Invalid OTP"));
+                .orElseThrow(() -> new BadRequestException("Mã OTP không chính xác"));
 
         if (otp.isUsed()) {
-            throw new BadRequestException("OTP already used");
+            throw new BadRequestException("Mã OTP đã được sử dụng");
         }
 
         if (otp.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP expired");
+            throw new BadRequestException("Mã OTP đã hết hạn");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
         if (!user.requiresFirstLoginSetup()) {
-            throw new BadRequestException("First login setup is not required for this account");
+            throw new BadRequestException("Tài khoản này không cần thực hiện thiết lập lần đầu");
         }
 
         if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
-            throw new BadRequestException("Email already exists");
+            throw new BadRequestException("Email này đã được sử dụng");
         }
 
         user.setEmail(request.getEmail());
@@ -107,10 +107,10 @@ public class FirstLoginServiceImpl implements FirstLoginService {
     private User getCurrentUserRequiringFirstLoginSetup() {
         Long userId = securityUtils.getCurrentUserId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
         if (!user.requiresFirstLoginSetup()) {
-            throw new BadRequestException("First login setup is not required for this account");
+            throw new BadRequestException("Tài khoản này không cần thực hiện thiết lập lần đầu");
         }
 
         return user;

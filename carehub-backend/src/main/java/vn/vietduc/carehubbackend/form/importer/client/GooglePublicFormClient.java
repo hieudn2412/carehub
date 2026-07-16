@@ -54,7 +54,7 @@ public class GooglePublicFormClient {
         } catch (BadRequestException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new BadRequestException("Invalid Google Form URL");
+            throw new BadRequestException("URL Google Form không hợp lệ");
         }
     }
 

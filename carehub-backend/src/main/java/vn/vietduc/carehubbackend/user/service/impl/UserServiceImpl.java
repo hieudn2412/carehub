@@ -51,13 +51,13 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
         if (userRepository.existsByEmployeeCodeAndIsDeletedFalse(request.getEmployeeCode())) {
-            throw new ConflictException("Employee Code already exists");
+            throw new ConflictException("Mã nhân viên đã tồn tại");
         }
         if (userRepository.existsByEmailAndIsDeletedFalse(request.getEmail())) {
-            throw new ConflictException("Email already exists");
+            throw new ConflictException("Email này đã được sử dụng");
         }
         Department department = departmentRepository.findById(request.getDepartmentId())
-                .orElseThrow(()-> new EntityNotFoundException("Department not found"));
+                .orElseThrow(()-> new EntityNotFoundException("Không tìm thấy phòng ban"));
 
         String randomPassword = createRandomPassword();
         String encodedPassword = passwordEncoder.encode(randomPassword);
@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
 
         for (Long roleId : request.getRoleIds()) {
             Role role = roleRepository.findById(roleId)
-                    .orElseThrow(() -> new BadRequestException("Role Not Found"));
+                    .orElseThrow(() -> new BadRequestException("Không tìm thấy vai trò"));
             UserRole userRole = UserRole.builder()
                     .user(user)
                     .role(role)
@@ -111,7 +111,7 @@ public class UserServiceImpl implements UserService {
         if (request.getEmployeeCode() != null) {
             validateText(request.getEmployeeCode(), "Employee code");
             if (userRepository.existsByEmployeeCodeAndIsDeletedFalseAndIdNot(request.getEmployeeCode(), id)) {
-                throw new ConflictException("Employee Code already exists");
+                throw new ConflictException("Mã nhân viên đã tồn tại");
             }
             user.setEmployeeCode(request.getEmployeeCode().trim());
         }
@@ -119,7 +119,7 @@ public class UserServiceImpl implements UserService {
         if (request.getEmail() != null) {
             validateText(request.getEmail(), "Email");
             if (userRepository.existsByEmailAndIsDeletedFalseAndIdNot(request.getEmail(), id)) {
-                throw new ConflictException("Email already exists");
+                throw new ConflictException("Email này đã được sử dụng");
             }
             user.setEmail(request.getEmail().trim());
         }
@@ -135,19 +135,19 @@ public class UserServiceImpl implements UserService {
 
         if (request.getDepartmentId() != null) {
             Department department = departmentRepository.findById(request.getDepartmentId())
-                    .orElseThrow(() -> new EntityNotFoundException("Department not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy phòng ban"));
             user.setDepartment(department);
         }
 
         if (request.getPositionId() != null) {
             Position position = positionRepository.findById(request.getPositionId())
-                    .orElseThrow(() -> new EntityNotFoundException("Position not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chức danh"));
             user.setPosition(position);
         }
 
         if (request.getEducationLevelId() != null) {
             EducationLevel educationLevel = educationLevelRepository.findById(request.getEducationLevelId())
-                    .orElseThrow(() -> new EntityNotFoundException("Education level not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy trình độ học vấn"));
             user.setEducationLevel(educationLevel);
         }
 
@@ -181,20 +181,20 @@ public class UserServiceImpl implements UserService {
     public void changePassword(ChangePasswordRequest request) {
         Long userId = securityUtils.getCurrentUserId();
         User user = userRepository.findById(userId)
-                .orElseThrow(()-> new EntityNotFoundException("User not found"));
+                .orElseThrow(()-> new EntityNotFoundException("Không tìm thấy người dùng"));
 
         String oldPassword = request.getOldPassword();
         String newPassword = request.getNewPassword();
         String confirmNewPassword = request.getConfirmNewPassword();
 
         if(!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new BadRequestException("Old Password Do Not Match");
+            throw new BadRequestException("Mật khẩu cũ không chính xác");
         }
         if(newPassword.equals(oldPassword)) {
-            throw new BadRequestException("Password cannot be the same");
+            throw new BadRequestException("Mật khẩu mới không được trùng với mật khẩu cũ");
         }
         if(!newPassword.equals(confirmNewPassword)) {
-            throw new BadRequestException("New Password Do Not Match");
+            throw new BadRequestException("Mật khẩu xác nhận không khớp");
         }
 
         String encodedPassword = passwordEncoder.encode(newPassword);
@@ -263,7 +263,7 @@ public class UserServiceImpl implements UserService {
     public UserDetailResponse assignRole(Long userId, Long roleId) {
         User user = findUser(userId);
         Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new EntityNotFoundException("Role not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy vai trò"));
 
         if (userRoleRepository.existsByUser_IdAndRole_Id(userId, roleId)) {
             throw new ConflictException("Role already assigned to user");
@@ -361,7 +361,7 @@ public class UserServiceImpl implements UserService {
 
     private void validateText(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            throw new BadRequestException(fieldName + " is required");
+            throw new BadRequestException(fieldName + " là bắt buộc");
         }
     }
 

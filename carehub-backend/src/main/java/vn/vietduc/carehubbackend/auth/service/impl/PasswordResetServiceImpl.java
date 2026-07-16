@@ -33,14 +33,14 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     ) {
         User user = userRepository
                 .findByEmailAndIsDeletedFalse(request.getEmail())
-                .orElseThrow(() -> new BadRequestException("Email not found"));
+                .orElseThrow(() -> new BadRequestException("Không tìm thấy email"));
 
         if (user.getStatus().equals(UserStatus.LOCKED)) {
-            throw new BadRequestException("User has been locked");
+            throw new BadRequestException("Tài khoản đã bị khóa");
         }
 
         if (user.requiresFirstLoginSetup()) {
-            throw new BadRequestException("Please complete first login setup before resetting password");
+            throw new BadRequestException("Vui lòng hoàn tất thiết lập tài khoản lần đầu trước khi đặt lại mật khẩu");
         }
 
         String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(1000000));
@@ -70,21 +70,21 @@ public class PasswordResetServiceImpl implements PasswordResetService {
         PasswordResetOtp otp = passwordResetRepository
                 .findTopByEmailAndOtpAndEmailVerificationFalseOrderByCreatedAtDesc(
                         request.getEmail(), request.getOtp())
-                .orElseThrow(() -> new BadRequestException("Invalid OTP"));
+                .orElseThrow(() -> new BadRequestException("Mã OTP không chính xác"));
         if (otp.isUsed()) {
-            throw new BadRequestException("OTP already used");
+            throw new BadRequestException("Mã OTP đã được sử dụng");
         }
 
         if (otp.getExpiredAt().isBefore(LocalDateTime.now())) {
             throw new BadRequestException(
-                    "OTP expired");
+                    "Mã OTP đã hết hạn");
         }
 
         User user = userRepository.findByEmailAndIsDeletedFalse(request.getEmail())
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
         if (user.requiresFirstLoginSetup()) {
-            throw new BadRequestException("Please complete first login setup before resetting password");
+            throw new BadRequestException("Vui lòng hoàn tất thiết lập tài khoản lần đầu trước khi đặt lại mật khẩu");
         }
 
         String newPassword = passwordEncoder.encode(request.getNewPassword());

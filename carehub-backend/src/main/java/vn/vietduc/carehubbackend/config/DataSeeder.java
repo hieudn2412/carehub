@@ -200,7 +200,7 @@ public class DataSeeder implements CommandLineRunner {
         try (InputStream inputStream = resource.getInputStream()) {
             return objectMapper.readValue(inputStream, QuestionBankSeedFile.class);
         } catch (IOException ex) {
-            throw new IllegalStateException("Cannot read question bank sample seed: " + questionBankSeedResource, ex);
+            throw new IllegalStateException("Không thể đọc dữ liệu mẫu ngân hàng câu hỏi: " + questionBankSeedResource, ex);
         }
     }
 

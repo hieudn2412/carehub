@@ -75,7 +75,7 @@ public class RoleServiceImpl implements RoleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
         if (userRoleRepository.existsByRole_Id(roleId)) {
-            throw new BadRequestException("Cannot delete role assigned to users");
+            throw new BadRequestException("Không thể xóa vai trò đã được gán cho người dùng");
         }
 
         rolePermissionRepository.deleteByRole_Id(roleId);

@@ -61,6 +61,7 @@ import TrainingHoursEvidenceScreen from '../features/staff/pages/training/Traini
 import TrainingHoursEvidencesListScreen from '../features/staff/pages/training/TrainingHoursEvidencesListScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
+import StaffCompetencyPage from '../features/staff/pages/competency/StaffCompetencyPage.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
 import ExamTakeListScreen from '../features/staff/pages/ExamTakeListScreen.jsx'
 import ExamTakeScreen from '../features/staff/pages/ExamTakeScreen.jsx'
@@ -295,6 +296,7 @@ function AppRouter() {
       <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
       <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
+      <Route path="/staff/competency" element={protectedElement(<StaffCompetencyPage />)} />
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />

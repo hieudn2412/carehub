@@ -57,7 +57,7 @@ public class FormSubmissionService {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
         User subject = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(request.subject().employeeCode().trim())
-                .orElseThrow(() -> new ResourceNotFoundException("Form subject user not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng đối tượng biểu mẫu"));
         if (submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                 item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)) {
             throw new ConflictException("An open draft already exists for this employee and assigned form");
@@ -319,7 +319,7 @@ public class FormSubmissionService {
 
     private void requireLock(FormSubmission submission, Long lockVersion) {
         if (!Objects.equals(submission.getLockVersion(), lockVersion)) {
-            throw new ConflictException("Form submission has been updated by another request");
+            throw new ConflictException("Bài nộp biểu mẫu đã được cập nhật bởi yêu cầu khác");
         }
     }
 

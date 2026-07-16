@@ -49,7 +49,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     @Transactional
     public DepartmentResponse createDepartment(DepartmentRequest request) {
         if (departmentRepository.existsByDepartmentCode(request.getDepartmentCode())) {
-            throw new ConflictException("Department code already exists");
+            throw new ConflictException("Mã phòng ban đã tồn tại");
         }
 
         Department department = Department.builder()
@@ -65,7 +65,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     public DepartmentResponse updateDepartment(Long id, DepartmentRequest request) {
         Department department = findDepartment(id);
         if (departmentRepository.existsByDepartmentCodeAndIdNot(request.getDepartmentCode(), id)) {
-            throw new ConflictException("Department code already exists");
+            throw new ConflictException("Mã phòng ban đã tồn tại");
         }
 
         department.setDepartmentCode(request.getDepartmentCode().trim());
@@ -197,6 +197,6 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
 
     private EducationLevel findEducationLevel(Long id) {
         return educationLevelRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Education level not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy trình độ học vấn"));
     }
 }
