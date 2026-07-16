@@ -109,7 +109,7 @@ public class FormAssignmentService {
     @Transactional
     public void revokeItem(Long id) {
         FormAssignmentItem item = itemRepository.findDetailById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Form assignment item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy mục phân công biểu mẫu"));
         if (item.getStatus() == FormAssignmentStatus.ACTIVE) item.setStatus(FormAssignmentStatus.REVOKED);
     }
 

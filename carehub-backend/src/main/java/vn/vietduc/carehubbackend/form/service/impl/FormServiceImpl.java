@@ -107,7 +107,7 @@ public class FormServiceImpl implements FormService {
             return null;
         }
         return departmentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Owner department not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban sở hữu"));
     }
 
     private Pageable normalizePageable(Pageable pageable) {

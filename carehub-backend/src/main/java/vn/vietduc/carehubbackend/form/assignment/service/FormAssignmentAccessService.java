@@ -23,7 +23,7 @@ public class FormAssignmentAccessService {
     public FormAssignmentItem requireActiveOwnedItem(Long itemId, Long managerId) {
         return itemRepository.findActiveOwnedItem(itemId, managerId, FormAssignmentStatus.ACTIVE,
                         FormStatus.PUBLISHED, FormVersionStatus.PUBLISHED, Instant.now(clock))
-                .orElseThrow(() -> new ResourceNotFoundException("Assigned form not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biểu mẫu được phân công"));
     }
 
     @Transactional
@@ -31,6 +31,6 @@ public class FormAssignmentAccessService {
         return itemRepository.findActiveOwnedItemForUpdate(itemId, managerId,
                         FormAssignmentStatus.ACTIVE, FormStatus.PUBLISHED,
                         FormVersionStatus.PUBLISHED, Instant.now(clock))
-                .orElseThrow(() -> new ResourceNotFoundException("Assigned form not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy biểu mẫu được phân công"));
     }
 }

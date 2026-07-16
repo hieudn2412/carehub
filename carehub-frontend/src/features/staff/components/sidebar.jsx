@@ -3,7 +3,7 @@ import {
   DashboardOutlined,
   ClockCircleOutlined,
   BarChartOutlined,
-
+  TrophyOutlined,
   EditOutlined,
   HistoryOutlined,
   UserOutlined,
@@ -54,6 +54,12 @@ function Sidebar() {
 
   // Personal/Staff features
   navSections.push(
+    {
+      label: 'Năng lực của tôi',
+      items: [
+        { icon: <TrophyOutlined />, label: 'Năng lực', path: '/staff/competency' },
+      ],
+    },
     {
       label: 'Đào tạo của tôi',
       items: [

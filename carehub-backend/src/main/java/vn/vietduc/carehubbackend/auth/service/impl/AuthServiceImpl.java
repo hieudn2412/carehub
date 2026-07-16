@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private static final String INVALID_CREDENTIALS_MESSAGE = "Invalid code or password";
+    private static final String INVALID_CREDENTIALS_MESSAGE = "Mã nhân viên hoặc mật khẩu không chính xác";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.getStatus() == UserStatus.LOCKED) {
-            throw new UnauthorizedException("Account is locked");
+            throw new UnauthorizedException("Tài khoản đã bị khóa");
         }
 
         refreshTokenService.revokeAllUserTokens(user);
@@ -66,18 +66,18 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenService.findToken(request.getRefreshToken());
         if (refreshToken.getRevoked()) {
-            throw new BadRequestException("Token is revoked");
+            throw new BadRequestException("Token đã bị thu hồi");
         }
         if (refreshToken.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Token has expired");
+            throw new BadRequestException("Token đã hết hạn");
         }
 
         User user = refreshToken.getUser();
         if (user.getStatus() == UserStatus.LOCKED) {
-            throw new UnauthorizedException("Account is locked");
+            throw new UnauthorizedException("Tài khoản đã bị khóa");
         }
         if (user.getStatus() != UserStatus.ACTIVE && !user.requiresFirstLoginSetup()) {
-            throw new UnauthorizedException("Account is not active");
+            throw new UnauthorizedException("Tài khoản chưa được kích hoạt");
         }
 
         AccessTokenResult accessToken = jwtTokenService.generateAccessToken(user);

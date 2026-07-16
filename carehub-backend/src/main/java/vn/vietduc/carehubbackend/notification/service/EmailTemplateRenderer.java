@@ -64,7 +64,7 @@ public class EmailTemplateRenderer {
         while (matcher.find()) {
             String variable = matcher.group(1);
             if (!variables.containsKey(variable)) {
-                throw new UnprocessableEntityException("Missing template variable: " + variable);
+                throw new UnprocessableEntityException("Thiếu biến mẫu: " + variable);
             }
             matcher.appendReplacement(rendered, Matcher.quoteReplacement(String.valueOf(variables.get(variable))));
         }

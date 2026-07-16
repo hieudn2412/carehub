@@ -192,7 +192,7 @@ public class FormVersionServiceImpl implements FormVersionService {
             throw new UnauthorizedException("Authenticated user is required");
         }
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UnauthorizedException("Authenticated user no longer exists"));
+                .orElseThrow(() -> new UnauthorizedException("Người dùng đã xác thực không còn tồn tại"));
     }
 
     private void updateSchemaSnapshot(FormVersion version) {
@@ -259,3 +259,4 @@ public class FormVersionServiceImpl implements FormVersionService {
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 }
+

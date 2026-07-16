@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})
     public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, HttpServletRequest request) {
         String message = ex.getMessage() == null || ex.getMessage().isBlank()
-                ? "The resource was updated by another request"
+                ? "Tài nguyên đã được cập nhật bởi yêu cầu khác"
                 : ex.getMessage();
         return build(HttpStatus.CONFLICT, "SYS_409", message, null, request);
     }
@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, "AUTH_002", "You don't have permission to do that.", null, request);
+        return build(HttpStatus.FORBIDDEN, "AUTH_002", "Bạn không có quyền thực hiện thao tác này.", null, request);
     }
 
     @ExceptionHandler(ForbiddenException.class)
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler {
                         .build())
                 .toList();
 
-        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", "Validation failed", errors, request);
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001", "Dữ liệu không hợp lệ", errors, request);
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -115,7 +115,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception for {} {}", request.getMethod(), request.getRequestURI(), ex);
-        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Internal server error", null, request);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "SYS_001", "Lỗi máy chủ nội bộ", null, request);
     }
 
     private ResponseEntity<ErrorResponse> build(

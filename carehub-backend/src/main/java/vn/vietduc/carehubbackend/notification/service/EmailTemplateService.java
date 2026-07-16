@@ -235,7 +235,7 @@ public class EmailTemplateService {
         Sort sort = pageable.getSort().isSorted() ? pageable.getSort() : Sort.by(Sort.Order.desc("updatedAt"));
         sort.forEach(order -> {
             if (!ALLOWED_SORTS.contains(order.getProperty())) {
-                throw ValidationException.field("sort", "Unsupported sort field: " + order.getProperty());
+                throw ValidationException.field("sort", "Trường sắp xếp không được hỗ trợ: " + order.getProperty());
             }
         });
         return PageRequest.of(Math.max(0, pageable.getPageNumber()), size, sort);

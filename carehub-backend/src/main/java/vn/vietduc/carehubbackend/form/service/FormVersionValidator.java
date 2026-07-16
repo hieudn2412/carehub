@@ -102,7 +102,7 @@ public class FormVersionValidator {
                 for (int optionIndex = 0; optionIndex < question.getOptions().size(); optionIndex++) {
                     FormOption option = question.getOptions().get(optionIndex);
                     String optionPath = questionPath + ".options[" + optionIndex + "]";
-                    unique(errors, optionKeys, option.getOptionKey(), optionPath + ".optionKey", "Option key must be unique");
+                    unique(errors, optionKeys, option.getOptionKey(), optionPath + ".optionKey", "Mã tùy chọn phải là duy nhất");
                     validateOrder(errors, question.getOptions(), option.getDisplayOrder(), optionPath + ".displayOrder", FormOption::getDisplayOrder);
                     if (!optionValues.add(option.getValue().toLowerCase())) {
                         add(errors, optionPath + ".value", "Option value must be unique within the question");

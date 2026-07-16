@@ -24,6 +24,6 @@ public class SecurityUtils {
         if (authentication.getName() != null && authentication.getName().matches("\\d+")) {
             return Long.valueOf(authentication.getName());
         }
-        throw new IllegalStateException("Missing authenticated user id");
+        throw new IllegalStateException("Thiếu ID người dùng đã xác thực");
     }
 }

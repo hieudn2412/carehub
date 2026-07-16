@@ -70,6 +70,8 @@ ai:
     records:
       review-enabled: ${TRAINING_RECORDS_REVIEW_ENABLED:false}
       max-edit-count: ${TRAINING_RECORDS_MAX_EDIT_COUNT:2}
+    evidence:
+      storage-dir: ${TRAINING_EVIDENCE_STORAGE_DIR:storage/training-evidence}
   embedding:
     provider: ${EMBEDDING_PROVIDER:e5}
     model: ${EMBEDDING_MODEL:intfloat/multilingual-e5-small}
