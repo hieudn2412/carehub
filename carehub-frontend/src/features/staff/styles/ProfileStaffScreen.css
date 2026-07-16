@@ -435,3 +435,31 @@
 .btn--secondary:hover {
   background: #6c7a7b;
 }
+
+/* Keep auth-page form styles from leaking into the change-password dialog. */
+.change-password-modal .form-field {
+  display: flex;
+  gap: 6px;
+}
+
+.change-password-modal .form-field__label {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.change-password-modal .form-field__input {
+  height: 40px;
+  padding: 0 38px 0 12px;
+  border: 1px solid #dce3e0;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2926;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.change-password-modal .form-field__input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
+}
