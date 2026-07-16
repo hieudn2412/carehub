@@ -22,6 +22,26 @@ export const competencyApi = {
   updateThresholds(payload) {
     return httpClient.put('/competency/thresholds', payload, { headers: authHeaders() })
   },
+
+  getByField(params) {
+    return httpClient.get('/competency/by-field', { headers: authHeaders(), params })
+  },
+
+  getEmployeeByField(employeeId, params) {
+    return httpClient.get(`/competency/employees/${employeeId}/by-field`, { headers: authHeaders(), params })
+  },
+
+  getByTechnique(params) {
+    return httpClient.get('/competency/by-technique', { headers: authHeaders(), params })
+  },
+
+  getEmployeeByTechnique(employeeId, params) {
+    return httpClient.get(`/competency/employees/${employeeId}/by-technique`, { headers: authHeaders(), params })
+  },
+
+  getSummary(params) {
+    return httpClient.get('/competency/summary', { headers: authHeaders(), params })
+  },
 }
 
 export const examAssignmentApi = {
