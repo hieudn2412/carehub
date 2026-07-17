@@ -22,12 +22,6 @@ import { questionSetApi } from '../api/questionSetApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetFormPage.css'
 
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Bản nháp' },
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'INACTIVE', label: 'Tạm ngưng' },
-]
-
 const DIFFICULTY_OPTIONS = [
   { value: 'easy', label: 'Dễ' },
   { value: 'medium', label: 'Trung bình' },
@@ -106,6 +100,8 @@ function QuestionSetFormPage() {
   }, [id, isEditMode, showToast])
 
   useEffect(() => {
+    // Hydrate form and question-bank data when the edited set changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
   }, [loadData])
 
@@ -285,7 +281,7 @@ function QuestionSetFormPage() {
   async function handleSave(event) {
     event.preventDefault()
     if (isActiveLocked) {
-      showToast('Bộ câu hỏi đang hoạt động đã được khóa snapshot. Hãy tạo bản nháp chỉnh sửa.', 'warning')
+      showToast('Bộ câu hỏi đang được sử dụng nên không thể sửa trực tiếp. Hãy tạo một bản sao để chỉnh sửa.', 'warning')
       return
     }
     if (!name.trim()) {
@@ -320,7 +316,7 @@ function QuestionSetFormPage() {
 
   async function previewQuestionSet() {
     if (isActiveLocked) {
-      showToast('Bộ câu hỏi đang hoạt động đã được khóa snapshot. Hãy tạo bản nháp chỉnh sửa.', 'warning')
+      showToast('Bộ câu hỏi đang được sử dụng nên không thể sửa trực tiếp. Hãy tạo một bản sao để chỉnh sửa.', 'warning')
       return
     }
     setIsPreviewing(true)
@@ -367,7 +363,7 @@ function QuestionSetFormPage() {
     try {
       const response = await questionSetApi.duplicateQuestionSet(id)
       const duplicated = apiData(response)
-      showToast('Đã tạo bản nháp chỉnh sửa từ bộ đang hoạt động.', 'success')
+      showToast('Đã tạo bản sao để chỉnh sửa.', 'success')
       if (duplicated?.id) {
         navigate(`/admin/evaluation/question-sets/${duplicated.id}/edit`)
       }
@@ -412,12 +408,12 @@ function QuestionSetFormPage() {
                       <section className="qsf-lock-banner">
                         <LockOutlined />
                         <div>
-                          <strong>Bộ câu hỏi đang hoạt động đã khóa snapshot</strong>
-                          <p>Không sửa trực tiếp bản active. Tạo bản nháp chỉnh sửa để thay đổi câu hỏi, thứ tự hoặc metadata rồi kích hoạt thành version mới.</p>
+                          <strong>Bộ câu hỏi này đang được sử dụng</strong>
+                          <p>Để bảo toàn các bài kiểm tra hiện có, hãy tạo một bản sao trước khi thay đổi nội dung.</p>
                         </div>
                         <button type="button" className="qsf-btn-save" onClick={createDraftCopy} disabled={isSaving}>
                           {isSaving ? <LoadingOutlined /> : <CopyOutlined />}
-                          Tạo bản nháp chỉnh sửa
+                          Tạo bản sao để chỉnh sửa
                         </button>
                       </section>
                     )}
@@ -425,7 +421,7 @@ function QuestionSetFormPage() {
                       <div className="qsf-section-heading">
                         <div>
                           <h3>Thông tin bộ câu hỏi</h3>
-                          <p>Thiết lập thông tin nhận diện và trạng thái sử dụng.</p>
+                          <p>Thiết lập thông tin nhận diện và nội dung sử dụng.</p>
                         </div>
                         <span className="qsf-selected-count">{selectedIds.length} câu đã chọn</span>
                       </div>
@@ -455,7 +451,7 @@ function QuestionSetFormPage() {
                       />
                     </div>
 
-                    <div className="qsf-form-row qsf-form-row--three">
+                    <div className="qsf-form-row">
                       <div className="qsf-form-group">
                         <label>Danh mục</label>
                         <input
@@ -474,14 +470,6 @@ function QuestionSetFormPage() {
                         <label>Độ khó</label>
                         <select className="qsf-input-red" value={difficulty} onChange={(event) => setDifficulty(event.target.value)} disabled={isActiveLocked}>
                           {DIFFICULTY_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="qsf-form-group">
-                        <label>Trạng thái</label>
-                        <select className="qsf-input-red" value={status} onChange={(event) => setStatus(event.target.value)} disabled={isActiveLocked}>
-                          {STATUS_OPTIONS.map((option) => (
                             <option key={option.value} value={option.value}>{option.label}</option>
                           ))}
                         </select>

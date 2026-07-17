@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
-import { CheckOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -12,6 +12,11 @@ import '../styles/QuestionFormPage.css'
 const CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'Quy trình lâm sàng', 'Cấp cứu', 'An toàn người bệnh']
 const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
 const ANSWER_LETTERS = ['A', 'B', 'C', 'D']
+const EMPTY_OPTIONS = ['', '', '', '']
+
+function formSnapshot({ content, category, difficulty, options, correctOptionIndices }) {
+  return JSON.stringify({ content, category, difficulty, options, correctOptionIndices })
+}
 
 function difficultyValue(label) {
   if (label === 'Dễ') return 'EASY'
@@ -29,10 +34,6 @@ function QuestionFormPage() {
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('Kiểm soát nhiễm khuẩn')
   const [difficulty, setDifficulty] = useState('Dễ')
-  const [active, setActive] = useState(true)
-  const [explanation, setExplanation] = useState('')
-  const [sourceDocument, setSourceDocument] = useState('')
-  const [questionType, setQuestionType] = useState('single') // 'single' or 'multiple'
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [backendCategories, setBackendCategories] = useState([])
@@ -40,8 +41,25 @@ function QuestionFormPage() {
   const [loadError, setLoadError] = useState('')
   
   // Dynamic Options State
-  const [options, setOptions] = useState(['', '', '', ''])
+  const [options, setOptions] = useState(EMPTY_OPTIONS)
   const [correctOptionIndices, setCorrectOptionIndices] = useState([0])
+  const [baselineSnapshot, setBaselineSnapshot] = useState(() => isEditMode ? null : formSnapshot({
+    content: '',
+    category: 'Kiểm soát nhiễm khuẩn',
+    difficulty: 'Dễ',
+    options: EMPTY_OPTIONS,
+    correctOptionIndices: [0],
+  }))
+  const [pendingDestination, setPendingDestination] = useState(null)
+
+  const currentSnapshot = useMemo(() => formSnapshot({
+    content,
+    category,
+    difficulty,
+    options,
+    correctOptionIndices,
+  }), [category, content, correctOptionIndices, difficulty, options])
+  const hasUnsavedChanges = baselineSnapshot !== null && currentSnapshot !== baselineSnapshot
 
   const categoryOptions = useMemo(() => {
     const names = backendCategories.length > 0 ? backendCategories.map((item) => item.name) : CATEGORIES
@@ -85,6 +103,7 @@ function QuestionFormPage() {
     async function loadQuestion() {
       setIsLoadingQuestion(true)
       setLoadError('')
+      setBaselineSnapshot(null)
       try {
         const response = await questionBankApi.getQuestion(id)
         const question = apiData(response)
@@ -93,15 +112,24 @@ function QuestionFormPage() {
         }
         if (ignore) return
 
-        setContent(question.stem || '')
-        setCategory(question.topic || question.sourceDocument || 'Chưa phân loại')
-        setDifficulty(difficultyText(question.difficulty))
-        setActive(question.status === 'APPROVED')
-        setExplanation(question.explanation || '')
-        setSourceDocument(question.sourceDocument || '')
-        setQuestionType('single')
-        setOptions([question.optionA || '', question.optionB || '', question.optionC || '', question.optionD || ''])
-        setCorrectOptionIndices([Math.max(0, ANSWER_LETTERS.indexOf(String(question.correctAnswer || 'A').toUpperCase()))])
+        const loadedContent = question.stem || ''
+        const loadedCategory = question.topic || question.sourceDocument || 'Chưa phân loại'
+        const loadedDifficulty = difficultyText(question.difficulty)
+        const loadedOptions = [question.optionA || '', question.optionB || '', question.optionC || '', question.optionD || '']
+        const loadedCorrectIndices = [Math.max(0, ANSWER_LETTERS.indexOf(String(question.correctAnswer || 'A').toUpperCase()))]
+
+        setContent(loadedContent)
+        setCategory(loadedCategory)
+        setDifficulty(loadedDifficulty)
+        setOptions(loadedOptions)
+        setCorrectOptionIndices(loadedCorrectIndices)
+        setBaselineSnapshot(formSnapshot({
+          content: loadedContent,
+          category: loadedCategory,
+          difficulty: loadedDifficulty,
+          options: loadedOptions,
+          correctOptionIndices: loadedCorrectIndices,
+        }))
         setImpactWarning(question.impactWarning || null)
       } catch (error) {
         if (ignore) return
@@ -124,12 +152,42 @@ function QuestionFormPage() {
     }
   }, [id, isEditMode, showToast])
 
-  const handleQuestionTypeChange = (type) => {
-    setQuestionType(type)
-    if (type === 'single') {
-      // If switching back to single choice, keep only the first checked option
-      setCorrectOptionIndices((prev) => (prev.length > 0 ? [prev[0]] : [0]))
+  useEffect(() => {
+    if (!hasUnsavedChanges) return undefined
+
+    const warnBeforeUnload = (event) => {
+      event.preventDefault()
+      event.returnValue = ''
     }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const requestLeave = (destination = '/admin/evaluation/question-bank') => {
+    if (hasUnsavedChanges && !isSaving) {
+      setPendingDestination(destination)
+      return
+    }
+    navigate(destination)
+  }
+
+  const handleNavigationCapture = (event) => {
+    if (!hasUnsavedChanges || isSaving || event.defaultPrevented) return
+    const anchor = event.target.closest('a[href]')
+    if (!anchor) return
+
+    const targetUrl = new URL(anchor.href, window.location.href)
+    if (targetUrl.origin !== window.location.origin) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    setPendingDestination(`${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`)
+  }
+
+  const confirmLeave = () => {
+    const destination = pendingDestination
+    setPendingDestination(null)
+    if (destination) navigate(destination)
   }
 
   const handleOptionChange = (index, value) => {
@@ -141,37 +199,7 @@ function QuestionFormPage() {
   }
 
   const handleSelectCorrect = (index) => {
-    if (questionType === 'single') {
-      setCorrectOptionIndices([index])
-    } else {
-      setCorrectOptionIndices((prev) =>
-        prev.includes(index)
-          ? prev.filter((i) => i !== index)
-          : [...prev, index]
-      )
-    }
-  }
-
-  const handleAddOption = () => {
-    setOptions((prev) => (prev.length >= 4 ? prev : [...prev, '']))
-  }
-
-  const handleDeleteOption = (indexToDelete) => {
-    if (options.length <= 4) {
-      alert('Câu hỏi trắc nghiệm trong ngân hàng hiện cần đúng 4 phương án A-D.')
-      return
-    }
-
-    setOptions((prev) => prev.filter((_, idx) => idx !== indexToDelete))
-
-    setCorrectOptionIndices((prev) => {
-      const nextIndices = prev
-        .filter((idx) => idx !== indexToDelete)
-        .map((idx) => (idx > indexToDelete ? idx - 1 : idx))
-      
-      // If we deleted all correct indices, default to the first option
-      return nextIndices.length > 0 ? nextIndices : [0]
-    })
+    setCorrectOptionIndices([index])
   }
 
   const handleSave = async (e) => {
@@ -187,7 +215,7 @@ function QuestionFormPage() {
       return
     }
 
-    if (questionType !== 'single' || correctOptionIndices.length !== 1) {
+    if (correctOptionIndices.length !== 1) {
       showToast('Ngân hàng câu hỏi hiện hỗ trợ một đáp án đúng cho mỗi câu.', 'warning')
       return
     }
@@ -199,17 +227,12 @@ function QuestionFormPage() {
       optionC: options[2].trim(),
       optionD: options[3].trim(),
       correctAnswer: ANSWER_LETTERS[correctOptionIndices[0]],
-      explanation: explanation.trim(),
+      explanation: null,
       topic: category,
       difficulty: difficultyValue(difficulty),
       language: 'vi',
-      sourceDocument: sourceDocument.trim(),
-      status: active ? 'APPROVED' : 'DRAFT',
-    }
-
-    if (isEditMode && !active && impactWarning?.blocksArchive) {
-      showToast(impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể chuyển về bản nháp.', 'warning')
-      return
+      sourceDocument: null,
+      status: 'APPROVED',
     }
 
     if (isEditMode && impactWarning?.warning && !window.confirm(`${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi?`)) {
@@ -245,7 +268,7 @@ function QuestionFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" onClickCapture={handleNavigationCapture}>
       <AdminSidebar />
       <div className="dashboard-layout__content">
         <AdminHeader breadcrumbs={breadcrumbs} />
@@ -255,12 +278,17 @@ function QuestionFormPage() {
               <div className="qf-container">
                 {/* Header */}
                 <div className="qf-header">
-                  <h2 className="qf-title">
-                    {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
-                  </h2>
-                  <p className="qf-subtitle">
-                    Thêm hoặc chỉnh sửa câu hỏi trắc nghiệm trong ngân hàng
-                  </p>
+                  <button type="button" className="qf-back-btn" onClick={() => requestLeave()}>
+                    <ArrowLeftOutlined /> Quay lại ngân hàng câu hỏi
+                  </button>
+                  <div>
+                    <h2 className="qf-title">
+                      {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
+                    </h2>
+                    <p className="qf-subtitle">
+                      {isEditMode ? 'Điều chỉnh nội dung và đáp án của câu hỏi.' : 'Soạn câu hỏi trắc nghiệm với một đáp án đúng.'}
+                    </p>
+                  </div>
                 </div>
 
                 {isLoadingQuestion && (
@@ -270,7 +298,7 @@ function QuestionFormPage() {
                   <div className="qf-error-banner">
                     <strong>Không tải được câu hỏi</strong>
                     <p>{loadError}</p>
-                    <button type="button" onClick={() => navigate('/admin/evaluation/question-bank')}>
+                    <button type="button" onClick={() => requestLeave()}>
                       Quay lại ngân hàng câu hỏi
                     </button>
                   </div>
@@ -297,6 +325,7 @@ function QuestionFormPage() {
                       placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
                       disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     />
+                    <small className="qf-field-hint">Viết ngắn gọn, rõ nghĩa và tránh đưa gợi ý đáp án vào câu hỏi.</small>
                   </div>
 
                   {/* Inputs Grid */}
@@ -340,61 +369,12 @@ function QuestionFormPage() {
                     </div>
                   </div>
 
-                  <div className="qf-form-row">
-                    <div className="qf-form-group">
-                      <label>Loại câu hỏi <span className="qf-required-star">*</span></label>
-                      <select
-                        className="qf-input-red"
-                        required
-                        value={questionType}
-                        onChange={(e) => handleQuestionTypeChange(e.target.value)}
-                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                      >
-                        <option value="single">Một đáp án đúng</option>
-                      </select>
-                    </div>
-
-                    <div className="qf-form-group">
-                      <label>Trạng thái</label>
-                      <select
-                        className="qf-input-red"
-                        value={active.toString()}
-                        onChange={(e) => setActive(e.target.value === 'true')}
-                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                      >
-                        <option value="true">Đã duyệt</option>
-                        <option value="false">Bản nháp</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="qf-form-group">
-                    <label>Giải thích đáp án</label>
-                    <input
-                      type="text"
-                      className="qf-input-red"
-                      value={explanation}
-                      onChange={(e) => setExplanation(e.target.value)}
-                      placeholder="Nhập giải thích ngắn gọn cho đáp án đúng..."
-                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                    />
-                  </div>
-
-                  <div className="qf-form-group">
-                    <label>Nguồn câu hỏi</label>
-                    <input
-                      type="text"
-                      className="qf-input-red"
-                      value={sourceDocument}
-                      onChange={(e) => setSourceDocument(e.target.value)}
-                      placeholder="Ví dụ: Tài liệu bệnh viện, file import, nhập thủ công..."
-                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                    />
-                  </div>
-
                   {/* Section Divider */}
                   <div className="qf-section-divider">
-                    <span className="qf-divider-title">CÁC PHƯƠNG ÁN TRẢ LỜI</span>
+                    <div>
+                      <span className="qf-divider-title">Các phương án trả lời</span>
+                      <p>Nhập đủ bốn phương án và chọn một đáp án đúng.</p>
+                    </div>
                   </div>
 
                   {/* Options List */}
@@ -413,7 +393,7 @@ function QuestionFormPage() {
                         >
                           <div className="qf-option-left">
                             <input
-                              type={questionType === 'single' ? 'radio' : 'checkbox'}
+                              type="radio"
                               name="correctAnswer"
                               checked={isCorrect}
                               onChange={() => handleSelectCorrect(idx)}
@@ -439,46 +419,23 @@ function QuestionFormPage() {
                                 <CheckOutlined /> Đúng
                               </span>
                             )}
-                            {options.length > 4 && (
-                              <button
-                                type="button"
-                                className="qf-option-delete-btn"
-                                onClick={() => handleDeleteOption(idx)}
-                                title="Xóa phương án này"
-                                disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                              >
-                                <DeleteOutlined />
-                              </button>
-                            )}
                           </div>
                         </div>
                       )
                     })}
                   </div>
 
-                  {/* Add Option Button */}
-                  {options.length < 4 && (
-                    <button
-                      type="button"
-                      className="qf-btn-add-option"
-                      onClick={handleAddOption}
-                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                    >
-                      <PlusOutlined /> Thêm phương án trả lời
-                    </button>
-                  )}
-
                   {/* Actions Footer */}
                   <div className="qf-form-actions">
-                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
-                      {isSaving ? 'Đang lưu...' : 'Lưu câu hỏi'}
-                    </button>
                     <button
                       type="button"
                       className="qf-btn-cancel"
-                      onClick={() => navigate('/admin/evaluation/question-bank')}
+                      onClick={() => requestLeave()}
                     >
                       Hủy
+                    </button>
+                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
+                      {isSaving ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo câu hỏi')}
                     </button>
                   </div>
                 </form>
@@ -487,6 +444,31 @@ function QuestionFormPage() {
           </main>
         </div>
       </div>
+      {pendingDestination && (
+        <div className="qf-leave-backdrop" role="presentation" onMouseDown={() => setPendingDestination(null)}>
+          <section
+            className="qf-leave-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qf-leave-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <span className="qf-leave-dialog__icon" aria-hidden="true"><ExclamationCircleOutlined /></span>
+            <div>
+              <h3 id="qf-leave-title">Rời trang mà không lưu?</h3>
+              <p>Các thay đổi bạn đang chỉnh sửa sẽ bị mất.</p>
+            </div>
+            <div className="qf-leave-dialog__actions">
+              <button type="button" className="qf-btn-cancel" onClick={() => setPendingDestination(null)}>
+                Tiếp tục chỉnh sửa
+              </button>
+              <button type="button" className="qf-btn-leave" onClick={confirmLeave}>
+                Rời trang, không lưu
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CheckCircleOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -14,7 +13,6 @@ import {
   PlusCircleOutlined,
   PrinterOutlined,
   SearchOutlined,
-  StopOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
@@ -24,13 +22,6 @@ import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetListPage.css'
 
 const DEFAULT_CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'An toàn sử dụng thuốc', 'An toàn người bệnh', 'Quy trình lâm sàng']
-
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: 'Bản nháp' },
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'INACTIVE', label: 'Tạm ngưng' },
-  { value: 'ARCHIVED', label: 'Đã lưu trữ' },
-]
 
 const EXPORT_MIME_TYPES = {
   csv: 'text/csv;charset=utf-8',
@@ -56,7 +47,6 @@ function QuestionSetListPage() {
   const [exportMenuId, setExportMenuId] = useState(null)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(0)
 
   const loadSets = useCallback(async () => {
@@ -65,17 +55,18 @@ function QuestionSetListPage() {
       const response = await questionSetApi.listQuestionSets({
         q: keyword || undefined,
         category: categoryFilter || undefined,
-        status: statusFilter || undefined,
       })
-      setSets(apiData(response, []))
+      setSets(apiData(response, []).filter((item) => item.status !== 'ARCHIVED'))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsLoading(false)
     }
-  }, [categoryFilter, keyword, showToast, statusFilter])
+  }, [categoryFilter, keyword, showToast])
 
   useEffect(() => {
+    // Hydrate the list from the API when its server-side filters change.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSets()
   }, [loadSets])
 
@@ -106,28 +97,12 @@ function QuestionSetListPage() {
   const displayRows = sets.slice(page * pageSize, (page + 1) * pageSize)
 
   async function archiveSet(item) {
-    if (!window.confirm(`Bạn có chắc chắn muốn lưu trữ bộ câu hỏi "${item.name}" không?`)) {
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa bộ câu hỏi "${item.name}" không?`)) {
       return
     }
     await runAction(item.id, async () => {
       await questionSetApi.archiveQuestionSet(item.id)
-      showToast('Đã lưu trữ bộ câu hỏi.', 'success')
-      await loadSets()
-    })
-  }
-
-  async function activateSet(item) {
-    await runAction(item.id, async () => {
-      await questionSetApi.activateQuestionSet(item.id)
-      showToast('Đã kích hoạt bộ câu hỏi.', 'success')
-      await loadSets()
-    })
-  }
-
-  async function deactivateSet(item) {
-    await runAction(item.id, async () => {
-      await questionSetApi.deactivateQuestionSet(item.id)
-      showToast('Đã tạm ngưng bộ câu hỏi.', 'success')
+      showToast('Đã xóa bộ câu hỏi.', 'success')
       await loadSets()
     })
   }
@@ -219,21 +194,6 @@ function QuestionSetListPage() {
                     ))}
                   </select>
 
-                  <select
-                    className="qsl-filter-select"
-                    value={statusFilter}
-                    onChange={(event) => {
-                      setStatusFilter(event.target.value)
-                      setPage(0)
-                    }}
-                  >
-                    <option value="">Trạng thái</option>
-                    {STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
                 <button className="qsl-btn-add" onClick={() => navigate('/admin/evaluation/question-sets/new')}>
@@ -249,20 +209,19 @@ function QuestionSetListPage() {
                       <th>Danh mục</th>
                       <th>Số câu hỏi</th>
                       <th>Độ khó</th>
-                      <th>Trạng thái</th>
                       <th style={{ width: '230px', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
+                        <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
                           <LoadingOutlined /> Đang tải bộ câu hỏi...
                         </td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                           Không tìm thấy bộ câu hỏi nào.
                         </td>
                       </tr>
@@ -275,11 +234,6 @@ function QuestionSetListPage() {
                           <td>
                             <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>
                               {difficultyText(item.difficulty)}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`qsl-badge ${getStatusClass(item.status)}`}>
-                              {item.statusText || statusText(item.status)}
                             </span>
                           </td>
                           <td>
@@ -297,7 +251,7 @@ function QuestionSetListPage() {
                                 className="qsl-action-btn"
                                 onClick={() => duplicateSet(item)}
                                 title="Nhân bản"
-                                disabled={actionId === item.id || item.status === 'ARCHIVED'}
+                                disabled={actionId === item.id}
                               >
                                 <CopyOutlined />
                               </button>
@@ -341,33 +295,12 @@ function QuestionSetListPage() {
                                   ))}
                                 </div>
                               </div>
-                              {item.status === 'ACTIVE' ? (
-                                <button
-                                  type="button"
-                                  className="qsl-action-btn"
-                                  onClick={() => deactivateSet(item)}
-                                  title="Tạm ngưng"
-                                  disabled={actionId === item.id}
-                                >
-                                  {actionId === item.id ? <LoadingOutlined /> : <StopOutlined />}
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="qsl-action-btn"
-                                  onClick={() => activateSet(item)}
-                                  title="Kích hoạt"
-                                  disabled={actionId === item.id || item.status === 'ARCHIVED'}
-                                >
-                                  {actionId === item.id ? <LoadingOutlined /> : <CheckCircleOutlined />}
-                                </button>
-                              )}
                               <button
                                 type="button"
                                 className="qsl-action-btn qsl-action-btn--delete"
                                 onClick={() => archiveSet(item)}
-                                title="Lưu trữ"
-                                disabled={actionId === item.id || item.status === 'ARCHIVED'}
+                                title="Xóa"
+                                disabled={actionId === item.id}
                               >
                                 <DeleteOutlined />
                               </button>
@@ -421,16 +354,6 @@ function difficultyText(value) {
   if (normalized === 'medium') return 'Trung bình'
   if (normalized === 'hard') return 'Khó'
   return value || '---'
-}
-
-function getStatusClass(status) {
-  if (status === 'ACTIVE') return 'qsl-badge--active'
-  if (status === 'ARCHIVED') return 'qsl-badge--inactive'
-  return 'qsl-badge--inactive'
-}
-
-function statusText(status) {
-  return STATUS_OPTIONS.find((option) => option.value === status)?.label || 'Không xác định'
 }
 
 function downloadFile(filename, content, type) {
