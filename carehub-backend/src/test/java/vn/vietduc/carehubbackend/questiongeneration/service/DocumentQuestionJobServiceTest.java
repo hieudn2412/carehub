@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentChunkRepo
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentKnowledgePointRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,7 @@ class DocumentQuestionJobServiceTest {
     private final QuestionCandidateValidationService validationService = mock(QuestionCandidateValidationService.class);
     private final DuplicateCheckService duplicateCheckService = mock(DuplicateCheckService.class);
     private final GenerationKeyService generationKeyService = mock(GenerationKeyService.class);
+    private final QuestionCategoryRepository questionCategoryRepository = mock(QuestionCategoryRepository.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private DocumentQuestionJobService service;
     private DocumentQuestionJob job;
@@ -51,6 +53,7 @@ class DocumentQuestionJobServiceTest {
                 validationService,
                 duplicateCheckService,
                 generationKeyService,
+                questionCategoryRepository,
                 new DocumentQuestionMapper(),
                 new AiGenerationProperties(),
                 new DocumentProcessingProperties(),
