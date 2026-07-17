@@ -28,9 +28,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -70,22 +67,19 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     }
 
     private void warmup() {
-        // Warmup từng handle trong pool để trigger JIT compilation trong ONNX Runtime
+        // Warmup tất cả handles trong pool để trigger JIT compilation trong ONNX Runtime
         String warmupPrompt = "paraphrase mcq:\nCâu hỏi: test\nA. test\nB. test\nC. test\nD. test\nĐáp án đúng: A\nYêu cầu: giữ nguyên.";
-        // Warmup handle đầu tiên
-        RuntimeHandle warmupHandle = null;
         try {
-            warmupHandle = handlePool.acquire(properties.getAcquireTimeoutMs());
-            generate(warmupHandle.question(), warmupPrompt, 0);
-            generate(warmupHandle.sentence(), "test", 0);
+            handlePool.processAllHandles(handle -> {
+                generate(handle.question(), warmupPrompt, 0);
+                generate(handle.sentence(), "test", 0);
+            });
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("VietQuill warmup bị ngắt");
             return;
-        } finally {
-            handlePool.release(warmupHandle);
         }
-        log.info("VietQuill warmup inference completed");
+        log.info("VietQuill warmup completed for all {} handles", handlePool.poolSize());
     }
 
     @PreDestroy
@@ -119,16 +113,10 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         RuntimeHandle handle = null;
         try {
             handle = handlePool.acquire(properties.getAcquireTimeoutMs());
-            RuntimeHandle finalHandle = handle;
-            return CompletableFuture
-                    .supplyAsync(() -> doParaphrase(finalHandle, input, count))
-                    .get(properties.getTimeoutSeconds(), TimeUnit.SECONDS);
+            return doParaphrase(handle, input, count);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new ParaphraseModelException("Bị ngắt khi chờ VietQuill handle", ex);
-        } catch (TimeoutException ex) {
-            throw new ParaphraseModelException(
-                    "Paraphrase timeout sau " + properties.getTimeoutSeconds() + "s", ex);
         } catch (Exception ex) {
             throw new ParaphraseModelException("Paraphrase thất bại", ex);
         } finally {
@@ -144,16 +132,17 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     }
 
     /**
-     * Single-pass: 1 lần encode+decode cho toàn bộ MCQ.
+     * Single-pass: 1 lần encode + N lần decode cho toàn bộ MCQ.
+     * Tái sử dụng encoder hidden states cho tất cả variants.
      */
     private List<ParaphrasedMcq> paraphraseSinglePass(RuntimeHandle handle, ParaphraseModelInput input, int count) {
         String prompt = promptBuilder.buildFullMcq(input);
+        EncoderState encoderState = encodePrompt(handle.question(), prompt);
         List<ParaphrasedMcq> results = new ArrayList<>();
 
         for (int index = 0; index < count; index++) {
-            String rawOutput = generate(handle.question(), prompt, index);
+            String rawOutput = decode(handle.question(), encoderState, index);
             if (rawOutput.isBlank()) {
-                // Fallback: generate từng field nếu single-pass fail
                 rawOutput = generatePerFieldAndCombine(handle, input, index);
             }
             ParaphrasedMcq mcq = mcqParser.parseFullMcq(rawOutput);
@@ -213,9 +202,18 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     /**
      * Generate text from a Seq2SeqHandle.
-     * KHÔNG còn synchronized — mỗi thread có handle riêng từ pool nên thread-safe.
+     * Convenience wrapper — encode + decode trong 1 lần gọi.
      */
     private String generate(Seq2SeqHandle handle, String prompt, int variantIndex) {
+        EncoderState state = encodePrompt(handle, prompt);
+        return decode(handle, state, variantIndex);
+    }
+
+    /**
+     * Tokenize + encode prompt → encoder hidden states.
+     * Kết quả có thể reuse cho nhiều lần decode (multi-variant).
+     */
+    private EncoderState encodePrompt(Seq2SeqHandle handle, String prompt) {
         try {
             Encoding encoding = handle.tokenizer().encode(prompt);
             long[] inputIds = truncate(encoding.getIds(), properties.getMaxInputLength());
@@ -223,20 +221,30 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             if (attentionMask.length != inputIds.length) {
                 attentionMask = filled(inputIds.length, 1);
             }
+            return new EncoderState(encode(handle, inputIds, attentionMask), attentionMask);
+        } catch (Exception ex) {
+            throw new ParaphraseModelException("Không encode được prompt VietQuill ONNX", ex);
+        }
+    }
 
-            float[][][] encoderHiddenStates = encode(handle, inputIds, attentionMask);
+    /**
+     * Decode từ encoder hidden states đã có sẵn.
+     * Không cần encode lại — dùng khi muốn sinh nhiều variant từ cùng 1 prompt.
+     */
+    private String decode(Seq2SeqHandle handle, EncoderState state, int variantIndex) {
+        try {
             List<String> decoded;
             if (properties.isKvCacheEnabled() && handle.kvCacheSupported()) {
-                decoded = beamDecodeWithKvCache(handle, encoderHiddenStates, attentionMask);
+                decoded = beamDecodeWithKvCache(handle, state.hiddenStates(), state.attentionMask());
             } else {
-                decoded = beamDecode(handle, encoderHiddenStates, attentionMask);
+                decoded = beamDecode(handle, state.hiddenStates(), state.attentionMask());
             }
             if (decoded.isEmpty()) {
                 return "";
             }
             return decoded.get(Math.min(variantIndex, decoded.size() - 1));
         } catch (Exception ex) {
-            throw new ParaphraseModelException("Không sinh được paraphrase bằng VietQuill ONNX", ex);
+            throw new ParaphraseModelException("Không decode được với VietQuill ONNX", ex);
         }
     }
 
@@ -615,21 +623,24 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             sum += Math.exp(logit - max);
         }
         double logSumExp = max + Math.log(sum);
-        List<TopToken> top = new ArrayList<>();
+
+        // PriorityQueue min-heap để giữ top-k tokens
+        java.util.PriorityQueue<TopToken> heap = new java.util.PriorityQueue<>(
+                (a, b) -> Double.compare(a.logProbability(), b.logProbability()));
+
         for (int i = 0; i < logits.length; i++) {
             TopToken token = new TopToken(i, logits[i] - logSumExp);
-            int insertAt = 0;
-            while (insertAt < top.size() && top.get(insertAt).logProbability() >= token.logProbability()) {
-                insertAt++;
-            }
-            if (insertAt < count) {
-                top.add(insertAt, token);
-                if (top.size() > count) {
-                    top.remove(top.size() - 1);
-                }
+            if (heap.size() < count) {
+                heap.offer(token);
+            } else if (token.logProbability() > heap.peek().logProbability()) {
+                heap.poll();
+                heap.offer(token);
             }
         }
-        return top;
+
+        List<TopToken> result = new ArrayList<>(heap);
+        result.sort((a, b) -> Double.compare(b.logProbability(), a.logProbability()));
+        return result;
     }
 
     private String decodeTokens(Seq2SeqHandle handle, List<Long> tokenIds) {
@@ -931,6 +942,13 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             double[] logits,
             List<float[][][]> nextPastKV  // null nếu model không output KV cache
     ) {
+    }
+
+    /**
+     * Cached encoder result — tokenized prompt + encoder hidden states.
+     * Có thể reuse cho nhiều lần decode (multi-variant).
+     */
+    private record EncoderState(float[][][] hiddenStates, long[] attentionMask) {
     }
 
     private record TopToken(long id, double logProbability) {

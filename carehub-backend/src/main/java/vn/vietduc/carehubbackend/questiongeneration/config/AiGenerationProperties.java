@@ -22,7 +22,8 @@ public class AiGenerationProperties {
     private int maxConcurrentCalls = 2;
     private int circuitBreakerFailureThreshold = 5;
     private int circuitBreakerCooldownSeconds = 60;
-    private double temperature = 0.2;
+    private double temperature = 0.7;
+    private double topP = 0.9;
     private int maxOutputTokens = 1800;
     private boolean llmValidationEnabled = true;
     private boolean parallelChunkProcessing = true;
