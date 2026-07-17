@@ -107,7 +107,12 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-sidebar__group-button > span:last-child {
+  flex: 0 0 auto;
 }
 
 .admin-sidebar__group-button:hover {
@@ -129,11 +134,14 @@
 
 .admin-sidebar__group-panel {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 4px;
+  align-self: stretch;
 }
 
 .admin-sidebar__section {
+  flex: 0 0 auto;
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 8px;

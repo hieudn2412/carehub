@@ -2,26 +2,32 @@
 .qf-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .qf-container {
+  width: min(980px, 100%);
+  margin: 0 auto;
   background: #fff;
-  border-radius: 16px;
-  border: 1px solid #cbd5e1;
-  padding: 32px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  border: 1px solid #dbe3ee;
+  padding: 28px;
+  box-sizing: border-box;
 }
 
 .qf-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
   border-bottom: 1px solid #cbd5e1;
-  padding-bottom: 20px;
-  margin-bottom: 24px;
+  padding-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .qf-title {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 650;
   color: #0f172a;
   margin: 0 0 6px 0;
 }
@@ -107,13 +113,13 @@
 .qf-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
 }
 
 .qf-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 16px;
 }
 
 @media (max-width: 768px) {
@@ -135,15 +141,38 @@
   color: #334155;
 }
 
+.qf-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.qf-back-btn:hover {
+  color: #0f766e;
+}
+
+.qf-field-hint {
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
 .qf-required-star {
   color: #dc2626;
 }
 
 /* Green Border Field */
 .qf-input-green {
-  border: 1.5px solid #10b981 !important;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 8px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   font-size: 14px;
   outline: none;
   color: #334155;
@@ -154,8 +183,8 @@
 }
 
 .qf-input-green:focus {
-  border-color: #059669 !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border-color: #0f766e !important;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .qf-input-green:disabled,
@@ -172,9 +201,9 @@
   border-color: #cbd5e1 !important;
 }
 
-/* Red Border Field (selects & explanation as shown in mockup) */
 .qf-input-red {
-  border: 1.5px solid #dc2626 !important;
+  min-height: 44px;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 14px;
@@ -187,14 +216,14 @@
 }
 
 .qf-input-red:focus {
-  border-color: #b91c1c !important;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  border-color: #0f766e !important;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 select.qf-input-red {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23dc2626'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 14px center;
   background-size: 14px;
@@ -205,16 +234,21 @@ select.qf-input-red {
 .qf-section-divider {
   display: flex;
   align-items: center;
-  margin: 12px 0 6px 0;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 8px;
+  margin: 4px 0 0;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
 }
 
 .qf-divider-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #334155;
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.qf-section-divider p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12.5px;
 }
 
 /* Options Cards List */
@@ -225,13 +259,14 @@ select.qf-input-red {
 }
 
 .qf-option-card {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
   align-items: center;
   background: #ffffff;
-  border: 1.5px solid #cbd5e1;
+  border: 1px solid #dbe3ee;
   border-radius: 8px;
-  padding: 12px 20px;
+  min-height: 58px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -242,33 +277,48 @@ select.qf-input-red {
 }
 
 .qf-option-card--correct {
-  background: #e8f7ef !important;
-  border-color: #10b981 !important;
+  background: #f0fdf7 !important;
+  border-color: #6ee7b7 !important;
 }
 
 .qf-option-left {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px 28px minmax(0, 1fr);
   align-items: center;
-  gap: 16px;
-  flex: 1;
+  gap: 10px;
 }
 
 .qf-option-control {
-  transform: scale(1.2);
+  width: 16px;
+  height: 16px;
+  margin: 0;
   cursor: pointer;
 }
 
 .qf-option-letter {
-  font-weight: 700;
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e2e8f0;
   color: #334155;
-  min-width: 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.qf-option-card--correct .qf-option-letter {
+  background: #16a34a;
+  color: #fff;
 }
 
 .qf-option-text-input {
   border: none;
   background: transparent;
   outline: none;
+  width: 100%;
+  min-width: 0;
   font-size: 14px;
   color: #0f172a;
   flex: 1;
@@ -288,7 +338,8 @@ select.qf-input-red {
 .qf-option-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .qf-option-correct-badge {
@@ -297,52 +348,9 @@ select.qf-input-red {
   gap: 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #10b981;
-}
-
-.qf-option-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: #ef4444;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.12s ease;
-}
-
-.qf-option-delete-btn:hover {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-/* Add Option Button */
-.qf-btn-add-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #f8fafc;
-  border: 1.5px dashed #cbd5e1;
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.qf-btn-add-option:hover {
-  background: #f1f5f9;
-  border-color: #007aff;
-  color: #007aff;
+  min-width: 82px;
+  justify-content: flex-end;
+  color: #15803d;
 }
 
 /* Actions footer */
@@ -360,20 +368,20 @@ select.qf-input-red {
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  background: #007aff;
+  background: #0f766e;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.2);
 }
 
 .qf-btn-save:hover {
-  background: #0062cc;
+  background: #115e59;
 }
 
 .qf-btn-save:disabled,
-.qf-btn-add-option:disabled {
+.qf-btn-cancel:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -382,14 +390,125 @@ select.qf-input-red {
   padding: 10px 24px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: #8e8e93;
-  border: none;
+  color: #334155;
+  background: #fff;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
 .qf-btn-cancel:hover {
-  background: #7c7c80;
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.qf-leave-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.qf-leave-dialog {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  width: min(440px, 100%);
+  padding: 22px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+  box-sizing: border-box;
+}
+
+.qf-leave-dialog__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #fff7ed;
+  color: #ea580c;
+  font-size: 20px;
+}
+
+.qf-leave-dialog h3 {
+  margin: 1px 0 6px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.qf-leave-dialog p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.qf-leave-dialog__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.qf-btn-leave {
+  padding: 10px 16px;
+  border: 1px solid #dc2626;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.qf-btn-leave:hover {
+  border-color: #b91c1c;
+  background: #b91c1c;
+}
+
+@media (max-width: 640px) {
+  .qf-container {
+    padding: 20px 16px;
+  }
+
+  .qf-option-card {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .qf-option-right {
+    padding-left: 58px;
+    justify-content: flex-start;
+  }
+
+  .qf-option-correct-badge {
+    justify-content: flex-start;
+  }
+
+  .qf-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .qf-leave-dialog__actions {
+    flex-direction: column-reverse;
+  }
+
+  .qf-leave-dialog__actions button {
+    width: 100%;
+  }
+
+  .qf-btn-save,
+  .qf-btn-cancel {
+    width: 100%;
+  }
 }

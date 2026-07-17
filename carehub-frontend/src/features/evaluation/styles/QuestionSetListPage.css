@@ -195,33 +195,6 @@
   color: #d32f2f;
 }
 
-/* Status Badge */
-.qsl-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 9999px;
-}
-
-.qsl-badge::before {
-  content: "•";
-  font-size: 14px;
-  line-height: 1;
-}
-
-.qsl-badge--active {
-  background: #e8f5f0;
-  color: #0f6e56;
-}
-
-.qsl-badge--inactive {
-  background: #ffebeb;
-  color: #d32f2f;
-}
-
 /* Action Buttons */
 .qsl-actions {
   position: relative;
