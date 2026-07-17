@@ -49,6 +49,7 @@ function Sidebar() {
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         { icon: <BarChartOutlined />, label: 'Năng lực theo lĩnh vực', path: '/manager/competency-by-field' },
+        { icon: <CheckSquareOutlined />, label: 'Tuân thủ kỹ thuật', path: '/manager/compliance-by-technique' },
       ],
     })
   }

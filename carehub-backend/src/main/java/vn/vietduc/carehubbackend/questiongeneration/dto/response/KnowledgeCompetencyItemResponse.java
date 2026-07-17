@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record KnowledgeCompetencyItemResponse(
         Long categoryId,
@@ -12,6 +13,7 @@ public record KnowledgeCompetencyItemResponse(
         String competencyLevel,
         String competencyLabel,
         String colorHex,
-        boolean isPassed
+        boolean isPassed,
+        List<ExamAttemptBriefResponse> attempts
 ) {
 }
