@@ -159,6 +159,12 @@ const navSections = [
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       {
+        icon: <TrophyOutlined />,
+        label: 'Tổng hợp năng lực',
+        path: '/admin/evaluation/competency-summary',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
+      {
         icon: <AuditOutlined />,
         label: 'Prompt Templates',
         path: '/admin/evaluation/prompt-templates',

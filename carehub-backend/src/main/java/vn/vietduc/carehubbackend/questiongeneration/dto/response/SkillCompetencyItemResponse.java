@@ -14,6 +14,7 @@ public record SkillCompetencyItemResponse(
         String competencyLabel,
         String colorHex,
         boolean isPassed,
+        boolean belowTarget,
         List<FormSubmissionBriefResponse> attempts
 ) {
 }

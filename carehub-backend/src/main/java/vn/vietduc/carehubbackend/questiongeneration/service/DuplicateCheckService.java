@@ -108,8 +108,9 @@ public class DuplicateCheckService {
                 checker = "e5-ann";
             }
 
-            // Nếu ANN không tìm thấy strong match, fallback về exact search
-            if (best < properties.getDuplicate().getStrongMin()) {
+            // Chỉ fallback exact khi ANN không tìm thấy gì hoặc best dưới reviewMin
+            // (nếu ANN đã tìm thấy match ≥ reviewMin thì đủ để đánh dấu needsReview, không cần exact)
+            if (annBest == null || best < properties.getDuplicate().getReviewMin()) {
                 for (QuestionEmbeddingSnapshot embedding : embeddings) {
                     if (excludedQuestionIds.contains(embedding.questionId())) {
                         continue;
@@ -144,9 +145,12 @@ public class DuplicateCheckService {
             }
         }
 
-        DuplicateCheckResult candidateBatchDuplicate = lexicalCandidateCheck(stem, excludedCandidateIds);
-        if (candidateBatchDuplicate.maxSimilarity() > best) {
-            return candidateBatchDuplicate;
+        // Chỉ lexical candidate check nếu chưa strong duplicate
+        if (best < properties.getDuplicate().getStrongMin()) {
+            DuplicateCheckResult candidateBatchDuplicate = lexicalCandidateCheck(stem, excludedCandidateIds);
+            if (candidateBatchDuplicate.maxSimilarity() > best) {
+                return candidateBatchDuplicate;
+            }
         }
         return new DuplicateCheckResult(
                 best,

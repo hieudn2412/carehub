@@ -227,7 +227,7 @@ function ComplianceByTechniquePage() {
                           <td>{idx + 1}</td>
                           <td><code style={{ fontSize: 12 }}>{item.employeeCode}</code></td>
                           <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
-                          {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
+                          {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || data?.departmentName || '—'}</td>}
                           <td>{item.evaluationCount}</td>
                           <td>{formatNumber(item.averageScore)}</td>
                           <td>
@@ -259,11 +259,16 @@ function ComplianceByTechniquePage() {
                           <td>
                             <button
                               className="evd-btn-text"
-                              onClick={() => navigate(
-                                isAdmin
-                                  ? `/admin/evaluation/compliance-by-technique/${item.employeeId}`
-                                  : `/manager/compliance-by-technique/${item.employeeId}`
-                              )}
+                              onClick={() => {
+                                const params = new URLSearchParams()
+                                params.set('from', fromDate)
+                                params.set('to', toDate)
+                                navigate(
+                                  isAdmin
+                                    ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`
+                                    : `/manager/compliance-by-technique/${item.employeeId}?${params.toString()}`
+                                )
+                              }}
                               style={{ padding: '4px 10px', fontSize: 13 }}
                             >
                               <EyeOutlined style={{ marginRight: 4 }} />Xem
