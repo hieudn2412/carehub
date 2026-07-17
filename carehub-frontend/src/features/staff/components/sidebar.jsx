@@ -50,6 +50,7 @@ function Sidebar() {
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         { icon: <BarChartOutlined />, label: 'Năng lực theo lĩnh vực', path: '/manager/competency-by-field' },
         { icon: <CheckSquareOutlined />, label: 'Tuân thủ kỹ thuật', path: '/manager/compliance-by-technique' },
+        { icon: <TrophyOutlined />, label: 'Tổng hợp năng lực', path: '/manager/competency-summary' },
       ],
     })
   }

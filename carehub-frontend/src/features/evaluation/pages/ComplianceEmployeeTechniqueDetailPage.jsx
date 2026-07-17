@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeftOutlined,
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
   ExclamationCircleFilled,
+  CloseCircleFilled,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
@@ -20,6 +21,7 @@ import '../styles/EvaluationDashboardPage.css'
 
 function ComplianceEmployeeTechniqueDetailPage() {
   const { employeeId } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -31,8 +33,8 @@ function ComplianceEmployeeTechniqueDetailPage() {
   const [loading, setLoading] = useState(true)
   const [expandedRow, setExpandedRow] = useState(null)
 
-  const fromDate = `${new Date().getFullYear()}-01-01`
-  const toDate = new Date().toISOString().slice(0, 10)
+  const fromDate = searchParams.get('from') || `${new Date().getFullYear()}-01-01`
+  const toDate = searchParams.get('to') || new Date().toISOString().slice(0, 10)
 
   const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
   const backPath = isAdmin ? '/admin/evaluation/compliance-by-technique' : '/manager/compliance-by-technique'
@@ -47,7 +49,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [employeeId, showToast])
+  }, [employeeId, fromDate, toDate, showToast])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -60,9 +62,9 @@ function ComplianceEmployeeTechniqueDetailPage() {
   const Layout = isAdmin ? AdminSidebar : Sidebar
   const PageHeader = isAdmin ? AdminHeader : Header
 
-  const overallAvg = data?.items?.length
-    ? Math.round(data.items.reduce((s, i) => s + (i.averageScore || 0), 0) / data.items.length)
-    : null
+  const complianceTarget = data?.complianceTarget || 80.0
+  const belowTargetItems = data?.items ? data.items.filter(i => i.belowTarget).length : 0
+  const totalItems = data?.items ? data.items.length : 0
 
   const toggleExpand = (idx) => {
     setExpandedRow(expandedRow === idx ? null : idx)
@@ -70,8 +72,28 @@ function ComplianceEmployeeTechniqueDetailPage() {
 
   const formatDateTime = (d) => {
     if (!d) return '—'
-    return new Date(d).toLocaleString('vi-VN')
+    return new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
+
+  const formatDate = (d) => {
+    if (!d) return '—'
+    return new Date(d).toLocaleDateString('vi-VN')
+  }
+
+  const handleBack = () => {
+    const params = new URLSearchParams()
+    params.set('from', fromDate)
+    params.set('to', toDate)
+    navigate(`${backPath}?${params.toString()}`)
+  }
+
+  const avatarLetter = data?.employeeName
+    ? data.employeeName.trim().split(' ').pop().charAt(0).toUpperCase()
+    : '?'
+
+  const overallAvg = data?.overallAverageScore ?? null
+
+  const hasData = data && data.items && data.items.length > 0
 
   return (
     <div className="dashboard-layout">
@@ -81,31 +103,67 @@ function ComplianceEmployeeTechniqueDetailPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">
+
               <div style={{ marginBottom: 16 }}>
-                <button className="evd-btn-text" onClick={() => navigate(backPath)} style={{ fontSize: 14, padding: '8px 0' }}>
+                <button className="evd-btn-text" onClick={handleBack} style={{ fontSize: 14, padding: '8px 0' }}>
                   <ArrowLeftOutlined style={{ marginRight: 6 }} />Quay lại danh sách
                 </button>
               </div>
 
-              <section className="evd-title-card">
-                <div>
-                  <h1>Tuân thủ kỹ thuật: {data?.employeeName || '...'}</h1>
-                  <p>Mã NV: {data?.employeeCode || '—'}</p>
-                </div>
-                <button className="evd-btn" onClick={loadData} disabled={loading}>
-                  <ReloadOutlined /> Tải lại
-                </button>
-              </section>
-
-              {data && data.items && data.items.length > 0 && (
-                <section className="evd-panel" style={{ padding: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, color: '#374151' }}>
-                    Điểm TB tổng: <strong>{overallAvg}</strong> — Dữ liệu từ {data.fromDate} đến {data.toDate}
+              {!loading && data && (
+                <section className="evd-title-card" style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 16,
+                  padding: 20,
+                }}>
+                  <div style={{
+                    width: 56, height: 56, borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                    color: '#fff', fontSize: 22, fontWeight: 700,
+                    display: 'grid', placeItems: 'center', flexShrink: 0,
+                  }}>
+                    {avatarLetter}
                   </div>
+                  <div style={{ flex: 1 }}>
+                    <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>
+                      {data.employeeName || '—'}
+                    </h1>
+                    <p style={{ margin: '4px 0 8px 0', fontSize: 13, color: '#6b7280' }}>
+                      Mã NV: {data.employeeCode || '—'}
+                      {data.departmentName ? ` · ${data.departmentName}` : ''}
+                    </p>
+                    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', fontSize: 14 }}>
+                      <div>
+                        <span style={{ color: '#6b7280' }}>Điểm TB kỹ năng: </span>
+                        <strong style={{ color: '#111827' }}>
+                          {overallAvg != null ? formatNumber(overallAvg) : '—'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span style={{ color: '#6b7280' }}>Mục tiêu khoa: </span>
+                        <strong style={{ color: '#2563eb' }}>{complianceTarget}%</strong>
+                      </div>
+                      {totalItems > 0 && belowTargetItems > 0 && (
+                        <div>
+                          <span style={{
+                            color: '#dc2626', fontSize: 13, fontWeight: 600,
+                            background: '#fef2f2', padding: '4px 10px', borderRadius: 6,
+                          }}>
+                            <ExclamationCircleFilled style={{ marginRight: 4 }} />
+                            {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button className="evd-btn" onClick={loadData} disabled={loading} style={{ flexShrink: 0 }}>
+                    <ReloadOutlined /> Tải lại
+                  </button>
                 </section>
               )}
 
-              <div className="evd-card" style={{ overflow: 'auto' }}>
+              <div className="evd-card" style={{ overflow: 'auto', marginTop: 16 }}>
                 <table className="evd-table">
                   <thead>
                     <tr>
@@ -113,21 +171,22 @@ function ComplianceEmployeeTechniqueDetailPage() {
                       <th>Kỹ thuật</th>
                       <th>Số lần ĐG</th>
                       <th>Điểm TB</th>
-                      <th>Tỷ lệ đạt</th>
+                      <th>Đạt/Không đạt</th>
+                      <th>Tỷ lệ</th>
                       <th>Phân loại</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                           Đang tải dữ liệu...
                         </td>
                       </tr>
-                    ) : !data || !data.items || data.items.length === 0 ? (
+                    ) : !hasData ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                          Chưa có dữ liệu giám sát tuân thủ kỹ thuật cho nhân viên này.
+                        <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                          Chưa có dữ liệu giám sát kỹ năng thực hành
                         </td>
                       </tr>
                     ) : (
@@ -135,7 +194,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                         <>
                           <tr
                             key={idx}
-                            className={!item.isPassed ? 'evd-row--danger' : ''}
+                            className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}
                             style={{ cursor: (item.attempts && item.attempts.length > 0) ? 'pointer' : 'default' }}
                             onClick={() => (item.attempts && item.attempts.length > 0) && toggleExpand(idx)}
                           >
@@ -150,11 +209,19 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                 }}>▶</span>
                               )}
                             </td>
-                            <td>{item.formName || '—'}</td>
+                            <td style={{ fontWeight: 500 }}>{item.formName || '—'}</td>
                             <td>{item.evaluationCount}</td>
                             <td>{formatNumber(item.averageScore)}</td>
                             <td>
-                              <span style={{ color: (item.passRate || 0) < 50 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                              <span style={{ fontWeight: 600, fontSize: 13 }}>
+                                {item.passCount ?? 0}/{item.evaluationCount ?? 0}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{
+                                color: item.belowTarget ? '#dc2626' : '#16a34a',
+                                fontWeight: 600,
+                              }}>
                                 {item.passRate != null ? `${item.passRate}%` : '—'}
                               </span>
                             </td>
@@ -163,14 +230,18 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                 backgroundColor: (item.colorHex || '#6b7280') + '20',
                                 color: item.colorHex || '#6b7280',
                               }}>
-                                {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
+                                {item.isPassed
+                                  ? <CheckCircleFilled style={{ marginRight: 4 }} />
+                                  : item.belowTarget
+                                    ? <CloseCircleFilled style={{ marginRight: 4 }} />
+                                    : <WarningFilled style={{ marginRight: 4 }} />}
                                 {item.competencyLabel || '—'}
                               </span>
                             </td>
                           </tr>
                           {expandedRow === idx && item.attempts && item.attempts.length > 0 && (
                             <tr key={`exp-${idx}`} className="evd-expand-row">
-                              <td colSpan={6} style={{ padding: 0, background: '#f9fafb' }}>
+                              <td colSpan={7} style={{ padding: 0, background: '#f9fafb' }}>
                                 <div style={{ padding: '12px 24px 12px 60px' }}>
                                   <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
                                     Lịch sử giám sát — {item.formName}
@@ -178,16 +249,19 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                   <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                                     <thead>
                                       <tr>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Thời gian</th>
+                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Ngày ĐG</th>
+                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Người ĐG</th>
+                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Bảng kiểm</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Điểm</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Kết quả</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Phân loại</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {item.attempts.map((att, aIdx) => (
                                         <tr key={aIdx}>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{formatDateTime(att.evaluatedAt)}</td>
+                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{formatDate(att.evaluatedAt)}</td>
+                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{att.evaluatedBy || '—'}</td>
+                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: 12 }}>{att.formName || '—'}</td>
                                           <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 600 }}>{att.score != null ? String(att.score) : '—'}</td>
                                           <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
                                             <span style={{
@@ -197,20 +271,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                             }}>
                                               {att.passed ? 'Đạt' : 'Không đạt'}
                                             </span>
-                                          </td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
-                                            {att.competencyLabel ? (
-                                              <span style={{
-                                                backgroundColor: (att.colorHex || '#6b7280') + '20',
-                                                color: att.colorHex || '#6b7280',
-                                                padding: '2px 8px',
-                                                borderRadius: 4,
-                                                fontSize: 12,
-                                                fontWeight: 500,
-                                              }}>
-                                                {att.competencyLabel}
-                                              </span>
-                                            ) : '—'}
                                           </td>
                                         </tr>
                                       ))}

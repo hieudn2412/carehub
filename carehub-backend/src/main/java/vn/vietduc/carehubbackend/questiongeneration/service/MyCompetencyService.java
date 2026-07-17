@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -40,6 +41,9 @@ public class MyCompetencyService {
     private final ExamAttemptRepository attemptRepository;
     private final FormSubmissionRepository formSubmissionRepository;
     private final CompetencyClassificationService classificationService;
+
+    @Value("${competency.compliance.default-target:80.0}")
+    private double defaultComplianceTarget;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -198,6 +202,7 @@ public class MyCompetencyService {
 
             CompetencyLevel level = classificationService.classifyOverall(avg);
             boolean isPassed = level != CompetencyLevel.NOT_COMPETENT;
+            boolean belowTarget = passRate < defaultComplianceTarget;
 
             items.add(new SkillCompetencyItemResponse(
                     form.getId(),
@@ -210,6 +215,7 @@ public class MyCompetencyService {
                     QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
                     isPassed,
+                    belowTarget,
                     List.of()
             ));
 

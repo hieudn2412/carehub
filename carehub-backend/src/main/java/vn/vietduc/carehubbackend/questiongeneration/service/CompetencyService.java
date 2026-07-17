@@ -280,6 +280,7 @@ public class CompetencyService {
 
             items.add(new CompetencyByTechniqueItemResponse(
                     firstUser.getId(), firstUser.getEmployeeCode(), firstUser.getName(),
+                    department.getName(),
                     subs.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
@@ -347,6 +348,7 @@ public class CompetencyService {
             BigDecimal avg = sum.divide(BigDecimal.valueOf(subs.size()), 2, RoundingMode.HALF_UP);
             double passRate = subs.size() > 0
                     ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
+            boolean belowTarget = passRate < defaultComplianceTarget;
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
             List<FormSubmissionBriefResponse> submissionBriefs = subs.stream()
@@ -377,15 +379,26 @@ public class CompetencyService {
                     form.getId(), form.getTitle(), subs.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
-                    level != CompetencyLevel.NOT_COMPETENT,
+                    level != CompetencyLevel.NOT_COMPETENT, belowTarget,
                     submissionBriefs
             ));
         }
         items.sort(Comparator.comparing(vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse::formName));
 
+        BigDecimal overallAvg = items.isEmpty() ? null
+                : items.stream()
+                .map(SkillCompetencyItemResponse::averageScore)
+                .filter(s -> s != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(items.size()), 2, RoundingMode.HALF_UP);
+
+        String departmentName = user.getDepartment() != null ? user.getDepartment().getName() : null;
+        Long departmentId = user.getDepartment() != null ? user.getDepartment().getId() : null;
+
         return new CompetencyEmployeeByTechniqueResponse(
                 user.getId(), user.getName(), user.getEmployeeCode(),
-                from.format(DATE_FMT), to.format(DATE_FMT), items
+                departmentId, departmentName,
+                from.format(DATE_FMT), to.format(DATE_FMT), defaultComplianceTarget, overallAvg, items
         );
     }
 

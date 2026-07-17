@@ -49,10 +49,14 @@ import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFiel
 import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/CompetencyEmployeeFieldDetailPage.jsx'
 import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceByTechniquePage.jsx'
 import ComplianceEmployeeTechniqueDetailPage from '../features/evaluation/pages/ComplianceEmployeeTechniqueDetailPage.jsx'
+import CompetencySummaryPage from '../features/evaluation/pages/CompetencySummaryPage.jsx'
 import PromptTemplateListPage from '../features/evaluation/pages/PromptTemplateListPage.jsx'
 import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateFormPage.jsx'
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage.jsx'
+import TrainingDashboardPage from '../features/admin/pages/TrainingDashboardPage.jsx'
+import ExportTrainingPage from '../features/admin/pages/ExportTrainingPage.jsx'
+import ExportQualityPage from '../features/admin/pages/ExportQualityPage.jsx'
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
@@ -220,6 +224,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
+      <Route path="/admin/evaluation/competency-summary" element={evaluationElement(<CompetencySummaryPage />)} />
       <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
       <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
@@ -250,12 +255,7 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/training-dashboard"
-        element={adminElement(
-          <ComingSoonPage
-            title="Dashboard đào tạo"
-            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard đào tạo' }]}
-          />
-        )}
+        element={adminElement(<TrainingDashboardPage />)}
       />
       <Route
         path="/admin/reports/quality-dashboard"
@@ -263,21 +263,11 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/export-training"
-        element={adminElement(
-          <ComingSoonPage
-            title="Xuất báo cáo đào tạo"
-            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo đào tạo' }]}
-          />
-        )}
+        element={adminElement(<ExportTrainingPage />)}
       />
       <Route
         path="/admin/reports/export-quality"
-        element={adminElement(
-          <ComingSoonPage
-            title="Xuất báo cáo chất lượng"
-            breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Xuất báo cáo chất lượng' }]}
-          />
-        )}
+        element={adminElement(<ExportQualityPage />)}
       />
       <Route
         path="/admin/profile"
@@ -299,6 +289,7 @@ function AppRouter() {
       <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/manager/compliance-by-technique" element={managerOrAdminElement(<ComplianceByTechniquePage />)} />
       <Route path="/manager/compliance-by-technique/:employeeId" element={managerOrAdminElement(<ComplianceEmployeeTechniqueDetailPage />)} />
+      <Route path="/manager/competency-summary" element={managerOrAdminElement(<CompetencySummaryPage />)} />
 
       {/* Staff Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />

@@ -1,6 +1,7 @@
 # Taste (Continuously Learned by [CommandCode][cmd])
 
 [cmd]: https://commandcode.ai/
+
 
 # frontend
 - All UI text, error messages, and user-facing content must be 100% Vietnamese — translate backend error messages to Vietnamese. Confidence: 0.85
