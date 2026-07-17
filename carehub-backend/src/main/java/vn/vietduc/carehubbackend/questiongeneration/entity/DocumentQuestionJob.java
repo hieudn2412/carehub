@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
 
@@ -46,6 +47,10 @@ public class DocumentQuestionJob extends BaseEntity {
 
     @Column(name = "questions_per_chunk", nullable = false)
     private Integer questionsPerChunk;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private QuestionCategory category;
 
     @Column(name = "chunk_count", nullable = false)
     private Integer chunkCount;

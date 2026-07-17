@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 public record CreateDocumentQuestionJobRequest(
         @Min(1)
         @Max(5)
-        Integer questionsPerChunk
+        Integer questionsPerChunk,
+        Long categoryId
 ) {
 }

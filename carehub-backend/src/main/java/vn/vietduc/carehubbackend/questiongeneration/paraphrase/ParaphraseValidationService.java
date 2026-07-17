@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +39,8 @@ public class ParaphraseValidationService {
     private final DuplicateCheckService duplicateCheckService;
     private final QuestionEmbeddingService embeddingService;
     private final AiEmbeddingProperties embeddingProperties;
+
+    private final Map<Long, List<String>> protectedTermsCache = new ConcurrentHashMap<>();
 
     public ParaphraseValidationResult validate(QuestionBankQuestion source, ParaphrasedMcq candidate) {
         List<String> warnings = new ArrayList<>();
@@ -64,13 +68,14 @@ public class ParaphraseValidationService {
             }
         }
 
-        List<String> protectedTerms = protectedTermService.extract(
-                source.getStem(),
-                source.getOptionA(),
-                source.getOptionB(),
-                source.getOptionC(),
-                source.getOptionD()
-        );
+        List<String> protectedTerms = protectedTermsCache.computeIfAbsent(source.getId(),
+                id -> protectedTermService.extract(
+                        source.getStem(),
+                        source.getOptionA(),
+                        source.getOptionB(),
+                        source.getOptionC(),
+                        source.getOptionD()
+                ));
         List<String> missingTerms = protectedTermService.missingTerms(
                 protectedTerms,
                 candidate.stem(),

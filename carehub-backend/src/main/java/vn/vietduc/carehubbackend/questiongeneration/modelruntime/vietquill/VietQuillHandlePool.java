@@ -63,6 +63,21 @@ public class VietQuillHandlePool {
         }
     }
 
+    /**
+     * Lặp qua tất cả handles trong pool, acquire từng cái một, chạy action, rồi release.
+     * Dùng cho warmup hoặc maintenance.
+     */
+    public void processAllHandles(java.util.function.Consumer<RuntimeHandle> action) throws InterruptedException {
+        for (int i = 0; i < poolSize; i++) {
+            RuntimeHandle handle = acquire(30000);
+            try {
+                action.accept(handle);
+            } finally {
+                release(handle);
+            }
+        }
+    }
+
     @PreDestroy
     public void close() {
         for (RuntimeHandle handle : allHandles) {

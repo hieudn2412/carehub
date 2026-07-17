@@ -160,9 +160,16 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage) {
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(json);
         List<GeneratedQuestion> questions = parseQuestions(json);
+        int parsedQuestionCount = questions.size();
         if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
+            log.info(
+                    "Silent drop: all knowledge points ineligible. totalKPs={} eligibleKPs=0 parsedQuestions={}",
+                    knowledgePoints.size(), parsedQuestionCount
+            );
             questions = List.of();
         }
+        log.info("parseSingleCallResult: kpCount={} questionCount={} rawJsonLen={}",
+                knowledgePoints.size(), questions.size(), json != null ? json.length() : 0);
         return new GeneratedChunkResult(
                 provider(),
                 properties.getModel(),
@@ -178,15 +185,28 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 Map.of(
                         "role", "system",
                         "content", """
-                                Bạn là hệ thống tạo câu hỏi trắc nghiệm một đáp án cho đào tạo bệnh viện.
-                                Chỉ dựa vào chunk được cung cấp. Không suy diễn ngoài nguồn.
-                                Câu hỏi, đáp án và giải thích phải bằng tiếng Việt, giữ nguyên thuật ngữ chuyên môn tiếng Anh khi cần.
-                                Stem phải tự đứng độc lập: người đọc hiểu và trả lời được mà không cần nhìn section path, chunk hoặc tài liệu gốc.
-                                Cấm bắt đầu stem bằng "Theo tài liệu", "Dựa vào tài liệu", "Trong tài liệu", "Theo nội dung trên" hoặc hỏi "nhận định nào phù hợp với mục...".
-                                Không dùng các lựa chọn kiểu "tất cả đều đúng", "cả A và B", "không có đáp án nào".
-                                Mỗi câu phải có đúng một đáp án tốt nhất và có sourceExcerpt xuất hiện nguyên văn trong chunk.
-                                Nếu chunk không đủ thông tin kiểm tra độc lập, trả về knowledgePoints phù hợp nhưng questions là mảng rỗng.
-                                Trả về JSON hợp lệ, không bọc markdown.
+                                Bạn là bác sĩ lâm sàng, chuyên tạo câu hỏi trắc nghiệm 1 đáp án cho đào tạo bệnh viện Việt Nam.
+
+                                QUY TẮC:
+                                - Chỉ dùng thông tin trong chunk, không suy diễn ngoài.
+                                - Viết tiếng Việt tự nhiên, giữ thuật ngữ chuyên môn tiếng Anh khi cần.
+                                - Stem tự đứng độc lập, không mở đầu bằng "Theo tài liệu", "Dựa vào tài liệu", "Trong tài liệu".
+                                - Không dùng "tất cả đều đúng", "cả A và B", "không có đáp án nào".
+                                - Mỗi câu có đúng 1 đáp án tốt nhất.
+                                - Nếu chunk không đủ thông tin độc lập → questions là mảng rỗng [].
+
+                                ĐA DẠNG CÂU HỎI — xoay vòng các kiểu sau, tránh lặp:
+                                1. Tình huống lâm sàng (bệnh nhân + triệu chứng → chẩn đoán/xử trí)
+                                2. Chỉ định/chống chỉ định thuốc hoặc thủ thuật
+                                3. Cơ chế bệnh sinh/tác dụng thuốc
+                                4. Phân biệt chẩn đoán giữa các bệnh
+                                5. Xét nghiệm cận lâm sàng phù hợp
+                                6. Biến chứng/tiên lượng
+
+                                VÍ DỤ NGẮN:
+                                {"knowledgePoints":[{"id":"KP1","statement":"Triệu chứng chính của sốt xuất huyết Dengue","type":"fact","importance":"high","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","generationEligible":true}],"questions":[{"stem":"Bệnh nhân 8 tuổi sốt cao liên tục 3 ngày, đau đầu nhiều, đau mỏi cơ toàn thân, xét nghiệm NS1 dương tính. Triệu chứng nào KHÔNG điển hình của sốt xuất huyết Dengue?","optionA":"Sốt cao đột ngột","optionB":"Đau đầu","optionC":"Ho khạc đờm vàng","optionD":"Đau cơ","correctAnswer":"C","explanation":"Ho khạc đờm vàng là triệu chứng viêm phổi/nhiễm khuẩn hô hấp, không phải triệu chứng điển hình của SXH Dengue.","difficulty":"medium","topic":"Sốt xuất huyết","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","knowledgePointId":"KP1"}]}
+
+                                OUTPUT: Chỉ trả về JSON hợp lệ, không bọc markdown, không giải thích ngoài JSON.
                                 """
                 ),
                 Map.of(
@@ -197,34 +217,12 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Chunk:
                                 %s
 
-                                Hãy trích xuất 0-8 knowledge point và tạo tối đa %d câu hỏi single-choice từ các knowledge point đủ điều kiện.
-                                Schema bắt buộc:
+                                Trích xuất 0-8 knowledge point và tạo tối đa %d câu hỏi single-choice.
+                                Mỗi câu hỏi phong cách khác nhau.
+                                Trả JSON:
                                 {
-                                  "knowledgePoints": [
-                                    {
-                                      "id": "KP1",
-                                      "statement": "mệnh đề kiến thức ngắn, rõ",
-                                      "type": "definition|fact|procedure|warning|principle",
-                                      "importance": "low|medium|high",
-                                      "sourceExcerpt": "trích dẫn nguyên văn ngắn từ chunk",
-                                      "generationEligible": true
-                                    }
-                                  ],
-                                  "questions": [
-                                    {
-                                      "stem": "câu hỏi tự đứng độc lập, nêu rõ đối tượng/khái niệm/quy trình cần hỏi",
-                                      "optionA": "phương án A",
-                                      "optionB": "phương án B",
-                                      "optionC": "phương án C",
-                                      "optionD": "phương án D",
-                                      "correctAnswer": "A",
-                                      "explanation": "giải thích bám nguồn",
-                                      "difficulty": "easy|medium|hard",
-                                      "topic": "chủ đề",
-                                      "sourceExcerpt": "trích dẫn nguyên văn ngắn từ chunk",
-                                      "knowledgePointId": "KP1"
-                                    }
-                                  ]
+                                  "knowledgePoints": [{"id":"KP1","statement":"...","type":"definition|fact|procedure|warning|principle","importance":"low|medium|high","sourceExcerpt":"...","generationEligible":true}],
+                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"...","knowledgePointId":"KP1"}]
                                 }
                                 """.formatted(input.sectionPath(), input.chunkText(), input.questionsPerChunk())
                 )
@@ -372,6 +370,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                     "model", model,
                                     "messages", messages,
                                     "temperature", properties.getTemperature(),
+                                    "top_p", properties.getTopP(),
                                     "max_tokens", properties.getMaxOutputTokens(),
                                     "thinking", Map.of("type", "disabled"),
                                     "response_format", Map.of("type", "json_object")
@@ -609,10 +608,13 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             JsonNode root = objectMapper.readTree(json);
             JsonNode array = root.path("questions");
             List<GeneratedQuestion> questions = new ArrayList<>();
+            int skippedByStemFilter = 0;
             if (array.isArray()) {
                 for (JsonNode node : array) {
                     String stem = text(node, "stem");
                     if (isGenericDocumentReferenceStem(stem)) {
+                        skippedByStemFilter++;
+                        log.info("Question dropped by stem filter: stem='{}'", stem.length() > 60 ? stem.substring(0, 60) + "..." : stem);
                         continue;
                     }
                     questions.add(new GeneratedQuestion(
@@ -631,6 +633,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             null
                     ));
                 }
+            }
+            if (skippedByStemFilter > 0) {
+                log.info("parseQuestions: totalInJson={} kept={} skippedByStemFilter={}",
+                        array.isArray() ? array.size() : 0, questions.size(), skippedByStemFilter);
             }
             return questions;
         } catch (Exception ex) {

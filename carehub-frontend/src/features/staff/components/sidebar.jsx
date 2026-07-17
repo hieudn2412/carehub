@@ -10,7 +10,8 @@ import {
   LogoutOutlined,
   TeamOutlined,
   CheckSquareOutlined,
-  FileDoneOutlined
+  FileDoneOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -57,6 +58,12 @@ function Sidebar() {
 
   // Personal/Staff features
   navSections.push(
+    {
+      label: 'ĐÁNH GIÁ',
+      items: [
+        { icon: <FileTextOutlined />, label: 'Tạo câu hỏi từ tài liệu', path: '/staff/generate-questions' },
+      ],
+    },
     {
       label: 'Năng lực của tôi',
       items: [
