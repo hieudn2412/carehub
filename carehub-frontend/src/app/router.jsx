@@ -47,6 +47,8 @@ import CompetencyThresholdPage from '../features/evaluation/pages/CompetencyThre
 import CompetencyDepartmentPage from '../features/evaluation/pages/CompetencyDepartmentPage.jsx'
 import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFieldPage.jsx'
 import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/CompetencyEmployeeFieldDetailPage.jsx'
+import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceByTechniquePage.jsx'
+import ComplianceEmployeeTechniqueDetailPage from '../features/evaluation/pages/ComplianceEmployeeTechniqueDetailPage.jsx'
 import PromptTemplateListPage from '../features/evaluation/pages/PromptTemplateListPage.jsx'
 import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateFormPage.jsx'
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
@@ -216,6 +218,8 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
       <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
+      <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
+      <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
       <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
       <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
@@ -293,6 +297,8 @@ function AppRouter() {
       <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
       <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />
       <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
+      <Route path="/manager/compliance-by-technique" element={managerOrAdminElement(<ComplianceByTechniquePage />)} />
+      <Route path="/manager/compliance-by-technique/:employeeId" element={managerOrAdminElement(<ComplianceEmployeeTechniqueDetailPage />)} />
 
       {/* Staff Training Hours routes */}
       <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />

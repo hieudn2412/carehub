@@ -153,6 +153,12 @@ const navSections = [
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       {
+        icon: <CheckSquareOutlined />,
+        label: 'Tuân thủ kỹ thuật',
+        path: '/admin/evaluation/compliance-by-technique',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
+      {
         icon: <AuditOutlined />,
         label: 'Prompt Templates',
         path: '/admin/evaluation/prompt-templates',

@@ -18,6 +18,8 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmplo
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptBriefResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
@@ -157,11 +159,31 @@ public class CompetencyService {
                     ? Math.round((passCount * 100.0 / catAttempts.size()) * 10.0) / 10.0 : 0.0;
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
+            List<ExamAttemptBriefResponse> attemptBriefs = catAttempts.stream()
+                    .sorted(Comparator.comparing(ExamAttempt::getSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .map(a -> {
+                        CompetencyLevel aLevel = a.getClassification();
+                        return new ExamAttemptBriefResponse(
+                                a.getId(),
+                                a.getExamPaper() != null ? a.getExamPaper().getName() : "—",
+                                a.getSubmittedAt() != null ? a.getSubmittedAt().toLocalDate() : null,
+                                a.getScore(),
+                                a.getCorrectCount(),
+                                a.getTotalQuestions(),
+                                a.getPassed(),
+                                aLevel != null ? aLevel.name() : null,
+                                aLevel != null ? QuestionGenerationLabels.competencyLevel(aLevel) : null,
+                                aLevel != null ? QuestionGenerationLabels.competencyLevelColor(aLevel) : null
+                        );
+                    })
+                    .collect(Collectors.toList());
+
             items.add(new vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse(
                     null, catName, catAttempts.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
-                    level != CompetencyLevel.NOT_COMPETENT
+                    level != CompetencyLevel.NOT_COMPETENT,
+                    attemptBriefs
             ));
         }
         items.sort(Comparator.comparing(vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse::categoryName));
@@ -327,11 +349,36 @@ public class CompetencyService {
                     ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
+            List<FormSubmissionBriefResponse> submissionBriefs = subs.stream()
+                    .sorted(Comparator.comparing(s -> {
+                        java.time.Instant i = s.getSubmittedAt();
+                        return i != null ? i : java.time.Instant.EPOCH;
+                    }, Comparator.reverseOrder()))
+                    .map(s -> {
+                        CompetencyLevel sLevel = classificationService.classifyOverall(
+                                s.getTotalScore() != null ? s.getTotalScore() : BigDecimal.ZERO);
+                        return new FormSubmissionBriefResponse(
+                                s.getId(),
+                                form.getTitle(),
+                                s.getSubmittedAt() != null
+                                        ? LocalDateTime.ofInstant(s.getSubmittedAt(), java.time.ZoneId.systemDefault())
+                                        : null,
+                                s.getSubmittedBy().getName(),
+                                s.getTotalScore(),
+                                s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED,
+                                sLevel.name(),
+                                QuestionGenerationLabels.competencyLevel(sLevel),
+                                QuestionGenerationLabels.competencyLevelColor(sLevel)
+                        );
+                    })
+                    .collect(Collectors.toList());
+
             items.add(new vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse(
                     form.getId(), form.getTitle(), subs.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
-                    level != CompetencyLevel.NOT_COMPETENT
+                    level != CompetencyLevel.NOT_COMPETENT,
+                    submissionBriefs
             ));
         }
         items.sort(Comparator.comparing(vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse::formName));

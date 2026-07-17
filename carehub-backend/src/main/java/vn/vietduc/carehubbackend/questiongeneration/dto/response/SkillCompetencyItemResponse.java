@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record SkillCompetencyItemResponse(
         Long formId,
@@ -12,6 +13,7 @@ public record SkillCompetencyItemResponse(
         String competencyLevel,
         String competencyLabel,
         String colorHex,
-        boolean isPassed
+        boolean isPassed,
+        List<FormSubmissionBriefResponse> attempts
 ) {
 }

@@ -105,7 +105,8 @@ public class MyCompetencyService {
                     level.name(),
                     QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
-                    isPassed
+                    isPassed,
+                    List.of()
             ));
 
             totalScoreSum = totalScoreSum.add(sum);
@@ -208,7 +209,8 @@ public class MyCompetencyService {
                     level.name(),
                     QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
-                    isPassed
+                    isPassed,
+                    List.of()
             ));
 
             totalScoreSum = totalScoreSum.add(sum);

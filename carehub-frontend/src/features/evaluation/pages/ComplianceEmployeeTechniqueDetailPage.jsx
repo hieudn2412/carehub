@@ -5,6 +5,7 @@ import {
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
+  ExclamationCircleFilled,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
@@ -17,7 +18,7 @@ import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
 
-function CompetencyEmployeeFieldDetailPage() {
+function ComplianceEmployeeTechniqueDetailPage() {
   const { employeeId } = useParams()
   const navigate = useNavigate()
   const { showToast } = useToast()
@@ -25,7 +26,6 @@ function CompetencyEmployeeFieldDetailPage() {
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
-  const isManager = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -35,12 +35,12 @@ function CompetencyEmployeeFieldDetailPage() {
   const toDate = new Date().toISOString().slice(0, 10)
 
   const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
-  const backPath = isAdmin ? '/admin/evaluation/competency-by-field' : '/manager/competency-by-field'
+  const backPath = isAdmin ? '/admin/evaluation/compliance-by-technique' : '/manager/compliance-by-technique'
 
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await competencyApi.getEmployeeByField(employeeId, { fromDate, toDate })
+      const response = await competencyApi.getEmployeeByTechnique(employeeId, { fromDate, toDate })
       setData(apiData(response, null))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -53,7 +53,7 @@ function CompetencyEmployeeFieldDetailPage() {
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
-    { label: 'Năng lực theo lĩnh vực', link: backPath },
+    { label: 'Tuân thủ kỹ thuật', link: backPath },
     { label: data?.employeeName || 'Chi tiết' },
   ]
 
@@ -68,16 +68,16 @@ function CompetencyEmployeeFieldDetailPage() {
     setExpandedRow(expandedRow === idx ? null : idx)
   }
 
-  const formatDate = (d) => {
+  const formatDateTime = (d) => {
     if (!d) return '—'
-    return new Date(d).toLocaleDateString('vi-VN')
+    return new Date(d).toLocaleString('vi-VN')
   }
 
   return (
     <div className="dashboard-layout">
       <Layout />
       <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined} />
+        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">
@@ -89,7 +89,7 @@ function CompetencyEmployeeFieldDetailPage() {
 
               <section className="evd-title-card">
                 <div>
-                  <h1>Chi tiết năng lực: {data?.employeeName || '...'}</h1>
+                  <h1>Tuân thủ kỹ thuật: {data?.employeeName || '...'}</h1>
                   <p>Mã NV: {data?.employeeCode || '—'}</p>
                 </div>
                 <button className="evd-btn" onClick={loadData} disabled={loading}>
@@ -110,8 +110,8 @@ function CompetencyEmployeeFieldDetailPage() {
                   <thead>
                     <tr>
                       <th style={{ width: 40 }}></th>
-                      <th>Lĩnh vực</th>
-                      <th>Số lần thi</th>
+                      <th>Kỹ thuật</th>
+                      <th>Số lần ĐG</th>
                       <th>Điểm TB</th>
                       <th>Tỷ lệ đạt</th>
                       <th>Phân loại</th>
@@ -127,7 +127,7 @@ function CompetencyEmployeeFieldDetailPage() {
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                          Chưa có dữ liệu kiểm tra kiến thức cho nhân viên này.
+                          Chưa có dữ liệu giám sát tuân thủ kỹ thuật cho nhân viên này.
                         </td>
                       </tr>
                     ) : (
@@ -150,8 +150,8 @@ function CompetencyEmployeeFieldDetailPage() {
                                 }}>▶</span>
                               )}
                             </td>
-                            <td>{item.categoryName || 'Chung'}</td>
-                            <td>{item.attemptCount}</td>
+                            <td>{item.formName || '—'}</td>
+                            <td>{item.evaluationCount}</td>
                             <td>{formatNumber(item.averageScore)}</td>
                             <td>
                               <span style={{ color: (item.passRate || 0) < 50 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
@@ -173,15 +173,13 @@ function CompetencyEmployeeFieldDetailPage() {
                               <td colSpan={6} style={{ padding: 0, background: '#f9fafb' }}>
                                 <div style={{ padding: '12px 24px 12px 60px' }}>
                                   <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
-                                    Lịch sử thi — {item.categoryName}
+                                    Lịch sử giám sát — {item.formName}
                                   </div>
                                   <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                                     <thead>
                                       <tr>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Ngày thi</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Đề thi</th>
+                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Thời gian</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Điểm</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Đúng/Tổng</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Kết quả</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Phân loại</th>
                                       </tr>
@@ -189,12 +187,8 @@ function CompetencyEmployeeFieldDetailPage() {
                                     <tbody>
                                       {item.attempts.map((att, aIdx) => (
                                         <tr key={aIdx}>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{formatDate(att.attemptDate)}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{att.examPaperTitle || '—'}</td>
+                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{formatDateTime(att.evaluatedAt)}</td>
                                           <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 600 }}>{att.score != null ? String(att.score) : '—'}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', color: '#6b7280' }}>
-                                            {att.correctCount != null && att.totalQuestions != null ? `${att.correctCount}/${att.totalQuestions}` : '—'}
-                                          </td>
                                           <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
                                             <span style={{
                                               color: att.passed ? '#16a34a' : '#dc2626',
@@ -240,4 +234,4 @@ function CompetencyEmployeeFieldDetailPage() {
   )
 }
 
-export default CompetencyEmployeeFieldDetailPage
+export default ComplianceEmployeeTechniqueDetailPage
