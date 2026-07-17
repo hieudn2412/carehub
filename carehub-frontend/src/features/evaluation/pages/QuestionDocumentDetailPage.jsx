@@ -159,16 +159,13 @@ function QuestionDocumentDetailPage() {
 
                   <section className="qdoc-metric-grid">
                     <Metric label="Số trang" value={formatNumber(documentDetail.pageCount)} />
-                    <Metric label="Số chunk" value={formatNumber(documentDetail.chunkCount)} />
-                    <Metric label="Section" value={formatNumber(documentDetail.sections?.length || 0)} />
-                    <Metric label="Chunk tạo được" value={formatNumber(eligibleChunkCount)} />
+                    <Metric label="Câu hỏi đã tạo" value={formatNumber(questionJobs.reduce((sum, job) => sum + (job.candidateCount || 0), 0))} />
+                    <Metric label="Số phiên" value={formatNumber(questionJobs.length)} />
                   </section>
 
                   <section className="qdoc-tabs-card">
                     <div className="qdoc-tabs">
                       <button className={activeTab === 'overview' ? 'active' : ''} type="button" onClick={() => setActiveTab('overview')}>Tổng quan</button>
-                      <button className={activeTab === 'sections' ? 'active' : ''} type="button" onClick={() => setActiveTab('sections')}>Cấu trúc tài liệu</button>
-                      <button className={activeTab === 'chunks' ? 'active' : ''} type="button" onClick={() => setActiveTab('chunks')}>Chunks</button>
                       <button className={activeTab === 'jobs' ? 'active' : ''} type="button" onClick={() => setActiveTab('jobs')}>Phiên tạo câu hỏi</button>
                     </div>
 
@@ -180,76 +177,6 @@ function QuestionDocumentDetailPage() {
                           <InfoRow label="Loại tệp" value={documentDetail.contentType || 'Không rõ'} />
                           <InfoRow label="Ngày cập nhật" value={formatDateTime(documentDetail.updatedAt)} />
                         </div>
-                      </div>
-                    )}
-
-                    {activeTab === 'sections' && (
-                      <div className="qdoc-tab-body">
-                        {sortedSections.length === 0 ? (
-                          <div className="qdoc-empty-state">Chưa có cấu trúc section.</div>
-                        ) : (
-                          <div className="qdoc-section-tree">
-                            {sortedSections.map((section) => (
-                              <div
-                                key={section.id}
-                                className="qdoc-section-node"
-                                style={{ marginLeft: `${Math.max(0, section.level - 1) * 18}px` }}
-                              >
-                                <div>
-                                  <strong>{section.title}</strong>
-                                  <span>{section.path}</span>
-                                </div>
-                                <div className="qdoc-section-meta">
-                                  <span>Cấp {section.level}</span>
-                                  <span>Trang {pageRange(section.pageStart, section.pageEnd)}</span>
-                                  <span>{Math.round((section.confidence || 0) * 100)}%</span>
-                                  {section.confidence < 0.5 && <span className="qdoc-mini-badge qdoc-mini-badge--warning">Độ tin cậy thấp</span>}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'chunks' && (
-                      <div className="qdoc-tab-body qdoc-table-scroll">
-                        <table className="qdoc-table">
-                          <thead>
-                            <tr>
-                              <th>Chunk</th>
-                              <th>Section</th>
-                              <th>Trang</th>
-                              <th>Tokens</th>
-                              <th>Khả năng</th>
-                              <th>Cảnh báo</th>
-                              <th>Preview</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(documentDetail.chunks || []).length === 0 ? (
-                              <tr>
-                                <td colSpan="7" className="qdoc-empty-cell">Chưa có chunk.</td>
-                              </tr>
-                            ) : (
-                              documentDetail.chunks.map((chunk) => (
-                                <tr key={chunk.id}>
-                                  <td>{chunk.chunkIndex}</td>
-                                  <td>{chunk.sectionPath || chunk.sectionTitle || 'Nội dung tài liệu'}</td>
-                                  <td>{pageRange(chunk.pageStart, chunk.pageEnd)}</td>
-                                  <td>{formatNumber(chunk.tokenCount)}</td>
-                                  <td>
-                                    <span className={`qdoc-mini-badge ${chunkGenerationEligible(chunk) ? 'qdoc-mini-badge--success' : 'qdoc-mini-badge--warning'}`}>
-                                      {chunkGenerationText(chunk)}
-                                    </span>
-                                  </td>
-                                  <td>{qualityFlagsText(chunk.qualityFlags)}</td>
-                                  <td className="qdoc-preview-cell">{chunk.textPreview}</td>
-                                </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
                       </div>
                     )}
 
@@ -272,10 +199,8 @@ function QuestionDocumentDetailPage() {
                             <tr>
                               <th>Phiên</th>
                               <th>Trạng thái</th>
-                              <th>Model</th>
                               <th>Câu hỏi</th>
-                              <th>Chunk</th>
-                              <th>Token</th>
+                              <th>Số chunk</th>
                               <th>Ngày tạo</th>
                               <th>Hành động</th>
                             </tr>
@@ -283,7 +208,7 @@ function QuestionDocumentDetailPage() {
                           <tbody>
                             {filteredQuestionJobs.length === 0 ? (
                               <tr>
-                                <td colSpan="8" className="qdoc-empty-cell">Không có phiên tạo câu hỏi phù hợp.</td>
+                                <td colSpan="6" className="qdoc-empty-cell">Không có phiên tạo câu hỏi phù hợp.</td>
                               </tr>
                             ) : (
                               filteredQuestionJobs.map((job) => (
@@ -294,7 +219,6 @@ function QuestionDocumentDetailPage() {
                                       {jobStatusText(job)}
                                     </span>
                                   </td>
-                                  <td>{job.model || job.provider || 'Không rõ'}</td>
                                   <td>{formatNumber(job.candidateCount)}</td>
                                   <td>
                                     {formatNumber(job.completedChunkCount)} / {formatNumber(job.chunkCount)}
@@ -304,7 +228,6 @@ function QuestionDocumentDetailPage() {
                                       </span>
                                     )}
                                   </td>
-                                  <td>{formatNumber(job.usage?.totalTokens)}</td>
                                   <td>{formatDateTime(job.createdAt)}</td>
                                   <td>
                                     <button

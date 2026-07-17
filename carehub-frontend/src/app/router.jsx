@@ -7,6 +7,8 @@ import ForgotAccountScreen from '../features/auth/pages/ForgotAccountScreen.jsx'
 import LoginScreen from '../features/auth/pages/LoginScreen.jsx'
 import ProtectedRoute from '../features/auth/components/ProtectedRoute.jsx'
 import StaffDashboard from '../features/staff/pages/DashboardStaffScreen.jsx'
+import StaffQuestionGenerationPage from '../features/staff/pages/StaffQuestionGenerationPage.jsx'
+import StaffQuestionReviewPage from '../features/staff/pages/StaffQuestionReviewPage.jsx'
 import OtpScreen from '../features/auth/pages/OtpScreen.jsx'
 import ResetPasswordScreen from '../features/auth/pages/ResetPasswordScreen.jsx'
 import ActivityTypeDetailPage from '../features/training/pages/ActivityTypeDetailPage.jsx'
@@ -303,6 +305,8 @@ function AppRouter() {
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />
+      <Route path="/staff/generate-questions" element={protectedElement(<StaffQuestionGenerationPage />)} />
+      <Route path="/staff/generate-questions/jobs/:jobId" element={protectedElement(<StaffQuestionReviewPage />)} />
 
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={protectedElement(<StaffDashboard />)} />

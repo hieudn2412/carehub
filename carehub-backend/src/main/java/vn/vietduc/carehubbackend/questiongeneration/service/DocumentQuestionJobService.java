@@ -19,6 +19,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentChunk;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentKnowledgePoint;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
@@ -31,6 +32,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentChunkRepo
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentKnowledgePointRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.CandidateValidationResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
@@ -72,6 +74,7 @@ public class DocumentQuestionJobService {
     private final QuestionCandidateValidationService validationService;
     private final DuplicateCheckService duplicateCheckService;
     private final GenerationKeyService generationKeyService;
+    private final QuestionCategoryRepository questionCategoryRepository;
     private final DocumentQuestionMapper mapper;
     private final AiGenerationProperties generationProperties;
     private final DocumentProcessingProperties documentProperties;
@@ -117,9 +120,15 @@ public class DocumentQuestionJobService {
         int questionsPerChunk = request != null && request.questionsPerChunk() != null
                 ? request.questionsPerChunk()
                 : documentProperties.getQuestionsPerChunk();
+        QuestionCategory category = null;
+        if (request != null && request.categoryId() != null) {
+            category = questionCategoryRepository.findById(request.categoryId())
+                    .orElseThrow(() -> new BadRequestException("Không tìm thấy danh mục câu hỏi"));
+        }
         String traceId = java.util.UUID.randomUUID().toString().substring(0, 8);
         DocumentQuestionJob job = DocumentQuestionJob.builder()
                 .document(document)
+                .category(category)
                 .provider(providerEnum())
                 .model(generationProperties.getModel())
                 .promptVersion(generationProperties.getPromptVersion())
@@ -332,6 +341,10 @@ public class DocumentQuestionJobService {
             if (candidateRepository.findFirstByGenerationKeyAndStatusIn(firstKey, IDEMPOTENT_STATUSES).isPresent()) {
                 long duplicateCheckMs = elapsedMs(duplicateCheckStarted);
                 logChunkTiming(job, chunk, 0, 0, duplicateCheckMs, 0, 0, "skipped_existing");
+                log.info("Idempotency skip: chunkId={} key={} provider={} model={} promptVersion={}",
+                        chunk.getId(), firstKey.substring(0, 8),
+                        generator.provider(), generationProperties.getModel(),
+                        generationProperties.getPromptVersion());
                 return ChunkOutcome.completedOutcome(0, LlmUsage.empty());
             }
             long generatorStarted = System.nanoTime();
@@ -426,6 +439,7 @@ public class DocumentQuestionJobService {
         int created = 0;
         long duplicateCheckMs = 0;
         long persistCandidateMs = 0;
+        String categoryTopic = job.getCategory() != null ? job.getCategory().getName() : null;
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
             String generationKey = generationKeyService.candidateKey(
@@ -479,7 +493,7 @@ public class DocumentQuestionJobService {
                     .optionD(blankToFallback(question.optionD(), ""))
                     .correctAnswer(normalizeAnswer(question.correctAnswer()))
                     .explanation(question.explanation())
-                    .topic(question.topic())
+                    .topic(categoryTopic != null ? categoryTopic : question.topic())
                     .difficulty(question.difficulty())
                     .sourceExcerpt(question.sourceExcerpt())
                     .knowledgePointKey(question.knowledgePointId())
@@ -521,8 +535,13 @@ public class DocumentQuestionJobService {
         double newCost = estimateCost(job.getModel(), result.usage.promptTokens(), result.usage.completionTokens());
         job.setEstimatedCostUsd(job.getEstimatedCostUsd() + newCost);
         if (result.failedChunks == 0) {
-            job.setStatus(JobStatus.GENERATED);
-            job.setErrorMessage(null);
+            if (job.getCandidateCount() == 0 && job.getLlmCallCount() == 0 && result.completedChunks > 0) {
+                job.setStatus(JobStatus.PARTIALLY_COMPLETED);
+                job.setErrorMessage("Tất cả chunk đã được xử lý từ lần trước, không có câu hỏi mới. Hãy cập nhật cấu hình hoặc dùng tài liệu mới.");
+            } else {
+                job.setStatus(JobStatus.GENERATED);
+                job.setErrorMessage(null);
+            }
         } else if (result.completedChunks > 0 || job.getCandidateCount() > 0) {
             job.setStatus(JobStatus.PARTIALLY_COMPLETED);
             job.setErrorMessage("Một số chunk xử lý lỗi, có thể retry riêng");

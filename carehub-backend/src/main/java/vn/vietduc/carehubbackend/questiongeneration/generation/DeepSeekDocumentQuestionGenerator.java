@@ -160,9 +160,16 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage) {
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(json);
         List<GeneratedQuestion> questions = parseQuestions(json);
+        int parsedQuestionCount = questions.size();
         if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
+            log.info(
+                    "Silent drop: all knowledge points ineligible. totalKPs={} eligibleKPs=0 parsedQuestions={}",
+                    knowledgePoints.size(), parsedQuestionCount
+            );
             questions = List.of();
         }
+        log.info("parseSingleCallResult: kpCount={} questionCount={} rawJsonLen={}",
+                knowledgePoints.size(), questions.size(), json != null ? json.length() : 0);
         return new GeneratedChunkResult(
                 provider(),
                 properties.getModel(),
@@ -178,65 +185,28 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 Map.of(
                         "role", "system",
                         "content", """
-                                Bạn là bác sĩ lâm sàng giàu kinh nghiệm, chuyên tạo câu hỏi trắc nghiệm một đáp án cho đào tạo bệnh viện tại Việt Nam.
-                                
-                                QUY TẮC CHUNG:
-                                - Chỉ dựa vào chunk được cung cấp. Không suy diễn ngoài nguồn.
-                                - Viết bằng tiếng Việt tự nhiên, giữ nguyên thuật ngữ chuyên môn tiếng Anh khi cần.
-                                - Stem phải tự đứng độc lập, nêu rõ đối tượng/khái niệm/quy trình cần hỏi.
-                                - Không mở đầu stem bằng "Theo tài liệu", "Dựa vào tài liệu", "Trong tài liệu", "Theo nội dung trên".
-                                - Không dùng lựa chọn "tất cả đều đúng", "cả A và B", "không có đáp án nào".
-                                - Mỗi câu có đúng một đáp án tốt nhất, sourceExcerpt phải xuất hiện nguyên văn trong chunk.
-                                - Nếu chunk không đủ thông tin độc lập → questions là mảng rỗng.
-                                
-                                ĐA DẠNG PHONG CÁCH:
-                                Mỗi câu hỏi nên có phong cách khác nhau, tránh lặp kiểu hỏi. Ưu tiên xoay vòng các dạng:
-                                1. Tình huống lâm sàng (case-based): "Bệnh nhân nam 45 tuổi vào viện vì đau ngực trái... Chẩn đoán phù hợp nhất là?"
-                                2. Chỉ định/chống chỉ định: "Thuốc X được chỉ định trong trường hợp nào sau đây?"
-                                3. Cơ chế/sinh lý bệnh: "Cơ chế tác dụng chính của thuốc Y là gì?"
-                                4. So sánh/phân biệt: "Đặc điểm giúp phân biệt bệnh A với bệnh B là?"
-                                5. Xét nghiệm cận lâm sàng: "Xét nghiệm nào có giá trị nhất để chẩn đoán xác định bệnh Z?"
-                                6. Biến chứng/tiên lượng: "Biến chứng nguy hiểm nhất của bệnh W là?"
-                                
-                                VÍ DỤ CÂU HỎI ĐẠT YÊU CẦU:
-                                
-                                Ví dụ 1 (tình huống lâm sàng):
-                                {
-                                  "knowledgePoints": [{"id":"KP1","statement":"Tiêu chuẩn chẩn đoán suy tim theo Framingham","type":"fact","importance":"high","sourceExcerpt":"Tiêu chuẩn Framingham gồm tiêu chuẩn chính và tiêu chuẩn phụ","generationEligible":true}],
-                                  "questions": [{
-                                    "stem": "Bệnh nhân nữ 68 tuổi có tiền sử tăng huyết áp, nhập viện vì khó thở khi nằm, phù hai chi dưới. Khám thấy tĩnh mạch cổ nổi, gan to, phản hồi gan tĩnh mạch cổ dương tính. Theo tiêu chuẩn Framingham, bệnh nhân này có mấy tiêu chuẩn chính của suy tim?",
-                                    "optionA": "1 tiêu chuẩn chính",
-                                    "optionB": "2 tiêu chuẩn chính",
-                                    "optionC": "3 tiêu chuẩn chính",
-                                    "optionD": "4 tiêu chuẩn chính",
-                                    "correctAnswer": "C",
-                                    "explanation": "Bệnh nhân có 3 tiêu chuẩn chính theo Framingham: khó thở khi nằm (orthopnea), tĩnh mạch cổ nổi, và phản hồi gan tĩnh mạch cổ dương tính. Phù hai chi dưới là tiêu chuẩn phụ.",
-                                    "difficulty": "medium",
-                                    "topic": "Suy tim - Chẩn đoán",
-                                    "sourceExcerpt": "Tiêu chuẩn Framingham gồm tiêu chuẩn chính và tiêu chuẩn phụ",
-                                    "knowledgePointId": "KP1"
-                                  }]
-                                }
-                                
-                                Ví dụ 2 (chỉ định điều trị):
-                                {
-                                  "knowledgePoints": [{"id":"KP1","statement":"Chỉ định dùng aspirin liều thấp trong dự phòng tiên phát bệnh tim mạch","type":"procedure","importance":"high","sourceExcerpt":"Aspirin liều thấp (75-100mg/ngày) được chỉ định dự phòng tiên phát ở bệnh nhân có nguy cơ tim mạch cao","generationEligible":true}],
-                                  "questions": [{
-                                    "stem": "Bệnh nhân nam 55 tuổi, hút thuốc lá 20 bao-năm, huyết áp 145/90 mmHg, cholesterol toàn phần 6.8 mmol/L, chưa có tiền sử bệnh tim mạch. Aspirin liều thấp có nên được chỉ định dự phòng tiên phát cho bệnh nhân này không?",
-                                    "optionA": "Có, vì bệnh nhân có 3 yếu tố nguy cơ tim mạch",
-                                    "optionB": "Có, vì tất cả bệnh nhân trên 50 tuổi đều cần aspirin dự phòng",
-                                    "optionC": "Không, vì aspirin chỉ dùng dự phòng thứ phát sau nhồi máu cơ tim",
-                                    "optionD": "Không, vì huyết áp chưa được kiểm soát dưới 140/90 mmHg",
-                                    "correctAnswer": "A",
-                                    "explanation": "Bệnh nhân có 3 yếu tố nguy cơ tim mạch chính: tăng huyết áp, rối loạn lipid máu và hút thuốc lá, thuộc nhóm nguy cơ cao, đủ điều kiện dự phòng tiên phát bằng aspirin liều thấp 75-100mg/ngày.",
-                                    "difficulty": "medium",
-                                    "topic": "Dự phòng tim mạch",
-                                    "sourceExcerpt": "Aspirin liều thấp (75-100mg/ngày) được chỉ định dự phòng tiên phát ở bệnh nhân có nguy cơ tim mạch cao",
-                                    "knowledgePointId": "KP1"
-                                  }]
-                                }
-                                
-                                OUTPUT: Chỉ trả về JSON hợp lệ, không bọc markdown, không thêm giải thích ngoài JSON.
+                                Bạn là bác sĩ lâm sàng, chuyên tạo câu hỏi trắc nghiệm 1 đáp án cho đào tạo bệnh viện Việt Nam.
+
+                                QUY TẮC:
+                                - Chỉ dùng thông tin trong chunk, không suy diễn ngoài.
+                                - Viết tiếng Việt tự nhiên, giữ thuật ngữ chuyên môn tiếng Anh khi cần.
+                                - Stem tự đứng độc lập, không mở đầu bằng "Theo tài liệu", "Dựa vào tài liệu", "Trong tài liệu".
+                                - Không dùng "tất cả đều đúng", "cả A và B", "không có đáp án nào".
+                                - Mỗi câu có đúng 1 đáp án tốt nhất.
+                                - Nếu chunk không đủ thông tin độc lập → questions là mảng rỗng [].
+
+                                ĐA DẠNG CÂU HỎI — xoay vòng các kiểu sau, tránh lặp:
+                                1. Tình huống lâm sàng (bệnh nhân + triệu chứng → chẩn đoán/xử trí)
+                                2. Chỉ định/chống chỉ định thuốc hoặc thủ thuật
+                                3. Cơ chế bệnh sinh/tác dụng thuốc
+                                4. Phân biệt chẩn đoán giữa các bệnh
+                                5. Xét nghiệm cận lâm sàng phù hợp
+                                6. Biến chứng/tiên lượng
+
+                                VÍ DỤ NGẮN:
+                                {"knowledgePoints":[{"id":"KP1","statement":"Triệu chứng chính của sốt xuất huyết Dengue","type":"fact","importance":"high","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","generationEligible":true}],"questions":[{"stem":"Bệnh nhân 8 tuổi sốt cao liên tục 3 ngày, đau đầu nhiều, đau mỏi cơ toàn thân, xét nghiệm NS1 dương tính. Triệu chứng nào KHÔNG điển hình của sốt xuất huyết Dengue?","optionA":"Sốt cao đột ngột","optionB":"Đau đầu","optionC":"Ho khạc đờm vàng","optionD":"Đau cơ","correctAnswer":"C","explanation":"Ho khạc đờm vàng là triệu chứng viêm phổi/nhiễm khuẩn hô hấp, không phải triệu chứng điển hình của SXH Dengue.","difficulty":"medium","topic":"Sốt xuất huyết","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","knowledgePointId":"KP1"}]}
+
+                                OUTPUT: Chỉ trả về JSON hợp lệ, không bọc markdown, không giải thích ngoài JSON.
                                 """
                 ),
                 Map.of(
@@ -247,35 +217,12 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Chunk:
                                 %s
 
-                                Hãy trích xuất 0-8 knowledge point và tạo tối đa %d câu hỏi single-choice từ các knowledge point đủ điều kiện.
-                                Đảm bảo mỗi câu hỏi có phong cách khác nhau (tình huống lâm sàng / chỉ định / cơ chế / so sánh / xét nghiệm / biến chứng).
-                                Trả về JSON hợp lệ theo schema:
+                                Trích xuất 0-8 knowledge point và tạo tối đa %d câu hỏi single-choice.
+                                Mỗi câu hỏi phong cách khác nhau.
+                                Trả JSON:
                                 {
-                                  "knowledgePoints": [
-                                    {
-                                      "id": "KP1",
-                                      "statement": "mệnh đề kiến thức ngắn, rõ",
-                                      "type": "definition|fact|procedure|warning|principle",
-                                      "importance": "low|medium|high",
-                                      "sourceExcerpt": "trích dẫn nguyên văn ngắn từ chunk",
-                                      "generationEligible": true
-                                    }
-                                  ],
-                                  "questions": [
-                                    {
-                                      "stem": "câu hỏi tự đứng độc lập, nêu rõ đối tượng/khái niệm/quy trình cần hỏi",
-                                      "optionA": "phương án A",
-                                      "optionB": "phương án B",
-                                      "optionC": "phương án C",
-                                      "optionD": "phương án D",
-                                      "correctAnswer": "A",
-                                      "explanation": "giải thích bám nguồn",
-                                      "difficulty": "easy|medium|hard",
-                                      "topic": "chủ đề",
-                                      "sourceExcerpt": "trích dẫn nguyên văn ngắn từ chunk",
-                                      "knowledgePointId": "KP1"
-                                    }
-                                  ]
+                                  "knowledgePoints": [{"id":"KP1","statement":"...","type":"definition|fact|procedure|warning|principle","importance":"low|medium|high","sourceExcerpt":"...","generationEligible":true}],
+                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"...","knowledgePointId":"KP1"}]
                                 }
                                 """.formatted(input.sectionPath(), input.chunkText(), input.questionsPerChunk())
                 )
@@ -425,7 +372,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                     "temperature", properties.getTemperature(),
                                     "top_p", properties.getTopP(),
                                     "max_tokens", properties.getMaxOutputTokens(),
-                                    "thinking", Map.of("type", "disabled")
+                                    "thinking", Map.of("type", "disabled"),
+                                    "response_format", Map.of("type", "json_object")
                             ))
                             .retrieve()
                             .body(DeepSeekResponse.class);
@@ -660,10 +608,13 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             JsonNode root = objectMapper.readTree(json);
             JsonNode array = root.path("questions");
             List<GeneratedQuestion> questions = new ArrayList<>();
+            int skippedByStemFilter = 0;
             if (array.isArray()) {
                 for (JsonNode node : array) {
                     String stem = text(node, "stem");
                     if (isGenericDocumentReferenceStem(stem)) {
+                        skippedByStemFilter++;
+                        log.info("Question dropped by stem filter: stem='{}'", stem.length() > 60 ? stem.substring(0, 60) + "..." : stem);
                         continue;
                     }
                     questions.add(new GeneratedQuestion(
@@ -682,6 +633,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             null
                     ));
                 }
+            }
+            if (skippedByStemFilter > 0) {
+                log.info("parseQuestions: totalInJson={} kept={} skippedByStemFilter={}",
+                        array.isArray() ? array.size() : 0, questions.size(), skippedByStemFilter);
             }
             return questions;
         } catch (Exception ex) {

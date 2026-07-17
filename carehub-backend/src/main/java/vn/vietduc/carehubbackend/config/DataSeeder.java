@@ -11,9 +11,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
 import vn.vietduc.carehubbackend.user.entity.Permission;
 import vn.vietduc.carehubbackend.user.entity.Role;
@@ -48,6 +51,7 @@ public class DataSeeder implements CommandLineRunner {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final QuestionBankQuestionRepository questionRepository;
+    private final QuestionCategoryRepository questionCategoryRepository;
     private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
 
@@ -85,6 +89,7 @@ public class DataSeeder implements CommandLineRunner {
         Role systemJobRole = seedRole(SYSTEM_JOB_ROLE_CODE, "System Job");
         seedEvaluationPermissions();
         seedAdminUser(adminRole);
+        seedQuestionCategories();
         seedQuestionBank();
     }
 
@@ -157,6 +162,25 @@ public class DataSeeder implements CommandLineRunner {
         if (!missingPermissions.isEmpty()) {
             permissionRepository.saveAll(missingPermissions);
             log.info("Seeded {} evaluation permissions", missingPermissions.size());
+        }
+    }
+
+    private void seedQuestionCategories() {
+        for (int i = 1; i <= 9; i++) {
+            String code = "BAI_" + i;
+            if (questionCategoryRepository.findByCode(code).isPresent()) {
+                continue;
+            }
+            String name = "Bài " + i;
+            QuestionCategory category = QuestionCategory.builder()
+                    .code(code)
+                    .name(name)
+                    .status(QuestionCategoryStatus.ACTIVE)
+                    .sortOrder(i)
+                    .createdBy("system-seed")
+                    .build();
+            questionCategoryRepository.save(category);
+            log.info("Seeded question category: {}", name);
         }
     }
 

@@ -13,7 +13,7 @@ public class AiGenerationProperties {
     private String apiKey;
     private String model = "deepseek-v4-flash";
     private String fallbackModel = "deepseek-v4-pro";
-    private String promptVersion = "docgen-mvp-flash-v1";
+    private String promptVersion = "docgen-mvp-flash-v2";
     private String pipelineMode = "single_call";
     private int timeoutSeconds = 60;
     private int connectTimeoutSeconds = 10;

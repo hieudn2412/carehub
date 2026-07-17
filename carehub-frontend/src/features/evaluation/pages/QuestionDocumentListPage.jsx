@@ -13,6 +13,7 @@ import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import {
   apiData,
   apiErrorMessage,
@@ -40,6 +41,8 @@ function QuestionDocumentListPage() {
   const [page, setPage] = useState(0)
   const [jobModalDocument, setJobModalDocument] = useState(null)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
+  const [categories, setCategories] = useState([])
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
 
   const loadDocuments = useCallback(async () => {
@@ -107,18 +110,31 @@ function QuestionDocumentListPage() {
     }
   }
 
-  function openCreateJob(document) {
+  async function openCreateJob(document) {
     setJobModalDocument(document)
     setQuestionsPerChunk(1)
+    setSelectedCategoryId('')
+    try {
+      const catResp = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
+      const catData = apiData(catResp, [])
+      setCategories(Array.isArray(catData) ? catData : [])
+    } catch {
+      setCategories([])
+    }
   }
 
   async function createJob() {
     if (!jobModalDocument) return
+    if (!selectedCategoryId) {
+      showToast('Vui lòng chọn danh mục (Bài 1-9).', 'warning')
+      return
+    }
     const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(jobModalDocument.id, {
         questionsPerChunk: normalizedCount,
+        categoryId: Number(selectedCategoryId),
       })
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
@@ -149,7 +165,7 @@ function QuestionDocumentListPage() {
                 <div>
                   <h1 className="qdoc-title">Tạo câu hỏi từ tài liệu</h1>
                   <p className="qdoc-subtitle">
-                    Tải tài liệu chuyên môn, tạo câu hỏi AI có evidence và duyệt trước khi lưu vào ngân hàng câu hỏi.
+                    Tải tài liệu chuyên môn, AI tự động tạo câu hỏi trắc nghiệm để duyệt và lưu vào ngân hàng.
                   </p>
                 </div>
                 <FileAddOutlined className="qdoc-title-icon" />
@@ -216,8 +232,7 @@ function QuestionDocumentListPage() {
                       <th>Tên tài liệu</th>
                       <th>Trạng thái</th>
                       <th>Số trang</th>
-                      <th>Số chunk</th>
-                      <th>Phiên gần nhất</th>
+                      <th>Câu hỏi đã tạo</th>
                       <th>Ngày tải</th>
                       <th>Hành động</th>
                     </tr>
@@ -225,11 +240,11 @@ function QuestionDocumentListPage() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="8" className="qdoc-empty-cell">Đang tải danh sách tài liệu...</td>
+                        <td colSpan="7" className="qdoc-empty-cell">Đang tải danh sách tài liệu...</td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="qdoc-empty-cell">Chưa có tài liệu nào. Tải tài liệu đầu tiên để bắt đầu tạo câu hỏi.</td>
+                        <td colSpan="7" className="qdoc-empty-cell">Chưa có tài liệu nào. Tải tài liệu đầu tiên để bắt đầu tạo câu hỏi.</td>
                       </tr>
                     ) : (
                       displayRows.map((document, index) => (
@@ -252,7 +267,6 @@ function QuestionDocumentListPage() {
                             </span>
                           </td>
                           <td>{formatNumber(document.pageCount)}</td>
-                          <td>{formatNumber(document.chunkCount)}</td>
                           <td>
                             {document.latestQuestionJob ? (
                               <button
@@ -260,27 +274,28 @@ function QuestionDocumentListPage() {
                                 className="qdoc-job-link"
                                 onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
                               >
-                                <span>#{document.latestQuestionJob.id}</span>
+                                <span>{formatNumber(document.latestQuestionJob.candidateCount)} câu</span>
                                 <span className={`qdoc-mini-badge qdoc-mini-badge--${statusTone(document.latestQuestionJob.status)}`}>
                                   {jobStatusText(document.latestQuestionJob)}
                                 </span>
-                                <small>{formatNumber(document.latestQuestionJob.candidateCount)} câu</small>
                               </button>
                             ) : (
-                              <span className="qdoc-muted-text">Chưa có phiên</span>
+                              <span className="qdoc-muted-text">Chưa tạo</span>
                             )}
                           </td>
                           <td>{formatDateTime(document.createdAt)}</td>
                           <td>
                             <div className="qdoc-table-actions">
-                              <button
-                                type="button"
-                                className="qdoc-icon-btn"
-                                title="Xem chi tiết"
-                                onClick={() => navigate(`/admin/evaluation/question-documents/${document.id}`)}
-                              >
-                                <EyeOutlined />
-                              </button>
+                              {document.latestQuestionJob && document.latestQuestionJob.candidateCount > 0 && (
+                                <button
+                                  type="button"
+                                  className="qdoc-icon-btn"
+                                  title="Xem câu hỏi"
+                                  onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
+                                >
+                                  <EyeOutlined />
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 className="qdoc-icon-btn qdoc-icon-btn--primary"
@@ -317,6 +332,21 @@ function QuestionDocumentListPage() {
             <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
             <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
             <label className="qdoc-field">
+              <span>Danh mục câu hỏi</span>
+              <select
+                className="qdoc-select"
+                value={selectedCategoryId}
+                onChange={(event) => setSelectedCategoryId(event.target.value)}
+              >
+                <option value="">-- Chọn bài (1-9) --</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="qdoc-field">
               <span>Số câu mỗi chunk</span>
               <input
                 type="number"
@@ -327,8 +357,7 @@ function QuestionDocumentListPage() {
               />
             </label>
             <div className="qdoc-note">
-              Phiên tạo câu hỏi sẽ xử lý từng chunk riêng để giữ evidence và có thể retry phần lỗi.
-              Nên bắt đầu 1 câu/chunk để kiểm soát chất lượng và tốc độ.
+              Chọn danh mục Bài 1-9 để gom nhóm câu hỏi. Tất cả câu hỏi từ tài liệu này sẽ thuộc danh mục đã chọn.
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>

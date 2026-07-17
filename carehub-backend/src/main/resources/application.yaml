@@ -53,7 +53,7 @@ ai:
     api-key: ${GENERATION_API_KEY:${DEEPSEEK_API_KEY:}}
     model: ${GENERATION_MODEL:deepseek-v4-flash}
     fallback-model: ${GENERATION_FALLBACK_MODEL:deepseek-v4-pro}
-    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v1}
+    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v2}
     pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
     connect-timeout-seconds: ${GENERATION_CONNECT_TIMEOUT_SECONDS:10}
