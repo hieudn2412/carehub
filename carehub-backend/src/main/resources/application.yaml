@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:8080}
 
 app:
   notification:
@@ -103,10 +103,10 @@ ai:
     intra-op-threads: ${E5_INTRA_OP_THREADS:-1}
     inter-op-threads: ${E5_INTER_OP_THREADS:1}
   paraphrase:
-    provider: ${PARAPHRASE_PROVIDER:mock}
+    provider: ${PARAPHRASE_PROVIDER:vietquill}
     model: ${PARAPHRASE_MODEL:ngwgsang/vietquill-vit5-base-tsubaki}
     model-path: ${VIETQUILL_MODEL_PATH:models/ngwgsang/vietquill-vit5-base-tsubaki}
-    preload: ${VIETQUILL_PRELOAD:false}
+    preload: ${VIETQUILL_PRELOAD:true}
     max-input-length: ${VIETQUILL_MAX_INPUT_LENGTH:512}
     max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:128}
     timeout-seconds: ${VIETQUILL_TIMEOUT_SECONDS:60}
@@ -163,7 +163,7 @@ spring:
     hikari:
       data-source-properties:
         TimeZone: Asia/Ho_Chi_Minh
-    driver-class-name: ${DB_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:

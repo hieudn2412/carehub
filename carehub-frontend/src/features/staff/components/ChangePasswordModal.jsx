@@ -26,6 +26,23 @@ function ChangePasswordModal({ isOpen, onClose }) {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
+  const resetForm = () => {
+    setOldPassword('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setShowOldPassword(false)
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
+    setErrorMessage('')
+    setSuccessMessage('')
+  }
+
+  const handleClose = () => {
+    if (isSubmitting) return
+    resetForm()
+    onClose()
+  }
+
   if (!isOpen) return null
 
   // ── Kiểm tra điều kiện mật khẩu mới ────────────────────────
@@ -70,15 +87,14 @@ function ChangePasswordModal({ isOpen, onClose }) {
       })
 
       setSuccessMessage('Đổi mật khẩu thành công!')
-      // Reset form
       setOldPassword('')
       setNewPassword('')
       setConfirmNewPassword('')
 
       // Đóng modal sau 1.5 giây
       setTimeout(() => {
+        resetForm()
         onClose()
-        setSuccessMessage('')
       }, 1500)
     } catch (err) {
       // 2. Dự phòng: Nếu API Backend lỗi/chưa có dữ liệu, thông báo lỗi cụ thể
@@ -107,7 +123,7 @@ function ChangePasswordModal({ isOpen, onClose }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-container">
+      <div className="modal-container change-password-modal">
         {/* Header */}
         <div className="modal-header">
           <div className="modal-header__left">
@@ -119,13 +135,13 @@ function ChangePasswordModal({ isOpen, onClose }) {
               <p className="modal-header__sub">Đổi mật khẩu mới</p>
             </div>
           </div>
-          <button className="modal-header__close" onClick={onClose}>
+          <button type="button" className="modal-header__close" onClick={handleClose}>
             <CloseOutlined />
           </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="off">
           <div className="modal-body">
             <p className="modal-section-title">
               <LockOutlined /> Đổi mật khẩu
@@ -159,7 +175,8 @@ function ChangePasswordModal({ isOpen, onClose }) {
                   className="form-field__input"
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  autoComplete="off"
+                  aria-label="Mật khẩu hiện tại"
                 />
                 <button
                   type="button"
@@ -182,7 +199,8 @@ function ChangePasswordModal({ isOpen, onClose }) {
                   className="form-field__input"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  autoComplete="new-password"
+                  aria-label="Mật khẩu mới"
                 />
                 <button
                   type="button"
@@ -221,7 +239,8 @@ function ChangePasswordModal({ isOpen, onClose }) {
                   className="form-field__input"
                   value={confirmNewPassword}
                   onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  autoComplete="new-password"
+                  aria-label="Xác nhận mật khẩu mới"
                 />
                 <button
                   type="button"
@@ -246,7 +265,7 @@ function ChangePasswordModal({ isOpen, onClose }) {
             <button
               type="button"
               className="btn btn--secondary"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
             >
               <CloseOutlined /> Huỷ

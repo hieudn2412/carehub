@@ -24,6 +24,6 @@ public record FormResponse (
     }
 
     @Builder
-    public record VersionSummary(Long id, Integer versionNumber) {
+    public record VersionSummary(Long id, Integer versionNumber, java.math.BigDecimal passingScore) {
     }
 }
