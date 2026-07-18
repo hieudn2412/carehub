@@ -107,7 +107,7 @@ function ExamPaperGeneratePage() {
 
                 <label>
                   <span>Tiền tố tên đề</span>
-                  <input value={namePrefix} onChange={(event) => setNamePrefix(event.target.value)} placeholder="Ví dụ: Đề kiểm tra an toàn người bệnh" />
+                  <input value={namePrefix} onChange={(event) => setNamePrefix(event.target.value)} placeholder="Nhập tiền tố tên đề" />
                 </label>
 
                 <label>
@@ -116,7 +116,7 @@ function ExamPaperGeneratePage() {
                 </label>
 
                 <label>
-                  <span>Random seed</span>
+                  <span>Mầm ngẫu nhiên</span>
                   <input type="number" value={randomSeed} onChange={(event) => setRandomSeed(event.target.value)} placeholder="Bỏ trống để hệ thống tự tạo" />
                 </label>
 

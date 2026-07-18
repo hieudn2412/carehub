@@ -127,7 +127,7 @@ function CompetencyEmployeeFieldDetailPage() {
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
                         <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                          Chưa có dữ liệu kiểm tra kiến thức cho nhân viên này.
+                          Chưa có dữ liệu kiểm tra cho nhân viên này.
                         </td>
                       </tr>
                     ) : (

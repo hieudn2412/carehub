@@ -13,6 +13,7 @@ function ExamTakeListScreen() {
   const { showToast } = useToast()
   const [assignments, setAssignments] = useState([])
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('OPEN')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -36,9 +37,10 @@ function ExamTakeListScreen() {
       const matchesSearch = !normalized
         || (assignment.name || '').toLowerCase().includes(normalized)
         || (assignment.examPaperName || '').toLowerCase().includes(normalized)
-      return matchesSearch && assignment.status === 'OPEN'
+      const matchesStatus = statusFilter === '' || assignment.status === statusFilter
+      return matchesSearch && matchesStatus
     })
-  }, [assignments, search])
+  }, [assignments, search, statusFilter])
 
   async function startAssignment(assignment) {
     try {
@@ -67,6 +69,12 @@ function ExamTakeListScreen() {
                 <span className="eh-search-icon"><SearchOutlined /></span>
                 <input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={(event) => setSearch(event.target.value)} />
               </div>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="">Tất cả trạng thái</option>
+                <option value="OPEN">Đang mở</option>
+                <option value="CLOSED">Đã đóng</option>
+                <option value="COMPLETED">Đã hoàn thành</option>
+              </select>
             </div>
 
             <div className="eh-table-card">
@@ -85,7 +93,7 @@ function ExamTakeListScreen() {
                   {loading ? (
                     <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan="6">Chưa có bài kiểm tra đang mở.</td></tr>
+                    <tr><td colSpan="6">Chưa có bài kiểm tra nào. Liên hệ trưởng phòng để được phân công bài kiểm tra.</td></tr>
                   ) : filtered.map((assignment) => (
                     <tr key={assignment.id}>
                       <td>{assignment.name}</td>

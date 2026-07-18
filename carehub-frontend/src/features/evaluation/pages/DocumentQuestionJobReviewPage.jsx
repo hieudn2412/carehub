@@ -124,7 +124,7 @@ function DocumentQuestionJobReviewPage() {
     try {
       const response = await documentQuestionApi.retryFailedChunks(jobId)
       setJobDetail(apiData(response))
-      showToast('Retry các chunk lỗi thành công.', 'success')
+      showToast('Thử lại các phần xử lý lỗi thành công.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -133,7 +133,7 @@ function DocumentQuestionJobReviewPage() {
   }
 
   async function cancelJob() {
-    if (!window.confirm('Hủy phiên tạo câu hỏi đang chạy? Các candidate đã tạo trước đó vẫn được giữ lại.')) return
+    if (!window.confirm('Hủy phiên tạo câu hỏi đang chạy? Các câu hỏi đã tạo trước đó vẫn được giữ lại.')) return
     try {
       const response = await documentQuestionApi.cancelQuestionJob(jobId)
       setJobDetail(apiData(response))
@@ -145,7 +145,7 @@ function DocumentQuestionJobReviewPage() {
 
   async function runBatchAction(action, candidateIds, successMessage, reviewerNotes = '') {
     if (!candidateIds.length) {
-      showToast('Không có candidate phù hợp để thao tác hàng loạt.', 'warning')
+      showToast('Không có câu hỏi phù hợp để thao tác hàng loạt.', 'warning')
       return
     }
     setIsBatching(true)
@@ -155,7 +155,7 @@ function DocumentQuestionJobReviewPage() {
       replaceCandidates(result.candidates || [])
       setSelectedCandidateIds((current) => current.filter((id) => !(result.succeededCandidateIds || []).includes(id)))
       if (Number(result.failedCount || 0) > 0) {
-        showToast(`${successMessage}. ${result.failedCount} candidate lỗi, kiểm tra lại trạng thái từng câu.`, 'warning')
+        showToast(`${successMessage}. ${result.failedCount} câu lỗi, kiểm tra lại trạng thái từng câu.`, 'warning')
       } else {
         showToast(successMessage, 'success')
       }
@@ -388,7 +388,7 @@ function DocumentQuestionJobReviewPage() {
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
-                        <span>Retry chunk lỗi</span>
+                        <span>Thử lại chunk lỗi</span>
                       </button>
                     </section>
                   )}

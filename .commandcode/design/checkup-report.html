@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Checkup — Giờ đào tạo + Đánh giá</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #fff;
+    --text: #1a1a1a;
+    --muted: #6b7280;
+    --critical: #dc2626;
+    --watch: #f59e0b;
+    --healthy: #16a34a;
+    --border: #e5e7eb;
+    --accent: #2563eb;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+  .container { max-width: 800px; margin: 0 auto; padding: 40px 24px; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .meta { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .score { display: flex; align-items: baseline; gap: 8px; margin-bottom: 32px; }
+  .score-value { font-size: 64px; font-weight: 800; }
+  .score-total { color: var(--muted); font-size: 20px; }
+  .score-label { color: var(--muted); font-size: 16px; margin-top: -8px; }
+  .vitals { display: grid; gap: 12px; margin-bottom: 40px; }
+  .vital { display: flex; align-items: center; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; gap: 16px; }
+  .vital-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .vital-icon.critical { background: #fef2f2; color: var(--critical); }
+  .vital-icon.watch { background: #fffbeb; color: var(--watch); }
+  .vital-icon.healthy { background: #f0fdf4; color: var(--healthy); }
+  .vital-info { flex: 1; }
+  .vital-name { font-weight: 600; font-size: 15px; }
+  .vital-note { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .vital-score { font-weight: 700; font-size: 18px; }
+  .section { margin-bottom: 36px; }
+  .section h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+  .section h3 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; }
+  .good, .bad { margin-bottom: 8px; }
+  .good::before { content: "✓ "; color: var(--healthy); font-weight: 700; }
+  .bad::before { content: "✗ "; color: var(--critical); font-weight: 700; }
+  .warn::before { content: "⚠ "; color: var(--watch); font-weight: 700; }
+  .good, .bad, .warn { padding-left: 4px; font-size: 14px; }
+  .bad strong, .warn strong { font-weight: 700; }
+  br { margin-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  th { text-align: left; padding: 8px 12px; background: #f9fafb; font-weight: 600; border-bottom: 2px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .tag.crit { background: #fef2f2; color: var(--critical); }
+  .tag.watch-tag { background: #fffbeb; color: #92400e; }
+  .tag.nice { background: #f0fdf4; color: var(--healthy); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Design Checkup</h1>
+<p class="meta">carehub-frontend — Giờ đào tạo, Đánh giá, Bài test, Ngân hàng câu hỏi<br>2026-07-17</p>
+
+<div class="score">
+  <span class="score-value" style="color:#f59e0b">38</span>
+  <span class="score-total">/60</span>
+</div>
+<p class="score-label">Watch — cần sửa vài điểm trước khi ship cho trưởng phòng điều dưỡng</p>
+
+<div class="vitals">
+  <div class="vital">
+    <div class="vital-icon watch">⚠</div>
+    <div class="vital-info"><div class="vital-name">Intentionality</div><div class="vital-note">Layout có chủ đích nhưng một số khu vực quá dày</div></div>
+    <div class="vital-score">5/10</div>
+  </div>
+  <div class="vital">
+    <div class="vital-icon watch">⚠</div>
+    <div class="vital-info"><div class="vital-name">Readability</div><div class="vital-note">Tiếng Việt tốt nhưng lẫn từ tiếng Anh</div></div>
+    <div class="vital-score">5/10</div>
+  </div>
+  <div class="vital">
+    <div class="vital-icon healthy">✓</div>
+    <div class="vital-info"><div class="vital-name">Usability</div><div class="vital-note">Luồng thao tác chính hoạt động, CRUD đầy đủ</div></div>
+    <div class="vital-score">10/10</div>
+  </div>
+  <div class="vital">
+    <div class="vital-icon watch">⚠</div>
+    <div class="vital-info"><div class="vital-name">Responsiveness</div><div class="vital-note">Desktop-focused, chưa kiểm tra mobile</div></div>
+    <div class="vital-score">5/10</div>
+  </div>
+  <div class="vital">
+    <div class="vital-icon healthy">✓</div>
+    <div class="vital-info"><div class="vital-name">Speed</div><div class="vital-note">Load nhanh, không layout shift</div></div>
+    <div class="vital-score">10/10</div>
+  </div>
+  <div class="vital">
+    <div class="vital-icon critical">✗</div>
+    <div class="vital-info"><div class="vital-name">Accessibility</div><div class="vital-note">Thiếu focus ring, chưa kiểm tra screen reader</div></div>
+    <div class="vital-score">3/10</div>
+  </div>
+</div>
+
+<div class="section">
+<h2>Phát hiện chi tiết</h2>
+
+<h3>1. Giờ đào tạo — Training Status</h3>
+<p class="good">Layout rõ ràng: compliance badge + progress bar + biểu đồ + bảng records</p>
+<p class="good">Có filter "Load mine" để xem của chính mình</p>
+<p class="bad"><strong>CRITICAL:</strong> Badge "NON_COMPLIANT" dùng tiếng Anh → phải là "KHÔNG ĐẠT"</p>
+<p class="bad">Chart "Giờ theo năm" và "Giờ theo activity type" trống — cần hiển thị "Chưa có dữ liệu" rõ hơn</p>
+<p class="bad">Tên record "test 1128" là dữ liệu test, không phải thật</p>
+
+<h3>2. Giờ đào tạo — Cấu hình yêu cầu</h3>
+<p class="good">Form cấu hình đầy đủ: chọn phòng ban, chu kỳ, ghi đè chức danh</p>
+<p class="warn"><strong>WATCH:</strong> 70 phòng ban trong 1 scroll list quá dài — nên chia cột hoặc dùng tree view</p>
+<p class="warn">Nút "Thiết lập mặc định" không rõ chức năng khác gì "Lưu cấu hình"</p>
+
+<h3>3. Ngân hàng câu hỏi</h3>
+<p class="good">Table rõ ràng, filter đa chiều, Export/Import/Tạo biến thể đầy đủ</p>
+<p class="warn"><strong>WATCH:</strong> Danh mục lẫn lộn: "Bài 4", "Bệnh cấp tính", "Học phần...Bài 1" — không đồng nhất</p>
+<p class="warn">"Export Excel" / "Import" — nên là "Xuất Excel" / "Nhập"</p>
+<p class="warn">Cột "Loại" hiển thị "Gốc" không có tooltip</p>
+
+<h3>4. Làm bài test</h3>
+<p class="good">Empty state rõ ràng: "Chưa có bài kiểm tra đang mở"</p>
+<p class="warn"><strong>WATCH:</strong> Thiếu hướng dẫn "Liên hệ trưởng phòng để được giao bài"</p>
+<p class="warn">Thiếu filter "Tất cả / Đang mở / Đã hoàn thành / Quá hạn"</p>
+
+<h3>5. Tạo câu hỏi từ tài liệu</h3>
+<p class="good">Đã được đơn giản hóa — hiện tại ổn</p>
+</div>
+
+<div class="section">
+<h2>Prescriptions</h2>
+
+<table>
+<thead><tr><th>#</th><th>Mức</th><th>Vấn đề</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>C1</td><td><span class="tag crit">Critical</span></td><td>"NON_COMPLIANT" — tiếng Anh</td><td>Đổi thành "KHÔNG ĐẠT"</td></tr>
+<tr><td>C2</td><td><span class="tag crit">Critical</span></td><td>Accessibility — thiếu focus ring</td><td>Audit tab navigation, thêm :focus-visible</td></tr>
+<tr><td>W1</td><td><span class="tag watch-tag">Watch</span></td><td>Danh mục không đồng nhất</td><td>Chuẩn hóa "Bài N — Tên chủ đề"</td></tr>
+<tr><td>W2</td><td><span class="tag watch-tag">Watch</span></td><td>70 phòng ban scroll dài</td><td>Chia cột hoặc transfer component</td></tr>
+<tr><td>W3</td><td><span class="tag watch-tag">Watch</span></td><td>Empty state bài test thiếu hướng dẫn</td><td>Thêm text hướng dẫn</td></tr>
+<tr><td>W4</td><td><span class="tag watch-tag">Watch</span></td><td>"Export Excel" / "Import" — tiếng Anh</td><td>Đổi thành "Xuất Excel" / "Nhập"</td></tr>
+<tr><td>W5</td><td><span class="tag watch-tag">Watch</span></td><td>Chưa test responsive</td><td>Test 375px và 768px</td></tr>
+</tbody>
+</table>
+</div>
+
+</div>
+</body>
+</html>

@@ -381,7 +381,7 @@ function TrainingRequirementPage() {
               <div className="tr-title-card">
                 <h1 className="tr-title">Cấu hình yêu cầu đào tạo</h1>
                 <p className="tr-subtitle">
-                  Thiết lập số giờ đào tạo tối thiểu theo chu kỳ, chức danh hoặc chuyên khoa
+                  Thiết lập số giờ đào tạo tối thiểu theo chu kỳ và chức danh
                 </p>
               </div>
 
@@ -480,8 +480,7 @@ function TrainingRequirementPage() {
                   )}
                   {!isLoading && removedDepartmentCount > 0 && (
                     <div className="tr-scope-warning" role="alert">
-                      {removedDepartmentCount} phòng đã bị bỏ chọn. Sau khi lưu, nhân viên tại đó sẽ chuyển sang
-                      {' '}NOT_CONFIGURED và ngừng nhận cảnh báo; dữ liệu giờ đào tạo vẫn được giữ nguyên.
+                      {removedDepartmentCount} phòng đã bị bỏ chọn. Sau khi lưu, nhân viên tại đó sẽ chuyển sang trạng thái "Chưa áp dụng" và ngừng nhận cảnh báo; dữ liệu giờ đào tạo vẫn được giữ nguyên.
                     </div>
                   )}
                 </div>

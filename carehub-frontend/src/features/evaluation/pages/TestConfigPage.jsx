@@ -361,11 +361,11 @@ function TestConfigPage() {
                     <div className="tcf-field-row">
                       <div className="tcf-field-left">
                         <span className="tcf-field-label">Chiến lược chọn câu hỏi</span>
-                        <span className="tcf-field-subtext">RANDOM: chọn ngẫu nhiên. MIXED: câu bắt buộc + random bổ sung</span>
+                        <span className="tcf-field-subtext">Ngẫu nhiên: chọn ngẫu nhiên từ ngân hàng. Kết hợp: câu bắt buộc + ngẫu nhiên bổ sung</span>
                       </div>
                       <select className="tcf-field-select" value={form.selectionStrategy} onChange={(event) => updateForm('selectionStrategy', event.target.value)}>
-                        <option value="RANDOM">RANDOM - Ngẫu nhiên</option>
-                        <option value="MIXED">MIXED - Kết hợp (bắt buộc + ngẫu nhiên)</option>
+                        <option value="RANDOM">Ngẫu nhiên</option>
+                        <option value="MIXED">Kết hợp (bắt buộc + ngẫu nhiên)</option>
                       </select>
                     </div>
                   </div>
@@ -482,7 +482,7 @@ function TestConfigPage() {
 
               <div className="tcf-modal-group">
                 <label>Số lượng câu hỏi phân bổ <span className="tcf-required-star">*</span></label>
-                <input type="number" className="tcf-input-green" min="1" required value={modalQuestions} onChange={(event) => setModalQuestions(event.target.value)} placeholder="Ví dụ: 8" />
+                <input type="number" className="tcf-input-green" min="1" required value={modalQuestions} onChange={(event) => setModalQuestions(event.target.value)} placeholder="Nhập số câu hỏi" />
               </div>
 
               <div className="tcf-modal-actions">

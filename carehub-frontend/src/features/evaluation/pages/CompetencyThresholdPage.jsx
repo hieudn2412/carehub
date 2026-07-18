@@ -144,7 +144,7 @@ function CompetencyThresholdPage() {
                                 fontWeight: 600,
                                 fontSize: 13,
                               }}>
-                                {t.competencyLevel}
+                                {t.label || t.competencyLevel}
                               </span>
                             </td>
                             <td>

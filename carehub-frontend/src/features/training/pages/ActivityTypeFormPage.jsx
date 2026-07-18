@@ -6,7 +6,15 @@ import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import '../styles/training.css'
 
-const DURATION_UNITS = ['HOUR', 'LESSON', 'CREDIT', 'DAY', 'MONTH', 'YEAR', 'OTHER']
+const DURATION_UNITS = [
+  { value: 'HOUR', label: 'Tính theo giờ' },
+  { value: 'LESSON', label: 'Tính theo tiết học' },
+  { value: 'CREDIT', label: 'Tính theo tín chỉ' },
+  { value: 'DAY', label: 'Tính theo ngày' },
+  { value: 'MONTH', label: 'Tính theo tháng' },
+  { value: 'YEAR', label: 'Tính theo năm' },
+  { value: 'OTHER', label: 'Khác' },
+]
 
 const EMPTY_FORM = {
   code: '',
@@ -149,19 +157,19 @@ function ActivityTypeFormPage() {
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Mã hình thức (Code) *</label>
+                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Mã hình thức *</label>
                       <input
                         type="text"
                         style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155', background: codeLocked ? '#f1f5f9' : '#fff' }}
                         disabled={codeLocked}
                         maxLength={50}
                         minLength={2}
-                        placeholder="Ví dụ: WORKSHOP, CONFERENCE"
+                        placeholder="Ví dụ: HOI_THAO, TAP_HUAN"
                         onChange={(event) => updateField('code', event.target.value)}
                         required
                         value={form.code}
                       />
-                      {codeLocked && <small style={{ color: '#64748b', fontSize: 12 }}>Hình thức này đã phát sinh dữ liệu liên kết nên không được phép đổi mã code.</small>}
+                      {codeLocked && <small style={{ color: '#64748b', fontSize: 12 }}>Hình thức này đã phát sinh dữ liệu liên kết nên không thể đổi mã.</small>}
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -199,8 +207,8 @@ function ActivityTypeFormPage() {
                           value={form.defaultDurationUnit}
                         >
                           {DURATION_UNITS.map((unit) => (
-                            <option key={unit} value={unit}>
-                              {unit}
+                            <option key={unit.value} value={unit.value}>
+                              {unit.label}
                             </option>
                           ))}
                         </select>

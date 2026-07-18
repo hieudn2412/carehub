@@ -122,7 +122,7 @@ function TrainingHoursListScreen() {
       <Sidebar />
       <div className="dashboard-layout__content">
         <Header breadcrumbs={[
-          { label: 'Dashboard', link: dashboardPath },
+          { label: 'Tổng quan', link: dashboardPath },
           { label: 'Giờ đào tạo' }
         ]} />
         <div className="dashboard-layout__body">

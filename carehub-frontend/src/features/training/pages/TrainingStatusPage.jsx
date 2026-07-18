@@ -68,7 +68,7 @@ function TrainingStatusPage() {
       <section className="training-panel training-panel--wide training-status-toolbar">
         <form className="training-filters training-filters--status" onSubmit={openEmployeeStatus}>
           <label>
-            Employee ID
+            Mã nhân viên
             <input
               onChange={(event) => setEmployeeInput(event.target.value)}
               placeholder="Trống = tôi"
@@ -76,12 +76,12 @@ function TrainingStatusPage() {
             />
           </label>
           <label>
-            Professional field
+            Lĩnh vực chuyên môn
             <select
               onChange={(event) => setProfessionalFieldId(event.target.value)}
               value={professionalFieldId}
             >
-              <option value="">Default</option>
+              <option value="">Mặc định</option>
               {professionalFields.map((field) => (
                 <option key={field.id} value={field.id}>
                   {field.name}
@@ -120,20 +120,31 @@ function TrainingStatusPage() {
       ) : status ? (
         <>
           <section className="training-grid training-grid--status">
-            <StatusCard label="Employee" value={status.employeeName || '-'} note={status.employeeCode} />
-            <StatusCard label="Compliance" value={status.status} note={status.warningMessage} />
+            <StatusCard label="Nhân viên" value={status.employeeName || '-'} note={status.employeeCode} />
             <StatusCard
-              label="Requirement"
-              value={status.requirementName || 'NOT CONFIGURED'}
+              label="Trạng thái"
+              value={status.status === 'COMPLIANT' ? 'ĐẠT' : status.status === 'NON_COMPLIANT' ? 'KHÔNG ĐẠT' : status.status}
+              note={status.warningMessage}
+            />
+            <StatusCard
+              label="Yêu cầu"
+              value={status.requirementName || 'CHƯA CẤU HÌNH'}
               note={status.cycleYears ? `${status.cycleYears} năm` : '-'}
             />
-            <StatusCard label="Window" value={status.windowStart || '-'} note={status.windowEnd || '-'} />
-            <StatusCard label="Submitted" value={`${status.submittedHours ?? 0}h`} note={`Required ${status.requiredHours ?? 0}h`} />
-            <StatusCard label="Remaining" value={`${status.remainingHours ?? 0}h`} note={`${status.progressPercentage ?? 0}%`} />
+            <StatusCard label="Chu kỳ" value={status.windowStart || '-'} note={`→ ${status.windowEnd || '-'}`} />
           </section>
 
-          <section className="training-panel training-panel--wide">
-            <h2>Progress</h2>
+          <section className="training-hero-progress">
+            <div className="training-progress-info">
+              <div className="training-progress-stat">
+                <span className="training-progress-value">{status.submittedHours ?? 0}h</span>
+                <span className="training-progress-label">đã nộp trên {status.requiredHours ?? 0}h yêu cầu</span>
+              </div>
+              <div className="training-progress-stat">
+                <span className="training-progress-value">{status.remainingHours ?? 0}h</span>
+                <span className="training-progress-label">còn thiếu ({status.progressPercentage ?? 0}%)</span>
+              </div>
+            </div>
             <div className="training-progress">
               <span style={{ width: `${Math.min(Number(status.progressPercentage ?? 0), 100)}%` }} />
             </div>
@@ -142,13 +153,14 @@ function TrainingStatusPage() {
           <section className="training-detail-grid">
             <div className="training-panel">
               <h2>Giờ theo năm</h2>
-              <StatusTable rows={status.yearlyHours ?? []} columns={['year', 'submittedHours']} />
+              <StatusTable rows={status.yearlyHours ?? []} columns={['year', 'submittedHours']} labels={{ year: 'Năm', submittedHours: 'Giờ đã nộp' }} />
             </div>
             <div className="training-panel">
               <h2>Giờ theo activity type</h2>
               <StatusTable
                 rows={status.activityTypeHours ?? []}
                 columns={['activityTypeName', 'submittedHours']}
+                labels={{ activityTypeName: 'Loại hoạt động', submittedHours: 'Giờ đã nộp' }}
               />
             </div>
             <div className="training-panel training-panel--wide">
@@ -176,7 +188,7 @@ function StatusCard({ label, value, note }) {
   )
 }
 
-function StatusTable({ rows, columns }) {
+function StatusTable({ rows, columns, labels }) {
   if (rows.length === 0) {
     return <div className="training-empty">Không có dữ liệu.</div>
   }
@@ -187,7 +199,7 @@ function StatusTable({ rows, columns }) {
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column}>{column}</th>
+              <th key={column}>{labels?.[column] || column}</th>
             ))}
           </tr>
         </thead>
@@ -210,16 +222,26 @@ function RecordTable({ rows }) {
     return <div className="training-empty">Không có record.</div>
   }
 
+  function statusText(workflowStatus) {
+    const map = {
+      SUBMITTED: 'Đã nộp',
+      APPROVED: 'Đã duyệt',
+      REJECTED: 'Từ chối',
+      DRAFT: 'Bản nháp',
+    }
+    return map[workflowStatus] || workflowStatus || '-'
+  }
+
   return (
     <div className="training-table-wrap">
       <table className="training-table training-table--compact">
         <thead>
           <tr>
-            <th>Title</th>
-            <th>Activity</th>
-            <th>Date</th>
-            <th>Declared</th>
-            <th>Status</th>
+            <th>Tiêu đề</th>
+            <th>Hoạt động</th>
+            <th>Ngày</th>
+            <th>Giờ khai báo</th>
+            <th>Trạng thái</th>
           </tr>
         </thead>
         <tbody>
@@ -229,7 +251,7 @@ function RecordTable({ rows }) {
               <td>{record.activityTypeName}</td>
               <td>{record.startDate}</td>
               <td>{record.declaredHours ?? '-'}</td>
-              <td>{record.workflowStatus}</td>
+              <td>{statusText(record.workflowStatus)}</td>
             </tr>
           ))}
         </tbody>

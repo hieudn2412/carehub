@@ -1182,3 +1182,15 @@
     width: 100%;
   }
 }
+
+.qsf-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 600;
+  background: #dbeafe;
+  color: #1d4ed8;
+  width: fit-content;
+}

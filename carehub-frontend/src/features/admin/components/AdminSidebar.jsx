@@ -37,7 +37,7 @@ const navSections = [
   {
     label: 'TỔNG QUAN',
     items: [
-      { icon: <DashboardOutlined />, label: 'Dashboard', path: '/admin/dashboard' },
+      { icon: <DashboardOutlined />, label: 'Tổng quan', path: '/admin/dashboard' },
     ],
   },
   {
@@ -51,7 +51,7 @@ const navSections = [
     items: [
       { icon: <TeamOutlined />, label: 'Danh sách nhân viên gốc', path: '/admin/reference/employees' },
       { icon: <BankOutlined />, label: 'Danh mục phòng ban gốc', path: '/admin/reference/departments' },
-      { icon: <DatabaseOutlined />, label: 'Import data', path: '/admin/reference/import' },
+      { icon: <DatabaseOutlined />, label: 'Nhập dữ liệu', path: '/admin/reference/import' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
     ],
   },
@@ -100,19 +100,19 @@ const navSections = [
       },
       {
         icon: <DatabaseOutlined />,
+        label: 'Danh mục bộ câu hỏi',
+        path: '/admin/evaluation/question-set-categories',
+        requiredPermissions: [EVALUATION_PERMISSION.questionSetManager],
+      },
+      {
+        icon: <DatabaseOutlined />,
         label: 'Danh mục câu hỏi',
         path: '/admin/evaluation/categories',
         requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
       },
       {
-        icon: <AuditOutlined />,
-        label: 'Cấu hình hiển thị kết quả',
-        path: '/admin/evaluation/classification-rules',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
-      },
-      {
         icon: <SlidersOutlined />,
-        label: 'Cấu hình bài kiểm tra',
+        label: 'Cấu hình & Sinh đề',
         path: '/admin/evaluation/configs',
         requiredPermissions: [EVALUATION_PERMISSION.examConfigManager],
       },
@@ -166,7 +166,7 @@ const navSections = [
       },
       {
         icon: <AuditOutlined />,
-        label: 'Prompt Templates',
+        label: 'Mẫu prompt',
         path: '/admin/evaluation/prompt-templates',
         requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
       },
@@ -179,7 +179,7 @@ const navSections = [
     ],
   },
   {
-    label: 'DASHBOARD & BÁO CÁO',
+    label: 'BÁO CÁO & THỐNG KÊ',
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
       { icon: <LineChartOutlined />, label: 'Dashboard chất lượng', path: '/admin/reports/quality-dashboard' },
@@ -318,7 +318,7 @@ function AdminSidebar() {
   return (
     <aside className="admin-sidebar">
       <div className="admin-sidebar__logo">
-        <img className="admin-sidebar__logo-icon" src={logo} alt="VietDuc Care Logo" />
+        <img className="admin-sidebar__logo-icon" src={logo} alt="Logo VietDuc Care" />
         <div>
           <p className="admin-sidebar__logo-name">VietDuc Care</p>
           <span className="admin-sidebar__logo-sub">Quản trị hệ thống</span>

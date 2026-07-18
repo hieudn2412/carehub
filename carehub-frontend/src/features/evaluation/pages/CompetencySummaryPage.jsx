@@ -70,7 +70,7 @@ function CompetencySummaryPage() {
             setDepartments([{ id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }])
           }
         } catch {
-          showToast('Không thể xác định khoa/phòng của bạn', 'error')
+          showToast('Không tìm thấy khoa/phòng của bạn', 'error')
         }
       }
     }
@@ -206,7 +206,7 @@ function CompetencySummaryPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Trọng số</label>
                   <span style={{ fontSize: 13, color: '#374151', padding: '6px 0' }}>
-                    Kiến thức: {knowledgeWeight}% · Kỹ năng: {skillWeight}%
+                    Kiến thức: {knowledgeWeight}% — Kỹ năng: {skillWeight}%
                   </span>
                 </div>
               </section>
@@ -265,7 +265,7 @@ function CompetencySummaryPage() {
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
                         <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                          Chưa có đủ dữ liệu kiến thức và kỹ năng để tổng hợp năng lực cho khoa này.
+                          Chưa có dữ liệu năng lực cho khoa này.
                         </td>
                       </tr>
                     ) : (

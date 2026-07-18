@@ -399,7 +399,39 @@
 }
 
 .training-status-card {
-  min-height: 140px;
+  min-height: 120px;
+}
+
+.training-hero-progress {
+  background: #ffffff;
+  border: 1px solid #dce3eb;
+  border-radius: 8px;
+  padding: 28px 32px;
+  margin-bottom: 8px;
+}
+
+.training-progress-info {
+  display: flex;
+  gap: 48px;
+  margin-bottom: 16px;
+}
+
+.training-progress-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.training-progress-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #1a1a1a;
+}
+
+.training-progress-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 4px;
 }
 
 .training-progress {

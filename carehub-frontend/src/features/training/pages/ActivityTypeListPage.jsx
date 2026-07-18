@@ -17,19 +17,7 @@ const EMPTY_FORM = {
   maxCreditedHoursPerRecord: '',
   sortOrder: 0,
   active: true,
-  multiplier: '',
   version: null,
-}
-
-function generateCodeFromName(name) {
-  if (!name) return ''
-  return name
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Remove Vietnamese accents
-    .replace(/[^a-zA-Z0-9\s-_]/g, '') // Remove special characters
-    .replace(/[\s-]+/g, '_') // Replace spaces/dashes with underscores
-    .toUpperCase()
 }
 
 function ActivityTypeListPage() {
@@ -110,7 +98,6 @@ function ActivityTypeListPage() {
       maxCreditedHoursPerRecord: item.maxCreditedHoursPerRecord || '',
       sortOrder: item.sortOrder ?? 0,
       active: item.active ?? true,
-      multiplier: item.multiplier || '1.0',
       version: item.version || null,
     })
     setSuccessMessage('')
@@ -172,9 +159,6 @@ function ActivityTypeListPage() {
   const rows = data?.content ?? []
   const totalElements = data?.totalElements ?? 0
   const totalPages = data?.totalPages ?? 1
-
-  const displayRows = rows
-  const displayTotal = totalElements
 
   const breadcrumbs = [{ label: 'Các hình thức đào tạo' }]
 
@@ -247,6 +231,10 @@ function ActivityTypeListPage() {
                   <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
                     Đang tải danh sách các hình thức đào tạo...
                   </div>
+                ) : rows.length === 0 ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                    {debouncedKeyword || status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có hình thức đào tạo nào.'}
+                  </div>
                 ) : (
                   <>
                     <table className="atl-table">
@@ -260,7 +248,7 @@ function ActivityTypeListPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayRows.map((item) => (
+                        {rows.map((item) => (
                           <tr key={item.id}>
                             <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
                             <td style={{ color: '#475569' }}>{item.description || '-'}</td>
@@ -301,7 +289,7 @@ function ActivityTypeListPage() {
                     {/* Pagination Bar */}
                     <div className="atl-pagination-bar">
                       <div className="atl-pagination-info">
-                        Hiển thị {displayRows.length} trong tổng số {displayTotal} kết quả
+                        Hiển thị {rows.length} trong tổng số {totalElements} kết quả
                       </div>
                       <div className="atl-pagination-buttons">
                         <button
@@ -392,8 +380,8 @@ function ActivityTypeListPage() {
                     value={modalForm.active.toString()}
                     onChange={(e) => updateModalField('active', e.target.value === 'true')}
                   >
-                    <option value="true">Hoạt động (Active)</option>
-                    <option value="false">Ngưng (Inactive)</option>
+                    <option value="true">Hoạt động</option>
+                    <option value="false">Ngưng hoạt động</option>
                   </select>
                 </div>
               </div>
@@ -418,23 +406,23 @@ function ActivityTypeListPage() {
                     value={modalForm.defaultDurationUnit}
                     onChange={(e) => updateModalField('defaultDurationUnit', e.target.value)}
                   >
-                    <option value="HOUR">Tính toàn bộ số giờ (Count full hour)</option>
-                    <option value="LESSON">Tính theo tiết học (Count by lesson)</option>
-                    <option value="CREDIT">Tính theo tín chỉ (Count by credit)</option>
-                    <option value="DAY">Tính theo ngày (Count by day)</option>
-                    <option value="MONTH">Tính theo tháng (Count by month)</option>
-                    <option value="YEAR">Tính theo năm (Count by year)</option>
-                    <option value="OTHER">Khác (Other)</option>
+                    <option value="HOUR">Tính toàn bộ số giờ</option>
+                    <option value="LESSON">Tính theo tiết học</option>
+                    <option value="CREDIT">Tính theo tín chỉ</option>
+                    <option value="DAY">Tính theo ngày</option>
+                    <option value="MONTH">Tính theo tháng</option>
+                    <option value="YEAR">Tính theo năm</option>
+                    <option value="OTHER">Khác</option>
                   </select>
                 </div>
                 <div className="atl-modal-group">
-                  <label>Hệ số nhân (tùy chọn)</label>
+                  <label>Tối đa giờ / hồ sơ</label>
                   <input
-                    type="text"
+                    type="number"
                     className="atl-input-green"
-                    value={modalForm.multiplier}
-                    onChange={(e) => updateModalField('multiplier', e.target.value)}
-                    placeholder="Ví dụ: 1.0"
+                    value={modalForm.maxCreditedHoursPerRecord}
+                    onChange={(e) => updateModalField('maxCreditedHoursPerRecord', e.target.value)}
+                    placeholder="Không giới hạn"
                   />
                 </div>
               </div>
