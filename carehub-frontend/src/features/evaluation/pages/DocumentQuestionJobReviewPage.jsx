@@ -348,9 +348,6 @@ function DocumentQuestionJobReviewPage() {
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>
                             {jobStatusText(jobDetail)}
                           </span>
-                          <span>{jobDetail.provider}</span>
-                          <span>{jobDetail.model}</span>
-                          <span>{jobDetail.promptVersion}</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
                         </div>
                       </div>
@@ -370,21 +367,10 @@ function DocumentQuestionJobReviewPage() {
                   </section>
 
                   <section className="qdoc-metric-grid qdoc-metric-grid--wide">
-                    <Metric label="Chunks" value={`${formatNumber(jobDetail.completedChunkCount)} / ${formatNumber(jobDetail.chunkCount)}`} />
-                    <Metric label="Chunk lỗi" value={formatNumber(jobDetail.failedChunkCount)} />
-                    <Metric label="Candidate" value={formatNumber(jobDetail.candidateCount)} />
-                    <Metric label="Số câu/chunk" value={formatNumber(jobDetail.questionsPerChunk)} />
-                    <Metric label="LLM calls" value={formatNumber(jobDetail.usage?.callCount)} />
-                    <Metric label="Total tokens" value={formatNumber(jobDetail.usage?.totalTokens)} />
-                    <Metric label="Latency" value={`${formatNumber(jobDetail.usage?.latencyMs)} ms`} />
-                    <Metric label="Chi phí" value={`$${Number(jobDetail.usage?.estimatedCostUsd || 0).toFixed(4)}`} />
-                  </section>
-
-                  <section className="qdoc-metric-grid qdoc-metric-grid--wide">
-                    <Metric label="Độ trễ/chunk" value={`${formatNumber(benchmarkMetrics.latencyPerChunk)} ms`} />
-                    <Metric label="Tỷ lệ duyệt" value={formatPercent(benchmarkMetrics.approveRate)} />
-                    <Metric label="Tỷ lệ lưu" value={formatPercent(benchmarkMetrics.saveRate)} />
-                    <Metric label="Cảnh báo trùng" value={formatPercent(benchmarkMetrics.duplicateWarningRate)} />
+                    <Metric label="Tổng câu hỏi" value={formatNumber(jobDetail.candidateCount)} />
+                    <Metric label="Đã duyệt" value={formatNumber(candidates.filter(c => c.status === 'APPROVED' || c.status === 'SAVED').length)} />
+                    <Metric label="Đã lưu vào ngân hàng" value={formatNumber(candidates.filter(c => c.status === 'SAVED').length)} />
+                    <Metric label="Chờ duyệt" value={formatNumber(candidates.filter(c => c.status === 'VALIDATED' || c.status === 'NEED_REVIEW').length)} />
                   </section>
 
                   {LIVE_JOB_STATUSES.has(jobDetail.status) && (
@@ -406,43 +392,6 @@ function DocumentQuestionJobReviewPage() {
                       </button>
                     </section>
                   )}
-
-                  <section className="qdoc-panel">
-                    <div className="qdoc-section-header">
-                      <h2>Knowledge points</h2>
-                      <span>{formatNumber(jobDetail.knowledgePoints?.length || 0)} mục</span>
-                    </div>
-                    <div className="qdoc-table-scroll">
-                      <table className="qdoc-table">
-                        <thead>
-                          <tr>
-                            <th>Key</th>
-                            <th>Loại</th>
-                            <th>Mức quan trọng</th>
-                            <th>Statement</th>
-                            <th>Nguồn</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(jobDetail.knowledgePoints || []).length === 0 ? (
-                            <tr>
-                              <td colSpan="5" className="qdoc-empty-cell">Không có knowledge point đủ điều kiện từ các chunk đã xử lý.</td>
-                            </tr>
-                          ) : (
-                            jobDetail.knowledgePoints.map((point) => (
-                              <tr key={point.id}>
-                                <td>{point.sourceKey || '---'}</td>
-                                <td>{point.knowledgeType || '---'}</td>
-                                <td>{point.importance || '---'}</td>
-                                <td>{point.statement}</td>
-                                <td className="qdoc-preview-cell">{point.sourceExcerpt}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
 
                   <section className="qdoc-filter-bar">
                     <div className="qdoc-search">
@@ -519,23 +468,6 @@ function DocumentQuestionJobReviewPage() {
                         ))
                       )}
                     </div>
-
-                    <aside className="qdoc-evidence-panel">
-                      <h2>Nguồn đang chọn</h2>
-                      {selectedCandidate ? (
-                        <>
-                          <InfoRow label="Candidate" value={`#${selectedCandidate.id}`} />
-                          <InfoRow label="Chunk" value={`#${selectedCandidate.chunkId}`} />
-                          <InfoRow label="Topic" value={selectedCandidate.topic || '---'} />
-                          <div className="qdoc-evidence-box">
-                            {selectedCandidate.sourceExcerpt || 'Chưa có trích dẫn nguồn.'}
-                          </div>
-                          <Warnings warnings={selectedCandidate.warnings} />
-                        </>
-                      ) : (
-                        <p>Chọn một candidate để xem evidence.</p>
-                      )}
-                    </aside>
                   </section>
                 </>
               )}
@@ -637,7 +569,6 @@ function CandidateCard({
           )}
           <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>
         </div>
-        <strong>{Math.round((candidate.qualityScore || 0) * 100)}%</strong>
       </header>
 
       <h2>{candidate.stem}</h2>
@@ -656,47 +587,14 @@ function CandidateCard({
       </div>
 
       <div className="qdoc-candidate-meta">
-        <InfoRow label="Đáp án đúng" value={candidate.correctAnswer} />
-        <InfoRow label="Chủ đề" value={candidate.topic || '---'} />
+        <span>Đáp án đúng: <strong>{candidate.correctAnswer}</strong></span>
+        <span>{candidate.topic || '---'}</span>
       </div>
 
       {candidate.explanation && (
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
           <p>{candidate.explanation}</p>
-        </div>
-      )}
-
-      {candidate.sourceExcerpt && (
-        <div className="qdoc-source-box">
-          <strong>Trích dẫn nguồn</strong>
-          <p>{candidate.sourceExcerpt}</p>
-        </div>
-      )}
-
-      {candidate.duplicateMaxSimilarity >= 0.8 && (
-        <div className="qdoc-alert qdoc-alert--warning">
-          <WarningOutlined />
-          <span>
-            Khả năng trùng: {Math.round(candidate.duplicateMaxSimilarity * 100)}% {candidate.duplicateQuestionStemSnapshot || ''}
-            {hasStrongDuplicate ? ' Cần chỉnh sửa hoặc từ chối trước khi lưu.' : ''}
-          </span>
-        </div>
-      )}
-
-      <Warnings warnings={candidate.warnings} />
-
-      {candidate.llmValidation && (
-        <details className="qdoc-validation-raw">
-          <summary>LLM validation</summary>
-          <pre>{candidate.llmValidation}</pre>
-        </details>
-      )}
-
-      {candidate.reviewerNotes && (
-        <div className="qdoc-soft-box">
-          <strong>Ghi chú reviewer</strong>
-          <p>{candidate.reviewerNotes}</p>
         </div>
       )}
 
