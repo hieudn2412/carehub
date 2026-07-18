@@ -218,6 +218,11 @@ function ManagerChecklistListPage() {
                             v{getVersionNumber(checklist)}
                           </span>
                         )}
+                        {checklist.version?.passingScore !== undefined && checklist.version?.passingScore !== null && (
+                          <span className="mgr-badge" style={{ fontSize: 11, background: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0' }}>
+                            Sàn: {Number(checklist.version.passingScore).toFixed(1)}/10
+                          </span>
+                        )}
                       </div>
                       <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
                     </div>

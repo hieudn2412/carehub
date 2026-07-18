@@ -666,6 +666,7 @@ function FormListPage() {
                         <th>Mã biểu mẫu</th>
                         <th>Tiêu đề biểu mẫu</th>
                         <th>Phiên bản hiện tại</th>
+                        <th>Điểm sàn</th>
                         <th>Trạng thái</th>
                         <th className="flp-table__actions-heading">Hành động</th>
                       </tr>
@@ -673,13 +674,13 @@ function FormListPage() {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td className="flp-table-empty" colSpan="5">
+                          <td className="flp-table-empty" colSpan="6">
                             <LoadingOutlined spin /> Đang tải danh sách checklist...
                           </td>
                         </tr>
                       ) : forms.length === 0 ? (
                         <tr>
-                          <td className="flp-table-empty" colSpan="5">
+                          <td className="flp-table-empty" colSpan="6">
                             <strong>{emptyTitle}</strong>
                             <span>{emptyDescription}</span>
                             {hasFilters && (
@@ -715,6 +716,15 @@ function FormListPage() {
                                 </span>
                               ) : (
                                 <span className="flp-text-muted">Chưa có</span>
+                              )}
+                            </td>
+                            <td>
+                              {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
+                                <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
+                                  {Number(form.currentPublishedVersion.passingScore).toFixed(1)}/10
+                                </strong>
+                              ) : (
+                                <span className="flp-text-muted">—</span>
                               )}
                             </td>
                             <td>
