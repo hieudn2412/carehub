@@ -360,17 +360,6 @@
   background: #fff5f5;
 }
 
-.qsl-action-btn--questions {
-  color: #0ea5e9;
-  border-color: #0ea5e9;
-  background: #f0f9ff;
-}
-
-.qsl-action-btn--questions:hover {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-
 .qsl-action-btn--delete:hover {
   background: #fee2e2;
   color: #b91c1c;

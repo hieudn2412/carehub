@@ -551,17 +551,6 @@
   border-color: #1d4ed8;
 }
 
-.qbl-page-ellipsis {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: #94a3b8;
-  font-size: 15px;
-  user-select: none;
-}
-
 .qbl-page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
