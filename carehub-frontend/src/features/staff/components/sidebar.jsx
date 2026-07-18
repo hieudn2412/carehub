@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
   ClockCircleOutlined,
@@ -10,7 +11,8 @@ import {
   LogoutOutlined,
   TeamOutlined,
   CheckSquareOutlined,
-  FileDoneOutlined
+  FileDoneOutlined,
+  DownOutlined
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -22,11 +24,25 @@ import '../styles/StaffDashBoardScreen.css'
 
 function Sidebar() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const currentPath = location.pathname
+  const navRef = useRef(null)
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
+
+  const isLinkActive = (itemPath) => {
+    if (
+      itemPath === '/admin/dashboard' ||
+      itemPath === '/manager/dashboard' ||
+      itemPath === '/staff/dashboard'
+    ) {
+      return currentPath === itemPath
+    }
+    return currentPath === itemPath || currentPath.startsWith(itemPath)
+  }
 
   // Base items for all staff members
   const navSections = [
@@ -43,8 +59,7 @@ function Sidebar() {
     navSections.push({
       label: 'Quản lý khoa',
       items: [
-        { icon: <TeamOutlined />, label: 'Nhân sự trong khoa', path: '/manager/employees' },
-        { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo nhân sự', path: '/training/employees' },
+        { icon: <TeamOutlined />, label: 'Nhân sự & Giờ đào tạo', path: '/manager/employees' },
         { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
@@ -100,6 +115,38 @@ function Sidebar() {
     }
   )
 
+  const activeSection = navSections.find((section) =>
+    section.items.some((item) => isLinkActive(item.path))
+  )
+
+  const [expandedSectionLabel, setExpandedSectionLabel] = useState(
+    activeSection ? activeSection.label : null
+  )
+
+  useEffect(() => {
+    if (activeSection) {
+      setExpandedSectionLabel(activeSection.label)
+    }
+  }, [currentPath])
+
+  // Restore scroll position
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem('staff-sidebar-scroll')
+    if (savedScroll && navRef.current) {
+      navRef.current.scrollTop = parseInt(savedScroll, 10)
+    }
+  }, [])
+
+  const handleScroll = (e) => {
+    sessionStorage.setItem('staff-sidebar-scroll', String(e.target.scrollTop))
+  }
+
+  const handleSectionToggle = (sectionLabel) => {
+    setExpandedSectionLabel((currentLabel) =>
+      currentLabel === sectionLabel ? null : sectionLabel
+    )
+  }
+
   const handleLogout = async () => {
     await logoutUser()
     navigate(AUTH_ROUTES.login, { replace: true })
@@ -117,24 +164,51 @@ function Sidebar() {
         </div>
       </div>
 
-      <nav className="sidebar__nav">
-        {navSections.map((section) => (
-          <div key={section.label} className="sidebar__section">
-            <p className="sidebar__section-label">{section.label}</p>
-            {section.items.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `sidebar__item ${isActive ? 'sidebar__item--active' : ''}`
-                }
+      <nav ref={navRef} onScroll={handleScroll} className="sidebar__nav">
+        {navSections.map((section) => {
+          const isExpanded = expandedSectionLabel === section.label
+          const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
+
+          return (
+            <div
+              key={section.label}
+              className={`sidebar__section ${
+                containsActiveItem ? 'sidebar__section--active' : ''
+              }`}
+            >
+              <button
+                type="button"
+                className="sidebar__section-trigger"
+                aria-expanded={isExpanded}
+                onClick={() => handleSectionToggle(section.label)}
               >
-                <span className="sidebar__item-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
+                <span>{section.label}</span>
+                <DownOutlined className="sidebar__section-chevron" />
+              </button>
+
+              <div
+                className={`sidebar__section-items ${
+                  isExpanded ? 'sidebar__section-items--open' : ''
+                }`}
+              >
+                <div className="sidebar__section-items-inner">
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={() =>
+                        `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
+                      }
+                    >
+                      <span className="sidebar__item-icon">{item.icon}</span>
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </nav>
 
       <div className="sidebar__footer">

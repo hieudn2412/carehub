@@ -39,6 +39,7 @@ public class FormMapper {
                 : FormResponse.VersionSummary.builder()
                 .id(form.getCurrentPublishedVersion().getId())
                 .versionNumber(form.getCurrentPublishedVersion().getVersionNumber())
+                .passingScore(calculatePassingScore(form.getCurrentPublishedVersion()))
                 .build();
 
         return FormResponse.builder()
@@ -54,6 +55,77 @@ public class FormMapper {
                 .updatedAt(form.getUpdatedAt())
                 .build();
     }
+
+    private java.math.BigDecimal calculatePassingScore(FormVersion version) {
+        if (version == null) return null;
+        List<FormQuestion> scored = version.getSections().stream()
+                .flatMap(s -> s.getQuestions().stream())
+                .filter(q -> q.getItemType() == FormItemType.QUESTION && !q.isExcludeFromScore())
+                .toList();
+        if (scored.isEmpty()) return null;
+
+        for (FormQuestion question : scored) {
+            if (question.getOptions().isEmpty() || question.getOptions().stream().anyMatch(o -> o.getScoreValue() == null)) {
+                return null;
+            }
+        }
+
+        List<FormQuestion> critical = scored.stream().filter(FormQuestion::isCritical).toList();
+        List<FormQuestion> normal = scored.stream().filter(q -> !q.isCritical()).toList();
+        
+        java.math.BigDecimal criticalShare;
+        Object scoring = version.getSettingsJson() == null ? null : version.getSettingsJson().get("scoring");
+        Object value = scoring instanceof Map<?, ?> map ? map.get("criticalWeightPercent") : null;
+        try {
+            criticalShare = new java.math.BigDecimal(value == null ? "55" : String.valueOf(value))
+                    .divide(new java.math.BigDecimal("100"), java.math.MathContext.DECIMAL128);
+        } catch (NumberFormatException ex) {
+            criticalShare = new java.math.BigDecimal("0.55");
+        }
+
+        java.math.BigDecimal scoredCoefficientTotal = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal criticalCoefficientTotal = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal normalCoefficientTotal = java.math.BigDecimal.ZERO;
+
+        for (FormQuestion q : scored) {
+            java.math.BigDecimal coef = q.getWeight() == null || q.getWeight().compareTo(java.math.BigDecimal.ZERO) <= 0 
+                    ? java.math.BigDecimal.ONE : q.getWeight();
+            scoredCoefficientTotal = scoredCoefficientTotal.add(coef);
+            if (q.isCritical()) {
+                criticalCoefficientTotal = criticalCoefficientTotal.add(coef);
+            } else {
+                normalCoefficientTotal = normalCoefficientTotal.add(coef);
+            }
+        }
+
+        java.math.BigDecimal floor = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal max = java.math.BigDecimal.ZERO;
+
+        for (FormQuestion question : scored) {
+            java.math.BigDecimal coef = question.getWeight() == null || question.getWeight().compareTo(java.math.BigDecimal.ZERO) <= 0 
+                    ? java.math.BigDecimal.ONE : question.getWeight();
+            java.math.BigDecimal weight;
+            if (critical.isEmpty() || normal.isEmpty()) {
+                weight = coef.divide(scoredCoefficientTotal, java.math.MathContext.DECIMAL128);
+            } else {
+                weight = question.isCritical()
+                        ? criticalShare.multiply(coef, java.math.MathContext.DECIMAL128).divide(criticalCoefficientTotal, java.math.MathContext.DECIMAL128)
+                        : java.math.BigDecimal.ONE.subtract(criticalShare, java.math.MathContext.DECIMAL128).multiply(coef, java.math.MathContext.DECIMAL128).divide(normalCoefficientTotal, java.math.MathContext.DECIMAL128);
+            }
+
+            java.math.BigDecimal questionMax = question.getOptions().stream()
+                    .map(FormOption::getScoreValue)
+                    .max(java.math.BigDecimal::compareTo)
+                    .orElse(java.math.BigDecimal.ZERO);
+
+            max = max.add(questionMax.multiply(weight, java.math.MathContext.DECIMAL128), java.math.MathContext.DECIMAL128);
+            floor = floor.add(weight, java.math.MathContext.DECIMAL128);
+        }
+
+        if (max.compareTo(java.math.BigDecimal.ZERO) <= 0) return null;
+        return floor.multiply(new java.math.BigDecimal("10"), java.math.MathContext.DECIMAL128).divide(max, java.math.MathContext.DECIMAL128);
+    }
+
 
     public FormVersionSummaryResponse toSummaryResponse(FormVersion version) {
         FormVersionResponse.UserSummary publisher = version.getPublishedBy() == null
@@ -95,6 +167,7 @@ public class FormMapper {
                 .title(version.getTitle())
                 .description(version.getDescription())
                 .settings(version.getSettingsJson())
+                .passingScore(calculatePassingScore(version))
                 .schemaHash(version.getSchemaHash())
                 .publishedAt(version.getPublishedAt())
                 .publishedBy(publisher)

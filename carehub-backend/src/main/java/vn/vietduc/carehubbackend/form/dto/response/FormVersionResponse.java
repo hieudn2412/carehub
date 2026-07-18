@@ -21,6 +21,7 @@ public record FormVersionResponse(
         String title,
         String description,
         Map<String, Object> settings,
+        java.math.BigDecimal passingScore,
         String schemaHash,
         Instant publishedAt,
         UserSummary publishedBy,

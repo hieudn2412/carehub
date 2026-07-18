@@ -64,15 +64,16 @@ function ChecklistListScreen() {
                   <th>Tên phiếu</th>
                   <th>Mô tả</th>
                   <th>Trạng thái</th>
+                  <th>Điểm sàn</th>
                   <th>Hạn nộp</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} className="text-center">Đang tải...</td></tr>
+                  <tr><td colSpan={6} className="text-center">Đang tải...</td></tr>
                 ) : assignments.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
+                  <tr><td colSpan={6} className="text-center">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
                 ) : (
                   assignments.map(item => (
                     <tr key={item.id}>
@@ -82,6 +83,15 @@ function ChecklistListScreen() {
                         <span className={`status-badge status-badge--${item.status === 'COMPLETED' ? 'active' : 'warning'}`}>
                           {statusIcon(item.status)} {statusLabel(item.status)}
                         </span>
+                      </td>
+                      <td>
+                        {item.version?.passingScore !== undefined && item.version?.passingScore !== null ? (
+                          <strong style={{ color: '#0f6e56' }}>
+                            {Number(item.version.passingScore).toFixed(1)}/10
+                          </strong>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
                       </td>
                       <td>{item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '—'}</td>
                       <td>
