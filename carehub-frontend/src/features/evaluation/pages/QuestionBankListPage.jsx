@@ -323,7 +323,7 @@ function QuestionBankListPage() {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'question-bank.xlsx'
+      link.download = 'ngan-hang-cau-hoi.xlsx'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -343,7 +343,7 @@ function QuestionBankListPage() {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'question-bank-import-template.xlsx'
+      link.download = 'mau-nhap-cau-hoi.xlsx'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -547,10 +547,10 @@ function QuestionBankListPage() {
 
                 <div className="qbl-toolbar-actions">
                   <button className="qbl-btn-secondary" onClick={exportQuestions} disabled={isExporting}>
-                    {isExporting ? <LoadingOutlined /> : <DownloadOutlined />} Export Excel
+                    {isExporting ? <LoadingOutlined /> : <DownloadOutlined />} Xuất Excel
                   </button>
                   <button className="qbl-btn-secondary" onClick={() => setIsImportModalOpen(true)}>
-                    <UploadOutlined /> Import
+                    <UploadOutlined /> Nhập
                   </button>
                   <button className="qbl-btn-secondary" onClick={openBatchParaphraseModal} disabled={selectedApprovedQuestionIds.length === 0}>
                     <CopyOutlined /> Tạo biến thể
@@ -688,15 +688,26 @@ function QuestionBankListPage() {
                     <button className="qbl-page-btn" disabled={page <= 0} onClick={() => setPage(page - 1)}>
                       &lt;
                     </button>
-                    {Array.from({ length: totalPages }).map((_, idx) => (
-                      <button
-                        key={idx}
-                        className={`qbl-page-btn ${page === idx ? 'qbl-page-btn--active' : ''}`}
-                        onClick={() => setPage(idx)}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
+                    {(() => {
+                      const maxVisible = 5
+                      const half = Math.floor(maxVisible / 2)
+                      let start = Math.max(0, page - half)
+                      const end = Math.min(totalPages, start + maxVisible)
+                      if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
+                      const buttons = []
+                      if (start > 0) {
+                        buttons.push(<button key={0} className={`qbl-page-btn ${page === 0 ? 'qbl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
+                        if (start > 1) buttons.push(<span key="se" className="qbl-page-ellipsis">&hellip;</span>)
+                      }
+                      for (let i = start; i < end; i++) {
+                        buttons.push(<button key={i} className={`qbl-page-btn ${page === i ? 'qbl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
+                      }
+                      if (end < totalPages) {
+                        if (end < totalPages - 1) buttons.push(<span key="ee" className="qbl-page-ellipsis">&hellip;</span>)
+                        buttons.push(<button key={totalPages - 1} className={`qbl-page-btn ${page === totalPages - 1 ? 'qbl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
+                      }
+                      return buttons
+                    })()}
                     <button className="qbl-page-btn" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
                       &gt;
                     </button>
@@ -768,7 +779,7 @@ function QuestionBankListPage() {
       {isImportModalOpen && (
         <div className="qbl-modal-backdrop">
           <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">
-            <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
+            <h2 id="import-question-bank-title">Nhập ngân hàng câu hỏi</h2>
             <p className="qbl-modal-subtitle">File hỗ trợ XLSX/XLS/CSV với header hoặc DOCX theo mẫu cố định: Câu hỏi, A-D, Đáp án, Giải thích, Chủ đề, Độ khó, Nguồn, Trạng thái</p>
 
             <label className="qbl-field">
@@ -795,7 +806,7 @@ function QuestionBankListPage() {
 
             {(importPreview?.sourceHeaders || []).length > 0 && (
               <div className="qbl-import-preview">
-                <p className="qbl-modal-subtitle">Mapping cột từ file nguồn. Chỉ cần chỉnh các cột chưa tự nhận đúng, rồi bấm Preview lại.</p>
+                <p className="qbl-modal-subtitle">Ánh xạ cột từ file nguồn. Chỉ cần chỉnh các cột chưa tự nhận đúng, rồi bấm Xem trước lại.</p>
                 <div className="qbl-detail-meta-grid">
                   {IMPORT_MAPPING_FIELDS.map((field) => (
                     <label key={field.key} className="qbl-field">
@@ -874,11 +885,11 @@ function QuestionBankListPage() {
               </button>
               <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
                 {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
-                <span>Preview</span>
+                <span>Xem trước</span>
               </button>
               <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).every((row) => !row.valid)}>
                 {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
-                <span>Commit dòng hợp lệ</span>
+                <span>Lưu dòng hợp lệ</span>
               </button>
             </div>
           </div>

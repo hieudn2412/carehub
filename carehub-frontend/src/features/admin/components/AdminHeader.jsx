@@ -50,6 +50,9 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('bộ câu hỏi')) {
     return '/admin/evaluation/question-sets'
   }
+  if (lbl.includes('danh mục bộ câu hỏi')) {
+    return '/admin/evaluation/question-set-categories'
+  }
   if (lbl.includes('danh mục câu hỏi')) {
     return '/admin/evaluation/categories'
   }
@@ -62,7 +65,7 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'
   }
-  if (lbl === 'trang chủ' || lbl === 'home') {
+  if (lbl === 'trang chủ') {
     return isAdm ? '/admin/dashboard' : (isMgr ? '/manager/dashboard' : '/staff/dashboard')
   }
   return null
@@ -170,7 +173,7 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
             return (
               <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {resolvedLink ? (
-                  <Link to={resolvedLink} style={{ color: '#6b7280', textDecoration: 'none' }} className="hover:text-[#1890ff] transition-colors">
+                  <Link to={resolvedLink} style={{ color: '#6b7280', textDecoration: 'none' }}>
                     {item.label}
                   </Link>
                 ) : (

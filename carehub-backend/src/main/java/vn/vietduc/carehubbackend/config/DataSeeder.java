@@ -167,20 +167,28 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedQuestionCategories() {
         for (int i = 1; i <= 9; i++) {
+            final int sortOrder = i;
             String code = "BAI_" + i;
-            if (questionCategoryRepository.findByCode(code).isPresent()) {
-                continue;
+            final String name = "Bài " + i;
+            var existing = questionCategoryRepository.findByCode(code);
+            if (existing.isPresent()) {
+                var cat = existing.get();
+                if (!name.equals(cat.getName())) {
+                    cat.setName(name);
+                    questionCategoryRepository.save(cat);
+                    log.info("Normalized question category name to: {}", name);
+                }
+            } else {
+                QuestionCategory category = QuestionCategory.builder()
+                        .code(code)
+                        .name(name)
+                        .status(QuestionCategoryStatus.ACTIVE)
+                        .sortOrder(sortOrder)
+                        .createdBy("system-seed")
+                        .build();
+                questionCategoryRepository.save(category);
+                log.info("Seeded question category: {}", name);
             }
-            String name = "Bài " + i;
-            QuestionCategory category = QuestionCategory.builder()
-                    .code(code)
-                    .name(name)
-                    .status(QuestionCategoryStatus.ACTIVE)
-                    .sortOrder(i)
-                    .createdBy("system-seed")
-                    .build();
-            questionCategoryRepository.save(category);
-            log.info("Seeded question category: {}", name);
         }
     }
 

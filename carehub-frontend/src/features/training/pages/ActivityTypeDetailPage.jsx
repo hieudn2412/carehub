@@ -66,7 +66,7 @@ function ActivityTypeDetailPage() {
               <div className="atl-title-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h1 className="atl-title">Chi tiết hình thức đào tạo</h1>
-                  <p className="atl-subtitle">Xem thông tin chi tiết và lịch sử sử dụng của hình thức này</p>
+                  <p className="atl-subtitle">Thông tin chi tiết và lịch sử sử dụng của hình thức đào tạo</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <Link className="training-button" to="/admin/training/activity-types" style={{ textDecoration: 'none' }}>
@@ -124,7 +124,7 @@ function ActivityTypeDetailPage() {
                     <h2>Quy tắc tính giờ & Minh chứng</h2>
                     <dl className="training-definition">
                       <dt>Đơn vị tính thời gian</dt>
-                      <dd>{activityType.defaultDurationUnit}</dd>
+                      <dd>{durationUnitLabel(activityType.defaultDurationUnit)}</dd>
                       <dt>Yêu cầu minh chứng</dt>
                       <dd>{activityType.requiresEvidence ? 'Bắt buộc' : 'Không bắt buộc'}</dd>
                       <dt>Số giờ tích lũy tối đa / hồ sơ</dt>
@@ -149,7 +149,7 @@ function ActivityTypeDetailPage() {
                       <dd>{formatDateTime(activityType.createdAt)}</dd>
                       <dt>Cập nhật lần cuối</dt>
                       <dd>{formatDateTime(activityType.updatedAt)}</dd>
-                      <dt>Phiên bản (Version)</dt>
+                      <dt>Phiên bản</dt>
                       <dd>{activityType.version}</dd>
                     </dl>
                   </article>
@@ -185,7 +185,7 @@ function ActivityTypeDetailPage() {
                   </article>
 
                   <article className="training-panel training-panel--wide">
-                    <h2>Lịch sử thay đổi (Audit timeline)</h2>
+                    <h2>Lịch sử thay đổi</h2>
                     {activityType.auditTimeline.length === 0 ? (
                       <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có lịch sử thay đổi nào được lưu lại.</p>
                     ) : (
@@ -194,7 +194,7 @@ function ActivityTypeDetailPage() {
                           <li key={event.id} style={{ marginBottom: 10 }}>
                             <strong style={{ color: '#0f172a' }}>{event.changeType}</strong>{' '}
                             <span style={{ color: '#64748b', fontSize: 12 }}>({formatDateTime(event.changedAt)})</span> -{' '}
-                            <span style={{ color: '#475569' }}>Thực hiện bởi: {event.changedByName || `User ID: ${event.changedByUserId}`}</span>
+                            <span style={{ color: '#475569' }}>Thực hiện bởi: {event.changedByName || event.changedByUserId || '—'}</span>
                           </li>
                         ))}
                       </ul>
@@ -208,6 +208,14 @@ function ActivityTypeDetailPage() {
       </div>
     </div>
   )
+}
+
+function durationUnitLabel(unit) {
+  const map = {
+    HOUR: 'Tính theo giờ', LESSON: 'Tính theo tiết học', CREDIT: 'Tính theo tín chỉ',
+    DAY: 'Tính theo ngày', MONTH: 'Tính theo tháng', YEAR: 'Tính theo năm', OTHER: 'Khác'
+  }
+  return map[unit] || unit || '-'
 }
 
 function formatDateTime(value) {

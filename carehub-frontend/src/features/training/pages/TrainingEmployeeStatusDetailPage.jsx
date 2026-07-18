@@ -94,7 +94,7 @@ function TrainingEmployeeStatusDetailPage() {
               <div className="ted-title-card">
                 <h1 className="ted-title">Chi tiết đào tạo nhân viên</h1>
                 <p className="ted-subtitle">
-                  Hồ sơ đào tạo chi tiết của nhân sự
+                  Lịch sử khai báo và tiến độ giờ đào tạo
                 </p>
               </div>
 
@@ -176,15 +176,6 @@ function TrainingEmployeeStatusDetailPage() {
                               recordsList.map((item, idx) => (
                                 <tr key={item.id || idx}>
                                   <td style={{ fontWeight: 500 }}>{item.title}</td>
-                                  <td>
-                                    <Link
-                                      to={`/training/records/${item.id}`}
-                                      className="ted-evidence-link ted-evidence-link--blue"
-                                      title="Xem chi tiết hồ sơ"
-                                    >
-                                      <EyeOutlined />
-                                    </Link>
-                                  </td>
                                   <td>{item.hours}h</td>
                                   <td>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}</td>
                                   <td>
@@ -200,6 +191,15 @@ function TrainingEmployeeStatusDetailPage() {
                                       }`} />
                                       {item.workflowStatus === 'SUBMITTED' ? 'Đã nộp' : item.workflowStatus === 'DRAFT' ? 'Bản nháp' : item.workflowStatus === 'CANCELLED' ? 'Đã hủy' : item.workflowStatus}
                                     </span>
+                                  </td>
+                                  <td>
+                                    <Link
+                                      to={`/training/records/${item.id}`}
+                                      className="ted-evidence-link ted-evidence-link--blue"
+                                      title="Xem chi tiết hồ sơ"
+                                    >
+                                      <EyeOutlined />
+                                    </Link>
                                   </td>
                                   <td>
                                     {item.evidenceUrl ? (

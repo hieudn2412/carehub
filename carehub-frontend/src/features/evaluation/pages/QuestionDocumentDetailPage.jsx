@@ -146,7 +146,7 @@ function QuestionDocumentDetailPage() {
                   {documentDetail.status === 'OCR_REQUIRED' && (
                     <section className="qdoc-alert qdoc-alert--warning">
                       <WarningOutlined />
-                      <span>Tài liệu cần OCR trước khi tạo câu hỏi. Hệ thống chưa sinh câu hỏi từ PDF scan trong MVP.</span>
+                      <span>Tài liệu cần OCR trước khi tạo câu hỏi. Hệ thống chưa hỗ trợ sinh câu hỏi từ PDF scan trong phiên bản hiện tại.</span>
                     </section>
                   )}
 

@@ -111,7 +111,7 @@ function TrainingEmployeeStatusListPage() {
 
               <div className="tes-title-card">
                 <h1 className="tes-title">Giờ đào tạo nhân viên</h1>
-                <p className="tes-subtitle">Theo dõi và giám sát hồ sơ đào tạo trên toàn khoa/phòng</p>
+                <p className="tes-subtitle">Danh sách nhân viên và tiến độ giờ đào tạo</p>
               </div>
 
               <div className="tes-filter-bar">

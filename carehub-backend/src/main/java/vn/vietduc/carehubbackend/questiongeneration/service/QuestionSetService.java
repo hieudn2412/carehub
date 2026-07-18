@@ -67,6 +67,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -127,6 +128,9 @@ public class QuestionSetService {
         String code = trimToNull(request.code());
         if (code != null && questionSetRepository.findByCode(code).isPresent()) {
             throw new BadRequestException("Mã bộ câu hỏi đã tồn tại");
+        }
+        if (code == null) {
+            code = generateCode();
         }
 
         QuestionSet questionSet = QuestionSet.builder()
@@ -977,6 +981,17 @@ public class QuestionSetService {
             code = base.substring(0, Math.min(base.length(), 64 - tail.length())) + tail;
         }
         return code;
+    }
+
+    private String generateCode() {
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String code = "QS-" + datePart + "-" + String.format("%03d", ThreadLocalRandom.current().nextInt(100, 999));
+            if (questionSetRepository.findByCode(code).isEmpty()) {
+                return code;
+            }
+        }
+        throw new BadRequestException("Không thể sinh mã bộ câu hỏi tự động, vui lòng thử lại");
     }
 
     private String normalize(String value) {

@@ -16,3 +16,6 @@
 
 # categorization
 - Organize question categories by lesson (Bài 1-9) — all questions from a single uploaded document share one lesson-based category instead of scattered small categories. Confidence: 0.70
+
+# architecture
+- Prefer dedicated CRUD management modules for each entity type over reusing similar/adjacent modules (e.g., create separate question set category management instead of reusing question category management). Confidence: 0.65

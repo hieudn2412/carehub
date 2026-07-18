@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
+import { EyeOutlined, ReloadOutlined, SearchOutlined, CloseOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -9,6 +10,8 @@ import '../styles/ExamPaperPages.css'
 
 function ExamAttemptListPage() {
   const { showToast } = useToast()
+  const [searchParams] = useSearchParams()
+  const assignmentIdFilter = searchParams.get('assignmentId')
   const [attempts, setAttempts] = useState([])
   const [selectedAttempt, setSelectedAttempt] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -41,9 +44,10 @@ function ExamAttemptListPage() {
         || (attempt.employeeCode || '').toLowerCase().includes(normalized)
         || (attempt.userName || '').toLowerCase().includes(normalized)
       const matchesStatus = !status || attempt.status === status
-      return matchesKeyword && matchesStatus
+      const matchesAssignment = !assignmentIdFilter || String(attempt.assignmentId) === assignmentIdFilter
+      return matchesKeyword && matchesStatus && matchesAssignment
     })
-  }, [attempts, keyword, status])
+  }, [attempts, keyword, status, assignmentIdFilter])
 
   async function viewAttempt(attempt) {
     try {
@@ -71,7 +75,9 @@ function ExamAttemptListPage() {
               <div className="exp-title-card">
                 <div>
                   <h1 className="exp-title">Kết quả kiểm tra</h1>
-                  <p className="exp-subtitle">Theo dõi lượt làm bài, điểm số và đáp án theo từng nhân viên</p>
+                  <p className="exp-subtitle">
+                    {assignmentIdFilter ? 'Kết quả của phân công đã chọn' : 'Theo dõi lượt làm bài, điểm số và đáp án theo từng nhân viên'}
+                  </p>
                 </div>
                 <div className="exp-title-actions">
                   <button type="button" className="exp-btn-secondary" onClick={loadAttempts} disabled={isLoading}>
@@ -83,7 +89,7 @@ function ExamAttemptListPage() {
               <div className="exp-filter-bar">
                 <div className="exp-search">
                   <SearchOutlined />
-                  <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm nhân viên, phân công, mã đề..." />
+                  <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm nhân viên, phân công, mã đề" />
                 </div>
                 <select value={status} onChange={(event) => setStatus(event.target.value)}>
                   <option value="">Trạng thái</option>
@@ -132,14 +138,17 @@ function ExamAttemptListPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
 
-              {selectedAttempt && (
-                <div className="exp-question-list">
-                  <div className="exp-form-card">
-                    <div className="exp-question-head">
-                      <strong>{selectedAttempt.userName} - {selectedAttempt.examPaperCode}</strong>
-                      <span>{selectedAttempt.statusText}</span>
+                {selectedAttempt && (
+                  <div className="exp-detail-panel">
+                    <div className="exp-detail-header">
+                      <div>
+                        <strong>{selectedAttempt.userName} - {selectedAttempt.examPaperCode}</strong>
+                        <span>{selectedAttempt.statusText}</span>
+                      </div>
+                      <button type="button" className="exp-btn-secondary" onClick={() => setSelectedAttempt(null)}>
+                        <CloseOutlined /> Đóng
+                      </button>
                     </div>
                     <div className="exp-info-strip">
                       <span>Điểm: {selectedAttempt.score ?? '---'}</span>
@@ -147,34 +156,36 @@ function ExamAttemptListPage() {
                       <span>{selectedAttempt.passed ? 'Đạt' : 'Chưa đạt'}</span>
                       <span>Nộp: {formatDateTime(selectedAttempt.submittedAt)}</span>
                     </div>
+                    <div className="exp-question-list">
+                      {(selectedAttempt.questions || []).map((question) => {
+                        const answer = (selectedAttempt.answers || []).find((item) => item.paperQuestionId === question.paperQuestionId)
+                        return (
+                          <div key={question.paperQuestionId} className="exp-question-card">
+                            <div className="exp-question-head">
+                              <strong>Câu {question.position}</strong>
+                              <span className={answer?.correct ? 'exp-result-correct' : 'exp-result-wrong'}>
+                                {answer?.correct ? 'Đúng' : 'Sai'}
+                              </span>
+                            </div>
+                            <p>{question.stem}</p>
+                            <ol type="A">
+                              <li>{question.optionA}</li>
+                              <li>{question.optionB}</li>
+                              <li>{question.optionC}</li>
+                              <li>{question.optionD}</li>
+                            </ol>
+                            <div className="exp-answer-box">
+                              <span>Đã chọn: {answerText(answer?.selectedAnswer)}</span>
+                              <span>Đáp án đúng: {answerText(answer?.correctAnswer)}</span>
+                              {answer?.explanation && <span>Giải thích: {answer.explanation}</span>}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  {(selectedAttempt.questions || []).map((question) => {
-                    const answer = (selectedAttempt.answers || []).find((item) => item.paperQuestionId === question.paperQuestionId)
-                    return (
-                      <div key={question.paperQuestionId} className="exp-question-card">
-                        <div className="exp-question-head">
-                          <strong>Câu {question.position}</strong>
-                          <span className={answer?.correct ? 'exp-result-correct' : 'exp-result-wrong'}>
-                            {answer?.correct ? 'Đúng' : 'Sai'}
-                          </span>
-                        </div>
-                        <p>{question.stem}</p>
-                        <ol type="A">
-                          <li>{question.optionA}</li>
-                          <li>{question.optionB}</li>
-                          <li>{question.optionC}</li>
-                          <li>{question.optionD}</li>
-                        </ol>
-                        <div className="exp-answer-box">
-                          <span>Đã chọn: {answerText(answer?.selectedAnswer)}</span>
-                          <span>Đáp án đúng: {answerText(answer?.correctAnswer)}</span>
-                          {answer?.explanation && <span>Giải thích: {answer.explanation}</span>}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </main>
         </div>

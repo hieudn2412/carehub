@@ -27,17 +27,17 @@ import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.js
 import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
 import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
+import QuestionSetQuestionsPage from '../features/evaluation/pages/QuestionSetQuestionsPage.jsx'
+import QuestionSetCategoryListPage from '../features/evaluation/pages/QuestionSetCategoryListPage.jsx'
 import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
 import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
 import ClassificationRuleFormPage from '../features/evaluation/pages/ClassificationRuleFormPage.jsx'
-import TestConfigPage from '../features/evaluation/pages/TestConfigPage.jsx'
+import ExamConfigPage from '../features/evaluation/pages/ExamConfigPage.jsx'
 import EvaluationDashboardPage from '../features/evaluation/pages/EvaluationDashboardPage.jsx'
 import EvaluationAuditLogPage from '../features/evaluation/pages/EvaluationAuditLogPage.jsx'
 import EvaluationImportHistoryPage from '../features/evaluation/pages/EvaluationImportHistoryPage.jsx'
 import ExamPaperListPage from '../features/evaluation/pages/ExamPaperListPage.jsx'
-import ExamPaperGeneratePage from '../features/evaluation/pages/ExamPaperGeneratePage.jsx'
-import ExamPaperDetailPage from '../features/evaluation/pages/ExamPaperDetailPage.jsx'
 import ExamAssignmentListPage from '../features/evaluation/pages/ExamAssignmentListPage.jsx'
 import ExamAssignmentFormPage from '../features/evaluation/pages/ExamAssignmentFormPage.jsx'
 import ExamAttemptListPage from '../features/evaluation/pages/ExamAttemptListPage.jsx'
@@ -207,16 +207,16 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-sets" element={evaluationElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
+      <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsPage />)} />
+      <Route path="/admin/evaluation/question-set-categories" element={evaluationElement(<QuestionSetCategoryListPage />)} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/classification-rules" element={evaluationElement(<ClassificationRuleListPage />)} />
       <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/configs" element={evaluationElement(<TestConfigPage />)} />
+      <Route path="/admin/evaluation/configs" element={evaluationElement(<ExamConfigPage />)} />
       <Route path="/admin/evaluation/exam-papers" element={evaluationElement(<ExamPaperListPage />)} />
-      <Route path="/admin/evaluation/exam-papers/new" element={evaluationElement(<ExamPaperGeneratePage />)} />
-      <Route path="/admin/evaluation/exam-papers/:paperId" element={evaluationElement(<ExamPaperDetailPage />)} />
       <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
       <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />

@@ -13,6 +13,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ParaphraseJobStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 
 public final class QuestionGenerationLabels {
@@ -108,6 +109,17 @@ public final class QuestionGenerationLabels {
     }
 
     public static String questionCategoryStatus(QuestionCategoryStatus status) {
+        if (status == null) {
+            return "";
+        }
+        return switch (status) {
+            case ACTIVE -> "Hoạt động";
+            case INACTIVE -> "Tạm ngưng";
+            case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String questionSetCategoryStatus(QuestionSetCategoryStatus status) {
         if (status == null) {
             return "";
         }

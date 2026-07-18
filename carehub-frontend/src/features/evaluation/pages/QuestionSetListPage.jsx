@@ -12,6 +12,7 @@ import {
   PrinterOutlined,
   SearchOutlined,
   StopOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
@@ -265,6 +266,14 @@ function QuestionSetListPage() {
                               </button>
                               <button
                                 type="button"
+                                className="qsl-action-btn qsl-action-btn--questions"
+                                onClick={() => navigate(`/admin/evaluation/question-sets/${item.id}/questions`)}
+                                title="Chọn câu hỏi"
+                              >
+                                <UnorderedListOutlined />
+                              </button>
+                              <button
+                                type="button"
                                 className="qsl-action-btn"
                                 onClick={() => duplicateSet(item)}
                                 title="Nhân bản"
@@ -361,15 +370,26 @@ function QuestionSetListPage() {
                     <button className="qsl-page-btn" disabled={page <= 0} onClick={() => setPage(page - 1)}>
                       &lt;
                     </button>
-                    {Array.from({ length: totalPages }).map((_, index) => (
-                      <button
-                        key={index}
-                        className={`qsl-page-btn ${page === index ? 'qsl-page-btn--active' : ''}`}
-                        onClick={() => setPage(index)}
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
+                    {(() => {
+                      const maxVisible = 5
+                      const half = Math.floor(maxVisible / 2)
+                      let start = Math.max(0, page - half)
+                      const end = Math.min(totalPages, start + maxVisible)
+                      if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
+                      const buttons = []
+                      if (start > 0) {
+                        buttons.push(<button key={0} className={`qsl-page-btn ${page === 0 ? 'qsl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
+                        if (start > 1) buttons.push(<span key="se" className="qsl-page-btn qsl-page-btn--dots">&hellip;</span>)
+                      }
+                      for (let i = start; i < end; i++) {
+                        buttons.push(<button key={i} className={`qsl-page-btn ${page === i ? 'qsl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
+                      }
+                      if (end < totalPages) {
+                        if (end < totalPages - 1) buttons.push(<span key="ee" className="qsl-page-btn qsl-page-btn--dots">&hellip;</span>)
+                        buttons.push(<button key={totalPages - 1} className={`qsl-page-btn ${page === totalPages - 1 ? 'qsl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
+                      }
+                      return buttons
+                    })()}
                     <button className="qsl-page-btn" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
                       &gt;
                     </button>

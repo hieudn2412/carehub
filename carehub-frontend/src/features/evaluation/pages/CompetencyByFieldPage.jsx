@@ -210,7 +210,7 @@ function CompetencyByFieldPage() {
                     ) : filteredItems.length === 0 ? (
                       <tr>
                         <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                          Chưa có dữ liệu đánh giá cho lĩnh vực này trong khoảng thời gian đã chọn.
+                          Chưa có dữ liệu đánh giá cho lĩnh vực này.
                         </td>
                       </tr>
                     ) : (
