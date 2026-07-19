@@ -30,7 +30,7 @@ http://localhost:5173
 Tạo file `.env` từ `.env.example`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_API_BASE_URL=http://localhost:8081/api/v1
 ```
 
 Không commit `.env` vì file này có thể chứa cấu hình local hoặc secret.

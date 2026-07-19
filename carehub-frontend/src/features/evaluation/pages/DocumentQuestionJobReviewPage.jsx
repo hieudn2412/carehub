@@ -26,7 +26,6 @@ import {
   formatNumber,
   jobStatusText,
   normalizeText,
-  parseJsonList,
   statusTone,
 } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
@@ -39,6 +38,7 @@ function DocumentQuestionJobReviewPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [jobDetail, setJobDetail] = useState(null)
+  const [loadError, setLoadError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isRetrying, setIsRetrying] = useState(false)
   const [candidateActionId, setCandidateActionId] = useState(null)
@@ -59,7 +59,9 @@ function DocumentQuestionJobReviewPage() {
     try {
       const response = await documentQuestionApi.getQuestionJob(jobId)
       setJobDetail(apiData(response))
+      setLoadError('')
     } catch (error) {
+      setLoadError(apiErrorMessage(error))
       showToast(apiErrorMessage(error), 'error')
     } finally {
       if (!silent) {
@@ -93,20 +95,6 @@ function DocumentQuestionJobReviewPage() {
       return matchesKeyword && matchesStatus && matchesDifficulty
     })
   }, [candidates, keyword, statusFilter, difficultyFilter])
-  const benchmarkMetrics = useMemo(() => {
-    const total = candidates.length
-    const approved = candidates.filter((candidate) => ['APPROVED', 'SAVED'].includes(candidate.status)).length
-    const saved = candidates.filter((candidate) => candidate.status === 'SAVED').length
-    const duplicateWarnings = candidates.filter((candidate) => Number(candidate.duplicateMaxSimilarity || 0) >= 0.8).length
-    const completedChunks = Math.max(1, Number(jobDetail?.completedChunkCount || 0))
-    return {
-      latencyPerChunk: Math.round(Number(jobDetail?.usage?.latencyMs || 0) / completedChunks),
-      approveRate: total ? approved / total : 0,
-      saveRate: total ? saved / total : 0,
-      duplicateWarningRate: total ? duplicateWarnings / total : 0,
-    }
-  }, [candidates, jobDetail])
-
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
   const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
   const selectedApprovableIds = selectedCandidates
@@ -118,13 +106,16 @@ function DocumentQuestionJobReviewPage() {
   const selectedSavableIds = selectedCandidates
     .filter((candidate) => candidate.status === 'APPROVED' && Number(candidate.duplicateMaxSimilarity || 0) < STRONG_DUPLICATE_THRESHOLD)
     .map((candidate) => candidate.id)
+  const canRetryNoNewQuestions = jobDetail?.status === 'PARTIALLY_COMPLETED'
+    && Number(jobDetail?.candidateCount || 0) === 0
+    && jobDetail?.errorMessage?.includes('không có câu hỏi mới')
 
   async function retryFailedChunks() {
     setIsRetrying(true)
     try {
       const response = await documentQuestionApi.retryFailedChunks(jobId)
       setJobDetail(apiData(response))
-      showToast('Thử lại các phần xử lý lỗi thành công.', 'success')
+      showToast(canRetryNoNewQuestions ? 'Đã chạy lại toàn bộ đoạn nội dung.' : 'Thử lại các phần xử lý lỗi thành công.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -336,7 +327,13 @@ function DocumentQuestionJobReviewPage() {
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên tạo câu hỏi...</section>
               ) : !jobDetail ? (
-                <section className="qdoc-panel qdoc-loading-panel">Không tìm thấy phiên tạo câu hỏi.</section>
+                <section className="qdoc-panel qdoc-loading-panel">
+                  <p>{loadError || 'Không tìm thấy phiên tạo câu hỏi.'}</p>
+                  <button type="button" className="qdoc-primary-btn" onClick={() => loadJob()}>
+                    <ReloadOutlined />
+                    <span>Thử tải lại</span>
+                  </button>
+                </section>
               ) : (
                 <>
                   <section className="qdoc-detail-hero">
@@ -380,15 +377,35 @@ function DocumentQuestionJobReviewPage() {
                     </section>
                   )}
 
+                  {jobDetail.errorMessage && (
+                    <section className={`qdoc-alert ${jobDetail.status === 'FAILED' ? 'qdoc-alert--danger' : 'qdoc-alert--warning'}`}>
+                      <WarningOutlined />
+                      <span>{jobDetail.errorMessage}</span>
+                    </section>
+                  )}
+
                   {Number(jobDetail.failedChunkCount) > 0 && (
                     <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
                       <div>
                         <WarningOutlined />
-                        <span>Một số chunk xử lý lỗi. Bạn có thể retry riêng các chunk lỗi mà không chạy lại toàn bộ tài liệu.</span>
+                        <span>Một số đoạn nội dung xử lý lỗi. Bạn có thể thử lại riêng các đoạn lỗi mà không chạy lại toàn bộ tài liệu.</span>
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
-                        <span>Thử lại chunk lỗi</span>
+                        <span>Thử lại đoạn lỗi</span>
+                      </button>
+                    </section>
+                  )}
+
+                  {canRetryNoNewQuestions && (
+                    <section className="qdoc-alert qdoc-alert--info qdoc-alert--action">
+                      <div>
+                        <ReloadOutlined />
+                        <span>Phiên trước chưa tạo câu hỏi mới do trùng khóa sinh. Có thể chạy lại với cấu hình/danh mục hiện tại.</span>
+                      </div>
+                      <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
+                        {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
+                        <span>{isRetrying ? 'Đang chạy lại...' : 'Chạy lại toàn bộ đoạn'}</span>
                       </button>
                     </section>
                   )}
@@ -640,36 +657,12 @@ function CandidateCard({
   }
 }
 
-function Warnings({ warnings }) {
-  const items = parseJsonList(warnings)
-  if (!items.length) return null
-  return (
-    <div className="qdoc-warning-list">
-      {items.map((warning, index) => (
-        <span key={`${warning}-${index}`}>
-          <WarningOutlined />
-          {warning}
-        </span>
-      ))}
-    </div>
-  )
-}
-
 function TextAreaField({ label, value, onChange }) {
   return (
     <label className="qdoc-field qdoc-field--textarea">
       <span>{label}</span>
       <textarea value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
-  )
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="qdoc-info-row">
-      <span>{label}</span>
-      <strong>{value || '---'}</strong>
-    </div>
   )
 }
 
@@ -680,10 +673,6 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
     </div>
   )
-}
-
-function formatPercent(value) {
-  return `${Math.round(Number(value || 0) * 100)}%`
 }
 
 function FileBadge() {

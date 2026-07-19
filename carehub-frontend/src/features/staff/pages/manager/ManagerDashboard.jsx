@@ -35,7 +35,6 @@ function ManagerDashboard() {
   const navigate = useNavigate()
   
   const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [nonCompliantCount, setNonCompliantCount] = useState(0)
   const [metrics, setMetrics] = useState({
     totalEmployees: 0,
@@ -83,11 +82,9 @@ function ManagerDashboard() {
           { name: 'Đang theo dõi', value: atRisk, color: '#f59e0b' },
           { name: 'Chưa đạt', value: nonComp, color: '#ef4444' }
         ])
-        setLoading(false)
       })
       .catch(err => {
         console.error("Error loading manager dashboard metrics", err)
-        setLoading(false)
       })
   }, [])
 
@@ -195,7 +192,7 @@ function ManagerDashboard() {
                 <PieChartOutlined style={{ color: '#10b981' }} /> Phân bổ trạng thái CME nhân sự
               </div>
               <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 220, position: 'relative' }}>
-                <ResponsiveContainer height={220} width="100%">
+                <ResponsiveContainer height={220} width="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={cmeData.filter(d => d.value > 0)}
@@ -224,7 +221,7 @@ function ManagerDashboard() {
                 <LineChartOutlined style={{ color: '#3b82f6' }} /> Tỉ lệ tuân thủ chất lượng (6 tháng gần đây)
               </div>
               <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 220 }}>
-                <ResponsiveContainer height={220} width="100%">
+                <ResponsiveContainer height={220} width="100%" minWidth={0}>
                   <BarChart data={qualityTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />

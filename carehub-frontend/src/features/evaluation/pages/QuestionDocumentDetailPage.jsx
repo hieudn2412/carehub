@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeftOutlined,
+  CloseOutlined,
   EyeOutlined,
   FileSearchOutlined,
   LoadingOutlined,
+  PlusOutlined,
   PlayCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -12,16 +14,15 @@ import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import {
   apiData,
   apiErrorMessage,
   chunkGenerationEligible,
-  chunkGenerationText,
   documentStatusText,
   formatDateTime,
   formatNumber,
   jobStatusText,
-  qualityFlagsText,
   statusTone,
 } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
@@ -36,6 +37,12 @@ function QuestionDocumentDetailPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [showJobModal, setShowJobModal] = useState(false)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
+  const [categoryId, setCategoryId] = useState('')
+  const [categories, setCategories] = useState([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
+  const [categoryForm, setCategoryForm] = useState({ name: '', code: '', description: '' })
   const [isCreatingJob, setIsCreatingJob] = useState(false)
   const [jobStatusFilter, setJobStatusFilter] = useState('')
 
@@ -60,9 +67,6 @@ function QuestionDocumentDetailPage() {
     loadDocument()
   }, [loadDocument])
 
-  const sortedSections = useMemo(() => {
-    return [...(documentDetail?.sections || [])].sort((left, right) => left.orderIndex - right.orderIndex)
-  }, [documentDetail])
   const chunks = useMemo(() => documentDetail?.chunks || [], [documentDetail])
   const eligibleChunkCount = useMemo(() => {
     return chunks.filter((chunk) => chunkGenerationEligible(chunk)).length
@@ -78,6 +82,7 @@ function QuestionDocumentDetailPage() {
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, {
         questionsPerChunk: normalizedCount,
+        categoryId: categoryId ? Number(categoryId) : null,
       })
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
@@ -86,6 +91,57 @@ function QuestionDocumentDetailPage() {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsCreatingJob(false)
+    }
+  }
+
+  async function openJobModal() {
+    setShowJobModal(true)
+    setShowCategoryModal(false)
+    setIsLoadingCategories(true)
+    try {
+      const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
+      setCategories(apiData(response, []))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsLoadingCategories(false)
+    }
+  }
+
+  function closeJobModal() {
+    if (isCreatingJob) return
+    setShowJobModal(false)
+    setShowCategoryModal(false)
+  }
+
+  async function createCategoryInline(event) {
+    event.preventDefault()
+    const name = categoryForm.name.trim()
+    if (!name) {
+      showToast('Tên danh mục không được để trống.', 'warning')
+      return
+    }
+    setIsCreatingCategory(true)
+    try {
+      const response = await questionCategoryApi.createCategory({
+        name,
+        code: categoryForm.code.trim() || null,
+        description: categoryForm.description.trim() || null,
+        status: 'ACTIVE',
+        sortOrder: 0,
+      })
+      const createdCategory = apiData(response)
+      if (createdCategory) {
+        setCategories((current) => [...current, createdCategory].sort((left, right) => left.name.localeCompare(right.name, 'vi')))
+        setCategoryId(String(createdCategory.id))
+      }
+      setCategoryForm({ name: '', code: '', description: '' })
+      setShowCategoryModal(false)
+      showToast('Đã thêm danh mục câu hỏi.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsCreatingCategory(false)
     }
   }
 
@@ -136,7 +192,7 @@ function QuestionDocumentDetailPage() {
                       type="button"
                       className="qdoc-primary-btn"
                       disabled={!canCreateJob()}
-                      onClick={() => setShowJobModal(true)}
+                      onClick={openJobModal}
                     >
                       <PlayCircleOutlined />
                       <span>Tạo câu hỏi</span>
@@ -200,7 +256,7 @@ function QuestionDocumentDetailPage() {
                               <th>Phiên</th>
                               <th>Trạng thái</th>
                               <th>Câu hỏi</th>
-                              <th>Số chunk</th>
+                              <th>Tiến độ xử lý</th>
                               <th>Ngày tạo</th>
                               <th>Hành động</th>
                             </tr>
@@ -261,12 +317,12 @@ function QuestionDocumentDetailPage() {
             <h2 id="detail-create-job-title">Tạo phiên sinh câu hỏi</h2>
             <p className="qdoc-modal-subtitle">{documentDetail.filename}</p>
             <div className="qdoc-modal-stats">
-              <InfoRow label="Tổng chunk" value={formatNumber(chunks.length)} />
-              <InfoRow label="Có thể tạo" value={formatNumber(eligibleChunkCount)} />
+              <InfoRow label="Tổng đoạn nội dung" value={formatNumber(chunks.length)} />
+              <InfoRow label="Đủ điều kiện" value={formatNumber(eligibleChunkCount)} />
               <InfoRow label="Bỏ qua" value={formatNumber(skippedChunkCount)} />
             </div>
             <label className="qdoc-field">
-              <span>Số câu mỗi chunk</span>
+              <span>Số câu mỗi đoạn nội dung</span>
               <input
                 type="number"
                 min="1"
@@ -275,12 +331,38 @@ function QuestionDocumentDetailPage() {
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
               />
             </label>
+            <div className="qdoc-field">
+              <span>Danh mục câu hỏi (không bắt buộc)</span>
+              <div className="qdoc-inline-field">
+                <select
+                  value={categoryId}
+                  onChange={(event) => setCategoryId(event.target.value)}
+                  disabled={isLoadingCategories || isCreatingJob}
+                >
+                  <option value="">Không chọn danh mục</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="qdoc-secondary-btn qdoc-inline-add-btn"
+                  onClick={() => setShowCategoryModal(true)}
+                  disabled={isCreatingJob}
+                >
+                  <PlusOutlined />
+                  <span>Thêm mới</span>
+                </button>
+              </div>
+              {isLoadingCategories && <small className="qdoc-field-help">Đang tải danh mục câu hỏi...</small>}
+              <small className="qdoc-field-help">Nếu chọn danh mục, các câu hỏi được duyệt từ phiên này sẽ được gắn theo chủ đề đó.</small>
+            </div>
             <div className="qdoc-note">
-              Phiên tạo câu hỏi sẽ xử lý từng chunk riêng để giữ evidence và có thể retry phần lỗi.
-              Nên bắt đầu 1 câu/chunk để kiểm soát chất lượng và tốc độ.
+              Phiên sẽ xử lý từng đoạn nội dung riêng để giữ nguồn trích dẫn và có thể thử lại phần lỗi.
+              Nên bắt đầu với 1 câu mỗi đoạn để kiểm soát chất lượng và tốc độ.
             </div>
             <div className="qdoc-modal-actions">
-              <button type="button" className="qdoc-secondary-btn" onClick={() => setShowJobModal(false)} disabled={isCreatingJob}>
+              <button type="button" className="qdoc-secondary-btn" onClick={closeJobModal} disabled={isCreatingJob}>
                 Hủy
               </button>
               <button type="button" className="qdoc-primary-btn" onClick={createJob} disabled={isCreatingJob}>
@@ -289,6 +371,40 @@ function QuestionDocumentDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {showCategoryModal && (
+        <div className="qdoc-modal-backdrop qdoc-modal-backdrop--front">
+          <form className="qdoc-modal qdoc-modal--category" role="dialog" aria-modal="true" onSubmit={createCategoryInline}>
+            <div className="qdoc-modal-heading-row">
+              <div>
+                <h2>Thêm danh mục câu hỏi</h2>
+                <p className="qdoc-modal-subtitle">Danh mục mới sẽ được chọn ngay cho phiên đang tạo.</p>
+              </div>
+              <button type="button" className="qdoc-icon-btn" aria-label="Đóng" onClick={() => setShowCategoryModal(false)} disabled={isCreatingCategory}>
+                <CloseOutlined />
+              </button>
+            </div>
+            <label className="qdoc-field">
+              <span>Tên danh mục</span>
+              <input autoFocus value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ví dụ: Kiểm soát nhiễm khuẩn" />
+            </label>
+            <label className="qdoc-field">
+              <span>Mã danh mục (không bắt buộc)</span>
+              <input value={categoryForm.code} onChange={(event) => setCategoryForm((current) => ({ ...current, code: event.target.value }))} placeholder="Tự sinh nếu bỏ trống" />
+            </label>
+            <label className="qdoc-field">
+              <span>Mô tả (không bắt buộc)</span>
+              <textarea value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} placeholder="Mô tả ngắn về chủ đề câu hỏi" />
+            </label>
+            <div className="qdoc-modal-actions">
+              <button type="button" className="qdoc-secondary-btn" onClick={() => setShowCategoryModal(false)} disabled={isCreatingCategory}>Hủy</button>
+              <button type="submit" className="qdoc-primary-btn" disabled={isCreatingCategory}>
+                {isCreatingCategory ? <LoadingOutlined /> : <PlusOutlined />}
+                <span>{isCreatingCategory ? 'Đang lưu...' : 'Thêm danh mục'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -311,12 +427,6 @@ function InfoRow({ label, value }) {
       <strong>{value || '---'}</strong>
     </div>
   )
-}
-
-function pageRange(start, end) {
-  if (!start && !end) return '---'
-  if (start && end && start !== end) return `${start}-${end}`
-  return String(start || end)
 }
 
 export default QuestionDocumentDetailPage

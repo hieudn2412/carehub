@@ -4,7 +4,7 @@ Tài liệu này là contract triển khai giao diện quản trị form, xem tr
 
 ## 1. Phạm vi và quy ước chung
 
-- Base URL local: `http://localhost:8080/api/v1`.
+- Base URL local: `http://localhost:8081/api/v1`.
 - Mọi request gửi header `Authorization: Bearer <accessToken>`.
 - API quản trị form, version, preview và import yêu cầu role `ADMIN`.
 - API tra cứu nhân viên cho phép `ADMIN` và `MANAGER`.

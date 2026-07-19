@@ -67,6 +67,7 @@ function TrainingStatusScreen() {
       <Sidebar />
       <div className="dashboard-layout__content">
         <Header title="Trạng thái đào tạo" />
+        <div className="dashboard-layout__body">
         <div className="ts-page">
           <p className="ts-page__title">Trạng thái đào tạo</p>
           <p className="ts-page__sub">Tổng quan về việc tuân thủ giờ đào tạo · Chu kỳ 5 năm</p>
@@ -165,6 +166,7 @@ function TrainingStatusScreen() {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </div>

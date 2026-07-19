@@ -136,7 +136,7 @@ function TrainingRecordListPage() {
             Activity
             <select onChange={(event) => updateFilter('activityTypeId', event.target.value)} value={filters.activityTypeId}>
               <option value="">All</option>
-              {options.activityTypes.map((item) => (
+              {(options.activityTypes || []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>

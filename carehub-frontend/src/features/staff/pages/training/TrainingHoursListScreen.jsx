@@ -65,7 +65,6 @@ function TrainingHoursListScreen() {
   }, [trigger])
 
   useEffect(() => {
-    if (myEmployeeId == null) return
     const timer = setTimeout(() => {
       setLoading(true)
       const params = {
@@ -73,7 +72,7 @@ function TrainingHoursListScreen() {
         size,
         keyword: search || undefined,
         workflowStatus: status || undefined,
-        employeeId: myEmployeeId || undefined,
+        ...(myEmployeeId != null && { employeeId: myEmployeeId }),
       }
       trainingApi.listRecords(params)
         .then(res => {

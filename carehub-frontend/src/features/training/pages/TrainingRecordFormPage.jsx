@@ -34,7 +34,7 @@ function TrainingRecordFormPage() {
   const [successMessage, setSuccessMessage] = useState('')
 
   const selectedActivityType = useMemo(
-    () => options.activityTypes.find((item) => String(item.id) === String(form.activityTypeId)),
+    () => (options.activityTypes || []).find((item) => String(item.id) === String(form.activityTypeId)),
     [form.activityTypeId, options.activityTypes],
   )
 
@@ -187,7 +187,7 @@ function TrainingRecordFormPage() {
                 value={form.activityTypeId}
               >
                 <option value="">Select activity type</option>
-                {options.activityTypes.map((item) => (
+                {(options.activityTypes || []).map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
                   </option>
@@ -292,7 +292,7 @@ function TrainingRecordFormPage() {
                   value={form.professionalFieldId}
                 >
                   <option value="">None</option>
-                  {options.professionalFields.map((item) => (
+                  {(options.professionalFields || []).map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
                     </option>

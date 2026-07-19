@@ -22,7 +22,7 @@ CareHub — a hospital staff management platform for Continuing Medical Educatio
 - **Preview build**: `npm run preview`
 
 ### Environment
-Backend requires a `.env.properties` or `env.properties` file at the project root (or environment variables) for secrets: `JWT_SECRET`, `DB_*`, `MAIL_*`, `DEEPSEEK_API_KEY`, admin seed credentials, etc. See `application.yaml` for all config keys and their defaults. Frontend uses `.env` (copy from `.env.example`; default `VITE_API_BASE_URL=http://localhost:8080/api/v1`).
+Backend requires a `.env.properties` or `env.properties` file at the project root (or environment variables) for secrets: `JWT_SECRET`, `DB_*`, `MAIL_*`, `DEEPSEEK_API_KEY`, admin seed credentials, etc. See `application.yaml` for all config keys and their defaults. Frontend uses `.env` (copy from `.env.example`; default `VITE_API_BASE_URL=http://localhost:8081/api/v1`).
 
 ## Architecture
 

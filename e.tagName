@@ -1,0 +1,1 @@
+Array.from(document.querySelectorAll('*')).map(e = + (e.className ? '.' + e.className.split(' ').join('.') : '')).join(', ') 
