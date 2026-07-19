@@ -130,7 +130,7 @@ function StaffQuestionGenerationPage() {
 
   async function handleGenerate(documentId) {
     if (!selectedCategoryId) {
-      showToast('Vui lòng chọn danh mục (Bài 1-9) trước khi tạo câu hỏi.', 'warning')
+      showToast('Vui lòng chọn danh mục câu hỏi trước khi tạo câu hỏi.', 'warning')
       return
     }
     setGeneratingDocId(documentId)
@@ -202,7 +202,7 @@ function StaffQuestionGenerationPage() {
               <div>
                 <h2 style={{ margin: 0, fontSize: 16 }}>Danh mục câu hỏi</h2>
                 <p style={{ margin: '4px 0 0', color: '#888', fontSize: 13 }}>
-                  Chọn bài tương ứng với tài liệu. Tất cả câu hỏi sẽ được gom vào danh mục này.
+                  Chọn danh mục phù hợp với tài liệu. Tất cả câu hỏi sẽ được gom vào danh mục này.
                 </p>
               </div>
               <select
@@ -213,7 +213,7 @@ function StaffQuestionGenerationPage() {
                   fontSize: 14, minWidth: 200,
                 }}
               >
-                <option value="">-- Chọn bài (1-9) --</option>
+                <option value="">-- Chọn danh mục --</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}

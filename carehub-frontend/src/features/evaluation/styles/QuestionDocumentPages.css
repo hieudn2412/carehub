@@ -892,6 +892,10 @@
   background: rgba(15, 23, 42, 0.36);
 }
 
+.qdoc-modal-backdrop--front {
+  z-index: 70;
+}
+
 .qdoc-modal {
   width: min(520px, 100%);
   max-height: calc(100vh - 48px);
@@ -901,6 +905,21 @@
   background: #fff;
   border: 1px solid #cbd5e1;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+}
+
+.qdoc-modal--category {
+  width: min(560px, 100%);
+}
+
+.qdoc-modal-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qdoc-modal-heading-row h2 {
+  margin-bottom: 4px;
 }
 
 .qdoc-modal--wide {
@@ -923,6 +942,28 @@
 .qdoc-field input,
 .qdoc-field select {
   padding: 10px 12px;
+}
+
+.qdoc-inline-field {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.qdoc-inline-field select {
+  flex: 1;
+  min-width: 0;
+}
+
+.qdoc-inline-add-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.qdoc-field-help {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .qdoc-field textarea {

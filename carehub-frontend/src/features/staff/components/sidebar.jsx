@@ -12,6 +12,7 @@ import {
   TeamOutlined,
   CheckSquareOutlined,
   FileDoneOutlined,
+  FileTextOutlined,
   DownOutlined
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
@@ -128,12 +129,6 @@ function Sidebar() {
   const [expandedSectionLabel, setExpandedSectionLabel] = useState(
     activeSection ? activeSection.label : null
   )
-
-  useEffect(() => {
-    if (activeSection) {
-      setExpandedSectionLabel(activeSection.label)
-    }
-  }, [currentPath])
 
   // Restore scroll position
   useEffect(() => {

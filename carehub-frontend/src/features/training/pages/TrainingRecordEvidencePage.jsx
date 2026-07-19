@@ -453,7 +453,7 @@ function toAbsoluteDownloadUrl(downloadUrl) {
   if (!downloadUrl) return ''
   if (/^https?:\/\//i.test(downloadUrl)) return downloadUrl
 
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1'
   const apiBase = new URL(apiBaseUrl, window.location.origin)
   return new URL(downloadUrl, apiBase.origin).toString()
 }

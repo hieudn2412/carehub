@@ -213,17 +213,28 @@ public class DocumentQuestionJobService {
             throw new BadRequestException("Không thể retry phiên tạo câu hỏi đã hủy");
         }
         List<Long> chunkIds = failedChunkIds(job.getChunkErrors());
-        if (chunkIds.isEmpty()) {
+        boolean retryAllChunks = chunkIds.isEmpty()
+                && job.getCandidateCount() == 0
+                && job.getStatus() == JobStatus.PARTIALLY_COMPLETED
+                && job.getErrorMessage() != null
+                && job.getErrorMessage().contains("không có câu hỏi mới");
+        if (chunkIds.isEmpty() && !retryAllChunks) {
             return get(jobId);
         }
-        List<DocumentChunk> chunks = chunkRepository.findAllById(chunkIds).stream()
+        List<DocumentChunk> chunks = (retryAllChunks
+                ? chunkRepository.findByDocumentOrderByChunkIndexAsc(job.getDocument())
+                : chunkRepository.findAllById(chunkIds)).stream()
                 .sorted(Comparator.comparing(DocumentChunk::getChunkIndex))
                 .toList();
         job.setStatus(JobStatus.GENERATING);
+        if (retryAllChunks) {
+            job.setCompletedChunkCount(0);
+            job.setCandidateCount(0);
+        }
         job.setFailedChunkCount(0);
         job.setChunkErrors("[]");
         ProcessResult result = processChunks(job, chunks);
-        applyResult(job, result, false);
+        applyResult(job, result, retryAllChunks);
         return get(jobId);
     }
 
@@ -277,15 +288,21 @@ public class DocumentQuestionJobService {
         List<Future<ChunkOutcome>> futures = new ArrayList<>();
 
         for (DocumentChunk chunk : chunks) {
+            Long chunkId = chunk.getId();
+            long chunkIndex = chunk.getChunkIndex();
             futures.add(chunkExecutor.submit(() -> {
                 if (isCancellationRequested(job.getId())) {
                     return ChunkOutcome.cancelledOutcome();
                 }
-                return self.processSingleChunkTransactional(job, chunk, generator);
+                // Không truyền entity đang được quản lý bởi transaction của thread cha
+                // sang thread worker. Mỗi worker phải nạp lại entity trong transaction riêng.
+                return self.processSingleChunkTransactional(job.getId(), chunkId, generator);
             }));
         }
 
-        for (Future<ChunkOutcome> future : futures) {
+        for (int index = 0; index < futures.size(); index++) {
+            Future<ChunkOutcome> future = futures.get(index);
+            DocumentChunk chunk = chunks.get(index);
             try {
                 ChunkOutcome outcome = future.get();
                 if (outcome.cancelled) {
@@ -294,8 +311,14 @@ public class DocumentQuestionJobService {
                 }
                 mergeOutcome(result, outcome);
             } catch (ExecutionException ex) {
-                result.failedChunks++;
-                log.warn("Chunk processing failed in parallel", ex.getCause());
+                Throwable cause = ex.getCause() == null ? ex : ex.getCause();
+                ChunkOutcome outcome = ChunkOutcome.failedOutcome(
+                        chunk.getId(),
+                        chunk.getChunkIndex(),
+                        cause.getMessage()
+                );
+                mergeOutcome(result, outcome);
+                log.warn("Chunk processing failed in parallel jobId={} chunkId={}", job.getId(), chunk.getId(), cause);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 result.cancelled = true;
@@ -312,9 +335,12 @@ public class DocumentQuestionJobService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public ChunkOutcome processSingleChunkTransactional(DocumentQuestionJob job, DocumentChunk chunk,
+    public ChunkOutcome processSingleChunkTransactional(Long jobId, Long chunkId,
                                                           DocumentQuestionGenerator generator) {
-        return executeSingleChunk(job, chunk, generator);
+        DocumentQuestionJob transactionJob = findJob(jobId);
+        DocumentChunk transactionChunk = chunkRepository.findById(chunkId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đoạn nội dung của phiên sinh câu hỏi"));
+        return executeSingleChunk(transactionJob, transactionChunk, generator);
     }
 
     private ChunkOutcome executeSingleChunk(DocumentQuestionJob job, DocumentChunk chunk,
@@ -335,6 +361,7 @@ public class DocumentQuestionJobService {
                     job.getQuestionsPerChunk(),
                     chunk.getTextHash(),
                     "vi",
+                    categoryId(job),
                     0
             );
             long duplicateCheckStarted = System.nanoTime();
@@ -449,6 +476,7 @@ public class DocumentQuestionJobService {
                     job.getQuestionsPerChunk(),
                     chunk.getTextHash(),
                     "vi",
+                    categoryId(job),
                     i
             );
             long duplicateStarted = System.nanoTime();
@@ -574,6 +602,10 @@ public class DocumentQuestionJobService {
         } catch (Exception ex) {
             throw new BadRequestException("Provider tạo câu hỏi chưa được hỗ trợ: " + generationProperties.getProvider());
         }
+    }
+
+    private Long categoryId(DocumentQuestionJob job) {
+        return job.getCategory() == null ? null : job.getCategory().getId();
     }
 
     private List<Long> failedChunkIds(String chunkErrors) {

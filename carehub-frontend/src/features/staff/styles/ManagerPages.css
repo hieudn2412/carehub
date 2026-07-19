@@ -106,6 +106,7 @@
   background: var(--mgr-card);
   border: 1px solid var(--mgr-border);
   border-radius: var(--mgr-radius);
+  min-width: 0;
   padding: 24px;
   box-shadow: var(--mgr-shadow);
   margin-bottom: 24px;

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   EyeOutlined,
+  CloseOutlined,
   FileAddOutlined,
   FileSearchOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
+  PlusOutlined,
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
@@ -44,6 +46,9 @@ function QuestionDocumentListPage() {
   const [categories, setCategories] = useState([])
   const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [isCreatingJob, setIsCreatingJob] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
+  const [categoryForm, setCategoryForm] = useState({ name: '', code: '', description: '' })
 
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -123,10 +128,40 @@ function QuestionDocumentListPage() {
     }
   }
 
+  async function createCategoryInline(event) {
+    event.preventDefault()
+    const name = categoryForm.name.trim()
+    if (!name) {
+      showToast('Vui lòng nhập tên danh mục.', 'warning')
+      return
+    }
+    setIsCreatingCategory(true)
+    try {
+      const response = await questionCategoryApi.createCategory({
+        name,
+        code: categoryForm.code.trim() || undefined,
+        description: categoryForm.description.trim() || undefined,
+        status: 'ACTIVE',
+      })
+      const category = apiData(response)
+      if (category?.id) {
+        setCategories((current) => [...current, category])
+        setSelectedCategoryId(String(category.id))
+      }
+      setCategoryForm({ name: '', code: '', description: '' })
+      setShowCategoryModal(false)
+      showToast('Đã thêm danh mục câu hỏi.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsCreatingCategory(false)
+    }
+  }
+
   async function createJob() {
     if (!jobModalDocument) return
     if (!selectedCategoryId) {
-      showToast('Vui lòng chọn danh mục (Bài 1-9).', 'warning')
+      showToast('Vui lòng chọn danh mục câu hỏi.', 'warning')
       return
     }
     const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
@@ -331,23 +366,29 @@ function QuestionDocumentListPage() {
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="create-job-title">
             <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
             <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
-            <label className="qdoc-field">
-              <span>Danh mục câu hỏi</span>
+            <div className="qdoc-field">
+              <div className="qdoc-modal-heading-row">
+                <span>Danh mục câu hỏi</span>
+                <button type="button" className="qdoc-inline-add-btn" onClick={() => setShowCategoryModal(true)}>
+                  <PlusOutlined /> Thêm mới
+                </button>
+              </div>
               <select
                 className="qdoc-select"
                 value={selectedCategoryId}
                 onChange={(event) => setSelectedCategoryId(event.target.value)}
               >
-                <option value="">-- Chọn bài (1-9) --</option>
+                <option value="">-- Chọn danh mục --</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
                   </option>
                 ))}
               </select>
-            </label>
+              <small className="qdoc-field-help">Tất cả câu hỏi sinh từ tài liệu sẽ được lưu vào danh mục này.</small>
+            </div>
             <label className="qdoc-field">
-              <span>Số câu mỗi chunk</span>
+              <span>Số câu mỗi đoạn nội dung</span>
               <input
                 type="number"
                 min="1"
@@ -357,7 +398,7 @@ function QuestionDocumentListPage() {
               />
             </label>
             <div className="qdoc-note">
-              Chọn danh mục Bài 1-9 để gom nhóm câu hỏi. Tất cả câu hỏi từ tài liệu này sẽ thuộc danh mục đã chọn.
+              Chọn danh mục để gom nhóm câu hỏi. Tài liệu sẽ được chia thành các đoạn nội dung để tạo câu hỏi.
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>
@@ -369,6 +410,37 @@ function QuestionDocumentListPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {showCategoryModal && (
+        <div className="qdoc-modal-backdrop qdoc-modal-backdrop--front">
+          <form className="qdoc-modal qdoc-modal--category" onSubmit={createCategoryInline}>
+            <div className="qdoc-modal-heading-row">
+              <h2>Thêm danh mục câu hỏi</h2>
+              <button type="button" className="qdoc-icon-btn" aria-label="Đóng" onClick={() => setShowCategoryModal(false)}>
+                <CloseOutlined />
+              </button>
+            </div>
+            <label className="qdoc-field">
+              <span>Tên danh mục <em>*</em></span>
+              <input value={categoryForm.name} onChange={(event) => setCategoryForm({ ...categoryForm, name: event.target.value })} autoFocus />
+            </label>
+            <label className="qdoc-field">
+              <span>Mã danh mục</span>
+              <input value={categoryForm.code} onChange={(event) => setCategoryForm({ ...categoryForm, code: event.target.value })} />
+            </label>
+            <label className="qdoc-field">
+              <span>Mô tả</span>
+              <textarea rows="3" value={categoryForm.description} onChange={(event) => setCategoryForm({ ...categoryForm, description: event.target.value })} />
+            </label>
+            <div className="qdoc-modal-actions">
+              <button type="button" className="qdoc-secondary-btn" onClick={() => setShowCategoryModal(false)} disabled={isCreatingCategory}>Hủy</button>
+              <button type="submit" className="qdoc-primary-btn" disabled={isCreatingCategory}>
+                {isCreatingCategory ? <LoadingOutlined /> : <PlusOutlined />}
+                <span>{isCreatingCategory ? 'Đang lưu...' : 'Thêm danh mục'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
