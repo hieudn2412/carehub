@@ -266,9 +266,18 @@ public class QuestionSetService {
 
     @Transactional(readOnly = true)
     public QuestionSetPreviewResponse preview(PreviewQuestionSetRequest request) {
-        if (request == null || request.difficultyDistribution() == null || request.difficultyDistribution().isEmpty()) {
-            return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Chưa có phân bổ độ khó để xem trước"));
+        if (request == null) {
+            return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Yêu cầu không hợp lệ"));
         }
+        
+        // Check if using simple questionCount mode (no difficulty distribution)
+        boolean useSimpleMode = request.questionCount() != null && request.questionCount() > 0
+                && (request.difficultyDistribution() == null || request.difficultyDistribution().isEmpty());
+        
+        if (!useSimpleMode && (request.difficultyDistribution() == null || request.difficultyDistribution().isEmpty())) {
+            return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Chưa có số lượng câu hỏi hoặc phân bổ độ khó để xem trước"));
+        }
+        
         Set<Long> excluded = new HashSet<>(request.excludeQuestionIds() == null ? List.of() : request.excludeQuestionIds());
         String normalizedCategory = normalize(request.category());
         String normalizedTopic = normalize(request.topic());
@@ -276,7 +285,7 @@ public class QuestionSetService {
         long seed = request.randomSeed() == null ? 1L : request.randomSeed();
         List<QuestionBankQuestion> approved = questionRepository.findTop500ByStatusOrderByIdAsc(QuestionBankStatus.APPROVED).stream()
                 .filter(question -> !excluded.contains(question.getId()))
-                .filter(question -> normalizedCategory.isBlank() || normalize(question.getTopic()).contains(normalizedCategory))
+                .filter(question -> normalizedCategory.isBlank() || normalize(question.getTopic()).equals(normalizedCategory))
                 .filter(question -> normalizedTopic.isBlank() || normalize(question.getTopic()).contains(normalizedTopic))
                 .toList();
 
@@ -286,38 +295,60 @@ public class QuestionSetService {
         Set<Long> selectedIds = new HashSet<>();
         Set<String> usedSources = new HashSet<>();
 
-        request.difficultyDistribution().entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> {
-                    String difficulty = entry.getKey();
-                    int requested = Math.max(0, entry.getValue() == null ? 0 : entry.getValue());
-                    if (requested == 0) {
-                        return;
-                    }
-                    List<QuestionBankQuestion> candidates = approved.stream()
-                            .filter(question -> !selectedIds.contains(question.getId()))
-                            .filter(question -> normalize(difficulty).isBlank()
-                                    || normalize(question.getDifficulty()).equals(normalize(difficulty)))
-                            .sorted(Comparator.comparing((QuestionBankQuestion question) ->
-                                    question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1))
-                            .collect(Collectors.toCollection(ArrayList::new));
-                    java.util.Collections.shuffle(candidates, new Random(seed + difficulty.hashCode()));
-                    List<QuestionBankQuestion> picked = pickCandidates(candidates, requested, avoidSameSource, usedSources);
-                    picked.forEach(question -> {
-                        selected.add(question);
-                        selectedIds.add(question.getId());
-                        if (question.getSourceDocument() != null && !question.getSourceDocument().isBlank()) {
-                            usedSources.add(question.getSourceDocument());
+        if (useSimpleMode) {
+            // Simple mode: just pick questionCount questions from the category
+            int requested = request.questionCount();
+            List<QuestionBankQuestion> candidates = new ArrayList<>(approved);
+            candidates.sort(Comparator.comparing((QuestionBankQuestion question) ->
+                    question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1));
+            java.util.Collections.shuffle(candidates, new Random(seed));
+            List<QuestionBankQuestion> picked = pickCandidates(candidates, requested, avoidSameSource, usedSources);
+            picked.forEach(question -> {
+                selected.add(question);
+                selectedIds.add(question.getId());
+                if (question.getSourceDocument() != null && !question.getSourceDocument().isBlank()) {
+                    usedSources.add(question.getSourceDocument());
+                }
+            });
+            if (picked.size() < requested) {
+                warnings.add("Chỉ tìm thấy " + picked.size() + "/" + requested + " câu hỏi phù hợp trong danh mục");
+            }
+        } else {
+            // Difficulty distribution mode (legacy)
+            request.difficultyDistribution().entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .forEach(entry -> {
+                        String difficulty = entry.getKey();
+                        int requested = Math.max(0, entry.getValue() == null ? 0 : entry.getValue());
+                        if (requested == 0) {
+                            return;
+                        }
+                        List<QuestionBankQuestion> candidates = approved.stream()
+                                .filter(question -> !selectedIds.contains(question.getId()))
+                                .filter(question -> normalize(difficulty).isBlank()
+                                        || normalize(question.getDifficulty()).equals(normalize(difficulty)))
+                                .sorted(Comparator.comparing((QuestionBankQuestion question) ->
+                                        question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1))
+                                .collect(Collectors.toCollection(ArrayList::new));
+                        java.util.Collections.shuffle(candidates, new Random(seed + difficulty.hashCode()));
+                        List<QuestionBankQuestion> picked = pickCandidates(candidates, requested, avoidSameSource, usedSources);
+                        picked.forEach(question -> {
+                            selected.add(question);
+                            selectedIds.add(question.getId());
+                            if (question.getSourceDocument() != null && !question.getSourceDocument().isBlank()) {
+                                usedSources.add(question.getSourceDocument());
+                            }
+                        });
+                        if (picked.size() < requested) {
+                            shortage.add(new QuestionSetPreviewResponse.Shortage(difficulty, requested, candidates.size()));
                         }
                     });
-                    if (picked.size() < requested) {
-                        shortage.add(new QuestionSetPreviewResponse.Shortage(difficulty, requested, candidates.size()));
-                    }
-                });
 
-        if (!shortage.isEmpty()) {
-            warnings.add("Không đủ câu hỏi theo phân bổ đã chọn");
+            if (!shortage.isEmpty()) {
+                warnings.add("Không đủ câu hỏi theo phân bổ đã chọn");
+            }
         }
+        
         QuestionSetPreviewResponse response = new QuestionSetPreviewResponse(
                 selected.stream().map(QuestionBankQuestion::getId).toList(),
                 selected.stream().map(questionMapper::toQuestionResponse).toList(),

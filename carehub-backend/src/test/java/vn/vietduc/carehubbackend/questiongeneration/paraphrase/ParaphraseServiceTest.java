@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.paraphrase;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -48,6 +49,7 @@ class ParaphraseServiceTest {
     private final ParaphraseJobRepository jobRepository = mock(ParaphraseJobRepository.class);
     private final ParaphraseCandidateRepository candidateRepository = mock(ParaphraseCandidateRepository.class);
     private final ParaphraseModelService modelService = mock(ParaphraseModelService.class);
+    private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final DuplicateCheckService duplicateCheckService = mock(DuplicateCheckService.class);
     private final QuestionEmbeddingService embeddingService = mock(QuestionEmbeddingService.class);
     private final AtomicReference<ParaphraseJob> savedJob = new AtomicReference<>();
@@ -78,7 +80,8 @@ class ParaphraseServiceTest {
                 embeddingService,
                 new ParaphraseMapper(),
                 paraphraseProperties,
-                new ObjectMapper()
+                new ObjectMapper(),
+                eventPublisher
         );
 
         sourceQuestion = QuestionBankQuestion.builder()
@@ -154,8 +157,21 @@ class ParaphraseServiceTest {
     }
 
     @Test
-    void createJobGeneratesValidatedFullMcqCandidate() {
+    void createJobQueuesGenerationAndPublishesEvent() {
         ParaphraseJobResponse response = service.createJob(
+                sourceQuestion.getId(),
+                new CreateParaphraseJobRequest(1, "medium"),
+                "admin"
+        );
+
+        assertThat(response.status()).isEqualTo(ParaphraseJobStatus.CREATED.name());
+        assertThat(response.candidates()).isEmpty();
+        verify(eventPublisher).publishEvent(new ParaphraseJobCreatedEvent(response.id()));
+    }
+
+    @Test
+    void createJobGeneratesValidatedFullMcqCandidate() {
+        ParaphraseJobResponse response = processJob(
                 sourceQuestion.getId(),
                 new CreateParaphraseJobRequest(1, "medium"),
                 "admin"
@@ -174,7 +190,7 @@ class ParaphraseServiceTest {
 
     @Test
     void approveThenSaveCreatesParaphraseQuestionWithParentAndEmbeddingAttempt() {
-        ParaphraseJobResponse response = service.createJob(
+        ParaphraseJobResponse response = processJob(
                 sourceQuestion.getId(),
                 new CreateParaphraseJobRequest(1, "medium"),
                 "admin"
@@ -222,12 +238,13 @@ class ParaphraseServiceTest {
         assertThat(response.succeededCount()).isEqualTo(1);
         assertThat(response.failedCount()).isEqualTo(2);
         assertThat(response.jobs()).hasSize(1);
+        assertThat(response.queuedCount()).isEqualTo(1);
         assertThat(response.errors()).extracting("questionId").containsExactly(draftQuestion.getId(), 999L);
     }
 
     @Test
     void approveBatchUpdatesCandidatesAndReportsMissingCandidate() {
-        ParaphraseJobResponse jobResponse = service.createJob(
+        ParaphraseJobResponse jobResponse = processJob(
                 sourceQuestion.getId(),
                 new CreateParaphraseJobRequest(1, "medium"),
                 "admin"
@@ -245,5 +262,12 @@ class ParaphraseServiceTest {
         assertThat(response.candidates()).hasSize(1);
         assertThat(response.candidates().get(0).status()).isEqualTo(CandidateStatus.APPROVED.name());
         assertThat(response.errors()).extracting("candidateId").containsExactly(999L);
+    }
+
+    private ParaphraseJobResponse processJob(Long questionId, CreateParaphraseJobRequest request, String actor) {
+        ParaphraseJobResponse created = service.createJob(questionId, request, actor);
+        ParaphraseService.GenerationContext context = service.startJob(created.id());
+        service.completeJob(created.id(), modelService.paraphrase(context.toModelInput()));
+        return service.getJob(created.id());
     }
 }

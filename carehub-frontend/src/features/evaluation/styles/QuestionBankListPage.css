@@ -466,6 +466,18 @@
   color: #1e40af;
 }
 
+.qbl-action-btn--paraphrase {
+  color: #7c3aed;
+  border-color: #a78bfa;
+  background: #f5f3ff;
+}
+
+.qbl-action-btn--paraphrase:hover:not(:disabled) {
+  background: #ede9fe;
+  border-color: #7c3aed;
+  color: #5b21b6;
+}
+
 .qbl-action-btn--view {
   color: #0f766e;
   border-color: #5eead4;

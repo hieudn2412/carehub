@@ -17,14 +17,14 @@ public class VietQuillMcqParser {
     );
 
     /**
-     * Attempt to parse model output as full MCQ.
-     * Falls back to line-by-line heuristic if regex fails.
+     * Attempt to parse model output as full MCQ. The heuristic parser is only
+     * accepted when it still contains every required field.
      */
     public ParaphrasedMcq parseFullMcq(String rawOutput) {
         try {
-            return parse(rawOutput);
+            return requireComplete(parse(rawOutput));
         } catch (ParaphraseModelException ex) {
-            return parseHeuristic(rawOutput);
+            return requireComplete(parseHeuristic(rawOutput));
         }
     }
 
@@ -99,6 +99,22 @@ public class VietQuillMcqParser {
                 optionD != null ? optionD : "",
                 rawOutput
         );
+    }
+
+    private ParaphrasedMcq requireComplete(ParaphrasedMcq result) {
+        if (result == null
+                || isBlank(result.stem())
+                || isBlank(result.optionA())
+                || isBlank(result.optionB())
+                || isBlank(result.optionC())
+                || isBlank(result.optionD())) {
+            throw new ParaphraseModelException("Output VietQuill thiếu câu hỏi hoặc một trong các phương án A/B/C/D");
+        }
+        return result;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private Pattern optionPattern(String label) {

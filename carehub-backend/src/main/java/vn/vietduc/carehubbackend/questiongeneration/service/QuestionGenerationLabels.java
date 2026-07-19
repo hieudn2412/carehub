@@ -75,7 +75,7 @@ public final class QuestionGenerationLabels {
             return "";
         }
         return switch (status) {
-            case CREATED -> "Đã tạo";
+            case CREATED -> "Đang chờ xử lý";
             case GENERATING -> "Đang diễn đạt lại";
             case GENERATED -> "Đã sinh";
             case VALIDATING -> "Đang kiểm tra";

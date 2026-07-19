@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.paraphrase;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
@@ -51,6 +52,7 @@ public class ParaphraseService {
     private final ParaphraseMapper mapper;
     private final AiParaphraseProperties properties;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ParaphraseJobResponse createJob(Long questionId, CreateParaphraseJobRequest request, String actor) {
@@ -72,34 +74,11 @@ public class ParaphraseService {
                 .changeStrength(changeStrength)
                 .provider(modelService.provider())
                 .model(modelService.modelName())
-                .status(ParaphraseJobStatus.GENERATING)
+                .status(ParaphraseJobStatus.CREATED)
                 .createdBy(actor)
                 .build();
         ParaphraseJob savedJob = jobRepository.save(job);
-
-        try {
-            List<ParaphrasedMcq> generated = modelService.paraphrase(new ParaphraseModelInput(
-                    source.getStem(),
-                    source.getOptionA(),
-                    source.getOptionB(),
-                    source.getOptionC(),
-                    source.getOptionD(),
-                    source.getCorrectAnswer(),
-                    changeStrength,
-                    requestedCount
-            ));
-            savedJob.setStatus(ParaphraseJobStatus.VALIDATING);
-            jobRepository.save(savedJob);
-            for (ParaphrasedMcq mcq : generated) {
-                persistCandidate(savedJob, source, mcq);
-            }
-            savedJob.setStatus(ParaphraseJobStatus.COMPLETED);
-            savedJob.setErrorMessage(null);
-        } catch (RuntimeException ex) {
-            savedJob.setStatus(ParaphraseJobStatus.FAILED);
-            savedJob.setErrorMessage(ex.getMessage() == null ? "Không tạo được paraphrase" : ex.getMessage());
-        }
-        jobRepository.save(savedJob);
+        eventPublisher.publishEvent(new ParaphraseJobCreatedEvent(savedJob.getId()));
         return getJob(savedJob.getId());
     }
 
@@ -127,8 +106,87 @@ public class ParaphraseService {
                 jobs.size(),
                 errors.size(),
                 jobs,
-                errors
+                errors,
+                jobs.size()
         );
+    }
+
+    @Transactional
+    public GenerationContext startJob(Long jobId) {
+        ParaphraseJob job = findJob(jobId);
+        if (job.getStatus() != ParaphraseJobStatus.CREATED) {
+            return null;
+        }
+        job.setStatus(ParaphraseJobStatus.GENERATING);
+        job.setErrorMessage(null);
+        jobRepository.save(job);
+        QuestionBankQuestion source = job.getSourceQuestion();
+        return new GenerationContext(
+                job.getId(),
+                source.getStem(),
+                source.getOptionA(),
+                source.getOptionB(),
+                source.getOptionC(),
+                source.getOptionD(),
+                source.getCorrectAnswer(),
+                job.getChangeStrength(),
+                job.getRequestedCount()
+        );
+    }
+
+    @Transactional
+    public void completeJob(Long jobId, List<ParaphrasedMcq> generated) {
+        ParaphraseJob job = findJob(jobId);
+        QuestionBankQuestion source = job.getSourceQuestion();
+        if (generated == null || generated.size() < job.getRequestedCount()) {
+            throw new BadRequestException("VietQuill không tạo đủ số biến thể được yêu cầu");
+        }
+        job.setStatus(ParaphraseJobStatus.VALIDATING);
+        jobRepository.save(job);
+        for (ParaphrasedMcq mcq : generated) {
+            persistCandidate(job, source, mcq);
+        }
+        job.setStatus(ParaphraseJobStatus.COMPLETED);
+        job.setErrorMessage(null);
+        jobRepository.save(job);
+    }
+
+    @Transactional
+    public void failJob(Long jobId, String message) {
+        ParaphraseJob job = findJob(jobId);
+        if (job.getStatus() == ParaphraseJobStatus.COMPLETED) {
+            return;
+        }
+        job.setStatus(ParaphraseJobStatus.FAILED);
+        job.setErrorMessage(message == null || message.isBlank()
+                ? "Không tạo được paraphrase"
+                : message.trim());
+        jobRepository.save(job);
+    }
+
+    public record GenerationContext(
+            Long jobId,
+            String stem,
+            String optionA,
+            String optionB,
+            String optionC,
+            String optionD,
+            String correctAnswer,
+            String changeStrength,
+            int requestedCount
+    ) {
+        public ParaphraseModelInput toModelInput() {
+            return new ParaphraseModelInput(
+                    stem,
+                    optionA,
+                    optionB,
+                    optionC,
+                    optionD,
+                    correctAnswer,
+                    changeStrength,
+                    requestedCount
+            );
+        }
     }
 
     @Transactional(readOnly = true)
@@ -289,11 +347,11 @@ public class ParaphraseService {
         ParaphraseCandidate candidate = ParaphraseCandidate.builder()
                 .job(job)
                 .sourceQuestion(source)
-                .stem(blankToFallback(mcq.stem(), source.getStem()))
-                .optionA(blankToFallback(mcq.optionA(), source.getOptionA()))
-                .optionB(blankToFallback(mcq.optionB(), source.getOptionB()))
-                .optionC(blankToFallback(mcq.optionC(), source.getOptionC()))
-                .optionD(blankToFallback(mcq.optionD(), source.getOptionD()))
+                .stem(mcq.stem().trim())
+                .optionA(mcq.optionA().trim())
+                .optionB(mcq.optionB().trim())
+                .optionC(mcq.optionC().trim())
+                .optionD(mcq.optionD().trim())
                 .correctAnswer(source.getCorrectAnswer())
                 .explanation(source.getExplanation())
                 .topic(source.getTopic())
@@ -374,10 +432,6 @@ public class ParaphraseService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
-    }
-
-    private String blankToFallback(String value, String fallback) {
-        return value == null || value.trim().isEmpty() ? fallback : value.trim();
     }
 
     private String toJson(Object value) {

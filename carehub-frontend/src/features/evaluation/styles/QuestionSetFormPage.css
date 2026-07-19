@@ -1182,3 +1182,80 @@
     width: 100%;
   }
 }
+
+/* Category select row with add button */
+.qsf-category-select-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.qsf-category-select-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.qsf-btn-add-category {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 1px solid #14b8a6;
+  border-radius: 6px;
+  background: #f0fdfa;
+  color: #0d9488;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qsf-btn-add-category:hover:not(:disabled) {
+  background: #ccfbf1;
+  border-color: #0d9488;
+}
+
+.qsf-btn-add-category:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal styles */
+.qsf-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.qsf-modal {
+  width: 100%;
+  max-width: 420px;
+  margin: 16px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.qsf-modal h3 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.qsf-modal .qsf-form-group {
+  margin-bottom: 20px;
+}
+
+.qsf-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}

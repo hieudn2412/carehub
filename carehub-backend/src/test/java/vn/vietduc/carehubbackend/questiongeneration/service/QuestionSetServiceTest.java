@@ -294,6 +294,7 @@ class QuestionSetServiceTest {
         PreviewQuestionSetRequest request = new PreviewQuestionSetRequest(
                 "Kiểm soát nhiễm khuẩn",
                 null,
+                3,
                 Map.of("medium", 3),
                 List.of(),
                 false,

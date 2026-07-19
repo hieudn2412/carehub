@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import {
   CheckCircleOutlined,
   CloseOutlined,
-  CopyOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  EditOutlined,
-  EyeOutlined,
+  ExportOutlined,
   FilterOutlined,
+  FormOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   SearchOutlined,
+  SyncOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
@@ -225,7 +225,7 @@ function QuestionBankListPage() {
       const result = apiData(response)
       const job = result
       setParaphraseTarget(null)
-      showToast('Tạo phiên diễn đạt lại thành công.', 'success')
+      showToast('Đã xếp hàng phiên diễn đạt lại. Hệ thống sẽ tự động cập nhật kết quả.', 'success')
       if (job?.id) {
         navigate(`/admin/evaluation/paraphrase-jobs/${job.id}`)
       }
@@ -505,17 +505,17 @@ function QuestionBankListPage() {
                                 aria-label="Chỉnh sửa câu hỏi"
                                 title="Chỉnh sửa"
                               >
-                                <EditOutlined />
+                                <FormOutlined />
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn"
+                                className="qbl-action-btn qbl-action-btn--paraphrase"
                                 onClick={() => openParaphraseModal(item)}
                                 disabled={!item.backend || jobQuestionId === item.id}
                                 aria-label="Tạo câu hỏi diễn đạt lại"
-                                title={item.backend ? 'Tạo câu hỏi diễn đạt lại' : 'Chỉ áp dụng cho câu hỏi đã lưu'}
+                                title={item.backend ? 'Tạo câu hỏi tương tự' : 'Chỉ áp dụng cho câu hỏi đã lưu'}
                               >
-                                {jobQuestionId === item.id ? <LoadingOutlined /> : <CopyOutlined />}
+                                {jobQuestionId === item.id ? <LoadingOutlined /> : <SyncOutlined />}
                               </button>
                               <button
                                 type="button"
@@ -524,7 +524,7 @@ function QuestionBankListPage() {
                                 aria-label="Xem chi tiết câu hỏi"
                                 title="Xem chi tiết"
                               >
-                                <EyeOutlined />
+                                <ExportOutlined />
                               </button>
                               <button
                                 type="button"
@@ -577,12 +577,6 @@ function QuestionBankListPage() {
             <h2 id="create-paraphrase-title">Tạo phiên diễn đạt lại</h2>
             <p className="qbl-modal-subtitle">{paraphraseTarget.content}</p>
 
-            <div className="qbl-model-status-grid">
-              <ModelStatusCard title="DeepSeek tạo câu hỏi" status={modelStatus?.generation} isLoading={isModelStatusLoading} />
-              <ModelStatusCard title="E5 duplicate" status={modelStatus?.embedding} isLoading={isModelStatusLoading} />
-              <ModelStatusCard title="VietQuill paraphrase" status={modelStatus?.paraphrase} isLoading={isModelStatusLoading} />
-            </div>
-
             <label className="qbl-field">
               <span>Số biến thể</span>
               <input
@@ -621,8 +615,8 @@ function QuestionBankListPage() {
                 onClick={createParaphraseJob}
                 disabled={jobQuestionId === paraphraseTarget.id}
               >
-                {jobQuestionId === paraphraseTarget.id ? <LoadingOutlined /> : <CopyOutlined />}
-                <span>Tạo phiên</span>
+                {jobQuestionId === paraphraseTarget.id ? <LoadingOutlined /> : <SyncOutlined />}
+                <span>Tạo câu hỏi tương tự</span>
               </button>
             </div>
           </div>
@@ -804,8 +798,8 @@ function QuestionBankListPage() {
                       className="qbl-btn-primary"
                       onClick={() => navigate(`/admin/evaluation/question-bank/${detailQuestion.id}/edit`)}
                     >
-                      <EditOutlined />
-                      <span>Mở form chỉnh sửa</span>
+                      <FormOutlined />
+                      <span>Chỉnh sửa</span>
                     </button>
                   )}
                 </div>

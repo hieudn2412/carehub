@@ -19,6 +19,8 @@ public class VietQuillHandlePool {
     private final BlockingQueue<RuntimeHandle> available;
     private final RuntimeHandle[] allHandles;
     private final int poolSize;
+    private HandleFactory handleFactory;
+    private volatile boolean closing;
 
     public VietQuillHandlePool(AiParaphraseProperties properties) {
         this.poolSize = Math.max(1, properties.getPoolSize());
@@ -30,10 +32,29 @@ public class VietQuillHandlePool {
      * Khởi tạo tất cả handles trong pool.
      * Gọi từ VietQuillParaphraseModelService sau khi load model path thành công.
      */
-    public void initialize(HandleFactory factory) {
-        for (int i = 0; i < poolSize; i++) {
-            allHandles[i] = factory.create(i);
-            available.offer(allHandles[i]);
+    public synchronized void initialize(HandleFactory factory) {
+        this.handleFactory = factory;
+        this.closing = false;
+        try {
+            for (int i = 0; i < poolSize; i++) {
+                RuntimeHandle handle = factory.create(i);
+                allHandles[i] = handle;
+                available.offer(handle);
+            }
+        } catch (RuntimeException ex) {
+            available.clear();
+            for (int i = 0; i < allHandles.length; i++) {
+                RuntimeHandle handle = allHandles[i];
+                allHandles[i] = null;
+                if (handle != null) {
+                    try {
+                        handle.close();
+                    } catch (Exception ignored) {
+                        // Best effort cleanup after partial initialization.
+                    }
+                }
+            }
+            throw ex;
         }
         log.info("VietQuill handle pool initialized with {} handles", poolSize);
     }
@@ -64,6 +85,42 @@ public class VietQuillHandlePool {
     }
 
     /**
+     * Remove a broken/expired handle and replace it with a fresh ONNX handle.
+     * This method is called only after the inference task has stopped using the
+     * old handle, so closing its native sessions is safe.
+     */
+    public synchronized void retire(RuntimeHandle handle) {
+        if (handle == null) {
+            return;
+        }
+        int index = -1;
+        for (int i = 0; i < allHandles.length; i++) {
+            if (allHandles[i] == handle) {
+                index = i;
+                allHandles[i] = null;
+                break;
+            }
+        }
+        available.remove(handle);
+        try {
+            handle.close();
+        } catch (Exception ignored) {
+            // Best effort cleanup of a broken native session.
+        }
+        if (closing || index < 0 || handleFactory == null) {
+            return;
+        }
+        try {
+            RuntimeHandle replacement = handleFactory.create(index);
+            allHandles[index] = replacement;
+            available.offer(replacement);
+            log.info("Replaced retired VietQuill handle at index {}", index);
+        } catch (RuntimeException ex) {
+            log.error("Không thể thay thế VietQuill handle tại index {}: {}", index, ex.getMessage(), ex);
+        }
+    }
+
+    /**
      * Lặp qua tất cả handles trong pool, acquire từng cái một, chạy action, rồi release.
      * Dùng cho warmup hoặc maintenance.
      */
@@ -79,7 +136,9 @@ public class VietQuillHandlePool {
     }
 
     @PreDestroy
-    public void close() {
+    public synchronized void close() {
+        closing = true;
+        available.clear();
         for (RuntimeHandle handle : allHandles) {
             if (handle != null) {
                 try {
@@ -89,6 +148,7 @@ public class VietQuillHandlePool {
                 }
             }
         }
+        handleFactory = null;
         log.info("VietQuill handle pool closed ({} handles)", poolSize);
     }
 
