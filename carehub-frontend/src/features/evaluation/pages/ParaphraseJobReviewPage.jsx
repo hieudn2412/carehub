@@ -45,8 +45,10 @@ function ParaphraseJobReviewPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
   const [isBatching, setIsBatching] = useState(false)
 
-  const loadJob = useCallback(async () => {
-    setIsLoading(true)
+  const loadJob = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setIsLoading(true)
+    }
     try {
       const response = await questionBankApi.getParaphraseJob(jobId)
       setJobDetail(apiData(response))
@@ -61,6 +63,17 @@ function ParaphraseJobReviewPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadJob()
   }, [loadJob])
+
+  useEffect(() => {
+    const status = jobDetail?.status
+    if (!status || ['COMPLETED', 'FAILED', 'CANCELLED'].includes(status)) {
+      return undefined
+    }
+    const timer = window.setInterval(() => {
+      loadJob({ silent: true })
+    }, 2000)
+    return () => window.clearInterval(timer)
+  }, [jobDetail?.status, loadJob])
 
   const candidates = useMemo(() => jobDetail?.candidates || [], [jobDetail])
   const filteredCandidates = useMemo(() => {
@@ -279,7 +292,7 @@ function ParaphraseJobReviewPage() {
                         </div>
                       </div>
                     </div>
-                    <button type="button" className="qdoc-secondary-btn" onClick={loadJob}>
+                    <button type="button" className="qdoc-secondary-btn" onClick={() => loadJob()}>
                       <ReloadOutlined />
                       <span>Tải lại</span>
                     </button>

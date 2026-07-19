@@ -6,6 +6,7 @@ import java.util.Map;
 public record PreviewQuestionSetRequest(
         String category,
         String topic,
+        Integer questionCount,
         Map<String, Integer> difficultyDistribution,
         List<Long> excludeQuestionIds,
         Boolean avoidSameSourceDocument,

@@ -28,6 +28,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -51,9 +57,11 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     private final VietQuillHandlePool handlePool;
 
     private volatile boolean initialized = false;
+    private ExecutorService inferenceExecutor;
 
     @PostConstruct
     void preload() {
+        inferenceExecutor();
         if (!properties.isVietQuillProvider() || !properties.isPreload()) {
             return;
         }
@@ -84,6 +92,9 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     @PreDestroy
     void close() {
+        if (inferenceExecutor != null) {
+            inferenceExecutor.shutdownNow();
+        }
         if (handlePool != null) {
             handlePool.close();
         }
@@ -110,94 +121,122 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         }
 
         ensureInitialized();
-        RuntimeHandle handle = null;
+        AtomicBoolean timedOut = new AtomicBoolean(false);
+        AtomicBoolean taskStarted = new AtomicBoolean(false);
         try {
-            handle = handlePool.acquire(properties.getAcquireTimeoutMs());
-            return doParaphrase(handle, input, count);
+            RuntimeHandle acquiredHandle = handlePool.acquire(properties.getAcquireTimeoutMs());
+            Future<List<ParaphrasedMcq>> future = inferenceExecutor().submit(() -> {
+                taskStarted.set(true);
+                try {
+                    return doParaphrase(acquiredHandle, input, count);
+                } finally {
+                    if (timedOut.get()) {
+                        handlePool.retire(acquiredHandle);
+                    } else {
+                        handlePool.release(acquiredHandle);
+                    }
+                }
+            });
+            try {
+                return future.get(Math.max(1, properties.getTimeoutSeconds()), TimeUnit.SECONDS);
+            } catch (TimeoutException ex) {
+                timedOut.set(true);
+                future.cancel(true);
+                if (!taskStarted.get()) {
+                    handlePool.retire(acquiredHandle);
+                }
+                throw new ParaphraseModelException(
+                        "Paraphrase timeout sau " + Math.max(1, properties.getTimeoutSeconds()) + " giây", ex);
+            } catch (InterruptedException ex) {
+                timedOut.set(true);
+                future.cancel(true);
+                Thread.currentThread().interrupt();
+                throw new ParaphraseModelException("Bị ngắt khi chờ VietQuill inference", ex);
+            } catch (java.util.concurrent.ExecutionException ex) {
+                Throwable cause = ex.getCause();
+                if (cause instanceof RuntimeException runtimeException) {
+                    throw runtimeException;
+                }
+                throw new ParaphraseModelException("Paraphrase thất bại", cause);
+            }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new ParaphraseModelException("Bị ngắt khi chờ VietQuill handle", ex);
         } catch (Exception ex) {
+            if (ex instanceof ParaphraseModelException paraphraseModelException) {
+                throw paraphraseModelException;
+            }
             throw new ParaphraseModelException("Paraphrase thất bại", ex);
-        } finally {
-            handlePool.release(handle);
         }
     }
 
     private List<ParaphrasedMcq> doParaphrase(RuntimeHandle handle, ParaphraseModelInput input, int count) {
-        if (properties.isSinglePassEnabled()) {
-            return paraphraseSinglePass(handle, input, count);
-        }
-        return paraphrasePerField(handle, input, count);
-    }
-
-    /**
-     * Single-pass: 1 lần encode + N lần decode cho toàn bộ MCQ.
-     * Tái sử dụng encoder hidden states cho tất cả variants.
-     */
-    private List<ParaphrasedMcq> paraphraseSinglePass(RuntimeHandle handle, ParaphraseModelInput input, int count) {
-        String prompt = promptBuilder.buildFullMcq(input);
-        EncoderState encoderState = encodePrompt(handle.question(), prompt);
         List<ParaphrasedMcq> results = new ArrayList<>();
-
         for (int index = 0; index < count; index++) {
-            String rawOutput = decode(handle.question(), encoderState, index);
-            if (rawOutput.isBlank()) {
-                rawOutput = generatePerFieldAndCombine(handle, input, index);
+            ParaphrasedMcq candidate;
+            try {
+                candidate = properties.isSinglePassEnabled()
+                        ? paraphraseSinglePassVariant(handle, input, index, false)
+                        : paraphrasePerFieldVariant(handle, input, index, false);
+            } catch (RuntimeException firstFailure) {
+                log.warn("VietQuill full-MCQ attempt failed for variant {}: {}", index + 1, firstFailure.getMessage());
+                candidate = null;
             }
-            ParaphrasedMcq mcq = mcqParser.parseFullMcq(rawOutput);
-            results.add(new ParaphrasedMcq(
-                    fallbackIfBlank(mcq.stem(), input.stem()),
-                    fallbackIfBlank(mcq.optionA(), input.optionA()),
-                    fallbackIfBlank(mcq.optionB(), input.optionB()),
-                    fallbackIfBlank(mcq.optionC(), input.optionC()),
-                    fallbackIfBlank(mcq.optionD(), input.optionD()),
-                    rawMcq(
-                            fallbackIfBlank(mcq.stem(), input.stem()),
-                            fallbackIfBlank(mcq.optionA(), input.optionA()),
-                            fallbackIfBlank(mcq.optionB(), input.optionB()),
-                            fallbackIfBlank(mcq.optionC(), input.optionC()),
-                            fallbackIfBlank(mcq.optionD(), input.optionD())
-                    )
-            ));
+            if (!isAcceptable(input, candidate, results)) {
+                candidate = paraphrasePerFieldVariant(handle, input, index, true);
+            }
+            if (!isAcceptable(input, candidate, results)) {
+                throw new ParaphraseModelException(
+                        "VietQuill không tạo được biến thể hợp lệ số " + (index + 1)
+                                + ": output thiếu field, trùng câu nguồn hoặc trùng biến thể khác");
+            }
+            results.add(candidate);
         }
         return results;
     }
 
     /**
-     * Per-field: generate từng field riêng lẻ (logic cũ, giữ lại làm fallback).
+     * Generate one complete MCQ in a single model pass.
      */
-    private List<ParaphrasedMcq> paraphrasePerField(RuntimeHandle handle, ParaphraseModelInput input, int count) {
-        List<ParaphrasedMcq> results = new ArrayList<>();
-        for (int index = 0; index < count; index++) {
-            String stem = fallbackIfBlank(generate(handle.question(), input.stem(), index), input.stem());
-            String optionA = fallbackIfBlank(generate(handle.sentence(), input.optionA(), index), input.optionA());
-            String optionB = fallbackIfBlank(generate(handle.sentence(), input.optionB(), index), input.optionB());
-            String optionC = fallbackIfBlank(generate(handle.sentence(), input.optionC(), index), input.optionC());
-            String optionD = fallbackIfBlank(generate(handle.sentence(), input.optionD(), index), input.optionD());
-            results.add(new ParaphrasedMcq(
-                    stem,
-                    optionA,
-                    optionB,
-                    optionC,
-                    optionD,
-                    rawMcq(stem, optionA, optionB, optionC, optionD)
-            ));
+    private ParaphrasedMcq paraphraseSinglePassVariant(
+            RuntimeHandle handle,
+            ParaphraseModelInput input,
+            int index,
+            boolean retry
+    ) {
+        String prompt = promptBuilder.buildFullMcq(input, index, retry);
+        EncoderState encoderState = encodePrompt(handle.question(), prompt);
+        String rawOutput = decode(handle.question(), encoderState, index);
+        if (rawOutput.isBlank()) {
+            throw new ParaphraseModelException("VietQuill trả về output rỗng");
         }
-        return results;
+        return mcqParser.parseFullMcq(rawOutput);
     }
 
     /**
-     * Fallback: generate từng field riêng lẻ rồi combine lại thành raw output string
-     * để parser có thể parse được. Dùng khi single-pass trả về blank.
+     * Retry path: generate each field separately with the sentence model.
      */
-    private String generatePerFieldAndCombine(RuntimeHandle handle, ParaphraseModelInput input, int index) {
-        String stem = fallbackIfBlank(generate(handle.question(), input.stem(), index), input.stem());
-        String optionA = fallbackIfBlank(generate(handle.sentence(), input.optionA(), index), input.optionA());
-        String optionB = fallbackIfBlank(generate(handle.sentence(), input.optionB(), index), input.optionB());
-        String optionC = fallbackIfBlank(generate(handle.sentence(), input.optionC(), index), input.optionC());
-        String optionD = fallbackIfBlank(generate(handle.sentence(), input.optionD(), index), input.optionD());
-        return rawMcq(stem, optionA, optionB, optionC, optionD);
+    private ParaphrasedMcq paraphrasePerFieldVariant(
+            RuntimeHandle handle,
+            ParaphraseModelInput input,
+            int index,
+            boolean retry
+    ) {
+        String stem = generate(handle.question(),
+                promptBuilder.buildSingleField(input.stem(), input.changeStrength(), index, retry), index);
+        String optionA = generate(handle.sentence(),
+                promptBuilder.buildSingleField(input.optionA(), input.changeStrength(), index, retry), index);
+        String optionB = generate(handle.sentence(),
+                promptBuilder.buildSingleField(input.optionB(), input.changeStrength(), index, retry), index);
+        String optionC = generate(handle.sentence(),
+                promptBuilder.buildSingleField(input.optionC(), input.changeStrength(), index, retry), index);
+        String optionD = generate(handle.sentence(),
+                promptBuilder.buildSingleField(input.optionD(), input.changeStrength(), index, retry), index);
+        if (List.of(stem, optionA, optionB, optionC, optionD).stream().anyMatch(this::isBlank)) {
+            throw new ParaphraseModelException("VietQuill per-field trả về field rỗng");
+        }
+        return new ParaphrasedMcq(stem, optionA, optionB, optionC, optionD,
+                rawMcq(stem, optionA, optionB, optionC, optionD));
     }
 
     /**
@@ -207,6 +246,52 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     private String generate(Seq2SeqHandle handle, String prompt, int variantIndex) {
         EncoderState state = encodePrompt(handle, prompt);
         return decode(handle, state, variantIndex);
+    }
+
+    private boolean isAcceptable(
+            ParaphraseModelInput input,
+            ParaphrasedMcq candidate,
+            List<ParaphrasedMcq> existing
+    ) {
+        if (candidate == null || List.of(candidate.stem(), candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD())
+                .stream().anyMatch(this::isBlank)) {
+            return false;
+        }
+        List<String> source = List.of(input.stem(), input.optionA(), input.optionB(), input.optionC(), input.optionD());
+        List<String> generated = List.of(candidate.stem(), candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD());
+        for (int i = 0; i < source.size(); i++) {
+            if (normalizeForCompare(source.get(i)).equals(normalizeForCompare(generated.get(i)))) {
+                return false;
+            }
+        }
+        String candidateKey = generated.stream().map(this::normalizeForCompare).reduce("", (left, right) -> left + "|" + right);
+        return existing.stream().noneMatch(previous -> {
+            String previousKey = List.of(previous.stem(), previous.optionA(), previous.optionB(), previous.optionC(), previous.optionD())
+                    .stream().map(this::normalizeForCompare).reduce("", (left, right) -> left + "|" + right);
+            return previousKey.equals(candidateKey);
+        });
+    }
+
+    private String normalizeForCompare(String value) {
+        return safe(value).toLowerCase()
+                .replaceAll("[\\p{Punct}]", "")
+                .replaceAll("\\s+", "")
+                .trim();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private synchronized ExecutorService inferenceExecutor() {
+        if (inferenceExecutor == null || inferenceExecutor.isShutdown()) {
+            inferenceExecutor = Executors.newCachedThreadPool(runnable -> {
+                Thread thread = new Thread(runnable, "vietquill-inference");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return inferenceExecutor;
     }
 
     /**
@@ -680,10 +765,6 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             ));
         }
         return results;
-    }
-
-    private String fallbackIfBlank(String generated, String fallback) {
-        return generated == null || generated.isBlank() ? safe(fallback) : generated.trim();
     }
 
     private String rawMcq(String stem, String optionA, String optionB, String optionC, String optionD) {

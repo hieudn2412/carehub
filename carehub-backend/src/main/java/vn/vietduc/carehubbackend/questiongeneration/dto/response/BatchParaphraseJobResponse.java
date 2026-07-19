@@ -7,6 +7,7 @@ public record BatchParaphraseJobResponse(
         Integer succeededCount,
         Integer failedCount,
         List<ParaphraseJobResponse> jobs,
-        List<BatchParaphraseJobErrorResponse> errors
+        List<BatchParaphraseJobErrorResponse> errors,
+        Integer queuedCount
 ) {
 }

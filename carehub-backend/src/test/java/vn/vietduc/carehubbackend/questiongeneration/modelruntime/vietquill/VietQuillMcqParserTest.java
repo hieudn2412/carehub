@@ -74,19 +74,14 @@ class VietQuillMcqParserTest {
     }
 
     @Test
-    void heuristicFallbackHandlesMissingOptions() {
-        // Heuristic vẫn parse được dù thiếu option C, D
-        ParaphrasedMcq result = parser.parseFullMcq("""
+    void heuristicRejectsMissingOptions() {
+        assertThatThrownBy(() -> parser.parseFullMcq("""
                 Câu hỏi: Test stem
                 A. Option A text
                 B. Option B text
-                """);
-
-        assertThat(result.stem()).isEqualTo("Test stem");
-        assertThat(result.optionA()).isEqualTo("Option A text");
-        assertThat(result.optionB()).isEqualTo("Option B text");
-        assertThat(result.optionC()).isEqualTo("");
-        assertThat(result.optionD()).isEqualTo("");
+                """))
+                .isInstanceOf(ParaphraseModelException.class)
+                .hasMessageContaining("thiếu câu hỏi hoặc một trong các phương án");
     }
 
     @Test

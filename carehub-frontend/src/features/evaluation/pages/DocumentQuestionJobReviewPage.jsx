@@ -16,6 +16,7 @@ import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import {
   apiData,
   apiErrorMessage,
@@ -50,6 +51,7 @@ function DocumentQuestionJobReviewPage() {
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
   const [isBatching, setIsBatching] = useState(false)
+  const [categories, setCategories] = useState([])
 
   const loadJob = useCallback(async (options = {}) => {
     const silent = options?.silent === true
@@ -74,6 +76,18 @@ function DocumentQuestionJobReviewPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadJob()
   }, [loadJob])
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
+        setCategories(apiData(response, []))
+      } catch (error) {
+        // ignore
+      }
+    }
+    loadCategories()
+  }, [])
 
   useEffect(() => {
     if (!LIVE_JOB_STATUSES.has(jobDetail?.status)) {
@@ -203,9 +217,9 @@ function DocumentQuestionJobReviewPage() {
 
   async function saveEdit() {
     if (!editingCandidate || !editForm) return
-    const requiredFields = ['stem', 'optionA', 'optionB', 'optionC', 'optionD', 'sourceExcerpt']
+    const requiredFields = ['stem', 'optionA', 'optionB', 'optionC', 'optionD']
     if (requiredFields.some((field) => !editForm[field]?.trim())) {
-      showToast('Vui lòng nhập đầy đủ câu hỏi, 4 đáp án và trích dẫn nguồn.', 'warning')
+      showToast('Vui lòng nhập đầy đủ câu hỏi và 4 đáp án.', 'warning')
       return
     }
     setCandidateActionId(editingCandidate.id)
@@ -528,11 +542,14 @@ function DocumentQuestionJobReviewPage() {
               </label>
               <label className="qdoc-field">
                 <span>Chủ đề</span>
-                <input value={editForm.topic} onChange={(event) => setEditFormField('topic', event.target.value)} />
+                <select value={editForm.topic} onChange={(event) => setEditFormField('topic', event.target.value)}>
+                  <option value="">-- Chọn danh mục --</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>{category.name}</option>
+                  ))}
+                </select>
               </label>
-              <TextAreaField label="Giải thích" value={editForm.explanation} onChange={(value) => setEditFormField('explanation', value)} />
-              <TextAreaField label="Trích dẫn nguồn" value={editForm.sourceExcerpt} onChange={(value) => setEditFormField('sourceExcerpt', value)} />
-              <TextAreaField label="Ghi chú reviewer" value={editForm.reviewerNotes} onChange={(value) => setEditFormField('reviewerNotes', value)} />
+
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setEditingCandidate(null)} disabled={candidateActionId === editingCandidate.id}>

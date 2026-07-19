@@ -61,13 +61,17 @@ function ExamAssignmentFormPage() {
     const filtered = normalized
       ? users.filter((user) => (
         (user.employeeCode || '').toLowerCase().includes(normalized)
-        || (user.name || '').toLowerCase().includes(normalized)
+        || (user.fullName || user.name || '').toLowerCase().includes(normalized)
         || (user.departmentName || user.department?.name || '').toLowerCase().includes(normalized)
       ))
       : users
-    return form.departmentIds.length > 0
-      ? filtered.filter((user) => form.departmentIds.includes(Number(user.departmentId || user.department?.id)))
-      : filtered
+    if (form.departmentIds.length === 0) {
+      return filtered
+    }
+    return filtered.filter((user) => {
+      const userDeptId = user.departmentId || user.department?.id
+      return userDeptId && form.departmentIds.includes(Number(userDeptId))
+    })
   }, [keyword, users, form.departmentIds])
 
   function updateField(field, value) {
@@ -248,7 +252,7 @@ function ExamAssignmentFormPage() {
                       <label key={user.id} className="exp-target-item exp-target-item--checkbox">
                         <input type="checkbox" checked={form.userIds.includes(userId)} onChange={() => toggleUser(userId)} />
                         <strong>{user.employeeCode}</strong>
-                        <span>{user.name}</span>
+                        <span>{user.fullName || user.name}</span>
                         <small>{user.departmentName || user.department?.name || 'Chưa có phòng ban'}</small>
                       </label>
                     )

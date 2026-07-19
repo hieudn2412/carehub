@@ -23,10 +23,18 @@ class VietQuillParaphraseModelSmokeTest {
                 "VIETQUILL_MODEL_PATH",
                 Path.of("models", "ngwgsang", "vietquill-vit5-base-tsubaki").toString()
         ));
-        assumeTrue(Files.isRegularFile(modelPath.resolve("encoder_model.onnx")));
-        assumeTrue(Files.isRegularFile(modelPath.resolve("decoder_model.onnx")));
-        assumeTrue(Files.isRegularFile(modelPath.resolve("tokenizer.json")));
-        assumeTrue(Files.isRegularFile(modelPath.resolve("config.json")));
+        Path questionPath = Files.isRegularFile(modelPath.resolve("encoder_model.onnx"))
+                ? modelPath
+                : modelPath.resolve("question");
+        Path sentencePath = Files.isRegularFile(modelPath.resolve("sentence").resolve("encoder_model.onnx"))
+                ? modelPath.resolve("sentence")
+                : questionPath;
+        assumeTrue(Files.isRegularFile(questionPath.resolve("encoder_model.onnx")));
+        assumeTrue(Files.isRegularFile(questionPath.resolve("decoder_model.onnx")));
+        assumeTrue(Files.isRegularFile(questionPath.resolve("tokenizer.json")));
+        assumeTrue(Files.isRegularFile(questionPath.resolve("config.json")));
+        assumeTrue(Files.isRegularFile(sentencePath.resolve("encoder_model.onnx")));
+        assumeTrue(Files.isRegularFile(sentencePath.resolve("decoder_model.onnx")));
 
         AiParaphraseProperties properties = new AiParaphraseProperties();
         properties.setProvider("vietquill");
