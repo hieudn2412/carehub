@@ -143,6 +143,117 @@
   display: block;
 }
 
+.fbp-scoring-config {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 14px 24px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #cfe5df;
+  border-radius: 10px;
+  background: #f7fcfa;
+}
+
+.fbp-scoring-config strong,
+.fbp-scoring-config p,
+.fbp-scoring-config small {
+  display: block;
+}
+
+.fbp-scoring-config p {
+  margin: 5px 0 0;
+  color: var(--text-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.fbp-scoring-config > small {
+  grid-column: 1 / -1;
+  color: #0f6e56;
+  font-size: 12px;
+}
+
+.fbp-scoring-config__controls {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.fbp-scoring-config__controls label,
+.fbp-scoring-config__normal {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 132px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.fbp-scoring-config__input,
+.fbp-scoring-config__normal strong {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.fbp-scoring-config__input input {
+  width: 78px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 14px;
+}
+
+.fbp-scoring-config__input b {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.fbp-scoring-config__normal strong {
+  justify-content: center;
+  color: var(--navy);
+  font-size: 14px;
+}
+
+.fbp-question-share {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 170px;
+  padding: 9px 12px;
+  border: 1px solid #cfe5df;
+  border-radius: 9px;
+  background: #f7fcfa;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.fbp-question-share strong {
+  color: #0f6e56;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .fbp-scoring-config {
+    grid-template-columns: 1fr;
+  }
+
+  .fbp-scoring-config__controls {
+    flex-direction: column;
+  }
+
+  .fbp-scoring-config > small {
+    grid-column: auto;
+  }
+}
+
 .fbp-subject-setting strong {
   font-size: 14px;
   color: var(--text);

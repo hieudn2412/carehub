@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
@@ -59,6 +59,13 @@ const EMPLOYEE_CODE_SUBJECT_SELECTOR = {
   required: true,
   displayFields: ['employeeCode', 'fullName', 'position', 'department'],
   readOnly: true,
+}
+const DEFAULT_CRITICAL_WEIGHT_PERCENT = 60
+
+function normalizeCriticalWeightPercent(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return DEFAULT_CRITICAL_WEIGHT_PERCENT
+  return Math.min(100, Math.max(0, parsed))
 }
 
 function QuestionTypeSelect({ value, onChange }) {
@@ -267,6 +274,55 @@ function FormBuilderPage() {
   }
 
   const subjectLookupEnabled = Boolean(settings?.subjectSelector)
+  const criticalWeightPercent = normalizeCriticalWeightPercent(
+    settings?.scoring?.criticalWeightPercent,
+  )
+  const scoringSummary = useMemo(() => {
+    const questions = sections.flatMap((section) => (
+      (section.items || [])
+        .filter((item) => item.itemType === 'QUESTION' && item.question)
+        .map((item) => item.question)
+    ))
+    const scored = questions.filter((question) => (
+      SCORABLE_FIELD_TYPES.includes(question.fieldType) && !question.excludeFromScore
+    ))
+    const criticalCount = scored.filter((question) => question.critical).length
+    return {
+      criticalCount,
+      normalCount: scored.length - criticalCount,
+      scoredCount: scored.length,
+    }
+  }, [sections])
+
+  const handleCriticalWeightChange = (value) => {
+    const nextPercent = normalizeCriticalWeightPercent(value)
+    setSettings((currentSettings) => ({
+      ...(currentSettings || {}),
+      scoring: {
+        ...(currentSettings?.scoring || {}),
+        criticalWeightPercent: nextPercent,
+      },
+    }))
+    setDirty(true)
+  }
+
+  const getQuestionSharePercent = (question) => {
+    if (
+      !SCORABLE_FIELD_TYPES.includes(question.fieldType)
+      || question.excludeFromScore
+      || scoringSummary.scoredCount === 0
+    ) {
+      return 0
+    }
+
+    if (scoringSummary.criticalCount === 0 || scoringSummary.normalCount === 0) {
+      return 100 / scoringSummary.scoredCount
+    }
+
+    return question.critical
+      ? criticalWeightPercent / scoringSummary.criticalCount
+      : (100 - criticalWeightPercent) / scoringSummary.normalCount
+  }
 
   const handleSubjectLookupSettingChange = (enabled) => {
     setSettings((currentSettings) => buildSubjectSelectorSettings(currentSettings, enabled))
@@ -551,11 +607,12 @@ function FormBuilderPage() {
           cleanedItem.question = {
             ...q,
             code: q.code.trim().toUpperCase(),
+            required: true,
             excludeFromScore: isScorableField ? q.excludeFromScore : true,
             critical: isScorableField ? q.critical : false,
             weight: !isScorableField || q.excludeFromScore
               ? null
-              : (q.weight ? parseFloat(q.weight) : 1),
+              : 1,
             options: isChoiceField ? (q.options || []).map((opt, optIdx) => ({
               ...opt,
               displayOrder: optIdx,
@@ -579,7 +636,13 @@ function FormBuilderPage() {
     const payload = {
       title,
       description: description || null,
-      settings: settings || null,
+      settings: {
+        ...(settings || {}),
+        scoring: {
+          ...(settings?.scoring || {}),
+          criticalWeightPercent,
+        },
+      },
       sections: cleanedSections,
       lockVersion: lockVersion,
     }
@@ -772,6 +835,38 @@ function FormBuilderPage() {
                         </small>
                       </span>
                     </label>
+                    <div className="fbp-scoring-config">
+                      <div>
+                        <strong>Tỷ trọng nhóm câu hỏi</strong>
+                        <p>
+                          Câu trọng yếu và câu thường được chia đều trong từng nhóm. Khi không có đủ
+                          hai nhóm, toàn bộ câu tính điểm được chia đều 100%.
+                        </p>
+                      </div>
+                      <div className="fbp-scoring-config__controls">
+                        <label>
+                          <span>Nhóm trọng yếu</span>
+                          <span className="fbp-scoring-config__input">
+                            <input
+                              max="100"
+                              min="0"
+                              onChange={(event) => handleCriticalWeightChange(event.target.value)}
+                              type="number"
+                              value={criticalWeightPercent}
+                            />
+                            <b>%</b>
+                          </span>
+                        </label>
+                        <div className="fbp-scoring-config__normal">
+                          <span>Nhóm thường</span>
+                          <strong>{100 - criticalWeightPercent}%</strong>
+                        </div>
+                      </div>
+                      <small>
+                        {scoringSummary.criticalCount} câu trọng yếu · {scoringSummary.normalCount} câu thường ·{' '}
+                        {scoringSummary.scoredCount} câu đang tính điểm
+                      </small>
+                    </div>
                   </div>
 
                   {/* Sections list */}
@@ -846,8 +941,7 @@ function FormBuilderPage() {
                                   <small>{itemTypeLabel}</small>
                                 </span>
                                 <span className="fbp-item-summary__badges">
-                                  {item.question?.required && <span>Bắt buộc</span>}
-                                  {item.question?.critical && <span className="is-critical">Trọng yếu</span>}
+                                  {item.question?.critical && <span className="is-critical">★ Trọng yếu</span>}
                                   {item.question && !item.question.excludeFromScore && <span>Có tính điểm</span>}
                                 </span>
                                 <span className="fbp-item-summary__chevron" aria-hidden="true">
@@ -967,13 +1061,6 @@ function FormBuilderPage() {
                                           <p>Thiết lập cách câu hỏi ảnh hưởng tới biểu mẫu.</p>
                                         </div>
                                         <div className="fbp-rule-group" aria-label="Quy tắc câu hỏi">
-                                          <label className="fbp-checkbox-label">
-                                            <input
-                                              type="checkbox"
-                                              checked={item.question.required}
-                                              onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'required', e.target.checked)}
-                                            /> Bắt buộc
-                                          </label>
                                           <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ bảng kiểm">
                                             <input
                                               type="checkbox"
@@ -1033,16 +1120,9 @@ function FormBuilderPage() {
 
                                           {SCORABLE_FIELD_TYPES.includes(item.question.fieldType)
                                             && !item.question.excludeFromScore && (
-                                            <div className="fbp-form-field fbp-weight-field">
-                                              <label>Hệ số</label>
-                                              <input
-                                                type="number"
-                                                className="fbp-input"
-                                                value={item.question.weight || ''}
-                                                onChange={(e) => handleQuestionChange(secIdx, itemIdx, 'weight', e.target.value)}
-                                                min="0.1"
-                                                step="0.1"
-                                              />
+                                            <div className="fbp-question-share">
+                                              <span>Tỷ trọng tự động</span>
+                                              <strong>{getQuestionSharePercent(item.question).toFixed(2)}%</strong>
                                             </div>
                                           )}
                                         </div>

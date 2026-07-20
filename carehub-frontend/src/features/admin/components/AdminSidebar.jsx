@@ -182,7 +182,8 @@ const navSections = [
     label: 'BÁO CÁO & THỐNG KÊ',
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
-      { icon: <LineChartOutlined />, label: 'Dashboard chất lượng', path: '/admin/reports/quality-dashboard' },
+      { icon: <LineChartOutlined />, label: 'Dashboard tuân thủ', path: '/admin/reports/quality-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Dashboard bảng kiểm', path: '/admin/reports/checklist-dashboard' },
       { icon: <DownloadOutlined />, label: 'Xuất báo cáo đào tạo', path: '/admin/reports/export-training' },
       { icon: <DownloadOutlined />, label: 'Xuất báo cáo chất lượng', path: '/admin/reports/export-quality' },
     ],

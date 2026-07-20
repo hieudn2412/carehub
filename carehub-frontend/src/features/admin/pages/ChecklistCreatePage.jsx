@@ -217,6 +217,9 @@ function clearPendingDraft() {
 function buildVersionSettings(enableEmployeeCodeLookup) {
   return {
     source: 'manual-simple-builder',
+    scoring: {
+      criticalWeightPercent: 60,
+    },
     ...(enableEmployeeCodeLookup
       ? {
           subjectSelector: EMPLOYEE_CODE_SUBJECT_SELECTOR,

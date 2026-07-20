@@ -24,6 +24,12 @@ function hasAnswerValue(value) {
   return value !== undefined && value !== null && String(value).trim() !== ''
 }
 
+function normalizeWeightPercent(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 60
+  return Math.min(100, Math.max(0, parsed))
+}
+
 function getChecklistDetailError(error) {
   const statusCode = error?.response?.status
 
@@ -107,6 +113,30 @@ function ManagerChecklistEvaluationPage() {
         .map((item) => item.question),
     )
   }, [sections])
+
+  const scoringSummary = useMemo(() => {
+    const scored = questions.filter((question) => !question.excludeFromScore)
+    const criticalCount = scored.filter((question) => question.critical).length
+    return {
+      criticalCount,
+      normalCount: scored.length - criticalCount,
+      scoredCount: scored.length,
+    }
+  }, [questions])
+
+  const getQuestionWeightPercent = (question) => {
+    if (question.excludeFromScore || scoringSummary.scoredCount === 0) return 0
+    if (scoringSummary.criticalCount === 0 || scoringSummary.normalCount === 0) {
+      return 100 / scoringSummary.scoredCount
+    }
+
+    const criticalShare = normalizeWeightPercent(
+      assignedForm?.version?.settings?.scoring?.criticalWeightPercent,
+    )
+    return question.critical
+      ? criticalShare / scoringSummary.criticalCount
+      : (100 - criticalShare) / scoringSummary.normalCount
+  }
 
   const updateAnswer = (questionKey, value) => {
     setAnswers((current) => ({
@@ -228,7 +258,7 @@ function ManagerChecklistEvaluationPage() {
     }
 
     const missingRequired = questions.filter((question) =>
-      question.required && !hasAnswerValue(answers[question.questionKey]),
+      !hasAnswerValue(answers[question.questionKey]),
     )
 
     if (!isDraft && missingRequired.length > 0) {
@@ -577,10 +607,14 @@ function ManagerChecklistEvaluationPage() {
                         <div key={question.questionKey} className="mgr-eval-question">
                           <div className="mgr-eval-question-text">
                             {question.title}
-                            {question.required && <span style={{ color: '#ef4444' }}> *</span>}
                             {question.critical && (
                               <span className="mgr-badge mgr-badge--red" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
-                                Trọng yếu
+                                ★ Trọng yếu
+                              </span>
+                            )}
+                            {!question.excludeFromScore && (
+                              <span className="mgr-badge mgr-badge--blue" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
+                                {getQuestionWeightPercent(question).toFixed(2)}%
                               </span>
                             )}
                           </div>

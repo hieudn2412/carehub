@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
-import { trainingApi } from '../../training/api/trainingApi.js'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 
@@ -66,7 +65,9 @@ export function useDashboard() {
         const avgScore = gradedAttempts.length > 0
           ? Math.round(gradedAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / gradedAttempts.length)
           : 0
-        const totalExamsDone = attemptList.length
+        const totalExamsDone = gradedAttempts.length
+        const passedExams = gradedAttempts.filter(a => a.passed === true).length
+        const failedExams = gradedAttempts.filter(a => a.passed === false).length
 
         // Parse notifications → activities
         const notifications = notifRes.data?.data?.content || notifRes.data?.data || []
@@ -91,6 +92,9 @@ export function useDashboard() {
             pendingExams: openAssignments.length,
             avgScore,
             totalExamsDone,
+            passedExams,
+            failedExams,
+            examPassRate: gradedAttempts.length ? passedExams * 100 / gradedAttempts.length : 0,
           },
           upcomingExams,
           activities,

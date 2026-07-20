@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { myExamApi } from '../../evaluation/api/myExamApi.js'
 
 function authHeaders() {
   const token = tokenStorage.getAccessToken()
@@ -37,6 +38,7 @@ function mapNotification(notification) {
 export function useNotifications() {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingExamCount, setPendingExamCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -44,12 +46,24 @@ export function useNotifications() {
     setLoading(true)
     try {
       const headers = authHeaders()
-      const [listResponse, countResponse] = await Promise.all([
+      const [listResponse, countResponse, assignmentResponse, attemptResponse] = await Promise.all([
         httpClient.get('/me/notifications', { headers, params: { page: 0, size: 8 } }),
         httpClient.get('/me/notifications/unread-count', { headers }),
+        myExamApi.listAssignments().catch(() => ({ data: { data: [] } })),
+        myExamApi.listAttempts().catch(() => ({ data: { data: [] } })),
       ])
       setNotifications((listResponse.data?.data?.content || []).map(mapNotification))
       setUnreadCount(countResponse.data?.data?.unreadCount || 0)
+      const assignments = assignmentResponse.data?.data || []
+      const attempts = attemptResponse.data?.data || []
+      const completedAssignmentIds = new Set(
+        (Array.isArray(attempts) ? attempts : [])
+          .filter((attempt) => ['SUBMITTED', 'GRADED'].includes(attempt.status))
+          .map((attempt) => String(attempt.assignmentId)),
+      )
+      setPendingExamCount((Array.isArray(assignments) ? assignments : []).filter((assignment) => (
+        assignment.status === 'OPEN' && !completedAssignmentIds.has(String(assignment.id))
+      )).length)
       setError(null)
     } catch (requestError) {
       console.error('Không thể tải thông báo', requestError)
@@ -93,5 +107,5 @@ export function useNotifications() {
     }
   }
 
-  return { notifications, unreadCount, loading, error, markAllAsRead, markAsRead, reload: load }
+  return { notifications, unreadCount, pendingExamCount, loading, error, markAllAsRead, markAsRead, reload: load }
 }

@@ -5,6 +5,7 @@ import {
   WarningOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
+  FormOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../hooks/useNotifications'
 import { staffApi } from '../api/staffApi'
@@ -89,6 +90,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
   const {
     notifications,
     unreadCount,
+    pendingExamCount,
     markAllAsRead,
     markAsRead,
   } = useNotifications()
@@ -184,6 +186,15 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
       )}
 
       <div className="dashboard-header__right">
+        <Link
+          to="/staff/exam/take"
+          className="dashboard-header__exam-notify"
+          title={`${pendingExamCount} bài kiểm tra chưa làm`}
+          aria-label={`${pendingExamCount} bài kiểm tra chưa làm`}
+        >
+          <FormOutlined />
+          {pendingExamCount > 0 && <span>{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
+        </Link>
         <div className="dashboard-header__notify-container">
           <div
             ref={notifyRef}

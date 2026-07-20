@@ -1,176 +1,103 @@
-import { useState, useEffect } from 'react'
-import Header from '../components/Header'
-import Sidebar from '../components/sidebar'
-import { trainingApi } from '../../training/api/trainingApi'
+import { useEffect, useState } from 'react'
 import {
-  ClockCircleOutlined,
   CheckCircleOutlined,
-  LoadingOutlined
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
+import Header from '../components/Header.jsx'
+import Sidebar from '../components/sidebar.jsx'
+import { trainingApi } from '../../training/api/trainingApi.js'
 import '../styles/TrainingStatusScreen.css'
 
-function TrainingStatusScreen() {
-  const [summary, setSummary] = useState({
-    totalHours: 0,
-    requiredHours: 120,
-    remainingHours: 120,
-    completionPercent: 0,
-    configured: false,
-  })
+const TARGET_HOURS = 120
 
-  const [yearsData, setYearsData] = useState([])
+export default function TrainingStatusScreen() {
+  const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setLoading(true)
+    let cancelled = false
     trainingApi.getMyTrainingStatus()
-      .then(res => {
-        const statusData = res.data?.data
-        if (statusData) {
-          setSummary({
-            totalHours: statusData.submittedHours || 0,
-            requiredHours: statusData.requiredHours ?? 0,
-            remainingHours: statusData.remainingHours || 0,
-            completionPercent: statusData.progressPercentage ? Math.round(statusData.progressPercentage) : 0,
-            configured: statusData.status !== 'NOT_CONFIGURED',
-          })
-
-          const yearlyList = statusData.yearlyHours || []
-          
-          // Target hours mapped to match mock goals for visual authenticity
-          const yearlyTargets = { 2022: 28, 2023: 30, 2024: 30, 2025: 30, 2026: 30 }
-
-          const updatedYears = yearlyList.map(y => {
-            const target = yearlyTargets[y.year] || 30
-            const hrs = y.submittedHours || 0
-            return {
-              year: y.year,
-              hours: hrs,
-              target: target,
-              passed: hrs >= target,
-            }
-          }).sort((a, b) => a.year - b.year)
-
-          setYearsData(updatedYears)
-        }
+      .then((response) => {
+        if (!cancelled) setStatus(response?.data?.data || null)
       })
-      .catch(err => {
-        console.error("Lỗi khi tải trạng thái đào tạo từ API status/me:", err)
+      .catch(() => {
+        if (!cancelled) setError('Không thể tải tiến độ giờ đào tạo cá nhân từ máy chủ.')
       })
       .finally(() => {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       })
+    return () => { cancelled = true }
   }, [])
 
+  const configured = status && status.status !== 'NOT_CONFIGURED'
+  const completedHours = configured ? Number(status.submittedHours) || 0 : 0
+  const missingHours = Math.max(0, TARGET_HOURS - completedHours)
+  const completed = configured && completedHours >= TARGET_HOURS
+  const progress = Math.max(0, Math.min(100, completedHours * 100 / TARGET_HOURS))
+  const tone = completed ? 'success' : 'danger'
+
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout training-status-page">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header title="Trạng thái đào tạo" />
+        <Header title="Tiến độ giờ đào tạo" />
         <div className="dashboard-layout__body">
-        <div className="ts-page">
-          <p className="ts-page__title">Trạng thái đào tạo</p>
-          <p className="ts-page__sub">Tổng quan về việc tuân thủ giờ đào tạo · Chu kỳ 5 năm</p>
-
-          {loading ? (
-            <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
-              <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin trạng thái...
-            </div>
-          ) : !summary.configured ? (
-            <div className="ts-not-configured" role="status">
-              <strong>Phòng ban của bạn không áp dụng yêu cầu giờ đào tạo.</strong>
-              <span>Bạn vẫn có thể khai báo và lưu hồ sơ đào tạo, nhưng hệ thống không đánh giá thiếu giờ.</span>
-            </div>
-          ) : (
-            <>
-              <div className="ts-stat-cards">
-                {/* Thẻ 1: Đỏ */}
-                <div className="ts-stat-card ts-stat-card--red">
-                  <span className="ts-stat-card__icon ts-stat-card__icon--red">
-                    <ClockCircleOutlined />
-                  </span>
-                  <div>
-                    <p className="ts-stat-card__label ts-stat-card__label--red">Tổng số giờ</p>
-                    <p className="ts-stat-card__value">
-                      {summary.totalHours} <span>/ {summary.requiredHours}h</span>
-                    </p>
-                    <p className="ts-stat-card__note ts-stat-card__note--red">
-                      {summary.remainingHours > 0 ? 'Chưa đạt yêu cầu' : 'Đã đạt yêu cầu'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Thẻ 2: Vàng */}
-                <div className="ts-stat-card ts-stat-card--amber">
-                  <span className="ts-stat-card__icon ts-stat-card__icon--amber">
-                    <ClockCircleOutlined />
-                  </span>
-                  <div>
-                    <p className="ts-stat-card__label ts-stat-card__label--amber">Số giờ còn lại</p>
-                    <p className="ts-stat-card__value">{summary.remainingHours}h</p>
-                    <p className="ts-stat-card__note ts-stat-card__note--amber">
-                      {summary.remainingHours > 0 ? 'Để đạt yêu cầu' : 'Đã đủ số giờ'}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Thẻ 3: Xanh lá */}
-                <div className="ts-stat-card ts-stat-card--green">
-                  <span className="ts-stat-card__icon ts-stat-card__icon--green">
-                    <CheckCircleOutlined />
-                  </span>
-                  <div>
-                    <p className="ts-stat-card__label ts-stat-card__label--green">Hoàn thành</p>
-                    <p className="ts-stat-card__value">{summary.completionPercent}%</p>
-                  </div>
-                </div>
+          <main className="ts-page">
+            <header className="ts-heading">
+              <div>
+                <span>ĐÀO TẠO CỦA TÔI</span>
+                <h1>Tiến độ hoàn thành 120 giờ</h1>
+                <p>Dashboard chỉ hiển thị số liệu tổng quan. Hồ sơ chi tiết được quản lý tại màn Giờ đào tạo.</p>
               </div>
+              {configured && (
+                <strong className={`ts-status ts-status--${tone}`}>
+                  {completed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+                  {completed ? 'Đã hoàn thành' : 'Chưa đủ giờ'}
+                </strong>
+              )}
+            </header>
 
-              <p className="ts-section-title">Giờ theo năm</p>
-
-              <div className="ts-year-list">
-                {yearsData.map(({ year, hours, target, passed }) => {
-                  const pct = Math.min((hours / target) * 100, 100)
-                  
-                  // Custom bar color & status badge
-                  let barColor = '#2563eb' // Xanh lam
-                  let badgeClass = 'ts-badge--fail-amber'
-                  let badgeLabel = 'Chưa đạt'
-
-                  if (passed) {
-                    barColor = '#1aaa84' // Xanh lá
-                    badgeClass = 'ts-badge--pass'
-                    badgeLabel = 'Đạt'
-                  } else if (hours < 10) {
-                    barColor = '#e53935' // Đỏ
-                    badgeClass = 'ts-badge--fail-red'
-                    badgeLabel = 'Chưa đạt'
-                  }
-
-                  return (
-                    <div key={year} className="ts-year-row">
-                      <span className="ts-year-row__label">{year}</span>
-                      <div className="ts-year-row__track">
-                        <div
-                          className="ts-year-row__bar"
-                          style={{ width: `${pct}%`, background: barColor }}
-                        />
-                      </div>
-                      <span className="ts-year-row__hours">{hours}h</span>
-                      <span className={`ts-badge ${badgeClass}`}>
-                        {badgeLabel}
-                      </span>
-                    </div>
-                  )
-                })}
+            {loading ? (
+              <div className="ts-loading"><LoadingOutlined spin /> Đang tải tiến độ đào tạo...</div>
+            ) : error ? (
+              <div className="ts-error"><ExclamationCircleOutlined /> {error}</div>
+            ) : !configured ? (
+              <div className="ts-not-configured" role="status">
+                <strong>Backend chưa trả cấu hình giờ đào tạo áp dụng cho tài khoản này.</strong>
+                <span>Cần cấu hình yêu cầu đào tạo trước khi hệ thống có thể tính tiến độ 120 giờ.</span>
               </div>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <section className="ts-stat-cards">
+                  <article className={`ts-stat-card ts-stat-card--${tone}`}>
+                    <span className="ts-stat-card__icon"><ClockCircleOutlined /></span>
+                    <div><p>Đã hoàn thành</p><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>Thời lượng đã được hệ thống ghi nhận</small></div>
+                  </article>
+                  <article className="ts-stat-card ts-stat-card--neutral">
+                    <span className="ts-stat-card__icon"><CheckCircleOutlined /></span>
+                    <div><p>Mục tiêu</p><strong>{TARGET_HOURS} giờ</strong><small>Chuẩn đào tạo cần hoàn thành</small></div>
+                  </article>
+                  <article className={`ts-stat-card ts-stat-card--${tone}`}>
+                    <span className="ts-stat-card__icon"><ExclamationCircleOutlined /></span>
+                    <div><p>Còn thiếu</p><strong>{missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>{completed ? 'Bạn đã hoàn thành mục tiêu' : 'Cần tiếp tục bổ sung giờ đào tạo'}</small></div>
+                  </article>
+                </section>
+
+                <section className={`ts-progress-card ts-progress-card--${tone}`}>
+                  <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{TARGET_HOURS} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
+                  <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="120" aria-valuenow={Math.min(TARGET_HOURS, completedHours)}>
+                    <span style={{ width: `${progress}%` }} />
+                  </div>
+                  <p>{completed ? 'Đã đạt yêu cầu 120 giờ đào tạo.' : `Chưa đủ yêu cầu. Bạn còn thiếu ${missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ.`}</p>
+                </section>
+              </>
+            )}
+          </main>
         </div>
       </div>
     </div>
   )
 }
-
-export default TrainingStatusScreen

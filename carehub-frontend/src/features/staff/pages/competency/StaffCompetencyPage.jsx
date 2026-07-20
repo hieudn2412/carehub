@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
-import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
@@ -23,11 +23,6 @@ const COMPETENCY_COLORS = {
   BASIC: ['#3b82f6', '#eff6ff'],
   PROFICIENT: ['#10b981', '#ecfdf5'],
   ADVANCED: ['#8b5cf6', '#f5f3ff'],
-}
-
-function getLevelBadgeStyle(level) {
-  const [fg] = COMPETENCY_COLORS[level] || ['#6b7280']
-  return { color: fg }
 }
 
 function StaffCompetencyPage() {
@@ -71,7 +66,8 @@ function StaffCompetencyPage() {
   }, [fromDate, toDate, showToast])
 
   useEffect(() => {
-    loadAllData()
+    const timer = window.setTimeout(loadAllData, 0)
+    return () => window.clearTimeout(timer)
   }, [loadAllData])
 
   const breadcrumbs = [
@@ -130,6 +126,8 @@ function StaffCompetencyPage() {
                 <button className="sc-filter__btn" onClick={loadAllData}>Áp dụng</button>
               </div>
 
+              <PersonalCompetencyOverview data={summaryData} />
+
               <div className="sc-tabs">
                 {tabs.map(tab => (
                   <button
@@ -153,6 +151,50 @@ function StaffCompetencyPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function PersonalCompetencyOverview({ data }) {
+  const hasSummary = data && [data.knowledgeAverage, data.skillAverage, data.overallScore]
+    .some((value) => value !== null && value !== undefined)
+
+  return (
+    <section className="sc-personal-overview" aria-labelledby="personal-competency-title">
+      <div className="sc-personal-overview__heading">
+        <div>
+          <span>NĂNG LỰC CỦA TÔI</span>
+          <h3 id="personal-competency-title">Kết quả tuân thủ quy trình</h3>
+        </div>
+        <span className={`sc-personal-status ${data?.isPassed ? 'sc-personal-status--passed' : ''}`}>
+          {hasSummary ? (data?.isPassed ? 'Đạt' : 'Chưa đạt') : 'Chưa có kết quả'}
+        </span>
+      </div>
+
+      <div className="sc-personal-metrics">
+        <PersonalMetric icon={<BookOutlined />} label="Điểm lý thuyết" value={data?.knowledgeAverage} />
+        <PersonalMetric icon={<ExperimentOutlined />} label="Điểm thực hành" value={data?.skillAverage} />
+        <PersonalMetric icon={<TrophyOutlined />} label="Điểm tổng" value={data?.overallScore} />
+        <PersonalMetric icon={<PieChartOutlined />} label="Mục tiêu của khoa" value={null} />
+      </div>
+
+      <div className="sc-personal-api-note">
+        <WarningFilled />
+        <span>Backend chưa trả về mục tiêu riêng của khoa nên chưa thể so sánh và cảnh báo chênh lệch cá nhân.</span>
+      </div>
+    </section>
+  )
+}
+
+function PersonalMetric({ icon, label, value }) {
+  const number = value === null || value === undefined || value === '' ? null : Number(value)
+  return (
+    <article className="sc-personal-metric">
+      <span className="sc-personal-metric__icon">{icon}</span>
+      <div>
+        <span>{label}</span>
+        <strong>{Number.isFinite(number) ? `${formatNumber(number)} điểm` : '—'}</strong>
+      </div>
+    </article>
   )
 }
 

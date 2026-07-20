@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   DeleteOutlined,
   DownOutlined,
+  EditOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
   ImportOutlined,
@@ -32,6 +33,25 @@ const STATUS_LABELS = {
 }
 const RETIRED_STATUS = 'RETIRED'
 const RETIRED_FORMS_CACHE_KEY = 'carehub.admin.retiredForms'
+
+function normalizeReferenceList(data) {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.content)) return data.content
+  return []
+}
+
+function formatChecklistDate(value) {
+  if (!value) return 'Chưa có'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Chưa có'
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
 
 function getEffectiveStatus(form) {
   return form?.deleted || form?.isDeleted ? RETIRED_STATUS : form?.status
@@ -83,7 +103,14 @@ function rememberRetiredForm(form) {
   return retiredForm
 }
 
-function matchesRetiredFilters(form, { keyword }) {
+function matchesRetiredFilters(form, { departmentId, keyword }) {
+  if (
+    departmentId !== 'all'
+    && String(form.ownerDepartment?.id || '') !== String(departmentId)
+  ) {
+    return false
+  }
+
   const normalizedKeyword = keyword.trim().toLowerCase()
   if (!normalizedKeyword) {
     return true
@@ -177,6 +204,9 @@ function FormListPage() {
   const [keyword, setKeyword] = useState('')
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('all')
+  const [departmentId, setDepartmentId] = useState('all')
+  const [departments, setDepartments] = useState([])
+  const [formStats, setFormStats] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false)
@@ -187,7 +217,24 @@ function FormListPage() {
   const [assignableForms, setAssignableForms] = useState([])
   const [selectedManagerId, setSelectedManagerId] = useState('')
   const [selectedFormVersionIds, setSelectedFormVersionIds] = useState([])
+  const [assignmentValidFrom, setAssignmentValidFrom] = useState('')
   const [assignmentValidUntil, setAssignmentValidUntil] = useState('')
+
+  useEffect(() => {
+    let active = true
+
+    adminApi.getDepartments()
+      .then((response) => {
+        if (active) setDepartments(normalizeReferenceList(response.data?.data))
+      })
+      .catch(() => {
+        if (active) setDepartments([])
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const normalizedKeyword = keyword.trim()
@@ -214,6 +261,7 @@ function FormListPage() {
       sort: 'updatedAt,desc',
       keyword: debouncedKeyword || undefined,
       status: status !== 'all' ? status : undefined,
+      ownerDepartmentId: departmentId !== 'all' ? Number(departmentId) : undefined,
       includeDeleted: status === RETIRED_STATUS ? true : undefined,
     }
 
@@ -232,6 +280,7 @@ function FormListPage() {
         const content = pageData.content
         const nextForms = status === RETIRED_STATUS
           ? mergeCachedRetiredForms(content, {
+            departmentId,
             keyword: debouncedKeyword,
           })
           : content
@@ -244,12 +293,49 @@ function FormListPage() {
         }
 
         setForms(nextForms)
+        setFormStats({})
         setTotalElements(status === RETIRED_STATUS
           ? Math.max(serverTotalElements, nextForms.length)
           : serverTotalElements)
         setTotalPages(status === RETIRED_STATUS && nextForms.length > 0
           ? Math.max(nextTotalPages, 1)
           : nextTotalPages)
+        setLoading(false)
+
+        const activeForms = nextForms.filter((form) => getEffectiveStatus(form) !== RETIRED_STATUS)
+        const [performanceResult, ...assignmentResults] = await Promise.allSettled([
+          adminApi.getDashboardFormPerformance({ page: 0, size: 100 }),
+          ...activeForms.map((form) => adminApi.getFormAssignmentsByForm(form.id, {
+            page: 0,
+            size: 1,
+            status: 'ACTIVE',
+          })),
+        ])
+
+        if (ignoreResponse) return
+
+        const nextStats = Object.fromEntries(nextForms.map((form) => [form.id, {
+          responseCount: 0,
+        }]))
+        if (performanceResult.status === 'fulfilled') {
+          const performanceItems = performanceResult.value.data?.data?.content || []
+          performanceItems.forEach((item) => {
+            nextStats[item.formId] = {
+              ...nextStats[item.formId],
+              responseCount: Number(item.submittedCount || item.responseCount || 0),
+            }
+          })
+        }
+
+        assignmentResults.forEach((result, index) => {
+          if (result.status !== 'fulfilled') return
+          const form = activeForms[index]
+          nextStats[form.id] = {
+            ...nextStats[form.id],
+            activeAssignmentCount: Number(result.value.data?.data?.totalElements || 0),
+          }
+        })
+        setFormStats(nextStats)
       } catch (error) {
         if (ignoreResponse) {
           return
@@ -271,13 +357,13 @@ function FormListPage() {
     return () => {
       ignoreResponse = true
     }
-  }, [debouncedKeyword, page, refreshKey, status])
+  }, [debouncedKeyword, departmentId, page, refreshKey, status])
 
   const visiblePages = useMemo(
     () => getVisiblePages(page, totalPages),
     [page, totalPages],
   )
-  const hasFilters = Boolean(keyword || status !== 'all')
+  const hasFilters = Boolean(keyword || status !== 'all' || departmentId !== 'all')
   const emptyTitle = status === RETIRED_STATUS
     ? 'Chưa có checklist đã ngừng'
     : hasFilters
@@ -316,6 +402,7 @@ function FormListPage() {
     setKeyword('')
     setDebouncedKeyword('')
     setStatus('all')
+    setDepartmentId('all')
     setPage(1)
   }
 
@@ -414,6 +501,7 @@ function FormListPage() {
       setAssignableForms(publishedForms)
       setSelectedManagerId(managerContent[0]?.id ? String(managerContent[0].id) : '')
       setSelectedFormVersionIds([])
+      setAssignmentValidFrom('')
       setAssignmentValidUntil('')
     } catch (error) {
       if (error.message === 'MANAGER_ROLE_NOT_FOUND') {
@@ -474,10 +562,22 @@ function FormListPage() {
       return
     }
 
+    if (
+      assignmentValidFrom
+      && assignmentValidUntil
+      && new Date(assignmentValidFrom) >= new Date(assignmentValidUntil)
+    ) {
+      setAssignmentError('Thời gian kết thúc phải sau thời gian bắt đầu.')
+      return
+    }
+
     try {
       setAssignmentSubmitting(true)
       await adminApi.createFormAssignment({
         managerId: Number(selectedManagerId),
+        validFrom: assignmentValidFrom
+          ? new Date(assignmentValidFrom).toISOString()
+          : undefined,
         validUntil: assignmentValidUntil
           ? new Date(assignmentValidUntil).toISOString()
           : undefined,
@@ -650,6 +750,27 @@ function FormListPage() {
                     </select>
                   </label>
 
+                  <label className="flp-filter-group">
+                    <span>Khoa/phòng</span>
+                    <select
+                      className="flp-select"
+                      onChange={(event) => {
+                        setErrorMessage('')
+                        setLoading(true)
+                        setDepartmentId(event.target.value)
+                        setPage(1)
+                      }}
+                      value={departmentId}
+                    >
+                      <option value="all">Tất cả khoa/phòng</option>
+                      {departments.map((department) => (
+                        <option key={department.id} value={department.id}>
+                          {department.name || department.code}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
                   {hasFilters && (
                     <button className="flp-clear-filters" onClick={clearFilters} type="button">
                       Xóa bộ lọc
@@ -663,9 +784,11 @@ function FormListPage() {
                   <table className="flp-table">
                     <thead>
                       <tr>
-                        <th>Mã biểu mẫu</th>
-                        <th>Tiêu đề biểu mẫu</th>
+                        <th>Tên bảng kiểm</th>
                         <th>Phiên bản hiện tại</th>
+                        <th>Khởi tạo / cập nhật</th>
+                        <th>Người được giao</th>
+                        <th>Lượt đánh giá</th>
                         <th>Điểm sàn</th>
                         <th>Trạng thái</th>
                         <th className="flp-table__actions-heading">Hành động</th>
@@ -674,13 +797,13 @@ function FormListPage() {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td className="flp-table-empty" colSpan="6">
+                          <td className="flp-table-empty" colSpan="8">
                             <LoadingOutlined spin /> Đang tải danh sách checklist...
                           </td>
                         </tr>
                       ) : forms.length === 0 ? (
                         <tr>
-                          <td className="flp-table-empty" colSpan="6">
+                          <td className="flp-table-empty" colSpan="8">
                             <strong>{emptyTitle}</strong>
                             <span>{emptyDescription}</span>
                             {hasFilters && (
@@ -693,14 +816,6 @@ function FormListPage() {
                       ) : (
                         forms.map((form) => (
                           <tr key={form.id}>
-                            <td>
-                              <span
-                                className="flp-form-code"
-                                title={`Mã hệ thống: ${form.code}`}
-                              >
-                                {getChecklistDisplayCode(form.code)}
-                              </span>
-                            </td>
                             <td>
                               <div className="flp-form-title-wrapper">
                                 <span className="flp-form-title">{form.title}</span>
@@ -718,6 +833,24 @@ function FormListPage() {
                                 <span className="flp-text-muted">Chưa có</span>
                               )}
                             </td>
+                            <td>
+                              <span className="flp-date-stack">
+                                <span>Tạo: {formatChecklistDate(form.createdAt)}</span>
+                                <small>Cập nhật: {formatChecklistDate(form.updatedAt)}</small>
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                className="flp-stat-link"
+                                onClick={() => navigate(`/admin/quality/checklists/${form.id}/assignments`)}
+                                title={`Quản lý người được giao ${form.title}`}
+                                type="button"
+                              >
+                                <strong>{formStats[form.id]?.activeAssignmentCount ?? '—'}</strong>
+                                <span>Quản lý</span>
+                              </button>
+                            </td>
+                            <td>{formStats[form.id]?.responseCount ?? '—'}</td>
                             <td>
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
@@ -746,6 +879,16 @@ function FormListPage() {
                                 >
                                   <EyeOutlined /> Chi tiết
                                 </button>
+                                {getEffectiveStatus(form) !== 'RETIRED' && (
+                                  <button
+                                    className="flp-btn-action flp-btn-edit"
+                                    onClick={() => navigate(`/admin/quality/checklists/${form.id}/edit`)}
+                                    title="Quản lý phiên bản và chỉnh sửa"
+                                    type="button"
+                                  >
+                                    <EditOutlined /> Sửa / phiên bản
+                                  </button>
+                                )}
                                 {getEffectiveStatus(form) !== 'RETIRED' && (
                                   <button
                                     aria-label={`Ngừng hoạt động ${form.title}`}
@@ -883,6 +1026,17 @@ function FormListPage() {
                       ))
                     )}
                   </select>
+                </label>
+
+                <label className="flp-assignment-field">
+                  <span>Hiệu lực từ</span>
+                  <input
+                    disabled={assignmentSubmitting}
+                    onChange={(event) => setAssignmentValidFrom(event.target.value)}
+                    type="datetime-local"
+                    value={assignmentValidFrom}
+                  />
+                  <small>Bỏ trống để phân quyền có hiệu lực ngay.</small>
                 </label>
 
                 <label className="flp-assignment-field">
