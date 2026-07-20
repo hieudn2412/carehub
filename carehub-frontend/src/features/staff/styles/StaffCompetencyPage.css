@@ -82,6 +82,99 @@
   padding-bottom: 0;
 }
 
+.sc-personal-overview {
+  margin-bottom: 24px;
+  padding: 20px;
+  border: 1px solid #d8e4eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.sc-personal-overview__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.sc-personal-overview__heading > div > span {
+  color: #087f6d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+
+.sc-personal-overview__heading h3 {
+  margin: 5px 0 0;
+  color: #172033;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sc-personal-status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #fff0f1;
+  color: #c93442;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sc-personal-status--passed {
+  background: #e9f9f3;
+  color: #087f62;
+}
+
+.sc-personal-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sc-personal-metric {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.sc-personal-metric__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 7px;
+  background: #e9f7f4;
+  color: #087f6d;
+  font-size: 17px;
+}
+
+.sc-personal-metric > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sc-personal-metric > div span { color: #66758a; font-size: 12px; }
+.sc-personal-metric strong { color: #172033; font-size: 18px; font-weight: 600; }
+.sc-personal-api-note { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 10px 12px; border-radius: 6px; background: #fff8e8; color: #96630a; font-size: 13px; }
+
+@media (max-width: 980px) {
+  .sc-personal-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .sc-personal-overview__heading { flex-direction: column; }
+  .sc-personal-metrics { grid-template-columns: 1fr; }
+}
+
 .sc-tab {
   display: flex;
   align-items: center;

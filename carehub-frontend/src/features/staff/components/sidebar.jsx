@@ -60,6 +60,10 @@ function Sidebar() {
     navSections.push({
       label: 'Quản lý khoa',
       items: [
+        { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
+        { icon: <TrophyOutlined />, label: 'Dashboard tuân thủ', path: '/manager/reports/quality-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Dashboard bảng kiểm', path: '/manager/reports/checklist-dashboard' },
+        { icon: <FileDoneOutlined />, label: 'Dashboard bài kiểm tra', path: '/manager/reports/exam-dashboard' },
         { icon: <TeamOutlined />, label: 'Nhân sự & Giờ đào tạo', path: '/manager/employees' },
         { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
@@ -82,7 +86,7 @@ function Sidebar() {
     {
       label: 'Năng lực của tôi',
       items: [
-        { icon: <TrophyOutlined />, label: 'Năng lực', path: '/staff/competency' },
+        { icon: <TrophyOutlined />, label: 'Năng lực của tôi', path: '/staff/competency' },
       ],
     },
     {

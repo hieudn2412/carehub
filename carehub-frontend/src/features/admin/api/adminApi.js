@@ -380,6 +380,13 @@ export const adminApi = {
   },
 
   // Dashboard
+  getDashboardOverview(params) {
+    return httpClient.get('/dashboard/overview', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getDashboardFormSummary(params) {
     return httpClient.get('/dashboard/forms/summary', {
       headers: authHeaders(),

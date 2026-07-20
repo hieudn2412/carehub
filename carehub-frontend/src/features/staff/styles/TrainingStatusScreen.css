@@ -1,163 +1,175 @@
-/* ── Training Status Screen Styles ── */
+.training-status-page .dashboard-layout__content {
+  overflow-y: auto;
+  background: #f4f7fb;
+}
+
 .ts-page {
-  padding: 24px;
-}
-
-.ts-page__title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 4px 0;
-}
-
-.ts-page__sub {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0 0 24px 0;
-}
-
-/* ── Stat cards ── */
-.ts-stat-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 32px;
+  gap: 18px;
+  padding: 24px;
+  color: #172033;
 }
 
-.ts-stat-card {
-  border-radius: 12px;
-  padding: 20px 24px;
+.ts-heading {
   display: flex;
   align-items: center;
-  gap: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px;
+  border: 1px solid #dce7ef;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f0fffb, #fff 60%, #eef7ff);
+  box-shadow: 0 16px 38px rgba(29, 54, 82, 0.07);
 }
 
-.ts-stat-card--red   { background: #fdecea; }
-.ts-stat-card--amber { background: #fff8ee; }
-.ts-stat-card--green { background: #eaf6f0; }
+.ts-heading span {
+  color: #087f6d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
 
-.ts-stat-card__icon {
-  font-size: 36px;
+.ts-heading h1 {
+  margin: 7px 0 0;
+  font-size: 28px;
+  font-weight: 650;
+}
+
+.ts-heading p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.ts-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ts-status--success { background: #e8faf3; color: #087f5f; }
+.ts-status--danger { background: #fff0f1; color: #c81e3a; }
+
+.ts-loading,
+.ts-error,
+.ts-not-configured {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  gap: 10px;
+  min-height: 100px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #fff;
 }
 
-.ts-stat-card__icon--red   { color: #e53935; }
-.ts-stat-card__icon--amber { color: #e68900; }
-.ts-stat-card__icon--green { color: #1aaa84; }
-
-.ts-stat-card__label {
-  font-size: 13px;
-  font-weight: 500;
-  margin: 0 0 6px 0;
-}
-.ts-stat-card__label--red   { color: #e53935; }
-.ts-stat-card__label--amber { color: #e68900; }
-.ts-stat-card__label--green { color: #1aaa84; }
-
-.ts-stat-card__value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 6px 0;
-  line-height: 1;
-}
-
-.ts-stat-card__value span {
-  font-size: 15px;
-  font-weight: 400;
-  color: #6b7280;
-}
-
-.ts-stat-card__note {
-  font-size: 12px;
-  font-weight: 500;
-  margin: 0;
-}
-.ts-stat-card__note--red   { color: #e53935; }
-.ts-stat-card__note--amber { color: #e68900; }
-
-/* ── Year bars ── */
-.ts-section-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 20px 0;
-}
-
-.ts-year-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.ts-year-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.ts-year-row__label {
-  width: 50px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #4b5563;
-  flex-shrink: 0;
-}
-
-.ts-year-row__track {
-  flex: 1;
-  height: 20px;
-  background: #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.ts-year-row__bar {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.6s ease;
-}
-
-.ts-year-row__hours {
-  width: 45px;
-  text-align: right;
-  font-size: 15px;
-  font-weight: 500;
-  color: #1f2937;
-  flex-shrink: 0;
-}
-
-/* ── Badges ── */
-.ts-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 12px;
-  border-radius: 999px;
-  text-align: center;
-  width: 64px;
-  flex-shrink: 0;
-}
-
-.ts-badge--pass       { background: #e8f5f0; color: #0f6e56; }
-.ts-badge--fail-amber { background: #fff3e0; color: #b7791f; }
-.ts-badge--fail-red   { background: #fdecea; color: #c0392b; }
+.ts-loading { border: 1px solid #dce7ef; color: #64748b; }
+.ts-error { border: 1px solid #fecaca; background: #fff5f5; color: #b91c1c; }
 
 .ts-not-configured {
-  display: flex;
+  align-items: flex-start;
   flex-direction: column;
-  gap: 6px;
-  padding: 24px;
   border: 1px solid #bfdbfe;
-  border-radius: 12px;
   color: #1e3a8a;
   background: #eff6ff;
 }
 
-.ts-not-configured span {
-  color: #475569;
-  font-size: 13px;
+.ts-not-configured span { color: #475569; font-size: 13px; }
+
+.ts-stat-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ts-stat-card {
+  display: flex;
+  gap: 14px;
+  min-height: 118px;
+  box-sizing: border-box;
+  padding: 18px;
+  border: 1px solid #dce7ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(29, 54, 82, 0.05);
+}
+
+.ts-stat-card__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  font-size: 19px;
+}
+
+.ts-stat-card p,
+.ts-stat-card strong,
+.ts-stat-card small { display: block; margin: 0; }
+.ts-stat-card p { color: #64748b; font-size: 13px; }
+.ts-stat-card strong { margin-top: 6px; font-size: 25px; font-weight: 650; }
+.ts-stat-card small { margin-top: 7px; color: #8190a5; font-size: 12px; }
+
+.ts-stat-card--success .ts-stat-card__icon { background: #e8faf3; color: #087f5f; }
+.ts-stat-card--danger .ts-stat-card__icon { background: #fff0f1; color: #dc2649; }
+.ts-stat-card--neutral .ts-stat-card__icon { background: #edf6ff; color: #1677c8; }
+
+.ts-progress-card {
+  padding: 24px;
+  border: 1px solid #dce7ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(29, 54, 82, 0.05);
+}
+
+.ts-progress-card header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.ts-progress-card header span,
+.ts-progress-card header strong { display: block; }
+.ts-progress-card header span { color: #64748b; font-size: 13px; }
+.ts-progress-card header strong { margin-top: 5px; font-size: 22px; font-weight: 650; }
+.ts-progress-card header b { font-size: 28px; font-weight: 650; }
+
+.ts-progress-track {
+  height: 18px;
+  margin-top: 20px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eef4;
+}
+
+.ts-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.6s ease;
+}
+
+.ts-progress-card--success .ts-progress-track span { background: #10a77d; }
+.ts-progress-card--success header b,
+.ts-progress-card--success p { color: #087f5f; }
+.ts-progress-card--danger .ts-progress-track span { background: #ef4444; }
+.ts-progress-card--danger header b,
+.ts-progress-card--danger p { color: #c81e3a; }
+.ts-progress-card p { margin: 14px 0 0; font-size: 13px; font-weight: 600; }
+
+@media (max-width: 900px) {
+  .ts-stat-cards { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .ts-page { padding: 14px; }
+  .ts-heading { align-items: flex-start; flex-direction: column; }
+  .ts-heading h1 { font-size: 24px; }
+  .ts-progress-card header { align-items: flex-start; flex-direction: column; }
 }

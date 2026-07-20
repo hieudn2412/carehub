@@ -97,6 +97,7 @@ import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistory
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import QualityDashboardPage from '../features/admin/pages/QualityDashboardPage.jsx'
+import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
@@ -264,6 +265,10 @@ function AppRouter() {
         element={adminElement(<QualityDashboardPage />)}
       />
       <Route
+        path="/admin/reports/checklist-dashboard"
+        element={adminElement(<ChecklistQualityDashboardPage />)}
+      />
+      <Route
         path="/admin/reports/export-training"
         element={adminElement(<ExportTrainingPage />)}
       />
@@ -278,6 +283,10 @@ function AppRouter() {
 
       {/* Manager Specific Routes */}
       <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
+      <Route path="/manager/reports/training-dashboard" element={managerOrAdminElement(<TrainingDashboardPage role="manager" />)} />
+      <Route path="/manager/reports/quality-dashboard" element={managerOrAdminElement(<QualityDashboardPage role="manager" />)} />
+      <Route path="/manager/reports/checklist-dashboard" element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)} />
+      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
       <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
 

@@ -20,9 +20,10 @@ export const evaluationDashboardApi = {
     })
   },
 
-  getExamResultsSummary() {
+  getExamResultsSummary(params = {}) {
     return httpClient.get('/evaluation-dashboard/exam-results-summary', {
       headers: authHeaders(),
+      params,
     })
   },
 
