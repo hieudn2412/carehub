@@ -21,6 +21,9 @@ public record CreateFormVersionRequest (
         Map<String, Object> settings,
 
         @Valid
+        PassingScoreConfigurationRequest passingScore,
+
+        @Valid
         List<FormSectionRequest> sections,
 
         @Min(value = 0, message = "Lock version must not be negative")

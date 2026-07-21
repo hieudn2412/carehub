@@ -200,6 +200,46 @@
   background: #fff;
 }
 
+.fbp-readonly-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  background: #eff6ff;
+  color: #175cd3;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.fbp-readonly-notice strong { display: block; margin-bottom: 2px; color: #1849a9; }
+.fbp-meta-card.is-readonly,
+.fbp-sections-list.is-readonly { opacity: .72; }
+
+.fbp-passing-config {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(120px, auto);
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #d8e4ec;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px 18px;
+}
+
+.fbp-passing-config > div:first-child strong { color: #172033; font-size: 14px; }
+.fbp-passing-config > div:first-child p { margin: 4px 0 0; color: var(--text-soft); font-size: 12px; line-height: 1.45; }
+.fbp-passing-config__mode { display: inline-flex; border: 1px solid #cfd9e3; border-radius: 6px; padding: 3px; }
+.fbp-passing-config__mode button { min-height: 32px; border: 0; border-radius: 4px; background: transparent; color: #667085; cursor: pointer; padding: 0 11px; font-size: 12px; font-weight: 700; }
+.fbp-passing-config__mode button.is-active { background: #087f6c; color: #fff; }
+.fbp-passing-config__value { display: grid; gap: 4px; color: #667085; font-size: 11px; }
+.fbp-passing-config__value > span:last-child { display: flex; align-items: center; min-height: 38px; border: 1px solid #cfd9e3; border-radius: 5px; background: #fff; }
+.fbp-passing-config__value input { width: 76px; border: 0; outline: 0; padding: 8px 9px; font: inherit; }
+.fbp-passing-config__value b { padding-right: 9px; color: #087f6c; font-size: 12px; }
+.fbp-passing-config__value strong { color: #087f6c; font-size: 16px; }
+.fbp-passing-config > small { grid-column: 1 / -1; color: #175cd3; font-size: 11px; }
+.fbp-passing-config > small.is-error { color: #b42318; }
+
 .fbp-scoring-config__input input {
   width: 78px;
   min-height: 38px;
@@ -252,6 +292,10 @@
   .fbp-scoring-config > small {
     grid-column: auto;
   }
+
+  .fbp-passing-config { grid-template-columns: 1fr; }
+  .fbp-passing-config__mode { width: 100%; }
+  .fbp-passing-config__mode button { flex: 1; }
 }
 
 .fbp-subject-setting strong {

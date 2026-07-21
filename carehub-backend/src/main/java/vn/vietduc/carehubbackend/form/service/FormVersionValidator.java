@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.form.service;
 
 import org.springframework.stereotype.Component;
+import lombok.RequiredArgsConstructor;
 import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.form.entity.FormOption;
@@ -16,15 +17,17 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.math.BigDecimal;
-import java.util.Map;
+import vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy;
 
 @Component
+@RequiredArgsConstructor
 public class FormVersionValidator {
     private static final Set<FormFieldType> OPTION_FIELD_TYPES = Set.of(
             FormFieldType.SINGLE_CHOICE,
             FormFieldType.MULTIPLE_CHOICE,
             FormFieldType.DROPDOWN
     );
+    private final FormScoringPolicy scoringPolicy;
 
     public void validateDraft(FormVersion version) {
         validate(version, false);
@@ -114,30 +117,18 @@ public class FormVersionValidator {
         if (publishing && scoredCriticalQuestions > 0 && scoredNormalQuestions == 0) {
             add(errors, "sections", "A scored form cannot contain only critical questions");
         }
-        if (publishing && scoredCriticalQuestions > 0) {
-            BigDecimal percentage = criticalWeightPercent(version.getSettingsJson());
-            if (percentage.compareTo(new BigDecimal("50")) < 0
-                    || percentage.compareTo(new BigDecimal("60")) > 0) {
+        if (publishing || scoringPolicy.hasConfiguredCriticalWeight(version)) {
+            BigDecimal percentage = scoringPolicy.criticalWeightPercent(version);
+            if (percentage.compareTo(BigDecimal.ZERO) < 0
+                    || percentage.compareTo(new BigDecimal("100")) > 0
+                    || Math.max(percentage.stripTrailingZeros().scale(), 0) > 0) {
                 add(errors, "settings.scoring.criticalWeightPercent",
-                        "Critical weight percentage must be between 50 and 60");
+                        "Critical weight percentage must be an integer between 0 and 100");
             }
         }
 
         if (!errors.isEmpty()) {
             throw new ValidationException("Form version validation failed", errors);
-        }
-    }
-
-    private BigDecimal criticalWeightPercent(Map<String, Object> settings) {
-        if (settings == null || !(settings.get("scoring") instanceof Map<?, ?> scoring)) {
-            return new BigDecimal("55");
-        }
-        Object value = scoring.get("criticalWeightPercent");
-        if (value == null) return new BigDecimal("55");
-        try {
-            return new BigDecimal(String.valueOf(value));
-        } catch (NumberFormatException ex) {
-            return BigDecimal.ZERO;
         }
     }
 

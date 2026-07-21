@@ -15,6 +15,7 @@ import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,9 @@ public class FormVersion extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "settings_json", columnDefinition = "jsonb")
     private Map<String, Object> settingsJson;
+
+    @Column(name = "passing_score_override", precision = 4, scale = 1)
+    private BigDecimal passingScoreOverride;
 
     @Column(length = 64)
     private String schemaHash;

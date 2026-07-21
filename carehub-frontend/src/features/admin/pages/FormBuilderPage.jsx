@@ -65,7 +65,13 @@ const DEFAULT_CRITICAL_WEIGHT_PERCENT = 60
 function normalizeCriticalWeightPercent(value) {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return DEFAULT_CRITICAL_WEIGHT_PERCENT
-  return Math.min(100, Math.max(0, parsed))
+  return Math.round(Math.min(100, Math.max(0, parsed)))
+}
+
+function isValidPassingScore(value) {
+  const text = String(value).trim()
+  const parsed = Number(text)
+  return /^\d+(\.\d)?$/.test(text) && parsed >= 0 && parsed <= 10
 }
 
 function QuestionTypeSelect({ value, onChange }) {
@@ -218,6 +224,11 @@ function FormBuilderPage() {
   const [settings, setSettings] = useState(null)
   const [lockVersion, setLockVersion] = useState(0)
   const [sections, setSections] = useState([])
+  const [versionStatus, setVersionStatus] = useState('DRAFT')
+  const [passingScoreMode, setPassingScoreMode] = useState('DEFAULT')
+  const [passingScoreValue, setPassingScoreValue] = useState('8.0')
+  const [effectivePassingScore, setEffectivePassingScore] = useState(null)
+  const [scoringJob, setScoringJob] = useState(null)
 
   const loadVersionDetails = useCallback(() => {
     adminApi.getFormVersionById(id, versionId)
@@ -230,9 +241,21 @@ function FormBuilderPage() {
         setVersionNumber(ver.versionNumber || 1)
         setTitle(ver.title || '')
         setDescription(ver.description || '')
-        setSettings(ver.settings || null)
+        setSettings({
+          ...(ver.settings || {}),
+          scoring: {
+            ...(ver.settings?.scoring || {}),
+            criticalWeightPercent: ver.criticalWeightPercent
+              ?? ver.settings?.scoring?.criticalWeightPercent
+              ?? DEFAULT_CRITICAL_WEIGHT_PERCENT,
+          },
+        })
         setLockVersion(ver.lockVersion || 0)
         setSections(ver.sections || [])
+        setVersionStatus(ver.status || 'DRAFT')
+        setPassingScoreMode(ver.passingScoreMode || 'DEFAULT')
+        setPassingScoreValue(ver.passingScoreOverride ?? ver.passingScore ?? '8.0')
+        setEffectivePassingScore(ver.passingScore ?? null)
         const firstItem = ver.sections?.[0]?.items?.[0]
         setExpandedItems(firstItem ? new Set([firstItem.itemKey]) : new Set())
         setAdvancedItems(new Set())
@@ -266,6 +289,27 @@ function FormBuilderPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
 
+  useEffect(() => {
+    if (!['PENDING', 'RUNNING'].includes(scoringJob?.status)) return undefined
+    const timer = window.setInterval(async () => {
+      try {
+        const response = await adminApi.getFormScoringRecalculationJob(scoringJob.id)
+        const job = response.data?.data
+        if (!job) return
+        setScoringJob(job)
+        if (job.status === 'COMPLETED') {
+          showToast('Đã áp dụng điểm sàn và tính lại kết quả.', 'success')
+          loadVersionDetails()
+        } else if (job.status === 'FAILED') {
+          setErrorMessage(job.errorMessage || 'Tác vụ tính lại kết quả thất bại.')
+        }
+      } catch {
+        setErrorMessage('Không thể cập nhật trạng thái tác vụ tính lại điểm.')
+      }
+    }, 3000)
+    return () => window.clearInterval(timer)
+  }, [loadVersionDetails, scoringJob, showToast])
+
   // --- Actions ---
 
   const updateSections = (nextSections) => {
@@ -274,6 +318,7 @@ function FormBuilderPage() {
   }
 
   const subjectLookupEnabled = Boolean(settings?.subjectSelector)
+  const isReadOnlyVersion = versionStatus !== 'DRAFT'
   const criticalWeightPercent = normalizeCriticalWeightPercent(
     settings?.scoring?.criticalWeightPercent,
   )
@@ -295,6 +340,7 @@ function FormBuilderPage() {
   }, [sections])
 
   const handleCriticalWeightChange = (value) => {
+    if (isReadOnlyVersion) return
     const nextPercent = normalizeCriticalWeightPercent(value)
     setSettings((currentSettings) => ({
       ...(currentSettings || {}),
@@ -304,6 +350,51 @@ function FormBuilderPage() {
       },
     }))
     setDirty(true)
+  }
+
+  const passingScorePayload = () => (
+    passingScoreMode === 'CUSTOM'
+      ? { mode: 'CUSTOM', value: Number(passingScoreValue) }
+      : { mode: 'DEFAULT', value: null }
+  )
+
+  const handlePassingModeChange = (mode) => {
+    setPassingScoreMode(mode)
+    setDirty(true)
+  }
+
+  const handlePassingScoreChange = (value) => {
+    setPassingScoreValue(value)
+    setDirty(true)
+  }
+
+  const savePublishedPassingScore = async () => {
+    if (passingScoreMode === 'CUSTOM' && !isValidPassingScore(passingScoreValue)) {
+      setErrorMessage('Điểm sàn phải từ 0 đến 10 và có tối đa một chữ số thập phân.')
+      return
+    }
+    try {
+      setSaving(true)
+      setErrorMessage('')
+      const response = await adminApi.updateFormScoringConfiguration(id, versionId, {
+        passingScore: passingScorePayload(),
+        lockVersion,
+      })
+      const result = response.data?.data
+      setScoringJob(result?.job || null)
+      if (!result?.recalculationScheduled) {
+        setLockVersion(result?.configuration?.lockVersion ?? lockVersion)
+        setDirty(false)
+        showToast('Đã cập nhật điểm sàn.', 'success')
+      } else {
+        setDirty(false)
+        showToast('Đã tạo tác vụ tính lại kết quả.', 'success')
+      }
+    } catch (error) {
+      setErrorMessage(error.response?.data?.message || 'Không thể cập nhật điểm sàn.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getQuestionSharePercent = (question) => {
@@ -514,6 +605,22 @@ function FormBuilderPage() {
       return
     }
 
+    if (passingScoreMode === 'CUSTOM' && !isValidPassingScore(passingScoreValue)) {
+      setErrorMessage('Điểm sàn phải từ 0 đến 10 và có tối đa một chữ số thập phân.')
+      return
+    }
+
+    if (isReadOnlyVersion) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Cập nhật điểm sàn?',
+        message: 'Các bài đã nộp của phiên bản này sẽ được tính lại bằng tác vụ nền. Cấu hình mới chỉ có hiệu lực sau khi tác vụ hoàn tất.',
+        onConfirm: savePublishedPassingScore,
+        danger: false,
+      })
+      return
+    }
+
     // Basic validation
     if (!title) {
       showToast('Vui lòng điền tiêu đề phiên bản.', 'warning')
@@ -644,6 +751,7 @@ function FormBuilderPage() {
         },
       },
       sections: cleanedSections,
+      passingScore: passingScorePayload(),
       lockVersion: lockVersion,
     }
 
@@ -715,7 +823,7 @@ function FormBuilderPage() {
                   </button>
                   <div className="fbp-toolbar-title">
                     <span>Trình thiết kế checklist</span>
-                    <strong>{title || `Phiên bản ${versionNumber}`}</strong>
+                    <strong>{title || `Phiên bản ${versionNumber}`} · {versionStatus}</strong>
                   </div>
                 </div>
                 <div className="fbp-toolbar-actions">
@@ -729,7 +837,7 @@ function FormBuilderPage() {
                     disabled={saving || loading || !versionLoaded || !dirty}
                     type="button"
                   >
-                    {saving ? <LoadingOutlined /> : <><SaveOutlined /> Lưu thay đổi</>}
+                    {saving ? <LoadingOutlined /> : <><SaveOutlined /> {isReadOnlyVersion ? 'Cập nhật điểm sàn' : 'Lưu thay đổi'}</>}
                   </button>
                 </div>
               </div>
@@ -783,15 +891,23 @@ function FormBuilderPage() {
                         </div>
                       ))}
                     </nav>
-                    <button className="fbp-outline__add" onClick={handleAddSection} type="button">
-                      <PlusOutlined /> Thêm phần
-                    </button>
+                    {!isReadOnlyVersion && (
+                      <button className="fbp-outline__add" onClick={handleAddSection} type="button">
+                        <PlusOutlined /> Thêm phần
+                      </button>
+                    )}
                   </aside>
 
                   <div className="fbp-editor-container">
                   
                   {/* General settings */}
-                  <div className="fbp-meta-card">
+                  {isReadOnlyVersion && (
+                    <div className="fbp-readonly-notice">
+                      <SettingOutlined />
+                      <span><strong>Version đã khóa cấu trúc.</strong> Bạn vẫn có thể thay đổi điểm sàn bên dưới.</span>
+                    </div>
+                  )}
+                  <div className={`fbp-meta-card ${isReadOnlyVersion ? 'is-readonly' : ''}`} inert={isReadOnlyVersion ? true : undefined}>
                     <div className="fbp-meta-heading">
                       <span>Thông tin chung</span>
                       <p>Tên và mô tả hiển thị với người sử dụng checklist.</p>
@@ -850,6 +966,7 @@ function FormBuilderPage() {
                             <input
                               max="100"
                               min="0"
+                              step="1"
                               onChange={(event) => handleCriticalWeightChange(event.target.value)}
                               type="number"
                               value={criticalWeightPercent}
@@ -869,8 +986,29 @@ function FormBuilderPage() {
                     </div>
                   </div>
 
+                  <div className="fbp-passing-config">
+                    <div>
+                      <strong>Điểm sàn đạt</strong>
+                      <p>Nếu dùng mặc định, hệ thống giữ nguyên công thức điểm sàn cũ của version.</p>
+                    </div>
+                    <div className="fbp-passing-config__mode" role="radiogroup" aria-label="Chế độ điểm sàn">
+                      <button className={passingScoreMode === 'DEFAULT' ? 'is-active' : ''} onClick={() => handlePassingModeChange('DEFAULT')} type="button">Mặc định</button>
+                      <button className={passingScoreMode === 'CUSTOM' ? 'is-active' : ''} onClick={() => handlePassingModeChange('CUSTOM')} type="button">Tùy chỉnh</button>
+                    </div>
+                    <label className="fbp-passing-config__value">
+                      <span>Điểm sàn</span>
+                      {passingScoreMode === 'CUSTOM' ? (
+                        <span><input min="0" max="10" step="0.1" type="number" value={passingScoreValue} onChange={(event) => handlePassingScoreChange(event.target.value)} /><b>/10</b></span>
+                      ) : (
+                        <strong>{effectivePassingScore === null ? 'Chưa tính được' : `${Number(effectivePassingScore).toFixed(1)}/10`}</strong>
+                      )}
+                    </label>
+                    {['PENDING', 'RUNNING'].includes(scoringJob?.status) && <small><LoadingOutlined /> Đang tính lại kết quả; cấu hình hiện tại vẫn được sử dụng.</small>}
+                    {scoringJob?.status === 'FAILED' && <small className="is-error">Tính lại thất bại: {scoringJob.errorMessage}</small>}
+                  </div>
+
                   {/* Sections list */}
-                  <div className="fbp-sections-list">
+                  <div className={`fbp-sections-list ${isReadOnlyVersion ? 'is-readonly' : ''}`} inert={isReadOnlyVersion ? true : undefined}>
                     {sections.map((sec, secIdx) => (
                       <div
                         id={`builder-section-${secIdx}`}
@@ -1247,9 +1385,11 @@ function FormBuilderPage() {
                   </div>
 
                   {/* Add Section Button */}
-                  <button className="fbp-btn-add-section" onClick={handleAddSection} type="button">
-                    <PlusCircleOutlined /> Thêm phần mới
-                  </button>
+                  {!isReadOnlyVersion && (
+                    <button className="fbp-btn-add-section" onClick={handleAddSection} type="button">
+                      <PlusCircleOutlined /> Thêm phần mới
+                    </button>
+                  )}
 
                   </div>
                 </div>

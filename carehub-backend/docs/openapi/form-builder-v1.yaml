@@ -8,7 +8,8 @@ info:
   description: |
     API v1 for creating, assigning, completing, and scoring versioned forms. Builder/import/assignment
     administration requires `ADMIN`; assigned-form and draft/submit operations require `MANAGER`.
-    Published versions are immutable. Creating a draft without `sections` clones the current published version.
+    Published and retired version schemas are immutable, while their passing score can be changed through a recalculation job.
+    Creating a draft without `sections` clones the current published version.
     Breaking changes will be introduced under `/api/v2`; v1 will receive deprecation and sunset headers before retirement.
 servers:
   - url: /api/v1
@@ -256,6 +257,98 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /form-scoring-configurations:
+    get:
+      tags: [Form Builder]
+      operationId: listFormScoringConfigurations
+      summary: List scoring configuration for every form version
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/VersionStatus' }
+      responses:
+        '200':
+          description: Paginated scoring configurations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormScoringConfigurationPageEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /forms/{formId}/versions/{versionId}/scoring-configuration:
+    parameters:
+      - $ref: '#/components/parameters/FormId'
+      - $ref: '#/components/parameters/VersionId'
+    patch:
+      tags: [Form Builder]
+      operationId: updateFormScoringConfiguration
+      summary: Update version weights or passing score
+      description: Critical weight is draft-only. Passing-score changes on published or retired versions return 202 and become effective after recalculation completes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateFormScoringConfigurationRequest' }
+      responses:
+        '200':
+          description: Draft configuration updated immediately
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateFormScoringConfigurationEnvelope' }
+        '202':
+          description: Recalculation job accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UpdateFormScoringConfigurationEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /form-scoring-recalculation-jobs/{jobId}:
+    get:
+      tags: [Form Builder]
+      operationId: getFormScoringRecalculationJob
+      summary: Get scoring recalculation job status
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormScoringRecalculationJobEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /form-scoring-recalculation-jobs/{jobId}/retry:
+    post:
+      tags: [Form Builder]
+      operationId: retryFormScoringRecalculationJob
+      summary: Retry a failed scoring recalculation job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '202':
+          description: Job queued again
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FormScoringRecalculationJobEnvelope' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
   /form-import-batches:
     get:
       tags: [Form Builder]
@@ -1108,6 +1201,7 @@ components:
         title: { type: string, maxLength: 255 }
         description: { type: string, maxLength: 4000 }
         settings: { type: object, additionalProperties: true }
+        passingScore: { $ref: '#/components/schemas/PassingScoreConfigurationRequest' }
         sections:
           type: array
           items: { $ref: '#/components/schemas/SectionRequest' }
@@ -1199,6 +1293,11 @@ components:
             formId: { type: integer, format: int64 }
             description: { type: string }
             settings: { type: object, additionalProperties: true }
+            criticalWeightPercent: { type: number, minimum: 0, maximum: 100, example: 60 }
+            normalWeightPercent: { type: number, minimum: 0, maximum: 100, example: 40 }
+            passingScoreMode: { $ref: '#/components/schemas/PassingScoreMode' }
+            passingScoreOverride: { type: [number, 'null'], minimum: 0, maximum: 10, multipleOf: 0.1 }
+            passingScore: { type: [number, 'null'], minimum: 0, maximum: 10, description: Effective score on a ten-point scale. }
             publishedBy: { type: object, additionalProperties: true }
             sections:
               type: array
@@ -1251,6 +1350,86 @@ components:
           required: [id, optionKey]
           properties:
             id: { type: integer, format: int64 }
+    PassingScoreMode:
+      type: string
+      enum: [DEFAULT, CUSTOM]
+    PassingScoreConfigurationRequest:
+      oneOf:
+        - type: object
+          required: [mode]
+          properties:
+            mode: { type: string, const: DEFAULT }
+            value: { type: 'null' }
+        - type: object
+          required: [mode, value]
+          properties:
+            mode: { type: string, const: CUSTOM }
+            value: { type: number, minimum: 0, maximum: 10, multipleOf: 0.1 }
+    UpdateFormScoringConfigurationRequest:
+      type: object
+      required: [lockVersion]
+      properties:
+        criticalWeightPercent: { type: integer, minimum: 0, maximum: 100, description: Draft versions only. }
+        passingScore: { $ref: '#/components/schemas/PassingScoreConfigurationRequest' }
+        lockVersion: { type: integer, format: int64, minimum: 0 }
+    FormScoringRecalculationStatus:
+      type: string
+      enum: [PENDING, RUNNING, COMPLETED, FAILED]
+    FormScoringRecalculationJob:
+      type: object
+      required: [id, formId, versionId, status, targetMode, previousMode, affectedSubmissionCount, attemptCount]
+      properties:
+        id: { type: integer, format: int64 }
+        formId: { type: integer, format: int64 }
+        versionId: { type: integer, format: int64 }
+        status: { $ref: '#/components/schemas/FormScoringRecalculationStatus' }
+        targetMode: { $ref: '#/components/schemas/PassingScoreMode' }
+        targetPassingScore: { type: [number, 'null'], minimum: 0, maximum: 10 }
+        previousMode: { $ref: '#/components/schemas/PassingScoreMode' }
+        previousPassingScore: { type: [number, 'null'], minimum: 0, maximum: 10 }
+        affectedSubmissionCount: { type: integer, format: int64 }
+        attemptCount: { type: integer }
+        requestedBy: { type: [string, 'null'] }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        errorMessage: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    FormScoringConfiguration:
+      type: object
+      required: [formId, versionId, versionNumber, versionStatus, criticalWeightPercent, normalWeightPercent, passingScoreMode, submittedCount, lockVersion]
+      properties:
+        formId: { type: integer, format: int64 }
+        formCode: { type: string }
+        formTitle: { type: string }
+        versionId: { type: integer, format: int64 }
+        versionNumber: { type: integer }
+        versionTitle: { type: string }
+        versionStatus: { $ref: '#/components/schemas/VersionStatus' }
+        criticalWeightPercent: { type: number, minimum: 0, maximum: 100 }
+        normalWeightPercent: { type: number, minimum: 0, maximum: 100 }
+        passingScoreMode: { $ref: '#/components/schemas/PassingScoreMode' }
+        passingScore: { type: [number, 'null'], minimum: 0, maximum: 10 }
+        passingScoreOverride: { type: [number, 'null'], minimum: 0, maximum: 10 }
+        submittedCount: { type: integer, format: int64 }
+        canEditCriticalWeight: { type: boolean }
+        canEditPassingScore: { type: boolean }
+        lockVersion: { type: integer, format: int64 }
+        latestJob:
+          oneOf:
+            - $ref: '#/components/schemas/FormScoringRecalculationJob'
+            - type: 'null'
+        updatedAt: { type: string, format: date-time }
+    UpdateFormScoringConfiguration:
+      type: object
+      required: [configuration, recalculationScheduled]
+      properties:
+        configuration: { $ref: '#/components/schemas/FormScoringConfiguration' }
+        job:
+          oneOf:
+            - $ref: '#/components/schemas/FormScoringRecalculationJob'
+            - type: 'null'
+        recalculationScheduled: { type: boolean }
     PageMetadata:
       type: object
       required: [page, size, totalElements, totalPages, content, sort]
@@ -1285,6 +1464,18 @@ components:
             - type: object
               properties:
                 content: { type: array, items: { $ref: '#/components/schemas/VersionSummary' } }
+    FormScoringConfigurationPageEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success: { type: boolean, const: true }
+        message: { type: string }
+        data:
+          allOf:
+            - $ref: '#/components/schemas/PageMetadata'
+            - type: object
+              properties:
+                content: { type: array, items: { $ref: '#/components/schemas/FormScoringConfiguration' } }
     FormPreviewPageEnvelope:
       type: object
       required: [success, message, data]
@@ -1318,6 +1509,20 @@ components:
         success: { type: boolean, const: true }
         message: { type: string }
         data: { $ref: '#/components/schemas/Version' }
+    UpdateFormScoringConfigurationEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success: { type: boolean, const: true }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/UpdateFormScoringConfiguration' }
+    FormScoringRecalculationJobEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success: { type: boolean, const: true }
+        message: { type: string }
+        data: { $ref: '#/components/schemas/FormScoringRecalculationJob' }
     Error:
       type: object
       required: [error_code, message, correlation_id]

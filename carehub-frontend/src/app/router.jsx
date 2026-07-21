@@ -96,6 +96,7 @@ import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.j
 import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
+import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
 import QualityDashboardPage from '../features/admin/pages/QualityDashboardPage.jsx'
 import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
@@ -240,12 +241,7 @@ function AppRouter() {
       <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
       <Route
         path="/admin/quality/formulas"
-        element={adminElement(
-          <ComingSoonPage
-            title="Công thức chỉ số"
-            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
-          />
-        )}
+        element={adminElement(<ScoringFormulaPage />)}
       />
       <Route
         path="/admin/quality/targets"

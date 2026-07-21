@@ -278,6 +278,31 @@ export const adminApi = {
     })
   },
 
+  getFormScoringConfigurations(params) {
+    return httpClient.get('/form-scoring-configurations', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  updateFormScoringConfiguration(formId, versionId, data) {
+    return httpClient.patch(`/forms/${formId}/versions/${versionId}/scoring-configuration`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormScoringRecalculationJob(jobId) {
+    return httpClient.get(`/form-scoring-recalculation-jobs/${jobId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  retryFormScoringRecalculationJob(jobId) {
+    return httpClient.post(`/form-scoring-recalculation-jobs/${jobId}/retry`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   // Form Previews
   getFormPreviews(params) {
     return httpClient.get('/form-previews', {
