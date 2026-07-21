@@ -442,13 +442,22 @@ function FormMetadataFormPage() {
                                             </button>
                                           </>
                                         ) : (
-                                          <button
-                                            className="fmp-v-btn fmp-v-btn--view"
-                                            onClick={() => navigate(`/admin/quality/checklists/${id}/preview?versionId=${v.id}`)}
-                                            title="Xem trước cấu trúc form"
-                                          >
-                                            <EyeOutlined /> Xem trước
-                                          </button>
+                                          <>
+                                            <button
+                                              className="fmp-v-btn fmp-v-btn--edit"
+                                              onClick={() => navigate(`/admin/quality/checklists/${id}/builder/${v.id}`)}
+                                              title="Xem thiết kế và cấu hình điểm sàn"
+                                            >
+                                              <EditOutlined /> Cấu hình điểm
+                                            </button>
+                                            <button
+                                              className="fmp-v-btn fmp-v-btn--view"
+                                              onClick={() => navigate(`/admin/quality/checklists/${id}/preview?versionId=${v.id}`)}
+                                              title="Xem trước cấu trúc form"
+                                            >
+                                              <EyeOutlined /> Xem trước
+                                            </button>
+                                          </>
                                         )}
                                       </div>
                                     </td>

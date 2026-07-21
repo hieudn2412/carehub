@@ -50,4 +50,40 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from FormSubmission s where s.id = :id")
     Optional<FormSubmission> findByIdForUpdate(@Param("id") Long id);
+
+    long countByFormVersion_IdAndStatus(Long versionId, FormSubmissionStatus status);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            update form_submissions
+               set passing_score = max_score * :passingScore / 10.0,
+                   result_status = case
+                       when critical_failure = true then 'FAILED_CRITICAL'
+                       when converted_score >= :passingScore then 'PASSED'
+                       else 'FAILED_SCORE'
+                   end,
+                   updated_at = current_timestamp
+             where form_version_id = :versionId
+               and status = 'SUBMITTED'
+               and scoring_status = 'CALCULATED'
+            """, nativeQuery = true)
+    int recalculateWithCustomFloor(@Param("versionId") Long versionId,
+                                   @Param("passingScore") java.math.BigDecimal passingScore);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+            update form_submissions
+               set passing_score = :rawPassingScore,
+                   result_status = case
+                       when critical_failure = true then 'FAILED_CRITICAL'
+                       when total_score >= :rawPassingScore then 'PASSED'
+                       else 'FAILED_SCORE'
+                   end,
+                   updated_at = current_timestamp
+             where form_version_id = :versionId
+               and status = 'SUBMITTED'
+               and scoring_status = 'CALCULATED'
+            """, nativeQuery = true)
+    int recalculateWithDefaultFloor(@Param("versionId") Long versionId,
+                                    @Param("rawPassingScore") java.math.BigDecimal rawPassingScore);
 }

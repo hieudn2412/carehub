@@ -5,6 +5,7 @@ import vn.vietduc.carehubbackend.form.entity.*;
 import vn.vietduc.carehubbackend.form.entity.enums.*;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.service.FormScoreCalculator;
+import vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -13,7 +14,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class FormScoreCalculatorTest {
-    private final FormScoreCalculator calculator = new FormScoreCalculator();
+    private final FormScoreCalculator calculator = new FormScoreCalculator(new FormScoringPolicy());
 
     @Test
     void binaryHandHygieneUsesOneAndZeroAndCriticalZeroFails() {
@@ -29,7 +30,7 @@ class FormScoreCalculatorTest {
 
         assertEquals(FormSubmissionResult.FAILED_CRITICAL, result.result());
         assertTrue(result.criticalFailure());
-        assertEquals(0, new BigDecimal("0.45").compareTo(result.totalScore()));
+        assertEquals(0, new BigDecimal("0.40").compareTo(result.totalScore()));
     }
 
     @Test
@@ -76,6 +77,38 @@ class FormScoreCalculatorTest {
         var result = calculator.calculate(version(question), List.of(answer(question, option)));
         assertEquals(FormScoringStatus.NOT_CONFIGURED, result.scoringStatus());
         assertNull(result.result());
+    }
+
+    @Test
+    void customPassingScoreUsesConvertedTenPointScale() {
+        FormQuestion first = question(1L, "FIRST", false,
+                option(11L, "YES", "1"), option(12L, "NO", "0"));
+        FormQuestion second = question(2L, "SECOND", false,
+                option(21L, "YES", "1"), option(22L, "NO", "0"));
+        FormVersion version = version(first, second);
+        version.setPassingScoreOverride(new BigDecimal("7.5"));
+
+        var failed = calculator.calculate(version, List.of(
+                answer(first, first.getOptions().get(0)), answer(second, second.getOptions().get(1))));
+        var passed = calculator.calculate(version, List.of(
+                answer(first, first.getOptions().get(0)), answer(second, second.getOptions().get(0))));
+
+        assertEquals(FormSubmissionResult.FAILED_SCORE, failed.result());
+        assertEquals(FormSubmissionResult.PASSED, passed.result());
+        assertEquals(0, new BigDecimal("0.75").compareTo(failed.passingScore()));
+    }
+
+    @Test
+    void missingCriticalShareDefaultsToSixtyPercent() {
+        FormQuestion normal = question(1L, "NORMAL", false,
+                option(11L, "YES", "1"), option(12L, "NO", "0"));
+        FormQuestion critical = question(2L, "CRITICAL", true,
+                option(21L, "YES", "1"), option(22L, "NO", "0"));
+        var result = calculator.calculate(version(normal, critical), List.of(
+                answer(normal, normal.getOptions().get(0)), answer(critical, critical.getOptions().get(0))));
+
+        assertEquals("0.4000", display(result.breakdown().get(0).weight()));
+        assertEquals("0.6000", display(result.breakdown().get(1).weight()));
     }
 
     private FormVersion version(FormQuestion... questions) {

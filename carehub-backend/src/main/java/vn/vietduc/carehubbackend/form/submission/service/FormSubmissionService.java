@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.submission.dto.*;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
+import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
 import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
@@ -42,6 +43,7 @@ public class FormSubmissionService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final FormScoreCalculator scoreCalculator;
+    private final FormVersionRepository formVersionRepository;
     private final EntityManager entityManager;
     private final Clock clock;
     private final NotificationEventPublisher notificationEventPublisher;
@@ -106,10 +108,14 @@ public class FormSubmissionService {
 
     @Transactional
     public FormSubmissionResponse submit(Long id, SubmitFormSubmissionRequest request) {
+        FormSubmission candidate = submissionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form submission not found"));
+        FormVersion scoringVersion = formVersionRepository.findByIdForScoring(candidate.getFormVersion().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
         FormSubmission submission = ownedDraft(id);
         requireLock(submission, request.lockVersion());
         validateRequiredAnswers(submission);
-        FormScoreCalculator.ScoreResult score = scoreCalculator.calculate(submission.getFormVersion(), submission.getAnswers());
+        FormScoreCalculator.ScoreResult score = scoreCalculator.calculate(scoringVersion, submission.getAnswers());
         applyScore(submission, score);
         submission.setStatus(FormSubmissionStatus.SUBMITTED);
         submission.setSubmittedAt(Instant.now(clock));

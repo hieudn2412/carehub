@@ -8,8 +8,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.UnauthorizedException;
@@ -26,18 +24,16 @@ import vn.vietduc.carehubbackend.form.repository.FormRepository;
 import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.service.FormVersionService;
 import vn.vietduc.carehubbackend.form.service.FormVersionValidator;
+import vn.vietduc.carehubbackend.form.service.FormSchemaSnapshotService;
+import vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy;
+import vn.vietduc.carehubbackend.form.scoring.PassingScoreMode;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 @Service
 @RequiredArgsConstructor
@@ -50,8 +46,9 @@ public class FormVersionServiceImpl implements FormVersionService {
     private final SecurityUtils securityUtils;
     private final FormMapper mapper;
     private final FormVersionValidator validator;
+    private final FormScoringPolicy scoringPolicy;
+    private final FormSchemaSnapshotService schemaSnapshotService;
     private final EntityManager entityManager;
-    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -96,8 +93,9 @@ public class FormVersionServiceImpl implements FormVersionService {
             mapper.cloneStructure(source, version);
         }
         mapper.replaceStructure(version, request);
+        applyPassingScore(version, request);
         validator.validateDraft(version);
-        updateSchemaSnapshot(version);
+        schemaSnapshotService.update(version);
         return mapper.toResponse(saveAndRefresh(version));
     }
 
@@ -117,8 +115,9 @@ public class FormVersionServiceImpl implements FormVersionService {
         }
 
         mapper.replaceStructure(version, request);
+        applyPassingScore(version, request);
         validator.validateDraft(version);
-        updateSchemaSnapshot(version);
+        schemaSnapshotService.update(version);
         return mapper.toResponse(saveAndRefresh(version));
     }
 
@@ -129,6 +128,7 @@ public class FormVersionServiceImpl implements FormVersionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
         FormVersion version = findVersion(formId, versionId);
         requireDraft(version);
+        scoringPolicy.ensurePublishDefault(version);
         validator.validatePublishable(version);
 
         FormVersion previous = form.getCurrentPublishedVersion();
@@ -140,7 +140,7 @@ public class FormVersionServiceImpl implements FormVersionService {
         version.setStatus(FormVersionStatus.PUBLISHED);
         version.setPublishedAt(Instant.now());
         version.setPublishedBy(currentUser());
-        updateSchemaSnapshot(version);
+        schemaSnapshotService.update(version);
         FormVersion published = versionRepository.saveAndFlush(version);
 
         form.setCurrentPublishedVersion(published);
@@ -184,6 +184,12 @@ public class FormVersionServiceImpl implements FormVersionService {
         }
     }
 
+    private void applyPassingScore(FormVersion version, CreateFormVersionRequest request) {
+        if (request.passingScore() == null) return;
+        version.setPassingScoreOverride(request.passingScore().mode() == PassingScoreMode.CUSTOM
+                ? request.passingScore().value() : null);
+    }
+
     private User currentUser() {
         Long userId;
         try {
@@ -195,45 +201,11 @@ public class FormVersionServiceImpl implements FormVersionService {
                 .orElseThrow(() -> new UnauthorizedException("Người dùng đã xác thực không còn tồn tại"));
     }
 
-    private void updateSchemaSnapshot(FormVersion version) {
-        version.setSchemaJson(mapper.toSchemaJson(version));
-        version.setSchemaHash(sha256(serializeCanonical(version.getSchemaJson())));
-    }
-
     private FormVersion saveAndRefresh(FormVersion version) {
         FormVersion saved = versionRepository.saveAndFlush(version);
         entityManager.flush();
         entityManager.refresh(saved);
         return saved;
-    }
-
-    private String sha256(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 is not available", ex);
-        }
-    }
-
-    private String serializeCanonical(Object value) {
-        try {
-            return objectMapper.writeValueAsString(canonicalize(value));
-        } catch (JacksonException ex) {
-            throw new IllegalStateException("Could not serialize form schema", ex);
-        }
-    }
-
-    private Object canonicalize(Object value) {
-        if (value instanceof Map<?, ?> map) {
-            Map<String, Object> sorted = new TreeMap<>();
-            map.forEach((key, item) -> sorted.put(String.valueOf(key), canonicalize(item)));
-            return sorted;
-        }
-        if (value instanceof List<?> list) {
-            return list.stream().map(this::canonicalize).toList();
-        }
-        return value;
     }
 
     private Pageable normalizePageable(Pageable pageable) {

@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.form.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,7 @@ import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,6 +40,9 @@ class FormBuilderControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     private User admin;
 
@@ -212,6 +217,86 @@ class FormBuilderControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.version.sections[0].items[0].question.options.length()", is(2)));
 
         mockMvc.perform(get("/api/v1/form-previews/{formId}", formId.longValue())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_USER"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void scoringConfigurationSupportsLockingAdminAccessAndRetiredPassingScore() throws Exception {
+        MvcResult formResult = mockMvc.perform(post("/api/v1/forms")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"SCORE-POLICY\",\"title\":\"Score policy\",\"subjectType\":\"USER\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        Number formId = JsonPath.read(formResult.getResponse().getContentAsString(), "$.data.id");
+
+        MvcResult versionResult = mockMvc.perform(post("/api/v1/forms/{formId}/versions", formId.longValue())
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(validVersionJson()))
+                .andExpect(status().isCreated())
+                .andReturn();
+        Number versionId = JsonPath.read(versionResult.getResponse().getContentAsString(), "$.data.id");
+        Number draftLock = JsonPath.read(versionResult.getResponse().getContentAsString(), "$.data.lockVersion");
+
+        MvcResult draftUpdate = mockMvc.perform(patch("/api/v1/forms/{formId}/versions/{versionId}/scoring-configuration",
+                        formId.longValue(), versionId.longValue())
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"criticalWeightPercent\":65,\"passingScore\":{\"mode\":\"CUSTOM\",\"value\":7.5},\"lockVersion\":" + draftLock + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.configuration.passingScoreMode", is("CUSTOM")))
+                .andReturn();
+        Number updatedLock = JsonPath.read(draftUpdate.getResponse().getContentAsString(), "$.data.configuration.lockVersion");
+
+        mockMvc.perform(patch("/api/v1/forms/{formId}/versions/{versionId}/scoring-configuration",
+                        formId.longValue(), versionId.longValue())
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"passingScore\":{\"mode\":\"DEFAULT\"},\"lockVersion\":" + draftLock + "}"))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/api/v1/forms/{formId}/versions/{versionId}/publication",
+                        formId.longValue(), versionId.longValue()).with(adminJwt()))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        MvcResult secondVersion = mockMvc.perform(post("/api/v1/forms/{formId}/versions", formId.longValue())
+                        .with(adminJwt()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isCreated()).andReturn();
+        Number secondVersionId = JsonPath.read(secondVersion.getResponse().getContentAsString(), "$.data.id");
+        mockMvc.perform(post("/api/v1/forms/{formId}/versions/{versionId}/publication",
+                        formId.longValue(), secondVersionId.longValue()).with(adminJwt()))
+                .andExpect(status().isOk());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        MvcResult retiredVersion = mockMvc.perform(get("/api/v1/forms/{formId}/versions/{versionId}",
+                        formId.longValue(), versionId.longValue()).with(adminJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status", is("RETIRED")))
+                .andReturn();
+        Number retiredLock = JsonPath.read(retiredVersion.getResponse().getContentAsString(), "$.data.lockVersion");
+
+        mockMvc.perform(patch("/api/v1/forms/{formId}/versions/{versionId}/scoring-configuration",
+                        formId.longValue(), versionId.longValue())
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"passingScore\":{\"mode\":\"DEFAULT\"},\"lockVersion\":" + retiredLock + "}"))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.data.recalculationScheduled", is(true)))
+                .andExpect(jsonPath("$.data.configuration.versionStatus", is("RETIRED")));
+
+        mockMvc.perform(patch("/api/v1/forms/{formId}/versions/{versionId}/scoring-configuration",
+                        formId.longValue(), versionId.longValue())
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"criticalWeightPercent\":70,\"lockVersion\":" + retiredLock + "}"))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(get("/api/v1/form-scoring-configurations")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_USER"))))
                 .andExpect(status().isForbidden());
     }

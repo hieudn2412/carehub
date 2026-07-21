@@ -11,13 +11,14 @@ import vn.vietduc.carehubbackend.form.entity.enums.FormItemType;
 
 import java.util.UUID;
 import java.math.BigDecimal;
+import vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FormVersionValidatorTest {
-    private final FormVersionValidator validator = new FormVersionValidator();
+    private final FormVersionValidator validator = new FormVersionValidator(new FormScoringPolicy());
 
     @Test
     void validChoiceQuestionCanBePublished() {
@@ -49,6 +50,28 @@ class FormVersionValidatorTest {
                     assertThat(validation.getFieldErrors())
                             .anyMatch(detail -> detail.message().contains("Question code must be unique"));
                 });
+    }
+
+    @Test
+    void configuredWeightOutsideRangeIsRejected() {
+        FormVersion version = validVersion();
+        new FormScoringPolicy().setCriticalWeightPercent(version, new BigDecimal("101"));
+
+        assertThatThrownBy(() -> validator.validateDraft(version))
+                .isInstanceOf(ValidationException.class)
+                .satisfies(error -> assertThat(((ValidationException) error).getFieldErrors())
+                        .anyMatch(detail -> detail.field().equals("settings.scoring.criticalWeightPercent")));
+    }
+
+    @Test
+    void criticalOnlyVersionCannotBePublished() {
+        FormVersion version = validVersion();
+        version.getSections().get(0).getQuestions().get(0).setCritical(true);
+
+        assertThatThrownBy(() -> validator.validatePublishable(version))
+                .isInstanceOf(ValidationException.class)
+                .satisfies(error -> assertThat(((ValidationException) error).getFieldErrors())
+                        .anyMatch(detail -> detail.message().contains("only critical questions")));
     }
 
     private FormVersion validVersion() {

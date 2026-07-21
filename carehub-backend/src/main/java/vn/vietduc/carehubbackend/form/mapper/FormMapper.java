@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.form.entity.FormSection;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
 import vn.vietduc.carehubbackend.form.entity.enums.FormFieldType;
 import vn.vietduc.carehubbackend.form.entity.enums.FormItemType;
+import vn.vietduc.carehubbackend.form.scoring.FormScoringPolicy;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,6 +27,12 @@ import java.util.UUID;
 
 @Component
 public class FormMapper {
+    private final FormScoringPolicy scoringPolicy;
+
+    public FormMapper(FormScoringPolicy scoringPolicy) {
+        this.scoringPolicy = scoringPolicy;
+    }
+
     public FormResponse toResponse(Form form) {
         FormResponse.DepartmentSummary department = form.getOwnerDepartment() == null
                 ? null
@@ -58,72 +65,8 @@ public class FormMapper {
 
     private java.math.BigDecimal calculatePassingScore(FormVersion version) {
         if (version == null) return null;
-        List<FormQuestion> scored = version.getSections().stream()
-                .flatMap(s -> s.getQuestions().stream())
-                .filter(q -> q.getItemType() == FormItemType.QUESTION && !q.isExcludeFromScore())
-                .toList();
-        if (scored.isEmpty()) return null;
-
-        for (FormQuestion question : scored) {
-            if (question.getOptions().isEmpty() || question.getOptions().stream().anyMatch(o -> o.getScoreValue() == null)) {
-                return null;
-            }
-        }
-
-        List<FormQuestion> critical = scored.stream().filter(FormQuestion::isCritical).toList();
-        List<FormQuestion> normal = scored.stream().filter(q -> !q.isCritical()).toList();
-        
-        java.math.BigDecimal criticalShare;
-        Object scoring = version.getSettingsJson() == null ? null : version.getSettingsJson().get("scoring");
-        Object value = scoring instanceof Map<?, ?> map ? map.get("criticalWeightPercent") : null;
-        try {
-            criticalShare = new java.math.BigDecimal(value == null ? "55" : String.valueOf(value))
-                    .divide(new java.math.BigDecimal("100"), java.math.MathContext.DECIMAL128);
-        } catch (NumberFormatException ex) {
-            criticalShare = new java.math.BigDecimal("0.55");
-        }
-
-        java.math.BigDecimal scoredCoefficientTotal = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal criticalCoefficientTotal = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal normalCoefficientTotal = java.math.BigDecimal.ZERO;
-
-        for (FormQuestion q : scored) {
-            java.math.BigDecimal coef = q.getWeight() == null || q.getWeight().compareTo(java.math.BigDecimal.ZERO) <= 0 
-                    ? java.math.BigDecimal.ONE : q.getWeight();
-            scoredCoefficientTotal = scoredCoefficientTotal.add(coef);
-            if (q.isCritical()) {
-                criticalCoefficientTotal = criticalCoefficientTotal.add(coef);
-            } else {
-                normalCoefficientTotal = normalCoefficientTotal.add(coef);
-            }
-        }
-
-        java.math.BigDecimal floor = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal max = java.math.BigDecimal.ZERO;
-
-        for (FormQuestion question : scored) {
-            java.math.BigDecimal coef = question.getWeight() == null || question.getWeight().compareTo(java.math.BigDecimal.ZERO) <= 0 
-                    ? java.math.BigDecimal.ONE : question.getWeight();
-            java.math.BigDecimal weight;
-            if (critical.isEmpty() || normal.isEmpty()) {
-                weight = coef.divide(scoredCoefficientTotal, java.math.MathContext.DECIMAL128);
-            } else {
-                weight = question.isCritical()
-                        ? criticalShare.multiply(coef, java.math.MathContext.DECIMAL128).divide(criticalCoefficientTotal, java.math.MathContext.DECIMAL128)
-                        : java.math.BigDecimal.ONE.subtract(criticalShare, java.math.MathContext.DECIMAL128).multiply(coef, java.math.MathContext.DECIMAL128).divide(normalCoefficientTotal, java.math.MathContext.DECIMAL128);
-            }
-
-            java.math.BigDecimal questionMax = question.getOptions().stream()
-                    .map(FormOption::getScoreValue)
-                    .max(java.math.BigDecimal::compareTo)
-                    .orElse(java.math.BigDecimal.ZERO);
-
-            max = max.add(questionMax.multiply(weight, java.math.MathContext.DECIMAL128), java.math.MathContext.DECIMAL128);
-            floor = floor.add(weight, java.math.MathContext.DECIMAL128);
-        }
-
-        if (max.compareTo(java.math.BigDecimal.ZERO) <= 0) return null;
-        return floor.multiply(new java.math.BigDecimal("10"), java.math.MathContext.DECIMAL128).divide(max, java.math.MathContext.DECIMAL128);
+        FormScoringPolicy.Definition definition = scoringPolicy.resolve(version);
+        return definition.configured() ? definition.effectivePassingScore() : null;
     }
 
 
@@ -159,6 +102,7 @@ public class FormMapper {
                 .name(version.getPublishedBy().getName())
                 .build();
 
+        FormScoringPolicy.GroupWeights groupWeights = scoringPolicy.effectiveGroupWeights(version);
         return FormVersionResponse.builder()
                 .id(version.getId())
                 .formId(version.getForm().getId())
@@ -167,6 +111,12 @@ public class FormMapper {
                 .title(version.getTitle())
                 .description(version.getDescription())
                 .settings(version.getSettingsJson())
+                .criticalWeightPercent(groupWeights.critical())
+                .normalWeightPercent(groupWeights.normal())
+                .passingScoreMode(version.getPassingScoreOverride() == null
+                        ? vn.vietduc.carehubbackend.form.scoring.PassingScoreMode.DEFAULT
+                        : vn.vietduc.carehubbackend.form.scoring.PassingScoreMode.CUSTOM)
+                .passingScoreOverride(version.getPassingScoreOverride())
                 .passingScore(calculatePassingScore(version))
                 .schemaHash(version.getSchemaHash())
                 .publishedAt(version.getPublishedAt())
@@ -200,6 +150,7 @@ public class FormMapper {
         target.setTitle(source.getTitle());
         target.setDescription(source.getDescription());
         target.setSettingsJson(copyMap(source.getSettingsJson()));
+        target.setPassingScoreOverride(source.getPassingScoreOverride());
         source.getSections().forEach(section -> target.getSections().add(cloneSection(section, target)));
     }
 

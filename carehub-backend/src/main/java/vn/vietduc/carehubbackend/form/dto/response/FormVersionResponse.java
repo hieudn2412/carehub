@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
+import vn.vietduc.carehubbackend.form.scoring.PassingScoreMode;
 
 @Builder
 public record FormVersionResponse(
@@ -21,7 +22,11 @@ public record FormVersionResponse(
         String title,
         String description,
         Map<String, Object> settings,
-        java.math.BigDecimal passingScore,
+        BigDecimal criticalWeightPercent,
+        BigDecimal normalWeightPercent,
+        PassingScoreMode passingScoreMode,
+        BigDecimal passingScoreOverride,
+        BigDecimal passingScore,
         String schemaHash,
         Instant publishedAt,
         UserSummary publishedBy,
