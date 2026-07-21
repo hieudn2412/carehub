@@ -76,8 +76,20 @@ function TrainingHoursListScreen() {
       }
       trainingApi.listRecords(params)
         .then(res => {
-          setRecords(res.data?.data?.content || [])
-          setTotalElements(res.data?.data?.totalElements || 0)
+          const content = res.data?.data?.content || []
+          const fiveYearsAgo = new Date()
+          fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
+          fiveYearsAgo.setHours(0, 0, 0, 0)
+          
+          const filtered = content.filter(r => {
+            if (!r.startDate) return false
+            const d = new Date(r.startDate)
+            d.setHours(0, 0, 0, 0)
+            return d >= fiveYearsAgo
+          })
+          
+          setRecords(filtered)
+          setTotalElements(filtered.length)
         })
         .catch(err => console.error("Error fetching training records", err))
         .finally(() => setLoading(false))
@@ -85,7 +97,18 @@ function TrainingHoursListScreen() {
     return () => clearTimeout(timer)
   }, [page, search, status, trigger, myEmployeeId])
 
-  const handleDirectSubmit = (recordId, version) => {
+  const handleDirectSubmit = (recordId, version, startDate) => {
+    if (startDate) {
+      const recordDate = new Date(startDate)
+      const fiveYearsAgo = new Date()
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
+      fiveYearsAgo.setHours(0, 0, 0, 0)
+      recordDate.setHours(0, 0, 0, 0)
+      if (recordDate < fiveYearsAgo) {
+        showToast("Hồ sơ đào tạo quá 5 năm không được phép nộp.", "error")
+        return
+      }
+    }
     setSubmittingId(recordId)
     trainingApi.submitRecord(recordId, { version })
       .then(() => {
@@ -214,10 +237,10 @@ function TrainingHoursListScreen() {
                   <table className="th-table">
                     <thead>
                       <tr>
+                        <th>Ngày bắt đầu</th>
                         <th>Tên khóa đào tạo</th>
-                        <th className="th-col-num">Giờ</th>
-                        <th>Ngày</th>
-                        <th>Trạng thái</th>
+                        <th className="th-col-num">Số giờ đào tạo</th>
+                        <th>Ngày nộp</th>
                         <th className="th-col-center">Minh chứng</th>
                         <th className="th-col-actions">Thao tác</th>
                       </tr>
@@ -225,20 +248,24 @@ function TrainingHoursListScreen() {
                     <tbody>
                       {records.map(r => (
                         <tr key={r.id} onClick={() => navigate(`/staff/training/${r.id}`)} className="th-clickable-row">
+                          <td>{formatDate(r.startDate)}</td>
                           <td>
                             <span className="th-record-title">{r.title}</span>
                             {r.provider && <span className="th-record-provider">{r.provider}</span>}
                           </td>
                           <td className="th-col-num"><strong>{r.declaredHours}h</strong></td>
-                          <td>{formatDate(r.startDate)}</td>
                           <td>
-                            <span className={`th-badge th-badge--${
-                              r.workflowStatus === 'SUBMITTED' ? 'success'
-                                : r.workflowStatus === 'CANCELLED' ? 'danger'
-                                : 'warning'
-                            }`}>
-                              {getStatusLabel(r.workflowStatus)}
-                            </span>
+                            {r.workflowStatus === 'SUBMITTED' ? (
+                              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+                                {formatDate(r.submittedAt)}
+                              </span>
+                            ) : (
+                              <span className={`th-badge th-badge--${
+                                r.workflowStatus === 'CANCELLED' ? 'danger' : 'warning'
+                              }`}>
+                                {getStatusLabel(r.workflowStatus)}
+                              </span>
+                            )}
                           </td>
                           <td className="th-col-center">
                             {r.evidenceCount > 0 ? (
@@ -254,7 +281,7 @@ function TrainingHoursListScreen() {
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
                                   className="th-action-btn th-action-btn--submit"
-                                  onClick={() => handleDirectSubmit(r.id, r.version)}
+                                  onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
                                   disabled={submittingId === r.id}
                                   title="Nộp hồ sơ"
                                 >

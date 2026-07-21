@@ -9,6 +9,7 @@ import {
   EnvironmentOutlined,
   DownloadOutlined,
   RollbackOutlined,
+  FolderOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
@@ -37,6 +38,17 @@ function TrainingHoursDetailScreen() {
 
   const handleSubmit = () => {
     if (!record) return
+    if (record.startDate) {
+      const recordDate = new Date(record.startDate)
+      const fiveYearsAgo = new Date()
+      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
+      fiveYearsAgo.setHours(0, 0, 0, 0)
+      recordDate.setHours(0, 0, 0, 0)
+      if (recordDate < fiveYearsAgo) {
+        showToast("Hồ sơ đào tạo quá 5 năm không được phép nộp.", "error")
+        return
+      }
+    }
     setSubmitting(true)
     trainingApi.submitRecord(id, { version: record.version })
       .then(() => { showToast("Nộp hồ sơ thành công!", "success"); fetchRecord() })
@@ -109,7 +121,7 @@ function TrainingHoursDetailScreen() {
                     <h1 className="th-detail-title">{record.title}</h1>
                     <div className="th-detail-meta">
                       <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
-                      {record.provider && <span><EnvironmentOutlined /> {record.provider}</span>}
+                      {record.provider && <span><FolderOutlined /> {record.provider}</span>}
                       <span className={`th-badge ${(statusCfg[record.workflowStatus] || statusCfg.DRAFT).cls}`}>
                         {(statusCfg[record.workflowStatus] || statusCfg.DRAFT).label}
                       </span>
@@ -148,7 +160,7 @@ function TrainingHoursDetailScreen() {
                     <div className="th-detail-text">{record.activityTypeName || '-'}</div>
                   </div>
                   <div className="th-detail-block">
-                    <label className="th-detail-label">Đơn vị tổ chức</label>
+                    <label className="th-detail-label">Lĩnh vực</label>
                     <div className="th-detail-text">{record.provider || '-'}</div>
                   </div>
                   <div className="th-detail-block th-detail-block--full">

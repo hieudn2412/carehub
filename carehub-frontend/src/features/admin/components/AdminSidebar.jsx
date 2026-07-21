@@ -60,7 +60,6 @@ const navSections = [
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Giờ đào tạo của tôi', path: '/staff/training' },
-      { icon: <TrophyOutlined />, label: 'Năng lực của tôi', path: '/staff/competency' },
       { icon: <AuditOutlined />, label: 'Cấu hình yêu cầu', path: '/admin/training/requirements' },
       { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
     ],
@@ -148,33 +147,9 @@ const navSections = [
       },
       {
         icon: <BarChartOutlined />,
-        label: 'Năng lực theo lĩnh vực',
-        path: '/admin/evaluation/competency-by-field',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
-      {
-        icon: <CheckSquareOutlined />,
-        label: 'Tuân thủ kỹ thuật',
-        path: '/admin/evaluation/compliance-by-technique',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
-      {
-        icon: <TrophyOutlined />,
-        label: 'Tổng hợp năng lực',
+        label: 'Dashboard năng lực',
         path: '/admin/evaluation/competency-summary',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
-      {
-        icon: <AuditOutlined />,
-        label: 'Mẫu prompt',
-        path: '/admin/evaluation/prompt-templates',
-        requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
-      },
-      {
-        icon: <TeamOutlined />,
-        label: 'Nhóm đào tạo',
-        path: '/admin/evaluation/training-groups',
-        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
       },
     ],
   },
