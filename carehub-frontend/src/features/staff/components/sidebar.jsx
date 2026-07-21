@@ -21,6 +21,7 @@ import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import logo from '../../../assets/logo.png'
+import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
 
 function Sidebar() {
@@ -33,6 +34,10 @@ function Sidebar() {
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
+
+  if (isAdmin) {
+    return <AdminSidebar />
+  }
 
   const isLinkActive = (itemPath) => {
     if (
@@ -68,9 +73,7 @@ function Sidebar() {
         { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
-        { icon: <BarChartOutlined />, label: 'Năng lực theo lĩnh vực', path: '/manager/competency-by-field' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ kỹ thuật', path: '/manager/compliance-by-technique' },
-        { icon: <TrophyOutlined />, label: 'Tổng hợp năng lực', path: '/manager/competency-summary' },
+        { icon: <BarChartOutlined />, label: 'Dashboard năng lực khoa', path: '/manager/competency-summary' },
       ],
     })
   }
