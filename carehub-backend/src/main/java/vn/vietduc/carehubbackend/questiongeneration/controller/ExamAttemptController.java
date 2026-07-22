@@ -24,11 +24,12 @@ public class ExamAttemptController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamAttemptResponse>>> list(
             @RequestParam(required = false) Long assignmentId,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long professionalFieldId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách lượt làm bài thành công",
-                attemptService.listAdmin(assignmentId, status)
+                attemptService.listAdmin(assignmentId, status, professionalFieldId)
         ));
     }
 

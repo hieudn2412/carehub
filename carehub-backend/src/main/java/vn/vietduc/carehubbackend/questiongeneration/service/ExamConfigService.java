@@ -248,8 +248,11 @@ public class ExamConfigService {
     }
 
     private Preview buildPreview(QuestionSet questionSet, int totalQuestions, List<DistributionDraft> drafts) {
+        List<DistributionDraft> effectiveDrafts = drafts.isEmpty()
+                ? List.of(new DistributionDraft(null, null, totalQuestions, true))
+                : drafts;
         List<String> warnings = new ArrayList<>();
-        int distributedQuestions = drafts.stream().mapToInt(DistributionDraft::questionCount).sum();
+        int distributedQuestions = effectiveDrafts.stream().mapToInt(DistributionDraft::questionCount).sum();
         if (distributedQuestions != totalQuestions) {
             warnings.add("Tổng phân bổ " + distributedQuestions + " câu chưa khớp tổng số câu " + totalQuestions);
         }
@@ -262,7 +265,7 @@ public class ExamConfigService {
                 .collect(Collectors.groupingBy(question -> normalize(question.getTopic()), Collectors.counting()));
 
         List<ExamConfigDistributionResponse> responses = new ArrayList<>();
-        for (DistributionDraft draft : drafts) {
+        for (DistributionDraft draft : effectiveDrafts) {
             String categoryName = draft.category() == null ? "Tất cả danh mục" : draft.category().getName();
             Integer available = null;
             boolean shortage = false;

@@ -36,11 +36,12 @@ public class ExamAssignmentController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamAssignmentResponse>>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long professionalFieldId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách phân công kiểm tra thành công",
-                assignmentService.list(q, status)
+                assignmentService.list(q, status, professionalFieldId)
         ));
     }
 

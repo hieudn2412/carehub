@@ -251,7 +251,7 @@ function TrainingHoursListScreen() {
                           <td>{formatDate(r.startDate)}</td>
                           <td>
                             <span className="th-record-title">{r.title}</span>
-                            {r.provider && <span className="th-record-provider">{r.provider}</span>}
+                            {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
                           </td>
                           <td className="th-col-num"><strong>{r.declaredHours}h</strong></td>
                           <td>

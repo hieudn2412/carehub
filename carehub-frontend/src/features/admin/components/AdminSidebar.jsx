@@ -18,7 +18,6 @@ import {
   CalculatorOutlined,
   FileSearchOutlined,
   ScheduleOutlined,
-  TrophyOutlined,
   BarChartOutlined,
   LineChartOutlined,
   DownloadOutlined,
@@ -62,6 +61,7 @@ const navSections = [
       { icon: <ScheduleOutlined />, label: 'Giờ đào tạo của tôi', path: '/staff/training' },
       { icon: <AuditOutlined />, label: 'Cấu hình yêu cầu', path: '/admin/training/requirements' },
       { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
+      { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
   {
@@ -111,27 +111,21 @@ const navSections = [
       },
       {
         icon: <SlidersOutlined />,
-        label: 'Cấu hình & Sinh đề',
+        label: 'Tạo & giao bài kiểm tra',
         path: '/admin/evaluation/configs',
         requiredPermissions: [EVALUATION_PERMISSION.examConfigManager],
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Đề kiểm tra',
+        label: 'Kho đề kiểm tra',
         path: '/admin/evaluation/exam-papers',
         requiredPermissions: [EVALUATION_PERMISSION.examPublisher],
       },
       {
         icon: <ScheduleOutlined />,
-        label: 'Giao bài kiểm tra',
+        label: 'Bài kiểm tra đã giao',
         path: '/admin/evaluation/exam-assignments',
         requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
-      },
-      {
-        icon: <TrophyOutlined />,
-        label: 'Kết quả kiểm tra',
-        path: '/admin/evaluation/exam-attempts',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       {
         icon: <CalculatorOutlined />,

@@ -34,13 +34,14 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long examConfigId,
             @RequestParam(required = false) Long paperId,
             @RequestParam(required = false) Long assignmentId,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long professionalFieldId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy dashboard đánh giá thành công",
                 dashboardService.dashboard(
                         parseDateTime(fromDate), parseDateTime(toDate),
-                        examConfigId, paperId, assignmentId, departmentId)
+                        examConfigId, paperId, assignmentId, departmentId, professionalFieldId)
         ));
     }
 
@@ -59,13 +60,14 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long examConfigId,
             @RequestParam(required = false) Long paperId,
             @RequestParam(required = false) Long assignmentId,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long professionalFieldId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy tổng quan kết quả kiểm tra thành công",
                 dashboardService.examResultsSummary(
                         parseDateTime(fromDate), parseDateTime(toDate),
-                        examConfigId, paperId, assignmentId, departmentId)
+                        examConfigId, paperId, assignmentId, departmentId, professionalFieldId)
         ));
     }
 
@@ -76,13 +78,14 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long examConfigId,
             @RequestParam(required = false) Long paperId,
             @RequestParam(required = false) Long assignmentId,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long professionalFieldId
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy phân tích câu hỏi thành công",
                 dashboardService.itemAnalysis(
                         parseDateTime(fromDate), parseDateTime(toDate),
-                        examConfigId, paperId, assignmentId, departmentId)
+                        examConfigId, paperId, assignmentId, departmentId, professionalFieldId)
         ));
     }
 

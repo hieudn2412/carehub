@@ -18,6 +18,8 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.Permission;
 import vn.vietduc.carehubbackend.user.entity.Role;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -52,6 +54,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final QuestionBankQuestionRepository questionRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
+    private final ProfessionalFieldRepository professionalFieldRepository;
     private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
 
@@ -76,6 +79,9 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.seed.question-bank.resource:classpath:question-bank/hospital-review-questions.json}")
     private String questionBankSeedResource;
 
+    @Value("${app.seed.professional-fields.resource:classpath:professional-fields/nursing-professional-fields.json}")
+    private String professionalFieldSeedResource;
+
     @Override
     public void run(String... args) {
         if (!seedEnabled) {
@@ -90,6 +96,7 @@ public class DataSeeder implements CommandLineRunner {
         seedEvaluationPermissions();
         seedAdminUser(adminRole);
         seedQuestionCategories();
+        seedProfessionalFields();
         seedQuestionBank();
     }
 
@@ -192,6 +199,59 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
+    private void seedProfessionalFields() {
+        Resource resource = resourceLoader.getResource(professionalFieldSeedResource);
+        if (!resource.exists()) {
+            log.warn("Professional field seed resource not found: {}", professionalFieldSeedResource);
+            return;
+        }
+
+        ProfessionalFieldSeedFile seedFile;
+        try (InputStream inputStream = resource.getInputStream()) {
+            seedFile = objectMapper.readValue(inputStream, ProfessionalFieldSeedFile.class);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Không thể đọc dữ liệu lĩnh vực chuyên môn: " + professionalFieldSeedResource, ex);
+        }
+
+        if (seedFile.fields() == null || seedFile.fields().isEmpty()) {
+            log.warn("Professional field seed has no data: {}", professionalFieldSeedResource);
+            return;
+        }
+
+        int changedCount = 0;
+        for (ProfessionalFieldSeed item : seedFile.fields()) {
+            if (item == null || !StringUtils.hasText(item.code()) || !StringUtils.hasText(item.name())) {
+                continue;
+            }
+            String code = item.code().trim();
+            String name = item.name().trim();
+            String description = StringUtils.hasText(item.description()) ? item.description().trim() : null;
+            var existing = professionalFieldRepository.findByCode(code);
+            if (existing.isPresent()) {
+                ProfessionalField field = existing.get();
+                boolean changed = !name.equals(field.getName())
+                        || !java.util.Objects.equals(description, field.getDescription())
+                        || !field.isActive();
+                if (changed) {
+                    field.setName(name);
+                    field.setDescription(description);
+                    field.setActive(true);
+                    professionalFieldRepository.save(field);
+                    changedCount++;
+                }
+            } else {
+                professionalFieldRepository.save(ProfessionalField.builder()
+                        .code(code)
+                        .name(name)
+                        .description(description)
+                        .active(true)
+                        .build());
+                changedCount++;
+            }
+        }
+        log.info("Seeded/updated {} professional fields from {}", changedCount, professionalFieldSeedResource);
+    }
+
     private void seedQuestionBank() {
         if (!questionBankSeedEnabled) {
             log.info("Question bank sample seeding is disabled");
@@ -276,6 +336,12 @@ public class DataSeeder implements CommandLineRunner {
             String difficulty,
             List<QuestionBankSeedQuestion> questions
     ) {
+    }
+
+    private record ProfessionalFieldSeedFile(List<ProfessionalFieldSeed> fields) {
+    }
+
+    private record ProfessionalFieldSeed(String code, String name, String description) {
     }
 
     private record QuestionBankSeedQuestion(

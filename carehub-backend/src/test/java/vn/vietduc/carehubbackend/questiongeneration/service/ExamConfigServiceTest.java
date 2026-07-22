@@ -110,6 +110,28 @@ class ExamConfigServiceTest {
     }
 
     @Test
+    void createActiveConfigUsesAllQuestionsWhenDistributionIsEmpty() {
+        UpsertExamConfigRequest request = new UpsertExamConfigRequest(
+                "Kiểm tra 18 câu",
+                null,
+                questionSet.getId(),
+                3,
+                45,
+                70,
+                0,
+                true,
+                true,
+                "ACTIVE",
+                List.of()
+        );
+
+        var response = service.create(request, "admin");
+
+        assertThat(response.status()).isEqualTo(ExamConfigStatus.ACTIVE.name());
+        assertThat(response.warnings()).isEmpty();
+    }
+
+    @Test
     void activateRejectsShortageByCategory() {
         ExamConfig config = ExamConfig.builder()
                 .id(30L)

@@ -1,5 +1,32 @@
 .ecfg-page { display: flex; flex-direction: column; gap: 20px; }
 
+/* Unified create → generate → assign flow */
+.exam-flow { max-width: 1180px; margin: 0 auto; }
+.exam-flow__steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; border: 1px solid #cbd5e1; border-radius: 10px; background: #cbd5e1; }
+.exam-flow__steps div { display: flex; align-items: center; gap: 10px; padding: 14px 18px; background: #fff; color: #334155; }
+.exam-flow__steps span, .exam-flow__section > header > span { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: #e0efff; color: #0069d9; font-size: 13px; font-weight: 800; }
+.exam-flow__steps strong { font-size: 13px; }
+.exam-flow__section { padding: 22px; }
+.exam-flow__section > header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid #e2e8f0; }
+.exam-flow__section h2 { margin: 1px 0 4px; color: #0f172a; font-size: 17px; }
+.exam-flow__section header p { margin: 0; color: #64748b; font-size: 13px; }
+.exam-flow .exp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.exam-flow__wide { grid-column: 1 / -1; }
+.exam-flow__target-columns { display: grid; grid-template-columns: minmax(260px, .8fr) minmax(420px, 1.2fr); gap: 18px; }
+.exam-flow__target-title { display: flex; justify-content: space-between; align-items: center; min-height: 34px; color: #334155; font-size: 13px; }
+.exam-flow__target-title span { color: #64748b; }
+.exam-flow__employee-search { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+.exam-flow .exp-target-list { max-height: 310px; overflow: auto; }
+.exam-flow__submit-card { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 22px; border: 1px solid #b6d8ff; border-radius: 10px; background: #f0f7ff; }
+.exam-flow__submit-card div { display: flex; flex-direction: column; gap: 4px; }
+.exam-flow__submit-card strong { color: #0f172a; font-size: 15px; }
+.exam-flow__submit-card span { color: #64748b; font-size: 13px; }
+@media (max-width: 900px) {
+  .exam-flow__steps, .exam-flow__target-columns, .exam-flow .exp-form-grid { grid-template-columns: 1fr; }
+  .exam-flow__wide { grid-column: auto; }
+  .exam-flow__submit-card { align-items: stretch; flex-direction: column; }
+}
+
 .ecfg-title-card {
   background: #fff; border-radius: 16px; border: 1px solid #cbd5e1;
   padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);

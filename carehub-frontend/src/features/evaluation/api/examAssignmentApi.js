@@ -70,6 +70,25 @@ export const examAssignmentApi = {
     })
   },
 
+  listManagerAssignments(params) {
+    return httpClient.get('/manager/exam-assignments', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getManagerAssignment(assignmentId) {
+    return httpClient.get(`/manager/exam-assignments/${assignmentId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  getManagerAssignmentResults(assignmentId) {
+    return httpClient.get(`/manager/exam-assignments/${assignmentId}/results`, {
+      headers: authHeaders(),
+    })
+  },
+
   exportAssignmentResults(assignmentId) {
     return httpClient.get(`/exam-assignments/${assignmentId}/export-results`, {
       headers: authHeaders(),
