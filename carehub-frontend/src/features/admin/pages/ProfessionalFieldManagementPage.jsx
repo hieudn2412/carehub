@@ -135,8 +135,29 @@ function ProfessionalFieldManagementPage() {
                     <tr key={field.id}>
                       <td><code>{field.code}</code></td>
                       <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
-                      <td><span className={field.active ? 'pfm-status pfm-status--active' : 'pfm-status'}>{field.active ? 'Đang dùng' : 'Ngừng dùng'}</span></td>
-                      <td><div className="pfm-row-actions"><button type="button" onClick={() => editField(field)}><EditOutlined /> Sửa</button><button type="button" onClick={() => toggleStatus(field)}>{field.active ? 'Ngừng dùng' : 'Kích hoạt'}</button></div></td>
+                      <td>
+                        {field.active ? (
+                          <span className="pfm-status pfm-status--active">Đang dùng</span>
+                        ) : field.code?.startsWith('CUSTOM_') ? (
+                          <span className="pfm-status pfm-status--pending">Chờ duyệt</span>
+                        ) : (
+                          <span className="pfm-status">Ngừng dùng</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="pfm-row-actions">
+                          <button type="button" className="pfm-btn-edit" onClick={() => editField(field)}>
+                            <EditOutlined /> Sửa
+                          </button>
+                          <button
+                            type="button"
+                            className={field.active ? 'pfm-btn-deactivate' : 'pfm-btn-activate'}
+                            onClick={() => toggleStatus(field)}
+                          >
+                            {field.active ? 'Ngừng dùng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

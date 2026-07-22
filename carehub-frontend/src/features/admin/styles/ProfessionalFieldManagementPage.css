@@ -1,24 +1,346 @@
-.pfm-page { padding: 24px; background: #f8fafc; min-height: 100%; }
-.pfm-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
-.pfm-heading h1 { margin: 0; font-size: 24px; color: #0f172a; }
-.pfm-heading p { margin: 6px 0 0; color: #64748b; }
-.pfm-heading button, .pfm-actions button, .pfm-row-actions button { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
-.pfm-layout { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
-.pfm-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
-.pfm-form { padding: 20px; display: grid; gap: 14px; }
-.pfm-form h2 { margin: 0; font-size: 18px; color: #0f172a; }
-.pfm-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; }
-.pfm-form input, .pfm-form textarea, .pfm-filters input, .pfm-filters select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font: inherit; background: #fff; }
-.pfm-form .pfm-check { display: flex; align-items: center; gap: 8px; }
-.pfm-actions, .pfm-row-actions, .pfm-filters { display: flex; gap: 8px; }
-.pfm-actions .pfm-primary { background: #0f766e; color: #fff; border-color: #0f766e; }
-.pfm-list { overflow: hidden; }
-.pfm-filters { padding: 16px; border-bottom: 1px solid #e2e8f0; }
-.pfm-filters input { flex: 1; }
-.pfm-list table { width: 100%; border-collapse: collapse; }
-.pfm-list th, .pfm-list td { padding: 13px 16px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
-.pfm-list th { background: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; }
-.pfm-list td small { display: block; margin-top: 4px; color: #64748b; }
-.pfm-status { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 12px; }
-.pfm-status--active { background: #dcfce7; color: #15803d; }
-@media (max-width: 960px) { .pfm-layout { grid-template-columns: 1fr; } }
+/* ── Premium Professional Field Management Styles ── */
+
+.pfm-page {
+  padding: 28px 32px;
+  background: #f8fafc;
+  min-height: calc(100vh - 64px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Heading section */
+.pfm-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.pfm-heading h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.pfm-heading p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.pfm-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.pfm-heading button:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* Layout split */
+.pfm-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* Card layout */
+.pfm-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+}
+
+/* Form Styles */
+.pfm-form {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.pfm-form h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pfm-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pfm-form input,
+.pfm-form textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.pfm-form input::placeholder {
+  color: #94a3b8;
+}
+
+.pfm-form input:focus,
+.pfm-form textarea:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.pfm-form textarea {
+  resize: vertical;
+}
+
+.pfm-form .pfm-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pfm-form .pfm-check input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #0d9488;
+}
+
+.pfm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.pfm-actions button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #475569;
+  transition: all 0.2s ease;
+}
+
+.pfm-actions button:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.pfm-actions .pfm-primary {
+  background: #0d9488;
+  color: #fff;
+  border-color: #0d9488;
+}
+
+.pfm-actions .pfm-primary:hover:not(:disabled) {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #fff;
+}
+
+/* List / Table Styles */
+.pfm-list {
+  overflow: hidden;
+}
+
+.pfm-filters {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  gap: 12px;
+  background: #fafafa;
+}
+
+.pfm-filters input {
+  flex: 1;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  outline: none;
+  background: #fff;
+  transition: all 0.2s ease;
+}
+
+.pfm-filters input:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.pfm-filters select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  outline: none;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pfm-filters select:focus {
+  border-color: #0d9488;
+}
+
+.pfm-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pfm-list th {
+  padding: 14px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pfm-list td {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  vertical-align: middle;
+  transition: background 0.15s ease;
+}
+
+.pfm-list tr:hover td {
+  background: #f8fafc;
+}
+
+.pfm-list td code {
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+}
+
+.pfm-list td strong {
+  display: block;
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.pfm-list td small {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Status Badges */
+.pfm-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.pfm-status--active {
+  background: #ecfdf5;
+  color: #0f766e;
+  border-color: #ccfbf1;
+}
+
+.pfm-status--pending {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #ffedd5;
+}
+
+/* Row Actions */
+.pfm-row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pfm-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #475569;
+}
+
+.pfm-row-actions .pfm-btn-edit:hover {
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0d9488;
+}
+
+.pfm-row-actions .pfm-btn-activate {
+  background: #0d9488;
+  color: #fff;
+  border-color: #0d9488;
+}
+
+.pfm-row-actions .pfm-btn-activate:hover {
+  background: #0f766e;
+  border-color: #0f766e;
+}
+
+.pfm-row-actions .pfm-btn-deactivate:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+@media (max-width: 960px) {
+  .pfm-layout {
+    grid-template-columns: 1fr;
+  }
+}
