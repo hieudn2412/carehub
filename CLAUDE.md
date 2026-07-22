@@ -56,7 +56,7 @@ Backend requires a `.env.properties` or `env.properties` file at the project roo
 - JWT claims carry roles and permissions; `CustomJwtAuthenticationConverter` maps them to Spring Security GrantedAuthorities
 - `@EnableMethodSecurity` enabled — controllers and services use `@PreAuthorize` annotations
 
-**Public endpoints** (no auth required): `/auth/login`, `/auth/refresh-token`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/training/evidence-download/**`.
+**Public endpoints** (no auth required): `/auth/login`, `/auth/refresh-token`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`.
 
 **AI/ML pipeline** (in `questiongeneration/`):
 - *Question generation*: `DocumentQuestionGenerator` interface → `DocumentQuestionGeneratorRouter` → `DeepSeekDocumentQuestionGenerator` (API) or `MockDocumentQuestionGenerator` (fallback). Configured via `ai.generation.*` properties. Includes circuit breaker and retry logic.

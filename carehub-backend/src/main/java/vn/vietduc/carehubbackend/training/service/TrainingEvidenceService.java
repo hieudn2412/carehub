@@ -14,4 +14,6 @@ public interface TrainingEvidenceService {
     void delete(Long recordId, Long evidenceId);
 
     EvidenceDownloadUrlResponse createDownloadUrl(Long recordId, Long evidenceId);
+
+    EvidenceDownloadUrlResponse createPreviewUrl(Long recordId, Long evidenceId);
 }

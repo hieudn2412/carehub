@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   EditOutlined,
@@ -6,7 +6,6 @@ import {
   ArrowLeftOutlined,
   SendOutlined,
   ClockCircleOutlined,
-  EnvironmentOutlined,
   DownloadOutlined,
   RollbackOutlined,
   FolderOutlined,
@@ -17,6 +16,12 @@ import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/TrainingHours.css'
 
+const PREVIEWABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
+
+function canPreviewEvidence(evidence) {
+  return PREVIEWABLE_IMAGE_TYPES.has(evidence?.mimeType?.toLowerCase())
+}
+
 function TrainingHoursDetailScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -25,16 +30,59 @@ function TrainingHoursDetailScreen() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [returningToDraft, setReturningToDraft] = useState(false)
+  const [evidencePreviews, setEvidencePreviews] = useState({})
 
-  const fetchRecord = () => {
+  const fetchRecord = useCallback(() => {
     setLoading(true)
     trainingApi.getRecord(id)
       .then(res => setRecord(res.data?.data))
       .catch(() => showToast("Không thể tải hồ sơ.", "error"))
       .finally(() => setLoading(false))
-  }
+  }, [id, showToast])
 
-  useEffect(() => { fetchRecord() }, [id])
+  useEffect(() => {
+    const timer = window.setTimeout(fetchRecord, 0)
+    return () => window.clearTimeout(timer)
+  }, [fetchRecord])
+
+  const requestEvidencePreview = useCallback(async (evidenceId) => {
+    const response = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
+    const url = response.data?.data?.downloadUrl
+    if (!url) {
+      throw new Error('Preview URL is missing')
+    }
+    return url
+  }, [id])
+
+  useEffect(() => {
+    const previewableEvidences = record?.evidences?.filter(canPreviewEvidence) || []
+    if (previewableEvidences.length === 0) return undefined
+
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      setEvidencePreviews(Object.fromEntries(
+        previewableEvidences.map(evidence => [evidence.id, { status: 'loading' }])
+      ))
+
+      const previewEntries = await Promise.all(previewableEvidences.map(async (evidence) => {
+        try {
+          const url = await requestEvidencePreview(evidence.id)
+          return [evidence.id, { status: 'ready', url }]
+        } catch {
+          return [evidence.id, { status: 'error' }]
+        }
+      }))
+
+      if (!cancelled) {
+        setEvidencePreviews(Object.fromEntries(previewEntries))
+      }
+    }, 0)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [record?.evidences, requestEvidencePreview])
 
   const handleSubmit = () => {
     if (!record) return
@@ -59,13 +107,39 @@ function TrainingHoursDetailScreen() {
   const handleDownloadEvidence = async (evidenceId) => {
     try {
       const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
-      const url = res.data?.data?.url
+      const url = res.data?.data?.downloadUrl
       if (url) {
-        window.open(url, '_blank')
+        window.open(url, '_blank', 'noopener,noreferrer')
       }
-    } catch (err) {
+    } catch {
       showToast("Không thể tải minh chứng.", "error")
     }
+  }
+
+  const handleRetryPreview = async (evidenceId) => {
+    setEvidencePreviews(previous => ({
+      ...previous,
+      [evidenceId]: { status: 'loading' },
+    }))
+    try {
+      const url = await requestEvidencePreview(evidenceId)
+      setEvidencePreviews(previous => ({
+        ...previous,
+        [evidenceId]: { status: 'ready', url },
+      }))
+    } catch {
+      setEvidencePreviews(previous => ({
+        ...previous,
+        [evidenceId]: { status: 'error' },
+      }))
+    }
+  }
+
+  const handlePreviewImageError = (evidenceId) => {
+    setEvidencePreviews(previous => ({
+      ...previous,
+      [evidenceId]: { status: 'error' },
+    }))
   }
 
   const handleReturnToDraft = async () => {
@@ -75,7 +149,7 @@ function TrainingHoursDetailScreen() {
       await trainingApi.returnToDraft(id)
       showToast("Đã trả hồ sơ về nháp!", "success")
       fetchRecord()
-    } catch (err) {
+    } catch {
       showToast("Không thể trả hồ sơ về nháp.", "error")
     } finally {
       setReturningToDraft(false)
@@ -176,29 +250,71 @@ function TrainingHoursDetailScreen() {
                       <PaperClipOutlined /> Minh chứng ({record.evidences.length})
                     </h3>
                     <div className="th-evidence-grid">
-                      {record.evidences.map(ev => (
-                        <div key={ev.id} className="th-evidence-item">
-                          <PaperClipOutlined className="th-evidence-item__icon" />
-                          <span className="th-evidence-item__name">{ev.originalFilename}</span>
-                          <span className={`th-badge th-badge--${
-                            ev.moderationStatus === 'PASSED' ? 'success'
-                              : ev.moderationStatus === 'FAILED' || ev.moderationStatus === 'ERROR' ? 'danger'
-                              : 'warning'
-                          } th-badge--sm`}>
-                            {ev.moderationStatus === 'PASSED' ? 'Đã duyệt'
-                              : ev.moderationStatus === 'FAILED' ? 'Từ chối'
-                              : ev.moderationStatus === 'ERROR' ? 'Lỗi'
-                              : 'Chờ duyệt'}
-                          </span>
-                          <button
-                            className="th-detail-btn"
-                            onClick={() => handleDownloadEvidence(ev.id)}
-                            style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: '0.8rem' }}
+                      {record.evidences.map(ev => {
+                        const isPreviewable = canPreviewEvidence(ev)
+                        const preview = evidencePreviews[ev.id]
+
+                        return (
+                          <article
+                            key={ev.id}
+                            className={`th-evidence-item${isPreviewable ? ' th-evidence-item--with-preview' : ''}`}
                           >
-                            <DownloadOutlined /> Tải
-                          </button>
-                        </div>
-                      ))}
+                            {isPreviewable && (
+                              <div className="th-evidence-preview">
+                                {preview?.status === 'ready' ? (
+                                  <img
+                                    className="th-evidence-preview__image"
+                                    src={preview.url}
+                                    alt={`Minh chứng ${ev.originalFilename}`}
+                                    loading="lazy"
+                                    onError={() => handlePreviewImageError(ev.id)}
+                                  />
+                                ) : preview?.status === 'error' ? (
+                                  <div className="th-evidence-preview__state" role="alert">
+                                    <span>Không thể hiển thị ảnh.</span>
+                                    <button
+                                      type="button"
+                                      className="th-evidence-preview__retry"
+                                      onClick={() => handleRetryPreview(ev.id)}
+                                    >
+                                      Thử lại
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="th-evidence-preview__state" role="status">
+                                    Đang tải ảnh từ R2...
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div className="th-evidence-item__info">
+                              <PaperClipOutlined className="th-evidence-item__icon" />
+                              <span className="th-evidence-item__name" title={ev.originalFilename}>
+                                {ev.originalFilename}
+                              </span>
+                              <span className={`th-badge th-badge--${
+                                ev.moderationStatus === 'PASSED' ? 'success'
+                                  : ev.moderationStatus === 'FAILED' || ev.moderationStatus === 'ERROR' ? 'danger'
+                                  : 'warning'
+                              } th-badge--sm`}>
+                                {ev.moderationStatus === 'PASSED' ? 'Đã duyệt'
+                                  : ev.moderationStatus === 'FAILED' ? 'Từ chối'
+                                  : ev.moderationStatus === 'ERROR' ? 'Lỗi'
+                                  : 'Chờ duyệt'}
+                              </span>
+                              <button
+                                type="button"
+                                className="th-detail-btn th-evidence-item__download"
+                                onClick={() => handleDownloadEvidence(ev.id)}
+                                aria-label={`Tải xuống ${ev.originalFilename}`}
+                              >
+                                <DownloadOutlined /> Tải
+                              </button>
+                            </div>
+                          </article>
+                        )
+                      })}
                     </div>
                   </div>
                 )}

@@ -54,8 +54,18 @@ public class TrainingEvidenceFile extends BaseEntity {
     @Column(name = "file_size_bytes")
     private Long fileSizeBytes;
 
+    @Column(name = "original_file_size_bytes")
+    private Long originalFileSizeBytes;
+
     @Column(name = "checksum_sha256", length = 64)
     private String checksumSha256;
+
+    @Column(name = "stored_checksum_sha256", length = 64)
+    private String storedChecksumSha256;
+
+    @Builder.Default
+    @Column(name = "is_optimized", nullable = false, columnDefinition = "boolean default false")
+    private boolean optimized = false;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -86,4 +96,7 @@ public class TrainingEvidenceFile extends BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Column(name = "storage_deleted_at")
+    private LocalDateTime storageDeletedAt;
 }

@@ -10,7 +10,15 @@ import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
+import { formatEvidenceStorageSummary, getEvidenceFileError } from '../../../../features/training/utils/evidenceFile.js'
 import '../../styles/TrainingHours.css'
+
+const formatCompactSize = (bytes) => {
+  const value = Number(bytes || 0)
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / 1024 / 1024).toFixed(2)} MB`
+}
 
 function TrainingHoursFormScreen() {
   const { id } = useParams() // empty if creating, exists if editing
@@ -41,12 +49,9 @@ function TrainingHoursFormScreen() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [fileError, setFileError] = useState('')
 
-  const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg']
-  const ALLOWED_EXTS = ['.pdf', '.jpg', '.jpeg', '.png']
-  const MAX_FILE_SIZE = 5 * 1024 * 1024
-
   // Fetch options (activity types) on mount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     trainingApi.getRecordOptions()
       .then(res => {
@@ -63,6 +68,7 @@ function TrainingHoursFormScreen() {
   // Fetch record detail if in edit mode
   useEffect(() => {
     if (isEditMode) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true)
       trainingApi.getRecord(id)
         .then(res => {
@@ -104,7 +110,7 @@ function TrainingHoursFormScreen() {
           setLoading(false)
         })
     }
-  }, [id, isEditMode, navigate])
+  }, [id, isEditMode, navigate, showToast])
 
   const required = ['name', 'date', 'hours', 'type']
 
@@ -183,13 +189,13 @@ function TrainingHoursFormScreen() {
     // Bước 2: Xử lý minh chứng (evidence)
     let failedDeletes = 0
     for (const ev of evidencesToDelete) {
-      try { await trainingApi.deleteEvidence(recordId, ev.id) } catch (e) { failedDeletes++ }
+      try { await trainingApi.deleteEvidence(recordId, ev.id) } catch { failedDeletes++ }
     }
 
     let failedUploads = 0
     if (selectedFiles.length > 0) {
       for (const file of selectedFiles) {
-        try { await trainingApi.uploadEvidence(recordId, file) } catch (e) { failedUploads++ }
+        try { await trainingApi.uploadEvidence(recordId, file) } catch { failedUploads++ }
       }
     }
 
@@ -248,13 +254,9 @@ function TrainingHoursFormScreen() {
     setFileError('')
     const valid = []
     for (const file of files) {
-      const ext = '.' + file.name.split('.').pop().toLowerCase()
-      if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTS.includes(ext)) {
-        setFileError(`File "${file.name}" không đúng định dạng (PDF, JPG, PNG)`)
-        continue
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        setFileError(`File "${file.name}" vượt quá 5MB`)
+      const validationError = getEvidenceFileError(file)
+      if (validationError) {
+        setFileError(validationError)
         continue
       }
       valid.push(file)
@@ -461,7 +463,7 @@ function TrainingHoursFormScreen() {
                       <PaperClipOutlined style={{ marginRight: 6 }} />Minh chứng đào tạo
                     </label>
                     <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>
-                      Kéo thả file vào đây hoặc click để chọn. Hỗ trợ PDF, JPG, PNG (tối đa 5MB/file)
+                      Kéo thả file vào đây hoặc click để chọn. Hỗ trợ PDF, JPG, PNG (đầu vào tối đa 20 MB; lưu tối đa 5 MB/file)
                     </p>
 
                     {/* Existing evidences (edit mode) */}
@@ -476,6 +478,9 @@ function TrainingHoursFormScreen() {
                               <PaperClipOutlined style={{ fontSize: 12 }} />
                               <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {ev.originalFilename}
+                              </span>
+                              <span style={{ color: '#6b7280', fontSize: 11 }}>
+                                {formatEvidenceStorageSummary(ev, formatCompactSize)}
                               </span>
                               <button
                                 type="button"
@@ -528,6 +533,15 @@ function TrainingHoursFormScreen() {
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          fileInputRef.current?.click()
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Chọn tệp minh chứng"
                     >
                       <input
                         ref={fileInputRef}
