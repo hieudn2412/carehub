@@ -86,7 +86,8 @@ public class MyCompetencyService {
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
             for (ExamAttempt a : catAttempts) {
-                sum = sum.add(a.getScore());
+                BigDecimal score = a.getScore() != null ? a.getScore() : BigDecimal.ZERO;
+                sum = sum.add(score);
                 if (Boolean.TRUE.equals(a.getPassed())) {
                     passCount++;
                 }
@@ -147,7 +148,13 @@ public class MyCompetencyService {
         // Filter: submittedBy = current user, status = SUBMITTED, within date range
         // and where subjectContext.employeeCode matches user.employeeCode
         List<FormSubmission> matched = allSubmissions.stream()
-                .filter(s -> s.getSubmittedBy().getId().equals(user.getId()))
+                .filter(s -> {
+                    try {
+                        return s.getSubmittedBy() != null && s.getSubmittedBy().getId().equals(user.getId());
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
                 .filter(s -> s.getStatus() == FormSubmissionStatus.SUBMITTED)
                 .filter(s -> s.getSubmittedAt() != null)
                 .filter(s -> {
