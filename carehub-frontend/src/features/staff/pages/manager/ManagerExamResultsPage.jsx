@@ -4,6 +4,7 @@ import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
+import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultsPage() {
@@ -11,22 +12,31 @@ function ManagerExamResultsPage() {
   const [search, setSearch] = useState('')
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
+  const [professionalFieldId, setProfessionalFieldId] = useState('')
+  const [professionalFields, setProfessionalFields] = useState([])
 
   useEffect(() => {
-    setLoading(true)
-    examAssignmentApi.listAssignments()
-      .then(res => {
-        const data = res.data?.data?.content || res.data?.data || []
-        setAssignments(Array.isArray(data) ? data : [])
-      })
-      .catch(err => {
-        console.error("Error fetching exam assignments", err)
-      })
-      .finally(() => setLoading(false))
-  }, [])
+    const timer = window.setTimeout(() => {
+      setLoading(true)
+      Promise.all([
+        examAssignmentApi.listManagerAssignments({ professionalFieldId: professionalFieldId || undefined }),
+        trainingApi.getRecordOptions(),
+      ])
+        .then(([res, optionRes]) => {
+          const data = res.data?.data?.content || res.data?.data || []
+          setAssignments(Array.isArray(data) ? data : [])
+          setProfessionalFields(optionRes.data?.data?.professionalFields || [])
+        })
+        .catch(err => {
+          console.error("Error fetching exam assignments", err)
+        })
+        .finally(() => setLoading(false))
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [professionalFieldId])
 
   const filteredResults = assignments.filter(item => {
-    const title = (item.title || item.examTitle || '').toLowerCase()
+    const title = (item.name || item.title || item.examTitle || '').toLowerCase()
     return title.includes(search.toLowerCase())
   })
 
@@ -54,6 +64,10 @@ function ManagerExamResultsPage() {
               />
               <SearchOutlined />
             </div>
+            <select className="mgr-select" value={professionalFieldId} onChange={e => setProfessionalFieldId(e.target.value)}>
+              <option value="">Tất cả lĩnh vực chuyên môn</option>
+              {professionalFields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}
+            </select>
           </div>
 
           {/* Loading */}
@@ -72,6 +86,7 @@ function ManagerExamResultsPage() {
               <thead>
                 <tr>
                   <th>Tên kỳ thi</th>
+                  <th>Lĩnh vực chuyên môn</th>
                   <th>Ngày tạo</th>
                   <th>Trạng thái</th>
                   <th>Hạn nộp</th>
@@ -81,7 +96,8 @@ function ManagerExamResultsPage() {
               <tbody>
                 {filteredResults.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
+                    <td>{item.professionalFieldName || '—'}</td>
                     <td style={{ color: '#475569' }}>
                       {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
                     </td>
@@ -91,7 +107,7 @@ function ManagerExamResultsPage() {
                       </span>
                     </td>
                     <td style={{ color: '#475569' }}>
-                      {item.dueDate ? new Date(item.dueDate).toLocaleDateString('vi-VN') : '--'}
+                      {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button 

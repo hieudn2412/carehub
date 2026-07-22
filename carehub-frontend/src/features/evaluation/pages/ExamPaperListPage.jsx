@@ -107,8 +107,7 @@ function ExamPaperListPage() {
 
   async function duplicatePaper(paper) {
     await runAction(paper.id, async () => {
-      const response = await examPaperApi.duplicateExamPaper(paper.id)
-      const duplicated = apiData(response)
+      await examPaperApi.duplicateExamPaper(paper.id)
       showToast('Đã nhân bản bộ đề kiểm tra.', 'success')
       loadPapers()
     })
@@ -147,7 +146,7 @@ function ExamPaperListPage() {
                     <ReloadOutlined /> Tải lại
                   </button>
                   <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/configs')}>
-                    <PlusCircleOutlined /> Sinh bộ đề
+                    <PlusCircleOutlined /> Tạo & giao bài
                   </button>
                 </div>
               </div>

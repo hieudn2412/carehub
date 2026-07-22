@@ -34,6 +34,8 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTar
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.training.entity.TrainingGroup;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
@@ -73,22 +75,56 @@ public class ExamAssignmentService {
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
     private final TrainingGroupRepository trainingGroupRepository;
+    private final ProfessionalFieldRepository professionalFieldRepository;
     private final NotificationEventPublisher notificationEventPublisher;
 
     @Transactional(readOnly = true)
-    public List<ExamAssignmentResponse> list(String query, String status) {
+    public List<ExamAssignmentResponse> list(String query, String status, Long professionalFieldId) {
         String normalizedQuery = normalize(query);
         ExamAssignmentStatus statusFilter = parseStatusOrNull(status);
         List<ExamAssignment> assignments = statusFilter == null
                 ? assignmentRepository.findByStatusNotOrderByUpdatedAtDesc(ExamAssignmentStatus.ARCHIVED)
                 : assignmentRepository.findByStatusOrderByUpdatedAtDesc(statusFilter);
         return assignments.stream()
+                .filter(assignment -> professionalFieldId == null
+                        || (assignment.getProfessionalField() != null
+                        && professionalFieldId.equals(assignment.getProfessionalField().getId())))
                 .filter(assignment -> normalizedQuery.isBlank()
                         || normalize(assignment.getName()).contains(normalizedQuery)
                         || normalize(assignment.getExamPaper().getName()).contains(normalizedQuery)
                         || normalize(assignment.getExamPaper().getCode()).contains(normalizedQuery))
                 .map(assignment -> toResponse(assignment, false))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExamAssignmentResponse> listForManager(
+            Long managerId,
+            String query,
+            String status,
+            Long professionalFieldId
+    ) {
+        Long departmentId = managerDepartmentId(managerId);
+        String normalizedQuery = normalize(query);
+        ExamAssignmentStatus statusFilter = parseStatusOrNull(status);
+        return targetRepository.findAssignmentsForDepartment(departmentId, ExamAssignmentStatus.ARCHIVED).stream()
+                .filter(assignment -> statusFilter == null || assignment.getStatus() == statusFilter)
+                .filter(assignment -> professionalFieldId == null
+                        || (assignment.getProfessionalField() != null
+                        && professionalFieldId.equals(assignment.getProfessionalField().getId())))
+                .filter(assignment -> normalizedQuery.isBlank()
+                        || normalize(assignment.getName()).contains(normalizedQuery)
+                        || normalize(assignment.getExamPaper().getName()).contains(normalizedQuery)
+                        || normalize(assignment.getExamPaper().getCode()).contains(normalizedQuery))
+                .map(assignment -> toResponse(assignment, false))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ExamAssignmentResponse getForManager(Long managerId, Long assignmentId) {
+        ExamAssignment assignment = find(assignmentId);
+        requireDepartmentTargets(managerDepartmentId(managerId), assignment);
+        return toResponse(assignment, true);
     }
 
     @Transactional(readOnly = true)
@@ -100,6 +136,20 @@ public class ExamAssignmentService {
     public ExamAssignmentResultsResponse results(Long assignmentId) {
         ExamAssignment assignment = find(assignmentId);
         List<ExamAssignmentTarget> targets = targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(assignment);
+        return buildResults(assignment, targets);
+    }
+
+    @Transactional(readOnly = true)
+    public ExamAssignmentResultsResponse resultsForManager(Long managerId, Long assignmentId) {
+        ExamAssignment assignment = find(assignmentId);
+        List<ExamAssignmentTarget> targets = requireDepartmentTargets(managerDepartmentId(managerId), assignment);
+        return buildResults(assignment, targets);
+    }
+
+    private ExamAssignmentResultsResponse buildResults(
+            ExamAssignment assignment,
+            List<ExamAssignmentTarget> targets
+    ) {
         Map<Long, List<ExamAttempt>> attemptsByUserId = attemptRepository.findByAssignmentOrderByStartedAtDesc(assignment).stream()
                 .collect(Collectors.groupingBy(
                         attempt -> attempt.getUser().getId(),
@@ -127,6 +177,9 @@ public class ExamAssignmentService {
                 assignment.getExamPaper().getId(),
                 assignment.getExamPaper().getCode(),
                 assignment.getExamPaper().getName(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 rows.size(),
                 (int) rows.stream().filter(row -> row.latestAttemptId() == null).count(),
                 (int) rows.stream().filter(row -> "IN_PROGRESS".equals(row.latestStatus())).count(),
@@ -137,6 +190,23 @@ public class ExamAssignmentService {
                 bestScore,
                 rows
         );
+    }
+
+    private Long managerDepartmentId(Long managerId) {
+        User manager = userRepository.findByIdAndIsDeletedFalse(managerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản manager"));
+        if (manager.getDepartment() == null) {
+            throw new BadRequestException("Tài khoản manager chưa được gán khoa/phòng");
+        }
+        return manager.getDepartment().getId();
+    }
+
+    private List<ExamAssignmentTarget> requireDepartmentTargets(Long departmentId, ExamAssignment assignment) {
+        List<ExamAssignmentTarget> targets = targetRepository.findByAssignmentAndDepartment(assignment, departmentId);
+        if (targets.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy bài kiểm tra trong khoa/phòng của manager");
+        }
+        return targets;
     }
 
     @Transactional(readOnly = true)
@@ -216,6 +286,12 @@ public class ExamAssignmentService {
         if (request.examPaperId() == null) {
             throw new BadRequestException("Vui lòng chọn bộ đề kiểm tra");
         }
+        if (request.professionalFieldId() == null) {
+            throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn");
+        }
+        ProfessionalField professionalField = professionalFieldRepository.findById(request.professionalFieldId())
+                .filter(ProfessionalField::isActive)
+                .orElseThrow(() -> new BadRequestException("Lĩnh vực chuyên môn không hợp lệ hoặc đã ngừng sử dụng"));
         ExamPaper examPaper = examPaperRepository.findById(request.examPaperId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bộ đề kiểm tra"));
         if (examPaper.getStatus() != ExamPaperStatus.PUBLISHED) {
@@ -330,6 +406,7 @@ public class ExamAssignmentService {
                 .name(name)
                 .description(trimToNull(request.description()))
                 .examPaper(examPaper)
+                .professionalField(professionalField)
                 .status(status)
                 .dueAt(request.dueAt())
                 .maxAttempts(clamp(request.maxAttempts() == null ? DEFAULT_MAX_ATTEMPTS : request.maxAttempts(), 1, 10))
@@ -440,6 +517,9 @@ public class ExamAssignmentService {
                 assignment.getExamPaper().getId(),
                 assignment.getExamPaper().getCode(),
                 assignment.getExamPaper().getName(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
                 QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
                 assignment.getDueAt(),

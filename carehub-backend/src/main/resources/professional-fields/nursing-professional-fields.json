@@ -1,0 +1,29 @@
+{
+  "fields": [
+    { "code": "QL-01", "name": "Quản lý điều dưỡng & Chất lượng chăm sóc", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "CN-02", "name": "Ứng dụng CNTT & Quản lý dữ liệu điều dưỡng", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "PC-03", "name": "Kiến thức nền tảng, Pháp luật & Đạo đức", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "GT-04", "name": "Giao tiếp – Ứng xử – Giáo dục sức khỏe", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "NC-05", "name": "Nghiên cứu khoa học & Điều dưỡng dựa trên bằng chứng", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "QT-25", "name": "An toàn lao động & Quản lý nguồn lực điều dưỡng", "description": "I. Quản lý, Công nghệ & Phát triển" },
+    { "code": "AT-06", "name": "An toàn phẫu thuật", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "AT-07", "name": "An toàn truyền máu & Dịch truyền", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "AT-08", "name": "Quản lý thuốc & An toàn sử dụng thuốc", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "KS-09", "name": "Kiểm soát nhiễm khuẩn", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "DP-10", "name": "Dự phòng biến chứng lâm sàng", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "VT-11", "name": "Chăm sóc vết thương & Da", "description": "II. An toàn & Kiểm soát lâm sàng" },
+    { "code": "CC-12", "name": "Hồi sức – Cấp cứu ban đầu", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "ICU-13", "name": "Chăm sóc người bệnh hồi sức tích cực (ICU)", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "NK-14", "name": "Chăm sóc người bệnh nội khoa", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "XK-15", "name": "Chăm sóc người bệnh ngoại khoa", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "SN-16", "name": "Chăm sóc người bệnh Sản – Nhi", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "GN-17", "name": "Chăm sóc giảm nhẹ & Điều dưỡng cuối đời", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "DD-18", "name": "Dinh dưỡng lâm sàng", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "PH-19", "name": "Phục hồi chức năng", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "CK-20", "name": "Điều dưỡng Thận nhân tạo & Lọc máu", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "CK-21", "name": "Điều dưỡng Ung bướu & An toàn hóa trị", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "CK-22", "name": "Điều dưỡng Chuyên khoa lẻ (Mắt-TMH-RHM)", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "PH-23", "name": "Sàng lọc (Triage), Phòng khám & Cấp cứu ngoại viện", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" },
+    { "code": "CD-24", "name": "Chăm sóc sức khỏe tâm thần & Tâm lý lâm sàng", "description": "III. Chăm sóc Lâm sàng Chuyên khoa" }
+  ]
+}

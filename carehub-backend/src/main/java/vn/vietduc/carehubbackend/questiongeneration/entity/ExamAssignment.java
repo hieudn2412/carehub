@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.time.LocalDateTime;
 
@@ -37,6 +38,10 @@ public class ExamAssignment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exam_paper_id", nullable = false)
     private ExamPaper examPaper;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)

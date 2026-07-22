@@ -19,6 +19,7 @@ import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EvaluationDashboardPage.css'
@@ -53,6 +54,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const [departments, setDepartments] = useState([])
   const [papers, setPapers] = useState([])
   const [assignments, setAssignments] = useState([])
+  const [professionalFields, setProfessionalFields] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -73,12 +75,14 @@ function EvaluationDashboardPage({ role = 'admin' }) {
         const commonRequests = [
           examPaperApi.listExamPapers({}),
           examAssignmentApi.listAssignments({}),
+          trainingApi.getRecordOptions(),
         ]
         const scopeRequest = isManager ? staffApi.getProfile() : adminApi.getDepartments()
-        const [paperResponse, assignmentResponse, scopeResponse] = await Promise.all([...commonRequests, scopeRequest])
+        const [paperResponse, assignmentResponse, optionResponse, scopeResponse] = await Promise.all([...commonRequests, scopeRequest])
         if (!active) return
         setPapers(unwrapList(paperResponse))
         setAssignments(unwrapList(assignmentResponse))
+        setProfessionalFields(apiData(optionResponse, {}).professionalFields || [])
         if (isManager) {
           const profile = apiData(scopeResponse, null)
           if (profile?.departmentId) {
@@ -111,6 +115,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
       toDate: filters.toDate ? `${filters.toDate}T23:59:59` : undefined,
       departmentId: filters.departmentId || undefined,
       paperId: filters.paperId || undefined,
+      professionalFieldId: filters.professionalFieldId || undefined,
     }
     try {
       const response = await evaluationDashboardApi.getExamResultsSummary(params)
@@ -123,7 +128,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
     } finally {
       setLoading(false)
     }
-  }, [filters.departmentId, filters.fromDate, filters.paperId, filters.toDate, isManager, showToast])
+  }, [filters.departmentId, filters.fromDate, filters.paperId, filters.professionalFieldId, filters.toDate, isManager, showToast])
 
   useEffect(() => {
     const timer = window.setTimeout(loadDashboard, 0)
@@ -176,13 +181,18 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                 {papers.map((paper) => <option key={paper.id} value={paper.id}>{paper.name || paper.code}</option>)}
               </select>
             </Filter>
-            <Filter label="Lĩnh vực chuyên môn" unavailable><select disabled><option>Chưa có API lọc</option></select></Filter>
+            <Filter label="Lĩnh vực chuyên môn">
+              <select value={filters.professionalFieldId} onChange={(event) => setFilters({ ...filters, professionalFieldId: event.target.value })}>
+                <option value="">Tất cả lĩnh vực</option>
+                {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
+              </select>
+            </Filter>
             <Filter label="Nhân viên" unavailable><select disabled><option>Chưa có API lọc</option></select></Filter>
             <Filter label="Trạng thái đạt/chưa đạt" unavailable><select disabled><option>Chưa có API lọc</option></select></Filter>
           </section>
 
           {error && <div className="exam-dashboard__notice exam-dashboard__notice--error"><InfoCircleOutlined /> {error}</div>}
-          <div className="exam-dashboard__notice"><InfoCircleOutlined /> Backend chưa có số bài chưa từng bắt đầu, lĩnh vực chuyên môn và thống kê nhóm theo bài/nhân viên.</div>
+          <div className="exam-dashboard__notice"><InfoCircleOutlined /> Backend chưa có số bài chưa từng bắt đầu và thống kê nhóm theo bài/nhân viên.</div>
 
           {loading ? (
             <div className="exam-dashboard__loading"><LoadingOutlined spin /><span>Đang tải kết quả bài kiểm tra...</span></div>

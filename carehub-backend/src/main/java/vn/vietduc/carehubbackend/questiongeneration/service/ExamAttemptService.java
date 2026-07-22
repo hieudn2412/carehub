@@ -57,7 +57,7 @@ public class ExamAttemptService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status) {
+    public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status, Long professionalFieldId) {
         ExamAttemptStatus statusFilter = parseStatusOrNull(status);
         List<ExamAttempt> attempts;
         if (assignmentId != null) {
@@ -71,6 +71,9 @@ public class ExamAttemptService {
         return attempts.stream()
                 .peek(this::expireIfNeeded)
                 .filter(attempt -> statusFilter == null || attempt.getStatus() == statusFilter)
+                .filter(attempt -> professionalFieldId == null
+                        || (attempt.getAssignment().getProfessionalField() != null
+                        && professionalFieldId.equals(attempt.getAssignment().getProfessionalField().getId())))
                 .map(attempt -> toResponse(attempt, false, true))
                 .toList();
     }
@@ -244,9 +247,12 @@ public class ExamAttemptService {
                 attempt.getAssignment().getId(),
                 attempt.getAssignment().getName(),
                 attempt.getExamPaper().getId(),
-                attempt.getExamPaper().getCode(),
-                attempt.getExamPaper().getName(),
-                attempt.getUser().getId(),
+                  attempt.getExamPaper().getCode(),
+                  attempt.getExamPaper().getName(),
+                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getId(),
+                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getCode(),
+                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getName(),
+                  attempt.getUser().getId(),
                 attempt.getUser().getEmployeeCode(),
                 attempt.getUser().getName(),
                 attempt.getAttemptNumber(),

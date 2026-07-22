@@ -83,6 +83,7 @@ function ExamTakeListScreen() {
                   <tr>
                     <th>Phân công</th>
                     <th>Bộ đề</th>
+                    <th>Lĩnh vực chuyên môn</th>
                     <th>Hạn nộp</th>
                     <th>Số lượt tối đa</th>
                     <th>Trạng thái</th>
@@ -91,13 +92,14 @@ function ExamTakeListScreen() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr>
+                    <tr><td colSpan="7">Đang tải bài kiểm tra...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan="6">Chưa có bài kiểm tra nào. Liên hệ trưởng phòng để được phân công bài kiểm tra.</td></tr>
+                    <tr><td colSpan="7">Chưa có bài kiểm tra nào. Liên hệ trưởng phòng để được phân công bài kiểm tra.</td></tr>
                   ) : filtered.map((assignment) => (
                     <tr key={assignment.id}>
                       <td>{assignment.name}</td>
                       <td>{assignment.examPaperName}</td>
+                      <td>{assignment.professionalFieldName || '—'}</td>
                       <td>{formatDateTime(assignment.dueAt)}</td>
                       <td>{assignment.maxAttempts}</td>
                       <td>{assignment.statusText}</td>

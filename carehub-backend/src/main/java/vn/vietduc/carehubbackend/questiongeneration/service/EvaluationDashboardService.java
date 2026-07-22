@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,17 +48,17 @@ public class EvaluationDashboardService {
 
     @Transactional(readOnly = true)
     public EvaluationDashboardResponse dashboard() {
-        return dashboard(null, null, null, null, null, null);
+        return dashboard(null, null, null, null, null, null, null);
     }
 
     @Transactional(readOnly = true)
     public EvaluationDashboardResponse dashboard(
             LocalDateTime fromDate, LocalDateTime toDate,
-            Long examConfigId, Long paperId, Long assignmentId, Long departmentId) {
+            Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
         return new EvaluationDashboardResponse(
                 questionBankSummary(),
-                examResultsSummary(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId),
-                itemAnalysis(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId)
+                examResultsSummary(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId, professionalFieldId),
+                itemAnalysis(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId, professionalFieldId)
         );
     }
 
@@ -81,14 +82,14 @@ public class EvaluationDashboardService {
 
     @Transactional(readOnly = true)
     public EvaluationExamResultsSummaryResponse examResultsSummary() {
-        return examResultsSummary(null, null, null, null, null, null);
+        return examResultsSummary(null, null, null, null, null, null, null);
     }
 
     @Transactional(readOnly = true)
     public EvaluationExamResultsSummaryResponse examResultsSummary(
             LocalDateTime fromDate, LocalDateTime toDate,
-            Long examConfigId, Long paperId, Long assignmentId, Long departmentId) {
-        List<ExamAttempt> attempts = filterAttempts(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId);
+            Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
+        List<ExamAttempt> attempts = filterAttempts(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId, professionalFieldId);
         long total = attempts.size();
         long graded = attempts.stream()
                 .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.GRADED || attempt.getStatus() == ExamAttemptStatus.SUBMITTED)
@@ -112,31 +113,39 @@ public class EvaluationDashboardService {
                 .average()
                 .orElse(0));
         double passRate = graded == 0 ? 0 : (double) passed / graded;
+        long inProgress = attempts.stream().filter(attempt -> attempt.getStatus() == ExamAttemptStatus.IN_PROGRESS).count();
+        long expired = attempts.stream().filter(attempt -> attempt.getStatus() == ExamAttemptStatus.EXPIRED).count();
+        List<EvaluationDistributionItemResponse> byStatus = Arrays.stream(ExamAttemptStatus.values())
+                .map(status -> new EvaluationDistributionItemResponse(
+                        status.name(), label(status.name()),
+                        attempts.stream().filter(attempt -> attempt.getStatus() == status).count()))
+                .filter(item -> item.count() > 0)
+                .toList();
 
         return new EvaluationExamResultsSummaryResponse(
                 total,
-                attemptRepository.countByStatus(ExamAttemptStatus.IN_PROGRESS),
+                inProgress,
                 graded,
-                attemptRepository.countByStatus(ExamAttemptStatus.EXPIRED),
+                expired,
                 passed,
                 failed,
                 averageScore,
                 passRate,
                 averageTimeSpent,
-                toDistribution(attemptRepository.countGroupByStatus(), TOP_DISTRIBUTION_LIMIT)
+                byStatus
         );
     }
 
     @Transactional(readOnly = true)
     public List<EvaluationQuestionItemAnalysisResponse> itemAnalysis() {
-        return itemAnalysis(null, null, null, null, null, null);
+        return itemAnalysis(null, null, null, null, null, null, null);
     }
 
     @Transactional(readOnly = true)
     public List<EvaluationQuestionItemAnalysisResponse> itemAnalysis(
             LocalDateTime fromDate, LocalDateTime toDate,
-            Long examConfigId, Long paperId, Long assignmentId, Long departmentId) {
-        List<ExamAttempt> filteredAttempts = filterAttempts(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId);
+            Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
+        List<ExamAttempt> filteredAttempts = filterAttempts(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId, professionalFieldId);
         Set<Long> filteredAttemptIds = filteredAttempts.stream().map(ExamAttempt::getId).collect(Collectors.toSet());
 
         return answerRepository.analyzeQuestionItems(List.of(ExamAttemptStatus.SUBMITTED, ExamAttemptStatus.GRADED)).stream()
@@ -149,7 +158,7 @@ public class EvaluationDashboardService {
     @Transactional(readOnly = true)
     public List<DiscriminationIndexResponse> discriminationIndex(
             Long paperId, Long assignmentId) {
-        List<ExamAttempt> attempts = filterAttempts(null, null, null, paperId, assignmentId, null);
+        List<ExamAttempt> attempts = filterAttempts(null, null, null, paperId, assignmentId, null, null);
         List<ExamAttempt> graded = attempts.stream()
                 .filter(a -> a.getScore() != null
                         && (a.getStatus() == ExamAttemptStatus.GRADED || a.getStatus() == ExamAttemptStatus.SUBMITTED))
@@ -199,7 +208,7 @@ public class EvaluationDashboardService {
 
     @Transactional(readOnly = true)
     public List<WrongAnswerDistributionResponse> wrongAnswerDistribution(Long paperId) {
-        List<ExamAttempt> attempts = filterAttempts(null, null, null, paperId, null, null);
+        List<ExamAttempt> attempts = filterAttempts(null, null, null, paperId, null, null, null);
         Set<Long> attemptIds = attempts.stream()
                 .filter(a -> a.getStatus() == ExamAttemptStatus.GRADED || a.getStatus() == ExamAttemptStatus.SUBMITTED)
                 .map(ExamAttempt::getId)
@@ -253,7 +262,7 @@ public class EvaluationDashboardService {
 
     private List<ExamAttempt> filterAttempts(
             LocalDateTime fromDate, LocalDateTime toDate,
-            Long examConfigId, Long paperId, Long assignmentId, Long departmentId) {
+            Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
         List<ExamAttempt> attempts = attemptRepository.findAllByOrderByStartedAtDesc();
         return attempts.stream()
                 .filter(a -> fromDate == null || (a.getStartedAt() != null && !a.getStartedAt().isBefore(fromDate)))
@@ -264,6 +273,9 @@ public class EvaluationDashboardService {
                 .filter(a -> assignmentId == null || (a.getAssignment() != null && a.getAssignment().getId().equals(assignmentId)))
                 .filter(a -> departmentId == null || (a.getUser() != null && a.getUser().getDepartment() != null
                         && a.getUser().getDepartment().getId().equals(departmentId)))
+                .filter(a -> professionalFieldId == null || (a.getAssignment() != null
+                        && a.getAssignment().getProfessionalField() != null
+                        && a.getAssignment().getProfessionalField().getId().equals(professionalFieldId)))
                 .toList();
     }
 

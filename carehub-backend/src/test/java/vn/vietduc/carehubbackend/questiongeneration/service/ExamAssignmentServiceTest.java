@@ -16,6 +16,8 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTar
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
@@ -46,6 +48,7 @@ class ExamAssignmentServiceTest {
     private final DepartmentRepository departmentRepository = mock(DepartmentRepository.class);
     private final PositionRepository positionRepository = mock(PositionRepository.class);
     private final TrainingGroupRepository trainingGroupRepository = mock(TrainingGroupRepository.class);
+    private final ProfessionalFieldRepository professionalFieldRepository = mock(ProfessionalFieldRepository.class);
     private final NotificationEventPublisher notificationEventPublisher = mock(NotificationEventPublisher.class);
     private ExamAssignmentService service;
 
@@ -60,6 +63,7 @@ class ExamAssignmentServiceTest {
                 departmentRepository,
                 positionRepository,
                 trainingGroupRepository,
+                professionalFieldRepository,
                 notificationEventPublisher
         );
     }
@@ -152,8 +156,15 @@ class ExamAssignmentServiceTest {
         User explicitUser = user(40L, "NV001", "Nguyễn Văn A", department);
         User departmentUser = user(41L, "NV002", "Trần Thị B", department);
         List<ExamAssignmentTarget> savedTargets = new ArrayList<>();
+        ProfessionalField professionalField = ProfessionalField.builder()
+                .id(60L)
+                .code("NOI")
+                .name("Nội khoa")
+                .active(true)
+                .build();
 
         when(examPaperRepository.findById(paper.getId())).thenReturn(Optional.of(paper));
+        when(professionalFieldRepository.findById(professionalField.getId())).thenReturn(Optional.of(professionalField));
         when(departmentRepository.findAllById(any())).thenReturn(List.of(department));
         when(userRepository.findByDepartment_IdInAndIsDeletedFalse(any())).thenReturn(List.of(explicitUser, departmentUser));
         when(userRepository.findAllById(any())).thenReturn(List.of(explicitUser, departmentUser));
@@ -175,6 +186,7 @@ class ExamAssignmentServiceTest {
                 "Đợt kiểm tra tháng 7",
                 null,
                 paper.getId(),
+                professionalField.getId(),
                 List.of(explicitUser.getId()),
                 List.of(department.getId()),
                 null,
@@ -188,6 +200,7 @@ class ExamAssignmentServiceTest {
 
         assertThat(response.targetCount()).isEqualTo(2);
         assertThat(response.resultVisibility()).isEqualTo("SCORE_AND_ANSWERS");
+        assertThat(response.professionalFieldName()).isEqualTo("Nội khoa");
         assertThat(savedTargets)
                 .extracting(target -> target.getUser().getId())
                 .containsExactly(explicitUser.getId(), departmentUser.getId());
