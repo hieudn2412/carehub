@@ -217,6 +217,24 @@
   cursor: pointer;
   position: relative;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pfm-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e23b4d;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 4px;
+  line-height: 1;
 }
 
 .pfm-tab-btn:hover {

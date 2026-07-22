@@ -15,6 +15,7 @@ function ProfessionalFieldManagementPage() {
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [pendingCount, setPendingCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -43,7 +44,7 @@ function ProfessionalFieldManagementPage() {
         if (activeTab === 'pending') {
           content = content.filter(f => f.code?.startsWith('CUSTOM_'))
         } else {
-          // 'existing' - show all except custom unapproved fields
+          // 'existing' - show all except unapproved custom fields
           content = content.filter(f => !(f.code?.startsWith('CUSTOM_') && !f.active))
         }
         setFields(content)
@@ -52,10 +53,27 @@ function ProfessionalFieldManagementPage() {
       .finally(() => setLoading(false))
   }, [activeTab, statusFilter, keyword, showToast])
 
+  const loadPendingCount = useCallback(() => {
+    adminApi.getProfessionalFields({
+      page: 0,
+      size: 100,
+      active: 'false',
+    })
+      .then(response => {
+        const content = response.data?.data?.content || []
+        const count = content.filter(f => f.code?.startsWith('CUSTOM_')).length
+        setPendingCount(count)
+      })
+      .catch(error => console.error("Error loading pending fields count", error))
+  }, [])
+
   useEffect(() => {
-    const timer = window.setTimeout(loadFields, 250)
+    const timer = window.setTimeout(() => {
+      loadFields()
+      loadPendingCount()
+    }, 250)
     return () => window.clearTimeout(timer)
-  }, [loadFields])
+  }, [loadFields, loadPendingCount])
 
   const resetForm = () => {
     setEditingId(null)
@@ -90,6 +108,7 @@ function ProfessionalFieldManagementPage() {
       }
       resetForm()
       loadFields()
+      loadPendingCount()
     } catch (error) {
       showToast(error?.response?.data?.message || 'Không thể lưu lĩnh vực chuyên môn', 'error')
     } finally {
@@ -108,6 +127,7 @@ function ProfessionalFieldManagementPage() {
       })
       showToast(field.active ? 'Đã ngừng sử dụng lĩnh vực' : 'Đã kích hoạt lĩnh vực', 'success')
       loadFields()
+      loadPendingCount()
     } catch (error) {
       showToast(error?.response?.data?.message || 'Không thể đổi trạng thái lĩnh vực', 'error')
     }
@@ -155,7 +175,7 @@ function ProfessionalFieldManagementPage() {
                     className={`pfm-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
                     onClick={() => handleTabChange('pending')}
                   >
-                    Chờ phê duyệt
+                    Chờ phê duyệt {pendingCount > 0 && <span className="pfm-tab-badge">{pendingCount}</span>}
                   </button>
                 </div>
                 <div className="pfm-search-box">
