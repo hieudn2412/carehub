@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
+import DepartmentCombobox from '../components/DepartmentCombobox'
 import { adminApi } from '../api/adminApi'
 import {
   SearchOutlined,
@@ -975,27 +976,15 @@ function AdminAccountsScreen() {
                   </div>
 
                   <div className="am-form-group">
-                    <label className="am-form-label">Phòng ban *</label>
-                    <select
-                      className="am-form-select"
+                    <label className="am-form-label" htmlFor="employee-department">Phòng ban *</label>
+                    <DepartmentCombobox
+                      id="employee-department"
+                      departments={departments}
                       value={formDeptId}
-                      onChange={(e) => setFormDeptId(e.target.value)}
+                      onChange={setFormDeptId}
                       disabled={departmentSelectDisabled}
-                      required
-                    >
-                      <option value="">
-                        {departmentLoading ? 'Đang tải phòng ban...' : 'Chọn phòng ban...'}
-                      </option>
-                      {!departmentLoading && departmentLoadError && (
-                        <option value="" disabled>Không tải được phòng ban</option>
-                      )}
-                      {departmentEmpty && (
-                        <option value="" disabled>Chưa có phòng ban trong hệ thống</option>
-                      )}
-                      {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                      placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tìm hoặc chọn phòng ban...'}
+                    />
                     {(departmentLoadError || departmentEmpty) && (
                       <div className="am-form-help am-form-help--warning">
                         {departmentLoadError || 'Chưa có phòng ban thật trong cơ sở dữ liệu. Hãy tạo phòng ban trước khi thêm tài khoản.'}

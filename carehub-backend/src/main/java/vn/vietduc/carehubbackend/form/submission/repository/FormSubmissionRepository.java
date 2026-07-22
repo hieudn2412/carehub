@@ -7,8 +7,28 @@ import org.springframework.data.repository.query.Param;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 
 import java.util.Optional;
+import java.time.Instant;
+import java.util.List;
 
 public interface FormSubmissionRepository extends JpaRepository<FormSubmission, Long> {
+    @EntityGraph(attributePaths = {"formVersion", "formVersion.form", "submittedBy", "subjectContext"})
+    @Query("""
+            select s from FormSubmission s
+            join s.subjectContext context
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and (context.subjectUser.id = :userId
+                   or (context.subjectUser is null and lower(context.employeeCode) = lower(:employeeCode)))
+            order by s.submittedAt desc
+            """)
+    List<FormSubmission> findScoredEvaluationsForSubject(
+            @Param("userId") Long userId,
+            @Param("employeeCode") String employeeCode,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate
+    );
+
     boolean existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
             Long assignmentItemId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
 

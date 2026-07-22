@@ -10,6 +10,7 @@ public record CompetencySummaryResponse(
         String toDate,
         BigDecimal knowledgeWeight,
         BigDecimal skillWeight,
+        BigDecimal targetScore,
         List<CompetencySummaryItemResponse> items
 ) {
 }

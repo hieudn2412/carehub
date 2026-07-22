@@ -38,8 +38,8 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             JOIN FETCH ec.questionSet qs
             WHERE a.user = :user
               AND a.status IN ('SUBMITTED', 'GRADED')
-              AND (:fromDate IS NULL OR a.submittedAt >= :fromDate)
-              AND (:toDate IS NULL OR a.submittedAt <= :toDate)
+              AND a.submittedAt >= :fromDate
+              AND a.submittedAt <= :toDate
             ORDER BY a.submittedAt DESC
             """)
     List<ExamAttempt> findScoredAttemptsByUserAndDateRange(

@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.form.submission.dto.FormSubmissionResponse;
+import vn.vietduc.carehubbackend.form.submission.service.FormSubmissionService;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencyKnowledgeResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencySkillResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencySummaryResponse;
@@ -27,6 +30,7 @@ public class MyCompetencyController {
     private final MyCompetencyService myCompetencyService;
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
+    private final FormSubmissionService formSubmissionService;
 
     @GetMapping("/knowledge")
     @PreAuthorize("isAuthenticated()")
@@ -59,6 +63,17 @@ public class MyCompetencyController {
         MyCompetencySummaryResponse data = myCompetencyService.getCompetencySummary(user, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy tổng hợp năng lực thành công", data));
+    }
+
+    @GetMapping("/skills/{submissionId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<FormSubmissionResponse>> getMySkillEvaluation(
+            @PathVariable Long submissionId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy chi tiết đánh giá kỹ năng thành công",
+                formSubmissionService.getForSubjectUser(submissionId, securityUtils.getCurrentUserId())
+        ));
     }
 
     private User getCurrentUser() {

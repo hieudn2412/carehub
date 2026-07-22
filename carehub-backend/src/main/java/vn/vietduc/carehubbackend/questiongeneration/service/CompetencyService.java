@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmplo
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyTargetResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse;
@@ -35,6 +36,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -58,13 +60,8 @@ public class CompetencyService {
     @Value("${competency.compliance.default-target:80.0}")
     private double defaultComplianceTarget;
 
-    @Value("${competency.weight.knowledge:0.5}")
-    private double knowledgeWeight;
-
-    @Value("${competency.weight.skill:0.5}")
-    private double skillWeight;
-
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final BigDecimal SUMMARY_WEIGHT = new BigDecimal("0.5");
 
     @Transactional(readOnly = true)
     public CompetencyByFieldResponse getByField(Long departmentId, Long categoryId, LocalDate fromDate, LocalDate toDate) {
@@ -86,7 +83,10 @@ public class CompetencyService {
 
         List<CompetencyByFieldItemResponse> items = new ArrayList<>();
         for (User user : users) {
-            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime);
+            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime)
+                    .stream()
+                    .filter(attempt -> attempt.getScore() != null)
+                    .toList();
             if (attempts.isEmpty()) continue;
 
             // Filter by category if specified
@@ -136,7 +136,10 @@ public class CompetencyService {
 
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-        List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime);
+        List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime)
+                .stream()
+                .filter(attempt -> attempt.getScore() != null)
+                .toList();
 
         Map<String, List<ExamAttempt>> grouped = new LinkedHashMap<>();
         for (ExamAttempt a : attempts) {
@@ -411,12 +414,16 @@ public class CompetencyService {
 
         Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
+        BigDecimal targetScore = department.getCompetencyTargetScore();
         List<User> users = userRepository.findByDepartment_IdInAndIsDeletedFalse(Set.of(departmentId));
 
         List<CompetencySummaryItemResponse> items = new ArrayList<>();
         for (User user : users) {
             // Knowledge
-            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime);
+            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime)
+                    .stream()
+                    .filter(attempt -> attempt.getScore() != null)
+                    .toList();
             BigDecimal knowledgeAvg = null;
             if (!attempts.isEmpty()) {
                 BigDecimal kSum = BigDecimal.ZERO;
@@ -425,23 +432,19 @@ public class CompetencyService {
             }
 
             // Skills
-            List<FormSubmission> allSubmissions = formSubmissionRepository.findAll();
-            List<FormSubmission> userSubs = allSubmissions.stream()
-                    .filter(s -> s.getSubmittedBy().getId().equals(user.getId()))
-                    .filter(s -> s.getStatus() == FormSubmissionStatus.SUBMITTED)
-                    .filter(s -> s.getSubmittedAt() != null)
-                    .filter(s -> {
-                        java.time.Instant instant = s.getSubmittedAt();
-                        LocalDateTime dt = LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault());
-                        return !dt.isBefore(fromDateTime) && !dt.isAfter(toDateTime);
-                    })
-                    .collect(Collectors.toList());
+            ZoneId zoneId = ZoneId.systemDefault();
+            List<FormSubmission> userSubs = formSubmissionRepository.findScoredEvaluationsForSubject(
+                    user.getId(),
+                    user.getEmployeeCode(),
+                    fromDateTime.atZone(zoneId).toInstant(),
+                    toDateTime.atZone(zoneId).toInstant()
+            );
 
             BigDecimal skillAvg = null;
             if (!userSubs.isEmpty()) {
                 BigDecimal sSum = BigDecimal.ZERO;
                 for (FormSubmission s : userSubs) {
-                    sSum = sSum.add(s.getTotalScore() != null ? s.getTotalScore() : BigDecimal.ZERO);
+                    sSum = sSum.add(practicalScore(s));
                 }
                 skillAvg = sSum.divide(BigDecimal.valueOf(userSubs.size()), 2, RoundingMode.HALF_UP);
             }
@@ -449,12 +452,8 @@ public class CompetencyService {
             // Calculate overall
             BigDecimal overallScore = null;
             if (knowledgeAvg != null && skillAvg != null) {
-                overallScore = knowledgeAvg.multiply(BigDecimal.valueOf(knowledgeWeight))
-                        .add(skillAvg.multiply(BigDecimal.valueOf(skillWeight)));
-            } else if (knowledgeAvg != null) {
-                overallScore = knowledgeAvg;
-            } else if (skillAvg != null) {
-                overallScore = skillAvg;
+                overallScore = knowledgeAvg.add(skillAvg)
+                        .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
             }
 
             CompetencyLevel level = overallScore != null
@@ -466,7 +465,7 @@ public class CompetencyService {
                     level != null ? level.name() : null,
                     level != null ? QuestionGenerationLabels.competencyLevel(level) : null,
                     level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
-                    level != null && level != CompetencyLevel.NOT_COMPETENT
+                    overallScore != null && targetScore != null && overallScore.compareTo(targetScore) > 0
             ));
         }
 
@@ -475,9 +474,50 @@ public class CompetencyService {
         return new CompetencySummaryResponse(
                 department.getId(), department.getName(),
                 from.format(DATE_FMT), to.format(DATE_FMT),
-                BigDecimal.valueOf(knowledgeWeight), BigDecimal.valueOf(skillWeight),
+                SUMMARY_WEIGHT, SUMMARY_WEIGHT,
+                targetScore,
                 items
         );
+    }
+
+    @Transactional
+    public DepartmentCompetencyTargetResponse updateDepartmentTarget(
+            Long departmentId,
+            BigDecimal targetScore,
+            User actor,
+            boolean admin
+    ) {
+        Department department = departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new vn.vietduc.carehubbackend.exception.ResourceNotFoundException(
+                        "Không tìm thấy khoa/phòng"
+                ));
+        if (!admin && (actor.getDepartment() == null
+                || !departmentId.equals(actor.getDepartment().getId()))) {
+            throw new vn.vietduc.carehubbackend.exception.ForbiddenException(
+                    "Manager chỉ được cập nhật mục tiêu của khoa mình"
+            );
+        }
+        department.setCompetencyTargetScore(targetScore.setScale(2, RoundingMode.HALF_UP));
+        Department saved = departmentRepository.save(department);
+        return new DepartmentCompetencyTargetResponse(
+                saved.getId(),
+                saved.getName(),
+                saved.getCompetencyTargetScore()
+        );
+    }
+
+    private BigDecimal practicalScore(FormSubmission submission) {
+        if (submission.getConvertedScore() != null) {
+            return submission.getConvertedScore().multiply(BigDecimal.TEN).setScale(2, RoundingMode.HALF_UP);
+        }
+        if (submission.getTotalScore() != null
+                && submission.getMaxScore() != null
+                && submission.getMaxScore().compareTo(BigDecimal.ZERO) > 0) {
+            return submission.getTotalScore()
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(submission.getMaxScore(), 2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
     }
 
     private String getCategoryName(ExamAttempt attempt) {
