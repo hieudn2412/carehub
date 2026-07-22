@@ -128,40 +128,42 @@ function ProfessionalFieldManagementPage() {
                   <option value="false">Ngừng sử dụng</option>
                 </select>
               </div>
-              <table>
-                <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-                <tbody>
-                  {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
-                    <tr key={field.id}>
-                      <td><code>{field.code}</code></td>
-                      <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
-                      <td>
-                        {field.active ? (
-                          <span className="pfm-status pfm-status--active">Đang dùng</span>
-                        ) : field.code?.startsWith('CUSTOM_') ? (
-                          <span className="pfm-status pfm-status--pending">Chờ duyệt</span>
-                        ) : (
-                          <span className="pfm-status">Ngừng dùng</span>
-                        )}
-                      </td>
-                      <td>
-                        <div className="pfm-row-actions">
-                          <button type="button" className="pfm-btn-edit" onClick={() => editField(field)}>
-                            <EditOutlined /> Sửa
-                          </button>
-                          <button
-                            type="button"
-                            className={field.active ? 'pfm-btn-deactivate' : 'pfm-btn-activate'}
-                            onClick={() => toggleStatus(field)}
-                          >
-                            {field.active ? 'Ngừng dùng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="pfm-table-container">
+                <table>
+                  <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                  <tbody>
+                    {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
+                      <tr key={field.id}>
+                        <td><code>{field.code}</code></td>
+                        <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
+                        <td>
+                          {field.active ? (
+                            <span className="pfm-status pfm-status--active">Đang dùng</span>
+                          ) : field.code?.startsWith('CUSTOM_') ? (
+                            <span className="pfm-status pfm-status--pending">Chờ duyệt</span>
+                          ) : (
+                            <span className="pfm-status">Ngừng dùng</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="pfm-row-actions">
+                            <button type="button" className="pfm-btn-edit" onClick={() => editField(field)}>
+                              <EditOutlined /> Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className={field.active ? 'pfm-btn-deactivate' : 'pfm-btn-activate'}
+                              onClick={() => toggleStatus(field)}
+                            >
+                              {field.active ? 'Ngừng dùng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </main>
