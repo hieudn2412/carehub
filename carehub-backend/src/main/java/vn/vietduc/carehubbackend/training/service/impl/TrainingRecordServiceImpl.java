@@ -42,7 +42,9 @@ import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordStateMachine;
 import vn.vietduc.carehubbackend.training.validation.TrainingDomainValidator;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 import vn.vietduc.carehubbackend.notification.service.NotificationService;
 
 import java.time.LocalDateTime;
@@ -70,6 +72,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final TrainingDomainValidator validator;
     private final TrainingAuditService auditService;
     private final NotificationService notificationService;
+    private final UserRoleRepository userRoleRepository;
 
     @Value("${app.training.records.max-edit-count:2}")
     private int maxEditCount;
@@ -331,7 +334,11 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                     });
 
             try {
-                List<User> admins = userRepository.findAllAdmins();
+                List<User> admins = userRoleRepository.findAll().stream()
+                        .filter(ur -> ur.getRole() != null && "ADMIN".equals(ur.getRole().getCode()))
+                        .map(ur -> ur.getUser())
+                        .filter(u -> u != null && !u.isDeleted())
+                        .toList();
                 String title = "Đề xuất lĩnh vực chuyên môn mới";
                 String content = "Nhân viên " + actor.getName() + " đã đề xuất lĩnh vực chuyên môn mới: \"" + trimmedName + "\". Vui lòng kiểm tra và duyệt.";
                 String deepLink = "/admin/training/professional-fields";

@@ -106,11 +106,4 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             """)
     List<User> findManagersByDepartmentId(@Param("departmentId") Long departmentId);
 
-    @Query("""
-            SELECT ur.user
-            FROM UserRole ur
-            WHERE ur.user.isDeleted = false
-              AND ur.role.code = 'ADMIN'
-            """)
-    List<User> findAllAdmins();
 }
