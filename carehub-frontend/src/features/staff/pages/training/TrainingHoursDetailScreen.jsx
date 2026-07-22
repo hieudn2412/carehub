@@ -340,6 +340,7 @@ function TrainingHoursDetailScreen() {
                       <RollbackOutlined /> {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
                     </button>
                   )}
+                </div>
               </>
             )}
           </div>
