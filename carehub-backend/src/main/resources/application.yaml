@@ -45,6 +45,8 @@ app:
     question-bank:
       enabled: ${APP_SEED_QUESTION_BANK_ENABLED:true}
       resource: ${APP_SEED_QUESTION_BANK_RESOURCE:classpath:question-bank/hospital-review-questions.json}
+    professional-fields:
+      resource: ${APP_SEED_PROFESSIONAL_FIELDS_RESOURCE:classpath:professional-fields/nursing-professional-fields.json}
 
 ai:
   generation:

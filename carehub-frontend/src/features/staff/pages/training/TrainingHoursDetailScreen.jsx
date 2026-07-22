@@ -195,7 +195,7 @@ function TrainingHoursDetailScreen() {
                     <h1 className="th-detail-title">{record.title}</h1>
                     <div className="th-detail-meta">
                       <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
-                      {record.provider && <span><FolderOutlined /> {record.provider}</span>}
+                      {record.professionalFieldName && <span><FolderOutlined /> {record.professionalFieldName}</span>}
                       <span className={`th-badge ${(statusCfg[record.workflowStatus] || statusCfg.DRAFT).cls}`}>
                         {(statusCfg[record.workflowStatus] || statusCfg.DRAFT).label}
                       </span>
@@ -234,8 +234,8 @@ function TrainingHoursDetailScreen() {
                     <div className="th-detail-text">{record.activityTypeName || '-'}</div>
                   </div>
                   <div className="th-detail-block">
-                    <label className="th-detail-label">Lĩnh vực</label>
-                    <div className="th-detail-text">{record.provider || '-'}</div>
+                    <label className="th-detail-label">Lĩnh vực chuyên môn</label>
+                    <div className="th-detail-text">{record.professionalFieldName || '-'}</div>
                   </div>
                   <div className="th-detail-block th-detail-block--full">
                     <label className="th-detail-label">Ghi chú</label>

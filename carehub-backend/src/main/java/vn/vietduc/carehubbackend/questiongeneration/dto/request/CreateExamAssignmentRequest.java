@@ -7,6 +7,7 @@ public record CreateExamAssignmentRequest(
         String name,
         String description,
         Long examPaperId,
+        Long professionalFieldId,
         List<Long> userIds,
         List<Long> departmentIds,
         List<Long> positionIds,

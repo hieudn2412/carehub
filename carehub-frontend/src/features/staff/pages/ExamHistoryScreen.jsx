@@ -25,6 +25,7 @@ function ExamHistoryScreen() {
   const [selectedAttempt, setSelectedAttempt] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [professionalFieldId, setProfessionalFieldId] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -71,9 +72,19 @@ function ExamHistoryScreen() {
         statusFilter === 'all'
         || (statusFilter === 'pass' && attempt.passed)
         || (statusFilter === 'fail' && !attempt.passed)
-      return matchesSearch && matchesStatus
+      const matchesField = !professionalFieldId || String(attempt.professionalFieldId) === professionalFieldId
+      return matchesSearch && matchesStatus && matchesField
     })
-  }, [completedAttempts, search, statusFilter])
+  }, [completedAttempts, professionalFieldId, search, statusFilter])
+
+  const professionalFields = useMemo(() => Array.from(new Map(
+    attempts
+      .filter((attempt) => attempt.professionalFieldId)
+      .map((attempt) => [String(attempt.professionalFieldId), {
+        id: String(attempt.professionalFieldId),
+        name: attempt.professionalFieldName || attempt.professionalFieldCode,
+      }]),
+  ).values()), [attempts])
 
   async function viewAttempt(attempt) {
     try {
@@ -123,6 +134,10 @@ function ExamHistoryScreen() {
                 <option value="pass">Đạt</option>
                 <option value="fail">Không đạt</option>
               </select>
+              <select value={professionalFieldId} onChange={(event) => setProfessionalFieldId(event.target.value)}>
+                <option value="">Tất cả lĩnh vực chuyên môn</option>
+                {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
+              </select>
             </div>
 
             <div className="eh-table-card">
@@ -131,6 +146,7 @@ function ExamHistoryScreen() {
                   <tr>
                     <th>Tên bài thi</th>
                     <th>Ngày nộp</th>
+                    <th>Lĩnh vực chuyên môn</th>
                     <th>Điểm số</th>
                     <th>Phân loại</th>
                     <th>Trạng thái</th>
@@ -141,13 +157,14 @@ function ExamHistoryScreen() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="8">Đang tải lịch sử thi...</td></tr>
+                    <tr><td colSpan="9">Đang tải lịch sử thi...</td></tr>
                   ) : filtered.length === 0 ? (
-                    <tr><td colSpan="8">Chưa có lịch sử thi.</td></tr>
+                    <tr><td colSpan="9">Chưa có lịch sử thi.</td></tr>
                   ) : filtered.map((attempt) => (
                     <tr key={attempt.id}>
                       <td>{attempt.examPaperName}</td>
                       <td>{formatDateTime(attempt.submittedAt)}</td>
+                      <td>{attempt.professionalFieldName || '—'}</td>
                       <td><span className={`eh-score ${attempt.passed ? 'eh-score--pass' : 'eh-score--fail'}`}>{attempt.score ?? '---'}%</span></td>
                       <td>
                         {attempt.classification ? (

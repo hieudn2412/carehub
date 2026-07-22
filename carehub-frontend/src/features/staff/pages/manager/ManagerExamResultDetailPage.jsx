@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
@@ -15,20 +15,23 @@ function ManagerExamResultDetailPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    setLoading(true)
-    Promise.all([
-      examAssignmentApi.getAssignment(id),
-      examAssignmentApi.getAssignmentResults(id)
-    ])
-      .then(([assignmentRes, resultsRes]) => {
-        setAssignment(assignmentRes.data?.data || null)
-        const data = resultsRes.data?.data?.content || resultsRes.data?.data || []
-        setResults(Array.isArray(data) ? data : [])
-      })
-      .catch(err => {
-        console.error("Error fetching assignment results", err)
-      })
-      .finally(() => setLoading(false))
+    const timer = window.setTimeout(() => {
+      setLoading(true)
+      Promise.all([
+        examAssignmentApi.getManagerAssignment(id),
+        examAssignmentApi.getManagerAssignmentResults(id)
+      ])
+        .then(([assignmentRes, resultsRes]) => {
+          setAssignment(assignmentRes.data?.data || null)
+          const data = resultsRes.data?.data || {}
+          setResults(Array.isArray(data) ? data : (data.rows || []))
+        })
+        .catch(err => {
+          console.error("Error fetching assignment results", err)
+        })
+        .finally(() => setLoading(false))
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [id])
 
   const getStatusBadge = (score, passThreshold = 50) => {
@@ -76,7 +79,8 @@ function ManagerExamResultDetailPage() {
             </button>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết kết quả kỳ thi</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              {assignment?.title || `Kỳ thi #${id}`}
+              {assignment?.name || `Kỳ thi #${id}`}
+              {assignment?.professionalFieldName ? ` · ${assignment.professionalFieldName}` : ''}
             </p>
           </div>
 
@@ -106,11 +110,12 @@ function ManagerExamResultDetailPage() {
                   </tr>
                 ) : (
                   results.map((item, idx) => {
-                    const badge = getStatusBadge(item.score || item.totalScore || 0)
+                    const score = item.latestScore ?? item.bestScore ?? 0
+                    const badge = getStatusBadge(score)
                     return (
                       <tr key={item.id || idx}>
                         <td>
-                          <div style={{ fontWeight: 500 }}>{item.employeeName || item.fullName || '--'}</div>
+                          <div style={{ fontWeight: 500 }}>{item.userName || item.employeeName || item.fullName || '--'}</div>
                           <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeCode || item.employeeId || '--'}</div>
                         </td>
                         <td>
@@ -118,14 +123,14 @@ function ManagerExamResultDetailPage() {
                             color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                             fontSize: 14
                           }}>
-                            {item.score ?? item.totalScore ?? 0}%
+                            {score}%
                           </strong>
                         </td>
                         <td>
                           <span className={`mgr-badge mgr-badge--${badge.color}`}>{badge.label}</span>
                         </td>
                         <td style={{ color: '#475569' }}>
-                          {formatDuration(item.duration || item.durationSeconds)}
+                          {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
                         </td>
                         <td>
                           {item.competencyLevel ? (

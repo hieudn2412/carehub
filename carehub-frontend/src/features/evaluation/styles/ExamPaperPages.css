@@ -60,6 +60,12 @@
   cursor: pointer;
 }
 
+.exp-actions button.is-active {
+  border-color: #007aff;
+  background: #e8f2ff;
+  color: #0069d9;
+}
+
 .exp-btn-primary {
   background: #007aff;
   color: #fff;
@@ -352,6 +358,17 @@
 .exp-detail-header span { color: #64748b; font-size: 13px; }
 .exp-detail-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
+.exp-assignment-results { background: #fff; }
+.exp-results-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 150px; color: #64748b; }
+.exp-results-summary { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 10px; }
+.exp-results-summary div { padding: 13px 15px; border: 1px solid #dbe5ef; border-radius: 8px; background: #f8fafc; }
+.exp-results-summary span { display: block; margin-bottom: 5px; color: #64748b; font-size: 12px; }
+.exp-results-summary strong { color: #0f172a; font-size: 20px; }
+.exp-results-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+.exp-results-table th, .exp-results-table td { white-space: nowrap; }
+.exp-results-table td:first-child { white-space: normal; min-width: 150px; }
+.exp-result-pending { color: #94a3b8; font-weight: 600; }
+
 @media (max-width: 900px) {
   .exp-title-card,
   .exp-filter-bar {
@@ -365,5 +382,9 @@
 
   .exp-form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .exp-results-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

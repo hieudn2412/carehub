@@ -31,11 +31,11 @@ function TrainingHoursFormScreen() {
     date: '',
     hours: '',
     type: '',
-    professionalField: '',
-    customProfessionalField: '',
+    professionalFieldId: '',
     notes: '',
   })
   const [activityTypes, setActivityTypes] = useState([])
+  const [professionalFields, setProfessionalFields] = useState([])
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -56,6 +56,7 @@ function TrainingHoursFormScreen() {
     trainingApi.getRecordOptions()
       .then(res => {
         setActivityTypes(res.data?.data?.activityTypes || [])
+        setProfessionalFields(res.data?.data?.professionalFields || [])
       })
       .catch(err => {
         console.error("Error fetching options", err)
@@ -79,17 +80,12 @@ function TrainingHoursFormScreen() {
               navigate('/staff/training')
               return
             }
-            const preDefinedFields = ['Điều dưỡng', 'Hộ sinh', 'Kỹ thuật y', 'Dược', 'Kỹ thuật viên']
-            const loadedField = record.provider || ''
-            const isCustom = loadedField && !preDefinedFields.includes(loadedField)
-
             setForm({
               name: record.title || '',
               date: record.startDate || '',
               hours: record.declaredHours ? String(record.declaredHours) : '',
               type: record.activityTypeId ? String(record.activityTypeId) : '',
-              professionalField: isCustom ? 'Khác' : loadedField,
-              customProfessionalField: isCustom ? loadedField : '',
+              professionalFieldId: record.professionalFieldId ? String(record.professionalFieldId) : '',
               notes: record.description || '',
             })
             setRecordVersion(record.version)
@@ -127,14 +123,6 @@ function TrainingHoursFormScreen() {
       }
     }
 
-    if (form.professionalField === 'Khác') {
-      if (!form.customProfessionalField || !form.customProfessionalField.trim()) {
-        e.customProfessionalField = 'Vui lòng nhập tên lĩnh vực'
-      } else if (form.customProfessionalField.trim().length > 255) {
-        e.customProfessionalField = 'Tên lĩnh vực không được vượt quá 255 ký tự'
-      }
-    }
-
     if (shouldSubmit && form.date) {
       const recordDate = new Date(form.date)
       const fiveYearsAgo = new Date()
@@ -163,9 +151,7 @@ function TrainingHoursFormScreen() {
         startDate: form.date,
         declaredHours: parseFloat(form.hours),
         activityTypeId: form.type ? parseInt(form.type, 10) : null,
-        provider: form.professionalField === 'Khác'
-          ? (form.customProfessionalField?.trim() || null)
-          : (form.professionalField || null),
+        professionalFieldId: form.professionalFieldId ? Number(form.professionalFieldId) : null,
         description: form.notes || null,
         durationValue: parseFloat(form.hours),
         durationUnit: 'HOUR',
@@ -398,48 +384,26 @@ function TrainingHoursFormScreen() {
                     </div>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                        Lĩnh vực
+                        Lĩnh vực chuyên môn
                       </label>
                       <select
-                        value={form.professionalField}
-                        onChange={e => setForm({ ...form, professionalField: e.target.value })}
+                        value={form.professionalFieldId}
+                        onChange={e => setForm({ ...form, professionalFieldId: e.target.value })}
                         style={{
-                          ...fieldStyle('professionalField'),
+                          ...fieldStyle('professionalFieldId'),
                           appearance: 'none',
                           backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236b7280\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E")',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'right 14px center',
                         }}
                       >
-                        <option value="">Chọn lĩnh vực</option>
-                        {[
-                          'Điều dưỡng',
-                          'Hộ sinh',
-                          'Kỹ thuật y',
-                          'Dược',
-                          'Kỹ thuật viên',
-                          'Khác'
-                        ].map(field => (
-                          <option key={field} value={field}>
-                            {field}
+                        <option value="">Chọn lĩnh vực chuyên môn</option>
+                        {professionalFields.map(field => (
+                          <option key={field.id} value={field.id}>
+                            {field.name}
                           </option>
                         ))}
                       </select>
-                      {form.professionalField === 'Khác' && (
-                        <div style={{ marginTop: 10 }}>
-                          <input
-                            value={form.customProfessionalField}
-                            onChange={e => setForm({ ...form, customProfessionalField: e.target.value })}
-                            placeholder="Nhập tên lĩnh vực khác..."
-                            style={fieldStyle('customProfessionalField')}
-                          />
-                          {errors.customProfessionalField && (
-                            <span style={{ color: '#ef4444', fontSize: 12, display: 'block', marginTop: 4 }}>
-                              {errors.customProfessionalField}
-                            </span>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
 

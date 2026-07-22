@@ -62,6 +62,25 @@ export const adminApi = {
     })
   },
 
+  getProfessionalFields(params) {
+    return httpClient.get('/training/professional-fields', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  createProfessionalField(data) {
+    return httpClient.post('/training/professional-fields', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateProfessionalField(id, data) {
+    return httpClient.put(`/training/professional-fields/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
   getUserById(id) {
     return httpClient.get(`/user/${id}`, {
       headers: authHeaders(),

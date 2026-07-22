@@ -12,6 +12,7 @@ import StaffQuestionReviewPage from '../features/staff/pages/StaffQuestionReview
 import OtpScreen from '../features/auth/pages/OtpScreen.jsx'
 import ResetPasswordScreen from '../features/auth/pages/ResetPasswordScreen.jsx'
 import ActivityTypeDetailPage from '../features/training/pages/ActivityTypeDetailPage.jsx'
+import ProfessionalFieldManagementPage from '../features/admin/pages/ProfessionalFieldManagementPage.jsx'
 import ActivityTypeFormPage from '../features/training/pages/ActivityTypeFormPage.jsx'
 import ActivityTypeListPage from '../features/training/pages/ActivityTypeListPage.jsx'
 import TrainingFoundationPage from '../features/training/pages/TrainingFoundationPage.jsx'
@@ -39,8 +40,6 @@ import EvaluationAuditLogPage from '../features/evaluation/pages/EvaluationAudit
 import EvaluationImportHistoryPage from '../features/evaluation/pages/EvaluationImportHistoryPage.jsx'
 import ExamPaperListPage from '../features/evaluation/pages/ExamPaperListPage.jsx'
 import ExamAssignmentListPage from '../features/evaluation/pages/ExamAssignmentListPage.jsx'
-import ExamAssignmentFormPage from '../features/evaluation/pages/ExamAssignmentFormPage.jsx'
-import ExamAttemptListPage from '../features/evaluation/pages/ExamAttemptListPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
@@ -63,7 +62,6 @@ import ExportQualityPage from '../features/admin/pages/ExportQualityPage.jsx'
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
-import ChecklistListScreen from '../features/staff/pages/ChecklistListScreen.jsx'
 import ChecklistFormScreen from '../features/staff/pages/ChecklistFormScreen.jsx'
 import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
@@ -197,6 +195,7 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/new" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
+      <Route path="/admin/training/professional-fields" element={adminElement(<ProfessionalFieldManagementPage />)} />
       <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
       <Route path="/admin/evaluation/question-documents" element={evaluationElement(<QuestionDocumentListPage />)} />
       <Route path="/admin/evaluation/dashboard" element={evaluationElement(<EvaluationDashboardPage />)} />
@@ -220,8 +219,8 @@ function AppRouter() {
       <Route path="/admin/evaluation/configs" element={evaluationElement(<ExamConfigPage />)} />
       <Route path="/admin/evaluation/exam-papers" element={evaluationElement(<ExamPaperListPage />)} />
       <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
-      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
-      <Route path="/admin/evaluation/exam-attempts" element={evaluationElement(<ExamAttemptListPage />)} />
+      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamConfigPage />)} />
+      <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-assignments" replace />} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
       <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
@@ -315,7 +314,13 @@ function AppRouter() {
 
       <Route path="/email-confirm" element={<Navigate to={AUTH_ROUTES.emailConfirm} replace />} />
       <Route path={AUTH_ROUTES.staffDashboard} element={protectedElement(<StaffDashboard />)} />
-      <Route path="/staff/checklists" element={protectedElement(<ChecklistListScreen />)} />
+      <Route
+        path="/staff/checklists"
+        element={protectedElement(
+          <ManagerChecklistListPage />,
+          { allowedRoles: [AUTH_ROLE.manager] },
+        )}
+      />
       <Route path="/staff/checklists/:id" element={protectedElement(<ChecklistFormScreen />)} />
       <Route path="/staff/profile" element={protectedElement(<ProfileStaffScreen />)} />
       <Route path="/staff/notifications" element={protectedElement(<NotificationsStaffScreen />)} />

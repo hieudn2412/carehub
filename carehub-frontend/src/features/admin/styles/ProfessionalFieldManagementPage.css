@@ -1,0 +1,24 @@
+.pfm-page { padding: 24px; background: #f8fafc; min-height: 100%; }
+.pfm-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+.pfm-heading h1 { margin: 0; font-size: 24px; color: #0f172a; }
+.pfm-heading p { margin: 6px 0 0; color: #64748b; }
+.pfm-heading button, .pfm-actions button, .pfm-row-actions button { border: 1px solid #cbd5e1; background: #fff; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+.pfm-layout { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.pfm-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
+.pfm-form { padding: 20px; display: grid; gap: 14px; }
+.pfm-form h2 { margin: 0; font-size: 18px; color: #0f172a; }
+.pfm-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; }
+.pfm-form input, .pfm-form textarea, .pfm-filters input, .pfm-filters select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; font: inherit; background: #fff; }
+.pfm-form .pfm-check { display: flex; align-items: center; gap: 8px; }
+.pfm-actions, .pfm-row-actions, .pfm-filters { display: flex; gap: 8px; }
+.pfm-actions .pfm-primary { background: #0f766e; color: #fff; border-color: #0f766e; }
+.pfm-list { overflow: hidden; }
+.pfm-filters { padding: 16px; border-bottom: 1px solid #e2e8f0; }
+.pfm-filters input { flex: 1; }
+.pfm-list table { width: 100%; border-collapse: collapse; }
+.pfm-list th, .pfm-list td { padding: 13px 16px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+.pfm-list th { background: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; }
+.pfm-list td small { display: block; margin-top: 4px; color: #64748b; }
+.pfm-status { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #f1f5f9; color: #64748b; font-size: 12px; }
+.pfm-status--active { background: #dcfce7; color: #15803d; }
+@media (max-width: 960px) { .pfm-layout { grid-template-columns: 1fr; } }

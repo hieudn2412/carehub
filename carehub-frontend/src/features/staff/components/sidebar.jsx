@@ -35,10 +35,6 @@ function Sidebar() {
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
 
-  if (isAdmin) {
-    return <AdminSidebar />
-  }
-
   const isLinkActive = (itemPath) => {
     if (
       itemPath === '/admin/dashboard' ||
@@ -80,6 +76,15 @@ function Sidebar() {
 
   // Personal/Staff features
   navSections.push(
+<<<<<<< HEAD
+=======
+    ...(!isManager ? [{
+      label: 'ĐÁNH GIÁ',
+      items: [
+        { icon: <FileTextOutlined />, label: 'Tạo câu hỏi từ tài liệu', path: '/staff/generate-questions' },
+      ],
+    }] : []),
+>>>>>>> main
     {
       label: 'Năng lực của tôi',
       items: [
@@ -98,19 +103,19 @@ function Sidebar() {
   // Admin không cần Kiểm tra và Phiếu kiểm tra
   if (!isAdmin) {
     navSections.push(
-      {
+      ...(!isManager ? [{
         label: 'Kiểm tra',
         items: [
           { icon: <EditOutlined />, label: 'Làm bài thi', path: '/staff/exam/take' },
           { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
         ],
-      },
-      {
+      }] : []),
+      ...(!isManager ? [{
         label: 'Phiếu kiểm tra',
         items: [
           { icon: <CheckSquareOutlined />, label: 'Phiếu được giao', path: '/staff/checklists' },
         ],
-      }
+      }] : [])
     )
   }
 
@@ -138,6 +143,10 @@ function Sidebar() {
       navRef.current.scrollTop = parseInt(savedScroll, 10)
     }
   }, [])
+
+  if (isAdmin) {
+    return <AdminSidebar />
+  }
 
   const handleScroll = (e) => {
     sessionStorage.setItem('staff-sidebar-scroll', String(e.target.scrollTop))
