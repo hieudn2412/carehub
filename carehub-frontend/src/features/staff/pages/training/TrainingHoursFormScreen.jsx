@@ -32,6 +32,7 @@ function TrainingHoursFormScreen() {
     hours: '',
     type: '',
     professionalFieldId: '',
+    customProfessionalField: '',
     notes: '',
   })
   const [activityTypes, setActivityTypes] = useState([])
@@ -86,6 +87,7 @@ function TrainingHoursFormScreen() {
               hours: record.declaredHours ? String(record.declaredHours) : '',
               type: record.activityTypeId ? String(record.activityTypeId) : '',
               professionalFieldId: record.professionalFieldId ? String(record.professionalFieldId) : '',
+              customProfessionalField: '',
               notes: record.description || '',
             })
             setRecordVersion(record.version)
@@ -134,6 +136,14 @@ function TrainingHoursFormScreen() {
       }
     }
 
+    if (form.professionalFieldId === 'OTHER') {
+      if (!form.customProfessionalField || !form.customProfessionalField.trim()) {
+        e.customProfessionalField = 'Vui lòng nhập tên lĩnh vực chuyên môn khác'
+      } else if (form.customProfessionalField.trim().length > 255) {
+        e.customProfessionalField = 'Lĩnh vực chuyên môn không được vượt quá 255 ký tự'
+      }
+    }
+
     setErrors(e)
     return Object.keys(e).length === 0;
   }
@@ -151,7 +161,8 @@ function TrainingHoursFormScreen() {
         startDate: form.date,
         declaredHours: parseFloat(form.hours),
         activityTypeId: form.type ? parseInt(form.type, 10) : null,
-        professionalFieldId: form.professionalFieldId ? Number(form.professionalFieldId) : null,
+        professionalFieldId: form.professionalFieldId && form.professionalFieldId !== 'OTHER' ? Number(form.professionalFieldId) : null,
+        customProfessionalField: form.professionalFieldId === 'OTHER' ? form.customProfessionalField.trim() : null,
         description: form.notes || null,
         durationValue: parseFloat(form.hours),
         durationUnit: 'HOUR',
@@ -403,7 +414,24 @@ function TrainingHoursFormScreen() {
                             {field.name}
                           </option>
                         ))}
+                        <option value="OTHER">Khác (Tự nhập...)</option>
                       </select>
+                      {form.professionalFieldId === 'OTHER' && (
+                        <div style={{ marginTop: 10 }}>
+                          <input
+                            type="text"
+                            placeholder="Nhập lĩnh vực chuyên môn khác..."
+                            value={form.customProfessionalField}
+                            onChange={e => setForm({ ...form, customProfessionalField: e.target.value })}
+                            style={fieldStyle('customProfessionalField')}
+                          />
+                          {errors.customProfessionalField && (
+                            <span style={{ color: '#ef4444', fontSize: 12, marginTop: 4, display: 'block' }}>
+                              {errors.customProfessionalField}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -538,6 +566,7 @@ function TrainingHoursFormScreen() {
                     </button>
                   </div>
                 </div>
+                <div style={{ height: '150px' }} />
               </div>
             )}
           </div>

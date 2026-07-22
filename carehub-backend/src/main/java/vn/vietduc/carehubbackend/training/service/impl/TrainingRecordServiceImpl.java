@@ -153,7 +153,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         Collection<String> roles = accessPolicy.currentRoleCodes();
         User employee = resolveTargetEmployee(actor, roles, request.employeeId());
         TrainingActivityType activityType = resolveActiveActivityType(request.activityTypeId());
-        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId());
+        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), request.customProfessionalField());
         validator.validateRecordForm(request, false);
 
         long duplicateCount = duplicateCount(employee.getId(), request, null);
@@ -181,7 +181,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         requireFreshVersion(record, request.version());
         User actor = accessPolicy.currentActor();
         TrainingActivityType activityType = resolveActiveActivityType(request.activityTypeId());
-        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId());
+        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), request.customProfessionalField());
         validator.validateRecordForm(request, false);
 
         if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT && record.getEditCount() >= maxEditCount) {
@@ -298,16 +298,36 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         return activityType;
     }
 
-    private ProfessionalField resolveProfessionalField(Long id) {
-        if (id == null) {
-            return null;
+    private ProfessionalField resolveProfessionalField(Long id, String customName) {
+        if (id != null) {
+            ProfessionalField professionalField = professionalFieldRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Professional field not found"));
+            if (!professionalField.isActive()) {
+                throw ValidationException.field("professionalFieldId", "Professional field must be active");
+            }
+            return professionalField;
         }
-        ProfessionalField professionalField = professionalFieldRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Professional field not found"));
-        if (!professionalField.isActive()) {
-            throw ValidationException.field("professionalFieldId", "Professional field must be active");
+        if (customName != null && !customName.trim().isEmpty()) {
+            String trimmedName = customName.trim();
+            if (trimmedName.length() > 255) {
+                throw ValidationException.field("customProfessionalField", "Lĩnh vực chuyên môn không được vượt quá 255 ký tự");
+            }
+            return professionalFieldRepository.findAll().stream()
+                    .filter(pf -> pf.getName().equalsIgnoreCase(trimmedName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        String cleanCode = "CUSTOM_" + System.currentTimeMillis();
+                        ProfessionalField newPf = ProfessionalField.builder()
+                                .code(cleanCode)
+                                .name(trimmedName)
+                                .description("Tự nhập bởi người dùng")
+                                .active(true)
+                                .version(0L)
+                                .build();
+                        return professionalFieldRepository.save(newPf);
+                    });
         }
-        return professionalField;
+        return null;
     }
 
     private void requireFreshVersion(TrainingRecord record, Long requestVersion) {
