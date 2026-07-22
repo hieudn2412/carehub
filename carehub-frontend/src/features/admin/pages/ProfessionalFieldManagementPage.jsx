@@ -19,7 +19,7 @@ function ProfessionalFieldManagementPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  const activeTab = searchParams.get('tab') || 'active'
+  const activeTab = searchParams.get('tab') || 'existing'
 
   const handleTabChange = (tabName) => {
     setSearchParams({ tab: tabName })
@@ -28,9 +28,7 @@ function ProfessionalFieldManagementPage() {
   const loadFields = useCallback(() => {
     setLoading(true)
     let apiActive = undefined
-    if (activeTab === 'active') {
-      apiActive = 'true'
-    } else if (activeTab === 'pending' || activeTab === 'inactive') {
+    if (activeTab === 'pending') {
       apiActive = 'false'
     }
 
@@ -44,8 +42,9 @@ function ProfessionalFieldManagementPage() {
         let content = response.data?.data?.content || []
         if (activeTab === 'pending') {
           content = content.filter(f => f.code?.startsWith('CUSTOM_'))
-        } else if (activeTab === 'inactive') {
-          content = content.filter(f => !f.code?.startsWith('CUSTOM_'))
+        } else {
+          // 'existing' - show all except custom unapproved fields
+          content = content.filter(f => !(f.code?.startsWith('CUSTOM_') && !f.active))
         }
         setFields(content)
       })
@@ -146,10 +145,10 @@ function ProfessionalFieldManagementPage() {
                 <div className="pfm-tabs">
                   <button
                     type="button"
-                    className={`pfm-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('active')}
+                    className={`pfm-tab-btn ${activeTab === 'existing' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('existing')}
                   >
-                    Đang sử dụng
+                    Lĩnh vực hiện có
                   </button>
                   <button
                     type="button"
@@ -157,13 +156,6 @@ function ProfessionalFieldManagementPage() {
                     onClick={() => handleTabChange('pending')}
                   >
                     Chờ phê duyệt
-                  </button>
-                  <button
-                    type="button"
-                    className={`pfm-tab-btn ${activeTab === 'inactive' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('inactive')}
-                  >
-                    Ngừng sử dụng
                   </button>
                 </div>
                 <div className="pfm-search-box">
