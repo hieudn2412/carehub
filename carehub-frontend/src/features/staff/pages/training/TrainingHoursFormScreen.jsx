@@ -4,6 +4,9 @@ import {
   CalendarOutlined,
   SaveOutlined,
   PaperClipOutlined,
+  SearchOutlined,
+  DownOutlined,
+  CloseOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
@@ -18,6 +21,203 @@ const formatCompactSize = (bytes) => {
   if (value < 1024) return `${value} B`
   if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
   return `${(value / 1024 / 1024).toFixed(2)} MB`
+}
+
+function SearchableDropdown({
+  options = [],
+  value = '',
+  onChange = () => {},
+  placeholder = 'Chọn...',
+  error = false,
+  showCustomOption = false,
+  onSelectCustomOption = null,
+  customValue = '',
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filteredOptions = options.filter(opt =>
+    (opt.name || '').toLowerCase().includes(search.toLowerCase())
+  )
+
+  const selectedOption = options.find(opt => String(opt.id) === String(value))
+
+  const displayLabel = customValue && value === 'OTHER'
+    ? customValue
+    : selectedOption
+    ? selectedOption.name
+    : placeholder;
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setIsOpen(!isOpen)
+          }
+        }}
+        style={{
+          width: '100%',
+          padding: '10px 14px',
+          border: `1px solid ${error ? '#ef4444' : '#e5e7eb'}`,
+          borderRadius: 8,
+          fontSize: 14,
+          color: (selectedOption || (customValue && value === 'OTHER')) ? '#111827' : '#9ca3af',
+          background: '#fff',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          boxSizing: 'border-box',
+          minHeight: 42,
+        }}
+      >
+        <span>{displayLabel}</span>
+        <DownOutlined style={{ fontSize: 12, color: '#6b7280' }} />
+      </div>
+
+      {isOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            width: '100%',
+            marginTop: 4,
+            background: '#fff',
+            border: '1px solid #d1d5db',
+            borderRadius: 8,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            zIndex: 1000,
+            maxHeight: 200,
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              padding: 8,
+              borderBottom: '1px solid #f3f4f6',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxSizing: 'border-box',
+            }}
+          >
+            <SearchOutlined style={{ color: '#9ca3af', fontSize: 14 }} />
+            <input
+              type="text"
+              placeholder="Tìm kiếm..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: '100%',
+                border: 'none',
+                outline: 'none',
+                fontSize: 13,
+                color: '#374151',
+                padding: '4px 0',
+              }}
+            />
+            {search && (
+              <CloseOutlined
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSearch('')
+                }}
+                style={{ color: '#9ca3af', cursor: 'pointer', fontSize: 12 }}
+              />
+            )}
+          </div>
+
+          <div style={{ overflowY: 'auto', flex: 1, padding: '4px 0' }}>
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(opt => (
+                <div
+                  key={opt.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    onChange(String(opt.id))
+                    setIsOpen(false)
+                    setSearch('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onChange(String(opt.id))
+                      setIsOpen(false)
+                      setSearch('')
+                    }
+                  }}
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: 13,
+                    color: '#374151',
+                    cursor: 'pointer',
+                    background: String(opt.id) === String(value) ? '#f3f4f6' : 'transparent',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  {opt.name}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '8px 14px', fontSize: 13, color: '#9ca3af', textAlign: 'center' }}>
+                Không tìm thấy kết quả
+              </div>
+            )}
+
+            {showCustomOption && (
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setIsOpen(false)
+                  setSearch('')
+                  if (onSelectCustomOption) onSelectCustomOption()
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setIsOpen(false)
+                    setSearch('')
+                    if (onSelectCustomOption) onSelectCustomOption()
+                  }
+                }}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: 13,
+                  color: '#2563eb',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  borderTop: '1px solid #f3f4f6',
+                  background: 'transparent',
+                  boxSizing: 'border-box',
+                }}
+              >
+                + Khác (Tự đề xuất lĩnh vực mới)
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function TrainingHoursFormScreen() {
@@ -49,6 +249,38 @@ function TrainingHoursFormScreen() {
   const [evidencesToDelete, setEvidencesToDelete] = useState([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [fileError, setFileError] = useState('')
+
+  // Custom professional field modal states
+  const [customModalOpen, setCustomModalOpen] = useState(false)
+  const [tempCustomName, setTempCustomName] = useState('')
+  const [tempCustomNameError, setTempCustomNameError] = useState('')
+
+  const handleOpenCustomModal = () => {
+    setTempCustomName(form.professionalFieldId === 'OTHER' ? form.customProfessionalField : '')
+    setTempCustomNameError('')
+    setCustomModalOpen(true)
+  }
+
+  const handleConfirmCustomModal = () => {
+    if (!tempCustomName || !tempCustomName.trim()) {
+      setTempCustomNameError('Vui lòng nhập tên lĩnh vực chuyên môn mới')
+      return
+    }
+    if (tempCustomName.trim().length > 255) {
+      setTempCustomNameError('Lĩnh vực chuyên môn không được vượt quá 255 ký tự')
+      return
+    }
+    setForm(prev => ({
+      ...prev,
+      professionalFieldId: 'OTHER',
+      customProfessionalField: tempCustomName.trim()
+    }))
+    setCustomModalOpen(false)
+  }
+
+  const handleCancelCustomModal = () => {
+    setCustomModalOpen(false)
+  }
 
   // Fetch options (activity types) on mount
   useEffect(() => {
@@ -373,63 +605,32 @@ function TrainingHoursFormScreen() {
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                         Hình thức đào tạo <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <select
+                      <SearchableDropdown
+                        options={activityTypes}
                         value={form.type}
-                        onChange={e => setForm({ ...form, type: e.target.value })}
-                        style={{
-                          ...fieldStyle('type'),
-                          appearance: 'none',
-                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236b7280\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E")',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 14px center',
-                        }}
-                      >
-                        <option value="">Chọn hình thức</option>
-                        {activityTypes.map(opt => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={val => setForm({ ...form, type: val })}
+                        placeholder="Chọn hình thức"
+                        error={errors.type}
+                      />
                       {errors.type && <span style={{ color: '#ef4444', fontSize: 12 }}>Bắt buộc chọn hình thức</span>}
                     </div>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                         Lĩnh vực chuyên môn
                       </label>
-                      <select
+                      <SearchableDropdown
+                        options={professionalFields}
                         value={form.professionalFieldId}
-                        onChange={e => setForm({ ...form, professionalFieldId: e.target.value })}
-                        style={{
-                          ...fieldStyle('professionalFieldId'),
-                          appearance: 'none',
-                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'12\' height=\'12\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236b7280\' stroke-width=\'2\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'/%3E%3C/svg%3E")',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'right 14px center',
-                        }}
-                      >
-                        <option value="">Chọn lĩnh vực chuyên môn</option>
-                        {professionalFields.map(field => (
-                          <option key={field.id} value={field.id}>
-                            {field.name}
-                          </option>
-                        ))}
-                        <option value="OTHER">Khác (Tự nhập...)</option>
-                      </select>
-                      {form.professionalFieldId === 'OTHER' && (
-                        <div style={{ marginTop: 10 }}>
-                          <input
-                            type="text"
-                            placeholder="Nhập lĩnh vực chuyên môn khác..."
-                            value={form.customProfessionalField}
-                            onChange={e => setForm({ ...form, customProfessionalField: e.target.value })}
-                            style={fieldStyle('customProfessionalField')}
-                          />
-                          {errors.customProfessionalField && (
-                            <span style={{ color: '#ef4444', fontSize: 12, marginTop: 4, display: 'block' }}>
-                              {errors.customProfessionalField}
-                            </span>
-                          )}
+                        onChange={val => setForm({ ...form, professionalFieldId: val })}
+                        placeholder="Chọn lĩnh vực chuyên môn"
+                        error={errors.professionalFieldId}
+                        showCustomOption={true}
+                        onSelectCustomOption={handleOpenCustomModal}
+                        customValue={form.professionalFieldId === 'OTHER' ? `Khác: ${form.customProfessionalField}` : ''}
+                      />
+                      {form.professionalFieldId === 'OTHER' && form.customProfessionalField && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#2563eb' }}>
+                          Lĩnh vực đề xuất: <strong>{form.customProfessionalField}</strong> (click dropdown chọn Khác để sửa)
                         </div>
                       )}
                     </div>
@@ -572,6 +773,102 @@ function TrainingHoursFormScreen() {
           </div>
         </div>
       </div>
+
+      {/* Modal đề xuất lĩnh vực mới */}
+      {customModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 12,
+              padding: 24,
+              width: '100%',
+              maxWidth: 450,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              boxSizing: 'border-box',
+            }}
+          >
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+              Đề xuất lĩnh vực chuyên môn mới
+            </h2>
+            <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 18px' }}>
+              Lĩnh vực chuyên môn này sẽ được gửi đến Admin phê duyệt sau khi bạn nộp hồ sơ.
+            </p>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 12, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
+                Tên lĩnh vực chuyên môn <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Chăm sóc giảm nhẹ nhi khoa..."
+                value={tempCustomName}
+                onChange={e => setTempCustomName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: `1px solid ${tempCustomNameError ? '#ef4444' : '#e5e7eb'}`,
+                  borderRadius: 8,
+                  fontSize: 14,
+                  color: '#111827',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {tempCustomNameError && (
+                <span style={{ color: '#ef4444', fontSize: 12, marginTop: 4, display: 'block' }}>
+                  {tempCustomNameError}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button
+                type="button"
+                onClick={handleCancelCustomModal}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: 6,
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCustomModal}
+                style={{
+                  padding: '8px 16px',
+                  border: 'none',
+                  borderRadius: 6,
+                  background: '#1aaa84',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
