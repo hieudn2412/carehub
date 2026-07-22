@@ -194,16 +194,56 @@
   min-height: 0;
 }
 
-.pfm-filters {
-  padding: 18px 24px;
-  border-bottom: 1px solid #e2e8f0;
+.pfm-tabs-container {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  border-bottom: 1px solid #e2e8f0;
   background: #fafafa;
 }
 
-.pfm-filters input {
-  flex: 1;
+.pfm-tabs {
+  display: flex;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pfm-tab-btn {
+  border: none;
+  background: transparent;
+  padding: 12px 20px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.pfm-tab-btn:hover {
+  color: #0f172a;
+}
+
+.pfm-tab-btn.active {
+  color: #0d9488;
+  background: #fff;
+}
+
+.pfm-tab-btn.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0d9488;
+}
+
+.pfm-search-box {
+  padding: 14px 24px;
+}
+
+.pfm-search-box input {
+  width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 10px 14px;
@@ -213,25 +253,9 @@
   transition: all 0.2s ease;
 }
 
-.pfm-filters input:focus {
+.pfm-search-box input:focus {
   border-color: #0d9488;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
-}
-
-.pfm-filters select {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  outline: none;
-  background: #fff;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pfm-filters select:focus {
-  border-color: #0d9488;
 }
 
 .pfm-list table {

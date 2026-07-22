@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import AdminHeader from '../components/AdminHeader.jsx'
 import AdminSidebar from '../components/AdminSidebar.jsx'
@@ -10,26 +11,47 @@ const EMPTY_FORM = { code: '', name: '', description: '', active: true, version:
 
 function ProfessionalFieldManagementPage() {
   const { showToast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
-  const [activeFilter, setActiveFilter] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const activeTab = searchParams.get('tab') || 'active'
+
+  const handleTabChange = (tabName) => {
+    setSearchParams({ tab: tabName })
+  }
+
   const loadFields = useCallback(() => {
     setLoading(true)
+    let apiActive = undefined
+    if (activeTab === 'active') {
+      apiActive = 'true'
+    } else if (activeTab === 'pending' || activeTab === 'inactive') {
+      apiActive = 'false'
+    }
+
     adminApi.getProfessionalFields({
       page: 0,
       size: 100,
       keyword: keyword || undefined,
-      active: activeFilter === '' ? undefined : activeFilter,
+      active: apiActive,
     })
-      .then(response => setFields(response.data?.data?.content || []))
+      .then(response => {
+        let content = response.data?.data?.content || []
+        if (activeTab === 'pending') {
+          content = content.filter(f => f.code?.startsWith('CUSTOM_'))
+        } else if (activeTab === 'inactive') {
+          content = content.filter(f => !f.code?.startsWith('CUSTOM_'))
+        }
+        setFields(content)
+      })
       .catch(error => showToast(error?.response?.data?.message || 'Không thể tải lĩnh vực chuyên môn', 'error'))
       .finally(() => setLoading(false))
-  }, [activeFilter, keyword, showToast])
+  }, [activeTab, keyword, showToast])
 
   useEffect(() => {
     const timer = window.setTimeout(loadFields, 250)
@@ -120,13 +142,33 @@ function ProfessionalFieldManagementPage() {
             </form>
 
             <section className="pfm-card pfm-list">
-              <div className="pfm-filters">
-                <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
-                <select value={activeFilter} onChange={e => setActiveFilter(e.target.value)}>
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="true">Đang sử dụng</option>
-                  <option value="false">Ngừng sử dụng</option>
-                </select>
+              <div className="pfm-tabs-container">
+                <div className="pfm-tabs">
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'active' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('active')}
+                  >
+                    Đang sử dụng
+                  </button>
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('pending')}
+                  >
+                    Chờ phê duyệt
+                  </button>
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'inactive' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('inactive')}
+                  >
+                    Ngừng sử dụng
+                  </button>
+                </div>
+                <div className="pfm-search-box">
+                  <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
+                </div>
               </div>
               <div className="pfm-table-container">
                 <table>

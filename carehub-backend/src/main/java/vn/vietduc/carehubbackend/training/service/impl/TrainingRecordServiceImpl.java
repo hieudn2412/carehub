@@ -341,7 +341,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                         .toList();
                 String title = "Đề xuất lĩnh vực chuyên môn mới";
                 String content = "Nhân viên " + actor.getName() + " đã đề xuất lĩnh vực chuyên môn mới: \"" + trimmedName + "\". Vui lòng kiểm tra và duyệt.";
-                String deepLink = "/admin/training/professional-fields";
+                String deepLink = "/admin/training/professional-fields?tab=pending";
                 for (User admin : admins) {
                     notificationService.createInAppNotification(
                             admin.getId(),
