@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileTextOutlined,
@@ -16,6 +16,8 @@ import Header from '../../components/Header'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
+import { formatEvidenceStorageSummary, getEvidenceFileError } from '../../../../features/training/utils/evidenceFile.js'
+import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursEvidenceScreen() {
@@ -39,7 +41,7 @@ function TrainingHoursEvidenceScreen() {
   // Editable constraint: only DRAFT records can modify evidence
   const isEditable = record && record.workflowStatus === 'DRAFT'
 
-  const fetchRecordAndEvidence = () => {
+  const fetchRecordAndEvidence = useCallback(() => {
     setLoading(true)
     Promise.all([
       trainingApi.getRecord(id),
@@ -56,11 +58,12 @@ function TrainingHoursEvidenceScreen() {
       .finally(() => {
         setLoading(false)
       })
-  }
+  }, [id, showToast])
 
   useEffect(() => {
-    fetchRecordAndEvidence()
-  }, [id])
+    const timer = window.setTimeout(fetchRecordAndEvidence, 0)
+    return () => window.clearTimeout(timer)
+  }, [fetchRecordAndEvidence])
 
   const handleUpload = (file) => {
     if (!isEditable) {
@@ -68,16 +71,9 @@ function TrainingHoursEvidenceScreen() {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("Tập tin quá lớn. Kích thước tối đa là 5MB.", "warning")
-      return
-    }
-
-    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
-    const fileExtension = file.name.split('.').pop().toLowerCase()
-    const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg']
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-      showToast("Định dạng tệp không được hỗ trợ. Chỉ cho phép các tệp PDF, PNG, JPG.", "warning")
+    const validationError = getEvidenceFileError(file)
+    if (validationError) {
+      showToast(validationError, "warning")
       return
     }
 
@@ -89,7 +85,7 @@ function TrainingHoursEvidenceScreen() {
       })
       .catch(err => {
         console.error("Error uploading evidence", err)
-        showToast("Tải lên thất bại. Vui lòng thử lại.", "error")
+        showToast(getApiErrorMessage(err, "Tải lên thất bại. Vui lòng thử lại."), "error")
       })
       .finally(() => {
         setUploading(false)
@@ -109,6 +105,7 @@ function TrainingHoursEvidenceScreen() {
     if (file) {
       handleUpload(file)
     }
+    e.target.value = ''
   }
 
   const handleDragOver = (e) => {
@@ -299,6 +296,15 @@ function TrainingHoursEvidenceScreen() {
                         onDragLeave={handleDragLeave}
                         onDrop={handleDrop}
                         onClick={handleDropzoneClick}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            handleDropzoneClick()
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Chọn tệp minh chứng"
                         className={`evidence-dropzone ${dragOver ? 'drag-active' : ''}`}
                         style={{ margin: 0, padding: '24px 16px' }}
                       >
@@ -306,7 +312,7 @@ function TrainingHoursEvidenceScreen() {
                         <p className="dropzone-text">
                           {uploading ? 'Đang tải lên...' : 'Kéo thả hoặc click để chọn file minh chứng'}
                         </p>
-                        <small className="dropzone-hint">Định dạng JPG, PNG, PDF · Tối đa 5MB</small>
+                        <small className="dropzone-hint">JPG, PNG, PDF · đầu vào tối đa 20 MB · lưu tối đa 5 MB</small>
                       </div>
                     ) : (
                       <div className="evidence-info-box" style={{ background: '#f8fafc', borderColor: '#cbd5e1', color: '#64748b', height: '100%', display: 'flex', alignItems: 'center' }}>
@@ -341,7 +347,7 @@ function TrainingHoursEvidenceScreen() {
                                   {f.originalFilename}
                                 </h4>
                                 <div className="evidence-card-meta">
-                                  <span>{formatSize(f.fileSizeBytes)}</span>
+                                  <span>{formatEvidenceStorageSummary(f, formatSize)}</span>
                                 </div>
                               </div>
                             </div>

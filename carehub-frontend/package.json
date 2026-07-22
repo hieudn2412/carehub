@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test:evidence": "node --test src/features/training/utils/evidenceFile.test.js",
     "preview": "vite preview"
   },
   "dependencies": {

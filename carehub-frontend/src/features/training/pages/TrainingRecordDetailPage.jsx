@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { formatEvidenceStorageSummary } from '../utils/evidenceFile.js'
 import '../styles/training.css'
 
 function TrainingRecordDetailPage() {
@@ -39,11 +40,11 @@ function TrainingRecordDetailPage() {
   const handleDownloadEvidence = async (evidenceId) => {
     try {
       const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
-      const url = res.data?.data?.url
+      const url = res.data?.data?.downloadUrl
       if (url) {
         window.open(url, '_blank')
       }
-    } catch (err) {
+    } catch {
       alert('Không thể tải minh chứng')
     }
   }
@@ -181,7 +182,7 @@ function TrainingRecordDetailPage() {
                     <tr key={item.id}>
                       <td>{item.originalFilename}</td>
                       <td>{item.mimeType}</td>
-                      <td>{formatSize(item.fileSizeBytes)}</td>
+                      <td>{formatEvidenceStorageSummary(item, formatSize)}</td>
                       <td>{item.moderationStatus}</td>
                       <td>
                         <button

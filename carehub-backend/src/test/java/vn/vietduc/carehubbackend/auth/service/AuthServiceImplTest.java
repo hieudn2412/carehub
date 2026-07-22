@@ -15,6 +15,7 @@ import vn.vietduc.carehubbackend.auth.entity.RefreshToken;
 import vn.vietduc.carehubbackend.auth.repository.RefreshTokenRepository;
 import vn.vietduc.carehubbackend.auth.service.impl.AuthServiceImpl;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.TokenException;
 import vn.vietduc.carehubbackend.exception.UnauthorizedException;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
@@ -66,7 +67,7 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void loginRevokesPreviousTokensPersistsLastLoginAndReturnsFreshTokens() {
+    void loginKeepsOtherSessionsPersistsLastLoginAndReturnsFreshTokens() {
         when(userRepository.findByEmployeeCodeAndIsDeletedFalse("EMP001")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("plain-password", "encoded-password")).thenReturn(true);
         when(jwtTokenService.generateAccessToken(activeUser)).thenReturn(new AccessTokenResult("access-token", 900));
@@ -85,7 +86,7 @@ class AuthServiceImplTest {
         assertEquals(900L, response.getExpiresIn());
         assertFalse(response.isRequiresFirstLoginSetup());
         assertNotNull(activeUser.getLastLogin());
-        verify(refreshTokenService).revokeAllUserTokens(activeUser);
+        verify(refreshTokenService, never()).revokeAllUserTokens(any());
         verify(userRepository).save(activeUser);
     }
 
@@ -99,7 +100,7 @@ class AuthServiceImplTest {
                 () -> service.login(login("EMP001", "wrong"))
         );
 
-        assertEquals("Invalid code or password", exception.getMessage());
+        assertEquals("Mã nhân viên hoặc mật khẩu không chính xác", exception.getMessage());
         verifyNoInteractions(jwtTokenService, refreshTokenService);
         verify(userRepository, never()).save(any());
     }
@@ -115,7 +116,7 @@ class AuthServiceImplTest {
                 () -> service.login(login("EMP001", "plain-password"))
         );
 
-        assertEquals("Account is locked", exception.getMessage());
+        assertEquals("Tài khoản đã bị khóa", exception.getMessage());
         verify(refreshTokenService, never()).revokeAllUserTokens(any());
         verify(jwtTokenService, never()).generateAccessToken(any());
     }
@@ -130,7 +131,7 @@ class AuthServiceImplTest {
                 .build();
         when(refreshTokenService.findToken("revoked")).thenReturn(revoked);
 
-        assertThrows(BadRequestException.class, () -> service.refreshToken(refresh("revoked")));
+        assertThrows(TokenException.class, () -> service.refreshToken(refresh("revoked")));
 
         RefreshToken expired = RefreshToken.builder()
                 .token("expired")
@@ -140,7 +141,7 @@ class AuthServiceImplTest {
                 .build();
         when(refreshTokenService.findToken("expired")).thenReturn(expired);
 
-        assertThrows(BadRequestException.class, () -> service.refreshToken(refresh("expired")));
+        assertThrows(TokenException.class, () -> service.refreshToken(refresh("expired")));
         verify(jwtTokenService, never()).generateAccessToken(any());
     }
 

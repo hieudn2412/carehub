@@ -178,6 +178,12 @@ export const trainingApi = {
     })
   },
 
+  createEvidencePreviewUrl(recordId, evidenceId) {
+    return httpClient.post(`/training/records/${recordId}/evidences/${evidenceId}/preview-url`, null, {
+      headers: authHeaders(),
+    })
+  },
+
   getMyTrainingStatus(params) {
     return httpClient.get('/training/status/me', {
       headers: authHeaders(),

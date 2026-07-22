@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.auth.entity.RefreshToken;
 import vn.vietduc.carehubbackend.auth.repository.RefreshTokenRepository;
 import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
-import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.TokenException;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -35,7 +35,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     public RefreshToken findToken(String token) {
         return refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new BadRequestException("Refresh token không hợp lệ"));
+                .orElseThrow(() -> new TokenException("Refresh token không hợp lệ"));
     }
 
     @Override

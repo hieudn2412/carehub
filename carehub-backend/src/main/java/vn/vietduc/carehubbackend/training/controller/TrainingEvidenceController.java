@@ -64,4 +64,15 @@ public class TrainingEvidenceController {
                 evidenceService.createDownloadUrl(recordId, evidenceId)
         ));
     }
+
+    @PostMapping("/{evidenceId}/preview-url")
+    public ResponseEntity<ApiResponse<EvidenceDownloadUrlResponse>> createPreviewUrl(
+            @PathVariable Long recordId,
+            @PathVariable Long evidenceId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Create evidence preview URL successfully",
+                evidenceService.createPreviewUrl(recordId, evidenceId)
+        ));
+    }
 }
