@@ -193,7 +193,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
           aria-label={`${pendingExamCount} bài kiểm tra chưa làm`}
         >
           <FormOutlined />
-          {pendingExamCount > 0 && <span>{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
+          {pendingExamCount > 0 && <span className="dashboard-header__exam-badge">{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
         </Link>
         <div className="dashboard-header__notify-container">
           <div

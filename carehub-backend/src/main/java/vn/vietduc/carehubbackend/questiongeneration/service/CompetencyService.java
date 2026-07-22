@@ -224,9 +224,13 @@ public class CompetencyService {
                     return !dt.isBefore(fromDateTime) && !dt.isAfter(toDateTime);
                 })
                 .filter(s -> {
-                    // Match by submitter's employee code
-                    String ec = s.getSubmittedBy().getEmployeeCode();
-                    return ec != null && employeeCodes.contains(ec);
+                    try {
+                        if (s.getSubmittedBy() == null) return false;
+                        String ec = s.getSubmittedBy().getEmployeeCode();
+                        return ec != null && employeeCodes.contains(ec);
+                    } catch (Exception e) {
+                        return false;
+                    }
                 })
                 .filter(s -> {
                     FormSubmissionContext ctx = s.getSubjectContext();
@@ -254,9 +258,15 @@ public class CompetencyService {
         for (FormSubmission s : matched) {
             Form form = s.getFormVersion() != null ? s.getFormVersion().getForm() : null;
             if (form == null) continue;
-            if (formId != null && !form.getId().equals(formId)) continue;
+            Long submitterId = null;
+            try {
+                if (s.getSubmittedBy() != null) {
+                    submitterId = s.getSubmittedBy().getId();
+                }
+            } catch (Exception e) {}
+            if (submitterId == null) continue;
 
-            String key = s.getSubmittedBy().getId() + ":" + form.getId();
+            String key = submitterId + ":" + form.getId();
             grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
         }
 

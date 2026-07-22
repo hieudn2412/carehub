@@ -105,4 +105,5 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND ur.role.code = 'MANAGER'
             """)
     List<User> findManagersByDepartmentId(@Param("departmentId") Long departmentId);
+
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import AdminHeader from '../components/AdminHeader.jsx'
 import AdminSidebar from '../components/AdminSidebar.jsx'
@@ -10,31 +11,69 @@ const EMPTY_FORM = { code: '', name: '', description: '', active: true, version:
 
 function ProfessionalFieldManagementPage() {
   const { showToast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
-  const [activeFilter, setActiveFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [pendingCount, setPendingCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  const activeTab = searchParams.get('tab') || 'existing'
+
+  const handleTabChange = (tabName) => {
+    setSearchParams({ tab: tabName })
+  }
+
   const loadFields = useCallback(() => {
     setLoading(true)
+    const apiActive = activeTab === 'pending'
+      ? 'false'
+      : (statusFilter === '' ? undefined : statusFilter)
+
     adminApi.getProfessionalFields({
       page: 0,
       size: 100,
       keyword: keyword || undefined,
-      active: activeFilter === '' ? undefined : activeFilter,
+      active: apiActive,
     })
-      .then(response => setFields(response.data?.data?.content || []))
+      .then(response => {
+        let content = response.data?.data?.content || []
+        if (activeTab === 'pending') {
+          content = content.filter(f => f.code?.startsWith('CUSTOM_'))
+        } else {
+          // 'existing' - show all except unapproved custom fields
+          content = content.filter(f => !(f.code?.startsWith('CUSTOM_') && !f.active))
+        }
+        setFields(content)
+      })
       .catch(error => showToast(error?.response?.data?.message || 'Không thể tải lĩnh vực chuyên môn', 'error'))
       .finally(() => setLoading(false))
-  }, [activeFilter, keyword, showToast])
+  }, [activeTab, statusFilter, keyword, showToast])
+
+  const loadPendingCount = useCallback(() => {
+    adminApi.getProfessionalFields({
+      page: 0,
+      size: 100,
+      active: 'false',
+    })
+      .then(response => {
+        const content = response.data?.data?.content || []
+        const count = content.filter(f => f.code?.startsWith('CUSTOM_')).length
+        setPendingCount(count)
+      })
+      .catch(error => console.error("Error loading pending fields count", error))
+  }, [])
 
   useEffect(() => {
-    const timer = window.setTimeout(loadFields, 250)
+    const timer = window.setTimeout(() => {
+      loadFields()
+      loadPendingCount()
+    }, 250)
     return () => window.clearTimeout(timer)
-  }, [loadFields])
+  }, [loadFields, loadPendingCount])
 
   const resetForm = () => {
     setEditingId(null)
@@ -69,6 +108,7 @@ function ProfessionalFieldManagementPage() {
       }
       resetForm()
       loadFields()
+      loadPendingCount()
     } catch (error) {
       showToast(error?.response?.data?.message || 'Không thể lưu lĩnh vực chuyên môn', 'error')
     } finally {
@@ -87,6 +127,7 @@ function ProfessionalFieldManagementPage() {
       })
       showToast(field.active ? 'Đã ngừng sử dụng lĩnh vực' : 'Đã kích hoạt lĩnh vực', 'success')
       loadFields()
+      loadPendingCount()
     } catch (error) {
       showToast(error?.response?.data?.message || 'Không thể đổi trạng thái lĩnh vực', 'error')
     }
@@ -120,27 +161,74 @@ function ProfessionalFieldManagementPage() {
             </form>
 
             <section className="pfm-card pfm-list">
-              <div className="pfm-filters">
-                <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
-                <select value={activeFilter} onChange={e => setActiveFilter(e.target.value)}>
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="true">Đang sử dụng</option>
-                  <option value="false">Ngừng sử dụng</option>
-                </select>
+              <div className="pfm-tabs-container">
+                <div className="pfm-tabs">
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'existing' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('existing')}
+                  >
+                    Lĩnh vực hiện có
+                  </button>
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('pending')}
+                  >
+                    Chờ phê duyệt {pendingCount > 0 && <span className="pfm-tab-badge">{pendingCount}</span>}
+                  </button>
+                </div>
+                <div className="pfm-search-box">
+                  <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
+                  {activeTab === 'existing' && (
+                    <select
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                      className="pfm-status-select"
+                    >
+                      <option value="">Tất cả trạng thái</option>
+                      <option value="true">Đang dùng</option>
+                      <option value="false">Ngừng dùng</option>
+                    </select>
+                  )}
+                </div>
               </div>
-              <table>
-                <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
-                <tbody>
-                  {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
-                    <tr key={field.id}>
-                      <td><code>{field.code}</code></td>
-                      <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
-                      <td><span className={field.active ? 'pfm-status pfm-status--active' : 'pfm-status'}>{field.active ? 'Đang dùng' : 'Ngừng dùng'}</span></td>
-                      <td><div className="pfm-row-actions"><button type="button" onClick={() => editField(field)}><EditOutlined /> Sửa</button><button type="button" onClick={() => toggleStatus(field)}>{field.active ? 'Ngừng dùng' : 'Kích hoạt'}</button></div></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="pfm-table-container">
+                <table>
+                  <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                  <tbody>
+                    {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
+                      <tr key={field.id}>
+                        <td><code>{field.code}</code></td>
+                        <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
+                        <td>
+                          {field.active ? (
+                            <span className="pfm-status pfm-status--active">Đang dùng</span>
+                          ) : field.code?.startsWith('CUSTOM_') ? (
+                            <span className="pfm-status pfm-status--pending">Chờ duyệt</span>
+                          ) : (
+                            <span className="pfm-status">Ngừng dùng</span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="pfm-row-actions">
+                            <button type="button" className="pfm-btn-edit" onClick={() => editField(field)}>
+                              <EditOutlined /> Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className={field.active ? 'pfm-btn-deactivate' : 'pfm-btn-activate'}
+                              onClick={() => toggleStatus(field)}
+                            >
+                              {field.active ? 'Ngừng dùng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </main>

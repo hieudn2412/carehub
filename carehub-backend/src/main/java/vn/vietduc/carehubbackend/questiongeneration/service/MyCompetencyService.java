@@ -85,7 +85,8 @@ public class MyCompetencyService {
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
             for (ExamAttempt a : catAttempts) {
-                sum = sum.add(a.getScore());
+                BigDecimal score = a.getScore() != null ? a.getScore() : BigDecimal.ZERO;
+                sum = sum.add(score);
                 if (Boolean.TRUE.equals(a.getPassed())) {
                     passCount++;
                 }
@@ -294,13 +295,21 @@ public class MyCompetencyService {
     private FormSubmissionBriefResponse toFormSubmissionBrief(FormSubmission submission) {
         BigDecimal score = practicalScore(submission);
         CompetencyLevel level = classificationService.classifyOverall(score);
+        String submittedByName = null;
+        try {
+            if (submission.getSubmittedBy() != null) {
+                submittedByName = submission.getSubmittedBy().getName();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get name of submitter for submission ID {}: {}", submission.getId(), e.getMessage());
+        }
         return new FormSubmissionBriefResponse(
                 submission.getId(),
                 submission.getFormVersion().getForm().getTitle(),
                 submission.getSubmittedAt() == null
                         ? null
                         : LocalDateTime.ofInstant(submission.getSubmittedAt(), ZoneId.systemDefault()),
-                submission.getSubmittedBy() == null ? null : submission.getSubmittedBy().getName(),
+                submittedByName,
                 score,
                 submission.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED,
                 level.name(),

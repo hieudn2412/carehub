@@ -684,7 +684,7 @@
   color: #176dbe;
 }
 
-.dashboard-header__exam-notify > span {
+.dashboard-header__exam-badge {
   position: absolute;
   top: -7px;
   right: -7px;

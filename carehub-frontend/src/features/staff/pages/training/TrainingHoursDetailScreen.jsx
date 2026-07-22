@@ -185,11 +185,6 @@ function TrainingHoursDetailScreen() {
               <div className="th-table-state">Không tìm thấy hồ sơ.</div>
             ) : (
               <>
-                {/* Back link + Title */}
-                <button className="th-back-link" onClick={() => navigate('/staff/training')}>
-                  <ArrowLeftOutlined /> Quay lại danh sách
-                </button>
-
                 <div className="th-detail-header">
                   <div className="th-detail-header__left">
                     <h1 className="th-detail-title">{record.title}</h1>
@@ -244,13 +239,13 @@ function TrainingHoursDetailScreen() {
                 </div>
 
                 {/* Evidence Preview */}
-                {record.evidences && record.evidences.length > 0 && (
+                {record.evidences && (record.workflowStatus === 'DRAFT' ? record.evidences.length > 0 : record.evidences.filter(canPreviewEvidence).length > 0) && (
                   <div className="th-detail-section">
                     <h3 className="th-detail-section-title">
-                      <PaperClipOutlined /> Minh chứng ({record.evidences.length})
+                      <PaperClipOutlined /> Minh chứng ({record.workflowStatus === 'DRAFT' ? record.evidences.length : record.evidences.filter(canPreviewEvidence).length})
                     </h3>
                     <div className="th-evidence-grid">
-                      {record.evidences.map(ev => {
+                      {(record.workflowStatus === 'DRAFT' ? record.evidences : record.evidences.filter(canPreviewEvidence)).map(ev => {
                         const isPreviewable = canPreviewEvidence(ev)
                         const preview = evidencePreviews[ev.id]
 
@@ -303,14 +298,16 @@ function TrainingHoursDetailScreen() {
                                   : ev.moderationStatus === 'ERROR' ? 'Lỗi'
                                   : 'Chờ duyệt'}
                               </span>
-                              <button
-                                type="button"
-                                className="th-detail-btn th-evidence-item__download"
-                                onClick={() => handleDownloadEvidence(ev.id)}
-                                aria-label={`Tải xuống ${ev.originalFilename}`}
-                              >
-                                <DownloadOutlined /> Tải
-                              </button>
+                              {record.workflowStatus === 'DRAFT' && (
+                                <button
+                                  type="button"
+                                  className="th-detail-btn th-evidence-item__download"
+                                  onClick={() => handleDownloadEvidence(ev.id)}
+                                  aria-label={`Tải xuống ${ev.originalFilename}`}
+                                >
+                                  <DownloadOutlined /> Tải
+                                </button>
+                              )}
                             </div>
                           </article>
                         )
@@ -329,6 +326,9 @@ function TrainingHoursDetailScreen() {
                       <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/edit`)}>
                         <EditOutlined /> Chỉnh sửa
                       </button>
+                      <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/evidence`)}>
+                        <PaperClipOutlined /> Quản lý minh chứng
+                      </button>
                     </>
                   )}
                   {record.workflowStatus === 'SUBMITTED' && (
@@ -340,9 +340,6 @@ function TrainingHoursDetailScreen() {
                       <RollbackOutlined /> {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
                     </button>
                   )}
-                  <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/evidence`)}>
-                    <PaperClipOutlined /> Quản lý minh chứng
-                  </button>
                 </div>
               </>
             )}

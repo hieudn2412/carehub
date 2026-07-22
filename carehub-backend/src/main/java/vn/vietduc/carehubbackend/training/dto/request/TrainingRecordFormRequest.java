@@ -14,6 +14,7 @@ public record TrainingRecordFormRequest(
         Long employeeId,
         @NotNull Long activityTypeId,
         Long professionalFieldId,
+        String customProfessionalField,
         @NotBlank @Size(max = 500) String title,
         @Size(max = 255) String provider,
         String description,

@@ -42,7 +42,10 @@ import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordStateMachine;
 import vn.vietduc.carehubbackend.training.validation.TrainingDomainValidator;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
+import vn.vietduc.carehubbackend.notification.service.NotificationService;
 
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
@@ -68,6 +71,8 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final TrainingRecordStateMachine stateMachine;
     private final TrainingDomainValidator validator;
     private final TrainingAuditService auditService;
+    private final NotificationService notificationService;
+    private final UserRoleRepository userRoleRepository;
 
     @Value("${app.training.records.max-edit-count:2}")
     private int maxEditCount;
@@ -153,7 +158,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         Collection<String> roles = accessPolicy.currentRoleCodes();
         User employee = resolveTargetEmployee(actor, roles, request.employeeId());
         TrainingActivityType activityType = resolveActiveActivityType(request.activityTypeId());
-        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId());
+        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), request.customProfessionalField());
         validator.validateRecordForm(request, false);
 
         long duplicateCount = duplicateCount(employee.getId(), request, null);
@@ -181,7 +186,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         requireFreshVersion(record, request.version());
         User actor = accessPolicy.currentActor();
         TrainingActivityType activityType = resolveActiveActivityType(request.activityTypeId());
-        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId());
+        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), request.customProfessionalField());
         validator.validateRecordForm(request, false);
 
         if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT && record.getEditCount() >= maxEditCount) {
@@ -298,16 +303,62 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         return activityType;
     }
 
-    private ProfessionalField resolveProfessionalField(Long id) {
-        if (id == null) {
-            return null;
+    private ProfessionalField resolveProfessionalField(Long id, String customName) {
+        if (id != null) {
+            ProfessionalField professionalField = professionalFieldRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Professional field not found"));
+            if (!professionalField.isActive() && !professionalField.getCode().startsWith("CUSTOM_")) {
+                throw ValidationException.field("professionalFieldId", "Professional field must be active");
+            }
+            return professionalField;
         }
-        ProfessionalField professionalField = professionalFieldRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Professional field not found"));
-        if (!professionalField.isActive()) {
-            throw ValidationException.field("professionalFieldId", "Professional field must be active");
+        if (customName != null && !customName.trim().isEmpty()) {
+            String trimmedName = customName.trim();
+            if (trimmedName.length() > 255) {
+                throw ValidationException.field("customProfessionalField", "Lĩnh vực chuyên môn không được vượt quá 255 ký tự");
+            }
+            User actor = accessPolicy.currentActor();
+            ProfessionalField savedPf = professionalFieldRepository.findAll().stream()
+                    .filter(pf -> pf.getName().equalsIgnoreCase(trimmedName))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        String cleanCode = "CUSTOM_" + System.currentTimeMillis();
+                        ProfessionalField newPf = ProfessionalField.builder()
+                                .code(cleanCode)
+                                .name(trimmedName)
+                                .description("Tự đề xuất bởi nhân viên: " + actor.getName() + " (Chờ duyệt)")
+                                .active(false)
+                                .version(0L)
+                                .build();
+                        return professionalFieldRepository.save(newPf);
+                    });
+
+            try {
+                List<User> admins = userRoleRepository.findAll().stream()
+                        .filter(ur -> ur.getRole() != null && "ADMIN".equals(ur.getRole().getCode()))
+                        .map(ur -> ur.getUser())
+                        .filter(u -> u != null && !u.isDeleted())
+                        .toList();
+                String title = "Đề xuất lĩnh vực chuyên môn mới";
+                String content = "Nhân viên " + actor.getName() + " đã đề xuất lĩnh vực chuyên môn mới: \"" + trimmedName + "\". Vui lòng kiểm tra và duyệt.";
+                String deepLink = "/admin/training/professional-fields?tab=pending";
+                for (User admin : admins) {
+                    notificationService.createInAppNotification(
+                            admin.getId(),
+                            "SYSTEM",
+                            title,
+                            content,
+                            deepLink,
+                            "CUSTOM_PF_" + savedPf.getId() + "_" + admin.getId()
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to send admin notifications for new professional field", e);
+            }
+
+            return savedPf;
         }
-        return professionalField;
+        return null;
     }
 
     private void requireFreshVersion(TrainingRecord record, Long requestVersion) {
