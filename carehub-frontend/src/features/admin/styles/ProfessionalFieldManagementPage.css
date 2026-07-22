@@ -240,10 +240,12 @@
 
 .pfm-search-box {
   padding: 14px 24px;
+  display: flex;
+  gap: 12px;
 }
 
 .pfm-search-box input {
-  width: 100%;
+  flex: 1;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 10px 14px;
@@ -256,6 +258,23 @@
 .pfm-search-box input:focus {
   border-color: #0d9488;
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+.pfm-status-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  outline: none;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+  min-width: 160px;
+  transition: all 0.2s ease;
+}
+
+.pfm-status-select:focus {
+  border-color: #0d9488;
 }
 
 .pfm-list table {

@@ -14,6 +14,7 @@ function ProfessionalFieldManagementPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,10 +28,9 @@ function ProfessionalFieldManagementPage() {
 
   const loadFields = useCallback(() => {
     setLoading(true)
-    let apiActive = undefined
-    if (activeTab === 'pending') {
-      apiActive = 'false'
-    }
+    const apiActive = activeTab === 'pending'
+      ? 'false'
+      : (statusFilter === '' ? undefined : statusFilter)
 
     adminApi.getProfessionalFields({
       page: 0,
@@ -50,7 +50,7 @@ function ProfessionalFieldManagementPage() {
       })
       .catch(error => showToast(error?.response?.data?.message || 'Không thể tải lĩnh vực chuyên môn', 'error'))
       .finally(() => setLoading(false))
-  }, [activeTab, keyword, showToast])
+  }, [activeTab, statusFilter, keyword, showToast])
 
   useEffect(() => {
     const timer = window.setTimeout(loadFields, 250)
@@ -160,6 +160,17 @@ function ProfessionalFieldManagementPage() {
                 </div>
                 <div className="pfm-search-box">
                   <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
+                  {activeTab === 'existing' && (
+                    <select
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                      className="pfm-status-select"
+                    >
+                      <option value="">Tất cả trạng thái</option>
+                      <option value="true">Đang dùng</option>
+                      <option value="false">Ngừng dùng</option>
+                    </select>
+                  )}
                 </div>
               </div>
               <div className="pfm-table-container">
