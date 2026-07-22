@@ -204,6 +204,24 @@ public class FormSubmissionService {
         return toResponse(submission, true);
     }
 
+    @Transactional(readOnly = true)
+    public FormSubmissionResponse getForSubjectUser(Long id, Long userId) {
+        User user = activeUser(userId);
+        FormSubmission submission = submissionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Form submission not found"));
+        FormSubmissionContext context = submission.getSubjectContext();
+        boolean sameUser = context != null && context.getSubjectUser() != null
+                && userId.equals(context.getSubjectUser().getId());
+        boolean sameEmployeeCode = context != null
+                && context.getSubjectUser() == null
+                && context.getEmployeeCode() != null
+                && context.getEmployeeCode().equalsIgnoreCase(user.getEmployeeCode());
+        if ((!sameUser && !sameEmployeeCode) || submission.getStatus() != FormSubmissionStatus.SUBMITTED) {
+            throw new ResourceNotFoundException("Form submission not found");
+        }
+        return toResponse(submission, true);
+    }
+
     private FormSubmission ownedDraft(Long id) {
         long actorId = securityUtils.getCurrentUserId();
         FormSubmission submission = submissionRepository.findByIdForUpdate(id)

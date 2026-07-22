@@ -42,6 +42,12 @@ export const competencyApi = {
   getSummary(params) {
     return httpClient.get('/competency/summary', { headers: authHeaders(), params })
   },
+
+  updateDepartmentTarget(departmentId, targetScore) {
+    return httpClient.put(`/competency/departments/${departmentId}/target`, { targetScore }, {
+      headers: authHeaders(),
+    })
+  },
 }
 
 export const examAssignmentApi = {

@@ -14,6 +14,8 @@ import {
   LoadingOutlined,
   WarningFilled,
   CheckCircleFilled,
+  EyeOutlined,
+  CloseOutlined,
 } from '@ant-design/icons'
 import '../../styles/StaffCompetencyPage.css'
 
@@ -33,6 +35,8 @@ function StaffCompetencyPage() {
   const [skillData, setSkillData] = useState(null)
   const [summaryData, setSummaryData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [detail, setDetail] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -80,6 +84,22 @@ function StaffCompetencyPage() {
     { key: 'skills', label: 'Kỹ năng thực hành', icon: <ExperimentOutlined /> },
     { key: 'summary', label: 'Tổng hợp', icon: <PieChartOutlined /> },
   ]
+
+  const openDetail = async (type, id) => {
+    setDetailLoading(true)
+    setDetail({ type, data: null })
+    try {
+      const response = type === 'exam'
+        ? await myCompetencyApi.getExamAttempt(id)
+        : await myCompetencyApi.getSkillEvaluation(id)
+      setDetail({ type, data: apiData(response, null) })
+    } catch (error) {
+      setDetail(null)
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -142,10 +162,18 @@ function StaffCompetencyPage() {
               </div>
 
               <div className="sc-content">
-                {activeTab === 'knowledge' && <KnowledgeTab data={knowledgeData} />}
-                {activeTab === 'skills' && <SkillsTab data={skillData} />}
+                {activeTab === 'knowledge' && <KnowledgeTab data={knowledgeData} onView={id => openDetail('exam', id)} />}
+                {activeTab === 'skills' && <SkillsTab data={skillData} onView={id => openDetail('skill', id)} />}
                 {activeTab === 'summary' && <SummaryTab data={summaryData} />}
               </div>
+
+              {detail && (
+                <CompetencyDetailDialog
+                  detail={detail}
+                  loading={detailLoading}
+                  onClose={() => setDetail(null)}
+                />
+              )}
             </div>
           </main>
         </div>
@@ -166,7 +194,9 @@ function PersonalCompetencyOverview({ data }) {
           <h3 id="personal-competency-title">Kết quả tuân thủ quy trình</h3>
         </div>
         <span className={`sc-personal-status ${data?.isPassed ? 'sc-personal-status--passed' : ''}`}>
-          {hasSummary ? (data?.isPassed ? 'Đạt' : 'Chưa đạt') : 'Chưa có kết quả'}
+          {!hasSummary ? 'Chưa đủ dữ liệu'
+            : data?.targetScore == null ? 'Chưa đặt mục tiêu'
+              : data?.isPassed ? 'Đạt' : 'Chưa đạt'}
         </span>
       </div>
 
@@ -174,32 +204,37 @@ function PersonalCompetencyOverview({ data }) {
         <PersonalMetric icon={<BookOutlined />} label="Điểm lý thuyết" value={data?.knowledgeAverage} />
         <PersonalMetric icon={<ExperimentOutlined />} label="Điểm thực hành" value={data?.skillAverage} />
         <PersonalMetric icon={<TrophyOutlined />} label="Điểm tổng" value={data?.overallScore} />
-        <PersonalMetric icon={<PieChartOutlined />} label="Mục tiêu của khoa" value={null} />
+        <PersonalMetric icon={<PieChartOutlined />} label="Mục tiêu của khoa" value={data?.targetScore} />
       </div>
 
-      <div className="sc-personal-api-note">
-        <WarningFilled />
-        <span>Backend chưa trả về mục tiêu riêng của khoa nên chưa thể so sánh và cảnh báo chênh lệch cá nhân.</span>
-      </div>
+      {data?.targetScore == null && (
+        <div className="sc-personal-api-note">
+          <WarningFilled />
+          <span>Manager của {data?.departmentName || 'khoa'} chưa thiết lập điểm mục tiêu.</span>
+        </div>
+      )}
     </section>
   )
 }
 
-function PersonalMetric({ icon, label, value }) {
+function PersonalMetric({ icon, label, value, suffix = 'điểm' }) {
   const number = value === null || value === undefined || value === '' ? null : Number(value)
   return (
     <article className="sc-personal-metric">
       <span className="sc-personal-metric__icon">{icon}</span>
       <div>
         <span>{label}</span>
-        <strong>{Number.isFinite(number) ? `${formatNumber(number)} điểm` : '—'}</strong>
+        <strong>{Number.isFinite(number) ? `${formatNumber(number)} ${suffix}` : '—'}</strong>
       </div>
     </article>
   )
 }
 
-function KnowledgeTab({ data }) {
-  if (!data || !data.items || data.items.length === 0) {
+function KnowledgeTab({ data, onView }) {
+  const attempts = (data?.items || []).flatMap(item =>
+    (item.attempts || []).map(attempt => ({ ...attempt, categoryName: item.categoryName || 'Chung' })))
+
+  if (attempts.length === 0) {
     return (
       <div className="sc-empty">
         <BookOutlined style={{ fontSize: 48, color: '#d1d5db', marginBottom: 16 }} />
@@ -226,26 +261,28 @@ function KnowledgeTab({ data }) {
         <table className="sc-table">
           <thead>
             <tr>
+              <th>Bài kiểm tra</th>
               <th>Lĩnh vực</th>
-              <th>Số lần thi</th>
-              <th>Điểm TB</th>
-              <th>Tỷ lệ đạt</th>
-              <th>Phân loại</th>
+              <th>Ngày làm</th>
+              <th>Điểm</th>
+              <th>Kết quả</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {data.items.map((item, idx) => (
-              <tr key={idx} className={!item.isPassed ? 'sc-row--danger' : ''}>
-                <td>{item.categoryName || 'Chung'}</td>
-                <td>{item.attemptCount}</td>
-                <td>{formatNumber(item.averageScore)}</td>
-                <td>{item.passRate != null ? `${item.passRate}%` : '—'}</td>
+            {attempts.map(attempt => (
+              <tr key={attempt.attemptId} className={!attempt.passed ? 'sc-row--danger' : ''}>
+                <td><strong>{attempt.examPaperTitle || 'Bài kiểm tra'}</strong></td>
+                <td>{attempt.categoryName}</td>
+                <td>{formatLocalDate(attempt.attemptDate)}</td>
+                <td>{formatNumber(attempt.score)} / 100</td>
                 <td>
-                  <span className="sc-badge" style={{ backgroundColor: (item.colorHex || '#6b7280') + '20', color: item.colorHex || '#6b7280', borderColor: item.colorHex || '#6b7280' }}>
-                    {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                    {item.competencyLabel || '—'}
+                  <span className="sc-badge" style={{ backgroundColor: (attempt.colorHex || '#6b7280') + '20', color: attempt.colorHex || '#6b7280', borderColor: attempt.colorHex || '#6b7280' }}>
+                    {attempt.passed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
+                    {attempt.passed ? 'Đạt' : 'Chưa đạt'}
                   </span>
                 </td>
+                <td><button type="button" className="sc-view-btn" onClick={() => onView(attempt.attemptId)}><EyeOutlined /> Chi tiết</button></td>
               </tr>
             ))}
           </tbody>
@@ -255,8 +292,11 @@ function KnowledgeTab({ data }) {
   )
 }
 
-function SkillsTab({ data }) {
-  if (!data || !data.items || data.items.length === 0) {
+function SkillsTab({ data, onView }) {
+  const evaluations = (data?.items || []).flatMap(item =>
+    (item.attempts || []).map(attempt => ({ ...attempt, formName: item.formName })))
+
+  if (evaluations.length === 0) {
     return (
       <div className="sc-empty">
         <ExperimentOutlined style={{ fontSize: 48, color: '#d1d5db', marginBottom: 16 }} />
@@ -283,30 +323,130 @@ function SkillsTab({ data }) {
         <table className="sc-table">
           <thead>
             <tr>
-              <th>Kỹ thuật</th>
-              <th>Số lần ĐG</th>
-              <th>Điểm TB</th>
-              <th>Tỷ lệ đạt</th>
-              <th>Phân loại</th>
+              <th>Bảng kiểm</th>
+              <th>Ngày đánh giá</th>
+              <th>Người đánh giá</th>
+              <th>Điểm</th>
+              <th>Kết quả</th>
+              <th>Thao tác</th>
             </tr>
           </thead>
           <tbody>
-            {data.items.map((item, idx) => (
-              <tr key={idx} className={!item.isPassed ? 'sc-row--danger' : ''}>
-                <td>{item.formName}</td>
-                <td>{item.evaluationCount}</td>
-                <td>{formatNumber(item.averageScore)}</td>
-                <td>{item.passRate != null ? `${item.passRate}%` : '—'}</td>
+            {evaluations.map(evaluation => (
+              <tr key={evaluation.submissionId} className={!evaluation.passed ? 'sc-row--danger' : ''}>
+                <td><strong>{evaluation.formName}</strong></td>
+                <td>{formatLocalDate(evaluation.evaluatedAt)}</td>
+                <td>{evaluation.evaluatedBy || '—'}</td>
+                <td>{formatNumber(evaluation.score)} / 100</td>
                 <td>
-                  <span className="sc-badge" style={{ backgroundColor: (item.colorHex || '#6b7280') + '20', color: item.colorHex || '#6b7280', borderColor: item.colorHex || '#6b7280' }}>
-                    {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                    {item.competencyLabel || '—'}
+                  <span className="sc-badge" style={{ backgroundColor: (evaluation.colorHex || '#6b7280') + '20', color: evaluation.colorHex || '#6b7280', borderColor: evaluation.colorHex || '#6b7280' }}>
+                    {evaluation.passed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
+                    {evaluation.passed ? 'Đạt' : 'Chưa đạt'}
                   </span>
                 </td>
+                <td><button type="button" className="sc-view-btn" onClick={() => onView(evaluation.submissionId)}><EyeOutlined /> Chi tiết</button></td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  )
+}
+
+function formatLocalDate(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString('vi-VN')
+}
+
+function CompetencyDetailDialog({ detail, loading, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  const data = detail.data
+  const isExam = detail.type === 'exam'
+  const title = isExam ? data?.examPaperName : data?.title
+  const skillScore = data?.convertedScore == null ? null : Number(data.convertedScore) * 10
+
+  return (
+    <div className="sc-detail-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="sc-detail-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="competency-detail-title"
+        onMouseDown={event => event.stopPropagation()}
+      >
+        <header className="sc-detail-dialog__header">
+          <div>
+            <span>{isExam ? 'KẾT QUẢ BÀI KIỂM TRA' : 'KẾT QUẢ BẢNG KIỂM'}</span>
+            <h3 id="competency-detail-title">{title || 'Chi tiết kết quả'}</h3>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Đóng chi tiết"><CloseOutlined /></button>
+        </header>
+
+        {loading ? (
+          <div className="sc-detail-dialog__loading"><LoadingOutlined spin /> Đang tải chi tiết...</div>
+        ) : !data ? (
+          <div className="sc-detail-dialog__loading">Không tìm thấy dữ liệu chi tiết.</div>
+        ) : isExam ? (
+          <ExamResultDetail data={data} />
+        ) : (
+          <SkillResultDetail data={data} score={skillScore} />
+        )}
+      </section>
+    </div>
+  )
+}
+
+function ExamResultDetail({ data }) {
+  return (
+    <div className="sc-detail-dialog__body">
+      <div className="sc-detail-metrics">
+        <PersonalMetric icon={<TrophyOutlined />} label="Điểm bài thi" value={data.score} />
+        <PersonalMetric icon={<CheckCircleFilled />} label="Số câu đúng" value={data.correctCount} suffix="câu" />
+        <PersonalMetric icon={<BookOutlined />} label="Tổng số câu" value={data.totalQuestions} suffix="câu" />
+      </div>
+      {(data.questions || []).map(question => {
+        const answer = (data.answers || []).find(item => item.paperQuestionId === question.paperQuestionId)
+        return (
+          <article key={question.paperQuestionId} className="sc-detail-question">
+            <div><strong>Câu {question.position}</strong><span>{answer?.correct ? 'Đúng' : 'Sai'}</span></div>
+            <p>{question.stem}</p>
+            <small>Đã chọn: {answer?.selectedAnswer || question.selectedAnswer || 'Chưa chọn'}{answer?.correctAnswer ? ` · Đáp án đúng: ${answer.correctAnswer}` : ''}</small>
+            {answer?.explanation && <small>Giải thích: {answer.explanation}</small>}
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function SkillResultDetail({ data, score }) {
+  return (
+    <div className="sc-detail-dialog__body">
+      <div className="sc-detail-metrics">
+        <PersonalMetric icon={<TrophyOutlined />} label="Điểm thực hành" value={score} />
+        <PersonalMetric icon={<ExperimentOutlined />} label="Điểm thô" value={data.totalScore} />
+        <PersonalMetric icon={<CheckCircleFilled />} label="Điểm đạt" value={data.passingScore} />
+      </div>
+      <div className="sc-detail-breakdown">
+        <h4>Chi tiết tiêu chí</h4>
+        {(data.scoreBreakdown || []).length === 0 ? (
+          <p>Không có dữ liệu phân rã điểm.</p>
+        ) : (data.scoreBreakdown || []).map(item => (
+          <article key={item.questionKey}>
+            <div><strong>{item.code} · {item.title}</strong>{item.critical && <span>Tiêu chí trọng yếu</span>}</div>
+            <small>Điểm: {formatNumber(item.weightedScore)} / {formatNumber(item.maxScore)}</small>
+          </article>
+        ))}
       </div>
     </div>
   )
@@ -336,6 +476,12 @@ function SummaryTab({ data }) {
         </div>
         <div className="sc-summary-card">
           <div className="sc-summary-card__item">
+            <span className="sc-summary-card__label">Mục tiêu của khoa</span>
+            <span className="sc-summary-card__value">{data.targetScore != null ? formatNumber(data.targetScore) : '—'}</span>
+          </div>
+        </div>
+        <div className="sc-summary-card">
+          <div className="sc-summary-card__item">
             <span className="sc-summary-card__label">Điểm TB kỹ năng</span>
             <span className="sc-summary-card__value">{data.skillAverage != null ? formatNumber(data.skillAverage) : '—'}</span>
           </div>
@@ -356,10 +502,20 @@ function SummaryTab({ data }) {
         </div>
       </div>
 
-      {!data.isPassed && (
+      {data.targetScore == null ? (
+        <div className="sc-warning sc-warning--neutral">
+          <WarningFilled style={{ fontSize: 20, marginRight: 8 }} />
+          <span>Manager của khoa chưa thiết lập điểm mục tiêu.</span>
+        </div>
+      ) : data.overallScore == null ? (
+        <div className="sc-warning sc-warning--neutral">
+          <WarningFilled style={{ fontSize: 20, marginRight: 8 }} />
+          <span>Cần có cả kết quả lý thuyết và thực hành để tính điểm tổng.</span>
+        </div>
+      ) : !data.isPassed && (
         <div className="sc-warning">
           <WarningFilled style={{ fontSize: 20, marginRight: 8 }} />
-          <span>Mức phân loại năng lực chuyên môn chưa đạt. Vui lòng liên hệ Điều dưỡng trưởng khoa.</span>
+          <span>Điểm tổng chưa vượt mục tiêu của khoa. Vui lòng liên hệ Điều dưỡng trưởng khoa.</span>
         </div>
       )}
 

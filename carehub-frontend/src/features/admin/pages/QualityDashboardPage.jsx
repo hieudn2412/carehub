@@ -64,6 +64,8 @@ function QualityDashboardPage({ role = 'admin' }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [targetInput, setTargetInput] = useState('')
+  const [savingTarget, setSavingTarget] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -111,7 +113,9 @@ function QualityDashboardPage({ role = 'admin' }) {
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
       })
-      setData(apiData(response, null))
+      const nextData = apiData(response, null)
+      setData(nextData)
+      setTargetInput(nextData?.targetScore ?? '')
     } catch (requestError) {
       const message = apiErrorMessage(requestError)
       setError(message)
@@ -126,6 +130,24 @@ function QualityDashboardPage({ role = 'admin' }) {
     const timer = window.setTimeout(loadDashboard, 0)
     return () => window.clearTimeout(timer)
   }, [loadDashboard])
+
+  const saveDepartmentTarget = async () => {
+    const target = Number(targetInput)
+    if (!departmentId || !Number.isFinite(target) || target < 0 || target > 100) {
+      showToast('Điểm mục tiêu phải từ 0 đến 100.', 'error')
+      return
+    }
+    setSavingTarget(true)
+    try {
+      await competencyApi.updateDepartmentTarget(departmentId, target)
+      showToast('Đã cập nhật điểm mục tiêu của khoa.', 'success')
+      await loadDashboard()
+    } catch (requestError) {
+      showToast(apiErrorMessage(requestError), 'error')
+    } finally {
+      setSavingTarget(false)
+    }
+  }
 
   const allItems = useMemo(() => Array.isArray(data?.items) ? data.items : [], [data])
   const employees = useMemo(() => (
@@ -144,6 +166,7 @@ function QualityDashboardPage({ role = 'admin' }) {
   const theoryAverage = average(filteredItems, 'knowledgeAverage')
   const practicalAverage = average(filteredItems, 'skillAverage')
   const totalAverage = average(filteredItems, 'overallScore')
+  const targetScore = nullableNumber(data?.targetScore)
 
   const LayoutSidebar = isManager ? Sidebar : AdminSidebar
   const LayoutHeader = isManager ? Header : AdminHeader
@@ -171,10 +194,22 @@ function QualityDashboardPage({ role = 'admin' }) {
               <div className="compliance-target-box">
                 <label htmlFor="department-target">Mục tiêu của khoa</label>
                 <div>
-                  <input id="department-target" value="" placeholder="—" disabled />
-                  <button type="button" disabled>Lưu mục tiêu</button>
+                  <input
+                    id="department-target"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={targetInput}
+                    onChange={event => setTargetInput(event.target.value)}
+                    placeholder="0–100"
+                    aria-describedby="department-target-help"
+                  />
+                  <button type="button" onClick={saveDepartmentTarget} disabled={savingTarget || !departmentId}>
+                    {savingTarget ? 'Đang lưu...' : 'Lưu mục tiêu'}
+                  </button>
                 </div>
-                <small>Chưa có API đọc và cập nhật mục tiêu riêng của khoa.</small>
+                <small id="department-target-help">Nhân viên đạt khi điểm tổng lớn hơn mục tiêu này.</small>
               </div>
             )}
           </section>
@@ -271,7 +306,11 @@ function QualityDashboardPage({ role = 'admin' }) {
                             <td>{formatScore(nullableNumber(item.skillAverage))}</td>
                             <td>{formatScore(nullableNumber(item.overallScore))}</td>
                             <td><span className={`compliance-status compliance-status--${item.isPassed ? 'passed' : 'failed'}`}>{item.isPassed ? 'Đạt' : 'Chưa đạt'}</span></td>
-                            <td className="compliance-muted">Chưa có mục tiêu khoa</td>
+                            <td className="compliance-muted">
+                              {targetScore == null || nullableNumber(item.overallScore) == null
+                                ? '—'
+                                : `${nullableNumber(item.overallScore) > targetScore ? '+' : ''}${formatScore(nullableNumber(item.overallScore) - targetScore)} điểm`}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
