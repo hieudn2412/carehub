@@ -76,15 +76,6 @@ function Sidebar() {
 
   // Personal/Staff features
   navSections.push(
-<<<<<<< HEAD
-=======
-    ...(!isManager ? [{
-      label: 'ĐÁNH GIÁ',
-      items: [
-        { icon: <FileTextOutlined />, label: 'Tạo câu hỏi từ tài liệu', path: '/staff/generate-questions' },
-      ],
-    }] : []),
->>>>>>> main
     {
       label: 'Năng lực của tôi',
       items: [
