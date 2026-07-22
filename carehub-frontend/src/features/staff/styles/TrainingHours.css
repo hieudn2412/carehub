@@ -810,20 +810,36 @@
 }
 
 .th-evidence-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 14px;
 }
 
 .th-evidence-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  min-width: 0;
+  padding: 12px 14px;
   border-radius: 8px;
   background: #f9fafb;
   border: 1px solid #f3f4f6;
   font-size: 13px;
+}
+
+.th-evidence-item--with-preview {
+  padding: 0;
+  overflow: hidden;
+  background: #fff;
+  border-color: #e5e7eb;
+}
+
+.th-evidence-item__info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.th-evidence-item--with-preview .th-evidence-item__info {
+  padding: 12px 14px;
 }
 
 .th-evidence-item__icon { color: #9ca3af; font-size: 14px; flex-shrink: 0; }
@@ -833,6 +849,65 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.th-evidence-item__download {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+
+.th-evidence-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 230px;
+  max-height: 420px;
+  padding: 12px;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  background-image:
+    linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+.th-evidence-preview__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 396px;
+  object-fit: contain;
+}
+
+.th-evidence-preview__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #6b7280;
+  text-align: center;
+}
+
+.th-evidence-preview__retry {
+  padding: 5px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font: inherit;
+  cursor: pointer;
+}
+
+.th-evidence-preview__retry:hover {
+  background: #f9fafb;
 }
 
 .th-badge--sm {

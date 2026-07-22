@@ -30,6 +30,12 @@ import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
+import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
@@ -40,6 +46,7 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.lessThan;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -55,8 +62,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Transactional
 @TestPropertySource(properties = {
-        "spring.jpa.hibernate.ddl-auto=create-drop",
-        "app.training.evidence.storage-dir=target/test-evidence-storage"
+        "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 class TrainingRecordEvidenceControllerIntegrationTest {
     @Autowired
@@ -155,8 +161,13 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
 
-        // Download URL path changed from /training/evidence-download/... — skip direct download test
-        // since HMAC token format changed; the download-url creation itself succeeded above
+        // The private R2 object is accessed through the presigned URL returned above.
+
+        mockMvc.perform(post("/api/v1/training/records/{recordId}/evidences/{evidenceId}/preview-url", recordId, evidenceId)
+                        .with(jwtFor(user, "USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.downloadUrl", containsString("preview=true")))
+                .andExpect(jsonPath("$.data.expiresAt").exists());
 
         TrainingRecord record = recordRepository.findById(recordId).orElseThrow();
         mockMvc.perform(post("/api/v1/training/records/{id}/submit", recordId)
@@ -346,6 +357,9 @@ class TrainingRecordEvidenceControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/training/records/{recordId}/evidences/{evidenceId}/download-url", recordId, evidenceId)
                         .with(jwtFor(otherEmployee, "USER")))
                 .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/training/records/{recordId}/evidences/{evidenceId}/preview-url", recordId, evidenceId)
+                        .with(jwtFor(otherEmployee, "USER")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -353,15 +367,12 @@ class TrainingRecordEvidenceControllerIntegrationTest {
         Long recordId = createDraft(evidenceOptionalType, user, "Evidence checks", "2");
 
         mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", recordId)
-                        .file(jpegFile("big.jpg", 5 * 1024 * 1024))
+                        .file(jpegFile("big.jpg", 6 * 1024 * 1024))
                         .with(jwtFor(user, "USER")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.fileSizeBytes", is(5 * 1024 * 1024)));
-
-        mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", recordId)
-                        .file(jpegFile("too-big.jpg", 5 * 1024 * 1024 + 1))
-                        .with(jwtFor(user, "USER")))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(jsonPath("$.data.originalFileSizeBytes", is(6 * 1024 * 1024)))
+                .andExpect(jsonPath("$.data.fileSizeBytes", lessThan(5 * 1024 * 1024)))
+                .andExpect(jsonPath("$.data.optimized", is(true)));
 
         mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", recordId)
                         .file(new MockMultipartFile("file", "fake.pdf", "application/pdf", jpegBytes(128)))
@@ -369,7 +380,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(status().isUnprocessableEntity());
 
         mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", recordId)
-                        .file(jpegFile("copy.jpg", 5 * 1024 * 1024))
+                        .file(jpegFile("copy.jpg", 6 * 1024 * 1024))
                         .with(jwtFor(user, "USER")))
                 .andExpect(status().isConflict());
 
@@ -466,12 +477,19 @@ class TrainingRecordEvidenceControllerIntegrationTest {
     }
 
     private byte[] jpegBytes(int size) {
-        byte[] bytes = new byte[size];
-        Arrays.fill(bytes, (byte) 1);
-        bytes[0] = (byte) 0xFF;
-        bytes[1] = (byte) 0xD8;
-        bytes[2] = (byte) 0xFF;
-        return bytes;
+        try {
+            BufferedImage image = new BufferedImage(32, 32, BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics = image.createGraphics();
+            graphics.setColor(new Color(35, 100, 180));
+            graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+            graphics.dispose();
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            ImageIO.write(image, "jpg", output);
+            byte[] jpeg = output.toByteArray();
+            return size <= jpeg.length ? jpeg : Arrays.copyOf(jpeg, size);
+        } catch (IOException ex) {
+            throw new IllegalStateException(ex);
+        }
     }
 
     private void assertNoActiveEvidence(Long recordId) {

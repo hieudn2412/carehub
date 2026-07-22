@@ -1,21 +1,22 @@
 package vn.vietduc.carehubbackend.training.service;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.time.Duration;
 
 public interface EvidenceStorageService {
-    StoredEvidenceObject store(EvidenceObjectRequest request, InputStream content) throws IOException;
+    StoredEvidenceObject store(EvidenceObjectRequest request, byte[] content);
 
-    String createDownloadUrl(String objectKey, Duration ttl);
+    String createDownloadUrl(String objectKey, String originalFilename, Duration ttl);
+
+    String createPreviewUrl(String objectKey, String originalFilename, Duration ttl);
 
     void delete(String objectKey);
 
     record EvidenceObjectRequest(
+            Long trainingRecordId,
             String originalFilename,
             String mimeType,
             long fileSizeBytes,
-            String checksumSha256
+            String storedChecksumSha256
     ) {
     }
 

@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.auth.service.AuthService;
 import vn.vietduc.carehubbackend.auth.service.JwtTokenService;
 import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.TokenException;
 import vn.vietduc.carehubbackend.exception.UnauthorizedException;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
@@ -46,8 +47,6 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Tài khoản đã bị khóa");
         }
 
-        refreshTokenService.revokeAllUserTokens(user);
-
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -66,10 +65,10 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         RefreshToken refreshToken = refreshTokenService.findToken(request.getRefreshToken());
         if (refreshToken.getRevoked()) {
-            throw new BadRequestException("Token đã bị thu hồi");
+            throw new TokenException("Token đã bị thu hồi");
         }
         if (refreshToken.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Token đã hết hạn");
+            throw new TokenException("Token đã hết hạn");
         }
 
         User user = refreshToken.getUser();

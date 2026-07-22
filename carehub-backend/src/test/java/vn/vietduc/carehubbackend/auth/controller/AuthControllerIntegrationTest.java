@@ -108,8 +108,24 @@ class AuthControllerIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error_code", is("REQ_001")));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error_code", is("AUTH_001")));
+    }
+
+    @Test
+    void secondLoginKeepsFirstSessionRefreshTokenValid() throws Exception {
+        String firstRefreshToken = loginAndGetRefreshToken();
+        String secondRefreshToken = loginAndGetRefreshToken();
+
+        assertNotEquals(firstRefreshToken, secondRefreshToken);
+        assertFalse(refreshTokenRepository.findByToken(firstRefreshToken).orElseThrow().getRevoked());
+        assertFalse(refreshTokenRepository.findByToken(secondRefreshToken).orElseThrow().getRevoked());
+
+        mockMvc.perform(post("/api/v1/auth/refresh-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"%s\"}".formatted(firstRefreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())));
     }
 
     @Test
@@ -155,6 +171,19 @@ class AuthControllerIntegrationTest {
         assertTrue(passwordResetRepository.findById(otp.getId()).orElseThrow().isUsed());
         User updated = userRepository.findById(activeUser.getId()).orElseThrow();
         assertTrue(passwordEncoder.matches("NewPass123", updated.getPassword()));
+    }
+
+    private String loginAndGetRefreshToken() throws Exception {
+        String response = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"employeeCode":"AUTH001","password":"Correct123"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return JsonPath.read(response, "$.data.refreshToken");
     }
 
     @TestConfiguration

@@ -4,6 +4,7 @@ import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import { formatEvidenceStorageSummary, getEvidenceFileError } from '../utils/evidenceFile.js'
 import { 
   UploadOutlined, 
   FilePdfOutlined, 
@@ -11,8 +12,6 @@ import {
   DeleteOutlined, 
   DownloadOutlined, 
   InboxOutlined, 
-  ArrowLeftOutlined, 
-  CloseOutlined, 
   LoadingOutlined,
   FileUnknownOutlined,
   InfoCircleOutlined
@@ -79,21 +78,23 @@ function TrainingRecordEvidencePage() {
     setIsDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0]
-      const validTypes = ['image/png', 'image/jpeg', 'application/pdf']
-      const fileExtension = file.name.split('.').pop().toLowerCase()
-      const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg']
-      
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Tập tin quá lớn. Kích thước tối đa là 5MB.', 'warning')
+      const validationError = getEvidenceFileError(file)
+      if (validationError) {
+        showToast(validationError, 'warning')
         return
       }
-      
-      if (validTypes.includes(file.type) || allowedExtensions.includes(fileExtension)) {
-        setSelectedFile(file)
-      } else {
-        showToast('Định dạng tệp không hợp lệ! Vui lòng chọn tệp PNG, JPG hoặc PDF.', 'warning')
-      }
+      setSelectedFile(file)
     }
+  }
+
+  const selectFile = (file) => {
+    if (!file) return
+    const validationError = getEvidenceFileError(file)
+    if (validationError) {
+      showToast(validationError, 'warning')
+      return
+    }
+    setSelectedFile(file)
   }
 
   const upload = async (event) => {
@@ -104,16 +105,9 @@ function TrainingRecordEvidencePage() {
       return
     }
 
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      showToast('Tập tin quá lớn. Kích thước tối đa là 5MB.', 'warning')
-      return
-    }
-
-    const validTypes = ['image/png', 'image/jpeg', 'application/pdf']
-    const fileExtension = selectedFile.name.split('.').pop().toLowerCase()
-    const allowedExtensions = ['pdf', 'png', 'jpg', 'jpeg']
-    if (!validTypes.includes(selectedFile.type) && !allowedExtensions.includes(fileExtension)) {
-      showToast('Định dạng tệp không hợp lệ! Vui lòng chọn tệp PNG, JPG hoặc PDF.', 'warning')
+    const validationError = getEvidenceFileError(selectedFile)
+    if (validationError) {
+      showToast(validationError, 'warning')
       return
     }
 
@@ -287,12 +281,21 @@ function TrainingRecordEvidencePage() {
                 onDragLeave={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => document.getElementById('evidence-file-input').click()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    document.getElementById('evidence-file-input').click()
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Chọn tệp minh chứng"
               >
                 <input 
                   id="evidence-file-input"
                   type="file" 
                   accept="image/png,image/jpeg,application/pdf"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  onChange={(e) => selectFile(e.target.files?.[0])}
                   style={{ display: 'none' }}
                 />
                 <div className="dropzone-content">
@@ -305,7 +308,7 @@ function TrainingRecordEvidencePage() {
                   ) : (
                     <>
                       <p className="dropzone-text">Kéo thả tệp minh chứng vào đây hoặc click để chọn</p>
-                      <small className="dropzone-hint">Hỗ trợ định dạng PNG, JPG, PDF (Tối đa 5MB)</small>
+                      <small className="dropzone-hint">Hỗ trợ PNG, JPG, PDF · đầu vào tối đa 20 MB · lưu tối đa 5 MB</small>
                     </>
                   )}
                 </div>
@@ -376,7 +379,7 @@ function TrainingRecordEvidencePage() {
                           {item.originalFilename}
                         </h4>
                         <div className="evidence-card-meta">
-                          <span>{formatSize(item.fileSizeBytes)}</span>
+                          <span>{formatEvidenceStorageSummary(item, formatSize)}</span>
                           <span style={{ margin: '0 6px' }}>•</span>
                           <span>{formatDateTime(item.uploadedAt)}</span>
                         </div>

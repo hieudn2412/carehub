@@ -12,6 +12,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @Entity
 @Getter
@@ -24,6 +25,9 @@ public class Department extends BaseEntity {
     private String name;
 
     private String departmentCode;
+
+    @jakarta.persistence.Column(name = "competency_target_score", precision = 5, scale = 2)
+    private BigDecimal competencyTargetScore;
 
     @OneToMany(mappedBy = "department")
     private List<User> users;

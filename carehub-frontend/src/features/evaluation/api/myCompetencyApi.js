@@ -18,4 +18,12 @@ export const myCompetencyApi = {
   getSummary(params) {
     return httpClient.get('/me/competency/summary', { headers: authHeaders(), params })
   },
+
+  getExamAttempt(attemptId) {
+    return httpClient.get(`/me/exam-attempts/${attemptId}`, { headers: authHeaders() })
+  },
+
+  getSkillEvaluation(submissionId) {
+    return httpClient.get(`/me/competency/skills/${submissionId}`, { headers: authHeaders() })
+  },
 }

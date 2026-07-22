@@ -9,7 +9,9 @@
 .compliance-target-box div { display: flex; gap: 8px; }
 .compliance-target-box input, .compliance-target-box button { height: 40px; border: 1px solid #d6e0e8; border-radius: 6px; }
 .compliance-target-box input { width: 90px; padding: 0 12px; }
-.compliance-target-box button { padding: 0 14px; }
+.compliance-target-box button { padding: 0 14px; background: #087f6d; color: #fff; font-weight: 600; cursor: pointer; }
+.compliance-target-box button:hover:not(:disabled) { background: #066b5d; }
+.compliance-target-box button:disabled { opacity: .65; cursor: wait; }
 .compliance-target-box small { display: block; margin-top: 8px; color: #8a98a8; }
 .compliance-filters { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 14px; margin-top: 18px; padding: 18px; border: 1px solid #dbe4ec; border-radius: 8px; background: #fff; }
 .compliance-filters label { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
