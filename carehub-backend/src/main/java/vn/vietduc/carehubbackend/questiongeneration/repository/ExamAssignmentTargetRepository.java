@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
@@ -33,6 +35,18 @@ public interface ExamAssignmentTargetRepository extends JpaRepository<ExamAssign
     List<ExamAssignmentTarget> findByUserOrderByAssignmentUpdatedAtDesc(User user);
 
     Optional<ExamAssignmentTarget> findByAssignmentAndUser(ExamAssignment assignment, User user);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT target
+            FROM ExamAssignmentTarget target
+            WHERE target.assignment = :assignment
+              AND target.user = :user
+            """)
+    Optional<ExamAssignmentTarget> findByAssignmentAndUserForUpdate(
+            @Param("assignment") ExamAssignment assignment,
+            @Param("user") User user
+    );
 
     @Query("""
             SELECT DISTINCT target.assignment

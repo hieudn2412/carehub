@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CopyOutlined, DownloadOutlined, SendOutlined } from '@ant-design/icons'
+import { DownloadOutlined, SendOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -38,7 +38,8 @@ function ExamPaperDetailPage() {
   }, [paperId, showToast])
 
   useEffect(() => {
-    loadPaper()
+    const timer = window.setTimeout(loadPaper, 0)
+    return () => window.clearTimeout(timer)
   }, [loadPaper])
 
   async function publishPaper() {
@@ -46,19 +47,6 @@ function ExamPaperDetailPage() {
       const response = await examPaperApi.publishExamPaper(paper.id)
       setPaper(apiData(response))
       showToast('Đã phát hành bộ đề kiểm tra.', 'success')
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    }
-  }
-
-  async function duplicatePaper() {
-    try {
-      const response = await examPaperApi.duplicateExamPaper(paper.id)
-      const duplicated = apiData(response)
-      showToast('Đã nhân bản bộ đề kiểm tra.', 'success')
-      if (duplicated?.id) {
-        navigate(`/admin/evaluation/exam-papers/${duplicated.id}`)
-      }
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
@@ -78,7 +66,7 @@ function ExamPaperDetailPage() {
   }
 
   const breadcrumbs = [
-    { label: 'Bộ đề kiểm tra', path: '/admin/evaluation/exam-papers' },
+    { label: 'Quản lý bài kiểm tra', path: '/admin/evaluation/exam-management' },
     { label: paper?.code || 'Chi tiết' },
   ]
 
@@ -100,12 +88,9 @@ function ExamPaperDetailPage() {
                       <p className="exp-subtitle">{paper.code} · {paper.statusText} · tạo lúc {formatDateTime(paper.createdAt)}</p>
                     </div>
                     <div className="exp-title-actions">
-                      <button type="button" className="exp-btn-secondary" onClick={() => navigate('/admin/evaluation/exam-papers')}>Quay lại</button>
+                      <button type="button" className="exp-btn-secondary" onClick={() => navigate('/admin/evaluation/exam-management')}>Quay lại</button>
                       <button type="button" className="exp-btn-secondary" onClick={() => setShowAnswers((current) => !current)}>
                         {showAnswers ? 'Ẩn đáp án' : 'Hiện đáp án'}
-                      </button>
-                      <button type="button" className="exp-btn-secondary" onClick={duplicatePaper} disabled={paper.status === 'ARCHIVED'}>
-                        <CopyOutlined /> Nhân bản
                       </button>
                       <select className="exp-export-select" value={exportFormat} onChange={(event) => setExportFormat(event.target.value)} title="Định dạng export">
                         {EXPORT_FORMATS.map((format) => (

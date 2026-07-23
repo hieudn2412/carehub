@@ -118,33 +118,6 @@ public class ExamPaperController {
         ));
     }
 
-    @PostMapping("/{paperId}/duplicate")
-    @PreAuthorize("@evaluationSecurity.canPublishExam(authentication)")
-    public ResponseEntity<ApiResponse<ExamPaperResponse>> duplicate(
-            @PathVariable Long paperId,
-            Authentication authentication
-    ) {
-        ExamPaperResponse response = examPaperService.duplicate(paperId, actor(authentication));
-        auditLogService.record(
-                "EXAM_PAPER_DUPLICATE",
-                "EXAM_PAPER",
-                response.id(),
-                actor(authentication),
-                "Nhân bản bộ đề #" + paperId + " thành #" + response.id(),
-                Map.of(
-                        "sourcePaperId", paperId,
-                        "newPaperId", response.id(),
-                        "code", response.code(),
-                        "status", response.status(),
-                        "totalQuestions", response.totalQuestions()
-                )
-        );
-        return ResponseEntity.ok(ApiResponse.success(
-                "Nhân bản bộ đề kiểm tra thành công",
-                response
-        ));
-    }
-
     @GetMapping("/{paperId}/export")
     @PreAuthorize("@evaluationSecurity.canPublishExam(authentication)")
     public ResponseEntity<byte[]> export(

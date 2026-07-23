@@ -1,78 +1,51 @@
 package vn.vietduc.carehubbackend.questiongeneration.modelruntime.vietquill;
 
 import org.springframework.stereotype.Component;
-import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphraseModelInput;
 
+/**
+ * Builds the control prefix expected by the official VietQuill models.
+ *
+ * <p>VietQuill is not an instruction/chat model. Its input contract is:
+ * {@code SEM_x SYN_y LEX_z : text}. Adding natural-language instructions to
+ * the input causes prompt leakage and low-quality generations.</p>
+ */
 @Component
 public class VietQuillPromptBuilder {
 
-    /**
-     * Build prompt cho single-pass full MCQ paraphrase.
-     * Model được yêu cầu output toàn bộ MCQ (Câu hỏi + A/B/C/D) trong 1 lần.
-     */
-    public String buildFullMcq(ParaphraseModelInput input) {
-        return buildFullMcq(input, 0, false);
+    public String buildControlledInput(String text, String changeStrength) {
+        Controls controls = controlsFor(changeStrength);
+        return "SEM_%d SYN_%d LEX_%d : %s".formatted(
+                controls.semantic(),
+                controls.syntactic(),
+                controls.lexical(),
+                safe(text)
+        );
     }
 
-    public String buildFullMcq(ParaphraseModelInput input, int variantIndex, boolean retry) {
-        return """
-                paraphrase mcq:
-                Câu hỏi: %s
-                A. %s
-                B. %s
-                C. %s
-                D. %s
-                Đáp án đúng: %s
-                Mức độ thay đổi: %s
-                Biến thể số: %d
-                Yêu cầu: diễn đạt lại toàn bộ câu hỏi và 4 phương án A/B/C/D, giữ nguyên nghĩa, \
-                giữ nguyên số liệu/thuật ngữ y khoa và giữ nguyên đáp án đúng. \
-                %s \
-                Trả lại đúng format:
-                Câu hỏi: <stem mới>
-                A. <option A mới>
-                B. <option B mới>
-                C. <option C mới>
-                D. <option D mới>
-                """.formatted(
-                safe(input.stem()),
-                safe(input.optionA()),
-                safe(input.optionB()),
-                safe(input.optionC()),
-                safe(input.optionD()),
-                safe(input.correctAnswer()),
-                strengthInstruction(input.changeStrength()),
-                Math.max(1, variantIndex + 1),
-                retry
-                        ? "Không được giữ nguyên nguyên văn bất kỳ field nào và không được bỏ sót phương án."
-                        : "Mỗi field phải được diễn đạt lại, không sao chép nguyên văn câu nguồn."
-        ).trim();
-    }
-
-    /**
-     * Build prompt cho single field (giữ lại cho fallback hoặc sentence model).
-     */
     public String buildSingleField(String text) {
-        return "paraphrase: " + safe(text);
+        return buildControlledInput(text, "medium");
     }
 
     public String buildSingleField(String text, String changeStrength, int variantIndex, boolean retry) {
-        return "paraphrase: " + safe(text)
-                + "\nMức độ thay đổi: " + strengthInstruction(changeStrength)
-                + "\nBiến thể số: " + Math.max(1, variantIndex + 1)
-                + "\nYêu cầu: diễn đạt lại, giữ nguyên nghĩa và thuật ngữ/số liệu."
-                + (retry ? " Không được giữ nguyên nguyên văn." : "");
+        return buildControlledInput(text, changeStrength);
     }
 
-    private String strengthInstruction(String value) {
+    private Controls controlsFor(String value) {
         return switch (safe(value).toLowerCase()) {
-            case "low", "nhẹ" -> "nhẹ - thay đổi từ ngữ và cấu trúc ở mức tối thiểu";
-            case "high", "mạnh" -> "mạnh - có thể đảo cấu trúc câu nhưng tuyệt đối không đổi nghĩa";
-            default -> "vừa - diễn đạt tự nhiên hơn nhưng vẫn giữ ý nghĩa gốc";
+            // Official VietQuill CONSERVATIVE preset.
+            case "low", "nhẹ" -> new Controls(95, 90, 80);
+            // Official VietQuill DIVERSE preset.
+            case "high", "mạnh" -> new Controls(90, 60, 40);
+            // Preserve clinical meaning while allowing enough syntactic and
+            // lexical movement to avoid near-identical assessment items.
+            default -> new Controls(90, 75, 50);
         };
     }
 
     private String safe(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private record Controls(int semantic, int syntactic, int lexical) {
     }
 }

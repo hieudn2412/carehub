@@ -54,8 +54,8 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('ngân hàng câu hỏi')) {
     return '/admin/evaluation/question-bank'
   }
-  if (lbl.includes('cấu hình đề')) {
-    return '/admin/evaluation/configs'
+  if (lbl.includes('cấu hình đề') || lbl.includes('quản lý bài kiểm tra')) {
+    return '/admin/evaluation/exam-management'
   }
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'

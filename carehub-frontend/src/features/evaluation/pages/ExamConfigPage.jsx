@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckOutlined, SendOutlined } from '@ant-design/icons'
+import {
+  CheckOutlined,
+  CloseOutlined,
+  EditOutlined,
+  EyeOutlined,
+  LoadingOutlined,
+  SendOutlined,
+} from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { adminApi } from '../../admin/api/adminApi.js'
@@ -10,7 +17,7 @@ import { examConfigApi } from '../api/examConfigApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
-import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
 
@@ -45,6 +52,10 @@ function ExamConfigPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [progress, setProgress] = useState('')
+  const [isSetModalOpen, setIsSetModalOpen] = useState(false)
+  const [isSetDetailLoading, setIsSetDetailLoading] = useState(false)
+  const [isPreparingSetEdit, setIsPreparingSetEdit] = useState(false)
+  const [selectedSetDetail, setSelectedSetDetail] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -90,6 +101,28 @@ function ExamConfigPage() {
     })
   }, [form.departmentIds, keyword, users])
 
+  const previewQuestions = useMemo(() => {
+    if (!selectedSetDetail) return []
+    if (selectedSetDetail.activeSnapshotItems?.length) {
+      return selectedSetDetail.activeSnapshotItems
+    }
+    return (selectedSetDetail.items || []).map((item) => ({
+      ...item.question,
+      position: item.position,
+    }))
+  }, [selectedSetDetail])
+
+  useEffect(() => {
+    if (!isSetModalOpen) return undefined
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape' && !isPreparingSetEdit) {
+        setIsSetModalOpen(false)
+      }
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [isPreparingSetEdit, isSetModalOpen])
+
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
   }
@@ -112,6 +145,45 @@ function ExamConfigPage() {
     }
     if (!form.departmentIds.length && !form.userIds.length) return 'Vui lòng chọn khoa/phòng hoặc nhân viên nhận bài.'
     return ''
+  }
+
+  async function openSelectedSet() {
+    if (!selectedSet?.id) {
+      showToast('Vui lòng chọn bộ câu hỏi trước khi xem.', 'warning')
+      return
+    }
+    setIsSetModalOpen(true)
+    setIsSetDetailLoading(true)
+    setSelectedSetDetail(null)
+    try {
+      const response = await questionSetApi.getQuestionSet(selectedSet.id)
+      setSelectedSetDetail(apiData(response))
+    } catch (error) {
+      setIsSetModalOpen(false)
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsSetDetailLoading(false)
+    }
+  }
+
+  async function editSelectedSet() {
+    if (!selectedSetDetail?.id) return
+    setIsPreparingSetEdit(true)
+    try {
+      let editableSetId = selectedSetDetail.id
+      if (selectedSetDetail.status === 'ACTIVE') {
+        const response = await questionSetApi.duplicateQuestionSet(selectedSetDetail.id)
+        const draft = apiData(response)
+        if (!draft?.id) throw new Error('Không nhận được bản nháp bộ câu hỏi.')
+        editableSetId = draft.id
+        showToast('Đã tạo bản nháp để chỉnh sửa, bộ đang sử dụng vẫn được giữ nguyên.', 'success')
+      }
+      navigate(`/admin/evaluation/question-sets/${editableSetId}/edit`)
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsPreparingSetEdit(false)
+    }
   }
 
   async function createAndAssign(event) {
@@ -186,7 +258,10 @@ function ExamConfigPage() {
     }
   }
 
-  const breadcrumbs = [{ label: 'Tạo & giao bài kiểm tra' }]
+  const breadcrumbs = [
+    { label: 'Quản lý bài kiểm tra', path: '/admin/evaluation/exam-management' },
+    { label: 'Tạo & giao bài kiểm tra' },
+  ]
 
   return (
     <div className="dashboard-layout">
@@ -226,21 +301,35 @@ function ExamConfigPage() {
                       {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
                     </select>
                   </label>
-                  <label className="exam-flow__wide">
-                    Bộ câu hỏi
-                    <select value={form.questionSetId} onChange={(event) => {
-                      const nextId = event.target.value
-                      const nextSet = questionSets.find((item) => String(item.id) === nextId)
-                      setForm((current) => ({
-                        ...current,
-                        questionSetId: nextId,
-                        totalQuestions: nextSet?.questionCount ? Math.min(30, nextSet.questionCount) : current.totalQuestions,
-                      }))
-                    }} required>
-                      <option value="">Chọn bộ câu hỏi đang hoạt động</option>
-                      {questionSets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.questionCount || 0} câu)</option>)}
-                    </select>
-                  </label>
+                  <div className="exam-flow__wide exam-flow__set-field">
+                    <label>
+                      Bộ câu hỏi
+                      <select value={form.questionSetId} onChange={(event) => {
+                        const nextId = event.target.value
+                        const nextSet = questionSets.find((item) => String(item.id) === nextId)
+                        setSelectedSetDetail(null)
+                        setForm((current) => ({
+                          ...current,
+                          questionSetId: nextId,
+                          totalQuestions: nextSet?.questionCount ? Math.min(30, nextSet.questionCount) : current.totalQuestions,
+                        }))
+                      }} required>
+                        <option value="">Chọn bộ câu hỏi đang hoạt động</option>
+                        {questionSets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.questionCount || 0} câu)</option>)}
+                      </select>
+                    </label>
+                    {selectedSet && (
+                      <div className="exam-flow__set-summary">
+                        <span>
+                          <strong>{selectedSet.name}</strong>
+                          {selectedSet.questionCount || 0} câu · {selectedSet.category || 'Chưa phân loại'}
+                        </span>
+                        <button type="button" className="exp-btn-secondary" onClick={openSelectedSet}>
+                          <EyeOutlined /> Xem và sửa bộ câu hỏi
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <label>
                     Số câu
                     <input type="number" min="1" max={selectedSet?.questionCount || undefined} value={form.totalQuestions} onChange={(event) => update('totalQuestions', event.target.value)} required />
@@ -312,6 +401,101 @@ function ExamConfigPage() {
           </main>
         </div>
       </div>
+
+      {isSetModalOpen && (
+        <div
+          className="ecfg-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isPreparingSetEdit) {
+              setIsSetModalOpen(false)
+            }
+          }}
+        >
+          <section
+            className="ecfg-modal exam-flow__set-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="selected-question-set-title"
+          >
+            <header className="ecfg-modal-header">
+              <div>
+                <h2 id="selected-question-set-title" className="ecfg-modal-title">
+                  {selectedSetDetail?.name || selectedSet?.name || 'Bộ câu hỏi'}
+                </h2>
+                <p>
+                  {selectedSetDetail
+                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu · ${selectedSetDetail.category || 'Chưa phân loại'}`
+                    : 'Đang tải nội dung bộ câu hỏi'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ecfg-modal-close"
+                onClick={() => setIsSetModalOpen(false)}
+                disabled={isPreparingSetEdit}
+                aria-label="Đóng popup"
+              >
+                <CloseOutlined />
+              </button>
+            </header>
+
+            {isSetDetailLoading ? (
+              <div className="exam-flow__set-modal-loading">
+                <LoadingOutlined spin /> Đang tải bộ câu hỏi...
+              </div>
+            ) : (
+              <>
+                {selectedSetDetail?.status === 'ACTIVE' && (
+                  <div className="exam-flow__set-lock-note">
+                    Bộ câu hỏi đang hoạt động đã được khóa phiên bản. Khi chọn sửa, hệ thống sẽ tạo một bản nháp mới để không ảnh hưởng các bài kiểm tra đã giao.
+                  </div>
+                )}
+
+                <div className="exam-flow__set-question-list">
+                  {previewQuestions.length === 0 ? (
+                    <div className="exam-flow__set-modal-loading">Bộ câu hỏi chưa có câu nào.</div>
+                  ) : previewQuestions.map((question, index) => (
+                    <article className="exam-flow__set-question" key={question.id || question.sourceQuestionId || index}>
+                      <div>
+                        <strong>Câu {question.position || index + 1}</strong>
+                        <span>{difficultyText(question.difficulty)}</span>
+                      </div>
+                      <p>{question.stem}</p>
+                      <ol type="A">
+                        <li>{question.optionA}</li>
+                        <li>{question.optionB}</li>
+                        <li>{question.optionC}</li>
+                        <li>{question.optionD}</li>
+                      </ol>
+                    </article>
+                  ))}
+                </div>
+
+                <footer className="ecfg-modal-actions">
+                  <button
+                    type="button"
+                    className="exp-btn-secondary"
+                    onClick={() => setIsSetModalOpen(false)}
+                    disabled={isPreparingSetEdit}
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    className="exp-btn-primary"
+                    onClick={editSelectedSet}
+                    disabled={isPreparingSetEdit}
+                  >
+                    {isPreparingSetEdit ? <LoadingOutlined spin /> : <EditOutlined />}
+                    {selectedSetDetail?.status === 'ACTIVE' ? 'Tạo bản nháp để sửa' : 'Sửa bộ câu hỏi'}
+                  </button>
+                </footer>
+              </>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   )
 }

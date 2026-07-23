@@ -38,12 +38,6 @@ export const examPaperApi = {
     })
   },
 
-  duplicateExamPaper(paperId) {
-    return httpClient.post(`/exam-papers/${paperId}/duplicate`, {}, {
-      headers: authHeaders(),
-    })
-  },
-
   exportExamPaper(paperId, includeAnswers = false, format = 'txt') {
     return httpClient.get(`/exam-papers/${paperId}/export`, {
       headers: authHeaders(),

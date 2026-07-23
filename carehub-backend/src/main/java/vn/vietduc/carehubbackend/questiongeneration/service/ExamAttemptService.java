@@ -90,7 +90,7 @@ public class ExamAttemptService {
         User user = findUser(userId);
         return attemptRepository.findByUserOrderByStartedAtDesc(user).stream()
                 .peek(this::expireIfNeeded)
-                .map(attempt -> toResponse(attempt, false, canRevealAnswers(attempt)))
+                .map(attempt -> toResponse(attempt, false, false))
                 .toList();
     }
 
@@ -112,8 +112,7 @@ public class ExamAttemptService {
         for (ExamAttempt existingAttempt : existingAttempts) {
             if (existingAttempt.getStatus() == ExamAttemptStatus.IN_PROGRESS) {
                 if (isExpired(existingAttempt)) {
-                    existingAttempt.setStatus(ExamAttemptStatus.EXPIRED);
-                    attemptRepository.save(existingAttempt);
+                    gradeAttempt(existingAttempt, null, effectiveExpiry(existingAttempt));
                 } else {
                     return toResponse(existingAttempt, true, false);
                 }
@@ -125,6 +124,10 @@ public class ExamAttemptService {
         }
 
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusMinutes(assignment.getExamPaper().getTimeLimitMinutes());
+        if (assignment.getDueAt() != null && assignment.getDueAt().isBefore(expiresAt)) {
+            expiresAt = assignment.getDueAt();
+        }
         ExamAttempt attempt = attemptRepository.save(ExamAttempt.builder()
                 .assignment(assignment)
                 .examPaper(assignment.getExamPaper())
@@ -132,7 +135,7 @@ public class ExamAttemptService {
                 .attemptNumber((int) attemptCount + 1)
                 .status(ExamAttemptStatus.IN_PROGRESS)
                 .startedAt(now)
-                .expiresAt(now.plusMinutes(assignment.getExamPaper().getTimeLimitMinutes()))
+                .expiresAt(expiresAt)
                 .totalQuestions(assignment.getExamPaper().getTotalQuestions())
                 .build());
         return toResponse(attempt, true, false);
@@ -142,7 +145,11 @@ public class ExamAttemptService {
     public ExamAttemptResponse saveAnswers(Long attemptId, Long userId, SaveExamAttemptAnswersRequest request) {
         ExamAttempt attempt = find(attemptId);
         requireOwner(attempt, userId);
-        ensureWritable(attempt);
+        ensureInProgress(attempt);
+        if (isExpired(attempt)) {
+            ExamAttempt saved = gradeAttempt(attempt, request, effectiveExpiry(attempt));
+            return toResponse(saved, true, canRevealAnswers(saved));
+        }
         upsertAnswers(attempt, request);
         return toResponse(attempt, true, false);
     }
@@ -151,9 +158,20 @@ public class ExamAttemptService {
     public ExamAttemptResponse submit(Long attemptId, Long userId, SaveExamAttemptAnswersRequest request) {
         ExamAttempt attempt = find(attemptId);
         requireOwner(attempt, userId);
-        ensureWritable(attempt);
-        upsertAnswers(attempt, request);
+        ensureInProgress(attempt);
+        LocalDateTime submittedAt = isExpired(attempt)
+                ? effectiveExpiry(attempt)
+                : LocalDateTime.now();
+        ExamAttempt saved = gradeAttempt(attempt, request, submittedAt);
+        return toResponse(saved, true, canRevealAnswers(saved));
+    }
 
+    private ExamAttempt gradeAttempt(
+            ExamAttempt attempt,
+            SaveExamAttemptAnswersRequest request,
+            LocalDateTime submittedAt
+    ) {
+        upsertAnswers(attempt, request);
         List<ExamPaperQuestion> questions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
         Map<Long, ExamAttemptAnswer> answersByQuestionId = answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity()));
@@ -181,7 +199,6 @@ public class ExamAttemptService {
                 : BigDecimal.valueOf(correctCount)
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(totalQuestions), 2, RoundingMode.HALF_UP);
-        LocalDateTime submittedAt = LocalDateTime.now();
         attempt.setStatus(ExamAttemptStatus.GRADED);
         attempt.setSubmittedAt(submittedAt);
         attempt.setCorrectCount(correctCount);
@@ -197,7 +214,7 @@ public class ExamAttemptService {
             eventPublisher.publishEvent(new ExamAttemptPassedEvent(saved));
         }
 
-        return toResponse(saved, true, canRevealAnswers(saved));
+        return saved;
     }
 
     private void upsertAnswers(ExamAttempt attempt, SaveExamAttemptAnswersRequest request) {
@@ -229,8 +246,10 @@ public class ExamAttemptService {
     }
 
     private ExamAttemptResponse toResponse(ExamAttempt attempt, boolean includeQuestions, boolean revealAnswers) {
-        Map<Long, ExamAttemptAnswer> answersByQuestionId = answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
-                .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity(), (left, right) -> left, LinkedHashMap::new));
+        Map<Long, ExamAttemptAnswer> answersByQuestionId = includeQuestions || revealAnswers
+                ? answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
+                .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity(), (left, right) -> left, LinkedHashMap::new))
+                : Map.of();
         List<ExamAttemptQuestionResponse> questions = includeQuestions
                 ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper()).stream()
                 .map(question -> toQuestionResponse(question, answersByQuestionId.get(question.getId())))
@@ -311,18 +330,13 @@ public class ExamAttemptService {
         if (assignment.getExamPaper().getStatus() != ExamPaperStatus.PUBLISHED) {
             throw new BadRequestException("Bộ đề kiểm tra chưa phát hành");
         }
-        targetRepository.findByAssignmentAndUser(assignment, user)
+        targetRepository.findByAssignmentAndUserForUpdate(assignment, user)
                 .orElseThrow(() -> new BadRequestException("Bạn không nằm trong danh sách được phân công"));
     }
 
-    private void ensureWritable(ExamAttempt attempt) {
+    private void ensureInProgress(ExamAttempt attempt) {
         if (attempt.getStatus() != ExamAttemptStatus.IN_PROGRESS) {
             throw new BadRequestException("Lượt làm bài không còn ở trạng thái đang làm");
-        }
-        if (isExpired(attempt)) {
-            attempt.setStatus(ExamAttemptStatus.EXPIRED);
-            attemptRepository.save(attempt);
-            throw new BadRequestException("Lượt làm bài đã quá thời gian");
         }
     }
 
@@ -332,9 +346,12 @@ public class ExamAttemptService {
 
     private void expireIfNeeded(ExamAttempt attempt) {
         if (attempt.getStatus() == ExamAttemptStatus.IN_PROGRESS && isExpired(attempt)) {
-            attempt.setStatus(ExamAttemptStatus.EXPIRED);
-            attemptRepository.save(attempt);
+            gradeAttempt(attempt, null, effectiveExpiry(attempt));
         }
+    }
+
+    private LocalDateTime effectiveExpiry(ExamAttempt attempt) {
+        return attempt.getExpiresAt() == null ? LocalDateTime.now() : attempt.getExpiresAt();
     }
 
     private boolean canRevealAnswers(ExamAttempt attempt) {

@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveExamAttemptAnswersRequest;
-import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAssignmentService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAttemptService;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
@@ -30,7 +30,7 @@ public class MyExamController {
     private final SecurityUtils securityUtils;
 
     @GetMapping("/exam-assignments")
-    public ResponseEntity<ApiResponse<List<ExamAssignmentResponse>>> listAssignments() {
+    public ResponseEntity<ApiResponse<List<MyExamAssignmentResponse>>> listAssignments() {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách bài kiểm tra được phân công thành công",
                 assignmentService.listForUser(securityUtils.getCurrentUserId())

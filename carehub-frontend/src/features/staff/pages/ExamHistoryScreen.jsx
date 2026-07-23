@@ -49,7 +49,7 @@ function ExamHistoryScreen() {
   )
 
   const summary = useMemo(() => {
-    const passed = completedAttempts.filter((attempt) => attempt.passed).length
+    const passed = completedAttempts.filter((attempt) => attempt.passed === true).length
     const scored = completedAttempts.filter((attempt) => attempt.score !== null && attempt.score !== undefined)
     const avgScore = scored.length
       ? Math.round(scored.reduce((sum, attempt) => sum + Number(attempt.score || 0), 0) / scored.length)
@@ -58,7 +58,7 @@ function ExamHistoryScreen() {
       total: completedAttempts.length,
       passed,
       avgScore,
-      passRate: completedAttempts.length ? Math.round((passed / completedAttempts.length) * 100) : 0,
+      passRate: scored.length ? Math.round((passed / scored.length) * 100) : 0,
     }
   }, [completedAttempts])
 
@@ -70,8 +70,9 @@ function ExamHistoryScreen() {
         || (attempt.assignmentName || '').toLowerCase().includes(normalized)
       const matchesStatus =
         statusFilter === 'all'
-        || (statusFilter === 'pass' && attempt.passed)
-        || (statusFilter === 'fail' && !attempt.passed)
+        || (statusFilter === 'pass' && attempt.passed === true)
+        || (statusFilter === 'fail' && attempt.passed === false)
+        || (statusFilter === 'expired' && attempt.status === 'EXPIRED')
       const matchesField = !professionalFieldId || String(attempt.professionalFieldId) === professionalFieldId
       return matchesSearch && matchesStatus && matchesField
     })
@@ -133,6 +134,7 @@ function ExamHistoryScreen() {
                 <option value="all">Tất cả trạng thái</option>
                 <option value="pass">Đạt</option>
                 <option value="fail">Không đạt</option>
+                <option value="expired">Hết thời gian</option>
               </select>
               <select value={professionalFieldId} onChange={(event) => setProfessionalFieldId(event.target.value)}>
                 <option value="">Tất cả lĩnh vực chuyên môn</option>
@@ -165,7 +167,11 @@ function ExamHistoryScreen() {
                       <td>{attempt.examPaperName}</td>
                       <td>{formatDateTime(attempt.submittedAt)}</td>
                       <td>{attempt.professionalFieldName || '—'}</td>
-                      <td><span className={`eh-score ${attempt.passed ? 'eh-score--pass' : 'eh-score--fail'}`}>{attempt.score ?? '---'}%</span></td>
+                      <td>
+                        <span className={`eh-score ${
+                          attempt.passed === true ? 'eh-score--pass' : attempt.passed === false ? 'eh-score--fail' : 'eh-score--pending'
+                        }`}>{attempt.score ?? '---'}{attempt.score !== null && attempt.score !== undefined ? '%' : ''}</span>
+                      </td>
                       <td>
                         {attempt.classification ? (
                           <span style={{
@@ -182,9 +188,13 @@ function ExamHistoryScreen() {
                         ) : <span style={{ color: '#9ca3af' }}>--</span>}
                       </td>
                       <td>
-                        <span className={`eh-badge ${attempt.passed ? 'eh-badge--pass' : 'eh-badge--fail'}`}>
+                        <span className={`eh-badge ${
+                          attempt.status === 'EXPIRED'
+                            ? 'eh-badge--pending'
+                            : attempt.passed ? 'eh-badge--pass' : 'eh-badge--fail'
+                        }`}>
                           <span className="eh-badge__dot" />
-                          {attempt.passed ? 'Đạt' : 'Không đạt'}
+                          {attempt.status === 'EXPIRED' ? 'Hết thời gian' : attempt.passed ? 'Đạt' : 'Không đạt'}
                         </span>
                       </td>
                       <td>{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>

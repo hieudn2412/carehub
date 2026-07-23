@@ -27,7 +27,6 @@ import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCateg
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
 import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
 import QuestionSetQuestionsPage from '../features/evaluation/pages/QuestionSetQuestionsPage.jsx'
-import QuestionSetCategoryListPage from '../features/evaluation/pages/QuestionSetCategoryListPage.jsx'
 import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
 import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
@@ -207,17 +206,19 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsPage />)} />
-      <Route path="/admin/evaluation/question-set-categories" element={evaluationElement(<QuestionSetCategoryListPage />)} />
+      <Route path="/admin/evaluation/question-set-categories" element={<Navigate to="/admin/evaluation/question-sets" replace />} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/classification-rules" element={evaluationElement(<ClassificationRuleListPage />)} />
       <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/configs" element={evaluationElement(<ExamConfigPage />)} />
-      <Route path="/admin/evaluation/exam-papers" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-management/new" element={evaluationElement(<ExamConfigPage />)} />
+      <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
+      <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />
       <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
-      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamConfigPage />)} />
+      <Route path="/admin/evaluation/exam-assignments/new" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-assignments" replace />} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />

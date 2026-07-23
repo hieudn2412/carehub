@@ -49,7 +49,6 @@ class VietQuillParaphraseModelSmokeTest {
                 properties,
                 new ObjectMapper(),
                 new VietQuillPromptBuilder(),
-                new VietQuillMcqParser(),
                 handlePool
         );
         String sourceStem = "Khi xác định người bệnh trước khi tiêm thuốc, điều dưỡng cần làm gì?";
@@ -62,11 +61,20 @@ class VietQuillParaphraseModelSmokeTest {
                 "Bỏ qua nếu người bệnh tỉnh táo.",
                 "A",
                 "medium",
-                1
+                3
         ));
         service.close();
 
-        assertThat(results).hasSize(1);
+        assertThat(results).hasSizeBetween(1, 3);
+        assertThat(results).extracting(ParaphrasedMcq::stem).doesNotHaveDuplicates();
+        assertThat(results).extracting(ParaphrasedMcq::stem).contains(
+                "Điều dưỡng cần làm gì khi xác định người bệnh trước khi tiêm thuốc?"
+        );
+        assertThat(results).allSatisfy(result ->
+                assertThat(result.stem())
+                        .containsIgnoringCase("tiêm thuốc")
+                        .containsIgnoringCase("điều dưỡng")
+        );
         ParaphrasedMcq candidate = results.get(0);
         assertThat(candidate.stem()).isNotBlank();
         assertThat(candidate.optionA()).isNotBlank();
@@ -74,6 +82,11 @@ class VietQuillParaphraseModelSmokeTest {
         assertThat(candidate.optionC()).isNotBlank();
         assertThat(candidate.optionD()).isNotBlank();
         assertThat(candidate.stem()).isNotEqualTo(sourceStem);
-        assertThat(candidate.optionA()).isNotEqualTo(sourceOptionA);
+        assertThat(candidate.optionA()).isEqualTo(sourceOptionA);
+        assertThat(candidate.rawOutput())
+                .doesNotContain("SEM_")
+                .doesNotContain("SYN_")
+                .doesNotContain("LEX_")
+                .doesNotContain("Yêu cầu:");
     }
 }

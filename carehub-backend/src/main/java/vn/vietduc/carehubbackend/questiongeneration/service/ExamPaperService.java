@@ -157,30 +157,6 @@ public class ExamPaperService {
         return toResponse(examPaperRepository.save(paper), false);
     }
 
-    @Transactional
-    public ExamPaperResponse duplicate(Long paperId, String actor) {
-        ExamPaper source = find(paperId);
-        if (source.getStatus() == ExamPaperStatus.ARCHIVED) {
-            throw new BadRequestException("Không thể nhân bản bộ đề đã lưu trữ");
-        }
-        ExamPaper copy = ExamPaper.builder()
-                .code(uniqueDuplicateCode(source))
-                .name("Bản sao - " + source.getName())
-                .examConfig(source.getExamConfig())
-                .questionSet(source.getQuestionSet())
-                .version(source.getVersion() + 1)
-                .randomSeed(System.currentTimeMillis())
-                .status(ExamPaperStatus.DRAFT)
-                .totalQuestions(source.getTotalQuestions())
-                .timeLimitMinutes(source.getTimeLimitMinutes())
-                .passingScore(source.getPassingScore())
-                .createdBy(actor)
-                .build();
-        ExamPaper saved = examPaperRepository.save(copy);
-        copyQuestions(source, saved);
-        return toResponse(saved, true);
-    }
-
     @Transactional(readOnly = true)
     public byte[] exportText(Long paperId, boolean includeAnswers) {
         ExamPaperResponse paper = get(paperId);
@@ -616,35 +592,6 @@ public class ExamPaperService {
                 .orElse(versions.get(0));
     }
 
-    private void copyQuestions(ExamPaper source, ExamPaper target) {
-        List<ExamPaperQuestion> sourceQuestions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(source);
-        for (ExamPaperQuestion sourceQuestion : sourceQuestions) {
-            ExamPaperQuestionSnapshot sourceSnapshot = snapshotRepository.findByExamPaperQuestion(sourceQuestion)
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
-            ExamPaperQuestion copiedQuestion = paperQuestionRepository.save(ExamPaperQuestion.builder()
-                    .examPaper(target)
-                    .question(sourceQuestion.getQuestion())
-                    .position(sourceQuestion.getPosition())
-                    .points(sourceQuestion.getPoints() == null ? DEFAULT_POINTS : sourceQuestion.getPoints())
-                    .optionOrderJson(sourceQuestion.getOptionOrderJson())
-                    .build());
-            snapshotRepository.save(ExamPaperQuestionSnapshot.builder()
-                    .examPaperQuestion(copiedQuestion)
-                    .stem(sourceSnapshot.getStem())
-                    .optionA(sourceSnapshot.getOptionA())
-                    .optionB(sourceSnapshot.getOptionB())
-                    .optionC(sourceSnapshot.getOptionC())
-                    .optionD(sourceSnapshot.getOptionD())
-                    .correctAnswer(sourceSnapshot.getCorrectAnswer())
-                    .explanation(sourceSnapshot.getExplanation())
-                    .difficulty(sourceSnapshot.getDifficulty())
-                    .topic(sourceSnapshot.getTopic())
-                    .sourceDocument(sourceSnapshot.getSourceDocument())
-                    .snapshotAt(LocalDateTime.now())
-                    .build());
-        }
-    }
-
     private ExamPaperResponse toResponse(ExamPaper paper, boolean includeQuestions) {
         List<ExamPaperQuestionResponse> questions = includeQuestions
                 ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).stream()
@@ -706,21 +653,6 @@ public class ExamPaperService {
         int suffix = 1;
         while (examPaperRepository.findByCode(code).isPresent()) {
             code = base + "-" + suffix++;
-        }
-        return code;
-    }
-
-    private String uniqueDuplicateCode(ExamPaper source) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-        String base = "COPY-" + source.getCode() + "-" + timestamp;
-        if (base.length() > 76) {
-            base = base.substring(0, 76);
-        }
-        String code = base;
-        int suffix = 1;
-        while (examPaperRepository.findByCode(code).isPresent()) {
-            String tail = "-" + suffix++;
-            code = base.substring(0, Math.min(base.length(), 80 - tail.length())) + tail;
         }
         return code;
     }

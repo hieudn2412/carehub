@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
+import { LoadingOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
 import '../styles/ExamHistoryScreen.css'
@@ -13,8 +13,9 @@ function ExamTakeListScreen() {
   const { showToast } = useToast()
   const [assignments, setAssignments] = useState([])
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('OPEN')
+  const [statusFilter, setStatusFilter] = useState('ACTIONABLE')
   const [loading, setLoading] = useState(true)
+  const [startingId, setStartingId] = useState(null)
 
   useEffect(() => {
     async function loadAssignments() {
@@ -37,18 +38,30 @@ function ExamTakeListScreen() {
       const matchesSearch = !normalized
         || (assignment.name || '').toLowerCase().includes(normalized)
         || (assignment.examPaperName || '').toLowerCase().includes(normalized)
-      const matchesStatus = statusFilter === '' || assignment.status === statusFilter
+      const matchesStatus = statusFilter === ''
+        || (statusFilter === 'ACTIONABLE' && assignment.actionable)
+        || (statusFilter === 'IN_PROGRESS' && assignment.availabilityStatus === 'IN_PROGRESS')
+        || (statusFilter === 'COMPLETED' && assignment.availabilityStatus === 'COMPLETED')
+        || (statusFilter === 'UNAVAILABLE' && !assignment.actionable && assignment.availabilityStatus !== 'COMPLETED')
       return matchesSearch && matchesStatus
     })
   }, [assignments, search, statusFilter])
 
   async function startAssignment(assignment) {
+    if (!assignment.actionable || startingId) return
+    if (assignment.currentAttemptId) {
+      navigate(`/staff/exam/take/${assignment.currentAttemptId}`)
+      return
+    }
+    setStartingId(assignment.id)
     try {
       const response = await myExamApi.startAssignment(assignment.id)
       const attempt = apiData(response, null)
       navigate(`/staff/exam/take/${attempt.id}`)
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setStartingId(null)
     }
   }
 
@@ -71,9 +84,10 @@ function ExamTakeListScreen() {
               </div>
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                 <option value="">Tất cả trạng thái</option>
-                <option value="OPEN">Đang mở</option>
-                <option value="CLOSED">Đã đóng</option>
+                <option value="ACTIONABLE">Có thể làm</option>
+                <option value="IN_PROGRESS">Đang làm</option>
                 <option value="COMPLETED">Đã hoàn thành</option>
+                <option value="UNAVAILABLE">Đã đóng / quá hạn</option>
               </select>
             </div>
 
@@ -85,7 +99,7 @@ function ExamTakeListScreen() {
                     <th>Bộ đề</th>
                     <th>Lĩnh vực chuyên môn</th>
                     <th>Hạn nộp</th>
-                    <th>Số lượt tối đa</th>
+                      <th>Số lượt</th>
                     <th>Trạng thái</th>
                     <th>Hành động</th>
                   </tr>
@@ -101,11 +115,21 @@ function ExamTakeListScreen() {
                       <td>{assignment.examPaperName}</td>
                       <td>{assignment.professionalFieldName || '—'}</td>
                       <td>{formatDateTime(assignment.dueAt)}</td>
-                      <td>{assignment.maxAttempts}</td>
-                      <td>{assignment.statusText}</td>
+                      <td>{assignment.usedAttempts || 0}/{assignment.maxAttempts}</td>
                       <td>
-                        <button className="eh-btn eh-btn--retry" onClick={() => startAssignment(assignment)}>
-                          <PlayCircleOutlined /> Làm bài
+                        <span className={`eh-badge eh-badge--availability-${String(assignment.availabilityStatus || '').toLowerCase()}`}>
+                          <span className="eh-badge__dot" />
+                          {assignment.availabilityText}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          className="eh-btn eh-btn--retry"
+                          onClick={() => startAssignment(assignment)}
+                          disabled={!assignment.actionable || startingId !== null}
+                        >
+                          {startingId === assignment.id ? <LoadingOutlined spin /> : <PlayCircleOutlined />}
+                          {startingId === assignment.id ? 'Đang mở...' : assignment.actionLabel}
                         </button>
                       </td>
                     </tr>
