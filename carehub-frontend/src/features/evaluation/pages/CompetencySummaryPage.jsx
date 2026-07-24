@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  TrophyOutlined,
   SearchOutlined,
   ReloadOutlined,
   WarningFilled,
@@ -113,9 +112,12 @@ function CompetencySummaryPage() {
         }
       }
     }
-    init()
-    loadCategories()
-    loadFormList()
+    const timer = window.setTimeout(() => {
+      init()
+      loadCategories()
+      loadFormList()
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [isAdmin, showToast, loadCategories, loadFormList])
 
   const loadData = useCallback(async () => {
@@ -158,9 +160,9 @@ function CompetencySummaryPage() {
   }, [reportType, departmentId, fromDate, toDate, selectedCategory, selectedFormId, showToast])
 
   useEffect(() => {
-    if (departmentId) {
-      loadData()
-    }
+    if (!departmentId) return undefined
+    const timer = window.setTimeout(loadData, 0)
+    return () => window.clearTimeout(timer)
   }, [departmentId, reportType, fromDate, toDate, selectedCategory, selectedFormId, loadData])
 
   const handleSort = (column) => {
@@ -233,13 +235,13 @@ function CompetencySummaryPage() {
     { label: 'Dashboard', link: dashboardPath },
     { label: 'Đánh giá' },
     {
-      label: reportType === 'summary' ? 'Tổng hợp năng lực'
+      label: reportType === 'summary' ? 'Dashboard năng lực'
         : reportType === 'field' ? 'Năng lực theo lĩnh vực'
         : 'Tuân thủ kỹ thuật'
     },
   ]
 
-  const pageTitle = reportType === 'summary' ? 'Tổng hợp năng lực'
+  const pageTitle = reportType === 'summary' ? 'Dashboard năng lực'
     : reportType === 'field' ? 'Năng lực theo lĩnh vực'
     : 'Tuân thủ kỹ thuật'
 
@@ -253,8 +255,11 @@ function CompetencySummaryPage() {
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
-                  <h1>Dashboard Đánh giá Năng lực</h1>
-                  <p>Theo dõi chỉ số chuyên môn, quy trình kỹ thuật và xếp loại năng lực điều dưỡng</p>
+                  <h1>Dashboard năng lực</h1>
+                  <p>
+                    Tổng hợp điểm lý thuyết từ bài test và điểm thực hành từ checklist
+                    để theo dõi năng lực nhân viên.
+                  </p>
                 </div>
                 <button className="evd-btn" onClick={loadData} disabled={loading}>
                   <ReloadOutlined /> Tải lại
@@ -265,7 +270,7 @@ function CompetencySummaryPage() {
               <section className="evd-panel" style={{ padding: '8px 12px', marginBottom: 16, display: 'inline-flex', background: '#f3f4f6', borderRadius: 8 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {[
-                    { key: 'summary', label: 'Tổng hợp năng lực' },
+                    { key: 'summary', label: 'Lý thuyết + thực hành' },
                     { key: 'field', label: 'Năng lực theo lĩnh vực' },
                     { key: 'technique', label: 'Tuân thủ kỹ thuật' }
                   ].map(tab => (
@@ -351,7 +356,7 @@ function CompetencySummaryPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Trọng số</label>
                     <span style={{ fontSize: 13, color: '#374151', padding: '6px 0' }}>
-                      Kiến thức: {knowledgeWeight}% — Kỹ năng: {skillWeight}%
+                      Lý thuyết: {knowledgeWeight}% — Thực hành: {skillWeight}%
                     </span>
                   </div>
                 )}
@@ -406,10 +411,10 @@ function CompetencySummaryPage() {
                           <th>Họ tên</th>
                           {isAdmin && <th>Khoa</th>}
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('knowledgeAverage')}>
-                            Điểm TB kiến thức{sortIcon('knowledgeAverage')}
+                            Điểm lý thuyết{sortIcon('knowledgeAverage')}
                           </th>
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('skillAverage')}>
-                            Điểm TB kỹ năng{sortIcon('skillAverage')}
+                            Điểm thực hành{sortIcon('skillAverage')}
                           </th>
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('overallScore')}>
                             Tổng điểm{sortIcon('overallScore')}

@@ -69,6 +69,10 @@ export default function AdminDashboard() {
       ...dateParams,
       departmentId: filters.departmentId || undefined,
     }
+    const examParams = {
+      ...scopedParams,
+      professionalFieldId: filters.professionalFieldId || undefined,
+    }
     const trainingScope = {
       departmentId: filters.departmentId || undefined,
       professionalFieldId: filters.professionalFieldId || undefined,
@@ -84,7 +88,7 @@ export default function AdminDashboard() {
       trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'COMPLIANT' }),
       trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'NON_COMPLIANT' }),
       trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'AT_RISK' }),
-      supportsProfessionalField ? evaluationDashboardApi.getDashboard(scopedParams) : Promise.resolve(null),
+      evaluationDashboardApi.getExamResultsSummary(examParams),
       supportsProfessionalField ? adminApi.getDashboardFormSummary(scopedParams) : Promise.resolve(null),
     ])
 
@@ -93,7 +97,7 @@ export default function AdminDashboard() {
     const trainingPassed = compliantResult.status === 'fulfilled' ? pageTotal(compliantResult.value) : 0
     const trainingFailed = (nonCompliantResult.status === 'fulfilled' ? pageTotal(nonCompliantResult.value) : 0)
       + (riskResult.status === 'fulfilled' ? pageTotal(riskResult.value) : 0)
-    const exams = examResult.status === 'fulfilled' && examResult.value ? payload(examResult.value)?.examResults || {} : null
+    const exams = examResult.status === 'fulfilled' && examResult.value ? payload(examResult.value) : null
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
     const submittedQuality = Number(quality?.submitted) || 0
     const qualityRate = Number(quality?.passRate) || 0
@@ -118,13 +122,11 @@ export default function AdminDashboard() {
             total: Number(exams.gradedAttempts) || 0,
             passed: Number(exams.passedAttempts) || 0,
             failed: Number(exams.failedAttempts) || 0,
-            rate: Number(exams.passRate) || 0,
+            rate: (Number(exams.passRate) || 0) * 100,
             available: true,
             note: `Điểm trung bình ${Number(exams.averageScore || 0).toFixed(1).replace('.', ',')}.`,
           }
-        : emptyDomain(filters.professionalFieldId
-          ? 'Backend chưa hỗ trợ lọc kết quả kiểm tra theo professionalFieldId.'
-          : 'Bạn chưa có quyền hoặc máy chủ chưa trả dữ liệu kiểm tra.'),
+        : emptyDomain('Không thể tải dữ liệu điểm bài kiểm tra từ máy chủ.'),
       quality: quality
         ? {
             total: submittedQuality,
@@ -163,14 +165,14 @@ export default function AdminDashboard() {
 
   const warnings = useMemo(() => [
     dashboard.training.failed > 0 && { id: 'training', title: 'Nhân viên chưa đạt giờ đào tạo', detail: 'Cần rà soát tiến độ và minh chứng', value: dashboard.training.failed, tone: 'danger', path: '/admin/reports/training-dashboard' },
-    dashboard.exams.failed > 0 && { id: 'exams', title: 'Lượt kiểm tra chưa đạt', detail: 'Cần xem kết quả chuyên môn', value: dashboard.exams.failed, tone: 'warning', path: '/admin/evaluation/dashboard' },
-    dashboard.quality.failed > 0 && { id: 'quality', title: 'Bảng kiểm chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/quality-dashboard' },
+    dashboard.exams.failed > 0 && { id: 'exams', title: 'Lượt kiểm tra chưa đạt', detail: 'Cần xem kết quả chuyên môn', value: dashboard.exams.failed, tone: 'warning', path: '/admin/reports/quality-dashboard' },
+    dashboard.quality.failed > 0 && { id: 'quality', title: 'Bảng kiểm chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/checklist-dashboard' },
   ].filter(Boolean), [dashboard])
 
   const domains = {
     training: { ...dashboard.training, path: '/admin/reports/training-dashboard' },
-    exams: { ...dashboard.exams, path: '/admin/evaluation/dashboard' },
-    quality: { ...dashboard.quality, path: '/admin/reports/quality-dashboard' },
+    exams: { ...dashboard.exams, path: '/admin/reports/quality-dashboard' },
+    quality: { ...dashboard.quality, path: '/admin/reports/checklist-dashboard' },
   }
 
   return (

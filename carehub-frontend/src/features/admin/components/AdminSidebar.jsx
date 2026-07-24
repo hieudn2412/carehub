@@ -139,20 +139,20 @@ const navSections = [
         path: '/admin/evaluation/competency',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
-      {
-        icon: <BarChartOutlined />,
-        label: 'Dashboard năng lực',
-        path: '/admin/evaluation/competency-summary',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
     ],
   },
   {
     label: 'BÁO CÁO & THỐNG KÊ',
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
-      { icon: <LineChartOutlined />, label: 'Dashboard tuân thủ', path: '/admin/reports/quality-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Dashboard bảng kiểm', path: '/admin/reports/checklist-dashboard' },
+      { icon: <LineChartOutlined />, label: 'Dashboard lý thuyết', path: '/admin/reports/quality-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Dashboard thực hành', path: '/admin/reports/checklist-dashboard' },
+      {
+        icon: <BarChartOutlined />,
+        label: 'Dashboard năng lực',
+        path: '/admin/reports/competency-dashboard',
+        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
+      },
       { icon: <DownloadOutlined />, label: 'Xuất báo cáo đào tạo', path: '/admin/reports/export-training' },
       { icon: <DownloadOutlined />, label: 'Xuất báo cáo chất lượng', path: '/admin/reports/export-quality' },
     ],
@@ -216,7 +216,7 @@ function AdminSidebar() {
     if (itemPath === '/admin/dashboard') {
       return currentPath === itemPath
     }
-    return currentPath === itemPath || currentPath.startsWith(itemPath)
+    return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`)
   }
 
   const visibleGroups = navGroups

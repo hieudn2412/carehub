@@ -93,7 +93,6 @@ import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistory
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
-import QualityDashboardPage from '../features/admin/pages/QualityDashboardPage.jsx'
 import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
@@ -108,7 +107,12 @@ import ManagerChecklistEvaluationPage from '../features/staff/pages/manager/Mana
 import ManagerEvaluationHistoryPage from '../features/staff/pages/manager/ManagerEvaluationHistoryPage.jsx'
 import ManagerEvaluationHistoryDetailPage from '../features/staff/pages/manager/ManagerEvaluationHistoryDetailPage.jsx'
 
-import { ADMIN_ROLES, AUTH_ROLE, EVALUATION_PERMISSIONS } from '../features/auth/utils/authNavigation.js'
+import {
+  ADMIN_ROLES,
+  AUTH_ROLE,
+  EVALUATION_PERMISSIONS,
+  THEORY_DASHBOARD_PERMISSIONS,
+} from '../features/auth/utils/authNavigation.js'
 
 
 function protectedElement(element, options = {}) {
@@ -225,7 +229,10 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
-      <Route path="/admin/evaluation/competency-summary" element={evaluationElement(<CompetencySummaryPage />)} />
+      <Route
+        path="/admin/evaluation/competency-summary"
+        element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
+      />
       <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
       <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
@@ -255,11 +262,15 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/quality-dashboard"
-        element={adminElement(<QualityDashboardPage />)}
+        element={adminElement(<EvaluationDashboardPage />)}
       />
       <Route
         path="/admin/reports/checklist-dashboard"
         element={adminElement(<ChecklistQualityDashboardPage />)}
+      />
+      <Route
+        path="/admin/reports/competency-dashboard"
+        element={evaluationElement(<CompetencySummaryPage />)}
       />
       <Route
         path="/admin/reports/export-training"
@@ -277,9 +288,18 @@ function AppRouter() {
       {/* Manager Specific Routes */}
       <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
       <Route path="/manager/reports/training-dashboard" element={managerOrAdminElement(<TrainingDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/quality-dashboard" element={managerOrAdminElement(<QualityDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/checklist-dashboard" element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)} />
+      <Route
+        path="/manager/reports/quality-dashboard"
+        element={protectedElement(<EvaluationDashboardPage role="manager" />, {
+          allowedRoles: ADMIN_ROLES,
+          allowedPermissions: THEORY_DASHBOARD_PERMISSIONS,
+        })}
+      />
+      <Route
+        path="/manager/reports/checklist-dashboard"
+        element={managerOrAdminElement(<Navigate to="/manager/dashboard" replace />)}
+      />
+      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
       <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
 

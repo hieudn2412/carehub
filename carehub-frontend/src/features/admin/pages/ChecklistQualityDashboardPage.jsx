@@ -65,6 +65,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [toDate, setToDate] = useState(today)
   const [search, setSearch] = useState('')
   const [forms, setForms] = useState([])
+  const [trendItems, setTrendItems] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -112,11 +113,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           size: 100,
           sort: 'responseCount,desc',
         }
-        const response = await adminApi.getDashboardFormPerformance(params)
-        if (active) setForms(pageItems(response))
+        const [performanceResponse, trendResponse] = await Promise.all([
+          adminApi.getDashboardFormPerformance(params),
+          adminApi.getDashboardFormTrend({
+            fromDate: params.fromDate,
+            toDate: params.toDate,
+            departmentId: params.departmentId,
+            bucket: 'MONTH',
+          }),
+        ])
+        if (active) {
+          setForms(pageItems(performanceResponse))
+          setTrendItems(apiData(trendResponse, {})?.items || [])
+        }
       } catch (requestError) {
         if (!active) return
         setForms([])
+        setTrendItems([])
         setError(
           isManager && requestError?.response?.status === 403
             ? 'Backend chưa cấp quyền dashboard bảng kiểm cho Manager.'
@@ -158,18 +171,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       <LayoutSidebar />
       <div className="dashboard-layout__content">
         <LayoutHeader
-          breadcrumbs={[
+          breadcrumbs={isManager ? undefined : [
             { label: 'Dashboard & Báo cáo' },
-            { label: 'Dashboard chất lượng bảng kiểm' },
+            { label: 'Dashboard thực hành' },
           ]}
+          title={isManager ? 'Dashboard thực hành' : undefined}
         />
 
         <main className="checklist-quality-dashboard">
           <section className="checklist-quality-hero">
             <div>
-              <span className="checklist-quality-hero__eyebrow">CHẤT LƯỢNG CHĂM SÓC</span>
-              <h1>Dashboard chất lượng bảng kiểm</h1>
-              <p>Theo dõi riêng từng bảng kiểm và quy trình, không gộp kết quả thành một chỉ số chung.</p>
+              <span className="checklist-quality-hero__eyebrow">ĐIỂM THỰC HÀNH</span>
+              <h1>Kết quả đánh giá checklist</h1>
+              <p>
+                {isManager
+                  ? 'Tổng hợp điểm thực hành từ các checklist đã đánh giá trong khoa.'
+                  : 'Tổng hợp điểm thực hành từ từng checklist và quy trình trên toàn viện hoặc theo khoa.'}
+              </p>
             </div>
             <div className="checklist-quality-hero__count">
               <FileSearchOutlined />
@@ -265,11 +283,14 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                     <ResultBar label="Chưa đạt" value={failedCount} total={passedCount + failedCount} tone="danger" />
                   </div>
                 </article>
-                <article className="checklist-quality-panel checklist-quality-panel--empty">
-                  <div className="checklist-quality-panel__heading"><div><h3>Xu hướng kết quả theo thời gian</h3><p>Theo từng bảng kiểm trong khoảng thời gian đã chọn.</p></div></div>
-                  <BarChartOutlined />
-                  <strong>Chưa có API xu hướng theo từng bảng kiểm</strong>
-                  <span>Endpoint hiện tại chỉ trả xu hướng gộp toàn bộ bảng kiểm nên frontend không sử dụng để tránh sai số liệu.</span>
+                <article className="checklist-quality-panel">
+                  <div className="checklist-quality-panel__heading">
+                    <div>
+                      <h3>Xu hướng kết quả toàn bộ bảng kiểm</h3>
+                      <p>Tổng hợp theo thời gian, ngày và khoa/phòng đang lọc.</p>
+                    </div>
+                  </div>
+                  <TrendChart items={trendItems} />
                 </article>
               </div>
             </section>
@@ -295,6 +316,49 @@ function ResultBar({ label, value, total, tone }) {
     <div className="checklist-quality-result-bar">
       <div><span>{label}</span><strong>{value} lượt · {formatPercent(percent)}</strong></div>
       <div className="checklist-quality-result-bar__track"><span className={`checklist-quality-result-bar__fill checklist-quality-result-bar__fill--${tone}`} style={{ width: `${percent}%` }} /></div>
+    </div>
+  )
+}
+
+function TrendChart({ items }) {
+  const maxSubmitted = Math.max(1, ...items.map((item) => Number(item.submittedCount || 0)))
+
+  if (!items.length) {
+    return (
+      <div className="checklist-quality-trend-empty">
+        <BarChartOutlined />
+        <strong>Chưa có dữ liệu xu hướng</strong>
+        <span>Không có response đã nộp trong khoảng thời gian đang lọc.</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="checklist-quality-trend" role="img" aria-label="Xu hướng kết quả bảng kiểm theo thời gian">
+      {items.map((item) => {
+        const submitted = Number(item.submittedCount || 0)
+        const passed = Number(item.passedCount || 0)
+        const passRate = submitted > 0 ? (passed / submitted) * 100 : 0
+        return (
+          <div className="checklist-quality-trend__item" key={item.period}>
+            <div className="checklist-quality-trend__values">
+              <strong>{formatPercent(passRate)}</strong>
+              <span>{submitted} lượt · {formatScore(item.averageConvertedScore)} điểm</span>
+            </div>
+            <div className="checklist-quality-trend__track">
+              <span
+                className="checklist-quality-trend__volume"
+                style={{ height: `${Math.max(8, (submitted / maxSubmitted) * 100)}%` }}
+              />
+              <span
+                className="checklist-quality-trend__pass"
+                style={{ height: `${Math.max(0, Math.min(100, passRate))}%` }}
+              />
+            </div>
+            <span className="checklist-quality-trend__period">{item.period}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }

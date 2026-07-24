@@ -5,6 +5,16 @@ import Header from '../../components/Header.jsx'
 import OverviewDashboard from '../../../dashboard/components/OverviewDashboard.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { trainingApi } from '../../../training/api/trainingApi.js'
+import { evaluationDashboardApi } from '../../../evaluation/api/evaluationDashboardApi.js'
+import { tokenStorage } from '../../../auth/services/tokenStorage.js'
+import {
+  THEORY_DASHBOARD_PERMISSIONS,
+  hasAnyPermission,
+} from '../../../auth/utils/authNavigation.js'
+import {
+  getPermissionsFromAccessToken,
+  getRolesFromAccessToken,
+} from '../../../auth/utils/jwt.js'
 
 function payload(response) {
   return response?.data?.data || {}
@@ -18,8 +28,31 @@ function unavailable(message) {
   return { total: 0, passed: 0, failed: 0, rate: 0, available: false, emptyMessage: message }
 }
 
+function dashboardDateRange(period) {
+  if (period === 'all') return {}
+
+  const toDate = new Date()
+  const fromDate = new Date(toDate)
+  if (period === '30d') fromDate.setDate(fromDate.getDate() - 29)
+  if (period === '90d') fromDate.setDate(fromDate.getDate() - 89)
+  if (period === 'year') fromDate.setMonth(0, 1)
+
+  return {
+    fromDate: `${fromDate.toISOString().slice(0, 10)}T00:00:00`,
+    toDate: `${toDate.toISOString().slice(0, 10)}T23:59:59`,
+  }
+}
+
 export default function ManagerDashboard() {
   const navigate = useNavigate()
+  const accessToken = tokenStorage.getAccessToken()
+  const roles = getRolesFromAccessToken(accessToken)
+  const permissions = getPermissionsFromAccessToken(accessToken)
+  const canViewTheoryDashboard = hasAnyPermission(
+    permissions,
+    THEORY_DASHBOARD_PERMISSIONS,
+    roles,
+  )
   const [profile, setProfile] = useState(null)
   const [filters, setFilters] = useState({ departmentId: '', period: '30d', professionalFieldId: '' })
   const [professionalFields, setProfessionalFields] = useState([])
@@ -68,17 +101,32 @@ export default function ManagerDashboard() {
       page: 0,
       size: 1,
     }
-    const [allResult, passedResult, failedResult, riskResult] = await Promise.allSettled([
+    const theoryRequest = canViewTheoryDashboard
+      ? evaluationDashboardApi.getExamResultsSummary({
+          ...dashboardDateRange(filters.period),
+          departmentId: managerDepartmentId,
+          professionalFieldId: filters.professionalFieldId || undefined,
+        })
+      : Promise.resolve(null)
+    const [allResult, passedResult, failedResult, riskResult, theoryResult] = await Promise.allSettled([
       trainingApi.getEmployeeTrainingStatuses(pageParams),
       trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'COMPLIANT' }),
       trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'NON_COMPLIANT' }),
       trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'AT_RISK' }),
+      theoryRequest,
     ])
 
     const total = allResult.status === 'fulfilled' ? pageTotal(allResult.value) : 0
     const passed = passedResult.status === 'fulfilled' ? pageTotal(passedResult.value) : 0
     const failed = (failedResult.status === 'fulfilled' ? pageTotal(failedResult.value) : 0)
       + (riskResult.status === 'fulfilled' ? pageTotal(riskResult.value) : 0)
+    const theorySummary = canViewTheoryDashboard && theoryResult.status === 'fulfilled'
+      ? payload(theoryResult.value)
+      : null
+    const theoryTotal = Number(theorySummary?.gradedAttempts) || 0
+    const theoryPassed = Number(theorySummary?.passedAttempts) || 0
+    const theoryFailed = Number(theorySummary?.failedAttempts) || 0
+    const theoryPassRate = Number(theorySummary?.passRate)
 
     setDomains({
       training: allResult.status === 'fulfilled'
@@ -95,16 +143,24 @@ export default function ManagerDashboard() {
           }
         : unavailable('Không thể tải dữ liệu giờ đào tạo trong khoa.'),
       exams: {
-        ...unavailable(filters.professionalFieldId
-          ? 'Dashboard bài kiểm tra chưa hỗ trợ lọc theo lĩnh vực chuyên môn.'
-          : 'Mở dashboard bài kiểm tra để xem kết quả theo khoa.'),
-        path: '/manager/reports/exam-dashboard',
+        ...(theorySummary
+          ? {
+              total: theoryTotal,
+              passed: theoryPassed,
+              failed: theoryFailed,
+              rate: Number.isFinite(theoryPassRate) ? theoryPassRate * 100 : 0,
+              available: true,
+              emptyMessage: 'Chưa có kết quả bài test trong phạm vi đang lọc.',
+              note: 'Kết quả bài test lý thuyết của nhân viên trong khoa.',
+            }
+          : unavailable('Không thể tải dữ liệu điểm bài test trong khoa.')),
+        path: '/manager/reports/quality-dashboard',
       },
       quality: {
         ...unavailable(filters.professionalFieldId
-          ? 'Dashboard tuân thủ hiện chưa hỗ trợ lọc theo lĩnh vực chuyên môn.'
-          : 'Mở dashboard tuân thủ để xem điểm lý thuyết, thực hành và điểm tổng của khoa.'),
-        path: '/manager/reports/quality-dashboard',
+          ? 'Dashboard thực hành hiện chưa hỗ trợ lọc theo lĩnh vực chuyên môn.'
+          : 'Mở dashboard thực hành để xem điểm đánh giá từ các checklist trong khoa.'),
+        path: '/manager/reports/checklist-dashboard',
       },
     })
 
@@ -112,7 +168,7 @@ export default function ManagerDashboard() {
       setError('Không thể tải dữ liệu đào tạo của khoa. Vui lòng kiểm tra kết nối máy chủ.')
     }
     setLoading(false)
-  }, [filters.period, filters.professionalFieldId, managerDepartmentId])
+  }, [canViewTheoryDashboard, filters.period, filters.professionalFieldId, managerDepartmentId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadDashboard, 0)
@@ -158,6 +214,10 @@ export default function ManagerDashboard() {
             onNavigate={navigate}
             summary={summary}
             domains={domains}
+            visibleDomains={[
+              'training',
+              ...(canViewTheoryDashboard ? ['exams'] : []),
+            ]}
             warnings={warnings}
           />
         </div>
