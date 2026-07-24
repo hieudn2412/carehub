@@ -55,7 +55,7 @@ export function useDashboard() {
         // Parse assignments
         const assignments = assignRes.data?.data?.content || assignRes.data?.data || []
         const openAssignments = Array.isArray(assignments)
-          ? assignments.filter(a => a.status === 'OPEN')
+          ? assignments.filter(a => a.actionable)
           : []
 
         // Parse attempts
@@ -83,7 +83,7 @@ export function useDashboard() {
         const upcomingExams = openAssignments.slice(0, 4).map(a => ({
           id: a.id,
           title: a.examPaperName || a.name || '',
-          startDate: a.createdAt || '',
+          startDate: a.openedAt || a.createdAt || '',
           dueDate: a.dueAt || '',
         }))
 

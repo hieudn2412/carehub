@@ -116,7 +116,7 @@ ai:
     num-beams: ${VIETQUILL_NUM_BEAMS:2}
     max-decode-length: ${VIETQUILL_MAX_DECODE_LENGTH:160}
     requested-count-default: ${VIETQUILL_REQUESTED_COUNT_DEFAULT:3}
-    single-pass-enabled: ${VIETQUILL_SINGLE_PASS:true}
+    paraphrase-options: ${VIETQUILL_PARAPHRASE_OPTIONS:false}
     pool-size: ${VIETQUILL_POOL_SIZE:2}
     acquire-timeout-ms: ${VIETQUILL_ACQUIRE_TIMEOUT_MS:30000}
     kv-cache-enabled: ${VIETQUILL_KV_CACHE_ENABLED:false}

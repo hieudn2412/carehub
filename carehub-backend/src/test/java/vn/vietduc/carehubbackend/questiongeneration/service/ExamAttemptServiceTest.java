@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveExamAttemptAnswersRequest;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig;
@@ -186,13 +187,52 @@ class ExamAttemptServiceTest {
     }
 
     @Test
-    void getForUserExpiresAttemptWhenDeadlinePassed() {
+    void getForUserAutoGradesAttemptWhenDeadlinePassed() {
         attempt.setExpiresAt(LocalDateTime.now().minusMinutes(1));
 
         var response = service.getForUser(attempt.getId(), user.getId());
 
-        assertThat(response.status()).isEqualTo(ExamAttemptStatus.EXPIRED.name());
+        assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
+        assertThat(response.score()).isEqualByComparingTo("0.00");
+        assertThat(response.submittedAt()).isEqualTo(attempt.getExpiresAt());
         verify(attemptRepository).save(attempt);
+    }
+
+    @Test
+    void saveAfterDeadlineAutoGradesLatestAnswers() {
+        attempt.setExpiresAt(LocalDateTime.now().minusSeconds(1));
+        var request = new SaveExamAttemptAnswersRequest(List.of(
+                new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
+        ));
+
+        var response = service.saveAnswers(attempt.getId(), user.getId(), request);
+
+        assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
+        assertThat(response.score()).isEqualByComparingTo("50.00");
+        assertThat(savedAnswers).extracting(ExamAttemptAnswer::getSelectedAnswer).contains("A");
+    }
+
+    @Test
+    void startCapsAttemptExpiryAtAssignmentDueDate() {
+        ExamAssignment assignment = attempt.getAssignment();
+        LocalDateTime dueAt = LocalDateTime.now().plusMinutes(5);
+        assignment.setDueAt(dueAt);
+        assignment.setMaxAttempts(2);
+        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+        when(assignmentService.find(assignment.getId())).thenReturn(assignment);
+        when(targetRepository.findByAssignmentAndUserForUpdate(assignment, user))
+                .thenReturn(Optional.of(ExamAssignmentTarget.builder()
+                        .assignment(assignment)
+                        .user(user)
+                        .build()));
+        when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user))
+                .thenReturn(List.of());
+        when(attemptRepository.countByAssignmentAndUser(assignment, user)).thenReturn(0L);
+
+        var response = service.start(assignment.getId(), user.getId());
+
+        assertThat(response.expiresAt()).isEqualTo(dueAt);
+        assertThat(response.status()).isEqualTo(ExamAttemptStatus.IN_PROGRESS.name());
     }
 
     private ExamPaperQuestion paperQuestion(Long id, ExamPaper paper, int position) {

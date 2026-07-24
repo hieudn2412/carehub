@@ -123,7 +123,7 @@ function ExamAssignmentListPage() {
                   <button type="button" className="exp-btn-secondary" onClick={loadAssignments} disabled={isLoading}>
                     <ReloadOutlined /> Tải lại
                   </button>
-                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-assignments/new')}>
+                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
                     <PlusCircleOutlined /> Tạo & giao bài
                   </button>
                 </div>

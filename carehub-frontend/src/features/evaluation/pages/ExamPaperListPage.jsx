@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CopyOutlined, DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -34,7 +34,8 @@ function ExamPaperListPage() {
   }, [showToast])
 
   useEffect(() => {
-    loadPapers()
+    const timer = window.setTimeout(loadPapers, 0)
+    return () => window.clearTimeout(timer)
   }, [loadPapers])
 
   const filteredPapers = useMemo(() => {
@@ -105,14 +106,6 @@ function ExamPaperListPage() {
     })
   }
 
-  async function duplicatePaper(paper) {
-    await runAction(paper.id, async () => {
-      await examPaperApi.duplicateExamPaper(paper.id)
-      showToast('Đã nhân bản bộ đề kiểm tra.', 'success')
-      loadPapers()
-    })
-  }
-
   async function exportPaper(paper, includeAnswers = false) {
     try {
       const response = await examPaperApi.exportExamPaper(paper.id, includeAnswers, 'docx')
@@ -126,7 +119,7 @@ function ExamPaperListPage() {
     }
   }
 
-  const breadcrumbs = [{ label: 'Bộ đề kiểm tra' }]
+  const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
 
   return (
     <div className="dashboard-layout">
@@ -138,14 +131,14 @@ function ExamPaperListPage() {
             <div className="exp-page">
               <div className="exp-title-card">
                 <div>
-                  <h1 className="exp-title">Bộ đề kiểm tra</h1>
-                  <p className="exp-subtitle">Sinh, phát hành và quản lý đề kiểm tra từ cấu hình và bộ câu hỏi</p>
+                  <h1 className="exp-title">Quản lý bài kiểm tra</h1>
+                  <p className="exp-subtitle">Tạo, giao, phát hành và quản lý đề kiểm tra tại một nơi</p>
                 </div>
                 <div className="exp-title-actions">
                   <button type="button" className="exp-btn-secondary" onClick={loadPapers} disabled={isLoading}>
                     <ReloadOutlined /> Tải lại
                   </button>
-                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/configs')}>
+                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
                     <PlusCircleOutlined /> Tạo & giao bài
                   </button>
                 </div>
@@ -198,7 +191,6 @@ function ExamPaperListPage() {
                         <td>{formatDateTime(paper.createdAt)}</td>
                         <td>
                           <div className="exp-actions">
-                            <button type="button" onClick={() => duplicatePaper(paper)} disabled={paper.status === 'ARCHIVED' || actionId === paper.id} title="Nhân bản"><CopyOutlined /></button>
                             <button type="button" onClick={() => exportPaper(paper, false)} title="Tải đề DOCX"><DownloadOutlined /></button>
                             <button type="button" onClick={() => exportPaper(paper, true)} title="Tải đáp án DOCX"><FileTextOutlined /></button>
                             {paper.status === 'DRAFT' && <button type="button" onClick={() => publishPaper(paper)} disabled={actionId === paper.id} title="Phát hành"><SendOutlined /></button>}

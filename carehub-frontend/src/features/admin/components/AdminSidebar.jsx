@@ -99,27 +99,18 @@ const navSections = [
       },
       {
         icon: <DatabaseOutlined />,
-        label: 'Danh mục bộ câu hỏi',
-        path: '/admin/evaluation/question-set-categories',
-        requiredPermissions: [EVALUATION_PERMISSION.questionSetManager],
-      },
-      {
-        icon: <DatabaseOutlined />,
         label: 'Danh mục câu hỏi',
         path: '/admin/evaluation/categories',
         requiredPermissions: [EVALUATION_PERMISSION.questionAuthor],
       },
       {
-        icon: <SlidersOutlined />,
-        label: 'Tạo & giao bài kiểm tra',
-        path: '/admin/evaluation/configs',
-        requiredPermissions: [EVALUATION_PERMISSION.examConfigManager],
-      },
-      {
         icon: <FileSearchOutlined />,
-        label: 'Kho đề kiểm tra',
-        path: '/admin/evaluation/exam-papers',
-        requiredPermissions: [EVALUATION_PERMISSION.examPublisher],
+        label: 'Quản lý bài kiểm tra',
+        path: '/admin/evaluation/exam-management',
+        requiredPermissions: [
+          EVALUATION_PERMISSION.examConfigManager,
+          EVALUATION_PERMISSION.examPublisher,
+        ],
       },
       {
         icon: <ScheduleOutlined />,

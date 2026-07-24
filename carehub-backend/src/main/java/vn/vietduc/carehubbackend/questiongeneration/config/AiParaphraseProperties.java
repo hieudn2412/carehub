@@ -21,7 +21,12 @@ public class AiParaphraseProperties {
     private int numBeams = 4;
     private int maxDecodeLength = 96;
     private int requestedCountDefault = 3;
-    private boolean singlePassEnabled = true;
+    /**
+     * Safe by default: paraphrase only the question stem and preserve all
+     * answer options. Full-option paraphrasing can be enabled explicitly after
+     * domain quality validation.
+     */
+    private boolean paraphraseOptions = false;
     private int poolSize = 2;
     private long acquireTimeoutMs = 30_000;
     private boolean kvCacheEnabled = false;

@@ -84,7 +84,11 @@ public class AiModelRuntimeStatusService {
                 || hasVietQuillSeq2SeqFiles(paraphraseProperties.getModelPath());
         String statusText = paraphraseProperties.isMockProvider()
                 ? "Mock sẵn sàng"
-                : filesPresent ? "Sẵn sàng" : "Thiếu encoder/decoder/tokenizer/config VietQuill ONNX";
+                : filesPresent
+                        ? paraphraseProperties.isParaphraseOptions()
+                                ? "Sẵn sàng · Chế độ toàn bộ MCQ"
+                                : "Sẵn sàng · Chế độ an toàn (chỉ diễn đạt câu hỏi)"
+                        : "Thiếu encoder/decoder/tokenizer/config VietQuill ONNX";
         return new AiModelRuntimeStatusResponse.ModelStatus(
                 paraphraseProperties.getProvider(),
                 paraphraseProperties.getModel(),

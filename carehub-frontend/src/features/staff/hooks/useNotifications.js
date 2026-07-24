@@ -46,23 +46,16 @@ export function useNotifications() {
     setLoading(true)
     try {
       const headers = authHeaders()
-      const [listResponse, countResponse, assignmentResponse, attemptResponse] = await Promise.all([
+      const [listResponse, countResponse, assignmentResponse] = await Promise.all([
         httpClient.get('/me/notifications', { headers, params: { page: 0, size: 8 } }),
         httpClient.get('/me/notifications/unread-count', { headers }),
         myExamApi.listAssignments().catch(() => ({ data: { data: [] } })),
-        myExamApi.listAttempts().catch(() => ({ data: { data: [] } })),
       ])
       setNotifications((listResponse.data?.data?.content || []).map(mapNotification))
       setUnreadCount(countResponse.data?.data?.unreadCount || 0)
       const assignments = assignmentResponse.data?.data || []
-      const attempts = attemptResponse.data?.data || []
-      const completedAssignmentIds = new Set(
-        (Array.isArray(attempts) ? attempts : [])
-          .filter((attempt) => ['SUBMITTED', 'GRADED'].includes(attempt.status))
-          .map((attempt) => String(attempt.assignmentId)),
-      )
       setPendingExamCount((Array.isArray(assignments) ? assignments : []).filter((assignment) => (
-        assignment.status === 'OPEN' && !completedAssignmentIds.has(String(assignment.id))
+        assignment.actionable
       )).length)
       setError(null)
     } catch (requestError) {

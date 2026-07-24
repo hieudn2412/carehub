@@ -207,6 +207,54 @@ class ExamAssignmentServiceTest {
         verify(notificationEventPublisher, times(2)).publish(any());
     }
 
+    @Test
+    void listForUserReturnsPersonalAttemptProgressAndContinueAction() {
+        ExamPaper paper = ExamPaper.builder()
+                .id(10L)
+                .code("EP-10")
+                .name("Đề kiểm tra an toàn")
+                .status(ExamPaperStatus.PUBLISHED)
+                .totalQuestions(10)
+                .timeLimitMinutes(30)
+                .passingScore(70)
+                .version(1)
+                .randomSeed(1L)
+                .build();
+        ExamAssignment assignment = ExamAssignment.builder()
+                .id(20L)
+                .name("Đợt kiểm tra tháng 7")
+                .examPaper(paper)
+                .status(ExamAssignmentStatus.OPEN)
+                .maxAttempts(2)
+                .dueAt(LocalDateTime.now().plusDays(1))
+                .build();
+        User employee = user(40L, "NV001", "Nguyễn Văn A", null);
+        ExamAttempt currentAttempt = ExamAttempt.builder()
+                .id(50L)
+                .assignment(assignment)
+                .examPaper(paper)
+                .user(employee)
+                .attemptNumber(1)
+                .status(ExamAttemptStatus.IN_PROGRESS)
+                .startedAt(LocalDateTime.now().minusMinutes(5))
+                .expiresAt(LocalDateTime.now().plusMinutes(25))
+                .build();
+        when(userRepository.findById(employee.getId())).thenReturn(Optional.of(employee));
+        when(targetRepository.findByUserOrderByAssignmentUpdatedAtDesc(employee))
+                .thenReturn(List.of(target(assignment, employee)));
+        when(attemptRepository.findByUserOrderByStartedAtDesc(employee))
+                .thenReturn(List.of(currentAttempt));
+
+        var response = service.listForUser(employee.getId());
+
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).currentAttemptId()).isEqualTo(currentAttempt.getId());
+        assertThat(response.get(0).availabilityStatus()).isEqualTo("IN_PROGRESS");
+        assertThat(response.get(0).actionLabel()).isEqualTo("Tiếp tục");
+        assertThat(response.get(0).usedAttempts()).isEqualTo(1);
+        assertThat(response.get(0).remainingAttempts()).isEqualTo(1);
+    }
+
     private ExamAssignmentTarget target(ExamAssignment assignment, User user) {
         return ExamAssignmentTarget.builder()
                 .assignment(assignment)

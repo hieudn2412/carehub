@@ -48,17 +48,14 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('bộ câu hỏi')) {
     return '/admin/evaluation/question-sets'
   }
-  if (lbl.includes('danh mục bộ câu hỏi')) {
-    return '/admin/evaluation/question-set-categories'
-  }
   if (lbl.includes('danh mục câu hỏi')) {
     return '/admin/evaluation/categories'
   }
   if (lbl.includes('ngân hàng câu hỏi')) {
     return '/admin/evaluation/question-bank'
   }
-  if (lbl.includes('cấu hình đề')) {
-    return '/admin/evaluation/configs'
+  if (lbl.includes('cấu hình đề') || lbl.includes('quản lý bài kiểm tra')) {
+    return '/admin/evaluation/exam-management'
   }
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'

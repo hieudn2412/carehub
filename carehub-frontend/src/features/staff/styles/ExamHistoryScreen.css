@@ -160,7 +160,7 @@
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .eh-table {
@@ -206,6 +206,10 @@
   color: #dc2626;
 }
 
+.eh-score--pending {
+  color: #64748b;
+}
+
 .eh-badge {
   display: inline-flex;
   align-items: center;
@@ -224,6 +228,33 @@
 .eh-badge--fail {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+.eh-badge--pending {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.eh-badge--availability-available,
+.eh-badge--availability-retake_available {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.eh-badge--availability-in_progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.eh-badge--availability-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.eh-badge--availability-overdue,
+.eh-badge--availability-closed {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .eh-badge__dot {
@@ -388,4 +419,246 @@
 
 .eh-option-row input {
   margin-top: 3px;
+}
+
+.eh-loading-state {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #64748b;
+}
+
+.eh-exam-toolbar {
+  position: sticky;
+  z-index: 8;
+  top: 8px;
+  padding: 16px 18px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.eh-exam-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.eh-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eh-save-indicator {
+  min-height: 18px;
+  color: #0f766e;
+}
+
+.eh-timer {
+  display: flex;
+  min-width: 126px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.eh-timer span {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.eh-timer strong {
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.eh-timer--warning {
+  border-color: #fdba74;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.eh-exam-progress {
+  padding: 16px 18px;
+  overflow: visible;
+}
+
+.eh-exam-progress__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eh-exam-progress__summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.eh-exam-progress__summary strong {
+  color: #0f172a;
+}
+
+.eh-exam-progress__summary span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.eh-progress-track {
+  height: 7px;
+  margin: 12px 0 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.eh-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #10b981);
+  transition: width 0.2s ease;
+}
+
+.eh-question-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eh-question-nav button {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eh-question-nav button.is-answered {
+  border-color: #86efac;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.eh-exam-question {
+  scroll-margin-top: 170px;
+  overflow: visible;
+}
+
+.eh-exam-question .eh-detail-header > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.eh-option-row {
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.eh-option-row:hover {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.eh-option-row--selected {
+  border-color: #60a5fa;
+  background: #eff6ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
+
+.eh-exam-submit-bar {
+  position: sticky;
+  z-index: 7;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 900px) {
+  .eh-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .eh-filter-bar,
+  .eh-detail-header,
+  .eh-exam-toolbar__right {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eh-filter-bar select {
+    width: 100%;
+  }
+
+  .eh-table {
+    min-width: 760px;
+  }
+
+  .eh-exam-toolbar {
+    position: relative;
+    top: auto;
+  }
+
+  .eh-timer {
+    align-items: flex-start;
+  }
+
+  .eh-actions .eh-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .eh-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .eh-exam-submit-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eh-exam-submit-bar .eh-btn {
+    justify-content: center;
+  }
 }
