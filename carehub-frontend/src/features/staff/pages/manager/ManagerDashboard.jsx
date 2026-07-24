@@ -5,23 +5,9 @@ import Header from '../../components/Header.jsx'
 import OverviewDashboard from '../../../dashboard/components/OverviewDashboard.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { trainingApi } from '../../../training/api/trainingApi.js'
-import { evaluationDashboardApi } from '../../../evaluation/api/evaluationDashboardApi.js'
-import { tokenStorage } from '../../../auth/services/tokenStorage.js'
-import {
-  THEORY_DASHBOARD_PERMISSIONS,
-  hasAnyPermission,
-} from '../../../auth/utils/authNavigation.js'
-import {
-  getPermissionsFromAccessToken,
-  getRolesFromAccessToken,
-} from '../../../auth/utils/jwt.js'
 
 function payload(response) {
   return response?.data?.data || {}
-}
-
-function pageTotal(response) {
-  return Number(payload(response)?.totalElements) || 0
 }
 
 function unavailable(message) {
@@ -38,31 +24,29 @@ function dashboardDateRange(period) {
   if (period === 'year') fromDate.setMonth(0, 1)
 
   return {
-    fromDate: `${fromDate.toISOString().slice(0, 10)}T00:00:00`,
-    toDate: `${toDate.toISOString().slice(0, 10)}T23:59:59`,
+    fromDate: formatLocalDate(fromDate),
+    toDate: formatLocalDate(toDate),
   }
+}
+
+function formatLocalDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export default function ManagerDashboard() {
   const navigate = useNavigate()
-  const accessToken = tokenStorage.getAccessToken()
-  const roles = getRolesFromAccessToken(accessToken)
-  const permissions = getPermissionsFromAccessToken(accessToken)
-  const canViewTheoryDashboard = hasAnyPermission(
-    permissions,
-    THEORY_DASHBOARD_PERMISSIONS,
-    roles,
-  )
   const [profile, setProfile] = useState(null)
   const [filters, setFilters] = useState({ departmentId: '', period: '30d', professionalFieldId: '' })
   const [professionalFields, setProfessionalFields] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const managerDepartmentId = profile?.departmentId || ''
   const [domains, setDomains] = useState({
     training: unavailable('Chưa có dữ liệu giờ đào tạo trong khoa.'),
-    exams: unavailable('Backend chưa có API tổng hợp kiểm tra được giới hạn theo khoa của Manager.'),
-    quality: unavailable('Backend chưa có API tổng hợp chất lượng được giới hạn theo khoa của Manager.'),
+    exams: unavailable('Chưa có kết quả bài kiểm tra trong khoa.'),
+    quality: unavailable('Chưa có kết quả checklist trong khoa.'),
   })
 
   useEffect(() => {
@@ -90,85 +74,73 @@ export default function ManagerDashboard() {
   }, [])
 
   const loadDashboard = useCallback(async () => {
-    if (!managerDepartmentId) return
     setLoading(true)
     setError('')
-    const asOf = new Date().toISOString().slice(0, 10)
-    const pageParams = {
-      departmentId: managerDepartmentId,
-      professionalFieldId: filters.professionalFieldId || undefined,
-      asOf,
-      page: 0,
-      size: 1,
-    }
-    const theoryRequest = canViewTheoryDashboard
-      ? evaluationDashboardApi.getExamResultsSummary({
-          ...dashboardDateRange(filters.period),
-          departmentId: managerDepartmentId,
-          professionalFieldId: filters.professionalFieldId || undefined,
+    try {
+      const response = await staffApi.getManagerDashboardOverview({
+        ...dashboardDateRange(filters.period),
+        allTime: filters.period === 'all' || undefined,
+        professionalFieldId: filters.professionalFieldId || undefined,
+      })
+      const overview = payload(response)
+      const training = overview.training || {}
+      const theory = overview.theory || {}
+      const quality = overview.quality || {}
+
+      if (overview.scope?.departmentId) {
+        setProfile((current) => current || {
+          departmentId: overview.scope.departmentId,
+          departmentName: overview.scope.departmentName,
         })
-      : Promise.resolve(null)
-    const [allResult, passedResult, failedResult, riskResult, theoryResult] = await Promise.allSettled([
-      trainingApi.getEmployeeTrainingStatuses(pageParams),
-      trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'NON_COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...pageParams, complianceStatus: 'AT_RISK' }),
-      theoryRequest,
-    ])
+      }
 
-    const total = allResult.status === 'fulfilled' ? pageTotal(allResult.value) : 0
-    const passed = passedResult.status === 'fulfilled' ? pageTotal(passedResult.value) : 0
-    const failed = (failedResult.status === 'fulfilled' ? pageTotal(failedResult.value) : 0)
-      + (riskResult.status === 'fulfilled' ? pageTotal(riskResult.value) : 0)
-    const theorySummary = canViewTheoryDashboard && theoryResult.status === 'fulfilled'
-      ? payload(theoryResult.value)
-      : null
-    const theoryTotal = Number(theorySummary?.gradedAttempts) || 0
-    const theoryPassed = Number(theorySummary?.passedAttempts) || 0
-    const theoryFailed = Number(theorySummary?.failedAttempts) || 0
-    const theoryPassRate = Number(theorySummary?.passRate)
-
-    setDomains({
-      training: allResult.status === 'fulfilled'
-        ? {
-            total,
-            passed,
-            failed,
-            rate: total ? passed * 100 / total : 0,
-            available: true,
-            note: filters.period === 'all'
-              ? 'Backend hiện chỉ trả trạng thái đào tạo tại thời điểm hiện tại, chưa có API tổng hợp toàn bộ lịch sử.'
-              : 'Backend tự giới hạn theo khoa của Manager; dữ liệu đào tạo là trạng thái tại ngày hiện tại.',
-            path: '/manager/reports/training-dashboard',
-          }
-        : unavailable('Không thể tải dữ liệu giờ đào tạo trong khoa.'),
-      exams: {
-        ...(theorySummary
+      setDomains({
+        training: {
+          total: Number(training.employeeCount) || 0,
+          passed: Number(training.compliantCount) || 0,
+          failed: Number(training.needsAttentionCount) || 0,
+          rate: Number(training.overallComplianceRate) || 0,
+          available: true,
+          emptyMessage: 'Chưa có nhân viên trong phạm vi đào tạo của khoa.',
+          note: `${Number(training.notConfiguredCount) || 0} nhân viên chưa được cấu hình chuẩn đào tạo.`,
+          path: '/manager/reports/training-dashboard',
+        },
+        exams: theory.available
           ? {
-              total: theoryTotal,
-              passed: theoryPassed,
-              failed: theoryFailed,
-              rate: Number.isFinite(theoryPassRate) ? theoryPassRate * 100 : 0,
+              total: Number(theory.gradedAttempts) || 0,
+              passed: Number(theory.passedAttempts) || 0,
+              failed: Number(theory.failedAttempts) || 0,
+              rate: Number(theory.passRate) || 0,
               available: true,
-              emptyMessage: 'Chưa có kết quả bài test trong phạm vi đang lọc.',
-              note: 'Kết quả bài test lý thuyết của nhân viên trong khoa.',
+              emptyMessage: 'Chưa có kết quả bài kiểm tra trong phạm vi đang lọc.',
+              note: `${Number(theory.notStartedCount) || 0} lượt được phân công chưa bắt đầu.`,
+              path: '/manager/reports/quality-dashboard',
             }
-          : unavailable('Không thể tải dữ liệu điểm bài test trong khoa.')),
-        path: '/manager/reports/quality-dashboard',
-      },
-      quality: {
-        ...unavailable(filters.professionalFieldId
-          ? 'Dashboard thực hành hiện chưa hỗ trợ lọc theo lĩnh vực chuyên môn.'
-          : 'Mở dashboard thực hành để xem điểm đánh giá từ các checklist trong khoa.'),
-        path: '/manager/reports/checklist-dashboard',
-      },
-    })
-
-    if (allResult.status === 'rejected') {
-      setError('Không thể tải dữ liệu đào tạo của khoa. Vui lòng kiểm tra kết nối máy chủ.')
+          : unavailable('Bạn chưa được cấp quyền xem kết quả bài kiểm tra.'),
+        quality: {
+          total: Number(quality.submittedCount) || 0,
+          passed: Number(quality.passedCount) || 0,
+          failed: Number(quality.failedCount) || 0,
+          rate: Number(quality.passRate) || 0,
+          available: true,
+          emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
+          note: filters.professionalFieldId
+            ? 'Số liệu checklist áp dụng cho toàn khoa trong khoảng thời gian đã chọn.'
+            : `Điểm checklist trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
+          path: '/manager/quality/history',
+        },
+      })
+    } catch {
+      setDomains({
+        training: unavailable('Không thể tải dữ liệu giờ đào tạo trong khoa.'),
+        exams: unavailable('Không thể tải dữ liệu bài kiểm tra trong khoa.'),
+        quality: unavailable('Không thể tải dữ liệu checklist trong khoa.'),
+      })
+      setError('Không thể tải dashboard của khoa. Vui lòng kiểm tra kết nối máy chủ.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-  }, [canViewTheoryDashboard, filters.period, filters.professionalFieldId, managerDepartmentId])
+  }, [filters.period, filters.professionalFieldId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadDashboard, 0)
@@ -182,20 +154,36 @@ export default function ManagerDashboard() {
     rate: domains.training.rate,
     totalDetail: 'Nhân viên trong khoa',
     passedDetail: 'Đạt chuẩn giờ đào tạo',
-    failedDetail: 'Thiếu giờ hoặc có nguy cơ',
+    failedDetail: 'Cần chú ý hoặc chưa cấu hình',
     rateDetail: 'Tỷ lệ đạt trong khoa',
   }), [domains])
 
-  const warnings = domains.training.failed > 0
-    ? [{
+  const warnings = [
+    domains.training.failed > 0 && {
         id: 'training',
         title: 'Nhân sự chưa đạt giờ đào tạo',
         detail: 'Cần theo dõi tiến độ trong khoa',
         value: domains.training.failed,
         tone: 'danger',
         path: '/manager/reports/training-dashboard',
-      }]
-    : []
+      },
+    domains.quality.failed > 0 && {
+      id: 'quality',
+      title: 'Checklist chưa đạt',
+      detail: 'Cần rà soát kết quả thực hành trong khoa',
+      value: domains.quality.failed,
+      tone: 'danger',
+      path: '/manager/quality/history',
+    },
+    domains.exams.failed > 0 && {
+      id: 'exams',
+      title: 'Bài kiểm tra chưa đạt',
+      detail: 'Cần rà soát kết quả lý thuyết trong khoa',
+      value: domains.exams.failed,
+      tone: 'danger',
+      path: '/manager/reports/quality-dashboard',
+    },
+  ].filter(Boolean)
 
   return (
     <div className="dashboard-layout">
@@ -216,7 +204,8 @@ export default function ManagerDashboard() {
             domains={domains}
             visibleDomains={[
               'training',
-              ...(canViewTheoryDashboard ? ['exams'] : []),
+              ...(domains.exams.available ? ['exams'] : []),
+              'quality',
             ]}
             warnings={warnings}
           />

@@ -29,8 +29,8 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import '../styles/TrainingDashboardPage.css'
 
-const PAGE_SIZE = 500
-const TARGET_HOURS = 120
+const PAGE_SIZE = 100
+const today = new Date().toISOString().slice(0, 10)
 
 function responsePayload(response) {
   return response?.data?.data || {}
@@ -65,16 +65,16 @@ async function fetchAll(baseParams) {
 }
 
 function normalizeEmployee(item) {
-  const completedHours = Number(item.submittedHours) || 0
   return {
     id: item.employeeId,
     code: item.employeeCode || '',
     name: item.employeeName || '',
     departmentName: item.departmentName || 'Chưa xác định',
     positionName: item.positionName || item.jobPositionName || '',
-    completedHours,
-    missingHours: Math.max(0, TARGET_HOURS - completedHours),
-    completed: completedHours >= TARGET_HOURS,
+    requiredHours: Number(item.requiredHours) || 0,
+    completedHours: Number(item.submittedHours) || 0,
+    missingHours: Number(item.remainingHours) || 0,
+    complianceStatus: item.complianceStatus || 'NOT_CONFIGURED',
   }
 }
 
@@ -90,9 +90,14 @@ function exportCsv(rows) {
     row.departmentName,
     row.positionName,
     row.completedHours,
-    TARGET_HOURS,
+    row.requiredHours,
     row.missingHours,
-    row.completed ? 'Đủ giờ' : 'Chưa đủ giờ',
+    {
+      COMPLIANT: 'Đạt yêu cầu',
+      AT_RISK: 'Có nguy cơ',
+      NON_COMPLIANT: 'Chưa đạt',
+      NOT_CONFIGURED: 'Chưa cấu hình',
+    }[row.complianceStatus] || row.complianceStatus,
   ].map(escapeCsv).join(','))
   const csvContent = [headers.map(escapeCsv).join(','), ...lines].join('\n')
   const blob = new Blob([String.fromCharCode(0xfeff), csvContent], {
@@ -127,12 +132,12 @@ function DashboardContent({ role }) {
   const [filters, setFilters] = useState({
     departmentId: '',
     professionalFieldId: '',
-    fromDate: '',
-    toDate: '',
+    asOf: today,
     status: '',
   })
-  const [employees, setEmployees] = useState([])
+  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
   const managerDepartmentId = profile?.departmentId || ''
 
@@ -164,85 +169,83 @@ function DashboardContent({ role }) {
     return () => { cancelled = true }
   }, [isManager])
 
-  const rangeUnsupported = Boolean(filters.fromDate || filters.toDate)
-
   const loadData = useCallback(async () => {
     if (isManager && !managerDepartmentId) return
     setLoading(true)
     setError('')
 
-    if (rangeUnsupported) {
-      setEmployees([])
-      setError('Backend chưa hỗ trợ lọc trạng thái giờ đào tạo theo khoảng fromDate/toDate. API hiện chỉ hỗ trợ ảnh chụp tại một ngày bằng tham số asOf.')
-      setLoading(false)
-      return
-    }
-
     try {
-      const rows = await fetchAll({
+      const response = await trainingApi.getTrainingDashboardSummary({
         departmentId: isManager
           ? managerDepartmentId
           : filters.departmentId || undefined,
         professionalFieldId: filters.professionalFieldId || undefined,
-        asOf: new Date().toISOString().slice(0, 10),
+        complianceStatus: filters.status || undefined,
+        asOf: filters.asOf || undefined,
       })
-      setEmployees(rows.map(normalizeEmployee))
+      setSummary(responsePayload(response))
     } catch {
-      setEmployees([])
+      setSummary(null)
       setError('Không thể tải thống kê giờ đào tạo từ máy chủ.')
     } finally {
       setLoading(false)
     }
-  }, [filters.departmentId, filters.professionalFieldId, isManager, managerDepartmentId, rangeUnsupported])
+  }, [filters.asOf, filters.departmentId, filters.professionalFieldId, filters.status, isManager, managerDepartmentId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
   }, [loadData])
 
-  const filteredEmployees = useMemo(() => employees.filter((employee) => {
-    if (filters.status === 'COMPLETED') return employee.completed
-    if (filters.status === 'INCOMPLETE') return !employee.completed
-    return true
-  }), [employees, filters.status])
-
-  const metrics = useMemo(() => {
-    const completed = filteredEmployees.filter((employee) => employee.completed).length
-    const incomplete = filteredEmployees.length - completed
-    const totalHours = filteredEmployees.reduce((sum, employee) => sum + employee.completedHours, 0)
-    const totalTarget = filteredEmployees.length * TARGET_HOURS
-    return {
-      total: filteredEmployees.length,
-      completed,
-      incomplete,
-      totalHours,
-      totalTarget,
-      rate: filteredEmployees.length ? completed * 100 / filteredEmployees.length : 0,
-    }
-  }, [filteredEmployees])
+  const totals = summary?.totals || {}
+  const metrics = {
+    total: Number(totals.employeeCount) || 0,
+    configured: Number(totals.configuredCount) || 0,
+    notConfigured: Number(totals.notConfiguredCount) || 0,
+    completed: Number(totals.compliantCount) || 0,
+    atRisk: Number(totals.atRiskCount) || 0,
+    incomplete: Number(totals.nonCompliantCount) || 0,
+    totalHours: Number(totals.submittedHours) || 0,
+    totalTarget: Number(totals.requiredHours) || 0,
+    remainingHours: Number(totals.remainingHours) || 0,
+    rate: Number(totals.complianceRate) || 0,
+  }
 
   const departmentData = useMemo(() => {
-    const groups = new Map()
-    filteredEmployees.forEach((employee) => {
-      const current = groups.get(employee.departmentName) || { total: 0, completed: 0 }
-      current.total += 1
-      if (employee.completed) current.completed += 1
-      groups.set(employee.departmentName, current)
-    })
-    return [...groups.entries()]
-      .map(([name, value]) => ({
-        name,
-        total: value.total,
-        rate: value.total ? Math.round(value.completed * 1000 / value.total) / 10 : 0,
+    return (summary?.byDepartment || [])
+      .map((item) => ({
+        name: item.departmentName || 'Chưa xác định',
+        total: Number(item.employeeCount) || 0,
+        rate: Number(item.complianceRate) || 0,
       }))
       .sort((left, right) => right.total - left.total)
       .slice(0, 12)
-  }, [filteredEmployees])
+  }, [summary])
 
   const completionData = [
-    { name: 'Đủ 120 giờ', value: metrics.completed, color: '#10a77d' },
-    { name: 'Chưa đủ 120 giờ', value: metrics.incomplete, color: '#ef4444' },
+    { name: 'Đạt yêu cầu', value: metrics.completed, color: '#10a77d' },
+    { name: 'Có nguy cơ', value: metrics.atRisk, color: '#f59e0b' },
+    { name: 'Chưa đạt', value: metrics.incomplete, color: '#ef4444' },
+    { name: 'Chưa cấu hình', value: metrics.notConfigured, color: '#94a3b8' },
   ]
+
+  async function handleExport() {
+    setExporting(true)
+    setError('')
+    try {
+      const rows = await fetchAll({
+        departmentId: isManager ? managerDepartmentId : filters.departmentId || undefined,
+        professionalFieldId: filters.professionalFieldId || undefined,
+        complianceStatus: filters.status || undefined,
+        asOf: filters.asOf || undefined,
+      })
+      exportCsv(rows.map(normalizeEmployee))
+    } catch {
+      setError('Không thể tải danh sách nhân viên để xuất báo cáo.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="training-dashboard">
@@ -252,12 +255,12 @@ function DashboardContent({ role }) {
           <h1>Dashboard giờ đào tạo</h1>
           <p>
             {isManager
-              ? `Theo dõi tiến độ 120 giờ của nhân sự ${profile?.departmentName ? `tại ${profile.departmentName}` : 'trong khoa quản lý'}.`
-              : 'Theo dõi tiến độ hoàn thành 120 giờ đào tạo trên toàn viện hoặc theo từng khoa.'}
+              ? `Theo dõi mức độ đáp ứng chuẩn đào tạo của nhân sự ${profile?.departmentName ? `tại ${profile.departmentName}` : 'trong khoa quản lý'}.`
+              : 'Theo dõi mức độ đáp ứng chuẩn giờ đào tạo đang áp dụng trên toàn viện hoặc theo từng khoa.'}
           </p>
         </div>
-        <button type="button" onClick={() => exportCsv(filteredEmployees)} disabled={loading || filteredEmployees.length === 0}>
-          <DownloadOutlined /> Xuất danh sách theo bộ lọc
+        <button type="button" onClick={handleExport} disabled={loading || exporting || metrics.total === 0}>
+          {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />} {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách theo bộ lọc'}
         </button>
       </section>
 
@@ -281,19 +284,17 @@ function DashboardContent({ role }) {
           </select>
         </label>
         <label>
-          <span>Từ ngày</span>
-          <input type="date" value={filters.fromDate} onChange={(event) => setFilters((current) => ({ ...current, fromDate: event.target.value }))} />
-        </label>
-        <label>
-          <span>Đến ngày</span>
-          <input type="date" value={filters.toDate} onChange={(event) => setFilters((current) => ({ ...current, toDate: event.target.value }))} />
+          <span>Tính đến ngày</span>
+          <input type="date" value={filters.asOf} max={today} onChange={(event) => setFilters((current) => ({ ...current, asOf: event.target.value }))} />
         </label>
         <label>
           <span>Trạng thái</span>
           <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
             <option value="">Tất cả trạng thái</option>
-            <option value="COMPLETED">Đủ 120 giờ</option>
-            <option value="INCOMPLETE">Chưa đủ 120 giờ</option>
+            <option value="COMPLIANT">Đạt yêu cầu</option>
+            <option value="AT_RISK">Có nguy cơ</option>
+            <option value="NON_COMPLIANT">Chưa đạt</option>
+            <option value="NOT_CONFIGURED">Chưa cấu hình chuẩn</option>
           </select>
         </label>
       </section>
@@ -306,8 +307,8 @@ function DashboardContent({ role }) {
         <>
           <section className="training-dashboard__kpis">
             <MetricCard icon={<TeamOutlined />} label="Nhân viên trong phạm vi" value={metrics.total.toLocaleString('vi-VN')} detail="Theo bộ lọc đang chọn" tone="blue" />
-            <MetricCard icon={<CheckCircleOutlined />} label="Đã đủ 120 giờ" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên hoàn thành`} tone="green" />
-            <MetricCard icon={<ExclamationCircleOutlined />} label="Chưa đủ 120 giờ" value={metrics.incomplete.toLocaleString('vi-VN')} detail="Cần tiếp tục bổ sung giờ" tone="red" />
+            <MetricCard icon={<CheckCircleOutlined />} label="Đạt chuẩn đào tạo" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên đã cấu hình`} tone="green" />
+            <MetricCard icon={<ExclamationCircleOutlined />} label="Cần theo dõi" value={(metrics.atRisk + metrics.incomplete).toLocaleString('vi-VN')} detail={`${metrics.notConfigured} nhân viên chưa có cấu hình`} tone="red" />
             <MetricCard icon={<ClockCircleOutlined />} label="Tổng giờ hoàn thành" value={metrics.totalHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} detail={`Mục tiêu cộng dồn ${metrics.totalTarget.toLocaleString('vi-VN')} giờ`} tone="amber" />
           </section>
 
@@ -320,7 +321,7 @@ function DashboardContent({ role }) {
           ) : (
             <section className="training-dashboard__charts">
               <article className="training-chart-card">
-                <header><h2>Tiến độ hoàn thành 120 giờ</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
+                <header><h2>Mức độ đáp ứng chuẩn đào tạo</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
                 <ResponsiveContainer width="100%" height={270}>
                   <PieChart>
                     <Pie data={completionData} dataKey="value" nameKey="name" innerRadius={72} outerRadius={102} paddingAngle={2} stroke="none">
@@ -337,7 +338,7 @@ function DashboardContent({ role }) {
               <article className="training-chart-card training-chart-card--wide">
                 <header><h2>Tỷ lệ hoàn thành theo khoa</h2><span>Tối đa 12 khoa</span></header>
                 {departmentData.length === 0 ? (
-                  <div className="training-dashboard__empty training-dashboard__empty--compact">Backend chưa trả dữ liệu khoa trong phạm vi này.</div>
+                  <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo khoa trong phạm vi này.</div>
                 ) : (
                   <ResponsiveContainer width="100%" height={310}>
                     <BarChart data={departmentData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
@@ -346,7 +347,7 @@ function DashboardContent({ role }) {
                       <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
                       <Tooltip formatter={(value) => [`${value}%`, 'Tỷ lệ hoàn thành']} />
                       <Bar dataKey="rate" radius={[7, 7, 0, 0]} maxBarSize={46}>
-                        {departmentData.map((entry) => <Cell key={entry.name} fill={entry.rate >= 100 ? '#10a77d' : '#ef4444'} />)}
+                        {departmentData.map((entry) => <Cell key={entry.name} fill={entry.rate >= 80 ? '#10a77d' : '#ef4444'} />)}
                         <LabelList dataKey="rate" position="top" formatter={(value) => `${value}%`} fill="#334155" fontSize={11} />
                       </Bar>
                     </BarChart>

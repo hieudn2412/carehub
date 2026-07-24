@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,16 @@ import java.util.Optional;
 
 @Repository
 public interface ExamAssignmentTargetRepository extends JpaRepository<ExamAssignmentTarget, Long> {
+    @EntityGraph(attributePaths = {
+            "assignment",
+            "assignment.examPaper",
+            "assignment.professionalField",
+            "user",
+            "user.department"
+    })
+    @Query("SELECT target FROM ExamAssignmentTarget target")
+    List<ExamAssignmentTarget> findAllForDashboard();
+
     @Query("""
             SELECT target
             FROM ExamAssignmentTarget target

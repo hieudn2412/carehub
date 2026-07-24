@@ -5,6 +5,7 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  EditOutlined,
   FileSearchOutlined,
   LoadingOutlined,
   SearchOutlined,
@@ -65,9 +66,15 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [toDate, setToDate] = useState(today)
   const [search, setSearch] = useState('')
   const [forms, setForms] = useState([])
+  const [filterOptions, setFilterOptions] = useState({ forms: [], subjects: [], evaluators: [] })
   const [trendItems, setTrendItems] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
+  const [processId, setProcessId] = useState('')
+  const [resultStatus, setResultStatus] = useState('')
+  const [subjectUserId, setSubjectUserId] = useState('')
+  const [submittedByUserId, setSubmittedByUserId] = useState('')
   const [loading, setLoading] = useState(true)
+  const [trendLoading, setTrendLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -109,30 +116,58 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
           departmentId: departmentId || undefined,
+          formId: processId || undefined,
+          resultStatus: resultStatus || undefined,
+          subjectUserId: subjectUserId || undefined,
+          submittedByUserId: submittedByUserId || undefined,
           page: 0,
           size: 100,
           sort: 'responseCount,desc',
         }
-        const [performanceResponse, trendResponse] = await Promise.all([
+        const [performanceResponse, optionsResponse] = await Promise.all([
           adminApi.getDashboardFormPerformance(params),
-          adminApi.getDashboardFormTrend({
+          adminApi.getDashboardFormFilterOptions({
             fromDate: params.fromDate,
             toDate: params.toDate,
             departmentId: params.departmentId,
-            bucket: 'MONTH',
           }),
         ])
         if (active) {
-          setForms(pageItems(performanceResponse))
-          setTrendItems(apiData(trendResponse, {})?.items || [])
+          const nextForms = pageItems(performanceResponse)
+          const nextOptions = apiData(optionsResponse, {})
+          setForms(nextForms)
+          setFilterOptions({
+            forms: nextOptions?.forms || [],
+            subjects: nextOptions?.subjects || [],
+            evaluators: nextOptions?.evaluators || [],
+          })
+          setProcessId((current) => (
+            !current || nextOptions?.forms?.some((item) => String(item.id) === String(current))
+              ? current
+              : ''
+          ))
+          setSubjectUserId((current) => (
+            !current || nextOptions?.subjects?.some((item) => String(item.id) === String(current))
+              ? current
+              : ''
+          ))
+          setSubmittedByUserId((current) => (
+            !current || nextOptions?.evaluators?.some((item) => String(item.id) === String(current))
+              ? current
+              : ''
+          ))
+          setSelectedFormId((current) => (
+            nextForms.some((item) => String(item.formId) === String(current))
+              ? current
+              : String(nextForms[0]?.formId || '')
+          ))
         }
       } catch (requestError) {
         if (!active) return
         setForms([])
-        setTrendItems([])
         setError(
           isManager && requestError?.response?.status === 403
-            ? 'Backend chưa cấp quyền dashboard bảng kiểm cho Manager.'
+            ? 'Tài khoản Manager không có quyền xem dữ liệu ngoài khoa/phòng được phân công.'
             : apiErrorMessage(requestError),
         )
       } finally {
@@ -142,7 +177,59 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
 
     loadDashboard()
     return () => { active = false }
-  }, [departmentId, fromDate, isManager, toDate])
+  }, [
+    departmentId,
+    fromDate,
+    isManager,
+    processId,
+    resultStatus,
+    subjectUserId,
+    submittedByUserId,
+    toDate,
+  ])
+
+  useEffect(() => {
+    if (!selectedFormId || (isManager && !departmentId)) {
+      return undefined
+    }
+    let active = true
+
+    async function loadTrend() {
+      setTrendLoading(true)
+      try {
+        const response = await adminApi.getDashboardFormTrend({
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          departmentId: departmentId || undefined,
+          formId: selectedFormId,
+          resultStatus: resultStatus || undefined,
+          subjectUserId: subjectUserId || undefined,
+          submittedByUserId: submittedByUserId || undefined,
+          bucket: 'MONTH',
+        })
+        if (active) setTrendItems(apiData(response, {})?.items || [])
+      } catch (requestError) {
+        if (active) {
+          setTrendItems([])
+          setError(apiErrorMessage(requestError))
+        }
+      } finally {
+        if (active) setTrendLoading(false)
+      }
+    }
+
+    loadTrend()
+    return () => { active = false }
+  }, [
+    departmentId,
+    fromDate,
+    isManager,
+    resultStatus,
+    selectedFormId,
+    subjectUserId,
+    submittedByUserId,
+    toDate,
+  ])
 
   const visibleForms = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase('vi-VN')
@@ -215,16 +302,43 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select></div>
             </label>
-            <label className="checklist-quality-filter checklist-quality-filter--unavailable">
+            <label className="checklist-quality-filter">
               <span>Kết quả</span>
-              <select disabled><option>Chờ backend hỗ trợ</option></select>
+              <div><CheckCircleOutlined /><select value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
+                <option value="">Tất cả kết quả</option>
+                <option value="PASSED">Đạt</option>
+                <option value="FAILED">Chưa đạt</option>
+                <option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
+                <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
+              </select></div>
             </label>
-            {['Người được đánh giá', 'Người thực hiện', 'Quy trình'].map((label) => (
-              <label className="checklist-quality-filter checklist-quality-filter--unavailable" key={label}>
-                <span>{label}</span>
-                <select disabled><option>Chờ backend hỗ trợ</option></select>
-              </label>
-            ))}
+            <label className="checklist-quality-filter">
+              <span>Người được đánh giá</span>
+              <div><TeamOutlined /><select value={subjectUserId} onChange={(event) => setSubjectUserId(event.target.value)}>
+                <option value="">Tất cả nhân viên</option>
+                {filterOptions.subjects.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name} · {item.employeeCode}</option>
+                ))}
+              </select></div>
+            </label>
+            <label className="checklist-quality-filter">
+              <span>Người thực hiện</span>
+              <div><EditOutlined /><select value={submittedByUserId} onChange={(event) => setSubmittedByUserId(event.target.value)}>
+                <option value="">Tất cả người thực hiện</option>
+                {filterOptions.evaluators.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name} · {item.employeeCode}</option>
+                ))}
+              </select></div>
+            </label>
+            <label className="checklist-quality-filter">
+              <span>Quy trình</span>
+              <div><FileSearchOutlined /><select value={processId} onChange={(event) => setProcessId(event.target.value)}>
+                <option value="">Tất cả quy trình</option>
+                {filterOptions.forms.map((item) => (
+                  <option key={item.id} value={item.id}>{item.title} · {item.code}</option>
+                ))}
+              </select></div>
+            </label>
           </section>
 
           {error && <div className="checklist-quality-alert"><CloseCircleOutlined /> {error}</div>}
@@ -248,11 +362,11 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                       <span className="checklist-quality-process-card__code">{item.formCode || `Bảng kiểm #${item.formId}`}</span>
                       <strong>{item.formTitle || 'Bảng kiểm chưa có tiêu đề'}</strong>
                       <dl>
-                        <div><dt>Người được kiểm tra</dt><dd>—</dd></div>
+                        <div><dt>Người được kiểm tra</dt><dd>{Number(item.uniqueSubjectCount || 0)}</dd></div>
                         <div><dt>Lượt đánh giá</dt><dd>{Number(item.submittedCount || item.responseCount || 0)}</dd></div>
                         <div><dt>Tỷ lệ đạt</dt><dd>{formatPercent(item.passRate)}</dd></div>
                       </dl>
-                      <small>Chờ API số người duy nhất</small>
+                      <small>{Number(item.failedCriticalCount || 0)} lượt không đạt tiêu chí trọng yếu</small>
                     </button>
                   )
                 })}
@@ -268,7 +382,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               </header>
 
               <div className="checklist-quality-metrics">
-                <Metric icon={<TeamOutlined />} label="Người được kiểm tra" value="—" note="Chờ API distinct subject" />
+                <Metric icon={<TeamOutlined />} label="Người được kiểm tra" value={Number(selectedForm.uniqueSubjectCount || 0)} note="Nhân viên duy nhất" />
                 <Metric icon={<BarChartOutlined />} label="Lượt đánh giá" value={submittedCount} note="Response đã nộp" />
                 <Metric icon={<CheckCircleOutlined />} label="Số lượt đạt" value={passedCount} note="Theo kết quả backend" tone="success" />
                 <Metric icon={<CloseCircleOutlined />} label="Số lượt chưa đạt" value={failedCount} note="Gồm điểm và tiêu chí trọng yếu" tone="danger" />
@@ -286,11 +400,13 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 <article className="checklist-quality-panel">
                   <div className="checklist-quality-panel__heading">
                     <div>
-                      <h3>Xu hướng kết quả toàn bộ bảng kiểm</h3>
-                      <p>Tổng hợp theo thời gian, ngày và khoa/phòng đang lọc.</p>
+                      <h3>Xu hướng của bảng kiểm đang chọn</h3>
+                      <p>Tổng hợp theo thời gian và toàn bộ bộ lọc phía trên.</p>
                     </div>
                   </div>
-                  <TrendChart items={trendItems} />
+                  {trendLoading
+                    ? <div className="checklist-quality-loading"><LoadingOutlined spin /><span>Đang tải xu hướng...</span></div>
+                    : <TrendChart items={trendItems} />}
                 </article>
               </div>
             </section>

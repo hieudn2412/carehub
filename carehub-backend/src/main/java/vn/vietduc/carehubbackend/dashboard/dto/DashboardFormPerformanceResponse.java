@@ -17,6 +17,7 @@ public record DashboardFormPerformanceResponse(
         long passedCount,
         long failedScoreCount,
         long failedCriticalCount,
+        long uniqueSubjectCount,
         BigDecimal passRate,
         BigDecimal averageConvertedScore,
         Instant lastSubmittedAt
