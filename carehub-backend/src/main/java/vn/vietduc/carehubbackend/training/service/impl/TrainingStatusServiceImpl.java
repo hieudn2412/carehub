@@ -17,6 +17,7 @@ import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLed
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingStatusSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusActivityTypeHoursResponse;
+import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusRecordSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusYearlyHoursResponse;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
@@ -89,60 +90,41 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             EmployeeTrainingStatusSearchRequest request,
             Pageable pageable
     ) {
-        User actor = accessPolicy.currentActor();
-        Set<String> roleCodes = accessPolicy.currentRoleCodes();
-        if (!hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_MANAGER, TrainingAccessPolicy.ROLE_SYSTEM_JOB)) {
-            throw new ForbiddenException("Bạn không có quyền truy cập danh sách trạng thái đào tạo nhân viên");
-        }
-
-        EmployeeTrainingStatusSearchRequest criteria = request == null
-                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null)
-                : request;
+        EmployeeTrainingStatusSearchRequest criteria = normalizeCriteria(request);
         Pageable normalizedPageable = normalizePageable(pageable, Sort.by(Sort.Order.asc("employeeCode")));
+        List<EmployeeTrainingStatusSummaryResponse> summaries =
+                employeeStatusSummaries(criteria, normalizedPageable.getSort());
+        return page(summaries, normalizedPageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TrainingDashboardSummaryResponse getDashboardSummary(EmployeeTrainingStatusSearchRequest request) {
+        EmployeeTrainingStatusSearchRequest criteria = normalizeCriteria(request);
         LocalDate asOfDate = criteria.asOf() == null ? LocalDate.now() : criteria.asOf();
-        Long scopeDepartmentId = hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_SYSTEM_JOB)
-                ? null
-                : idOf(actor.getDepartment());
+        List<EmployeeTrainingStatusSummaryResponse> summaries =
+                employeeStatusSummaries(criteria, Sort.by(Sort.Order.asc("employeeCode")));
 
-        // Fetch candidates — pagination is handled via DB for the user list,
-        // but compliance scoring must run across all candidates before filtering/sorting.
-        List<User> candidates = userRepository.searchTrainingEmployeeCandidates(
-                scopeDepartmentId,
-                normalizeKeywordPattern(criteria.keyword()),
-                criteria.departmentId(),
-                criteria.jobPositionId()
-        );
-        if (candidates.isEmpty()) {
-            return new PageImpl<>(List.of(), normalizedPageable, 0);
-        }
-
-        List<TrainingRequirement> activeRequirements = requirementRepository.findActiveRequirementsAsOf(asOfDate);
-        Set<Long> applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
-        int maxCycleYears = activeRequirements.stream()
-                .map(TrainingRequirement::getCycleYears)
-                .filter(years -> years != null && years > 0)
-                .max(Integer::compareTo)
-                .orElse(DEFAULT_WINDOW_YEARS);
-        Map<Long, List<TrainingRecord>> recordsByEmployee = recordsByEmployee(
-                candidates,
-                asOfDate.minusYears(maxCycleYears),
-                asOfDate
-        );
-
-        List<EmployeeTrainingStatusSummaryResponse> summaries = candidates.stream()
-                .map(employee -> summarizeEmployee(
-                        employee,
-                        criteria.professionalFieldId(),
-                        asOfDate,
-                        activeRequirements,
-                        recordsByEmployee.getOrDefault(employee.getId(), List.of()),
-                        applicableDepartmentIds
+        Map<Long, List<EmployeeTrainingStatusSummaryResponse>> byDepartment = new HashMap<>();
+        summaries.forEach(summary -> byDepartment
+                .computeIfAbsent(summary.departmentId(), ignored -> new ArrayList<>())
+                .add(summary));
+        List<TrainingDashboardSummaryResponse.DepartmentItem> departmentItems = byDepartment.values().stream()
+                .map(this::departmentDashboardItem)
+                .sorted(Comparator.comparing(
+                        TrainingDashboardSummaryResponse.DepartmentItem::departmentName,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
                 ))
-                .filter(summary -> matchesStatusFilters(summary, criteria))
-                .sorted(summaryComparator(normalizedPageable.getSort()))
                 .toList();
 
-        return page(summaries, normalizedPageable);
+        return new TrainingDashboardSummaryResponse(
+                asOfDate,
+                criteria.departmentId(),
+                criteria.professionalFieldId(),
+                criteria.complianceStatus(),
+                dashboardTotals(summaries),
+                departmentItems
+        );
     }
 
     @Override
@@ -187,6 +169,134 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     }
 
     // ── Private helpers ──────────────────────────────────────────
+
+    private EmployeeTrainingStatusSearchRequest normalizeCriteria(EmployeeTrainingStatusSearchRequest request) {
+        return request == null
+                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null)
+                : request;
+    }
+
+    private List<EmployeeTrainingStatusSummaryResponse> employeeStatusSummaries(
+            EmployeeTrainingStatusSearchRequest criteria,
+            Sort sort
+    ) {
+        User actor = accessPolicy.currentActor();
+        Set<String> roleCodes = accessPolicy.currentRoleCodes();
+        if (!hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_MANAGER, TrainingAccessPolicy.ROLE_SYSTEM_JOB)) {
+            throw new ForbiddenException("Bạn không có quyền truy cập danh sách trạng thái đào tạo nhân viên");
+        }
+
+        LocalDate asOfDate = criteria.asOf() == null ? LocalDate.now() : criteria.asOf();
+        Long scopeDepartmentId = hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_SYSTEM_JOB)
+                ? null
+                : idOf(actor.getDepartment());
+        List<User> candidates = userRepository.searchTrainingEmployeeCandidates(
+                scopeDepartmentId,
+                normalizeKeywordPattern(criteria.keyword()),
+                criteria.departmentId(),
+                criteria.jobPositionId()
+        );
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+
+        List<TrainingRequirement> activeRequirements = requirementRepository.findActiveRequirementsAsOf(asOfDate);
+        Set<Long> applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
+        int maxCycleYears = activeRequirements.stream()
+                .map(TrainingRequirement::getCycleYears)
+                .filter(years -> years != null && years > 0)
+                .max(Integer::compareTo)
+                .orElse(DEFAULT_WINDOW_YEARS);
+        Map<Long, List<TrainingRecord>> recordsByEmployee = recordsByEmployee(
+                candidates,
+                asOfDate.minusYears(maxCycleYears),
+                asOfDate
+        );
+
+        return candidates.stream()
+                .map(employee -> summarizeEmployee(
+                        employee,
+                        criteria.professionalFieldId(),
+                        asOfDate,
+                        activeRequirements,
+                        recordsByEmployee.getOrDefault(employee.getId(), List.of()),
+                        applicableDepartmentIds
+                ))
+                .filter(summary -> matchesStatusFilters(summary, criteria))
+                .sorted(summaryComparator(sort))
+                .toList();
+    }
+
+    private TrainingDashboardSummaryResponse.Totals dashboardTotals(
+            List<EmployeeTrainingStatusSummaryResponse> summaries
+    ) {
+        long configured = summaries.stream().filter(item -> item.requirementId() != null).count();
+        long compliant = countStatus(summaries, ComplianceStatus.COMPLIANT);
+        BigDecimal averageProgress = configured == 0
+                ? BigDecimal.ZERO
+                : summaries.stream()
+                        .filter(item -> item.requirementId() != null)
+                        .map(EmployeeTrainingStatusSummaryResponse::progressPercentage)
+                        .map(this::safe)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .divide(BigDecimal.valueOf(configured), 2, RoundingMode.HALF_UP);
+        BigDecimal complianceRate = configured == 0
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(compliant)
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(BigDecimal.valueOf(configured), 2, RoundingMode.HALF_UP);
+        return new TrainingDashboardSummaryResponse.Totals(
+                summaries.size(),
+                configured,
+                countStatus(summaries, ComplianceStatus.NOT_CONFIGURED),
+                compliant,
+                countStatus(summaries, ComplianceStatus.AT_RISK),
+                countStatus(summaries, ComplianceStatus.NON_COMPLIANT),
+                sumHours(summaries, EmployeeTrainingStatusSummaryResponse::requiredHours),
+                sumHours(summaries, EmployeeTrainingStatusSummaryResponse::submittedHours),
+                sumHours(summaries, EmployeeTrainingStatusSummaryResponse::remainingHours),
+                averageProgress,
+                complianceRate
+        );
+    }
+
+    private TrainingDashboardSummaryResponse.DepartmentItem departmentDashboardItem(
+            List<EmployeeTrainingStatusSummaryResponse> summaries
+    ) {
+        EmployeeTrainingStatusSummaryResponse first = summaries.get(0);
+        TrainingDashboardSummaryResponse.Totals totals = dashboardTotals(summaries);
+        return new TrainingDashboardSummaryResponse.DepartmentItem(
+                first.departmentId(),
+                first.departmentName() == null ? "Chưa xác định" : first.departmentName(),
+                totals.employeeCount(),
+                totals.configuredCount(),
+                totals.notConfiguredCount(),
+                totals.compliantCount(),
+                totals.atRiskCount(),
+                totals.nonCompliantCount(),
+                totals.requiredHours(),
+                totals.submittedHours(),
+                totals.remainingHours(),
+                totals.complianceRate()
+        );
+    }
+
+    private long countStatus(
+            List<EmployeeTrainingStatusSummaryResponse> summaries,
+            ComplianceStatus status
+    ) {
+        return summaries.stream().filter(item -> item.complianceStatus() == status).count();
+    }
+
+    private BigDecimal sumHours(
+            List<EmployeeTrainingStatusSummaryResponse> summaries,
+            Function<EmployeeTrainingStatusSummaryResponse, BigDecimal> extractor
+    ) {
+        return summaries.stream()
+                .map(extractor)
+                .map(this::safe)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 
     private PersonalTrainingStatusResponse statusFor(User employee, Long professionalFieldId, LocalDate asOf) {
         PersonalTrainingStatusResponse base = complianceCalculator.calculate(employee, professionalFieldId, asOf);

@@ -69,4 +69,18 @@ export const staffApi = {
       headers: authHeaders(),
     })
   },
+
+  getMyDashboardFormSummary(params) {
+    return httpClient.get('/dashboard/me/forms/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getManagerDashboardOverview(params) {
+    return httpClient.get('/dashboard/manager/overview', {
+      headers: authHeaders(),
+      params,
+    })
+  },
 }

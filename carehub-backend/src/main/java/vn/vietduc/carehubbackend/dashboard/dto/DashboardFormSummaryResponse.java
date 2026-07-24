@@ -29,6 +29,9 @@ public record DashboardFormSummaryResponse(
             long submitted,
             long draft,
             long voided,
+            long passed,
+            long failedScore,
+            long failedCritical,
             BigDecimal passRate,
             BigDecimal averageConvertedScore
     ) {}

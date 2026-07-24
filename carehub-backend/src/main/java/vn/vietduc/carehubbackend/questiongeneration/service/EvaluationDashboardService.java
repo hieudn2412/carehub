@@ -6,18 +6,25 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DiscriminationIndexResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationDashboardResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationDistributionItemResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamDashboardResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamResultsSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuestionBankSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuestionItemAnalysisResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.WrongAnswerDistributionResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
@@ -45,6 +52,7 @@ public class EvaluationDashboardService {
     private final ExamAttemptRepository attemptRepository;
     private final ExamAttemptAnswerRepository answerRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
+    private final ExamAssignmentTargetRepository assignmentTargetRepository;
 
     @Transactional(readOnly = true)
     public EvaluationDashboardResponse dashboard() {
@@ -90,6 +98,113 @@ public class EvaluationDashboardService {
             LocalDateTime fromDate, LocalDateTime toDate,
             Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
         List<ExamAttempt> attempts = filterAttempts(fromDate, toDate, examConfigId, paperId, assignmentId, departmentId, professionalFieldId);
+        return summarizeAttempts(attempts);
+    }
+
+    @Transactional(readOnly = true)
+    public EvaluationExamDashboardResponse examOverview(
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            Long paperId,
+            Long assignmentId,
+            Long departmentId,
+            Long professionalFieldId,
+            Long employeeId,
+            EvaluationResultFilter resultFilter
+    ) {
+        List<ExamAssignmentTarget> allTargets = assignmentTargetRepository.findAllForDashboard();
+        List<ExamAssignmentTarget> targets = filterTargets(
+                allTargets,
+                departmentId,
+                paperId,
+                assignmentId,
+                professionalFieldId,
+                employeeId
+        );
+        List<ExamAssignmentTarget> employeeOptionTargets = filterTargets(
+                allTargets,
+                departmentId,
+                null,
+                null,
+                null,
+                null
+        );
+        List<ExamAttempt> allAttempts = attemptRepository.findAllByOrderByStartedAtDesc();
+        Set<String> startedTargetKeys = allAttempts.stream()
+                .map(attempt -> targetKey(attempt.getAssignment(), attempt.getUser().getId()))
+                .collect(Collectors.toSet());
+        List<ExamAttempt> attempts = filterAttempts(
+                allAttempts,
+                fromDate,
+                toDate,
+                null,
+                paperId,
+                assignmentId,
+                departmentId,
+                professionalFieldId
+        ).stream()
+                .filter(attempt -> employeeId == null || attempt.getUser().getId().equals(employeeId))
+                .filter(attempt -> matchesResult(attempt, resultFilter))
+                .toList();
+
+        Map<Long, List<ExamAssignmentTarget>> targetsByField = new LinkedHashMap<>();
+        targets.forEach(target -> targetsByField
+                .computeIfAbsent(professionalFieldId(target.getAssignment()), ignored -> new ArrayList<>())
+                .add(target));
+        List<EvaluationExamDashboardResponse.ProfessionalFieldItem> byProfessionalField =
+                targetsByField.values().stream()
+                        .map(fieldTargets -> professionalFieldItem(
+                                fieldTargets,
+                                attempts,
+                                startedTargetKeys
+                        ))
+                        .sorted(Comparator.comparing(
+                                EvaluationExamDashboardResponse.ProfessionalFieldItem::professionalFieldName,
+                                Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                        ))
+                        .toList();
+
+        Map<Long, List<ExamAssignmentTarget>> targetsByPaper = new LinkedHashMap<>();
+        targets.forEach(target -> targetsByPaper
+                .computeIfAbsent(target.getAssignment().getExamPaper().getId(), ignored -> new ArrayList<>())
+                .add(target));
+        List<EvaluationExamDashboardResponse.PaperItem> byPaper = targetsByPaper.values().stream()
+                .map(paperTargets -> paperItem(paperTargets, attempts, startedTargetKeys))
+                .sorted(Comparator.comparing(
+                        EvaluationExamDashboardResponse.PaperItem::paperName,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                ))
+                .toList();
+
+        Map<Long, EvaluationExamDashboardResponse.EmployeeOption> employeeOptions = new LinkedHashMap<>();
+        employeeOptionTargets.forEach(target -> employeeOptions.putIfAbsent(
+                target.getUser().getId(),
+                new EvaluationExamDashboardResponse.EmployeeOption(
+                        target.getUser().getId(),
+                        target.getUser().getEmployeeCode(),
+                        target.getUser().getName()
+                )
+        ));
+        List<EvaluationExamDashboardResponse.EmployeeOption> employees = employeeOptions.values().stream()
+                .sorted(Comparator.comparing(
+                        EvaluationExamDashboardResponse.EmployeeOption::name,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                ))
+                .toList();
+
+        return new EvaluationExamDashboardResponse(
+                LocalDateTime.now(),
+                targets.stream().map(target -> target.getAssignment().getId()).distinct().count(),
+                targets.size(),
+                notStartedCount(targets, startedTargetKeys),
+                summarizeAttempts(attempts),
+                byProfessionalField,
+                byPaper,
+                employees
+        );
+    }
+
+    private EvaluationExamResultsSummaryResponse summarizeAttempts(List<ExamAttempt> attempts) {
         long total = attempts.size();
         long graded = attempts.stream()
                 .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.GRADED || attempt.getStatus() == ExamAttemptStatus.SUBMITTED)
@@ -263,7 +378,28 @@ public class EvaluationDashboardService {
     private List<ExamAttempt> filterAttempts(
             LocalDateTime fromDate, LocalDateTime toDate,
             Long examConfigId, Long paperId, Long assignmentId, Long departmentId, Long professionalFieldId) {
-        List<ExamAttempt> attempts = attemptRepository.findAllByOrderByStartedAtDesc();
+        return filterAttempts(
+                attemptRepository.findAllByOrderByStartedAtDesc(),
+                fromDate,
+                toDate,
+                examConfigId,
+                paperId,
+                assignmentId,
+                departmentId,
+                professionalFieldId
+        );
+    }
+
+    private List<ExamAttempt> filterAttempts(
+            List<ExamAttempt> attempts,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            Long examConfigId,
+            Long paperId,
+            Long assignmentId,
+            Long departmentId,
+            Long professionalFieldId
+    ) {
         return attempts.stream()
                 .filter(a -> fromDate == null || (a.getStartedAt() != null && !a.getStartedAt().isBefore(fromDate)))
                 .filter(a -> toDate == null || (a.getStartedAt() != null && !a.getStartedAt().isAfter(toDate)))
@@ -277,6 +413,142 @@ public class EvaluationDashboardService {
                         && a.getAssignment().getProfessionalField() != null
                         && a.getAssignment().getProfessionalField().getId().equals(professionalFieldId)))
                 .toList();
+    }
+
+    private List<ExamAssignmentTarget> filterTargets(
+            List<ExamAssignmentTarget> targets,
+            Long departmentId,
+            Long paperId,
+            Long assignmentId,
+            Long professionalFieldId,
+            Long employeeId
+    ) {
+        return targets.stream()
+                .filter(target -> target.getAssignment().getStatus() != ExamAssignmentStatus.ARCHIVED)
+                .filter(target -> departmentId == null
+                        || (target.getUser().getDepartment() != null
+                        && departmentId.equals(target.getUser().getDepartment().getId())))
+                .filter(target -> paperId == null
+                        || paperId.equals(target.getAssignment().getExamPaper().getId()))
+                .filter(target -> assignmentId == null
+                        || assignmentId.equals(target.getAssignment().getId()))
+                .filter(target -> professionalFieldId == null
+                        || professionalFieldId.equals(professionalFieldId(target.getAssignment())))
+                .filter(target -> employeeId == null || employeeId.equals(target.getUser().getId()))
+                .toList();
+    }
+
+    private EvaluationExamDashboardResponse.ProfessionalFieldItem professionalFieldItem(
+            List<ExamAssignmentTarget> targets,
+            List<ExamAttempt> attempts,
+            Set<String> startedTargetKeys
+    ) {
+        ExamAssignment assignment = targets.get(0).getAssignment();
+        List<ExamAttempt> scopedAttempts = attemptsForTargets(attempts, targets);
+        EvaluationExamResultsSummaryResponse summary = summarizeAttempts(scopedAttempts);
+        return new EvaluationExamDashboardResponse.ProfessionalFieldItem(
+                professionalFieldId(assignment),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
+                assignment.getProfessionalField() == null ? "Chưa xác định" : assignment.getProfessionalField().getName(),
+                distinctAssignmentCount(targets),
+                targets.size(),
+                notStartedCount(targets, startedTargetKeys),
+                summary.gradedAttempts(),
+                summary.passedAttempts(),
+                summary.failedAttempts(),
+                summary.averageScore(),
+                rate(summary.passRate())
+        );
+    }
+
+    private EvaluationExamDashboardResponse.PaperItem paperItem(
+            List<ExamAssignmentTarget> targets,
+            List<ExamAttempt> attempts,
+            Set<String> startedTargetKeys
+    ) {
+        ExamPaper paper = targets.get(0).getAssignment().getExamPaper();
+        List<ExamAttempt> scopedAttempts = attemptsForTargets(attempts, targets);
+        EvaluationExamResultsSummaryResponse summary = summarizeAttempts(scopedAttempts);
+        List<String> fieldNames = targets.stream()
+                .map(ExamAssignmentTarget::getAssignment)
+                .map(ExamAssignment::getProfessionalField)
+                .map(field -> field == null ? "Chưa xác định" : field.getName())
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+        return new EvaluationExamDashboardResponse.PaperItem(
+                paper.getId(),
+                paper.getCode(),
+                paper.getName(),
+                paper.getVersion(),
+                paper.getTotalQuestions(),
+                paper.getPassingScore(),
+                fieldNames,
+                distinctAssignmentCount(targets),
+                targets.size(),
+                notStartedCount(targets, startedTargetKeys),
+                summary.gradedAttempts(),
+                summary.passedAttempts(),
+                summary.failedAttempts(),
+                summary.averageScore(),
+                rate(summary.passRate())
+        );
+    }
+
+    private List<ExamAttempt> attemptsForTargets(
+            List<ExamAttempt> attempts,
+            List<ExamAssignmentTarget> targets
+    ) {
+        Set<String> targetKeys = targets.stream()
+                .map(target -> targetKey(target.getAssignment(), target.getUser().getId()))
+                .collect(Collectors.toSet());
+        return attempts.stream()
+                .filter(attempt -> targetKeys.contains(targetKey(attempt.getAssignment(), attempt.getUser().getId())))
+                .toList();
+    }
+
+    private long notStartedCount(
+            List<ExamAssignmentTarget> targets,
+            Set<String> startedTargetKeys
+    ) {
+        return targets.stream()
+                .filter(target -> !startedTargetKeys.contains(targetKey(
+                        target.getAssignment(),
+                        target.getUser().getId()
+                )))
+                .count();
+    }
+
+    private long distinctAssignmentCount(List<ExamAssignmentTarget> targets) {
+        return targets.stream().map(target -> target.getAssignment().getId()).distinct().count();
+    }
+
+    private Long professionalFieldId(ExamAssignment assignment) {
+        return assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId();
+    }
+
+    private String targetKey(ExamAssignment assignment, Long userId) {
+        return assignment.getId() + ":" + userId;
+    }
+
+    private boolean matchesResult(ExamAttempt attempt, EvaluationResultFilter filter) {
+        if (filter == null) {
+            return true;
+        }
+        boolean graded = attempt.getStatus() == ExamAttemptStatus.GRADED
+                || attempt.getStatus() == ExamAttemptStatus.SUBMITTED;
+        if (!graded) {
+            return false;
+        }
+        return filter == EvaluationResultFilter.PASSED
+                ? Boolean.TRUE.equals(attempt.getPassed())
+                : !Boolean.TRUE.equals(attempt.getPassed());
+    }
+
+    private BigDecimal rate(Double value) {
+        return value == null
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(value).setScale(4, RoundingMode.HALF_UP);
     }
 
     private String interpretDiscrimination(double di) {

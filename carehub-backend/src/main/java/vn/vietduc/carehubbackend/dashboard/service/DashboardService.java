@@ -130,6 +130,17 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public DashboardFormSummaryResponse formSummary(LocalDate fromDate, LocalDate toDate, Long departmentId) {
         DashboardPeriod period = resolvePeriod(fromDate, toDate, 366);
+        return formSummary(period, departmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardFormSummaryResponse formSummaryAllTime(Long departmentId) {
+        LocalDate today = LocalDate.now(clock.withZone(DASHBOARD_ZONE));
+        DashboardPeriod period = resolvePeriod(LocalDate.of(1970, 1, 1), today, Integer.MAX_VALUE);
+        return formSummary(period, departmentId);
+    }
+
+    private DashboardFormSummaryResponse formSummary(DashboardPeriod period, Long departmentId) {
         MapSqlParameterSource params = baseParams(period, departmentId);
         params.addValue("nowInstant", dbInstant(Instant.now(clock)), Types.TIMESTAMP_WITH_TIMEZONE);
         Map<String, Object> forms = jdbc.queryForMap("""
@@ -183,6 +194,9 @@ public class DashboardService {
                         responseStats.submitted(),
                         responseStats.draft(),
                         responseStats.voided(),
+                        responseStats.passed(),
+                        responseStats.failedScore(),
+                        responseStats.failedCritical(),
                         responseStats.passRate(),
                         responseStats.averageConvertedScore()
                 ))
@@ -191,12 +205,10 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public Page<DashboardFormPerformanceResponse> formPerformance(
-            LocalDate fromDate,
-            LocalDate toDate,
-            Long departmentId,
+            DashboardFormFilter filter,
             Pageable pageable
     ) {
-        DashboardPeriod period = resolvePeriod(fromDate, toDate, 366);
+        DashboardPeriod period = resolvePeriod(filter.fromDate(), filter.toDate(), 366);
         Pageable normalized = normalizePageable(pageable, 10);
         Sort.Order order = normalized.getSort().isSorted()
                 ? normalized.getSort().iterator().next()
@@ -205,7 +217,7 @@ public class DashboardService {
             throw ValidationException.field("sort", "Unsupported sort field: " + order.getProperty());
         }
         String orderBy = performanceOrderBy(order);
-        MapSqlParameterSource params = baseParams(period, departmentId)
+        MapSqlParameterSource params = formFilterParams(period, filter)
                 .addValue("limit", normalized.getPageSize())
                 .addValue("offset", normalized.getOffset());
         String aggregateSql = """
@@ -216,13 +228,13 @@ public class DashboardService {
                         s.result_status,
                         s.converted_score,
                         s.submitted_at,
+                        ctx.subject_user_id,
                         fv.form_template_id
                     from form_submissions s
                     join form_versions fv on fv.id = s.form_version_id
                     left join form_submission_contexts ctx on ctx.submission_id = s.id
                     left join users subject_user on subject_user.id = ctx.subject_user_id
                     where %s
-                      and (:departmentId is null or subject_user.department_id = :departmentId)
                 ),
                 agg as (
                     select
@@ -232,12 +244,15 @@ public class DashboardService {
                         count(*) filter (where status = 'SUBMITTED' and result_status = 'PASSED') as passed_count,
                         count(*) filter (where status = 'SUBMITTED' and result_status = 'FAILED_SCORE') as failed_score_count,
                         count(*) filter (where status = 'SUBMITTED' and result_status = 'FAILED_CRITICAL') as failed_critical_count,
+                        count(distinct subject_user_id) filter (
+                            where status = 'SUBMITTED' and subject_user_id is not null
+                        ) as unique_subject_count,
                         avg(converted_score) filter (where status = 'SUBMITTED' and converted_score is not null) as average_converted_score,
                         max(submitted_at) filter (where status = 'SUBMITTED') as last_submitted_at
                     from filtered_submissions
                     group by form_template_id
                 )
-                """.formatted(periodPredicate("s"));
+                """.formatted(formSubmissionFilterPredicate("s"));
         List<DashboardFormPerformanceResponse> content = jdbc.query(aggregateSql + """
                 select
                     f.id as form_id,
@@ -250,6 +265,7 @@ public class DashboardService {
                     coalesce(a.passed_count, 0) as passed_count,
                     coalesce(a.failed_score_count, 0) as failed_score_count,
                     coalesce(a.failed_critical_count, 0) as failed_critical_count,
+                    coalesce(a.unique_subject_count, 0) as unique_subject_count,
                     case when coalesce(a.submitted_count, 0) = 0
                          then 0
                          else round((a.passed_count * 100.0 / a.submitted_count)::numeric, 2)
@@ -259,6 +275,8 @@ public class DashboardService {
                 from form_templates f
                 left join agg a on a.form_template_id = f.id
                 where f.deleted = false
+                  and (:formId is null or f.id = :formId)
+                  and (:restrictToMatched = false or a.form_template_id is not null)
                 order by %s, f.id desc
                 limit :limit offset :offset
                 """.formatted(orderBy), params, (rs, ignored) -> DashboardFormPerformanceResponse.builder()
@@ -272,12 +290,19 @@ public class DashboardService {
                 .passedCount(rs.getLong("passed_count"))
                 .failedScoreCount(rs.getLong("failed_score_count"))
                 .failedCriticalCount(rs.getLong("failed_critical_count"))
+                .uniqueSubjectCount(rs.getLong("unique_subject_count"))
                 .passRate(decimal(rs.getObject("pass_rate")))
                 .averageConvertedScore(decimal(rs.getObject("average_converted_score")))
                 .lastSubmittedAt(toInstant(rs.getObject("last_submitted_at")))
                 .build());
-        Long total = jdbc.queryForObject("select count(*) from form_templates where deleted = false",
-                new MapSqlParameterSource(), Long.class);
+        Long total = jdbc.queryForObject(aggregateSql + """
+                select count(*)
+                from form_templates f
+                left join agg a on a.form_template_id = f.id
+                where f.deleted = false
+                  and (:formId is null or f.id = :formId)
+                  and (:restrictToMatched = false or a.form_template_id is not null)
+                """, params, Long.class);
         Pageable responsePageable = PageRequest.of(normalized.getPageNumber(), normalized.getPageSize(),
                 Sort.by(order.getDirection(), order.getProperty()));
         return new PageImpl<>(content, responsePageable, total == null ? 0 : total);
@@ -285,19 +310,17 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardFormTrendResponse formTrend(
-            LocalDate fromDate,
-            LocalDate toDate,
-            DashboardTrendBucket bucket,
-            Long departmentId
+            DashboardFormFilter filter,
+            DashboardTrendBucket bucket
     ) {
         DashboardTrendBucket normalizedBucket = bucket == null ? DashboardTrendBucket.DAY : bucket;
         int maxDays = normalizedBucket == DashboardTrendBucket.DAY ? 366 : 365 * 5;
-        DashboardPeriod period = resolvePeriod(fromDate, toDate, maxDays);
+        DashboardPeriod period = resolvePeriod(filter.fromDate(), filter.toDate(), maxDays);
         String truncExpression = normalizedBucket == DashboardTrendBucket.DAY
                 ? "date_trunc('day', s.submitted_at at time zone 'Asia/Bangkok')"
                 : "date_trunc('month', s.submitted_at at time zone 'Asia/Bangkok')";
         String periodFormat = normalizedBucket == DashboardTrendBucket.DAY ? "YYYY-MM-DD" : "YYYY-MM";
-        MapSqlParameterSource params = baseParams(period, departmentId);
+        MapSqlParameterSource params = formFilterParams(period, filter);
         List<DashboardFormTrendResponse.Item> items = jdbc.query("""
                 select
                     to_char(%s, '%s') as period,
@@ -306,14 +329,20 @@ public class DashboardService {
                     count(*) filter (where s.result_status in ('FAILED_SCORE', 'FAILED_CRITICAL')) as failed_count,
                     coalesce(round(avg(s.converted_score)::numeric, 4), 0) as average_converted_score
                 from form_submissions s
+                join form_versions fv on fv.id = s.form_version_id
                 left join form_submission_contexts ctx on ctx.submission_id = s.id
                 left join users subject_user on subject_user.id = ctx.subject_user_id
                 where s.status = 'SUBMITTED'
-                  and s.submitted_at >= :fromInstant and s.submitted_at < :toInstant
-                  and (:departmentId is null or subject_user.department_id = :departmentId)
+                  and %s
                 group by %s
                 order by %s asc
-                """.formatted(truncExpression, periodFormat, truncExpression, truncExpression), params,
+                """.formatted(
+                        truncExpression,
+                        periodFormat,
+                        formSubmissionFilterPredicate("s"),
+                        truncExpression,
+                        truncExpression
+                ), params,
                 (rs, ignored) -> DashboardFormTrendResponse.Item.builder()
                         .period(rs.getString("period"))
                         .submittedCount(rs.getLong("submitted_count"))
@@ -324,6 +353,103 @@ public class DashboardService {
         return DashboardFormTrendResponse.builder()
                 .bucket(normalizedBucket)
                 .items(items)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardFormFilterOptionsResponse formFilterOptions(DashboardFormFilter filter) {
+        DashboardPeriod period = resolvePeriod(filter.fromDate(), filter.toDate(), 366);
+        MapSqlParameterSource params = formFilterParams(period, filter);
+        String scopedSubmissions = """
+                from form_submissions s
+                join form_versions fv on fv.id = s.form_version_id
+                join form_templates f on f.id = fv.form_template_id and f.deleted = false
+                join users evaluator on evaluator.id = s.submitted_by_user_id
+                left join form_submission_contexts ctx on ctx.submission_id = s.id
+                left join users subject_user on subject_user.id = ctx.subject_user_id
+                where s.status = 'SUBMITTED'
+                  and %s
+                """.formatted(formSubmissionFilterPredicate("s"));
+
+        List<DashboardFormFilterOptionsResponse.FormOption> forms = jdbc.query("""
+                select distinct f.id, f.code, f.title
+                %s
+                order by f.title asc, f.id asc
+                """.formatted(scopedSubmissions), params, (rs, ignored) ->
+                DashboardFormFilterOptionsResponse.FormOption.builder()
+                        .id(rs.getLong("id"))
+                        .code(rs.getString("code"))
+                        .title(rs.getString("title"))
+                        .build());
+        List<DashboardFormFilterOptionsResponse.UserOption> subjects = jdbc.query("""
+                select distinct subject_user.id, subject_user.employee_code, subject_user.name
+                %s
+                  and subject_user.id is not null
+                order by subject_user.name asc, subject_user.id asc
+                """.formatted(scopedSubmissions), params, (rs, ignored) ->
+                DashboardFormFilterOptionsResponse.UserOption.builder()
+                        .id(rs.getLong("id"))
+                        .employeeCode(rs.getString("employee_code"))
+                        .name(rs.getString("name"))
+                        .build());
+        List<DashboardFormFilterOptionsResponse.UserOption> evaluators = jdbc.query("""
+                select distinct evaluator.id, evaluator.employee_code, evaluator.name
+                %s
+                order by evaluator.name asc, evaluator.id asc
+                """.formatted(scopedSubmissions), params, (rs, ignored) ->
+                DashboardFormFilterOptionsResponse.UserOption.builder()
+                        .id(rs.getLong("id"))
+                        .employeeCode(rs.getString("employee_code"))
+                        .name(rs.getString("name"))
+                        .build());
+        return DashboardFormFilterOptionsResponse.builder()
+                .generatedAt(generatedAt())
+                .forms(forms)
+                .subjects(subjects)
+                .evaluators(evaluators)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardMyFormSummaryResponse myFormSummary(
+            LocalDate fromDate,
+            LocalDate toDate,
+            Long currentUserId
+    ) {
+        DashboardPeriod period = resolvePeriod(fromDate, toDate, 366);
+        MapSqlParameterSource params = baseParams(period, null)
+                .addValue("currentUserId", currentUserId);
+        Map<String, Object> row = jdbc.queryForMap("""
+                select
+                    count(distinct fv.form_template_id) as form_count,
+                    count(*) as submitted_count,
+                    count(*) filter (where s.result_status = 'PASSED') as passed_count,
+                    count(*) filter (where s.result_status = 'FAILED_SCORE') as failed_score_count,
+                    count(*) filter (where s.result_status = 'FAILED_CRITICAL') as failed_critical_count,
+                    case when count(*) = 0 then 0
+                         else round((
+                             count(*) filter (where s.result_status = 'PASSED') * 100.0 / count(*)
+                         )::numeric, 2)
+                    end as pass_rate,
+                    coalesce(round(avg(s.converted_score)::numeric, 4), 0) as average_converted_score
+                from form_submissions s
+                join form_versions fv on fv.id = s.form_version_id
+                join form_submission_contexts ctx on ctx.submission_id = s.id
+                where s.status = 'SUBMITTED'
+                  and s.submitted_at >= :fromInstant
+                  and s.submitted_at < :toInstant
+                  and ctx.subject_user_id = :currentUserId
+                """, params);
+        return DashboardMyFormSummaryResponse.builder()
+                .generatedAt(generatedAt())
+                .period(new DashboardMyFormSummaryResponse.Period(period.fromDate(), period.toDate()))
+                .formCount(number(row, "form_count"))
+                .submittedCount(number(row, "submitted_count"))
+                .passedCount(number(row, "passed_count"))
+                .failedScoreCount(number(row, "failed_score_count"))
+                .failedCriticalCount(number(row, "failed_critical_count"))
+                .passRate(decimal(row.get("pass_rate")))
+                .averageConvertedScore(decimal(row.get("average_converted_score")))
                 .build();
     }
 
@@ -555,6 +681,39 @@ public class DashboardService {
                 .addValue("toInstant", dbInstant(period.toInstant()), Types.TIMESTAMP_WITH_TIMEZONE)
                 .addValue("fromLocal", period.fromLocal(), Types.TIMESTAMP)
                 .addValue("toLocal", period.toLocal(), Types.TIMESTAMP);
+    }
+
+    private MapSqlParameterSource formFilterParams(DashboardPeriod period, DashboardFormFilter filter) {
+        String resultStatus = filter.resultStatus() == null ? null : filter.resultStatus().name();
+        return baseParams(period, filter.departmentId())
+                .addValue("formId", filter.formId(), Types.BIGINT)
+                .addValue("subjectUserId", filter.subjectUserId(), Types.BIGINT)
+                .addValue("submittedByUserId", filter.submittedByUserId(), Types.BIGINT)
+                .addValue("resultStatus", resultStatus, Types.VARCHAR)
+                .addValue("restrictToMatched", filter.restrictToMatchedForms(), Types.BOOLEAN);
+    }
+
+    private String formSubmissionFilterPredicate(String submissionAlias) {
+        return """
+                %s
+                  and (:departmentId is null or subject_user.department_id = :departmentId)
+                  and (:formId is null or fv.form_template_id = :formId)
+                  and (:subjectUserId is null or ctx.subject_user_id = :subjectUserId)
+                  and (:submittedByUserId is null or %s.submitted_by_user_id = :submittedByUserId)
+                  and (
+                      :resultStatus is null
+                      or %s.result_status = :resultStatus
+                      or (
+                          :resultStatus = 'FAILED'
+                          and %s.result_status in ('FAILED_SCORE', 'FAILED_CRITICAL')
+                      )
+                  )
+                """.formatted(
+                periodPredicate(submissionAlias),
+                submissionAlias,
+                submissionAlias,
+                submissionAlias
+        );
     }
 
     private MapSqlParameterSource departmentParams(Long departmentId) {

@@ -11,10 +11,6 @@ function payload(response) {
   return response?.data?.data || {}
 }
 
-function pageTotal(response) {
-  return Number(payload(response)?.totalElements) || 0
-}
-
 function resolvePeriod(period) {
   if (period === 'all') return {}
   const toDate = new Date()
@@ -77,27 +73,27 @@ export default function AdminDashboard() {
       departmentId: filters.departmentId || undefined,
       professionalFieldId: filters.professionalFieldId || undefined,
       asOf: dateParams.toDate,
-      page: 0,
-      size: 1,
     }
     const supportsProfessionalField = !filters.professionalFieldId
 
-    const [overviewResult, trainingResult, compliantResult, nonCompliantResult, riskResult, examResult, qualityResult] = await Promise.allSettled([
+    const [overviewResult, trainingResult, examResult, qualityResult] = await Promise.allSettled([
       adminApi.getDashboardOverview(scopedParams),
-      trainingApi.getEmployeeTrainingStatuses(trainingScope),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'NON_COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'AT_RISK' }),
-      evaluationDashboardApi.getExamResultsSummary(examParams),
+      trainingApi.getTrainingDashboardSummary(trainingScope),
+      evaluationDashboardApi.getExamOverview(examParams),
       supportsProfessionalField ? adminApi.getDashboardFormSummary(scopedParams) : Promise.resolve(null),
     ])
 
     const overview = overviewResult.status === 'fulfilled' ? payload(overviewResult.value) : {}
-    const trainingTotal = trainingResult.status === 'fulfilled' ? pageTotal(trainingResult.value) : 0
-    const trainingPassed = compliantResult.status === 'fulfilled' ? pageTotal(compliantResult.value) : 0
-    const trainingFailed = (nonCompliantResult.status === 'fulfilled' ? pageTotal(nonCompliantResult.value) : 0)
-      + (riskResult.status === 'fulfilled' ? pageTotal(riskResult.value) : 0)
-    const exams = examResult.status === 'fulfilled' && examResult.value ? payload(examResult.value) : null
+    const trainingTotals = trainingResult.status === 'fulfilled'
+      ? payload(trainingResult.value)?.totals || {}
+      : {}
+    const trainingTotal = Number(trainingTotals.employeeCount) || 0
+    const trainingPassed = Number(trainingTotals.compliantCount) || 0
+    const trainingFailed = (Number(trainingTotals.nonCompliantCount) || 0)
+      + (Number(trainingTotals.atRiskCount) || 0)
+    const exams = examResult.status === 'fulfilled' && examResult.value
+      ? payload(examResult.value)?.attempts
+      : null
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
     const submittedQuality = Number(quality?.submitted) || 0
     const qualityRate = Number(quality?.passRate) || 0

@@ -8,8 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
+import vn.vietduc.carehubbackend.dashboard.service.DashboardAccessPolicy;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.EvaluationResultFilter;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DiscriminationIndexResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationDashboardResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamDashboardResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamResultsSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuestionBankSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuestionItemAnalysisResponse;
@@ -26,6 +29,7 @@ import java.util.List;
 @PreAuthorize("@evaluationSecurity.hasAny(authentication, 'RESULT_VIEWER', 'QUESTION_REVIEWER', 'QUESTION_SET_MANAGER', 'EXAM_PUBLISHER')")
 public class EvaluationDashboardController {
     private final EvaluationDashboardService dashboardService;
+    private final DashboardAccessPolicy dashboardAccessPolicy;
 
     @GetMapping
     public ResponseEntity<ApiResponse<EvaluationDashboardResponse>> dashboard(
@@ -68,6 +72,34 @@ public class EvaluationDashboardController {
                 dashboardService.examResultsSummary(
                         parseDateTime(fromDate), parseDateTime(toDate),
                         examConfigId, paperId, assignmentId, departmentId, professionalFieldId)
+        ));
+    }
+
+    @GetMapping("/exam-overview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') and @evaluationSecurity.hasAny(authentication, 'RESULT_VIEWER', 'EXAM_PUBLISHER')")
+    public ResponseEntity<ApiResponse<EvaluationExamDashboardResponse>> examOverview(
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
+            @RequestParam(required = false) Long paperId,
+            @RequestParam(required = false) Long assignmentId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long professionalFieldId,
+            @RequestParam(required = false) Long employeeId,
+            @RequestParam(required = false) EvaluationResultFilter resultStatus
+    ) {
+        Long scopedDepartmentId = dashboardAccessPolicy.resolveDepartmentScope(departmentId);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy dashboard kết quả kiểm tra thành công",
+                dashboardService.examOverview(
+                        parseDateTime(fromDate),
+                        parseDateTime(toDate),
+                        paperId,
+                        assignmentId,
+                        scopedDepartmentId,
+                        professionalFieldId,
+                        employeeId,
+                        resultStatus
+                )
         ));
     }
 

@@ -71,6 +71,8 @@ Frontend nên hiển thị `message`, map `details[].field` vào input tương �
 | Thống kê form dashboard | GET | `/dashboard/forms/summary` |
 | Hiệu suất từng form | GET | `/dashboard/forms/performance` |
 | Xu hướng response form | GET | `/dashboard/forms/trend` |
+| Lựa chọn bộ lọc dashboard form | GET | `/dashboard/forms/filter-options` |
+| Kết quả form cá nhân | GET | `/dashboard/me/forms/summary` |
 | Hoạt động gần đây | GET | `/dashboard/recent-activity` |
 
 Các URL cũ có tiền tố khác không còn là contract của module mới. Frontend cần dùng đúng các endpoint trong bảng trên.
@@ -823,7 +825,7 @@ Response:
 ```
 
 ```http
-GET /api/v1/dashboard/forms/performance?fromDate=2026-07-01&toDate=2026-07-31&departmentId=10&sort=responseCount,desc&page=0&size=10
+GET /api/v1/dashboard/forms/performance?fromDate=2026-07-01&toDate=2026-07-31&departmentId=10&resultStatus=FAILED&subjectUserId=24&submittedByUserId=7&formId=1&sort=responseCount,desc&page=0&size=10
 ```
 
 Response:
@@ -845,6 +847,7 @@ Response:
         "passedCount": 35,
         "failedScoreCount": 3,
         "failedCriticalCount": 2,
+        "uniqueSubjectCount": 18,
         "passRate": 87.5,
         "averageConvertedScore": 8.91,
         "lastSubmittedAt": "2026-07-05T09:20:00Z"
@@ -860,8 +863,10 @@ Response:
 
 Sort field cho phép: `responseCount`, `passRate`, `averageConvertedScore`, `lastSubmittedAt`, `failedCriticalCount`. Backend reject field khác bằng `VAL_001`.
 
+Các bộ lọc `formId`, `subjectUserId`, `submittedByUserId` và `resultStatus` đều tùy chọn. `resultStatus` nhận `PASSED`, `FAILED`, `FAILED_SCORE`, `FAILED_CRITICAL`; `FAILED` gộp hai loại không đạt.
+
 ```http
-GET /api/v1/dashboard/forms/trend?fromDate=2026-07-01&toDate=2026-07-31&bucket=DAY&departmentId=10
+GET /api/v1/dashboard/forms/trend?fromDate=2026-07-01&toDate=2026-07-31&bucket=DAY&departmentId=10&formId=1
 ```
 
 Response:
@@ -884,6 +889,26 @@ Response:
   }
 }
 ```
+
+`forms/trend` hỗ trợ cùng bộ lọc với `forms/performance`, giúp biểu đồ bám đúng bảng kiểm và nhóm nhân viên đang chọn.
+
+```http
+GET /api/v1/dashboard/forms/filter-options?fromDate=2026-07-01&toDate=2026-07-31&departmentId=10
+```
+
+Response trả ba danh sách nhẹ: `forms`, `subjects`, `evaluators`. Chỉ các lựa chọn đã xuất hiện trong submission thuộc khoảng ngày và phạm vi khoa mới được trả về.
+
+```http
+GET /api/v1/dashboard/me/forms/summary?fromDate=2026-07-01&toDate=2026-07-31
+```
+
+Endpoint cá nhân trả `formCount`, `submittedCount`, `passedCount`, `failedScoreCount`, `failedCriticalCount`, `passRate` và `averageConvertedScore`.
+
+Phân quyền:
+
+- `ADMIN` được chọn toàn viện hoặc một khoa bằng `departmentId`.
+- `MANAGER` được dùng các API form dashboard nhưng backend luôn khóa về khoa của tài khoản; truyền khoa khác trả `403`.
+- `USER` chỉ dùng `/dashboard/me/forms/summary`; dữ liệu được khóa theo `subject_user_id` của tài khoản đăng nhập.
 
 Tối ưu backend:
 
