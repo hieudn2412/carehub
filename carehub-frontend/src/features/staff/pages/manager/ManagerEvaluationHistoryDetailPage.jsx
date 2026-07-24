@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftOutlined, PrinterOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
-import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import '../../styles/ManagerPages.css'
 
@@ -24,7 +23,6 @@ function formatScore(value) {
 function ManagerEvaluationHistoryDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { showToast } = useToast()
 
   const [evaluation, setEvaluation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -115,7 +113,7 @@ function ManagerEvaluationHistoryDetailPage() {
             </div>
             
             <button 
-              onClick={() => showToast("Đang chuẩn bị in bảng kiểm...", "success")}
+              onClick={() => window.print()}
               className="training-button"
               style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
             >
@@ -137,7 +135,7 @@ function ManagerEvaluationHistoryDetailPage() {
                   {evaluation.subject?.fullName} ({evaluation.subject?.employeeCode})
                 </div>
                 <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
-                  Người đánh giá: Trưởng khoa · Ngày thực hiện: {evaluation.submittedAt ? new Date(evaluation.submittedAt).toLocaleDateString('vi-VN') : new Date(evaluation.updatedAt).toLocaleDateString('vi-VN')}
+                  Người đánh giá: {evaluation.submittedBy?.fullName || 'Trưởng khoa'} · Ngày thực hiện: {evaluation.submittedAt ? new Date(evaluation.submittedAt).toLocaleDateString('vi-VN') : new Date(evaluation.updatedAt).toLocaleDateString('vi-VN')}
                 </div>
               </div>
               <span className={`mgr-badge mgr-badge--${badgeColor}`} style={{ marginLeft: 'auto', fontSize: 13, padding: '6px 14px' }}>

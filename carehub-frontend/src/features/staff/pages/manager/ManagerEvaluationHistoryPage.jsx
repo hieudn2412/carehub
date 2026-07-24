@@ -42,6 +42,7 @@ function getVisiblePages(currentPage, totalPages) {
 function ManagerEvaluationHistoryPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [history, setHistory] = useState([])
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -50,10 +51,19 @@ function ManagerEvaluationHistoryPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim())
+      setPage(0)
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
     staffApi.getFormSubmissions({
       page,
       size: HISTORY_PAGE_SIZE,
       status: 'SUBMITTED',
+      keyword: debouncedSearch || undefined,
       sort: 'submittedAt,desc',
     })
       .then(res => {
@@ -75,7 +85,7 @@ function ManagerEvaluationHistoryPage() {
         setTotalItems(0)
         setLoading(false)
       })
-  }, [page])
+  }, [page, debouncedSearch])
 
   const goToPage = (nextPage) => {
     setLoading(true)
@@ -87,13 +97,6 @@ function ManagerEvaluationHistoryPage() {
   const visiblePages = useMemo(
     () => getVisiblePages(currentPageNumber, totalPages),
     [currentPageNumber, totalPages],
-  )
-
-  const filteredHistory = history.filter(item => 
-    (item.title || '').toLowerCase().includes(search.toLowerCase()) ||
-    (getSubmissionVersionNumber(item) ? `v${getSubmissionVersionNumber(item)}` : '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.subject?.fullName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.subject?.employeeCode || '').toLowerCase().includes(search.toLowerCase())
   )
 
   const getResultText = (result) => {
@@ -149,7 +152,7 @@ function ManagerEvaluationHistoryPage() {
               <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>
                 {error}
               </div>
-            ) : filteredHistory.length === 0 ? (
+            ) : history.length === 0 ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>
                 Không có lịch sử đánh giá nào.
               </div>
@@ -167,7 +170,7 @@ function ManagerEvaluationHistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredHistory.map((item) => (
+                  {history.map((item) => (
                     <tr key={item.id}>
                       <td style={{ fontWeight: 600, color: '#0f172a' }}>
                         <span>{item.title}</span>
@@ -194,7 +197,7 @@ function ManagerEvaluationHistoryPage() {
                         <div style={{ fontWeight: 500 }}>{item.subject?.fullName}</div>
                         <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.subject?.employeeCode}</div>
                       </td>
-                      <td>Trưởng khoa</td>
+                      <td>{item.submittedBy?.fullName || 'Trưởng khoa'}</td>
                       <td style={{ color: '#475569' }}>
                         {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('vi-VN') : new Date(item.updatedAt).toLocaleDateString('vi-VN')}
                       </td>

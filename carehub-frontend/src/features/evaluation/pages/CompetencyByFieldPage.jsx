@@ -14,6 +14,7 @@ import Header from '../../staff/components/Header'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
+import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
@@ -43,16 +44,30 @@ function CompetencyByFieldPage() {
 
   const loadDepartments = useCallback(async () => {
     try {
-      const response = await adminApi.getDepartments()
-      const depts = apiData(response, [])
-      setDepartments(depts)
-      if (depts.length > 0 && !selectedDeptId) {
-        setSelectedDeptId(String(depts[0].id))
+      if (isAdmin) {
+        const response = await adminApi.getDepartments()
+        const depts = apiData(response, [])
+        setDepartments(depts)
+        if (depts.length > 0) {
+          setSelectedDeptId(current => current || String(depts[0].id))
+        }
+        return
       }
+
+      const response = await staffApi.getProfile()
+      const profile = apiData(response, null)
+      if (!profile?.departmentId) {
+        throw new Error('Manager chưa được gán khoa/phòng')
+      }
+      setDepartments([{
+        id: profile.departmentId,
+        name: profile.departmentName || 'Khoa của tôi',
+      }])
+      setSelectedDeptId(String(profile.departmentId))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
-  }, [showToast, selectedDeptId])
+  }, [isAdmin, showToast])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -87,9 +102,19 @@ function CompetencyByFieldPage() {
     }
   }, [selectedDeptId, selectedCategory, fromDate, toDate, showToast])
 
-  useEffect(() => { loadDepartments() }, [])
-  useEffect(() => { loadCategories() }, [])
-  useEffect(() => { if (selectedDeptId) loadData() }, [selectedDeptId])
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadDepartments()
+      loadCategories()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadDepartments, loadCategories])
+
+  useEffect(() => {
+    if (!selectedDeptId) return undefined
+    const timer = window.setTimeout(loadData, 0)
+    return () => window.clearTimeout(timer)
+  }, [selectedDeptId, loadData])
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
@@ -132,6 +157,7 @@ function CompetencyByFieldPage() {
                   <select
                     value={selectedDeptId}
                     onChange={e => setSelectedDeptId(e.target.value)}
+                    disabled={!isAdmin}
                     style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
                   >
                     {departments.map(d => (

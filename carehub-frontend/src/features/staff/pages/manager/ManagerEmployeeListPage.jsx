@@ -24,23 +24,26 @@ function ManagerEmployeeListPage() {
   }, [search])
 
   useEffect(() => {
-    setLoading(true)
-    const params = {
-      size: 100,
-      keyword: debouncedSearch.trim() || undefined,
-      complianceStatus: statusFilter !== 'all' ? statusFilter : undefined
-    }
+    const timer = window.setTimeout(() => {
+      setLoading(true)
+      const params = {
+        size: 100,
+        keyword: debouncedSearch.trim() || undefined,
+        complianceStatus: statusFilter !== 'all' ? statusFilter : undefined
+      }
 
-    trainingApi.getEmployeeTrainingStatuses(params)
-      .then(res => {
-        setEmployees(res.data?.data?.content || [])
-        setLoading(false)
-      })
-      .catch(err => {
-        console.error("Error loading employee training status list", err)
-        setError("Không thể tải danh sách nhân sự trong khoa.")
-        setLoading(false)
-      })
+      trainingApi.getEmployeeTrainingStatuses(params)
+        .then(res => {
+          setEmployees(res.data?.data?.content || [])
+          setError(null)
+        })
+        .catch(err => {
+          console.error("Error loading employee training status list", err)
+          setError("Không thể tải danh sách nhân sự trong khoa.")
+        })
+        .finally(() => setLoading(false))
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [debouncedSearch, statusFilter])
 
   const getStatusText = (status) => {
@@ -160,7 +163,7 @@ function ManagerEmployeeListPage() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button 
-                          onClick={() => navigate(`/training/employees/${emp.employeeId}`)}
+                          onClick={() => navigate(`/manager/employees/${emp.employeeId}`)}
                           style={{
                             border: '1px solid #e2e8f0',
                             background: '#fff',
@@ -170,7 +173,7 @@ function ManagerEmployeeListPage() {
                             color: '#475569',
                             transition: 'all 0.15s'
                           }}
-                          title="Xem hồ sơ đào tạo chi tiết"
+                          title="Xem tổng hợp nhân sự"
                           className="mgr-view-btn"
                           onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
                           onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}

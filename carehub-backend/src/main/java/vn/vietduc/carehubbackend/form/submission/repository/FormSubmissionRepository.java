@@ -29,19 +29,59 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             @Param("toDate") Instant toDate
     );
 
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy",
+            "subjectContext", "subjectContext.subjectUser"
+    })
+    @Query("""
+            select s from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and subject.department.id = :departmentId
+            order by s.submittedAt desc
+            """)
+    List<FormSubmission> findScoredEvaluationsForDepartment(
+            @Param("departmentId") Long departmentId,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate
+    );
+
     boolean existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
             Long assignmentItemId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
 
-    @Query("select s from FormSubmission s where (:status is null or s.status = :status) order by s.createdAt desc")
-    Page<FormSubmission> searchAll(@Param("status") FormSubmissionStatus status, Pageable pageable);
+    @Query("""
+            select s from FormSubmission s
+            left join s.subjectContext context
+            where (:status is null or s.status = :status)
+              and (:keyword is null
+                   or lower(s.formVersion.title) like :keyword
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword
+                   or lower(s.submittedBy.name) like :keyword)
+            order by s.createdAt desc
+            """)
+    Page<FormSubmission> searchAll(@Param("status") FormSubmissionStatus status,
+                                   @Param("keyword") String keyword,
+                                   Pageable pageable);
 
     @Query("""
             select s from FormSubmission s
-            where s.submittedBy.id = :userId and (:status is null or s.status = :status)
+            left join s.subjectContext context
+            where s.submittedBy.id = :userId
+              and (:status is null or s.status = :status)
+              and (:keyword is null
+                   or lower(s.formVersion.title) like :keyword
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword)
             order by s.createdAt desc
             """)
     Page<FormSubmission> searchOwned(@Param("userId") Long userId,
-                                     @Param("status") FormSubmissionStatus status, Pageable pageable);
+                                     @Param("status") FormSubmissionStatus status,
+                                     @Param("keyword") String keyword,
+                                     Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignmentItem", "formVersion", "formVersion.form", "subjectContext"})
     @Query("""

@@ -1,6 +1,5 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 public record CompetencyByTechniqueResponse(
@@ -11,6 +10,7 @@ public record CompetencyByTechniqueResponse(
         double complianceTarget,
         String fromDate,
         String toDate,
+        List<CompetencyTechniqueOptionResponse> forms,
         List<CompetencyByTechniqueItemResponse> items
 ) {
 }

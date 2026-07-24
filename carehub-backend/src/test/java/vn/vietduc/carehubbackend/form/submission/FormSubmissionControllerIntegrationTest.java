@@ -147,6 +147,24 @@ class FormSubmissionControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.answers.length()", is(1)))
                 .andExpect(jsonPath("$.data.submittedAt", not(blankOrNullString())));
 
+        mockMvc.perform(get("/api/v1/form-submissions")
+                        .with(managerJwt())
+                        .param("status", "SUBMITTED")
+                        .param("keyword", "Subject")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)))
+                .andExpect(jsonPath("$.data.content[0].submittedBy.fullName", is(manager.getName())))
+                .andExpect(jsonPath("$.data.content[0].subject.employeeCode", is(subject.getEmployeeCode())));
+
+        mockMvc.perform(get("/api/v1/form-submissions")
+                        .with(managerJwt())
+                        .param("status", "SUBMITTED")
+                        .param("keyword", "khong-ton-tai")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(0)));
+
         mockMvc.perform(get("/api/v1/forms/{formId}/responses", fixture.formId())
                         .with(adminJwt())
                         .param("includeAnswers", "true")

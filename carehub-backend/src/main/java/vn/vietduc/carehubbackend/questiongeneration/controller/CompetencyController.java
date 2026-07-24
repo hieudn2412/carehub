@@ -68,8 +68,12 @@ public class CompetencyController {
     private final SecurityUtils securityUtils;
 
     @GetMapping("/employees/{id}")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
-    public ResponseEntity<ApiResponse<CompetencyClassificationResponse>> getEmployeeClassification(@PathVariable Long id) {
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<CompetencyClassificationResponse>> getEmployeeClassification(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        requireManagerEmployeeScope(id, authentication);
         vn.vietduc.carehubbackend.user.entity.User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên"));
 
@@ -109,8 +113,12 @@ public class CompetencyController {
     }
 
     @GetMapping("/departments/{id}")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
-    public ResponseEntity<ApiResponse<DepartmentCompetencyResponse>> getDepartmentClassification(@PathVariable Long id) {
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
+    public ResponseEntity<ApiResponse<DepartmentCompetencyResponse>> getDepartmentClassification(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        requireManagerDepartmentScope(id, authentication);
         Department department = departmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khoa/phòng"));
 
@@ -182,43 +190,51 @@ public class CompetencyController {
     }
 
     @GetMapping("/by-field")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyByFieldResponse>> getByField(
             @RequestParam Long departmentId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate) {
+            @RequestParam(required = false) LocalDate toDate,
+            Authentication authentication) {
+        requireManagerDepartmentScope(departmentId, authentication);
         CompetencyByFieldResponse data = competencyService.getByField(departmentId, categoryId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy năng lực theo lĩnh vực thành công", data));
     }
 
     @GetMapping("/employees/{employeeId}/by-field")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyEmployeeByFieldResponse>> getEmployeeByField(
             @PathVariable Long employeeId,
             @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate) {
+            @RequestParam(required = false) LocalDate toDate,
+            Authentication authentication) {
+        requireManagerEmployeeScope(employeeId, authentication);
         CompetencyEmployeeByFieldResponse data = competencyService.getEmployeeByField(employeeId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy năng lực cá nhân theo lĩnh vực thành công", data));
     }
 
     @GetMapping("/by-technique")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyByTechniqueResponse>> getByTechnique(
             @RequestParam Long departmentId,
             @RequestParam(required = false) Long formId,
             @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate) {
+            @RequestParam(required = false) LocalDate toDate,
+            Authentication authentication) {
+        requireManagerDepartmentScope(departmentId, authentication);
         CompetencyByTechniqueResponse data = competencyService.getByTechnique(departmentId, formId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật thành công", data));
     }
 
     @GetMapping("/employees/{employeeId}/by-technique")
-    @PreAuthorize("@evaluationSecurity.canViewResults(authentication)")
+    @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyEmployeeByTechniqueResponse>> getEmployeeByTechnique(
             @PathVariable Long employeeId,
             @RequestParam(required = false) LocalDate fromDate,
-            @RequestParam(required = false) LocalDate toDate) {
+            @RequestParam(required = false) LocalDate toDate,
+            Authentication authentication) {
+        requireManagerEmployeeScope(employeeId, authentication);
         CompetencyEmployeeByTechniqueResponse data = competencyService.getEmployeeByTechnique(employeeId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật cá nhân thành công", data));
     }
@@ -265,6 +281,21 @@ public class CompetencyController {
         if (actor.getDepartment() == null || !departmentId.equals(actor.getDepartment().getId())) {
             throw new ForbiddenException("Manager chỉ được xem dữ liệu của khoa mình");
         }
+    }
+
+    private void requireManagerEmployeeScope(Long employeeId, Authentication authentication) {
+        boolean admin = hasAuthority(authentication, "ROLE_ADMIN", "ADMIN");
+        boolean manager = hasAuthority(authentication, "ROLE_MANAGER", "MANAGER");
+        if (!manager || admin) {
+            return;
+        }
+        vn.vietduc.carehubbackend.user.entity.User employee =
+                userRepository.findByIdAndIsDeletedFalse(employeeId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên"));
+        if (employee.getDepartment() == null) {
+            throw new ForbiddenException("Manager chỉ được xem nhân viên thuộc khoa mình");
+        }
+        requireManagerDepartmentScope(employee.getDepartment().getId(), authentication);
     }
 
     private boolean hasAuthority(Authentication authentication, String... authorities) {
