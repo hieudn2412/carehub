@@ -19,13 +19,13 @@ const DOMAIN_META = {
   },
   exams: {
     eyebrow: 'BÀI KIỂM TRA & CHUYÊN MÔN',
-    title: 'Kết quả kiểm tra năng lực',
+    title: 'Điểm bài kiểm tra (lý thuyết)',
     icon: <BookOutlined />,
     tone: 'violet',
   },
   quality: {
     eyebrow: 'TUÂN THỦ & CHẤT LƯỢNG',
-    title: 'Tuân thủ quy trình chăm sóc',
+    title: 'Điểm checklist (thực hành)',
     icon: <SafetyCertificateOutlined />,
     tone: 'green',
   },
@@ -132,9 +132,10 @@ export default function OverviewDashboard({
   summary,
   domains,
   warnings = [],
+  visibleDomains = ['training', 'exams', 'quality'],
 }) {
   const isStaff = role === 'staff'
-  const visibleTypes = ['training', 'exams', 'quality']
+  const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
 
   return (
     <div className="overview-dashboard">

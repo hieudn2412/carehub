@@ -64,36 +64,70 @@ function EvaluationDashboardPage({ role = 'admin' }) {
     departmentId: '',
     paperId: '',
     professionalFieldId: '',
-    employeeId: '',
-    result: '',
   })
 
   useEffect(() => {
     let active = true
     async function loadOptions() {
       try {
-        const commonRequests = [
+        if (isManager) {
+          const [assignmentResponse, profileResponse] = await Promise.all([
+            examAssignmentApi.listManagerAssignments({}),
+            staffApi.getProfile(),
+          ])
+          if (!active) return
+
+          const assignmentItems = unwrapList(assignmentResponse)
+          const managerProfile = apiData(profileResponse, null)
+          const paperMap = new Map()
+          const fieldMap = new Map()
+
+          assignmentItems.forEach((assignment) => {
+            if (assignment.examPaperId) {
+              paperMap.set(String(assignment.examPaperId), {
+                id: assignment.examPaperId,
+                code: assignment.examPaperCode,
+                name: assignment.examPaperName || assignment.name,
+              })
+            }
+            if (assignment.professionalFieldId) {
+              fieldMap.set(String(assignment.professionalFieldId), {
+                id: assignment.professionalFieldId,
+                code: assignment.professionalFieldCode,
+                name: assignment.professionalFieldName,
+              })
+            }
+          })
+
+          setAssignments(assignmentItems)
+          setPapers([...paperMap.values()])
+          setProfessionalFields([...fieldMap.values()])
+          if (managerProfile?.departmentId) {
+            setDepartments([{
+              id: managerProfile.departmentId,
+              name: managerProfile.departmentName || 'Khoa của tôi',
+            }])
+            setFilters((current) => ({
+              ...current,
+              departmentId: String(managerProfile.departmentId),
+            }))
+          } else {
+            setError('Tài khoản manager chưa được gán khoa/phòng.')
+          }
+          return
+        }
+
+        const [paperResponse, assignmentResponse, optionResponse, departmentResponse] = await Promise.all([
           examPaperApi.listExamPapers({}),
           examAssignmentApi.listAssignments({}),
           trainingApi.getRecordOptions(),
-        ]
-        const scopeRequest = isManager ? staffApi.getProfile() : adminApi.getDepartments()
-        const [paperResponse, assignmentResponse, optionResponse, scopeResponse] = await Promise.all([...commonRequests, scopeRequest])
+          adminApi.getDepartments(),
+        ])
         if (!active) return
         setPapers(unwrapList(paperResponse))
         setAssignments(unwrapList(assignmentResponse))
         setProfessionalFields(apiData(optionResponse, {}).professionalFields || [])
-        if (isManager) {
-          const profile = apiData(scopeResponse, null)
-          if (profile?.departmentId) {
-            setDepartments([{ id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }])
-            setFilters((current) => ({ ...current, departmentId: String(profile.departmentId) }))
-          } else {
-            setError('Tài khoản manager chưa được gán khoa/phòng.')
-          }
-        } else {
-          setDepartments(unwrapList(scopeResponse))
-        }
+        setDepartments(unwrapList(departmentResponse))
       } catch (requestError) {
         if (!active) return
         setError(apiErrorMessage(requestError))
@@ -121,7 +155,10 @@ function EvaluationDashboardPage({ role = 'admin' }) {
       const response = await evaluationDashboardApi.getExamResultsSummary(params)
       setSummary(apiData(response, null))
     } catch (requestError) {
-      const message = apiErrorMessage(requestError)
+      const status = requestError?.response?.status || requestError?.status
+      const message = isManager && (status === 401 || status === 403)
+        ? 'Backend chưa cấp quyền xem tổng hợp điểm bài test cho Manager.'
+        : apiErrorMessage(requestError)
       setError(message)
       setSummary(null)
       showToast(message, 'error')
@@ -144,21 +181,26 @@ function EvaluationDashboardPage({ role = 'admin' }) {
 
   const LayoutSidebar = isManager ? Sidebar : AdminSidebar
   const LayoutHeader = isManager ? Header : AdminHeader
+  const pageTitle = 'Dashboard lý thuyết'
 
   return (
     <div className="dashboard-layout exam-dashboard-page">
       <LayoutSidebar />
       <div className="dashboard-layout__content">
         <LayoutHeader
-          breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard bài kiểm tra' }]}
-          title={isManager ? 'Dashboard bài kiểm tra' : undefined}
+          breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
+          title={isManager ? pageTitle : undefined}
         />
         <main className="exam-dashboard">
           <section className="exam-dashboard__hero">
             <div>
-              <span>ĐÁNH GIÁ CHUYÊN MÔN</span>
-              <h1>Dashboard bài kiểm tra</h1>
-              <p>Theo dõi tiến độ làm bài, kết quả và điểm số theo phạm vi quản lý.</p>
+              <span>ĐIỂM LÝ THUYẾT</span>
+              <h1>Điểm bài kiểm tra</h1>
+              <p>
+                {isManager
+                  ? 'Tổng hợp điểm bài test lý thuyết của nhân viên trong khoa theo phạm vi quản lý.'
+                  : 'Theo dõi tiến độ làm bài, kết quả và điểm số theo phạm vi quản lý.'}
+              </p>
             </div>
             <div className="exam-dashboard__assignment-count">
               <FileTextOutlined />
