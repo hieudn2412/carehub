@@ -166,11 +166,15 @@ public class FormSubmissionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<FormSubmissionResponse> search(FormSubmissionStatus status, Pageable pageable) {
+    public Page<FormSubmissionResponse> search(FormSubmissionStatus status, String keyword, Pageable pageable) {
         Pageable normalized = normalize(pageable);
+        String normalizedKeyword = keyword == null || keyword.isBlank()
+                ? null
+                : "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
         Page<FormSubmission> page = isAdmin()
-                ? submissionRepository.searchAll(status, normalized)
-                : submissionRepository.searchOwned(securityUtils.getCurrentUserId(), status, normalized);
+                ? submissionRepository.searchAll(status, normalizedKeyword, normalized)
+                : submissionRepository.searchOwned(
+                        securityUtils.getCurrentUserId(), status, normalizedKeyword, normalized);
         return page.map(submission -> toResponse(submission, false));
     }
 
@@ -366,7 +370,13 @@ public class FormSubmissionService {
                 .formCode(submission.getFormVersion().getForm().getCode())
                 .formVersionId(submission.getFormVersion().getId())
                 .versionNumber(submission.getFormVersion().getVersionNumber()).title(submission.getFormVersion().getTitle())
-                .status(submission.getStatus()).subject(FormSubmissionResponse.SubjectSnapshot.builder()
+                .status(submission.getStatus())
+                .submittedBy(FormSubmissionResponse.ActorSnapshot.builder()
+                        .id(submission.getSubmittedBy().getId())
+                        .employeeCode(submission.getSubmittedBy().getEmployeeCode())
+                        .fullName(submission.getSubmittedBy().getName())
+                        .build())
+                .subject(FormSubmissionResponse.SubjectSnapshot.builder()
                         .type(context.getSubjectType()).employeeCode(context.getEmployeeCode()).fullName(context.getFullName())
                         .position(context.getPosition()).department(context.getDepartment()).build())
                 .scoringStatus(submission.getScoringStatus()).result(submission.getResult())

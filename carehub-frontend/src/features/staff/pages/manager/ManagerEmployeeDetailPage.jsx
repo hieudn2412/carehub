@@ -1,29 +1,107 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, BookOutlined, FileDoneOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import { trainingApi } from '../../../training/api/trainingApi.js'
+import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerEmployeeDetailPage() {
   const navigate = useNavigate()
   const { id } = useParams()
 
-  const [employee] = useState({
-    id: id || 'NV-001',
-    name: 'Nguyễn Văn An',
-    title: 'Điều dưỡng hạng III',
-    dept: 'Khoa Nội tổng hợp',
-    education: 'Cử nhân Điều dưỡng',
-    entryDate: '15/03/2019',
-    specialty: 'Nội khoa, Chăm sóc mãn tính',
-    status: 'Đang làm việc',
-    hours: 106,
-    requiredHours: 120,
-    examScore: 76,
-    performance: 'Khá',
-    badgeColor: 'amber'
-  })
+  const [training, setTraining] = useState(null)
+  const [competency, setCompetency] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const timer = window.setTimeout(async () => {
+      setLoading(true)
+      const [trainingResult, competencyResult] = await Promise.allSettled([
+        trainingApi.getEmployeeTrainingStatus(id),
+        competencyApi.getEmployeeClassification(id),
+      ])
+
+      if (trainingResult.status === 'fulfilled') {
+        setTraining(trainingResult.value.data?.data || null)
+      }
+      if (competencyResult.status === 'fulfilled') {
+        setCompetency(competencyResult.value.data?.data || null)
+      }
+      if (trainingResult.status === 'rejected' && competencyResult.status === 'rejected') {
+        setError('Không thể tải thông tin nhân viên hoặc nhân viên không thuộc khoa của bạn.')
+      } else {
+        setError('')
+      }
+      setLoading(false)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [id])
+
+  const employee = useMemo(() => {
+    const status = training?.status
+    const statusMap = {
+      COMPLIANT: { label: 'Đạt yêu cầu', color: 'green' },
+      AT_RISK: { label: 'Đang theo dõi', color: 'amber' },
+      NON_COMPLIANT: { label: 'Chưa đạt', color: 'red' },
+      NOT_CONFIGURED: { label: 'Chưa thiết lập', color: 'gray' },
+    }
+    return {
+      id,
+      code: training?.employeeCode || competency?.employeeCode || `#${id}`,
+      name: training?.employeeName || competency?.employeeName || 'Nhân viên',
+      dept: competency?.departmentName || '---',
+      status: statusMap[status] || { label: 'Chưa có dữ liệu', color: 'gray' },
+      hours: training?.submittedHours ?? 0,
+      requiredHours: training?.requiredHours ?? 0,
+      remainingHours: training?.remainingHours ?? 0,
+      progress: training?.progressPercentage ?? 0,
+      windowStart: training?.windowStart,
+      windowEnd: training?.windowEnd,
+      examScore: competency?.overallScore,
+      totalAttempts: competency?.totalAttempts ?? 0,
+      lastAttemptAt: competency?.lastAttemptAt,
+      performance: competency?.overallLevelText || 'Chưa xếp loại',
+    }
+  }, [id, training, competency])
+
+  const avatar = employee.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(-2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase()
+
+  const formatDate = value => value ? new Date(value).toLocaleDateString('vi-VN') : '---'
+
+  if (loading || error) {
+    return (
+      <div className="dashboard-layout">
+        <Sidebar />
+        <div className="dashboard-layout__content">
+          <Header title="Chi tiết nhân sự" />
+          <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 80 }}>
+            {loading ? (
+              <>
+                <LoadingOutlined style={{ fontSize: 28, color: '#2563eb' }} />
+                <p style={{ color: '#6b7280' }}>Đang tải thông tin nhân viên...</p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
+                <button className="training-button" onClick={() => navigate('/manager/employees')}>
+                  <ArrowLeftOutlined /> Quay lại danh sách
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-layout">
@@ -62,35 +140,35 @@ function ManagerEmployeeDetailPage() {
           <div className="mgr-card">
             {/* Detail Head */}
             <div className="mgr-detail-header">
-              <div className="mgr-avatar">NV</div>
+              <div className="mgr-avatar">{avatar || 'NV'}</div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{employee.name}</div>
                 <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
-                  {employee.id} · {employee.dept} · {employee.title}
+                  {employee.code} · {employee.dept}
                 </div>
               </div>
-              <span className={`mgr-badge mgr-badge--${employee.badgeColor}`} style={{ marginLeft: 'auto' }}>
-                Đang theo dõi
+              <span className={`mgr-badge mgr-badge--${employee.status.color}`} style={{ marginLeft: 'auto' }}>
+                {employee.status.label}
               </span>
             </div>
 
             {/* Information Grid */}
             <div className="mgr-kv-grid" style={{ marginBottom: 24 }}>
               <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Trình độ chuyên môn</span>
-                <div className="mgr-kv-val">{employee.education}</div>
+                <span className="mgr-kv-label">Mã nhân viên</span>
+                <div className="mgr-kv-val">{employee.code}</div>
               </div>
               <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Ngày vào làm việc</span>
-                <div className="mgr-kv-val">{employee.entryDate}</div>
+                <span className="mgr-kv-label">Khoa / Phòng</span>
+                <div className="mgr-kv-val">{employee.dept}</div>
               </div>
               <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Lĩnh vực chuyên môn</span>
-                <div className="mgr-kv-val">{employee.specialty}</div>
+                <span className="mgr-kv-label">Chu kỳ đào tạo</span>
+                <div className="mgr-kv-val">{formatDate(employee.windowStart)} - {formatDate(employee.windowEnd)}</div>
               </div>
               <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Trạng thái công tác</span>
-                <div className="mgr-kv-val">{employee.status}</div>
+                <span className="mgr-kv-label">Lần thi gần nhất</span>
+                <div className="mgr-kv-val">{formatDate(employee.lastAttemptAt)}</div>
               </div>
             </div>
 
@@ -102,13 +180,17 @@ function ManagerEmployeeDetailPage() {
               <div className="mgr-metric-card" style={{ cursor: 'default' }}>
                 <div className="mgr-metric-label">Giờ đào tạo tích lũy</div>
                 <div className="mgr-metric-val" style={{ color: '#d97706' }}>{employee.hours}h</div>
-                <div className="mgr-metric-sub">yêu cầu: {employee.requiredHours}h</div>
+                <div className="mgr-metric-sub">
+                  yêu cầu: {employee.requiredHours}h · còn {employee.remainingHours}h
+                </div>
               </div>
 
               <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-                <div className="mgr-metric-label">Điểm thi chuyên môn</div>
-                <div className="mgr-metric-val" style={{ color: '#10b981' }}>{employee.examScore}%</div>
-                <div className="mgr-metric-sub">lần thi gần nhất</div>
+                <div className="mgr-metric-label">Điểm thi trung bình</div>
+                <div className="mgr-metric-val" style={{ color: '#10b981' }}>
+                  {employee.examScore == null ? '---' : `${employee.examScore}%`}
+                </div>
+                <div className="mgr-metric-sub">{employee.totalAttempts} lượt thi đã có điểm</div>
               </div>
 
               <div className="mgr-metric-card" style={{ cursor: 'default' }}>
@@ -128,11 +210,11 @@ function ManagerEmployeeDetailPage() {
                 <BookOutlined /> Hồ sơ đào tạo
               </button>
               <button 
-                onClick={() => navigate(`/manager/exam-results/${employee.id}`)}
+                onClick={() => navigate('/manager/exam-results')}
                 className="training-button training-button--primary"
                 style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
               >
-                <FileDoneOutlined /> Xem kết quả thi
+                <FileDoneOutlined /> Danh sách kết quả thi
               </button>
             </div>
           </div>

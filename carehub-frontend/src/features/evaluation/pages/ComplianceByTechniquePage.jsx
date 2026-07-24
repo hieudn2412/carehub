@@ -15,6 +15,7 @@ import Header from '../../staff/components/Header'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
+import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
@@ -42,36 +43,34 @@ function ComplianceByTechniquePage() {
   const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
 
   useEffect(() => {
-    adminApi.getDepartments().then(res => {
-      const depts = apiData(res, [])
-      setDepartments(depts)
-    }).catch(() => {})
-
-    loadFormList()
-  }, [])
-
-  const loadFormList = async () => {
-    try {
-      const formListResponse = await import('../api/questionCategoryApi.js')
-      const fRes = await formListResponse.questionCategoryApi.getAllCategories()
-      const categories = apiData(fRes, [])
-      setForms(categories.map(c => ({ id: c.id, title: c.name || c.categoryName })))
-    } catch {
+    const timer = window.setTimeout(async () => {
       try {
-        const resp = await competencyApi.getByTechnique(departmentId || 1, formId || null, fromDate, toDate)
-        const d = apiData(resp, null)
-        if (d && d.items) {
-          const uniqueForms = []
-          d.items.forEach(i => {
-            if (i.formId && i.formName && !uniqueForms.find(f => f.id === i.formId)) {
-              uniqueForms.push({ id: i.formId, title: i.formName })
-            }
-          })
-          setForms(uniqueForms)
+        if (isAdmin) {
+          const response = await adminApi.getDepartments()
+          const depts = apiData(response, [])
+          setDepartments(depts)
+          if (depts.length > 0) {
+            setDepartmentId(String(depts[0].id))
+          }
+          return
         }
-      } catch {}
-    }
-  }
+
+        const response = await staffApi.getProfile()
+        const profile = apiData(response, null)
+        if (!profile?.departmentId) {
+          throw new Error('Manager chưa được gán khoa/phòng')
+        }
+        setDepartments([{
+          id: profile.departmentId,
+          name: profile.departmentName || 'Khoa của tôi',
+        }])
+        setDepartmentId(String(profile.departmentId))
+      } catch (error) {
+        showToast(apiErrorMessage(error), 'error')
+      }
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [isAdmin, showToast])
 
   const loadData = useCallback(async () => {
     if (!departmentId) {
@@ -80,8 +79,15 @@ function ComplianceByTechniquePage() {
     }
     setLoading(true)
     try {
-      const response = await competencyApi.getByTechnique(departmentId, formId || null, fromDate, toDate)
-      setData(apiData(response, null))
+      const response = await competencyApi.getByTechnique({
+        departmentId,
+        formId: formId || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+      })
+      const responseData = apiData(response, null)
+      setData(responseData)
+      setForms(responseData?.forms || [])
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -90,8 +96,10 @@ function ComplianceByTechniquePage() {
   }, [departmentId, formId, fromDate, toDate, showToast])
 
   useEffect(() => {
-    if (departmentId) loadData()
-  }, [departmentId, formId, fromDate, toDate])
+    if (!departmentId) return undefined
+    const timer = window.setTimeout(loadData, 0)
+    return () => window.clearTimeout(timer)
+  }, [departmentId, loadData])
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
@@ -138,6 +146,14 @@ function ComplianceByTechniquePage() {
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
+                  </div>
+                )}
+                {!isAdmin && departments.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
+                    <span style={{ padding: '7px 0', color: '#374151', fontSize: 13, fontWeight: 600 }}>
+                      {departments[0].name}
+                    </span>
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

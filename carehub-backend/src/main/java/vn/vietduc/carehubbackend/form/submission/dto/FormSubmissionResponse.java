@@ -18,6 +18,7 @@ public record FormSubmissionResponse(
         Integer versionNumber,
         String title,
         FormSubmissionStatus status,
+        ActorSnapshot submittedBy,
         SubjectSnapshot subject,
         FormScoringStatus scoringStatus,
         FormSubmissionResult result,
@@ -33,6 +34,9 @@ public record FormSubmissionResponse(
         LocalDateTime updatedAt,
         Instant submittedAt
 ) {
+    @Builder
+    public record ActorSnapshot(Long id, String employeeCode, String fullName) {}
+
     @Builder
     public record SubjectSnapshot(FormSubjectType type, String employeeCode, String fullName,
                                   String position, String department) {}

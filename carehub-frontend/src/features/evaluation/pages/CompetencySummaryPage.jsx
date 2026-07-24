@@ -58,6 +58,8 @@ function CompetencySummaryPage() {
   // Technique specific states
   const [forms, setForms] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
+  const [targetInput, setTargetInput] = useState('')
+  const [targetSaving, setTargetSaving] = useState(false)
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('')
@@ -76,17 +78,6 @@ function CompetencySummaryPage() {
       setCategories(apiData(response, []))
     } catch {
       setCategories([])
-    }
-  }, [])
-
-  const loadFormList = useCallback(async () => {
-    try {
-      const formListResponse = await import('../api/questionCategoryApi.js')
-      const fRes = await formListResponse.questionCategoryApi.getAllCategories()
-      const categoriesList = apiData(fRes, [])
-      setForms(categoriesList.map(c => ({ id: c.id, title: c.name || c.categoryName })))
-    } catch {
-      setForms([])
     }
   }, [])
 
@@ -115,10 +106,9 @@ function CompetencySummaryPage() {
     const timer = window.setTimeout(() => {
       init()
       loadCategories()
-      loadFormList()
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [isAdmin, showToast, loadCategories, loadFormList])
+  }, [isAdmin, showToast, loadCategories])
 
   const loadData = useCallback(async () => {
     if (!departmentId) return
@@ -131,7 +121,9 @@ function CompetencySummaryPage() {
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
         })
-        setData(apiData(response, null))
+        const responseData = apiData(response, null)
+        setData(responseData)
+        setTargetInput(responseData?.targetScore == null ? '' : String(responseData.targetScore))
       } else if (reportType === 'field') {
         const params = {
           departmentId,
@@ -144,13 +136,15 @@ function CompetencySummaryPage() {
         const response = await competencyApi.getByField(params)
         setData(apiData(response, null))
       } else if (reportType === 'technique') {
-        const response = await competencyApi.getByTechnique(
+        const response = await competencyApi.getByTechnique({
           departmentId,
-          selectedFormId || null,
-          fromDate,
-          toDate
-        )
-        setData(apiData(response, null))
+          formId: selectedFormId || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+        })
+        const responseData = apiData(response, null)
+        setData(responseData)
+        setForms(responseData?.forms || [])
       }
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -164,6 +158,27 @@ function CompetencySummaryPage() {
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
   }, [departmentId, reportType, fromDate, toDate, selectedCategory, selectedFormId, loadData])
+
+  const handleSaveTarget = async () => {
+    const targetScore = Number(targetInput)
+    if (!Number.isFinite(targetScore) || targetScore < 0 || targetScore > 100) {
+      showToast('Điểm mục tiêu phải nằm trong khoảng 0 đến 100.', 'warning')
+      return
+    }
+
+    setTargetSaving(true)
+    try {
+      const response = await competencyApi.updateDepartmentTarget(departmentId, targetScore)
+      const updated = apiData(response, null)
+      setData(current => current ? { ...current, targetScore: updated?.targetScore ?? targetScore } : current)
+      setTargetInput(String(updated?.targetScore ?? targetScore))
+      showToast('Đã cập nhật điểm mục tiêu của khoa.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setTargetSaving(false)
+    }
+  }
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -307,6 +322,7 @@ function CompetencySummaryPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
                   <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
+                    disabled={!isAdmin}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
@@ -365,6 +381,53 @@ function CompetencySummaryPage() {
               {/* REPORT TYPE: 1. SUMMARY VIEW */}
               {reportType === 'summary' && (
                 <>
+                  <section className="evd-panel" style={{
+                    padding: 16,
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'flex-end',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    flexWrap: 'wrap',
+                  }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#374151' }}>
+                        Điểm mục tiêu của khoa
+                      </div>
+                      <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
+                        Dùng để xác định nhân viên đang đạt hoặc dưới mục tiêu năng lực tổng hợp.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Điểm / 100</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={targetInput}
+                          onChange={(event) => setTargetInput(event.target.value)}
+                          style={{
+                            width: 120,
+                            padding: '7px 10px',
+                            borderRadius: 6,
+                            border: '1px solid #d1d5db',
+                            fontSize: 13,
+                          }}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="evd-btn"
+                        onClick={handleSaveTarget}
+                        disabled={targetSaving || !departmentId}
+                      >
+                        {targetSaving ? 'Đang lưu...' : 'Lưu mục tiêu'}
+                      </button>
+                    </div>
+                  </section>
+
                   {data && distribution.length > 0 && (
                     <section className="evd-panel" style={{ padding: 20, marginBottom: 16 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>

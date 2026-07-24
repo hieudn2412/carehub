@@ -26,7 +26,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("${app.api-prefix}/question-categories")
 @RequiredArgsConstructor
-@PreAuthorize("@evaluationSecurity.canAccess(authentication)")
+@PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canAccess(authentication)")
 public class QuestionCategoryController {
     private final QuestionCategoryService categoryService;
     private final EvaluationAuditLogService auditLogService;
