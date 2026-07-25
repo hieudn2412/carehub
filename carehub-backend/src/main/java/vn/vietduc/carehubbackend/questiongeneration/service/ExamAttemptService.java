@@ -197,14 +197,18 @@ public class ExamAttemptService {
         BigDecimal score = totalQuestions == 0
                 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(correctCount)
-                .multiply(BigDecimal.valueOf(100))
+                .multiply(BigDecimal.valueOf(10))
                 .divide(BigDecimal.valueOf(totalQuestions), 2, RoundingMode.HALF_UP);
         attempt.setStatus(ExamAttemptStatus.GRADED);
         attempt.setSubmittedAt(submittedAt);
         attempt.setCorrectCount(correctCount);
         attempt.setTotalQuestions(totalQuestions);
         attempt.setScore(score);
-        boolean passed = score.compareTo(BigDecimal.valueOf(attempt.getExamPaper().getPassingScore())) >= 0;
+        BigDecimal paperPassingScore = BigDecimal.valueOf(attempt.getExamPaper().getPassingScore());
+        if (paperPassingScore.compareTo(BigDecimal.valueOf(10)) > 0) {
+            paperPassingScore = paperPassingScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        }
+        boolean passed = score.compareTo(paperPassingScore) >= 0;
         attempt.setPassed(passed);
         attempt.setClassification(classificationService.classifyOverall(score));
         attempt.setTimeSpentSeconds(Math.toIntExact(Math.max(0, Duration.between(attempt.getStartedAt(), submittedAt).toSeconds())));

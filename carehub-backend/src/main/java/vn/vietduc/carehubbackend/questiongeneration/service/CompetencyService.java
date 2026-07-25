@@ -393,6 +393,9 @@ public class CompetencyService {
         Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
         BigDecimal targetScore = department.getCompetencyTargetScore();
+        if (targetScore != null && targetScore.compareTo(BigDecimal.valueOf(10)) > 0) {
+            targetScore = targetScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        }
         List<User> users = userRepository.findByDepartment_IdInAndIsDeletedFalse(Set.of(departmentId));
 
         List<CompetencySummaryItemResponse> items = new ArrayList<>();
@@ -405,7 +408,13 @@ public class CompetencyService {
             BigDecimal knowledgeAvg = null;
             if (!attempts.isEmpty()) {
                 BigDecimal kSum = BigDecimal.ZERO;
-                for (ExamAttempt a : attempts) kSum = kSum.add(a.getScore());
+                for (ExamAttempt a : attempts) {
+                    BigDecimal attemptScore = a.getScore() != null ? a.getScore() : BigDecimal.ZERO;
+                    if (attemptScore.compareTo(BigDecimal.valueOf(10)) > 0) {
+                        attemptScore = attemptScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+                    }
+                    kSum = kSum.add(attemptScore);
+                }
                 knowledgeAvg = kSum.divide(BigDecimal.valueOf(attempts.size()), 2, RoundingMode.HALF_UP);
             }
 
@@ -486,13 +495,13 @@ public class CompetencyService {
 
     private BigDecimal practicalScore(FormSubmission submission) {
         if (submission.getConvertedScore() != null) {
-            return submission.getConvertedScore().multiply(BigDecimal.TEN).setScale(2, RoundingMode.HALF_UP);
+            return submission.getConvertedScore().setScale(2, RoundingMode.HALF_UP);
         }
         if (submission.getTotalScore() != null
                 && submission.getMaxScore() != null
                 && submission.getMaxScore().compareTo(BigDecimal.ZERO) > 0) {
             return submission.getTotalScore()
-                    .multiply(BigDecimal.valueOf(100))
+                    .multiply(BigDecimal.valueOf(10))
                     .divide(submission.getMaxScore(), 2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;

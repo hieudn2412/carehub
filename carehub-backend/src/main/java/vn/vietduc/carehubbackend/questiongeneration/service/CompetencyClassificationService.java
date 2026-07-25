@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel
 import vn.vietduc.carehubbackend.questiongeneration.repository.CompetencyThresholdConfigRepository;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 
@@ -20,13 +21,13 @@ public class CompetencyClassificationService {
 
     private final CompetencyThresholdConfigRepository thresholdRepository;
 
-    public static final BigDecimal DEFAULT_NOT_COMPETENT_MAX = BigDecimal.valueOf(40);
-    public static final BigDecimal DEFAULT_BEGINNER_MAX = BigDecimal.valueOf(60);
-    public static final BigDecimal DEFAULT_BASIC_MAX = BigDecimal.valueOf(75);
-    public static final BigDecimal DEFAULT_PROFICIENT_MAX = BigDecimal.valueOf(90);
+    public static final BigDecimal DEFAULT_NOT_COMPETENT_MAX = BigDecimal.valueOf(4.0);
+    public static final BigDecimal DEFAULT_BEGINNER_MAX = BigDecimal.valueOf(6.0);
+    public static final BigDecimal DEFAULT_BASIC_MAX = BigDecimal.valueOf(7.5);
+    public static final BigDecimal DEFAULT_PROFICIENT_MAX = BigDecimal.valueOf(9.0);
 
     /**
-     * Classify a score (0-100) into a CompetencyLevel using configured thresholds.
+     * Classify a score (0-10) into a CompetencyLevel using configured thresholds.
      * Falls back to default thresholds if no config exists.
      */
     public CompetencyLevel classify(BigDecimal score, QuestionCategory category) {
@@ -41,9 +42,17 @@ public class CompetencyClassificationService {
             return classifyWithDefaults(score);
         }
 
+        // Self-healing check: if thresholds are configured on 100-point scale, divide by 10 for 10-point scale evaluation
+        boolean isHundredScale = thresholds.stream().anyMatch(t -> t.getMaxScore() != null && t.getMaxScore().compareTo(BigDecimal.valueOf(10)) > 0);
+
         for (CompetencyThresholdConfig threshold : thresholds) {
-            if (score.compareTo(threshold.getMinScore()) >= 0
-                    && score.compareTo(threshold.getMaxScore()) <= 0) {
+            BigDecimal min = threshold.getMinScore();
+            BigDecimal max = threshold.getMaxScore();
+            if (isHundredScale) {
+                if (min != null) min = min.divide(BigDecimal.valueOf(10), 4, RoundingMode.HALF_UP);
+                if (max != null) max = max.divide(BigDecimal.valueOf(10), 4, RoundingMode.HALF_UP);
+            }
+            if (min != null && max != null && score.compareTo(min) >= 0 && score.compareTo(max) <= 0) {
                 return threshold.getCompetencyLevel();
             }
         }
@@ -65,9 +74,9 @@ public class CompetencyClassificationService {
      * Default classification when no threshold config exists in DB.
      */
     private CompetencyLevel classifyWithDefaults(BigDecimal score) {
-        BigDecimal hundred = BigDecimal.valueOf(100);
-        if (score.compareTo(hundred) > 0) {
-            score = hundred;
+        BigDecimal ten = BigDecimal.valueOf(10);
+        if (score.compareTo(ten) > 0) {
+            score = ten;
         }
         if (score.compareTo(DEFAULT_NOT_COMPETENT_MAX) < 0) {
             return CompetencyLevel.NOT_COMPETENT;
@@ -145,7 +154,7 @@ public class CompetencyClassificationService {
                 CompetencyThresholdConfig.builder()
                         .competencyLevel(CompetencyLevel.ADVANCED)
                         .minScore(DEFAULT_PROFICIENT_MAX)
-                        .maxScore(BigDecimal.valueOf(100))
+                        .maxScore(BigDecimal.valueOf(10))
                         .label("Chuyên sâu")
                         .colorHex("#8B5CF6")
                         .sortOrder(5)

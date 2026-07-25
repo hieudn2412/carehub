@@ -181,7 +181,7 @@ public class ExamPaperService {
         builder.append(paper.name()).append(System.lineSeparator());
         builder.append("Mã đề: ").append(paper.code()).append(System.lineSeparator());
         builder.append("Thời gian: ").append(paper.timeLimitMinutes()).append(" phút").append(System.lineSeparator());
-        builder.append("Điểm đạt: ").append(paper.passingScore()).append("%").append(System.lineSeparator());
+        builder.append("Điểm đạt: ").append(paper.passingScore()).append("/10").append(System.lineSeparator());
         builder.append("Số câu: ").append(paper.totalQuestions()).append(System.lineSeparator());
         builder.append(System.lineSeparator());
         for (ExamPaperQuestionResponse question : paper.questions()) {
@@ -244,7 +244,7 @@ public class ExamPaperService {
             rowIndex = metadataRow(sheet, rowIndex, "Tên đề", paper.name());
             rowIndex = metadataRow(sheet, rowIndex, "Mã đề", paper.code());
             rowIndex = metadataRow(sheet, rowIndex, "Thời gian", paper.timeLimitMinutes() + " phút");
-            rowIndex = metadataRow(sheet, rowIndex, "Điểm đạt", paper.passingScore() + "%");
+            rowIndex = metadataRow(sheet, rowIndex, "Điểm đạt", paper.passingScore() + "/10");
             rowIndex = metadataRow(sheet, rowIndex, "Số câu", String.valueOf(paper.totalQuestions()));
             rowIndex++;
 
