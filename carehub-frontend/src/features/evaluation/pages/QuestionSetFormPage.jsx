@@ -19,7 +19,6 @@ import AdminHeader from '../../admin/components/AdminHeader'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
-import { questionSetCategoryApi } from '../api/questionSetCategoryApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetFormPage.css'
 
@@ -38,21 +37,17 @@ function QuestionSetFormPage() {
 
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [category, setCategory] = useState('')
-  const [categoryId, setCategoryId] = useState('')
   const [difficulty, setDifficulty] = useState('medium')
-  const [status, setStatus] = useState('DRAFT')
+  const [status, setStatus] = useState('ACTIVE')
+  const [persistedStatus, setPersistedStatus] = useState(null)
   const [description, setDescription] = useState('')
   const [selectedIds, setSelectedIds] = useState([])
   const [draggedQuestionId, setDraggedQuestionId] = useState(null)
   const [dragOverQuestionId, setDragOverQuestionId] = useState(null)
   const [questionsList, setQuestionsList] = useState([])
-  const [questionSetCategories, setQuestionSetCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [showCategoryModal, setShowCategoryModal] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
+  const [isChangingStatus, setIsChangingStatus] = useState(false)
   const [snapshotInfo, setSnapshotInfo] = useState({
     activeVersion: null,
     snapshotAt: null,
@@ -67,7 +62,6 @@ function QuestionSetFormPage() {
   const [qType, setQType] = useState('')
   const [qPage, setQPage] = useState(0)
 
-  const [previewCounts, setPreviewCounts] = useState({ easy: 0, medium: 10, hard: 0 })
   const [avoidSameSource, setAvoidSameSource] = useState(true)
   const [previewCategory, setPreviewCategory] = useState('')
   const [previewQuestionCount, setPreviewQuestionCount] = useState(10)
@@ -77,22 +71,20 @@ function QuestionSetFormPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [questionsResponse, categoriesResponse, detailResponse] = await Promise.all([
+      const [questionsResponse, detailResponse] = await Promise.all([
         questionBankApi.listQuestions({ status: 'APPROVED' }),
-        questionSetCategoryApi.listCategories({ status: 'ACTIVE' }),
         isEditMode ? questionSetApi.getQuestionSet(id) : Promise.resolve(null),
       ])
       const questions = apiData(questionsResponse, [])
       setQuestionsList(questions)
-      setQuestionSetCategories(apiData(categoriesResponse, []))
       if (detailResponse) {
         const detail = apiData(detailResponse)
         setCode(detail.code || '')
         setName(detail.name || '')
-        setCategory(detail.category || '')
-        setCategoryId(detail.categoryId ? String(detail.categoryId) : '')
         setDifficulty(detail.difficulty || 'medium')
-        setStatus(detail.status === 'ARCHIVED' ? 'INACTIVE' : detail.status || 'DRAFT')
+        const loadedStatus = detail.status === 'ARCHIVED' ? 'INACTIVE' : detail.status || 'DRAFT'
+        setStatus(loadedStatus)
+        setPersistedStatus(loadedStatus)
         setDescription(detail.description || '')
         setSelectedIds((detail.items || []).map((item) => item.question?.id).filter(Boolean))
         setSnapshotInfo({
@@ -149,7 +141,7 @@ function QuestionSetFormPage() {
   const displayQuestions = filteredQuestions.slice(qPage * qPageSize, (qPage + 1) * qPageSize)
   const displayIds = displayQuestions.map((question) => question.id)
   const isAllDisplayChecked = displayIds.length > 0 && displayIds.every((questionId) => selectedIds.includes(questionId))
-  const isActiveLocked = isEditMode && status === 'ACTIVE'
+  const isActiveLocked = isEditMode && persistedStatus === 'ACTIVE'
 
   function toggleQuestion(questionId) {
     if (isActiveLocked) return
@@ -298,13 +290,16 @@ function QuestionSetFormPage() {
       showToast('Vui lòng nhập tên bộ câu hỏi.', 'warning')
       return
     }
+    if (status === 'ACTIVE' && !selectedIds.length) {
+      showToast('Vui lòng chọn ít nhất một câu hỏi cho bộ.', 'warning')
+      return
+    }
     setIsSaving(true)
     try {
       const payload = {
         code: code.trim() || null,
         name: name.trim(),
-        category: category.trim() || null,
-        categoryId: categoryId ? Number(categoryId) : null,
+        category: null,
         difficulty,
         status,
         description: description.trim() || null,
@@ -322,6 +317,33 @@ function QuestionSetFormPage() {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleStatusChange(nextStatus) {
+    if (!isEditMode || persistedStatus !== 'ACTIVE') {
+      setStatus(nextStatus)
+      return
+    }
+    if (nextStatus === 'ACTIVE') return
+    if (nextStatus !== 'INACTIVE') {
+      showToast('Bộ đang hoạt động chỉ có thể chuyển sang Tạm ngưng.', 'warning')
+      return
+    }
+    if (!window.confirm('Tạm ngưng bộ câu hỏi này để mở khóa chỉnh sửa? Bộ sẽ không còn xuất hiện khi tạo bài kiểm tra.')) {
+      return
+    }
+
+    setIsChangingStatus(true)
+    try {
+      await questionSetApi.deactivateQuestionSet(id)
+      setStatus('INACTIVE')
+      setPersistedStatus('INACTIVE')
+      showToast('Đã chuyển bộ câu hỏi sang trạng thái Tạm ngưng. Bạn có thể chỉnh sửa nội dung.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsChangingStatus(false)
     }
   }
 
@@ -387,30 +409,6 @@ function QuestionSetFormPage() {
     }
   }
 
-  async function createNewCategory() {
-    if (!newCategoryName.trim()) {
-      showToast('Vui lòng nhập tên danh mục.', 'warning')
-      return
-    }
-    setIsCreatingCategory(true)
-    try {
-      const response = await questionSetCategoryApi.createCategory({
-        name: newCategoryName.trim(),
-        status: 'ACTIVE',
-      })
-      const newCategory = apiData(response)
-      setQuestionSetCategories((current) => [...current, newCategory])
-      setCategoryId(String(newCategory.id))
-      setShowCategoryModal(false)
-      setNewCategoryName('')
-      showToast('Đã tạo danh mục bộ câu hỏi mới.', 'success')
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setIsCreatingCategory(false)
-    }
-  }
-
   const breadcrumbs = [
     { label: 'Bộ câu hỏi', path: '/admin/evaluation/question-sets' },
     { label: isEditMode ? 'Chỉnh sửa' : 'Tạo mới' },
@@ -433,7 +431,7 @@ function QuestionSetFormPage() {
                   </button>
                   <div>
                     <h2 className="qsf-title">{isEditMode ? 'Cập nhật bộ câu hỏi' : 'Tạo bộ câu hỏi'}</h2>
-                    <p className="qsf-subtitle">Gom nhóm các câu hỏi theo chủ đề, độ khó và thứ tự sử dụng</p>
+                    <p className="qsf-subtitle">Gom nhóm, sắp xếp và quản lý trạng thái sử dụng của bộ câu hỏi</p>
                   </div>
                 </div>
 
@@ -490,43 +488,22 @@ function QuestionSetFormPage() {
 
                     <div className="qsf-form-row">
                       <div className="qsf-form-group">
-                        <label>Danh mục bộ câu hỏi</label>
-                        <div className="qsf-category-select-row">
-                          <select
-                            className="qsf-input-red"
-                            value={categoryId}
-                            onChange={(event) => setCategoryId(event.target.value)}
-                            disabled={isActiveLocked}
-                          >
-                            <option value="">-- Chọn danh mục --</option>
-                            {questionSetCategories.map((cat) => (
-                              <option key={cat.id} value={cat.id}>{cat.name}</option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="qsf-btn-add-category"
-                            onClick={() => setShowCategoryModal(true)}
-                            disabled={isActiveLocked}
-                            title="Thêm danh mục mới"
-                          >
-                            <PlusOutlined />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="qsf-form-group">
-                        <label>Chủ đề (tag)</label>
-                        <input
-                          className="qsf-input-green"
-                          value={category}
-                          onChange={(event) => setCategory(event.target.value)}
-                          list="question-set-topics"
-                          placeholder="Nhập chủ đề..."
-                          disabled={isActiveLocked}
-                        />
-                        <datalist id="question-set-topics">
-                          {topics.map((topic) => <option key={topic} value={topic} />)}
-                        </datalist>
+                        <label>Trạng thái</label>
+                        <select
+                          className="qsf-input-red"
+                          value={status}
+                          onChange={(event) => handleStatusChange(event.target.value)}
+                          disabled={isChangingStatus}
+                        >
+                          <option value="DRAFT" disabled={persistedStatus === 'ACTIVE'}>Bản nháp</option>
+                          <option value="ACTIVE">Hoạt động</option>
+                          <option value="INACTIVE">Tạm ngưng</option>
+                        </select>
+                        <small>
+                          {persistedStatus === 'ACTIVE'
+                            ? 'Chuyển sang Tạm ngưng để mở khóa và chỉnh sửa nội dung.'
+                            : 'Bộ Hoạt động sẽ xuất hiện khi tạo bài kiểm tra.'}
+                        </small>
                       </div>
                     </div>
 
@@ -850,46 +827,6 @@ function QuestionSetFormPage() {
         </div>
       </div>
 
-      {showCategoryModal && (
-        <div className="qsf-modal-backdrop">
-          <div className="qsf-modal">
-            <h3>Thêm danh mục bộ câu hỏi</h3>
-            <div className="qsf-form-group">
-              <label>Tên danh mục <span className="qsf-required-star">*</span></label>
-              <input
-                type="text"
-                className="qsf-input-green"
-                value={newCategoryName}
-                onChange={(event) => setNewCategoryName(event.target.value)}
-                placeholder="Nhập tên danh mục..."
-                disabled={isCreatingCategory}
-              />
-            </div>
-            <div className="qsf-modal-actions">
-              <button
-                type="button"
-                className="qsf-btn-save"
-                onClick={createNewCategory}
-                disabled={isCreatingCategory || !newCategoryName.trim()}
-              >
-                {isCreatingCategory ? <LoadingOutlined /> : <PlusOutlined />}
-                Tạo danh mục
-              </button>
-              <button
-                type="button"
-                className="qsf-btn-cancel"
-                onClick={() => {
-                  setShowCategoryModal(false)
-                  setNewCategoryName('')
-                }}
-                disabled={isCreatingCategory}
-              >
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

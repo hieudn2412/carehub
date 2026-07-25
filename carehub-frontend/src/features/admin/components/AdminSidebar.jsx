@@ -110,13 +110,8 @@ const navSections = [
         requiredPermissions: [
           EVALUATION_PERMISSION.examConfigManager,
           EVALUATION_PERMISSION.examPublisher,
+          EVALUATION_PERMISSION.assignmentManager,
         ],
-      },
-      {
-        icon: <ScheduleOutlined />,
-        label: 'Bài kiểm tra đã giao',
-        path: '/admin/evaluation/exam-assignments',
-        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
       },
       {
         icon: <CalculatorOutlined />,

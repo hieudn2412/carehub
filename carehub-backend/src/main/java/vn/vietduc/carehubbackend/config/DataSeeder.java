@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
+import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankLessonCatalog;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.Permission;
@@ -34,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -173,28 +175,30 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedQuestionCategories() {
-        for (int i = 1; i <= 9; i++) {
-            final int sortOrder = i;
-            String code = "BAI_" + i;
-            final String name = "Bài " + i;
-            var existing = questionCategoryRepository.findByCode(code);
+        for (QuestionBankLessonCatalog.Lesson lesson : QuestionBankLessonCatalog.lessons()) {
+            var existing = questionCategoryRepository.findByCode(lesson.code());
             if (existing.isPresent()) {
                 var cat = existing.get();
-                if (!name.equals(cat.getName())) {
-                    cat.setName(name);
+                boolean changed = !lesson.name().equals(cat.getName())
+                        || cat.getStatus() != QuestionCategoryStatus.ACTIVE
+                        || !Objects.equals(cat.getSortOrder(), lesson.number());
+                if (changed) {
+                    cat.setName(lesson.name());
+                    cat.setStatus(QuestionCategoryStatus.ACTIVE);
+                    cat.setSortOrder(lesson.number());
                     questionCategoryRepository.save(cat);
-                    log.info("Normalized question category name to: {}", name);
+                    log.info("Updated question category: {}", lesson.name());
                 }
             } else {
                 QuestionCategory category = QuestionCategory.builder()
-                        .code(code)
-                        .name(name)
+                        .code(lesson.code())
+                        .name(lesson.name())
                         .status(QuestionCategoryStatus.ACTIVE)
-                        .sortOrder(sortOrder)
+                        .sortOrder(lesson.number())
                         .createdBy("system-seed")
                         .build();
                 questionCategoryRepository.save(category);
-                log.info("Seeded question category: {}", name);
+                log.info("Seeded question category: {}", lesson.name());
             }
         }
     }
@@ -270,22 +274,40 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        List<QuestionBankQuestion> questions = seedFile.questions().stream()
-                .filter(this::isValidSeedQuestion)
-                .filter(question -> !questionRepository.existsBySourceDocumentAndStem(
-                        seedFile.sourceDocument(),
-                        question.stem()
-                ))
-                .map(question -> toQuestionBankQuestion(seedFile, question))
-                .toList();
-
-        if (questions.isEmpty()) {
-            log.info("Question bank sample seed already exists: {}", seedFile.sourceDocument());
-            return;
+        List<QuestionBankQuestion> created = new java.util.ArrayList<>();
+        List<QuestionBankQuestion> updated = new java.util.ArrayList<>();
+        for (QuestionBankSeedQuestion seedQuestion : seedFile.questions()) {
+            if (!isValidSeedQuestion(seedQuestion)) {
+                continue;
+            }
+            String topic = resolveSeedTopic(seedFile, seedQuestion);
+            var existing = questionRepository.findFirstBySourceDocumentAndStemOrderByIdAsc(
+                    seedFile.sourceDocument(),
+                    seedQuestion.stem()
+            );
+            if (existing.isPresent()) {
+                QuestionBankQuestion question = existing.get();
+                if (!Objects.equals(question.getTopic(), topic)) {
+                    question.setTopic(topic);
+                    updated.add(question);
+                }
+            } else {
+                created.add(toQuestionBankQuestion(seedFile, seedQuestion, topic));
+            }
         }
 
-        questionRepository.saveAll(questions);
-        log.info("Seeded {} question bank sample questions from {}", questions.size(), seedFile.sourceDocument());
+        if (!created.isEmpty()) {
+            questionRepository.saveAll(created);
+        }
+        if (!updated.isEmpty()) {
+            questionRepository.saveAll(updated);
+        }
+        log.info(
+                "Question bank seed synchronized from {}: created={}, remapped={}",
+                seedFile.sourceDocument(),
+                created.size(),
+                updated.size()
+        );
     }
 
     private QuestionBankSeedFile readQuestionBankSeed(Resource resource) {
@@ -310,7 +332,18 @@ public class DataSeeder implements CommandLineRunner {
         return "A".equals(answer) || "B".equals(answer) || "C".equals(answer) || "D".equals(answer);
     }
 
-    private QuestionBankQuestion toQuestionBankQuestion(QuestionBankSeedFile seedFile, QuestionBankSeedQuestion question) {
+    private String resolveSeedTopic(QuestionBankSeedFile seedFile, QuestionBankSeedQuestion question) {
+        return QuestionBankLessonCatalog.topicForLesson(question.lesson())
+                .orElseGet(() -> StringUtils.hasText(question.topic())
+                        ? question.topic().trim()
+                        : seedFile.sourceDocument());
+    }
+
+    private QuestionBankQuestion toQuestionBankQuestion(
+            QuestionBankSeedFile seedFile,
+            QuestionBankSeedQuestion question,
+            String topic
+    ) {
         return QuestionBankQuestion.builder()
                 .stem(question.stem())
                 .optionA(question.optionA())
@@ -319,7 +352,7 @@ public class DataSeeder implements CommandLineRunner {
                 .optionD(question.optionD())
                 .correctAnswer(question.correctAnswer())
                 .explanation(question.explanation())
-                .topic(StringUtils.hasText(question.topic()) ? question.topic() : seedFile.sourceDocument())
+                .topic(topic)
                 .difficulty(StringUtils.hasText(seedFile.difficulty()) ? seedFile.difficulty() : "medium")
                 .language(StringUtils.hasText(seedFile.language()) ? seedFile.language() : "vi")
                 .sourceDocument(seedFile.sourceDocument())

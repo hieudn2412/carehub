@@ -4,13 +4,19 @@ import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, S
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examPaperApi } from '../api/examPaperApi.js'
 import { apiData, apiErrorMessage, difficultyText, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 
 const EXPORT_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-function ExamPaperListPage() {
+function ExamPaperListPage({
+  activeView = 'papers',
+  canViewPapers = true,
+  canViewAssignments = true,
+  onViewChange = () => {},
+}) {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [papers, setPapers] = useState([])
@@ -143,6 +149,13 @@ function ExamPaperListPage() {
                   </button>
                 </div>
               </div>
+
+              <ExamManagementViewSwitch
+                activeView={activeView}
+                canViewPapers={canViewPapers}
+                canViewAssignments={canViewAssignments}
+                onChange={onViewChange}
+              />
 
               <div className="exp-filter-bar">
                 <div className="exp-search">

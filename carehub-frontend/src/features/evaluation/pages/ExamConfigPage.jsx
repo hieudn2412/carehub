@@ -63,7 +63,7 @@ function ExamConfigPage() {
       setIsLoading(true)
       try {
         const [setResponse, optionResponse, departmentResponse, userResponse] = await Promise.all([
-          questionSetApi.listQuestionSets({ status: 'ACTIVE' }),
+          questionSetApi.listQuestionSets(),
           trainingApi.getRecordOptions(),
           adminApi.getDepartments(),
           adminApi.getUsers({ page: 0, size: 100, status: 'ACTIVE' }),
@@ -249,7 +249,7 @@ function ExamConfigPage() {
       })
 
       showToast('Đã tạo đề và giao bài kiểm tra thành công.', 'success')
-      navigate('/admin/evaluation/exam-assignments')
+      navigate('/admin/evaluation/exam-management?view=assignments')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -315,14 +315,19 @@ function ExamConfigPage() {
                         }))
                       }} required>
                         <option value="">Chọn bộ câu hỏi đang hoạt động</option>
-                        {questionSets.map((set) => <option key={set.id} value={set.id}>{set.name} ({set.questionCount || 0} câu)</option>)}
+                        {questionSets.map((set) => (
+                          <option key={set.id} value={set.id} disabled={set.status !== 'ACTIVE'}>
+                            {set.name} ({set.questionCount || 0} câu)
+                            {set.status !== 'ACTIVE' ? ` — ${set.statusText || 'Chưa kích hoạt'}` : ''}
+                          </option>
+                        ))}
                       </select>
                     </label>
                     {selectedSet && (
                       <div className="exam-flow__set-summary">
                         <span>
                           <strong>{selectedSet.name}</strong>
-                          {selectedSet.questionCount || 0} câu · {selectedSet.category || 'Chưa phân loại'}
+                          {selectedSet.questionCount || 0} câu · {difficultyText(selectedSet.difficulty)}
                         </span>
                         <button type="button" className="exp-btn-secondary" onClick={openSelectedSet}>
                           <EyeOutlined /> Xem và sửa bộ câu hỏi
@@ -425,7 +430,7 @@ function ExamConfigPage() {
                 </h2>
                 <p>
                   {selectedSetDetail
-                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu · ${selectedSetDetail.category || 'Chưa phân loại'}`
+                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu · ${difficultyText(selectedSetDetail.difficulty)}`
                     : 'Đang tải nội dung bộ câu hỏi'}
                 </p>
               </div>
