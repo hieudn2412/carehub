@@ -113,6 +113,23 @@
   padding: 0 12px;
 }
 
+.checklist-quality-filter > div > .searchable-select {
+  flex: 1;
+}
+
+.checklist-quality-filter > div > .searchable-select > input {
+  border: 0;
+  box-shadow: none;
+}
+
+.checklist-quality-filter > div > .searchable-select .searchable-select__search-icon {
+  display: none;
+}
+
+.checklist-quality-filter > div > .searchable-select > input {
+  padding-left: 0;
+}
+
 .checklist-quality-filter input,
 .checklist-quality-filter select {
   background: #fff;

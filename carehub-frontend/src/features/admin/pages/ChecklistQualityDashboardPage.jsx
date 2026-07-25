@@ -18,6 +18,7 @@ import Sidebar from '../../staff/components/sidebar.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../evaluation/utils/documentQuestionUi.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/ChecklistQualityDashboardPage.css'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -297,10 +298,21 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
             </label>
             <label className="checklist-quality-filter">
               <span>Khoa/phòng</span>
-              <div><ApartmentOutlined /><select value={departmentId} disabled={isManager} onChange={(event) => setDepartmentId(event.target.value)}>
-                {!isManager && <option value="">Toàn viện</option>}
-                {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select></div>
+              <div><ApartmentOutlined /><SearchableSelect
+                value={departmentId}
+                disabled={isManager}
+                onChange={setDepartmentId}
+                placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
+                searchPlaceholder="Gõ tên khoa/phòng..."
+                options={[
+                  ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
+                  ...departments.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                    searchText: item.code || item.departmentCode,
+                  })),
+                ]}
+              /></div>
             </label>
             <label className="checklist-quality-filter">
               <span>Kết quả</span>
@@ -314,30 +326,57 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
             </label>
             <label className="checklist-quality-filter">
               <span>Người được đánh giá</span>
-              <div><TeamOutlined /><select value={subjectUserId} onChange={(event) => setSubjectUserId(event.target.value)}>
-                <option value="">Tất cả nhân viên</option>
-                {filterOptions.subjects.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name} · {item.employeeCode}</option>
-                ))}
-              </select></div>
+              <div><TeamOutlined /><SearchableSelect
+                value={subjectUserId}
+                onChange={setSubjectUserId}
+                placeholder="Tất cả nhân viên"
+                searchPlaceholder="Gõ tên hoặc mã nhân viên..."
+                options={[
+                  { value: '', label: 'Tất cả nhân viên' },
+                  ...filterOptions.subjects.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                    description: item.employeeCode,
+                    searchText: item.employeeCode,
+                  })),
+                ]}
+              /></div>
             </label>
             <label className="checklist-quality-filter">
               <span>Người thực hiện</span>
-              <div><EditOutlined /><select value={submittedByUserId} onChange={(event) => setSubmittedByUserId(event.target.value)}>
-                <option value="">Tất cả người thực hiện</option>
-                {filterOptions.evaluators.map((item) => (
-                  <option key={item.id} value={item.id}>{item.name} · {item.employeeCode}</option>
-                ))}
-              </select></div>
+              <div><EditOutlined /><SearchableSelect
+                value={submittedByUserId}
+                onChange={setSubmittedByUserId}
+                placeholder="Tất cả người thực hiện"
+                searchPlaceholder="Gõ tên hoặc mã người thực hiện..."
+                options={[
+                  { value: '', label: 'Tất cả người thực hiện' },
+                  ...filterOptions.evaluators.map((item) => ({
+                    value: item.id,
+                    label: item.name,
+                    description: item.employeeCode,
+                    searchText: item.employeeCode,
+                  })),
+                ]}
+              /></div>
             </label>
             <label className="checklist-quality-filter">
               <span>Quy trình</span>
-              <div><FileSearchOutlined /><select value={processId} onChange={(event) => setProcessId(event.target.value)}>
-                <option value="">Tất cả quy trình</option>
-                {filterOptions.forms.map((item) => (
-                  <option key={item.id} value={item.id}>{item.title} · {item.code}</option>
-                ))}
-              </select></div>
+              <div><FileSearchOutlined /><SearchableSelect
+                value={processId}
+                onChange={setProcessId}
+                placeholder="Tất cả quy trình"
+                searchPlaceholder="Gõ tên hoặc mã quy trình..."
+                options={[
+                  { value: '', label: 'Tất cả quy trình' },
+                  ...filterOptions.forms.map((item) => ({
+                    value: item.id,
+                    label: item.title,
+                    description: item.code,
+                    searchText: item.code,
+                  })),
+                ]}
+              /></div>
             </label>
           </section>
 

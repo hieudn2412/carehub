@@ -31,6 +31,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function numberOrNull(value) {
@@ -245,30 +246,71 @@ function EvaluationDashboardPage({ role = 'admin' }) {
             <Filter label="Từ ngày"><input type="date" value={filters.fromDate} onChange={(event) => setFilters({ ...filters, fromDate: event.target.value })} /></Filter>
             <Filter label="Đến ngày"><input type="date" value={filters.toDate} onChange={(event) => setFilters({ ...filters, toDate: event.target.value })} /></Filter>
             <Filter label="Khoa/phòng">
-              <select value={filters.departmentId} disabled={isManager} onChange={(event) => setFilters({ ...filters, departmentId: event.target.value })}>
-                {!isManager && <option value="">Toàn viện</option>}
-                {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={filters.departmentId}
+                disabled={isManager}
+                onChange={(value) => setFilters({ ...filters, departmentId: value })}
+                placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
+                searchPlaceholder="Gõ tên khoa/phòng..."
+                options={[
+                  ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
+                  ...departments.map((department) => ({
+                    value: department.id,
+                    label: department.name,
+                    searchText: department.code || department.departmentCode,
+                  })),
+                ]}
+              />
             </Filter>
             <Filter label="Bài kiểm tra">
-              <select value={filters.paperId} onChange={(event) => setFilters({ ...filters, paperId: event.target.value })}>
-                <option value="">Tất cả bài kiểm tra</option>
-                {papers.map((paper) => <option key={paper.id} value={paper.id}>{paper.name || paper.code}</option>)}
-              </select>
+              <SearchableSelect
+                value={filters.paperId}
+                onChange={(value) => setFilters({ ...filters, paperId: value })}
+                placeholder="Tất cả bài kiểm tra"
+                searchPlaceholder="Gõ tên bài kiểm tra..."
+                options={[
+                  { value: '', label: 'Tất cả bài kiểm tra' },
+                  ...papers.map((paper) => ({
+                    value: paper.id,
+                    label: paper.name || paper.code,
+                    description: paper.name && paper.code ? paper.code : '',
+                    searchText: paper.code,
+                  })),
+                ]}
+              />
             </Filter>
             <Filter label="Lĩnh vực chuyên môn">
-              <select value={filters.professionalFieldId} onChange={(event) => setFilters({ ...filters, professionalFieldId: event.target.value })}>
-                <option value="">Tất cả lĩnh vực</option>
-                {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
-              </select>
+              <SearchableSelect
+                value={filters.professionalFieldId}
+                onChange={(value) => setFilters({ ...filters, professionalFieldId: value })}
+                placeholder="Tất cả lĩnh vực"
+                searchPlaceholder="Gõ tên lĩnh vực..."
+                options={[
+                  { value: '', label: 'Tất cả lĩnh vực' },
+                  ...professionalFields.map((field) => ({
+                    value: field.id,
+                    label: field.name,
+                    searchText: field.code,
+                  })),
+                ]}
+              />
             </Filter>
             <Filter label="Nhân viên">
-              <select value={filters.employeeId} onChange={(event) => setFilters({ ...filters, employeeId: event.target.value })}>
-                <option value="">Tất cả nhân viên</option>
-                {(overview?.employees || []).map((employee) => (
-                  <option key={employee.id} value={employee.id}>{employee.name} · {employee.employeeCode}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={filters.employeeId}
+                onChange={(value) => setFilters({ ...filters, employeeId: value })}
+                placeholder="Tất cả nhân viên"
+                searchPlaceholder="Gõ tên hoặc mã nhân viên..."
+                options={[
+                  { value: '', label: 'Tất cả nhân viên' },
+                  ...(overview?.employees || []).map((employee) => ({
+                    value: employee.id,
+                    label: employee.name,
+                    description: employee.employeeCode,
+                    searchText: employee.employeeCode,
+                  })),
+                ]}
+              />
             </Filter>
             <Filter label="Trạng thái kết quả">
               <select value={filters.resultStatus} onChange={(event) => setFilters({ ...filters, resultStatus: event.target.value })}>

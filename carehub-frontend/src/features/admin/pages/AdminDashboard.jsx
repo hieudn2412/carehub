@@ -91,13 +91,17 @@ export default function AdminDashboard() {
     const trainingPassed = Number(trainingTotals.compliantCount) || 0
     const trainingFailed = (Number(trainingTotals.nonCompliantCount) || 0)
       + (Number(trainingTotals.atRiskCount) || 0)
-    const exams = examResult.status === 'fulfilled' && examResult.value
-      ? payload(examResult.value)?.attempts
+      + (Number(trainingTotals.notConfiguredCount) || 0)
+    const examOverview = examResult.status === 'fulfilled' && examResult.value
+      ? payload(examResult.value)
       : null
+    const examAttempts = examOverview?.attempts || null
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
     const submittedQuality = Number(quality?.submitted) || 0
     const qualityRate = Number(quality?.passRate) || 0
-    const qualityPassed = Math.round(submittedQuality * qualityRate / 100)
+    const qualityPassed = Number(quality?.passed) || 0
+    const qualityFailed = (Number(quality?.failedScore) || 0)
+      + (Number(quality?.failedCritical) || 0)
 
     setDashboard({
       totalEmployees: filters.professionalFieldId
@@ -113,21 +117,21 @@ export default function AdminDashboard() {
             note: 'Tính theo chuẩn giờ đào tạo đang áp dụng cho nhân viên.',
           }
         : emptyDomain('Không thể tải dữ liệu giờ đào tạo từ máy chủ.'),
-      exams: exams
+      exams: examOverview
         ? {
-            total: Number(exams.gradedAttempts) || 0,
-            passed: Number(exams.passedAttempts) || 0,
-            failed: Number(exams.failedAttempts) || 0,
-            rate: (Number(exams.passRate) || 0) * 100,
+            total: Number(examOverview.targetCount) || Number(examAttempts?.totalAttempts) || 0,
+            passed: Number(examAttempts?.passedAttempts) || 0,
+            failed: Number(examAttempts?.failedAttempts) || 0,
+            rate: (Number(examAttempts?.passRate) || 0) * 100,
             available: true,
-            note: `Điểm trung bình ${Number(exams.averageScore || 0).toFixed(1).replace('.', ',')}.`,
+            note: `${Number(examOverview.assignmentCount) || 0} bài kiểm tra · ${Number(examOverview.notStartedCount) || 0} lượt chưa bắt đầu · Điểm trung bình ${Number(examAttempts?.averageScore || 0).toFixed(1).replace('.', ',')}.`,
           }
         : emptyDomain('Không thể tải dữ liệu điểm bài kiểm tra từ máy chủ.'),
       quality: quality
         ? {
             total: submittedQuality,
             passed: qualityPassed,
-            failed: Math.max(0, submittedQuality - qualityPassed),
+            failed: qualityFailed,
             rate: qualityRate,
             available: true,
             note: `Điểm chất lượng trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
