@@ -255,14 +255,14 @@ function TrainingHoursEvidenceScreen() {
               </div>
             ) : (
               <div>
-                <div>
-                  <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Minh chứng đào tạo</h1>
-                  <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 20px' }}>
+                <div className="th-page-heading">
+                  <h1 className="th-page-title">Minh chứng đào tạo</h1>
+                  <p className="th-page-subtitle">
                     {record.title} · Quản lý và tải lên tệp minh chứng giờ đào tạo
                   </p>
                 </div>
 
-                <div style={{ display: 'grid', gap: 20, gridTemplateColumns: '1fr 1fr', alignItems: 'stretch', marginBottom: 24 }}>
+                <div className="th-evidence-manage-layout">
                   {/* Left Info Panel */}
                   <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0 }}>
                     <dl className="training-definition" style={{ gap: '12px 16px' }}>
@@ -326,8 +326,8 @@ function TrainingHoursEvidenceScreen() {
                 </div>
 
                 {/* Evidence List section */}
-                <div style={{ marginTop: 24 }}>
-                  <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: 8, marginBottom: 16 }}>
+                <section className="th-evidence-list-section" aria-labelledby="attached-evidence-heading">
+                  <h2 className="th-evidence-list-title" id="attached-evidence-heading">
                     Danh sách tệp minh chứng đã đính kèm
                   </h2>
                   
@@ -383,10 +383,10 @@ function TrainingHoursEvidenceScreen() {
                       ))}
                     </div>
                   )}
-                </div>
+                </section>
 
                 {/* Footer action */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, borderTop: '1px solid #e5e7eb', paddingTop: 20 }}>
+                <div className="th-evidence-footer-action">
                   <button
                     onClick={() => navigate(`/staff/training/${id}`)}
                     className="training-button"

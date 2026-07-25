@@ -6,6 +6,7 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   FormOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../hooks/useNotifications'
 import { staffApi } from '../api/staffApi'
@@ -71,6 +72,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
 
   useEffect(() => {
     staffApi.getProfile()
@@ -155,35 +157,45 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
 
   return (
     <header className="dashboard-header">
-      {breadcrumbs && breadcrumbs.length > 0 ? (
-        <div className="dashboard-header__breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-          {breadcrumbs.map((item, index) => {
-            const isLast = index === breadcrumbs.length - 1
-            const resolvedLink = item.link || getFallbackLink(item.label, roles)
-            if (isLast) {
+      <div className="dashboard-header__main">
+        <button
+          type="button"
+          className="dashboard-header__menu-button"
+          aria-label="Mở menu điều hướng"
+          onClick={() => window.dispatchEvent(new CustomEvent(isAdmin ? 'admin-sidebar-toggle' : 'staff-sidebar-toggle'))}
+        >
+          <MenuOutlined />
+        </button>
+        {breadcrumbs && breadcrumbs.length > 0 ? (
+          <div className="dashboard-header__breadcrumbs">
+            {breadcrumbs.map((item, index) => {
+              const isLast = index === breadcrumbs.length - 1
+              const resolvedLink = item.link || getFallbackLink(item.label, roles)
+              if (isLast) {
+                return (
+                  <span key={index} className="dashboard-header__breadcrumb-current">
+                    {item.label}
+                  </span>
+                )
+              }
               return (
-                <span key={index} style={{ color: '#1a1a1a', fontWeight: 600 }}>
-                  {item.label}
+                <span key={index} className="dashboard-header__breadcrumb-item">
+                  {resolvedLink ? (
+                    <Link to={resolvedLink}>
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span>{item.label}</span>
+                  )}
+                  <span className="dashboard-header__breadcrumb-separator">›</span>
                 </span>
               )
-            }
-            return (
-              <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {resolvedLink ? (
-                  <Link to={resolvedLink} style={{ color: '#6b7280', textDecoration: 'none' }}>
-                    {item.label}
-                  </Link>
-                ) : (
-                  <span style={{ color: '#6b7280' }}>{item.label}</span>
-                )}
-                <span style={{ color: '#9ca3af', fontSize: 12 }}>›</span>
-              </span>
-            )
-          })}
-        </div>
-      ) : (
-        <h1 className="dashboard-header__title">{title}</h1>
-      )}
+            })}
+          </div>
+        ) : (
+          <h1 className="dashboard-header__title">{title}</h1>
+        )}
+      </div>
 
       <div className="dashboard-header__right">
         <Link
@@ -196,14 +208,17 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
           {pendingExamCount > 0 && <span className="dashboard-header__exam-badge">{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
         </Link>
         <div className="dashboard-header__notify-container">
-          <div
+          <button
+            type="button"
             ref={notifyRef}
             className="dashboard-header__notify"
             onClick={() => setShowNotifications(prev => !prev)}
+            aria-label="Mở thông báo"
+            aria-expanded={showNotifications}
           >
             <BellOutlined />
             {unreadCount > 0 && <span className="dashboard-header__notify-dot"></span>}
-          </div>
+          </button>
 
           {showNotifications && (
             <div className="notify-popover" ref={popoverRef}>

@@ -204,12 +204,14 @@ function TrainingHoursListScreen() {
                   onChange={e => { setSearch(e.target.value); setPage(0) }}
                   placeholder="Tìm theo tên khóa đào tạo..."
                   className="th-search-input"
+                  aria-label="Tìm theo tên khóa đào tạo"
                 />
               </div>
               <select
                 value={status}
                 onChange={e => { setStatus(e.target.value); setPage(0) }}
                 className="th-filter-select"
+                aria-label="Lọc theo trạng thái hồ sơ"
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="SUBMITTED">Đã nộp</option>
@@ -248,13 +250,13 @@ function TrainingHoursListScreen() {
                     <tbody>
                       {records.map(r => (
                         <tr key={r.id} onClick={() => navigate(`/staff/training/${r.id}`)} className="th-clickable-row">
-                          <td>{formatDate(r.startDate)}</td>
-                          <td>
+                          <td data-label="Ngày bắt đầu">{formatDate(r.startDate)}</td>
+                          <td data-label="Khóa đào tạo">
                             <span className="th-record-title">{r.title}</span>
                             {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
                           </td>
-                          <td className="th-col-num"><strong>{r.declaredHours}h</strong></td>
-                          <td>
+                          <td className="th-col-num" data-label="Số giờ"><strong>{r.declaredHours}h</strong></td>
+                          <td data-label="Ngày nộp">
                             {r.workflowStatus === 'SUBMITTED' ? (
                               <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
                                 {formatDate(r.submittedAt)}
@@ -267,7 +269,7 @@ function TrainingHoursListScreen() {
                               </span>
                             )}
                           </td>
-                          <td className="th-col-center">
+                          <td className="th-col-center" data-label="Minh chứng">
                             {r.evidenceCount > 0 ? (
                               <span className="th-evidence-count">
                                 <PaperClipOutlined /> {r.evidenceCount}
@@ -276,7 +278,7 @@ function TrainingHoursListScreen() {
                               <span className="th-evidence-none">-</span>
                             )}
                           </td>
-                          <td className="th-col-actions">
+                          <td className="th-col-actions" data-label="Thao tác">
                             <div className="th-actions" onClick={e => e.stopPropagation()}>
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
@@ -284,6 +286,7 @@ function TrainingHoursListScreen() {
                                   onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
                                   disabled={submittingId === r.id}
                                   title="Nộp hồ sơ"
+                                  aria-label={`Nộp hồ sơ ${r.title}`}
                                 >
                                   <SendOutlined />
                                 </button>
@@ -292,6 +295,7 @@ function TrainingHoursListScreen() {
                                 className="th-action-btn th-action-btn--view"
                                 onClick={() => navigate(`/staff/training/${r.id}`)}
                                 title="Xem chi tiết"
+                                aria-label={`Xem chi tiết ${r.title}`}
                               >
                                 <EyeOutlined />
                               </button>
@@ -300,6 +304,7 @@ function TrainingHoursListScreen() {
                                   className="th-action-btn th-action-btn--edit"
                                   onClick={() => navigate(`/staff/training/${r.id}/edit`)}
                                   title="Chỉnh sửa"
+                                  aria-label={`Chỉnh sửa ${r.title}`}
                                 >
                                   <EditOutlined />
                                 </button>
@@ -308,6 +313,7 @@ function TrainingHoursListScreen() {
                                 className="th-action-btn th-action-btn--evidence"
                                 onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
                                 title="Minh chứng"
+                                aria-label={`Quản lý minh chứng ${r.title}`}
                               >
                                 <PaperClipOutlined />
                               </button>
@@ -323,7 +329,7 @@ function TrainingHoursListScreen() {
                       Hiển thị {records.length} / {totalElements} kết quả
                     </span>
                     <div className="th-pagination-pages">
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                      <button className="th-page-btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Trang trước">
                         <LeftOutlined />
                       </button>
                       {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
@@ -333,12 +339,14 @@ function TrainingHoursListScreen() {
                             key={pageNum}
                             className={`th-page-btn ${page === pageNum ? 'th-page-btn--active' : ''}`}
                             onClick={() => setPage(pageNum)}
+                            aria-label={`Trang ${pageNum + 1}`}
+                            aria-current={page === pageNum ? 'page' : undefined}
                           >
                             {pageNum + 1}
                           </button>
                         )
                       })}
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                      <button className="th-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Trang sau">
                         <RightOutlined />
                       </button>
                     </div>
