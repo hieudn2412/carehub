@@ -133,8 +133,8 @@ function QualityDashboardPage({ role = 'admin' }) {
 
   const saveDepartmentTarget = async () => {
     const target = Number(targetInput)
-    if (!departmentId || !Number.isFinite(target) || target < 0 || target > 100) {
-      showToast('Điểm mục tiêu phải từ 0 đến 100.', 'error')
+    if (!departmentId || !Number.isFinite(target) || target < 0 || target > 10) {
+      showToast('Điểm mục tiêu phải từ 0 đến 10.', 'error')
       return
     }
     setSavingTarget(true)
@@ -198,11 +198,11 @@ function QualityDashboardPage({ role = 'admin' }) {
                     id="department-target"
                     type="number"
                     min="0"
-                    max="100"
+                    max="10"
                     step="0.1"
                     value={targetInput}
                     onChange={event => setTargetInput(event.target.value)}
-                    placeholder="0–100"
+                    placeholder="0–10"
                     aria-describedby="department-target-help"
                   />
                   <button type="button" onClick={saveDepartmentTarget} disabled={savingTarget || !departmentId}>

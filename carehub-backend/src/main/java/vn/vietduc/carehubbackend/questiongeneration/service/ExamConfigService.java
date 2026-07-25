@@ -77,7 +77,7 @@ public class ExamConfigService {
                 .questionSet(questionSet)
                 .totalQuestions(positive(request.totalQuestions(), "Tổng số câu hỏi phải lớn hơn 0"))
                 .timeLimitMinutes(positive(request.timeLimitMinutes(), "Thời gian làm bài phải lớn hơn 0"))
-                .passingScore(percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-100"))
+                .passingScore(percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-10"))
                 .maxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"))
                 .shuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions())
                 .shuffleOptions(request.shuffleOptions() == null || request.shuffleOptions())
@@ -106,7 +106,7 @@ public class ExamConfigService {
         config.setQuestionSet(questionSet);
         config.setTotalQuestions(positive(request.totalQuestions(), "Tổng số câu hỏi phải lớn hơn 0"));
         config.setTimeLimitMinutes(positive(request.timeLimitMinutes(), "Thời gian làm bài phải lớn hơn 0"));
-        config.setPassingScore(percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-100"));
+        config.setPassingScore(percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-10"));
         config.setMaxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"));
         config.setShuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions());
         config.setShuffleOptions(request.shuffleOptions() == null || request.shuffleOptions());
@@ -185,7 +185,7 @@ public class ExamConfigService {
     private void validateBase(UpsertExamConfigRequest request, QuestionSet questionSet) {
         positive(request.totalQuestions(), "Tổng số câu hỏi phải lớn hơn 0");
         positive(request.timeLimitMinutes(), "Thời gian làm bài phải lớn hơn 0");
-        percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-100");
+        percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-10");
         nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm");
         if (questionSet != null && questionSet.getStatus() != QuestionSetStatus.ACTIVE) {
             throw new BadRequestException("Chỉ được dùng bộ câu hỏi đang hoạt động");
@@ -411,7 +411,7 @@ public class ExamConfigService {
     }
 
     private int percent(Integer value, String message) {
-        if (value == null || value < 0 || value > 100) {
+        if (value == null || value < 0 || value > 10) {
             throw new BadRequestException(message);
         }
         return value;

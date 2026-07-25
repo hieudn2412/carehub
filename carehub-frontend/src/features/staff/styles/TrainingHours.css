@@ -31,8 +31,8 @@
 }
 
 .th-compliance-banner--warning {
-  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
-  border: 1px solid #fed7aa;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+  border: 1px solid #f87171;
 }
 
 .th-compliance-banner--neutral {
@@ -79,7 +79,11 @@
 }
 
 .th-compliance-banner--warning .th-ring-fill {
-  stroke: #ea580c;
+  stroke: #991b1b;
+}
+
+.th-compliance-banner--warning .th-ring-value {
+  color: #991b1b;
 }
 
 .th-ring-value {
@@ -123,8 +127,8 @@
 }
 
 .th-compliance-banner--warning .th-compliance-label {
-  color: #ea580c;
-  font-weight: 500;
+  color: #991b1b;
+  font-weight: 600;
 }
 
 /* ── Filter Bar ── */
