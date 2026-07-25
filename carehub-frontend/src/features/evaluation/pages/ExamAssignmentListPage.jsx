@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, BarChartOutlined, LoadingOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
@@ -24,6 +25,7 @@ function ExamAssignmentListPage({
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null)
   const [results, setResults] = useState(null)
   const [isLoadingResults, setIsLoadingResults] = useState(false)
+  const [pendingArchive, setPendingArchive] = useState(null)
 
   const loadAssignments = useCallback(async () => {
     setIsLoading(true)
@@ -75,7 +77,13 @@ function ExamAssignmentListPage({
   }
 
   async function archiveAssignment(assignment) {
-    if (!window.confirm(`Lưu trữ phân công "${assignment.name}"?`)) return
+    setPendingArchive(assignment)
+  }
+
+  async function confirmArchiveAssignment() {
+    if (!pendingArchive) return
+    const assignment = pendingArchive
+    setPendingArchive(null)
     try {
       await examAssignmentApi.archiveAssignment(assignment.id)
       showToast('Đã lưu trữ phân công kiểm tra.', 'success')
@@ -273,6 +281,15 @@ function ExamAssignmentListPage({
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(pendingArchive)}
+        title="Lưu trữ phân công?"
+        message={pendingArchive ? `Phân công “${pendingArchive.name}” sẽ không còn xuất hiện trong danh sách đang quản lý.` : ''}
+        confirmText="Lưu trữ phân công"
+        danger
+        onCancel={() => setPendingArchive(null)}
+        onConfirm={confirmArchiveAssignment}
+      />
     </div>
   )
 }

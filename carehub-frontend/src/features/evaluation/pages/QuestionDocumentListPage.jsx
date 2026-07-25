@@ -289,7 +289,13 @@ function QuestionDocumentListPage() {
                             <div className="qdoc-file-cell">
                               <FileSearchOutlined />
                               <div>
-                                <strong>{document.filename}</strong>
+                                <button
+                                  type="button"
+                                  className="qdoc-file-link"
+                                  onClick={() => navigate(`/admin/evaluation/question-documents/${document.id}`)}
+                                >
+                                  {document.filename}
+                                </button>
                                 {document.status === 'OCR_REQUIRED' && (
                                   <span>Tài liệu cần OCR trước khi tạo câu hỏi.</span>
                                 )}
@@ -326,6 +332,7 @@ function QuestionDocumentListPage() {
                                   type="button"
                                   className="qdoc-icon-btn"
                                   title="Xem câu hỏi"
+                                  aria-label={`Duyệt câu hỏi từ ${document.filename}`}
                                   onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
                                 >
                                   <EyeOutlined />
@@ -335,6 +342,7 @@ function QuestionDocumentListPage() {
                                 type="button"
                                 className="qdoc-icon-btn qdoc-icon-btn--primary"
                                 title="Tạo câu hỏi"
+                                aria-label={`Tạo phiên câu hỏi từ ${document.filename}`}
                                 disabled={!canCreateJob(document)}
                                 onClick={() => openCreateJob(document)}
                               >

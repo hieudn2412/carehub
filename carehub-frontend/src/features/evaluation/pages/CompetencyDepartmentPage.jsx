@@ -6,6 +6,7 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function CompetencyDepartmentPage() {
@@ -21,13 +22,11 @@ function CompetencyDepartmentPage() {
       const response = await adminApi.getDepartments()
       const depts = apiData(response, [])
       setDepartments(depts)
-      if (depts.length > 0 && !selectedDeptId) {
-        setSelectedDeptId(String(depts[0].id))
-      }
+      if (depts.length > 0) setSelectedDeptId((current) => current || String(depts[0].id))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
-  }, [showToast, selectedDeptId])
+  }, [showToast])
 
   const loadDepartmentData = useCallback(async (deptId) => {
     if (!deptId) return
@@ -43,12 +42,16 @@ function CompetencyDepartmentPage() {
     }
   }, [showToast])
 
-  useEffect(() => { loadDepartments() }, [])
-  useEffect(() => { if (selectedDeptId) loadDepartmentData(selectedDeptId) }, [selectedDeptId])
-
-  const handleDeptChange = (e) => {
-    setSelectedDeptId(e.target.value)
-  }
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadDepartments()
+  }, [loadDepartments])
+  useEffect(() => {
+    if (selectedDeptId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadDepartmentData(selectedDeptId)
+    }
+  }, [selectedDeptId, loadDepartmentData])
 
   const breadcrumbs = [{ label: 'Đánh giá' }, { label: 'Phân loại năng lực theo khoa' }]
 
@@ -71,28 +74,22 @@ function CompetencyDepartmentPage() {
               </section>
 
               {/* Department selector */}
-              <section className="evd-panel" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <label style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>
-                    <TeamOutlined style={{ marginRight: 6 }} />Chọn khoa/phòng:
-                  </label>
-                  <select
-                    value={selectedDeptId}
-                    onChange={handleDeptChange}
-                    style={{
-                      padding: '8px 14px',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 8,
-                      fontSize: 14,
-                      minWidth: 200,
-                      background: '#fff',
-                    }}
-                  >
-                    {departments.map(d => (
-                      <option key={d.id} value={String(d.id)}>{d.name}</option>
-                    ))}
-                  </select>
+              <section className="evd-panel evd-department-picker">
+                <div className="evd-department-picker__label">
+                  <TeamOutlined aria-hidden="true" />
+                  <label htmlFor="competency-department">Chọn khoa/phòng</label>
                 </div>
+                <SearchableSelect
+                  id="competency-department"
+                  value={selectedDeptId}
+                  onChange={setSelectedDeptId}
+                  options={departments.map((department) => ({ value: department.id, label: department.name }))}
+                  placeholder="Chọn khoa/phòng"
+                  searchPlaceholder="Tìm theo tên khoa/phòng..."
+                  ariaLabel="Tìm và chọn khoa/phòng"
+                  disabled={loading && departments.length === 0}
+                />
+                <span className="evd-department-picker__hint">Chọn một khoa/phòng để xem phân bố năng lực hiện tại.</span>
               </section>
 
               {loading || deptLoading ? (
@@ -117,6 +114,13 @@ function CompetencyDepartmentPage() {
                         <strong>{formatNumber(data.classifiedEmployees)}</strong>
                       </div>
                     </div>
+                    <div className="evd-metric evd-metric--warning">
+                      <div className="evd-metric-icon"><BarChartOutlined /></div>
+                      <div>
+                        <span>Chưa phân loại</span>
+                        <strong>{formatNumber(Math.max(0, Number(data.totalEmployees || 0) - Number(data.classifiedEmployees || 0)))}</strong>
+                      </div>
+                    </div>
                   </section>
 
                   {/* Distribution */}
@@ -127,22 +131,13 @@ function CompetencyDepartmentPage() {
                     <div className="evd-bars">
                       {(data.levelDistribution || []).map((item) => (
                         <div key={item.level} className="evd-bar-row">
-                          <span style={{
-                            color: item.levelColor,
-                            fontWeight: 600,
-                          }}>
+                          <span className="evd-bar-label" style={{ '--bar-color': item.levelColor }}>
                             {item.levelText || item.level}
                           </span>
                           <div className="evd-bar-track">
-                            <div style={{
-                              width: `${data.totalEmployees > 0 ? (item.count / data.totalEmployees) * 100 : 0}%`,
-                              background: item.levelColor,
-                              height: 8,
-                              borderRadius: 4,
-                              transition: 'width 0.3s',
-                            }} />
+                            <div className="evd-bar-fill" style={{ '--bar-width': `${data.totalEmployees > 0 ? (item.count / data.totalEmployees) * 100 : 0}%`, '--bar-color': item.levelColor }} />
                           </div>
-                          <strong>{formatNumber(item.count)}</strong>
+                          <strong>{formatNumber(item.count)} ({data.totalEmployees > 0 ? Math.round((item.count / data.totalEmployees) * 100) : 0}%)</strong>
                         </div>
                       ))}
                       {(data.levelDistribution || []).length === 0 && (

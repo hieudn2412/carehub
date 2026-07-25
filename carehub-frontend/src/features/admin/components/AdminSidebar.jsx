@@ -232,6 +232,7 @@ function AdminSidebar() {
       ? getSectionKey(activeNavigation.group.id, activeNavigation.section.label)
       : null,
   )
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   const selectedGroup = visibleGroups.find((group) => group.id === selectedGroupId)
     || visibleGroups[0]
@@ -243,6 +244,25 @@ function AdminSidebar() {
       navRef.current.scrollTop = parseInt(savedScroll, 10)
     }
   }, [])
+
+  useEffect(() => {
+    const handleMenuToggle = () => setIsMobileOpen(true)
+    window.addEventListener('admin-sidebar-toggle', handleMenuToggle)
+    return () => window.removeEventListener('admin-sidebar-toggle', handleMenuToggle)
+  }, [])
+
+  useEffect(() => {
+    if (!isMobileOpen) return undefined
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsMobileOpen(false)
+    }
+    document.addEventListener('keydown', handleEscape)
+    document.body.classList.add('admin-sidebar-open')
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.classList.remove('admin-sidebar-open')
+    }
+  }, [isMobileOpen])
 
   const handleScroll = (e) => {
     sessionStorage.setItem('admin-sidebar-scroll', String(e.target.scrollTop))
@@ -272,7 +292,16 @@ function AdminSidebar() {
   }
 
   return (
-    <aside className="admin-sidebar">
+    <>
+      {isMobileOpen && (
+        <button
+          type="button"
+          className="admin-sidebar__backdrop"
+          aria-label="Đóng menu điều hướng"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      <aside className={`admin-sidebar ${isMobileOpen ? 'admin-sidebar--mobile-open' : ''}`}>
       <div className="admin-sidebar__logo">
         <img className="admin-sidebar__logo-icon" src={logo} alt="Logo VietDuc Care" />
         <div>
@@ -334,6 +363,7 @@ function AdminSidebar() {
                         className={() =>
                           `admin-sidebar__item ${isLinkActive(item.path) ? 'admin-sidebar__item--active' : ''}`
                         }
+                        onClick={() => setIsMobileOpen(false)}
                       >
                         <span className="admin-sidebar__item-icon">{item.icon}</span>
                         <span>{item.label}</span>
@@ -348,12 +378,13 @@ function AdminSidebar() {
       </nav>
 
       <div className="admin-sidebar__footer">
-        <button className="admin-sidebar__logout" onClick={handleLogout}>
+        <button type="button" className="admin-sidebar__logout" onClick={handleLogout}>
           <LogoutOutlined />
           <span>Đăng xuất</span>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 

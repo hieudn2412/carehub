@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -52,6 +53,7 @@ function DocumentQuestionJobReviewPage() {
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
   const [isBatching, setIsBatching] = useState(false)
   const [categories, setCategories] = useState([])
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false)
 
   const loadJob = useCallback(async (options = {}) => {
     const silent = options?.silent === true
@@ -82,7 +84,7 @@ function DocumentQuestionJobReviewPage() {
       try {
         const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
         setCategories(apiData(response, []))
-      } catch (error) {
+      } catch {
         // ignore
       }
     }
@@ -138,7 +140,11 @@ function DocumentQuestionJobReviewPage() {
   }
 
   async function cancelJob() {
-    if (!window.confirm('Hủy phiên tạo câu hỏi đang chạy? Các câu hỏi đã tạo trước đó vẫn được giữ lại.')) return
+    setIsCancelConfirmOpen(true)
+  }
+
+  async function confirmCancelJob() {
+    setIsCancelConfirmOpen(false)
     try {
       const response = await documentQuestionApi.cancelQuestionJob(jobId)
       setJobDetail(apiData(response))
@@ -563,6 +569,15 @@ function DocumentQuestionJobReviewPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={isCancelConfirmOpen}
+        title="Hủy phiên tạo câu hỏi?"
+        message="Phiên đang chạy sẽ dừng xử lý các đoạn còn lại. Những câu hỏi đã tạo trước đó vẫn được giữ lại để bạn tiếp tục duyệt."
+        confirmText="Hủy phiên"
+        danger
+        onCancel={() => setIsCancelConfirmOpen(false)}
+        onConfirm={confirmCancelJob}
+      />
     </div>
   )
 

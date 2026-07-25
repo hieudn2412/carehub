@@ -1,0 +1,174 @@
+/* Shared evaluation surface. Loaded after page styles so the mobile contract stays consistent. */
+.dashboard-body:has(.qbl-page),
+.dashboard-body:has(.qsl-page),
+.dashboard-body:has(.qcl-page),
+.dashboard-body:has(.qdoc-page),
+.dashboard-body:has(.evd-page),
+.dashboard-body:has(.exam-flow),
+.dashboard-body:has(.exam-management-page) {
+  background: #f3f7f6;
+}
+
+.qbl-page,
+.qsl-page,
+.qcl-page,
+.qdoc-page,
+.evd-page,
+.exam-flow {
+  max-width: 1480px;
+  margin-inline: auto;
+}
+
+.qbl-title-card,
+.qsl-title-card,
+.qcl-title-card,
+.qdoc-title-card,
+.evd-title-card,
+.exp-title-card {
+  border-color: #d7e3e0 !important;
+  box-shadow: 0 8px 24px rgb(15 59 51 / 5%) !important;
+}
+
+.qbl-btn-add,
+.qsl-btn-add,
+.qcl-btn-add,
+.qdoc-primary-btn,
+.exp-btn-primary,
+.evd-btn--primary {
+  background: #0f766e !important;
+  border-color: #0f766e !important;
+}
+
+.qbl-btn-add:hover,
+.qsl-btn-add:hover,
+.qcl-btn-add:hover,
+.qdoc-primary-btn:hover,
+.exp-btn-primary:hover,
+.evd-btn--primary:hover:not(:disabled) { background: #075e57 !important; }
+
+.qbl-table-card,
+.qsl-table-card,
+.qcl-table-card,
+.qdoc-table-card,
+.exp-table-card,
+.evd-panel { border-color: #d7e3e0 !important; }
+
+@media (max-width: 900px) {
+  .dashboard-body { padding: 18px 14px 28px; }
+  .qbl-page,
+  .qsl-page,
+  .qcl-page,
+  .qdoc-page,
+  .evd-page,
+  .exam-flow { width: 100%; }
+}
+
+@media (max-width: 760px) {
+  .qbl-title-card,
+  .qsl-title-card,
+  .qcl-title-card,
+  .qdoc-title-card,
+  .evd-title-card,
+  .exp-title-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding: 18px !important;
+  }
+
+  .qbl-title,
+  .qsl-title,
+  .qcl-title,
+  .qdoc-title,
+  .evd-title-card h1,
+  .exp-title { font-size: 23px !important; line-height: 1.2; }
+
+  .qbl-filter-bar,
+  .qsl-filter-bar,
+  .qcl-filter-bar,
+  .qdoc-filter-bar { grid-template-columns: 1fr !important; display: grid !important; gap: 10px !important; }
+
+  .qbl-search,
+  .qsl-search,
+  .qcl-search,
+  .qdoc-search { width: 100% !important; min-width: 0 !important; }
+
+  .qbl-table-card,
+  .qsl-table-card,
+  .qcl-table-card,
+  .qdoc-table-card,
+  .exp-table-card { overflow: visible !important; background: transparent !important; border: 0 !important; box-shadow: none !important; }
+
+  .qbl-table,
+  .qsl-table,
+  .qcl-table,
+  .qdoc-table,
+  .exp-table { display: block !important; min-width: 0 !important; }
+
+  .qbl-table thead,
+  .qsl-table thead,
+  .qcl-table thead,
+  .qdoc-table thead,
+  .exp-table thead { display: none !important; }
+
+  .qbl-table tbody,
+  .qsl-table tbody,
+  .qcl-table tbody,
+  .qdoc-table tbody,
+  .exp-table tbody { display: grid !important; gap: 10px; }
+
+  .qbl-table tr,
+  .qsl-table tr,
+  .qcl-table tr,
+  .qdoc-table tr,
+  .exp-table tr {
+    display: grid !important;
+    gap: 9px;
+    padding: 15px !important;
+    border: 1px solid #d7e3e0 !important;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgb(15 59 51 / 5%);
+  }
+
+  .qbl-table td,
+  .qsl-table td,
+  .qcl-table td,
+  .qdoc-table td,
+  .exp-table td {
+    display: block !important;
+    width: auto !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .qbl-table td:last-child,
+  .qsl-table td:last-child,
+  .qcl-table td:last-child,
+  .qdoc-table td:last-child,
+  .exp-table td:last-child { padding-top: 5px !important; }
+
+  .qbl-table .qbl-table-actions,
+  .qsl-table .qsl-table-actions,
+  .qcl-table .qcl-table-actions,
+  .qdoc-table .qdoc-table-actions { justify-content: flex-start !important; flex-wrap: wrap; }
+
+  .qdoc-pagination-bar,
+  .qbl-pagination-bar,
+  .qsl-pagination-bar,
+  .qcl-pagination-bar { flex-wrap: wrap; gap: 10px; }
+
+  .evd-title-actions .evd-btn { justify-content: center; flex: 1; }
+  .exam-flow__steps { grid-template-columns: 1fr !important; }
+  .exam-flow__steps > * { border-bottom: 1px solid #d7e3e0; }
+  .exam-flow__steps > *:last-child { border-bottom: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qbl-table tr,
+  .qsl-table tr,
+  .qcl-table tr,
+  .qdoc-table tr,
+  .exp-table tr { transition: none !important; }
+}

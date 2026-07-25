@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import EmailConfirmOtpScreen from '../features/auth/pages/EmailConfirmOtpScreen.jsx'
 import EmailConfirmResetScreen from '../features/auth/pages/EmailConfirmResetScreen.jsx'
 import EmailConfirmScreen from '../features/auth/pages/EmailConfirmScreen.jsx'
@@ -26,7 +26,6 @@ import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.js
 import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
 import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
-import QuestionSetQuestionsPage from '../features/evaluation/pages/QuestionSetQuestionsPage.jsx'
 import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
 import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
@@ -127,6 +126,11 @@ function evaluationElement(element) {
   })
 }
 
+function QuestionSetQuestionsRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/admin/evaluation/question-sets/${id}/edit`} replace />
+}
+
 
 function managerOrAdminElement(element) {
   return protectedElement(element, { allowedRoles: [AUTH_ROLE.admin, AUTH_ROLE.manager] })
@@ -207,7 +211,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-sets" element={evaluationElement(<QuestionSetListPage />)} />
       <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
-      <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsPage />)} />
+      <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsRedirect />)} />
       <Route path="/admin/evaluation/question-set-categories" element={<Navigate to="/admin/evaluation/question-sets" replace />} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
