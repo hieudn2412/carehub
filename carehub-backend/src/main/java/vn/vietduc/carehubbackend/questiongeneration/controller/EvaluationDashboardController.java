@@ -76,7 +76,7 @@ public class EvaluationDashboardController {
     }
 
     @GetMapping("/exam-overview")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') and @evaluationSecurity.hasAny(authentication, 'RESULT_VIEWER', 'EXAM_PUBLISHER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<EvaluationExamDashboardResponse>> examOverview(
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
