@@ -35,8 +35,7 @@ import ExamConfigPage from '../features/evaluation/pages/ExamConfigPage.jsx'
 import EvaluationDashboardPage from '../features/evaluation/pages/EvaluationDashboardPage.jsx'
 import EvaluationAuditLogPage from '../features/evaluation/pages/EvaluationAuditLogPage.jsx'
 import EvaluationImportHistoryPage from '../features/evaluation/pages/EvaluationImportHistoryPage.jsx'
-import ExamPaperListPage from '../features/evaluation/pages/ExamPaperListPage.jsx'
-import ExamAssignmentListPage from '../features/evaluation/pages/ExamAssignmentListPage.jsx'
+import ExamManagementPage from '../features/evaluation/pages/ExamManagementPage.jsx'
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
@@ -216,13 +215,13 @@ function AppRouter() {
       <Route path="/admin/evaluation/classification-rules" element={evaluationElement(<ClassificationRuleListPage />)} />
       <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamManagementPage />)} />
       <Route path="/admin/evaluation/exam-management/new" element={evaluationElement(<ExamConfigPage />)} />
       <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />
-      <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
+      <Route path="/admin/evaluation/exam-assignments" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
       <Route path="/admin/evaluation/exam-assignments/new" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
-      <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-assignments" replace />} />
+      <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
       <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
