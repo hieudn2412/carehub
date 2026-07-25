@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { EditOutlined, DeleteOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { classificationRuleApi } from '../api/classificationRuleApi.js'
@@ -15,6 +16,7 @@ function ClassificationRuleListPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [enabledFilter, setEnabledFilter] = useState('')
+  const [pendingDisable, setPendingDisable] = useState(null)
   
   const loadRules = useCallback(async () => {
     setIsLoading(true)
@@ -29,6 +31,8 @@ function ClassificationRuleListPage() {
   }, [showToast])
 
   useEffect(() => {
+    // Hydrate classification rules when the screen mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRules()
   }, [loadRules])
 
@@ -47,9 +51,13 @@ function ClassificationRuleListPage() {
   }, [enabledFilter, keyword, rules])
 
   const handleDelete = (item) => {
-    if (!window.confirm(`Tạm ngưng quy tắc phân loại "${item.name}"?`)) {
-      return
-    }
+    setPendingDisable(item)
+  }
+
+  const confirmDisable = () => {
+    if (!pendingDisable) return
+    const item = pendingDisable
+    setPendingDisable(null)
     classificationRuleApi.disableRule(item.id)
       .then(() => {
         showToast('Đã tạm ngưng quy tắc phân loại.', 'success')
@@ -191,6 +199,15 @@ function ClassificationRuleListPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(pendingDisable)}
+        title="Tạm ngưng quy tắc?"
+        message={pendingDisable ? `Quy tắc “${pendingDisable.name}” sẽ dừng tự động gán danh mục cho các câu hỏi mới.` : ''}
+        confirmText="Tạm ngưng quy tắc"
+        danger
+        onCancel={() => setPendingDisable(null)}
+        onConfirm={confirmDisable}
+      />
     </div>
   )
 }

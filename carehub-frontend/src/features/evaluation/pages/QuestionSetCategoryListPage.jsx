@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionSetCategoryApi } from '../api/questionSetCategoryApi.js'
@@ -28,6 +29,7 @@ function QuestionSetCategoryListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState('create')
   const [modalForm, setModalForm] = useState(EMPTY_FORM)
+  const [categoryToArchive, setCategoryToArchive] = useState(null)
 
   const loadCategories = useCallback(async () => {
     setIsLoading(true)
@@ -42,6 +44,8 @@ function QuestionSetCategoryListPage() {
   }, [showToast])
 
   useEffect(() => {
+    // Hydrate categories when the screen mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCategories()
   }, [loadCategories])
 
@@ -124,9 +128,13 @@ function QuestionSetCategoryListPage() {
   }
 
   const handleDeleteCategory = (item) => {
-    if (!window.confirm(`Lưu trữ danh mục "${item.name}"?`)) {
-      return
-    }
+    setCategoryToArchive(item)
+  }
+
+  const confirmDeleteCategory = () => {
+    if (!categoryToArchive) return
+    const item = categoryToArchive
+    setCategoryToArchive(null)
     questionSetCategoryApi.archiveCategory(item.id)
       .then(() => {
         showToast('Đã lưu trữ danh mục bộ câu hỏi.', 'success')
@@ -392,6 +400,15 @@ function QuestionSetCategoryListPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={Boolean(categoryToArchive)}
+        title="Lưu trữ danh mục bộ câu hỏi?"
+        message={categoryToArchive ? `Danh mục “${categoryToArchive.name}” sẽ không còn xuất hiện trong các lựa chọn mới.` : ''}
+        confirmText="Lưu trữ danh mục"
+        danger
+        onCancel={() => setCategoryToArchive(null)}
+        onConfirm={confirmDeleteCategory}
+      />
     </div>
   )
 }

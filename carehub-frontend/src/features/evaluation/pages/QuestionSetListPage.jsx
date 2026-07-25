@@ -18,6 +18,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionSetApi } from '../api/questionSetApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -47,6 +48,7 @@ function QuestionSetListPage() {
   const [exportMenuId, setExportMenuId] = useState(null)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
+  const [pendingConfirmation, setPendingConfirmation] = useState(null)
 
   const loadSets = useCallback(async () => {
     setIsLoading(true)
@@ -91,13 +93,18 @@ function QuestionSetListPage() {
   const displayRows = sets.slice(page * pageSize, (page + 1) * pageSize)
 
   async function archiveSet(item) {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa bộ câu hỏi "${item.name}" không?`)) {
-      return
-    }
-    await runAction(item.id, async () => {
-      await questionSetApi.archiveQuestionSet(item.id)
-      showToast('Đã xóa bộ câu hỏi.', 'success')
-      await loadSets()
+    setPendingConfirmation({
+      title: 'Lưu trữ bộ câu hỏi?',
+      message: `Bộ “${item.name}” sẽ không còn xuất hiện khi tạo bài kiểm tra mới.`,
+      confirmText: 'Lưu trữ bộ',
+      danger: true,
+      action: async () => {
+        await runAction(item.id, async () => {
+          await questionSetApi.archiveQuestionSet(item.id)
+          showToast('Đã lưu trữ bộ câu hỏi.', 'success')
+          await loadSets()
+        })
+      },
     })
   }
 
@@ -107,7 +114,7 @@ function QuestionSetListPage() {
       const duplicated = apiData(response)
       showToast('Đã nhân bản bộ câu hỏi.', 'success')
       await loadSets()
-      if (duplicated?.id && window.confirm('Mở bản sao để chỉnh sửa ngay?')) {
+      if (duplicated?.id) {
         navigate(`/admin/evaluation/question-sets/${duplicated.id}/edit`)
       }
     })
@@ -116,17 +123,22 @@ function QuestionSetListPage() {
   async function toggleSetStatus(item) {
     const activating = item.status !== 'ACTIVE'
     const actionLabel = activating ? 'kích hoạt' : 'tạm ngưng'
-    if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} bộ câu hỏi "${item.name}" không?`)) {
-      return
-    }
-    await runAction(item.id, async () => {
-      if (activating) {
-        await questionSetApi.activateQuestionSet(item.id)
-      } else {
-        await questionSetApi.deactivateQuestionSet(item.id)
-      }
-      showToast(activating ? 'Đã kích hoạt bộ câu hỏi.' : 'Đã tạm ngưng bộ câu hỏi.', 'success')
-      await loadSets()
+    setPendingConfirmation({
+      title: `${activating ? 'Kích hoạt' : 'Tạm ngưng'} bộ câu hỏi?`,
+      message: `Bạn đang yêu cầu ${actionLabel} “${item.name}”. Trạng thái này sẽ ảnh hưởng đến việc chọn bộ khi tạo bài kiểm tra.`,
+      confirmText: activating ? 'Kích hoạt' : 'Tạm ngưng',
+      danger: !activating,
+      action: async () => {
+        await runAction(item.id, async () => {
+          if (activating) {
+            await questionSetApi.activateQuestionSet(item.id)
+          } else {
+            await questionSetApi.deactivateQuestionSet(item.id)
+          }
+          showToast(activating ? 'Đã kích hoạt bộ câu hỏi.' : 'Đã tạm ngưng bộ câu hỏi.', 'success')
+          await loadSets()
+        })
+      },
     })
   }
 
@@ -242,6 +254,7 @@ function QuestionSetListPage() {
                                 className={`qsl-action-btn ${item.status === 'ACTIVE' ? 'qsl-action-btn--pause' : 'qsl-action-btn--activate'}`}
                                 onClick={() => toggleSetStatus(item)}
                                 title={item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'}
+                                aria-label={`${item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'} bộ ${item.name}`}
                                 disabled={actionId === item.id}
                               >
                                 {actionId === item.id
@@ -253,6 +266,7 @@ function QuestionSetListPage() {
                                 className="qsl-action-btn qsl-action-btn--edit"
                                 onClick={() => navigate(`/admin/evaluation/question-sets/${item.id}/edit`)}
                                 title="Chỉnh sửa"
+                                aria-label={`Chỉnh sửa bộ ${item.name}`}
                               >
                                 <EditOutlined />
                               </button>
@@ -261,6 +275,7 @@ function QuestionSetListPage() {
                                 className="qsl-action-btn"
                                 onClick={() => duplicateSet(item)}
                                 title="Nhân bản"
+                                aria-label={`Nhân bản bộ ${item.name}`}
                                 disabled={actionId === item.id}
                               >
                                 <CopyOutlined />
@@ -310,6 +325,7 @@ function QuestionSetListPage() {
                                 className="qsl-action-btn qsl-action-btn--delete"
                                 onClick={() => archiveSet(item)}
                                 title="Xóa"
+                                aria-label={`Lưu trữ bộ ${item.name}`}
                                 disabled={actionId === item.id}
                               >
                                 <DeleteOutlined />
@@ -347,6 +363,19 @@ function QuestionSetListPage() {
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(pendingConfirmation)}
+        title={pendingConfirmation?.title || ''}
+        message={pendingConfirmation?.message || ''}
+        confirmText={pendingConfirmation?.confirmText}
+        danger={pendingConfirmation?.danger}
+        onCancel={() => setPendingConfirmation(null)}
+        onConfirm={async () => {
+          const confirmation = pendingConfirmation
+          setPendingConfirmation(null)
+          await confirmation?.action?.()
+        }}
+      />
     </div>
   )
 }

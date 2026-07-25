@@ -1,16 +1,18 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import {
   BellOutlined,
   WarningOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
+import EvaluationWorkflow from '../../evaluation/components/EvaluationWorkflow.jsx'
 import '../styles/AdminHeader.css'
 
 function getFallbackLink(label, roles = []) {
@@ -18,29 +20,8 @@ function getFallbackLink(label, roles = []) {
   const isMgr = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
   const lbl = String(label).toLowerCase().trim()
   
-  if (lbl.includes('chất lượng') || lbl.includes('checklist') || lbl.includes('bảng kiểm')) {
-    return isAdm ? '/admin/quality/checklists' : '/manager/quality/checklists'
-  }
-  if (lbl.includes('đào tạo')) {
-    return '/training/employees'
-  }
-  if (lbl.includes('đánh giá') || lbl.includes('lịch sử')) {
-    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
-  }
-  if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
-    return isAdm ? '/admin/reference/employees' : '/manager/employees'
-  }
-  if (lbl.includes('phòng ban')) {
-    return '/admin/reference/departments'
-  }
-  if (lbl.includes('hệ thống') || lbl.includes('log') || lbl.includes('cấu hình hệ thống')) {
-    return '/admin/system-settings'
-  }
-  if (lbl.includes('thông báo')) {
-    return '/admin/notifications/settings'
-  }
-  if (lbl.includes('mẫu email')) {
-    return '/admin/notifications/email-templates'
+  if (lbl === 'đánh giá' || lbl === 'evaluation') {
+    return isAdm ? '/admin/evaluation/question-documents' : '/manager/quality/history'
   }
   if (lbl.includes('quy tắc phân loại')) {
     return '/admin/evaluation/classification-rules'
@@ -60,6 +41,30 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'
   }
+  if (lbl.includes('chất lượng') || lbl.includes('checklist') || lbl.includes('bảng kiểm')) {
+    return isAdm ? '/admin/quality/checklists' : '/manager/quality/checklists'
+  }
+  if (lbl.includes('đào tạo')) {
+    return '/training/employees'
+  }
+  if (lbl.includes('lịch sử')) {
+    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
+  }
+  if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
+    return isAdm ? '/admin/reference/employees' : '/manager/employees'
+  }
+  if (lbl.includes('phòng ban')) {
+    return '/admin/reference/departments'
+  }
+  if (lbl.includes('hệ thống') || lbl.includes('log') || lbl.includes('cấu hình hệ thống')) {
+    return '/admin/system-settings'
+  }
+  if (lbl.includes('thông báo')) {
+    return '/admin/notifications/settings'
+  }
+  if (lbl.includes('mẫu email')) {
+    return '/admin/notifications/email-templates'
+  }
   if (lbl === 'trang chủ') {
     return isAdm ? '/admin/dashboard' : (isMgr ? '/manager/dashboard' : '/staff/dashboard')
   }
@@ -68,6 +73,7 @@ function getFallbackLink(label, roles = []) {
 
 function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
   const [profile, setProfile] = useState(null)
+  const location = useLocation()
   
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -153,28 +159,37 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
 
   return (
     <header className="dashboard-header">
+      <button
+        type="button"
+        className="dashboard-header__menu-button"
+        aria-label="Mở menu điều hướng"
+        onClick={() => window.dispatchEvent(new CustomEvent('admin-sidebar-toggle'))}
+      >
+        <MenuOutlined aria-hidden="true" />
+      </button>
+      <div className="dashboard-header__main">
       {breadcrumbs && breadcrumbs.length > 0 ? (
-        <div className="dashboard-header__breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+        <div className="dashboard-header__breadcrumbs">
           {breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1
             const resolvedLink = item.link || getFallbackLink(item.label, roles)
             if (isLast) {
               return (
-                <span key={index} style={{ color: '#1a1a1a', fontWeight: 600 }}>
+                <span key={index} className="dashboard-header__breadcrumb-current">
                   {item.label}
                 </span>
               )
             }
             return (
-              <span key={index} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span key={index} className="dashboard-header__breadcrumb-item">
                 {resolvedLink ? (
-                  <Link to={resolvedLink} style={{ color: '#6b7280', textDecoration: 'none' }}>
+                  <Link to={resolvedLink}>
                     {item.label}
                   </Link>
                 ) : (
-                  <span style={{ color: '#6b7280' }}>{item.label}</span>
+                  <span>{item.label}</span>
                 )}
-                <span style={{ color: '#9ca3af', fontSize: 12 }}>›</span>
+                <span className="dashboard-header__breadcrumb-separator">›</span>
               </span>
             )
           })}
@@ -182,17 +197,22 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
       ) : (
         <h1 className="dashboard-header__title">{title}</h1>
       )}
+      {location.pathname.startsWith('/admin/evaluation/') && <EvaluationWorkflow />}
+      </div>
 
       <div className="dashboard-header__right">
         <div className="dashboard-header__notify-container">
-          <div
+          <button
+            type="button"
             ref={notifyRef}
             className="dashboard-header__notify"
+            aria-label={`Thông báo${unreadCount > 0 ? `, ${unreadCount} chưa đọc` : ''}`}
+            aria-expanded={showNotifications}
             onClick={() => setShowNotifications(prev => !prev)}
           >
             <BellOutlined />
             {unreadCount > 0 && <span className="dashboard-header__notify-dot"></span>}
-          </div>
+          </button>
 
           {showNotifications && (
             <div className="notify-popover" ref={popoverRef}>

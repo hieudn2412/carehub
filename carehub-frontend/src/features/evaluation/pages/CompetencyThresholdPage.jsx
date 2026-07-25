@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { SaveOutlined, ReloadOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { SaveOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/TestConfigPage.css'
+import '../styles/EvaluationDashboardPage.css'
 
 const DEFAULT_LEVELS = [
   { competencyLevel: 'NOT_COMPETENT', label: 'Chưa đạt', colorHex: '#ef4444', sortOrder: 1 },
@@ -50,7 +51,30 @@ function CompetencyThresholdPage() {
     }
   }, [showToast])
 
-  useEffect(() => { loadThresholds() }, [loadThresholds])
+  useEffect(() => {
+    // Hydrate thresholds from the API when the page mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadThresholds()
+  }, [loadThresholds])
+
+  const sortedThresholds = [...thresholds].sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const validationErrors = sortedThresholds.reduce((errors, threshold, index) => {
+    const min = Number(threshold.minScore)
+    const max = Number(threshold.maxScore)
+    const previous = sortedThresholds[index - 1]
+    const previousMax = previous ? Number(previous.maxScore) : null
+    const rowErrors = []
+    if (!Number.isFinite(min) || !Number.isFinite(max)) rowErrors.push('Điểm phải là số hợp lệ.')
+    if (Number.isFinite(min) && (min < 0 || min > 100) || Number.isFinite(max) && (max < 0 || max > 100)) rowErrors.push('Điểm phải nằm trong khoảng 0–100.')
+    if (Number.isFinite(min) && Number.isFinite(max) && min > max) rowErrors.push('Điểm tối thiểu không được lớn hơn điểm tối đa.')
+    if (index === 0 && min !== 0) rowErrors.push('Mức đầu tiên phải bắt đầu từ 0.')
+    if (index === sortedThresholds.length - 1 && max !== 100) rowErrors.push('Mức cuối cùng phải kết thúc ở 100.')
+    if (previousMax !== null && Number.isFinite(min) && Math.abs(min - (previousMax + 0.01)) > 0.001) rowErrors.push('Khoảng điểm phải liền nhau, không chồng lấn hoặc bỏ trống.')
+    if (rowErrors.length) errors[threshold.competencyLevel] = rowErrors.join(' ')
+    return errors
+  }, {})
+  const hasValidationErrors = Object.keys(validationErrors).length > 0
 
   const updateThreshold = (level, field, value) => {
     setThresholds(prev => prev.map(t =>
@@ -60,6 +84,10 @@ function CompetencyThresholdPage() {
   }
 
   const handleSave = async () => {
+    if (hasValidationErrors) {
+      showToast('Vui lòng kiểm tra lại các khoảng điểm trước khi lưu.', 'warning')
+      return
+    }
     setSaving(true)
     try {
       const payload = {
@@ -106,11 +134,11 @@ function CompetencyThresholdPage() {
                   <h1>Ngưỡng phân loại năng lực</h1>
                   <p>Cấu hình điểm số tối thiểu/tối đa cho từng mức năng lực</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="evd-title-actions">
                   <button type="button" className="evd-btn" onClick={loadThresholds} disabled={loading}>
                     <ReloadOutlined /> Tải lại
                   </button>
-                  <button type="button" className="evd-btn evd-btn--primary" onClick={handleSave} disabled={saving || !hasChanges} style={{ minWidth: 140 }}>
+                  <button type="button" className="evd-btn evd-btn--primary" onClick={handleSave} disabled={saving || !hasChanges || hasValidationErrors}>
                     <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
@@ -120,7 +148,7 @@ function CompetencyThresholdPage() {
                 <section className="evd-panel evd-empty">Đang tải cấu hình...</section>
               ) : (
                 <section className="evd-panel">
-                  <div style={{ overflowX: 'auto' }}>
+                  <div className="evd-table-scroll">
                     <table className="evd-table">
                       <thead>
                         <tr>
@@ -132,18 +160,10 @@ function CompetencyThresholdPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {thresholds.sort((a, b) => a.sortOrder - b.sortOrder).map((t) => (
-                          <tr key={t.competencyLevel}>
+                        {sortedThresholds.map((t) => (
+                          <tr key={t.competencyLevel} className={validationErrors[t.competencyLevel] ? 'evd-threshold-row--invalid' : ''}>
                             <td>
-                              <span style={{
-                                display: 'inline-block',
-                                padding: '4px 12px',
-                                borderRadius: 20,
-                                background: (t.colorHex || levelColors[t.competencyLevel]) + '20',
-                                color: t.colorHex || levelColors[t.competencyLevel],
-                                fontWeight: 600,
-                                fontSize: 13,
-                              }}>
+                              <span className="evd-level-badge" style={{ '--level-color': t.colorHex || levelColors[t.competencyLevel] }}>
                                 {t.label || t.competencyLevel}
                               </span>
                             </td>
@@ -151,13 +171,8 @@ function CompetencyThresholdPage() {
                               <input
                                 value={t.label}
                                 onChange={e => updateThreshold(t.competencyLevel, 'label', e.target.value)}
-                                style={{
-                                  width: 120,
-                                  padding: '6px 10px',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 6,
-                                  fontSize: 13,
-                                }}
+                                className="evd-threshold-input evd-threshold-input--label"
+                                aria-label={`Nhãn hiển thị cho ${t.label || t.competencyLevel}`}
                               />
                             </td>
                             <td>
@@ -168,13 +183,9 @@ function CompetencyThresholdPage() {
                                 max="100"
                                 value={t.minScore}
                                 onChange={e => updateThreshold(t.competencyLevel, 'minScore', e.target.value)}
-                                style={{
-                                  width: 90,
-                                  padding: '6px 10px',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 6,
-                                  fontSize: 13,
-                                }}
+                                className="evd-threshold-input"
+                                aria-label={`Điểm tối thiểu cho ${t.label || t.competencyLevel}`}
+                                aria-invalid={Boolean(validationErrors[t.competencyLevel])}
                               />
                             </td>
                             <td>
@@ -185,13 +196,9 @@ function CompetencyThresholdPage() {
                                 max="100"
                                 value={t.maxScore}
                                 onChange={e => updateThreshold(t.competencyLevel, 'maxScore', e.target.value)}
-                                style={{
-                                  width: 90,
-                                  padding: '6px 10px',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 6,
-                                  fontSize: 13,
-                                }}
+                                className="evd-threshold-input"
+                                aria-label={`Điểm tối đa cho ${t.label || t.competencyLevel}`}
+                                aria-invalid={Boolean(validationErrors[t.competencyLevel])}
                               />
                             </td>
                             <td>
@@ -199,15 +206,8 @@ function CompetencyThresholdPage() {
                                 type="color"
                                 value={t.colorHex || levelColors[t.competencyLevel]}
                                 onChange={e => updateThreshold(t.competencyLevel, 'colorHex', e.target.value)}
-                                style={{
-                                  width: 40,
-                                  height: 32,
-                                  padding: 2,
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: 6,
-                                  cursor: 'pointer',
-                                  background: 'none',
-                                }}
+                                className="evd-color-input"
+                                aria-label={`Màu cho ${t.label || t.competencyLevel}`}
                               />
                             </td>
                           </tr>
@@ -217,23 +217,23 @@ function CompetencyThresholdPage() {
                   </div>
 
                   {thresholds.length > 0 && (
-                    <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {thresholds.sort((a, b) => a.sortOrder - b.sortOrder).map(t => (
-                        <span key={t.competencyLevel} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 6,
-                          padding: '6px 14px', borderRadius: 20,
-                          background: (t.colorHex || levelColors[t.competencyLevel]) + '15',
-                          color: t.colorHex || levelColors[t.competencyLevel],
-                          fontWeight: 600, fontSize: 13,
-                        }}>
+                    <div className="evd-threshold-legend">
+                      {sortedThresholds.map(t => (
+                        <span key={t.competencyLevel} className="evd-threshold-legend__item" style={{ '--level-color': t.colorHex || levelColors[t.competencyLevel] }}>
                           {t.label} ({t.minScore}% - {t.maxScore}%)
                         </span>
                       ))}
                     </div>
                   )}
 
+                  {hasValidationErrors && (
+                    <div className="evd-validation-summary" role="alert">
+                      <WarningOutlined /> <span>{Object.values(validationErrors).join(' ')}</span>
+                    </div>
+                  )}
+
                   {hasChanges && (
-                    <div className="evd-panel" style={{ marginTop: 16, padding: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#92400e' }}>
+                    <div className="evd-unsaved-notice">
                       <WarningOutlined /> Bạn chưa lưu thay đổi. Nhấn "Lưu thay đổi" để áp dụng.
                     </div>
                   )}

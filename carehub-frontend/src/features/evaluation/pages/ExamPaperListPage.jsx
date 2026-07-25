@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -26,6 +27,7 @@ function ExamPaperListPage({
   const [expandedId, setExpandedId] = useState(null)
   const [showAnswers, setShowAnswers] = useState(false)
   const [actionId, setActionId] = useState(null)
+  const [pendingArchive, setPendingArchive] = useState(null)
 
   const loadPapers = useCallback(async () => {
     setIsLoading(true)
@@ -104,7 +106,13 @@ function ExamPaperListPage({
   }
 
   async function archivePaper(paper) {
-    if (!window.confirm(`Lưu trữ bộ đề "${paper.name}"?`)) return
+    setPendingArchive(paper)
+  }
+
+  async function confirmArchivePaper() {
+    if (!pendingArchive) return
+    const paper = pendingArchive
+    setPendingArchive(null)
     await runAction(paper.id, async () => {
       await examPaperApi.archiveExamPaper(paper.id)
       showToast('Đã lưu trữ bộ đề kiểm tra.', 'success')
@@ -279,6 +287,15 @@ function ExamPaperListPage({
           </main>
         </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(pendingArchive)}
+        title="Lưu trữ bộ đề?"
+        message={pendingArchive ? `Bộ đề “${pendingArchive.name}” sẽ không còn xuất hiện trong kho bài kiểm tra.` : ''}
+        confirmText="Lưu trữ bộ đề"
+        danger
+        onCancel={() => setPendingArchive(null)}
+        onConfirm={confirmArchivePaper}
+      />
     </div>
   )
 }

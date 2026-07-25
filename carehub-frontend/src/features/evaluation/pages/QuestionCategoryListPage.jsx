@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -29,6 +30,7 @@ function QuestionCategoryListPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalMode, setModalMode] = useState('create') // 'create' or 'edit'
   const [modalForm, setModalForm] = useState(EMPTY_FORM)
+  const [categoryToArchive, setCategoryToArchive] = useState(null)
 
   const loadCategories = useCallback(async () => {
     setIsLoading(true)
@@ -43,6 +45,8 @@ function QuestionCategoryListPage() {
   }, [showToast])
 
   useEffect(() => {
+    // Hydrate categories when the screen mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCategories()
   }, [loadCategories])
 
@@ -127,9 +131,13 @@ function QuestionCategoryListPage() {
   }
 
   const handleDeleteCategory = (item) => {
-    if (!window.confirm(`Lưu trữ danh mục "${item.name}"?`)) {
-      return
-    }
+    setCategoryToArchive(item)
+  }
+
+  const confirmDeleteCategory = () => {
+    if (!categoryToArchive) return
+    const item = categoryToArchive
+    setCategoryToArchive(null)
     questionCategoryApi.archiveCategory(item.id)
       .then(() => {
         showToast('Đã lưu trữ danh mục câu hỏi.', 'success')
@@ -238,6 +246,7 @@ function QuestionCategoryListPage() {
                                 className="qcl-action-btn qcl-action-btn--edit"
                                 onClick={() => handleOpenEditModal(item)}
                                 title="Chỉnh sửa"
+                                aria-label={`Chỉnh sửa danh mục ${item.name}`}
                               >
                                 <EditOutlined />
                               </button>
@@ -246,6 +255,7 @@ function QuestionCategoryListPage() {
                                 className="qcl-action-btn qcl-action-btn--delete"
                                 onClick={() => handleDeleteCategory(item)}
                                 title="Lưu trữ"
+                                aria-label={`Lưu trữ danh mục ${item.name}`}
                                 disabled={item.status === 'ARCHIVED'}
                               >
                                 <DeleteOutlined />
@@ -309,18 +319,18 @@ function QuestionCategoryListPage() {
       {/* Add / Edit Modal Popup */}
       {isModalOpen && (
         <div className="qcl-modal-backdrop" onClick={handleCloseModal}>
-          <div className="qcl-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="qcl-modal" role="dialog" aria-modal="true" aria-labelledby="qcl-modal-title" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="qcl-modal-header">
               <div className="qcl-modal-title-wrap">
                 <div className="qcl-modal-title-icon">
                   <PlusOutlined />
                 </div>
-                <h2 className="qcl-modal-title">
+                <h2 className="qcl-modal-title" id="qcl-modal-title">
                   {modalMode === 'create' ? 'Tạo danh mục câu hỏi' : 'Cập nhật danh mục câu hỏi'}
                 </h2>
               </div>
-              <button className="qcl-modal-close" onClick={handleCloseModal}>
+              <button type="button" className="qcl-modal-close" onClick={handleCloseModal} aria-label="Đóng hộp thoại danh mục">
                 <CloseOutlined />
               </button>
             </div>
@@ -403,6 +413,15 @@ function QuestionCategoryListPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={Boolean(categoryToArchive)}
+        title="Lưu trữ danh mục câu hỏi?"
+        message={categoryToArchive ? `Danh mục “${categoryToArchive.name}” sẽ không còn xuất hiện trong các lựa chọn mới. Bạn vẫn có thể xem lại trong danh mục đã lưu trữ.` : ''}
+        confirmText="Lưu trữ danh mục"
+        danger
+        onCancel={() => setCategoryToArchive(null)}
+        onConfirm={confirmDeleteCategory}
+      />
     </div>
   )
 }
