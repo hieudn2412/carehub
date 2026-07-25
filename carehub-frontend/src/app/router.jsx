@@ -110,7 +110,6 @@ import {
   ADMIN_ROLES,
   AUTH_ROLE,
   EVALUATION_PERMISSIONS,
-  THEORY_DASHBOARD_PERMISSIONS,
 } from '../features/auth/utils/authNavigation.js'
 
 
@@ -291,14 +290,11 @@ function AppRouter() {
       <Route path="/manager/reports/training-dashboard" element={managerOrAdminElement(<TrainingDashboardPage role="manager" />)} />
       <Route
         path="/manager/reports/quality-dashboard"
-        element={protectedElement(<EvaluationDashboardPage role="manager" />, {
-          allowedRoles: ADMIN_ROLES,
-          allowedPermissions: THEORY_DASHBOARD_PERMISSIONS,
-        })}
+        element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)}
       />
       <Route
         path="/manager/reports/checklist-dashboard"
-        element={managerOrAdminElement(<Navigate to="/manager/dashboard" replace />)}
+        element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)}
       />
       <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />

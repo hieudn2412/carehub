@@ -127,7 +127,7 @@ export default function ManagerDashboard() {
           note: filters.professionalFieldId
             ? 'Số liệu checklist áp dụng cho toàn khoa trong khoảng thời gian đã chọn.'
             : `Điểm checklist trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
-          path: '/manager/quality/history',
+          path: '/manager/reports/checklist-dashboard',
         },
       })
     } catch {
@@ -173,7 +173,7 @@ export default function ManagerDashboard() {
       detail: 'Cần rà soát kết quả thực hành trong khoa',
       value: domains.quality.failed,
       tone: 'danger',
-      path: '/manager/quality/history',
+      path: '/manager/reports/checklist-dashboard',
     },
     domains.exams.failed > 0 && {
       id: 'exams',
@@ -202,11 +202,7 @@ export default function ManagerDashboard() {
             onNavigate={navigate}
             summary={summary}
             domains={domains}
-            visibleDomains={[
-              'training',
-              ...(domains.exams.available ? ['exams'] : []),
-              'quality',
-            ]}
+            visibleDomains={['training', 'exams', 'quality']}
             warnings={warnings}
           />
         </div>
