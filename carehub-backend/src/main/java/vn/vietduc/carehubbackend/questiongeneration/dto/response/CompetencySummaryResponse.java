@@ -11,6 +11,10 @@ public record CompetencySummaryResponse(
         BigDecimal knowledgeWeight,
         BigDecimal skillWeight,
         BigDecimal targetScore,
-        List<CompetencySummaryItemResponse> items
+        List<CompetencySummaryItemResponse> items,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages
 ) {
 }

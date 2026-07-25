@@ -63,7 +63,8 @@ public class FormAssignmentService {
                 throw ValidationException.field("formVersionIds", "Only published form versions can be assigned");
             }
             if (hasOverlappingActiveAssignment(manager.getId(), version.getId(), from, request.validUntil())) {
-                throw new ConflictException("Manager already has an active assignment for form " + version.getForm().getCode());
+                throw new ConflictException("Manager already has an active assignment for form "
+                        + version.getForm().getCode() + " version " + version.getVersionNumber());
             }
         }
 

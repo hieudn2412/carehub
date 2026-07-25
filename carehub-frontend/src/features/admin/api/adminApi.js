@@ -423,6 +423,18 @@ export const adminApi = {
     })
   },
 
+  exportFormVersionResponses(formId, versionId, result) {
+    return httpClient.get('/form-submissions/exports/version', {
+      headers: authHeaders(),
+      params: {
+        formId,
+        versionId,
+        result: result || undefined,
+      },
+      responseType: 'blob',
+    })
+  },
+
   // Dashboard
   getDashboardOverview(params) {
     return httpClient.get('/dashboard/overview', {

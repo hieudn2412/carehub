@@ -3,6 +3,9 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -44,7 +47,6 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,17 +67,23 @@ public class CompetencyService {
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final BigDecimal SUMMARY_WEIGHT = new BigDecimal("0.5");
+    private static final String ALL_DEPARTMENTS_LABEL = "Toàn viện";
 
     @Transactional(readOnly = true)
-    public CompetencyByFieldResponse getByField(Long departmentId, Long categoryId, LocalDate fromDate, LocalDate toDate) {
+    public CompetencyByFieldResponse getByField(
+            Long departmentId,
+            Long categoryId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            Pageable pageable
+    ) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
         LocalDate to = toDate != null ? toDate : LocalDate.now();
         LocalDateTime fromDateTime = from.atStartOfDay();
         LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
 
-        Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
-        List<User> users = userRepository.findByDepartment_IdInAndIsDeletedFalse(Set.of(departmentId));
+        Department department = findDepartment(departmentId);
 
         String categoryName = null;
         String categoryFilter = categoryId != null ? String.valueOf(categoryId) : null;
@@ -84,9 +92,24 @@ public class CompetencyService {
             categoryName = cat != null ? cat.getName() : null;
         }
 
+        Page<User> userPage = userRepository.findCompetencyFieldCandidates(
+                departmentId,
+                normalizeKeyword(keyword),
+                categoryFilter,
+                fromDateTime,
+                toDateTime,
+                normalizePageable(pageable)
+        );
+        List<User> users = userPage.getContent();
+        Map<Long, List<ExamAttempt>> attemptsByUser = users.isEmpty()
+                ? Map.of()
+                : groupAttemptsByUser(attemptRepository.findScoredAttemptsByUserIdsAndDateRange(
+                        userIds(users), fromDateTime, toDateTime
+                ));
+
         List<CompetencyByFieldItemResponse> items = new ArrayList<>();
         for (User user : users) {
-            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime)
+            List<ExamAttempt> attempts = attemptsByUser.getOrDefault(user.getId(), List.of())
                     .stream()
                     .filter(attempt -> attempt.getScore() != null)
                     .toList();
@@ -115,6 +138,7 @@ public class CompetencyService {
 
             items.add(new CompetencyByFieldItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
+                    departmentName(user),
                     attempts.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level), isPassed
@@ -124,9 +148,11 @@ public class CompetencyService {
         items.sort(Comparator.comparing(CompetencyByFieldItemResponse::employeeName));
 
         return new CompetencyByFieldResponse(
-                department.getId(), department.getName(),
+                departmentId, scopeName(department),
                 categoryId, categoryName,
-                from.format(DATE_FMT), to.format(DATE_FMT), items
+                from.format(DATE_FMT), to.format(DATE_FMT), items,
+                userPage.getNumber(), userPage.getSize(),
+                userPage.getTotalElements(), userPage.getTotalPages()
         );
     }
 
@@ -201,42 +227,39 @@ public class CompetencyService {
     }
 
     @Transactional(readOnly = true)
-    public CompetencyByTechniqueResponse getByTechnique(Long departmentId, Long formId, LocalDate fromDate, LocalDate toDate) {
+    public CompetencyByTechniqueResponse getByTechnique(
+            Long departmentId,
+            Long formId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            Pageable pageable
+    ) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
         LocalDate to = toDate != null ? toDate : LocalDate.now();
         ZoneId zoneId = ZoneId.systemDefault();
 
-        Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
-        List<FormSubmission> departmentSubmissions =
-                formSubmissionRepository.findScoredEvaluationsForDepartment(
-                        departmentId,
-                        from.atStartOfDay(zoneId).toInstant(),
-                        to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1)
+        Department department = findDepartment(departmentId);
+        java.time.Instant fromInstant = from.atStartOfDay(zoneId).toInstant();
+        java.time.Instant toInstant = to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1);
+        Page<User> userPage = formSubmissionRepository.findCompetencyTechniqueCandidates(
+                departmentId,
+                formId,
+                normalizeKeyword(keyword),
+                fromInstant,
+                toInstant,
+                normalizePageable(pageable)
+        );
+        List<User> users = userPage.getContent();
+        List<CompetencyTechniqueOptionResponse> forms =
+                formSubmissionRepository.findCompetencyTechniqueOptions(
+                        departmentId, fromInstant, toInstant
                 );
-
-        List<CompetencyTechniqueOptionResponse> forms = departmentSubmissions.stream()
-                .map(FormSubmission::getFormVersion)
-                .filter(java.util.Objects::nonNull)
-                .map(version -> version.getForm())
-                .filter(java.util.Objects::nonNull)
-                .collect(Collectors.toMap(
-                        Form::getId,
-                        form -> new CompetencyTechniqueOptionResponse(form.getId(), form.getTitle()),
-                        (left, right) -> left,
-                        LinkedHashMap::new
-                ))
-                .values().stream()
-                .sorted(Comparator.comparing(CompetencyTechniqueOptionResponse::title))
-                .toList();
-
-        List<FormSubmission> matched = departmentSubmissions.stream()
-                .filter(submission -> formId == null
-                        || (submission.getFormVersion() != null
-                        && submission.getFormVersion().getForm() != null
-                        && formId.equals(submission.getFormVersion().getForm().getId())))
-                .toList();
-
+        List<FormSubmission> matched = users.isEmpty()
+                ? List.of()
+                : formSubmissionRepository.findScoredEvaluationsForTechniqueCandidates(
+                        userIds(users), formId, fromInstant, toInstant
+                );
         Map<Long, List<FormSubmission>> grouped = matched.stream()
                 .filter(submission -> submission.getSubjectContext() != null)
                 .filter(submission -> submission.getSubjectContext().getSubjectUser() != null)
@@ -247,9 +270,11 @@ public class CompetencyService {
                 ));
 
         List<CompetencyByTechniqueItemResponse> items = new ArrayList<>();
-        for (var entry : grouped.entrySet()) {
-            List<FormSubmission> subs = entry.getValue();
-            User subject = subs.get(0).getSubjectContext().getSubjectUser();
+        for (User subject : users) {
+            List<FormSubmission> subs = grouped.getOrDefault(subject.getId(), List.of());
+            if (subs.isEmpty()) {
+                continue;
+            }
 
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
@@ -269,7 +294,7 @@ public class CompetencyService {
 
             items.add(new CompetencyByTechniqueItemResponse(
                     subject.getId(), subject.getEmployeeCode(), subject.getName(),
-                    department.getName(),
+                    departmentName(subject),
                     subs.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
@@ -286,9 +311,11 @@ public class CompetencyService {
         }
 
         return new CompetencyByTechniqueResponse(
-                department.getId(), department.getName(),
+                departmentId, scopeName(department),
                 formId, formName, defaultComplianceTarget,
-                from.format(DATE_FMT), to.format(DATE_FMT), forms, items
+                from.format(DATE_FMT), to.format(DATE_FMT), forms, items,
+                userPage.getNumber(), userPage.getSize(),
+                userPage.getTotalElements(), userPage.getTotalPages()
         );
     }
 
@@ -384,24 +411,74 @@ public class CompetencyService {
     }
 
     @Transactional(readOnly = true)
-    public CompetencySummaryResponse getSummary(Long departmentId, LocalDate fromDate, LocalDate toDate) {
+    public CompetencySummaryResponse getSummary(
+            Long departmentId,
+            LocalDate fromDate,
+            LocalDate toDate,
+            String keyword,
+            Pageable pageable
+    ) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
         LocalDate to = toDate != null ? toDate : LocalDate.now();
         LocalDateTime fromDateTime = from.atStartOfDay();
         LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
 
-        Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
-        BigDecimal targetScore = department.getCompetencyTargetScore();
-        if (targetScore != null && targetScore.compareTo(BigDecimal.valueOf(10)) > 0) {
-            targetScore = targetScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        Department department = findDepartment(departmentId);
+        BigDecimal targetScore = department != null
+                ? normalizeTargetScore(department.getCompetencyTargetScore())
+                : null;
+        Page<User> userPage = userRepository.findCompetencySummaryCandidates(
+                departmentId,
+                normalizeKeyword(keyword),
+                normalizePageable(pageable)
+        );
+        List<User> users = userPage.getContent();
+        Map<Long, List<ExamAttempt>> attemptsByUser = users.isEmpty()
+                ? Map.of()
+                : groupAttemptsByUser(attemptRepository.findScoredAttemptsByUserIdsAndDateRange(
+                        userIds(users), fromDateTime, toDateTime
+                ));
+        ZoneId zoneId = ZoneId.systemDefault();
+        Map<Long, List<FormSubmission>> allSubmissionsByUser = new LinkedHashMap<>();
+        Map<String, List<FormSubmission>> legacySubmissionsByEmployeeCode = new LinkedHashMap<>();
+        if (!users.isEmpty()) {
+            List<String> employeeCodes = users.stream()
+                    .map(User::getEmployeeCode)
+                    .map(this::normalizeEmployeeCode)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            List<FormSubmission> allSubmissions =
+                    formSubmissionRepository.findScoredEvaluationsForCandidateUsers(
+                    userIds(users),
+                    employeeCodes.isEmpty() ? List.of("__none__") : employeeCodes,
+                    fromDateTime.atZone(zoneId).toInstant(),
+                    toDateTime.atZone(zoneId).toInstant()
+            );
+            for (FormSubmission submission : allSubmissions) {
+                if (submission.getSubjectContext() == null) {
+                    continue;
+                }
+                User subject = submission.getSubjectContext().getSubjectUser();
+                if (subject != null) {
+                    allSubmissionsByUser.computeIfAbsent(subject.getId(), ignored -> new ArrayList<>())
+                            .add(submission);
+                } else {
+                    String employeeCode = normalizeEmployeeCode(
+                            submission.getSubjectContext().getEmployeeCode()
+                    );
+                    if (employeeCode != null) {
+                        legacySubmissionsByEmployeeCode
+                                .computeIfAbsent(employeeCode, ignored -> new ArrayList<>())
+                                .add(submission);
+                    }
+                }
+            }
         }
-        List<User> users = userRepository.findByDepartment_IdInAndIsDeletedFalse(Set.of(departmentId));
 
         List<CompetencySummaryItemResponse> items = new ArrayList<>();
         for (User user : users) {
             // Knowledge
-            List<ExamAttempt> attempts = attemptRepository.findScoredAttemptsByUserAndDateRange(user, fromDateTime, toDateTime)
+            List<ExamAttempt> attempts = attemptsByUser.getOrDefault(user.getId(), List.of())
                     .stream()
                     .filter(attempt -> attempt.getScore() != null)
                     .toList();
@@ -419,13 +496,13 @@ public class CompetencyService {
             }
 
             // Skills
-            ZoneId zoneId = ZoneId.systemDefault();
-            List<FormSubmission> userSubs = formSubmissionRepository.findScoredEvaluationsForSubject(
-                    user.getId(),
-                    user.getEmployeeCode(),
-                    fromDateTime.atZone(zoneId).toInstant(),
-                    toDateTime.atZone(zoneId).toInstant()
-            );
+            List<FormSubmission> userSubs = allSubmissionsByUser.get(user.getId());
+            if (userSubs == null || userSubs.isEmpty()) {
+                userSubs = legacySubmissionsByEmployeeCode.getOrDefault(
+                        normalizeEmployeeCode(user.getEmployeeCode()),
+                        List.of()
+                );
+            }
 
             BigDecimal skillAvg = null;
             if (!userSubs.isEmpty()) {
@@ -445,26 +522,94 @@ public class CompetencyService {
 
             CompetencyLevel level = overallScore != null
                     ? classificationService.classifyOverall(overallScore) : null;
+            BigDecimal employeeTargetScore = departmentId != null
+                    ? targetScore
+                    : normalizeTargetScore(user.getDepartment() != null
+                            ? user.getDepartment().getCompetencyTargetScore()
+                            : null);
 
             items.add(new CompetencySummaryItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
+                    departmentName(user),
                     knowledgeAvg, skillAvg, overallScore,
                     level != null ? level.name() : null,
                     level != null ? QuestionGenerationLabels.competencyLevel(level) : null,
                     level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
-                    overallScore != null && targetScore != null && overallScore.compareTo(targetScore) > 0
+                    overallScore != null
+                            && employeeTargetScore != null
+                            && overallScore.compareTo(employeeTargetScore) > 0
             ));
         }
 
         items.sort(Comparator.comparing(CompetencySummaryItemResponse::employeeName));
 
         return new CompetencySummaryResponse(
-                department.getId(), department.getName(),
+                departmentId, scopeName(department),
                 from.format(DATE_FMT), to.format(DATE_FMT),
                 SUMMARY_WEIGHT, SUMMARY_WEIGHT,
                 targetScore,
-                items
+                items,
+                userPage.getNumber(), userPage.getSize(),
+                userPage.getTotalElements(), userPage.getTotalPages()
         );
+    }
+
+    private Department findDepartment(Long departmentId) {
+        if (departmentId == null) {
+            return null;
+        }
+        return departmentRepository.findById(departmentId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
+    }
+
+    private String scopeName(Department department) {
+        return department != null ? department.getName() : ALL_DEPARTMENTS_LABEL;
+    }
+
+    private String departmentName(User user) {
+        return user.getDepartment() != null ? user.getDepartment().getName() : null;
+    }
+
+    private BigDecimal normalizeTargetScore(BigDecimal targetScore) {
+        if (targetScore != null && targetScore.compareTo(BigDecimal.valueOf(10)) > 0) {
+            return targetScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        }
+        return targetScore;
+    }
+
+    private Map<Long, List<ExamAttempt>> groupAttemptsByUser(List<ExamAttempt> attempts) {
+        return attempts.stream()
+                .filter(attempt -> attempt.getUser() != null)
+                .collect(Collectors.groupingBy(
+                        attempt -> attempt.getUser().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+    }
+
+    private Pageable normalizePageable(Pageable pageable) {
+        int page = pageable != null ? Math.max(0, pageable.getPageNumber()) : 0;
+        int requestedSize = pageable != null ? pageable.getPageSize() : 10;
+        int size = Math.min(Math.max(requestedSize, 1), 100);
+        return PageRequest.of(page, size);
+    }
+
+    private List<Long> userIds(List<User> users) {
+        return users.stream().map(User::getId).toList();
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
+        return "%" + keyword.trim().toLowerCase(java.util.Locale.ROOT) + "%";
+    }
+
+    private String normalizeEmployeeCode(String employeeCode) {
+        if (employeeCode == null || employeeCode.isBlank()) {
+            return null;
+        }
+        return employeeCode.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     @Transactional

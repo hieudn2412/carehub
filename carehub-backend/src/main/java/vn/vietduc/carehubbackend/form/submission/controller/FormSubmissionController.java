@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import vn.vietduc.carehubbackend.common.response.*;
 import vn.vietduc.carehubbackend.form.submission.dto.*;
+import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionStatus;
+import vn.vietduc.carehubbackend.form.submission.service.FormSubmissionExcelExportService;
 import vn.vietduc.carehubbackend.form.submission.service.FormSubmissionService;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("${app.api-prefix}/form-submissions")
@@ -21,6 +24,7 @@ import java.net.URI;
 @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
 public class FormSubmissionController {
     private final FormSubmissionService service;
+    private final FormSubmissionExcelExportService excelExportService;
 
     @PostMapping
     @PreAuthorize("hasRole('MANAGER')")
@@ -61,6 +65,28 @@ public class FormSubmissionController {
                 "Get form submissions successfully",
                 PageResponse.from(service.search(status, keyword, pageable))
         );
+    }
+
+    @GetMapping("/exports/version")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> exportVersion(
+            @RequestParam Long formId,
+            @RequestParam Long versionId,
+            @RequestParam(required = false) FormSubmissionResult result
+    ) {
+        FormSubmissionExcelExportService.ExportFile file =
+                excelExportService.exportVersion(formId, versionId, result);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(file.contentType()))
+                .cacheControl(CacheControl.noStore())
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename(file.filename(), StandardCharsets.UTF_8)
+                                .build()
+                                .toString()
+                )
+                .body(file.content());
     }
 
     @GetMapping("/{id}")

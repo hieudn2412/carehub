@@ -636,20 +636,22 @@ function AdminAccountsScreen() {
                   />
                 </div>
 
-                {/* Department dropdown */}
-                <select 
-                  className="am-filter-select" 
-                  value={deptFilter} 
-                  onChange={(e) => { setDeptFilter(e.target.value); setPage(1) }}
-                >
-                  <option value="all">Tất cả phòng ban</option>
-                  {departmentLoading && <option disabled>Đang tải phòng ban...</option>}
-                  {!departmentLoading && departmentLoadError && <option disabled>Không tải được phòng ban</option>}
-                  {departmentEmpty && <option disabled>Chưa có phòng ban</option>}
-                  {departments.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+                <div className="am-filter-department">
+                  <DepartmentCombobox
+                    id="account-department-filter"
+                    departments={departments}
+                    value={deptFilter}
+                    onChange={(value) => {
+                      setDeptFilter(value || 'all')
+                      setPage(1)
+                    }}
+                    disabled={departmentLoading}
+                    placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tìm khoa/phòng...'}
+                    allLabel="Tất cả phòng ban"
+                    emptyValue="all"
+                    required={false}
+                  />
+                </div>
 
                 {/* Role dropdown */}
                 <select 

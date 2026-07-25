@@ -14,6 +14,7 @@ public record EmployeeTrainingStatusSearchRequest(
         BigDecimal submittedHoursMin,
         BigDecimal submittedHoursMax,
         Boolean requirementConfigured,
+        Boolean compliant,
         LocalDate asOf
 ) {
 }

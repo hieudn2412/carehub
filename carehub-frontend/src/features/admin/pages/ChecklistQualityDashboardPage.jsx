@@ -5,6 +5,7 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
   EditOutlined,
   FileSearchOutlined,
   LoadingOutlined,
@@ -23,6 +24,7 @@ import '../styles/ChecklistQualityDashboardPage.css'
 
 const today = new Date().toISOString().slice(0, 10)
 const yearStart = `${new Date().getFullYear()}-01-01`
+const EXPORT_PAGE_SIZE = 100
 
 function pageItems(response) {
   const data = apiData(response, null)
@@ -57,6 +59,66 @@ function normalizeDepartment(item) {
   }
 }
 
+function csvCell(value) {
+  return `"${String(value ?? '').replaceAll('"', '""')}"`
+}
+
+function downloadChecklistCsv(rows) {
+  const csvRows = [
+    ['Mã bảng kiểm', 'Tên bảng kiểm', 'Người được kiểm tra', 'Lượt đánh giá', 'Số đạt', 'Số chưa đạt', 'Điểm trung bình', 'Tỷ lệ đạt']
+      .map(csvCell)
+      .join(','),
+    ...rows.map((item) => {
+      const submitted = Number(item.submittedCount || item.responseCount || 0)
+      const passed = Number(item.passedCount || 0)
+      return [
+        item.formCode,
+        item.formTitle,
+        Number(item.uniqueSubjectCount || 0),
+        submitted,
+        passed,
+        Math.max(0, submitted - passed),
+        formatScore(item.averageConvertedScore),
+        formatPercent(item.passRate),
+      ].map(csvCell).join(',')
+    }),
+  ]
+  const blob = new Blob([`\uFEFF${csvRows.join('\n')}`], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = `ket-qua-bang-kiem-${new Date().toISOString().slice(0, 10)}.csv`
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+async function fetchAllFormPerformance(params) {
+  const firstResponse = await adminApi.getDashboardFormPerformance({
+    ...params,
+    page: 0,
+    size: EXPORT_PAGE_SIZE,
+    sort: 'responseCount,desc',
+  })
+  const firstData = apiData(firstResponse, {})
+  const totalPages = Math.max(1, Number(firstData?.totalPages) || 1)
+  if (totalPages === 1) return pageItems(firstResponse)
+
+  const remainingResponses = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => (
+      adminApi.getDashboardFormPerformance({
+        ...params,
+        page: index + 1,
+        size: EXPORT_PAGE_SIZE,
+        sort: 'responseCount,desc',
+      })
+    )),
+  )
+  return [
+    ...pageItems(firstResponse),
+    ...remainingResponses.flatMap(pageItems),
+  ]
+}
+
 function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
   const LayoutSidebar = isManager ? Sidebar : AdminSidebar
@@ -76,6 +138,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [submittedByUserId, setSubmittedByUserId] = useState('')
   const [loading, setLoading] = useState(true)
   const [trendLoading, setTrendLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -254,6 +317,31 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     : 0
   const evaluatedProcessCount = forms.filter((item) => Number(item.submittedCount || item.responseCount || 0) > 0).length
 
+  const handleExport = async () => {
+    setExporting(true)
+    setError('')
+    try {
+      const rows = await fetchAllFormPerformance({
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
+        departmentId: departmentId || undefined,
+        formId: processId || undefined,
+        resultStatus: resultStatus || undefined,
+        subjectUserId: subjectUserId || undefined,
+        submittedByUserId: submittedByUserId || undefined,
+      })
+      const keyword = search.trim().toLocaleLowerCase('vi-VN')
+      downloadChecklistCsv(rows.filter((item) => (
+        !keyword || [item.formTitle, item.formCode]
+          .some((value) => String(value || '').toLocaleLowerCase('vi-VN').includes(keyword))
+      )))
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError))
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div className="dashboard-layout checklist-quality-page">
       <LayoutSidebar />
@@ -277,9 +365,22 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                   : 'Tổng hợp điểm thực hành từ từng checklist và quy trình trên toàn viện hoặc theo khoa.'}
               </p>
             </div>
-            <div className="checklist-quality-hero__count">
-              <FileSearchOutlined />
-              <span><strong>{evaluatedProcessCount}</strong> quy trình có đánh giá</span>
+            <div className="checklist-quality-hero__actions">
+              <div className="checklist-quality-hero__count">
+                <FileSearchOutlined />
+                <span><strong>{evaluatedProcessCount}</strong> quy trình có đánh giá</span>
+              </div>
+              {!isManager && (
+                <button
+                  className="checklist-quality-export"
+                  disabled={exporting || loading || visibleForms.length === 0}
+                  onClick={handleExport}
+                  type="button"
+                >
+                  {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
+                  {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+                </button>
+              )}
             </div>
           </section>
 

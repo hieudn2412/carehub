@@ -9,6 +9,10 @@ public record CompetencyByFieldResponse(
         String categoryName,
         String fromDate,
         String toDate,
-        List<CompetencyByFieldItemResponse> items
+        List<CompetencyByFieldItemResponse> items,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages
 ) {
 }

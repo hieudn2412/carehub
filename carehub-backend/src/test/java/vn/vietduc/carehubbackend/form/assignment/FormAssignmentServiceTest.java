@@ -72,6 +72,27 @@ class FormAssignmentServiceTest {
     }
 
     @Test
+    void allowsAssignmentToNewVersionWhenManagerWasAssignedToOldVersion() {
+        Form form = Form.builder().id(3L).code("HAND").title("Hand").subjectType(FormSubjectType.USER)
+                .status(FormStatus.PUBLISHED).deleted(false).build();
+        FormVersion publishedVersion = FormVersion.builder().id(11L).form(form).title("Hand v2")
+                .versionNumber(2).status(FormVersionStatus.PUBLISHED).build();
+        when(versionRepository.findAllById(List.of(11L))).thenReturn(List.of(publishedVersion));
+        when(itemRepository.existsOpenEndedOverlappingActiveAssignment(
+                eq(5L), anyLong(), eq(FormAssignmentStatus.ACTIVE), any(Instant.class)))
+                .thenAnswer(invocation -> Objects.equals(invocation.getArgument(1), 10L));
+        when(assignmentRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.create(new CreateFormAssignmentRequest(5L, null, null, List.of(11L)));
+
+        assertEquals(11L, response.items().get(0).formVersionId());
+        verify(itemRepository).existsOpenEndedOverlappingActiveAssignment(
+                5L, 11L, FormAssignmentStatus.ACTIVE, Instant.parse("2026-06-21T00:00:00Z"));
+        verify(itemRepository, never()).existsOpenEndedOverlappingActiveAssignment(
+                eq(5L), eq(10L), any(), any());
+    }
+
+    @Test
     void rejectsDraftVersion() {
         Form form = Form.builder().id(3L).code("HAND").build();
         FormVersion draft = FormVersion.builder().id(10L).form(form).status(FormVersionStatus.DRAFT).build();

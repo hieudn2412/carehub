@@ -10,6 +10,8 @@ import {
   CaretUpOutlined,
   CaretDownOutlined,
   EyeOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons'
 import {
   BarChart,
@@ -33,6 +35,8 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
+
+const PAGE_SIZE = 10
 
 function CompetencySummaryPage() {
   const { showToast } = useToast()
@@ -63,6 +67,8 @@ function CompetencySummaryPage() {
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
+  const [page, setPage] = useState(0)
 
   // Sorting
   const [sortColumn, setSortColumn] = useState('overallScore')
@@ -88,7 +94,7 @@ function CompetencySummaryPage() {
           const res = await adminApi.getDepartments()
           const depts = apiData(res, [])
           setDepartments(depts)
-          if (depts.length > 0) setDepartmentId(String(depts[0].id))
+          setDepartmentId('')
         } catch { /* ignore */ }
       } else {
         try {
@@ -110,25 +116,39 @@ function CompetencySummaryPage() {
     return () => window.clearTimeout(timer)
   }, [isAdmin, showToast, loadCategories])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim())
+      setPage(0)
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
+
   const loadData = useCallback(async () => {
-    if (!departmentId) return
+    if (!isAdmin && !departmentId) return
     setLoading(true)
     setData(null)
     try {
       if (reportType === 'summary') {
         const response = await competencyApi.getSummary({
-          departmentId,
+          departmentId: departmentId || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          keyword: debouncedSearchTerm || undefined,
+          page,
+          size: PAGE_SIZE,
         })
         const responseData = apiData(response, null)
         setData(responseData)
         setTargetInput(responseData?.targetScore == null ? '' : String(responseData.targetScore))
       } else if (reportType === 'field') {
         const params = {
-          departmentId,
+          departmentId: departmentId || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          keyword: debouncedSearchTerm || undefined,
+          page,
+          size: PAGE_SIZE,
         }
         if (selectedCategory) {
           params.categoryId = selectedCategory
@@ -137,10 +157,13 @@ function CompetencySummaryPage() {
         setData(apiData(response, null))
       } else if (reportType === 'technique') {
         const response = await competencyApi.getByTechnique({
-          departmentId,
+          departmentId: departmentId || undefined,
           formId: selectedFormId || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          keyword: debouncedSearchTerm || undefined,
+          page,
+          size: PAGE_SIZE,
         })
         const responseData = apiData(response, null)
         setData(responseData)
@@ -151,15 +174,25 @@ function CompetencySummaryPage() {
     } finally {
       setLoading(false)
     }
-  }, [reportType, departmentId, fromDate, toDate, selectedCategory, selectedFormId, showToast])
+  }, [
+    reportType, departmentId, fromDate, toDate, selectedCategory, selectedFormId,
+    debouncedSearchTerm, page, isAdmin, showToast,
+  ])
 
   useEffect(() => {
-    if (!departmentId) return undefined
+    if (!isAdmin && !departmentId) return undefined
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
-  }, [departmentId, reportType, fromDate, toDate, selectedCategory, selectedFormId, loadData])
+  }, [
+    departmentId, reportType, fromDate, toDate, selectedCategory, selectedFormId,
+    debouncedSearchTerm, page, isAdmin, loadData,
+  ])
 
   const handleSaveTarget = async () => {
+    if (!departmentId) {
+      showToast('Vui lòng chọn một khoa/phòng để đặt điểm mục tiêu.', 'warning')
+      return
+    }
     const targetScore = Number(targetInput)
     if (!Number.isFinite(targetScore) || targetScore < 0 || targetScore > 10) {
       showToast('Điểm mục tiêu phải nằm trong khoảng 0 đến 10.', 'warning')
@@ -219,13 +252,9 @@ function CompetencySummaryPage() {
   const knowledgeWeight = data?.knowledgeWeight ? parseFloat(data.knowledgeWeight) * 100 : 50
   const skillWeight = data?.skillWeight ? parseFloat(data.skillWeight) * 100 : 50
 
-  const filteredItems = data?.items
-    ? data.items.filter(item =>
-        !searchTerm ||
-        (item.employeeName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.employeeCode || '').toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : []
+  const filteredItems = data?.items || []
+  const totalElements = Number(data?.totalElements) || 0
+  const totalPages = Number(data?.totalPages) || 0
 
   const getSortedSummaryItems = () => {
     const items = [...filteredItems]
@@ -242,6 +271,89 @@ function CompetencySummaryPage() {
   const complianceTarget = data?.complianceTarget || 80.0
   const belowCount = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalCount = data?.items ? data.items.length : 0
+
+  const visiblePages = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index)
+    }
+    const indexes = new Set([0, totalPages - 1, page - 1, page, page + 1])
+    const pages = [...indexes]
+      .filter(index => index >= 0 && index < totalPages)
+      .sort((left, right) => left - right)
+    const result = []
+    pages.forEach((pageIndex, index) => {
+      if (index > 0 && pageIndex - pages[index - 1] > 1) {
+        result.push(`ellipsis-${pageIndex}`)
+      }
+      result.push(pageIndex)
+    })
+    return result
+  }
+
+  const renderPagination = () => {
+    if (loading || totalElements === 0) return null
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 12,
+        padding: '14px 16px',
+        borderTop: '1px solid #e5e7eb',
+        flexWrap: 'wrap',
+      }}>
+        <span style={{ fontSize: 13, color: '#6b7280' }}>
+          Hiển thị {filteredItems.length} trong tổng số {totalElements} kết quả
+        </span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="evd-btn-text"
+            aria-label="Trang trước"
+            onClick={() => setPage(current => Math.max(0, current - 1))}
+            disabled={page === 0}
+            style={{ width: 34, height: 34 }}
+          >
+            <LeftOutlined />
+          </button>
+          {visiblePages().map(pageItem => (
+            typeof pageItem === 'string'
+              ? <span key={pageItem} style={{ padding: '0 4px', color: '#9ca3af' }}>...</span>
+              : (
+                <button
+                  type="button"
+                  key={pageItem}
+                  onClick={() => setPage(pageItem)}
+                  aria-current={pageItem === page ? 'page' : undefined}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 6,
+                    border: pageItem === page ? '1px solid #2563eb' : '1px solid #d1d5db',
+                    background: pageItem === page ? '#eff6ff' : '#fff',
+                    color: pageItem === page ? '#1d4ed8' : '#374151',
+                    fontWeight: pageItem === page ? 700 : 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {pageItem + 1}
+                </button>
+              )
+          ))}
+          <button
+            type="button"
+            className="evd-btn-text"
+            aria-label="Trang sau"
+            onClick={() => setPage(current => Math.min(totalPages - 1, current + 1))}
+            disabled={page + 1 >= totalPages}
+            style={{ width: 34, height: 34 }}
+          >
+            <RightOutlined />
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const Layout = isAdmin ? AdminSidebar : Sidebar
   const PageHeader = isAdmin ? AdminHeader : Header
@@ -294,6 +406,7 @@ function CompetencySummaryPage() {
                       onClick={() => {
                         setReportType(tab.key)
                         setSearchTerm('')
+                        setPage(0)
                       }}
                       style={{
                         padding: '8px 16px',
@@ -321,9 +434,13 @@ function CompetencySummaryPage() {
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                  <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
+                  <select value={departmentId} onChange={(e) => {
+                    setDepartmentId(e.target.value)
+                    setPage(0)
+                  }}
                     disabled={!isAdmin}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
+                    {isAdmin && <option value="">Toàn viện</option>}
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
@@ -332,20 +449,29 @@ function CompetencySummaryPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
-                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+                  <input type="date" value={fromDate} onChange={(e) => {
+                    setFromDate(e.target.value)
+                    setPage(0)
+                  }}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Đến ngày</label>
-                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+                  <input type="date" value={toDate} onChange={(e) => {
+                    setToDate(e.target.value)
+                    setPage(0)
+                  }}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
                 </div>
 
                 {reportType === 'field' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Lĩnh vực</label>
-                    <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}
+                    <select value={selectedCategory} onChange={(e) => {
+                      setSelectedCategory(e.target.value)
+                      setPage(0)
+                    }}
                       style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
                       <option value="">Tất cả lĩnh vực</option>
                       {categories.map(c => (
@@ -358,7 +484,10 @@ function CompetencySummaryPage() {
                 {reportType === 'technique' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Kỹ thuật</label>
-                    <select value={selectedFormId} onChange={(e) => setSelectedFormId(e.target.value)}
+                    <select value={selectedFormId} onChange={(e) => {
+                      setSelectedFormId(e.target.value)
+                      setPage(0)
+                    }}
                       style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 200 }}>
                       <option value="">-- Tất cả kỹ thuật --</option>
                       {forms.map(f => (
@@ -381,7 +510,7 @@ function CompetencySummaryPage() {
               {/* REPORT TYPE: 1. SUMMARY VIEW */}
               {reportType === 'summary' && (
                 <>
-                  <section className="evd-panel" style={{
+                  {departmentId && <section className="evd-panel" style={{
                     padding: 16,
                     marginBottom: 16,
                     display: 'flex',
@@ -426,12 +555,12 @@ function CompetencySummaryPage() {
                         {targetSaving ? 'Đang lưu...' : 'Lưu mục tiêu'}
                       </button>
                     </div>
-                  </section>
+                  </section>}
 
                   {data && distribution.length > 0 && (
                     <section className="evd-panel" style={{ padding: 20, marginBottom: 16 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
-                        Phân bố mức phân loại — {data.departmentName || 'Khoa đã chọn'}
+                        Phân bố trên trang hiện tại — {data.departmentName || 'Khoa đã chọn'}
                       </div>
                       <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={distribution} layout="vertical" margin={{ left: 100, right: 20, top: 5, bottom: 5 }}>
@@ -495,7 +624,7 @@ function CompetencySummaryPage() {
                         ) : !data || filteredItems.length === 0 ? (
                           <tr>
                             <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                              Chưa có dữ liệu năng lực cho khoa này.
+                              Chưa có dữ liệu năng lực trong phạm vi đã chọn.
                             </td>
                           </tr>
                         ) : (
@@ -505,10 +634,10 @@ function CompetencySummaryPage() {
                             const rowClass = isNotCompetent ? 'evd-row--danger' : (isBeginner ? 'evd-row--warning' : '')
                             return (
                               <tr key={idx} className={rowClass}>
-                                <td>{idx + 1}</td>
+                                <td>{page * PAGE_SIZE + idx + 1}</td>
                                 <td><code style={{ fontSize: 12 }}>{item.employeeCode || '—'}</code></td>
                                 <td style={{ fontWeight: 500 }}>{item.employeeName || '—'}</td>
-                                {isAdmin && <td style={{ color: '#6b7280' }}>{data.departmentName || '—'}</td>}
+                                {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
                                 <td>{formatNumber(item.knowledgeAverage)}</td>
                                 <td>{formatNumber(item.skillAverage)}</td>
                                 <td style={{ fontWeight: 700 }}>{formatNumber(item.overallScore)}</td>
@@ -531,6 +660,7 @@ function CompetencySummaryPage() {
                         )}
                       </tbody>
                     </table>
+                    {renderPagination()}
                   </div>
                 </>
               )}
@@ -543,7 +673,7 @@ function CompetencySummaryPage() {
                       <div style={{ fontSize: 14, color: '#374151' }}>
                         <strong>{data.departmentName}</strong>
                         {data.categoryName && <> — <em>{data.categoryName}</em></>}
-                        : {data.items.length} điều dưỡng có dữ liệu
+                        : {totalElements} điều dưỡng có dữ liệu
                       </div>
                     </section>
                   )}
@@ -568,6 +698,7 @@ function CompetencySummaryPage() {
                           <th style={{ width: 50 }}>STT</th>
                           <th>Mã NV</th>
                           <th>Họ tên</th>
+                          {isAdmin && <th>Khoa</th>}
                           <th>Số lần thi</th>
                           <th>Điểm TB</th>
                           <th>Tỷ lệ đạt</th>
@@ -578,13 +709,13 @@ function CompetencySummaryPage() {
                       <tbody>
                         {loading ? (
                           <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                            <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                               Đang tải dữ liệu...
                             </td>
                           </tr>
                         ) : filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                            <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
                               Chưa có dữ liệu đánh giá cho lĩnh vực này.
                             </td>
                           </tr>
@@ -596,9 +727,10 @@ function CompetencySummaryPage() {
                               style={{ cursor: 'pointer' }}
                               onClick={() => navigate(`${detailPathField}/${item.employeeId}`)}
                             >
-                              <td>{idx + 1}</td>
+                              <td>{page * PAGE_SIZE + idx + 1}</td>
                               <td>{item.employeeCode}</td>
                               <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
+                              {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
                               <td>{item.attemptCount}</td>
                               <td>{formatNumber(item.averageScore)}</td>
                               <td>
@@ -625,6 +757,7 @@ function CompetencySummaryPage() {
                         )}
                       </tbody>
                     </table>
+                    {renderPagination()}
                   </div>
                 </>
               )}
@@ -641,7 +774,7 @@ function CompetencySummaryPage() {
                       </div>
                       {totalCount > 0 && (
                         <div style={{ fontSize: 14, color: '#6b7280' }}>
-                          {totalCount} Điều dưỡng —{' '}
+                          {totalCount} điều dưỡng trên trang hiện tại —{' '}
                           <span style={{ color: belowCount > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
                             {belowCount} dưới mục tiêu
                           </span>
@@ -694,13 +827,15 @@ function CompetencySummaryPage() {
                         ) : filteredItems.length === 0 ? (
                           <tr>
                             <td colSpan={isAdmin ? 10 : 9} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                              {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
+                              {!isAdmin && !departmentId
+                                ? 'Vui lòng chọn khoa/phòng.'
+                                : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
                             </td>
                           </tr>
                         ) : (
                           filteredItems.map((item, idx) => (
                             <tr key={idx} className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}>
-                              <td>{idx + 1}</td>
+                              <td>{page * PAGE_SIZE + idx + 1}</td>
                               <td><code style={{ fontSize: 12 }}>{item.employeeCode}</code></td>
                               <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
                               {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || data?.departmentName || '—'}</td>}
@@ -755,6 +890,7 @@ function CompetencySummaryPage() {
                         )}
                       </tbody>
                     </table>
+                    {renderPagination()}
                   </div>
                 </>
               )}

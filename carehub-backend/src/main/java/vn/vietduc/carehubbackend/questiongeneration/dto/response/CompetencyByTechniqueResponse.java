@@ -11,6 +11,10 @@ public record CompetencyByTechniqueResponse(
         String fromDate,
         String toDate,
         List<CompetencyTechniqueOptionResponse> forms,
-        List<CompetencyByTechniqueItemResponse> items
+        List<CompetencyByTechniqueItemResponse> items,
+        int page,
+        int size,
+        long totalElements,
+        int totalPages
 ) {
 }

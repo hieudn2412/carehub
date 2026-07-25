@@ -85,6 +85,7 @@ function FormAssignmentManagementPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState(null)
   const [assignments, setAssignments] = useState([])
+  const [activeAssignments, setActiveAssignments] = useState([])
   const [managers, setManagers] = useState([])
   const [selectedManagerId, setSelectedManagerId] = useState('')
   const [validUntil, setValidUntil] = useState('')
@@ -123,25 +124,39 @@ function FormAssignmentManagementPage() {
       setLoading(true)
       setErrorMessage('')
 
-      const [formResponse, assignmentsResponse, managerContent] = await Promise.all([
+      const assignmentsRequest = adminApi.getFormAssignmentsByForm(id, {
+        page: 0,
+        size: 100,
+        status,
+      })
+      const activeAssignmentsRequest = status === 'ACTIVE'
+        ? assignmentsRequest
+        : adminApi.getFormAssignmentsByForm(id, {
+            page: 0,
+            size: 100,
+            status: 'ACTIVE',
+          })
+
+      const [formResponse, assignmentsResponse, activeAssignmentsResponse, managerContent] = await Promise.all([
         adminApi.getFormById(id),
-        adminApi.getFormAssignmentsByForm(id, {
-          page: 0,
-          size: 100,
-          status,
-        }),
+        assignmentsRequest,
+        activeAssignmentsRequest,
         loadManagers(),
       ])
 
       const nextForm = formResponse.data?.data || null
       setForm(nextForm)
       setAssignments(getPageContent(assignmentsResponse))
+      setActiveAssignments(getPageContent(activeAssignmentsResponse))
       setTotalAssignments(getPageTotalElements(assignmentsResponse))
       setManagers(managerContent)
-      setSelectedManagerId((current) => current || (managerContent[0]?.id ? String(managerContent[0].id) : ''))
+      setSelectedManagerId((current) => (
+        managerContent.some((manager) => String(manager.id) === current) ? current : ''
+      ))
     } catch (error) {
       setForm(null)
       setAssignments([])
+      setActiveAssignments([])
       setTotalAssignments(0)
       setManagers([])
       setSelectedManagerId('')
@@ -163,19 +178,29 @@ function FormAssignmentManagementPage() {
     return () => window.clearTimeout(timer)
   }, [loadData, refreshKey])
 
-  const assignedManagerIds = useMemo(() => (
+  const assignedCurrentVersionManagerIds = useMemo(() => (
     new Set(
-      assignments
-        .filter((assignment) => assignment.effectiveStatus === 'ACTIVE' && assignment.itemStatus === 'ACTIVE')
+      activeAssignments
+        .filter((assignment) => (
+          String(assignment.formVersionId) === String(publishedVersion?.id)
+          && assignment.effectiveStatus === 'ACTIVE'
+          && assignment.itemStatus === 'ACTIVE'
+        ))
         .map((assignment) => String(assignment.manager?.id)),
     )
-  ), [assignments])
+  ), [activeAssignments, publishedVersion?.id])
 
   const availableManagers = useMemo(() => (
-    managers.filter((manager) => !assignedManagerIds.has(String(manager.id)))
-  ), [assignedManagerIds, managers])
+    managers.filter((manager) => !assignedCurrentVersionManagerIds.has(String(manager.id)))
+  ), [assignedCurrentVersionManagerIds, managers])
 
-  const canCreateAssignment = Boolean(publishedVersion?.id && selectedManagerId)
+  const effectiveSelectedManagerId = availableManagers.some(
+    (manager) => String(manager.id) === selectedManagerId,
+  )
+    ? selectedManagerId
+    : (availableManagers[0]?.id ? String(availableManagers[0].id) : '')
+
+  const canCreateAssignment = Boolean(publishedVersion?.id && effectiveSelectedManagerId)
 
   const submitAssignment = async (event) => {
     event.preventDefault()
@@ -187,7 +212,7 @@ function FormAssignmentManagementPage() {
       return
     }
 
-    if (!selectedManagerId) {
+    if (!effectiveSelectedManagerId) {
       setErrorMessage('Vui lòng chọn manager cần phân quyền.')
       return
     }
@@ -195,12 +220,12 @@ function FormAssignmentManagementPage() {
     try {
       setSubmitting(true)
       await adminApi.createFormAssignment({
-        managerId: Number(selectedManagerId),
+        managerId: Number(effectiveSelectedManagerId),
         validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
         formVersionIds: [Number(publishedVersion.id)],
       })
 
-      const manager = managers.find((item) => String(item.id) === selectedManagerId)
+      const manager = managers.find((item) => String(item.id) === effectiveSelectedManagerId)
       setSuccessMessage(`Đã phân quyền checklist cho ${getManagerName(manager)}.`)
       setValidUntil('')
       setSelectedManagerId('')
@@ -300,7 +325,7 @@ function FormAssignmentManagementPage() {
                     <select
                       disabled={loading || submitting || !publishedVersion?.id}
                       onChange={(event) => setSelectedManagerId(event.target.value)}
-                      value={selectedManagerId}
+                      value={effectiveSelectedManagerId}
                     >
                       {availableManagers.length === 0 ? (
                         <option value="">Không còn manager khả dụng</option>

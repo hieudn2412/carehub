@@ -4,6 +4,7 @@ import {
   ArrowLeftOutlined,
   ClockCircleOutlined,
   EyeOutlined,
+  FileExcelOutlined,
   FilterOutlined,
   LoadingOutlined,
   WarningOutlined,
@@ -144,7 +145,9 @@ function AdminQualityHistoryVersionPage() {
   const [assignments, setAssignments] = useState([])
   const [resultFilter, setResultFilter] = useState('')
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
+  const [exportError, setExportError] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -211,6 +214,35 @@ function AdminQualityHistoryVersionPage() {
       averageScore,
     }
   }, [versionSubmissions])
+
+  const exportResponses = async () => {
+    setExporting(true)
+    setExportError('')
+    try {
+      const response = await adminApi.exportFormVersionResponses(formId, versionId, resultFilter)
+      const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const safeCode = getChecklistDisplayCode(form?.code || 'bang-kiem')
+        .replace(/[^A-Za-z0-9._-]/g, '-')
+      const suffix = resultFilter ? resultFilter.toLowerCase() : 'tat-ca'
+      link.href = url
+      link.download = `ket-qua-${safeCode}-v${version?.versionNumber || versionId}-${suffix}.xlsx`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      setExportError(
+        error?.response?.data?.message
+        || 'Không thể xuất Excel cho phiên bản này. Vui lòng thử lại.',
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="dashboard-layout admin-quality-history-page">
@@ -307,17 +339,30 @@ function AdminQualityHistoryVersionPage() {
                 <section className="aqh-response-panel">
                   <div className="aqh-panel-heading">
                     <h3>Response của phiên bản</h3>
-                    <label>
-                      <FilterOutlined />
-                      <select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}>
-                        {RESULT_OPTIONS.map((option) => (
-                          <option key={option.value || 'all'} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="aqh-panel-actions">
+                      <label>
+                        <FilterOutlined />
+                        <select value={resultFilter} onChange={(event) => setResultFilter(event.target.value)}>
+                          {RESULT_OPTIONS.map((option) => (
+                            <option key={option.value || 'all'} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        className="aqh-export-button"
+                        disabled={exporting || filteredSubmissions.length === 0}
+                        onClick={exportResponses}
+                        type="button"
+                      >
+                        {exporting ? <LoadingOutlined spin /> : <FileExcelOutlined />}
+                        {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                      </button>
+                    </div>
                   </div>
+
+                  {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}
 
                   {filteredSubmissions.length === 0 ? (
                     <p>Chưa có response phù hợp với bộ lọc hiện tại.</p>

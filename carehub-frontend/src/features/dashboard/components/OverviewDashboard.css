@@ -87,6 +87,23 @@
 
 .overview-summary--loading { min-height: 128px; grid-template-columns: 1fr; border: 1px solid var(--overview-border); border-radius: 8px; background: #fff; }
 .overview-summary-card { display: flex; align-items: flex-start; gap: 13px; min-height: 118px; padding: 19px; }
+.overview-summary-card--interactive {
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.overview-summary-card--interactive:hover {
+  border-color: #98d7c8;
+  box-shadow: 0 8px 20px rgba(23, 74, 65, .09);
+  transform: translateY(-2px);
+}
+.overview-summary-card--interactive:focus-visible {
+  outline: 3px solid rgba(26, 170, 132, .2);
+  outline-offset: 2px;
+}
 .overview-summary-card__icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; font-size: 19px; }
 .overview-summary-card p { margin: 0 0 5px; color: var(--overview-muted); font-size: 13px; }
 .overview-summary-card strong { display: block; font-size: 25px; font-weight: 650; }

@@ -172,7 +172,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
 
     private EmployeeTrainingStatusSearchRequest normalizeCriteria(EmployeeTrainingStatusSearchRequest request) {
         return request == null
-                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null)
+                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null)
                 : request;
     }
 
@@ -434,6 +434,10 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             EmployeeTrainingStatusSearchRequest criteria
     ) {
         if (criteria.complianceStatus() != null && summary.complianceStatus() != criteria.complianceStatus()) {
+            return false;
+        }
+        if (criteria.compliant() != null
+                && (summary.complianceStatus() == ComplianceStatus.COMPLIANT) != criteria.compliant()) {
             return false;
         }
         if (criteria.submittedHoursMin() != null

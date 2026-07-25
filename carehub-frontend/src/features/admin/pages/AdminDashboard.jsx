@@ -175,6 +175,16 @@ export default function AdminDashboard() {
     quality: { ...dashboard.quality, path: '/admin/reports/checklist-dashboard' },
   }
 
+  const openTrainingEmployees = (summaryType) => {
+    const params = new URLSearchParams()
+    if (filters.departmentId) params.set('departmentId', filters.departmentId)
+    if (filters.professionalFieldId) params.set('professionalFieldId', filters.professionalFieldId)
+    if (summaryType === 'passed') params.set('complianceStatus', 'COMPLIANT')
+    if (summaryType === 'failed') params.set('compliant', 'false')
+    const query = params.toString()
+    navigate(`/training/employees${query ? `?${query}` : ''}`)
+  }
+
   return (
     <div className="dashboard-layout">
       <AdminSidebar />
@@ -190,8 +200,8 @@ export default function AdminDashboard() {
               departments={departments}
               professionalFields={professionalFields}
               onFilterChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
-              onExport={() => navigate('/admin/reports/export-training')}
               onNavigate={navigate}
+              onSummaryOpen={openTrainingEmployees}
               summary={summary}
               domains={domains}
               warnings={warnings}

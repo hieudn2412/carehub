@@ -42,6 +42,7 @@ public class TrainingStatusController {
             @RequestParam(required = false) BigDecimal submittedHoursMin,
             @RequestParam(required = false) BigDecimal submittedHoursMax,
             @RequestParam(required = false) Boolean requirementConfigured,
+            @RequestParam(required = false) Boolean compliant,
             @RequestParam(required = false) LocalDate asOf,
             @PageableDefault(size = 20, sort = "employeeCode", direction = Sort.Direction.ASC)
             Pageable pageable
@@ -55,6 +56,7 @@ public class TrainingStatusController {
                 submittedHoursMin,
                 submittedHoursMax,
                 requirementConfigured,
+                compliant,
                 asOf
         );
         return ResponseEntity.ok(ApiResponse.success(
