@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,13 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
     List<ExamAttempt> findByAssignmentAndUserOrderByAttemptNumberDesc(ExamAssignment assignment, User user);
     List<ExamAttempt> findByUserOrderByStartedAtDesc(User user);
     List<ExamAttempt> findByStatusOrderByStartedAtDesc(ExamAttemptStatus status);
+    @EntityGraph(attributePaths = {
+            "assignment",
+            "assignment.professionalField",
+            "examPaper",
+            "user",
+            "user.department"
+    })
     List<ExamAttempt> findAllByOrderByStartedAtDesc();
     long countByAssignmentAndUser(ExamAssignment assignment, User user);
     long countByStatus(ExamAttemptStatus status);

@@ -3,17 +3,26 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.QuestionItemAnalysisProjection;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.user.entity.Department;
+import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,11 +34,18 @@ class EvaluationDashboardServiceTest {
     private final ExamAttemptRepository attemptRepository = mock(ExamAttemptRepository.class);
     private final ExamAttemptAnswerRepository answerRepository = mock(ExamAttemptAnswerRepository.class);
     private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
+    private final ExamAssignmentTargetRepository assignmentTargetRepository = mock(ExamAssignmentTargetRepository.class);
     private EvaluationDashboardService service;
 
     @BeforeEach
     void setUp() {
-        service = new EvaluationDashboardService(questionRepository, attemptRepository, answerRepository, snapshotRepository);
+        service = new EvaluationDashboardService(
+                questionRepository,
+                attemptRepository,
+                answerRepository,
+                snapshotRepository,
+                assignmentTargetRepository
+        );
         when(questionRepository.count()).thenReturn(10L);
         when(questionRepository.countByStatus(QuestionBankStatus.APPROVED)).thenReturn(6L);
         when(questionRepository.countByStatus(QuestionBankStatus.DRAFT)).thenReturn(2L);
@@ -86,12 +102,72 @@ class EvaluationDashboardServiceTest {
         assertThat(rows.get(0).correctRate()).isEqualTo(0.75);
     }
 
+    @Test
+    void examOverviewIncludesTargetsWithoutAttemptsAndPaperBreakdown() {
+        Department department = Department.builder().id(10L).name("Khoa A").build();
+        ProfessionalField field = ProfessionalField.builder().id(20L).code("HSCC").name("Hồi sức").build();
+        ExamPaper paper = ExamPaper.builder()
+                .id(30L)
+                .code("P-01")
+                .name("Bài kiểm tra A")
+                .version(1)
+                .totalQuestions(20)
+                .passingScore(70)
+                .build();
+        ExamAssignment assignment = ExamAssignment.builder()
+                .id(40L)
+                .name("Đợt 1")
+                .examPaper(paper)
+                .professionalField(field)
+                .status(ExamAssignmentStatus.OPEN)
+                .build();
+        User first = user(50L, "NV050", department);
+        User second = user(51L, "NV051", department);
+        when(assignmentTargetRepository.findAllForDashboard()).thenReturn(List.of(
+                ExamAssignmentTarget.builder().id(60L).assignment(assignment).user(first).build(),
+                ExamAssignmentTarget.builder().id(61L).assignment(assignment).user(second).build()
+        ));
+        when(attemptRepository.findAllByOrderByStartedAtDesc()).thenReturn(List.of(
+                ExamAttempt.builder()
+                        .id(70L)
+                        .assignment(assignment)
+                        .examPaper(paper)
+                        .user(first)
+                        .status(ExamAttemptStatus.GRADED)
+                        .startedAt(LocalDateTime.of(2026, 7, 1, 8, 0))
+                        .score(new BigDecimal("80"))
+                        .passed(true)
+                        .build()
+        ));
+
+        var overview = service.examOverview(null, null, null, null, 10L, null, null, null);
+
+        assertThat(overview.assignmentCount()).isEqualTo(1);
+        assertThat(overview.targetCount()).isEqualTo(2);
+        assertThat(overview.notStartedCount()).isEqualTo(1);
+        assertThat(overview.attempts().gradedAttempts()).isEqualTo(1);
+        assertThat(overview.byPaper()).singleElement().satisfies(item -> {
+            assertThat(item.paperCode()).isEqualTo("P-01");
+            assertThat(item.averageScore()).isEqualByComparingTo("80");
+        });
+    }
+
     private ExamAttempt attempt(ExamAttemptStatus status, String score, Boolean passed, Integer timeSpentSeconds) {
         return ExamAttempt.builder()
                 .status(status)
                 .score(score == null ? null : new BigDecimal(score))
                 .passed(passed)
                 .timeSpentSeconds(timeSpentSeconds)
+                .build();
+    }
+
+    private User user(Long id, String employeeCode, Department department) {
+        return User.builder()
+                .id(id)
+                .employeeCode(employeeCode)
+                .name("User " + id)
+                .password("password")
+                .department(department)
                 .build();
     }
 

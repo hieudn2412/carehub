@@ -108,7 +108,8 @@ class AiModelRuntimeStatusServiceTest {
         ).status();
 
         assertThat(readyStatus.paraphrase().filesPresent()).isTrue();
-        assertThat(readyStatus.paraphrase().statusText()).isEqualTo("Sẵn sàng");
+        assertThat(readyStatus.paraphrase().statusText())
+                .isEqualTo("Sẵn sàng · Chế độ an toàn (chỉ diễn đạt câu hỏi)");
     }
 
     @Test
@@ -132,7 +133,8 @@ class AiModelRuntimeStatusServiceTest {
         ).status();
 
         assertThat(status.paraphrase().filesPresent()).isTrue();
-        assertThat(status.paraphrase().statusText()).isEqualTo("Sẵn sàng");
+        assertThat(status.paraphrase().statusText())
+                .isEqualTo("Sẵn sàng · Chế độ an toàn (chỉ diễn đạt câu hỏi)");
     }
 
     @Test

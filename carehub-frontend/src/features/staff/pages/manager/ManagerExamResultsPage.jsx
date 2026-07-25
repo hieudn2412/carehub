@@ -10,16 +10,25 @@ import '../../styles/ManagerPages.css'
 function ManagerExamResultsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
   const [professionalFieldId, setProfessionalFieldId] = useState('')
   const [professionalFields, setProfessionalFields] = useState([])
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => window.clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       setLoading(true)
       Promise.all([
-        examAssignmentApi.listManagerAssignments({ professionalFieldId: professionalFieldId || undefined }),
+        examAssignmentApi.listManagerAssignments({
+          q: debouncedSearch || undefined,
+          professionalFieldId: professionalFieldId || undefined,
+        }),
         trainingApi.getRecordOptions(),
       ])
         .then(([res, optionRes]) => {
@@ -33,12 +42,7 @@ function ManagerExamResultsPage() {
         .finally(() => setLoading(false))
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [professionalFieldId])
-
-  const filteredResults = assignments.filter(item => {
-    const title = (item.name || item.title || item.examTitle || '').toLowerCase()
-    return title.includes(search.toLowerCase())
-  })
+  }, [professionalFieldId, debouncedSearch])
 
   return (
     <div className="dashboard-layout">
@@ -58,7 +62,7 @@ function ManagerExamResultsPage() {
             <div className="mgr-search-box">
               <input 
                 type="text" 
-                placeholder="Tìm theo tên nhân viên, tên bài thi..." 
+                placeholder="Tìm theo tên kỳ thi..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -76,7 +80,7 @@ function ManagerExamResultsPage() {
               <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
               <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
             </div>
-          ) : filteredResults.length === 0 ? (
+          ) : assignments.length === 0 ? (
             <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
               <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
             </div>
@@ -94,7 +98,7 @@ function ManagerExamResultsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredResults.map((item) => (
+                {assignments.map((item) => (
                   <tr key={item.id}>
                     <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
                     <td>{item.professionalFieldName || '—'}</td>

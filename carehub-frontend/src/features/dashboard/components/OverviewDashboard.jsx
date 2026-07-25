@@ -8,6 +8,7 @@ import {
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import './OverviewDashboard.css'
 
 const DOMAIN_META = {
@@ -19,13 +20,13 @@ const DOMAIN_META = {
   },
   exams: {
     eyebrow: 'BÀI KIỂM TRA & CHUYÊN MÔN',
-    title: 'Kết quả kiểm tra năng lực',
+    title: 'Điểm bài kiểm tra (lý thuyết)',
     icon: <BookOutlined />,
     tone: 'violet',
   },
   quality: {
     eyebrow: 'TUÂN THỦ & CHẤT LƯỢNG',
-    title: 'Tuân thủ quy trình chăm sóc',
+    title: 'Điểm checklist (thực hành)',
     icon: <SafetyCertificateOutlined />,
     tone: 'green',
   },
@@ -132,9 +133,10 @@ export default function OverviewDashboard({
   summary,
   domains,
   warnings = [],
+  visibleDomains = ['training', 'exams', 'quality'],
 }) {
   const isStaff = role === 'staff'
-  const visibleTypes = ['training', 'exams', 'quality']
+  const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
 
   return (
     <div className="overview-dashboard">
@@ -162,12 +164,21 @@ export default function OverviewDashboard({
           <label>
             <span>Khoa/Phòng</span>
             {role === 'admin' ? (
-              <select value={filters.departmentId} onChange={(event) => onFilterChange('departmentId', event.target.value)}>
-                <option value="">Toàn viện</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>{department.name}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={filters.departmentId}
+                onChange={(value) => onFilterChange('departmentId', value)}
+                ariaLabel="Tìm và chọn khoa/phòng"
+                placeholder="Toàn viện"
+                searchPlaceholder="Gõ tên khoa/phòng..."
+                options={[
+                  { value: '', label: 'Toàn viện' },
+                  ...departments.map((department) => ({
+                    value: department.id,
+                    label: department.name,
+                    searchText: department.code || department.departmentCode,
+                  })),
+                ]}
+              />
             ) : (
               <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
             )}
@@ -183,12 +194,21 @@ export default function OverviewDashboard({
           </label>
           <label>
             <span>Lĩnh vực chuyên môn</span>
-            <select value={filters.professionalFieldId} onChange={(event) => onFilterChange('professionalFieldId', event.target.value)}>
-              <option value="">Tất cả lĩnh vực</option>
-              {professionalFields.map((field) => (
-                <option key={field.id} value={field.id}>{field.name}</option>
-              ))}
-            </select>
+            <SearchableSelect
+              value={filters.professionalFieldId}
+              onChange={(value) => onFilterChange('professionalFieldId', value)}
+              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              placeholder="Tất cả lĩnh vực"
+              searchPlaceholder="Gõ tên lĩnh vực..."
+              options={[
+                { value: '', label: 'Tất cả lĩnh vực' },
+                ...professionalFields.map((field) => ({
+                  value: field.id,
+                  label: field.name,
+                  searchText: field.code,
+                })),
+              ]}
+            />
           </label>
         </section>
       )}

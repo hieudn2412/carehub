@@ -11,10 +11,6 @@ function payload(response) {
   return response?.data?.data || {}
 }
 
-function pageTotal(response) {
-  return Number(payload(response)?.totalElements) || 0
-}
-
 function resolvePeriod(period) {
   if (period === 'all') return {}
   const toDate = new Date()
@@ -69,35 +65,43 @@ export default function AdminDashboard() {
       ...dateParams,
       departmentId: filters.departmentId || undefined,
     }
+    const examParams = {
+      ...scopedParams,
+      professionalFieldId: filters.professionalFieldId || undefined,
+    }
     const trainingScope = {
       departmentId: filters.departmentId || undefined,
       professionalFieldId: filters.professionalFieldId || undefined,
       asOf: dateParams.toDate,
-      page: 0,
-      size: 1,
     }
     const supportsProfessionalField = !filters.professionalFieldId
 
-    const [overviewResult, trainingResult, compliantResult, nonCompliantResult, riskResult, examResult, qualityResult] = await Promise.allSettled([
+    const [overviewResult, trainingResult, examResult, qualityResult] = await Promise.allSettled([
       adminApi.getDashboardOverview(scopedParams),
-      trainingApi.getEmployeeTrainingStatuses(trainingScope),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'NON_COMPLIANT' }),
-      trainingApi.getEmployeeTrainingStatuses({ ...trainingScope, complianceStatus: 'AT_RISK' }),
-      supportsProfessionalField ? evaluationDashboardApi.getDashboard(scopedParams) : Promise.resolve(null),
+      trainingApi.getTrainingDashboardSummary(trainingScope),
+      evaluationDashboardApi.getExamOverview(examParams),
       supportsProfessionalField ? adminApi.getDashboardFormSummary(scopedParams) : Promise.resolve(null),
     ])
 
     const overview = overviewResult.status === 'fulfilled' ? payload(overviewResult.value) : {}
-    const trainingTotal = trainingResult.status === 'fulfilled' ? pageTotal(trainingResult.value) : 0
-    const trainingPassed = compliantResult.status === 'fulfilled' ? pageTotal(compliantResult.value) : 0
-    const trainingFailed = (nonCompliantResult.status === 'fulfilled' ? pageTotal(nonCompliantResult.value) : 0)
-      + (riskResult.status === 'fulfilled' ? pageTotal(riskResult.value) : 0)
-    const exams = examResult.status === 'fulfilled' && examResult.value ? payload(examResult.value)?.examResults || {} : null
+    const trainingTotals = trainingResult.status === 'fulfilled'
+      ? payload(trainingResult.value)?.totals || {}
+      : {}
+    const trainingTotal = Number(trainingTotals.employeeCount) || 0
+    const trainingPassed = Number(trainingTotals.compliantCount) || 0
+    const trainingFailed = (Number(trainingTotals.nonCompliantCount) || 0)
+      + (Number(trainingTotals.atRiskCount) || 0)
+      + (Number(trainingTotals.notConfiguredCount) || 0)
+    const examOverview = examResult.status === 'fulfilled' && examResult.value
+      ? payload(examResult.value)
+      : null
+    const examAttempts = examOverview?.attempts || null
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
     const submittedQuality = Number(quality?.submitted) || 0
     const qualityRate = Number(quality?.passRate) || 0
-    const qualityPassed = Math.round(submittedQuality * qualityRate / 100)
+    const qualityPassed = Number(quality?.passed) || 0
+    const qualityFailed = (Number(quality?.failedScore) || 0)
+      + (Number(quality?.failedCritical) || 0)
 
     setDashboard({
       totalEmployees: filters.professionalFieldId
@@ -113,23 +117,21 @@ export default function AdminDashboard() {
             note: 'Tính theo chuẩn giờ đào tạo đang áp dụng cho nhân viên.',
           }
         : emptyDomain('Không thể tải dữ liệu giờ đào tạo từ máy chủ.'),
-      exams: exams
+      exams: examOverview
         ? {
-            total: Number(exams.gradedAttempts) || 0,
-            passed: Number(exams.passedAttempts) || 0,
-            failed: Number(exams.failedAttempts) || 0,
-            rate: Number(exams.passRate) || 0,
+            total: Number(examOverview.targetCount) || Number(examAttempts?.totalAttempts) || 0,
+            passed: Number(examAttempts?.passedAttempts) || 0,
+            failed: Number(examAttempts?.failedAttempts) || 0,
+            rate: (Number(examAttempts?.passRate) || 0) * 100,
             available: true,
-            note: `Điểm trung bình ${Number(exams.averageScore || 0).toFixed(1).replace('.', ',')}.`,
+            note: `${Number(examOverview.assignmentCount) || 0} bài kiểm tra · ${Number(examOverview.notStartedCount) || 0} lượt chưa bắt đầu · Điểm trung bình ${Number(examAttempts?.averageScore || 0).toFixed(1).replace('.', ',')}.`,
           }
-        : emptyDomain(filters.professionalFieldId
-          ? 'Backend chưa hỗ trợ lọc kết quả kiểm tra theo professionalFieldId.'
-          : 'Bạn chưa có quyền hoặc máy chủ chưa trả dữ liệu kiểm tra.'),
+        : emptyDomain('Không thể tải dữ liệu điểm bài kiểm tra từ máy chủ.'),
       quality: quality
         ? {
             total: submittedQuality,
             passed: qualityPassed,
-            failed: Math.max(0, submittedQuality - qualityPassed),
+            failed: qualityFailed,
             rate: qualityRate,
             available: true,
             note: `Điểm chất lượng trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
@@ -163,14 +165,14 @@ export default function AdminDashboard() {
 
   const warnings = useMemo(() => [
     dashboard.training.failed > 0 && { id: 'training', title: 'Nhân viên chưa đạt giờ đào tạo', detail: 'Cần rà soát tiến độ và minh chứng', value: dashboard.training.failed, tone: 'danger', path: '/admin/reports/training-dashboard' },
-    dashboard.exams.failed > 0 && { id: 'exams', title: 'Lượt kiểm tra chưa đạt', detail: 'Cần xem kết quả chuyên môn', value: dashboard.exams.failed, tone: 'warning', path: '/admin/evaluation/dashboard' },
-    dashboard.quality.failed > 0 && { id: 'quality', title: 'Bảng kiểm chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/quality-dashboard' },
+    dashboard.exams.failed > 0 && { id: 'exams', title: 'Lượt kiểm tra chưa đạt', detail: 'Cần xem kết quả chuyên môn', value: dashboard.exams.failed, tone: 'warning', path: '/admin/reports/quality-dashboard' },
+    dashboard.quality.failed > 0 && { id: 'quality', title: 'Bảng kiểm chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/checklist-dashboard' },
   ].filter(Boolean), [dashboard])
 
   const domains = {
     training: { ...dashboard.training, path: '/admin/reports/training-dashboard' },
-    exams: { ...dashboard.exams, path: '/admin/evaluation/dashboard' },
-    quality: { ...dashboard.quality, path: '/admin/reports/quality-dashboard' },
+    exams: { ...dashboard.exams, path: '/admin/reports/quality-dashboard' },
+    quality: { ...dashboard.quality, path: '/admin/reports/checklist-dashboard' },
   }
 
   return (

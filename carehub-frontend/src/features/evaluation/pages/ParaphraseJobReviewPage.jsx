@@ -287,7 +287,7 @@ function ParaphraseJobReviewPage() {
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>{jobStatusText(jobDetail)}</span>
                           <span>{jobDetail.provider}</span>
                           <span>{jobDetail.model}</span>
-                          <span>{jobDetail.requestedCount} biến thể</span>
+                          <span>Tối đa {jobDetail.requestedCount} biến thể</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
                         </div>
                       </div>

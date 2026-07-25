@@ -21,6 +21,13 @@ export const EVALUATION_PERMISSIONS = [
   'AUDIT_VIEWER',
 ]
 
+export const THEORY_DASHBOARD_PERMISSIONS = [
+  'RESULT_VIEWER',
+  'QUESTION_REVIEWER',
+  'QUESTION_SET_MANAGER',
+  'EXAM_PUBLISHER',
+]
+
 function normalizeRoles(roles) {
   return roles.map((role) => String(role).replace(/^ROLE_/, '').toUpperCase())
 }

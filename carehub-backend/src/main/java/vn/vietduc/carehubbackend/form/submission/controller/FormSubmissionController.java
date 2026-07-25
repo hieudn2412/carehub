@@ -55,8 +55,12 @@ public class FormSubmissionController {
     @GetMapping
     public ApiResponse<PageResponse<FormSubmissionResponse>> search(
             @RequestParam(required = false) FormSubmissionStatus status,
+            @RequestParam(required = false) String keyword,
             @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.success("Get form submissions successfully", PageResponse.from(service.search(status, pageable)));
+        return ApiResponse.success(
+                "Get form submissions successfully",
+                PageResponse.from(service.search(status, keyword, pageable))
+        );
     }
 
     @GetMapping("/{id}")

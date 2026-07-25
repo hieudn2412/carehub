@@ -27,6 +27,13 @@ export const evaluationDashboardApi = {
     })
   },
 
+  getExamOverview(params = {}) {
+    return httpClient.get('/evaluation-dashboard/exam-overview', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getQuestionItemAnalysis(params = {}) {
     return httpClient.get('/evaluation-dashboard/question-item-analysis', {
       headers: authHeaders(),

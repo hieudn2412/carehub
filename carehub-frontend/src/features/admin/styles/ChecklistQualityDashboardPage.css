@@ -113,6 +113,23 @@
   padding: 0 12px;
 }
 
+.checklist-quality-filter > div > .searchable-select {
+  flex: 1;
+}
+
+.checklist-quality-filter > div > .searchable-select > input {
+  border: 0;
+  box-shadow: none;
+}
+
+.checklist-quality-filter > div > .searchable-select .searchable-select__search-icon {
+  display: none;
+}
+
+.checklist-quality-filter > div > .searchable-select > input {
+  padding-left: 0;
+}
+
 .checklist-quality-filter input,
 .checklist-quality-filter select {
   background: #fff;
@@ -299,6 +316,71 @@
 .checklist-quality-result-bar__fill { display: block; height: 100%; transition: width .45s ease; }
 .checklist-quality-result-bar__fill--success { background: #18b98f; }
 .checklist-quality-result-bar__fill--danger { background: #ef6a6a; }
+
+.checklist-quality-trend {
+  align-items: end;
+  display: flex;
+  gap: 12px;
+  height: 165px;
+  margin-top: 18px;
+  overflow-x: auto;
+  padding: 30px 4px 0;
+}
+
+.checklist-quality-trend__item {
+  display: grid;
+  flex: 1 0 72px;
+  gap: 7px;
+  justify-items: center;
+  min-width: 72px;
+}
+
+.checklist-quality-trend__values {
+  display: grid;
+  justify-items: center;
+  white-space: nowrap;
+}
+
+.checklist-quality-trend__values strong { color: #087f63; font-size: 12px; }
+.checklist-quality-trend__values span { color: #7b889c; font-size: 10px; }
+
+.checklist-quality-trend__track {
+  align-items: end;
+  background: #eef3f7;
+  border-radius: 5px 5px 2px 2px;
+  display: flex;
+  gap: 3px;
+  height: 76px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0 8px;
+  width: 54px;
+}
+
+.checklist-quality-trend__track span {
+  border-radius: 3px 3px 0 0;
+  display: block;
+  transition: height .45s ease;
+  width: 12px;
+}
+
+.checklist-quality-trend__volume { background: #73a7ef; }
+.checklist-quality-trend__pass { background: #18b98f; }
+.checklist-quality-trend__period { color: #59687d; font-size: 11px; }
+
+.checklist-quality-trend-empty {
+  align-items: center;
+  color: #8390a4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 145px;
+  text-align: center;
+}
+
+.checklist-quality-trend-empty > .anticon { color: #55a995; font-size: 30px; margin-bottom: 10px; }
+.checklist-quality-trend-empty strong { color: #536176; font-size: 14px; }
+.checklist-quality-trend-empty span { font-size: 12px; margin-top: 6px; }
 
 .checklist-quality-panel--empty {
   align-items: center;

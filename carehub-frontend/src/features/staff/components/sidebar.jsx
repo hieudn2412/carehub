@@ -12,13 +12,15 @@ import {
   TeamOutlined,
   CheckSquareOutlined,
   FileDoneOutlined,
-  FileTextOutlined,
   DownOutlined
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
-import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
+import {
+  AUTH_ROLE,
+  hasAnyRole,
+} from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import logo from '../../../assets/logo.png'
 import AdminSidebar from '../../admin/components/AdminSidebar'
@@ -43,7 +45,7 @@ function Sidebar() {
     ) {
       return currentPath === itemPath
     }
-    return currentPath === itemPath || currentPath.startsWith(itemPath)
+    return currentPath === itemPath || currentPath.startsWith(`${itemPath}/`)
   }
 
   // Base items for all staff members
@@ -62,14 +64,13 @@ function Sidebar() {
       label: 'Quản lý khoa',
       items: [
         { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
-        { icon: <TrophyOutlined />, label: 'Dashboard tuân thủ', path: '/manager/reports/quality-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Dashboard bảng kiểm', path: '/manager/reports/checklist-dashboard' },
-        { icon: <FileDoneOutlined />, label: 'Dashboard bài kiểm tra', path: '/manager/reports/exam-dashboard' },
+        { icon: <TrophyOutlined />, label: 'Dashboard lý thuyết', path: '/manager/reports/quality-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Dashboard thực hành', path: '/manager/reports/checklist-dashboard' },
+        { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
         { icon: <TeamOutlined />, label: 'Nhân sự & Giờ đào tạo', path: '/manager/employees' },
         { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
-        { icon: <BarChartOutlined />, label: 'Dashboard năng lực khoa', path: '/manager/competency-summary' },
       ],
     })
   }

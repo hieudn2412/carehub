@@ -27,7 +27,6 @@ import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCateg
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
 import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
 import QuestionSetQuestionsPage from '../features/evaluation/pages/QuestionSetQuestionsPage.jsx'
-import QuestionSetCategoryListPage from '../features/evaluation/pages/QuestionSetCategoryListPage.jsx'
 import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
 import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
@@ -93,7 +92,6 @@ import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistory
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
-import QualityDashboardPage from '../features/admin/pages/QualityDashboardPage.jsx'
 import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
 import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
@@ -108,7 +106,11 @@ import ManagerChecklistEvaluationPage from '../features/staff/pages/manager/Mana
 import ManagerEvaluationHistoryPage from '../features/staff/pages/manager/ManagerEvaluationHistoryPage.jsx'
 import ManagerEvaluationHistoryDetailPage from '../features/staff/pages/manager/ManagerEvaluationHistoryDetailPage.jsx'
 
-import { ADMIN_ROLES, AUTH_ROLE, EVALUATION_PERMISSIONS } from '../features/auth/utils/authNavigation.js'
+import {
+  ADMIN_ROLES,
+  AUTH_ROLE,
+  EVALUATION_PERMISSIONS,
+} from '../features/auth/utils/authNavigation.js'
 
 
 function protectedElement(element, options = {}) {
@@ -207,17 +209,19 @@ function AppRouter() {
       <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
       <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsPage />)} />
-      <Route path="/admin/evaluation/question-set-categories" element={evaluationElement(<QuestionSetCategoryListPage />)} />
+      <Route path="/admin/evaluation/question-set-categories" element={<Navigate to="/admin/evaluation/question-sets" replace />} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/classification-rules" element={evaluationElement(<ClassificationRuleListPage />)} />
       <Route path="/admin/evaluation/classification-rules/new" element={evaluationElement(<ClassificationRuleFormPage />)} />
       <Route path="/admin/evaluation/classification-rules/:id/edit" element={evaluationElement(<ClassificationRuleFormPage />)} />
-      <Route path="/admin/evaluation/configs" element={evaluationElement(<ExamConfigPage />)} />
-      <Route path="/admin/evaluation/exam-papers" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-management" element={evaluationElement(<ExamPaperListPage />)} />
+      <Route path="/admin/evaluation/exam-management/new" element={evaluationElement(<ExamConfigPage />)} />
+      <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
+      <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />
       <Route path="/admin/evaluation/exam-assignments" element={evaluationElement(<ExamAssignmentListPage />)} />
-      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamConfigPage />)} />
+      <Route path="/admin/evaluation/exam-assignments/new" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-assignments" replace />} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
@@ -225,7 +229,10 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
-      <Route path="/admin/evaluation/competency-summary" element={evaluationElement(<CompetencySummaryPage />)} />
+      <Route
+        path="/admin/evaluation/competency-summary"
+        element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
+      />
       <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
       <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
@@ -255,11 +262,15 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/quality-dashboard"
-        element={adminElement(<QualityDashboardPage />)}
+        element={adminElement(<EvaluationDashboardPage />)}
       />
       <Route
         path="/admin/reports/checklist-dashboard"
         element={adminElement(<ChecklistQualityDashboardPage />)}
+      />
+      <Route
+        path="/admin/reports/competency-dashboard"
+        element={evaluationElement(<CompetencySummaryPage />)}
       />
       <Route
         path="/admin/reports/export-training"
@@ -277,9 +288,15 @@ function AppRouter() {
       {/* Manager Specific Routes */}
       <Route path="/manager/dashboard" element={managerOrAdminElement(<ManagerDashboard />)} />
       <Route path="/manager/reports/training-dashboard" element={managerOrAdminElement(<TrainingDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/quality-dashboard" element={managerOrAdminElement(<QualityDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/checklist-dashboard" element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)} />
-      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)} />
+      <Route
+        path="/manager/reports/quality-dashboard"
+        element={managerOrAdminElement(<EvaluationDashboardPage role="manager" />)}
+      />
+      <Route
+        path="/manager/reports/checklist-dashboard"
+        element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)}
+      />
+      <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
       <Route path="/manager/employees/:id" element={managerOrAdminElement(<ManagerEmployeeDetailPage />)} />
 

@@ -6,9 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.form.entity.Form;
+import vn.vietduc.carehubbackend.form.repository.FormRepository;
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmission;
-import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionContext;
-import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionStatus;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByFieldItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByFieldResponse;
@@ -18,6 +17,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmplo
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmployeeByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyTargetResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionBriefResponse;
@@ -26,6 +26,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetency
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
@@ -53,8 +54,10 @@ public class CompetencyService {
 
     private final ExamAttemptRepository attemptRepository;
     private final FormSubmissionRepository formSubmissionRepository;
+    private final FormRepository formRepository;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final QuestionCategoryRepository questionCategoryRepository;
     private final CompetencyClassificationService classificationService;
 
     @Value("${competency.compliance.default-target:80.0}")
@@ -77,7 +80,7 @@ public class CompetencyService {
         String categoryName = null;
         String categoryFilter = categoryId != null ? String.valueOf(categoryId) : null;
         if (categoryId != null) {
-            var cat = departmentRepository.findById(categoryId).orElse(null);
+            var cat = questionCategoryRepository.findById(categoryId).orElse(null);
             categoryName = cat != null ? cat.getName() : null;
         }
 
@@ -201,79 +204,52 @@ public class CompetencyService {
     public CompetencyByTechniqueResponse getByTechnique(Long departmentId, Long formId, LocalDate fromDate, LocalDate toDate) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
         LocalDate to = toDate != null ? toDate : LocalDate.now();
-        LocalDateTime fromDateTime = from.atStartOfDay();
-        LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
+        ZoneId zoneId = ZoneId.systemDefault();
 
         Department department = departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy khoa/phòng"));
-        List<User> users = userRepository.findByDepartment_IdInAndIsDeletedFalse(Set.of(departmentId));
-        Set<String> employeeCodes = users.stream()
-                .map(User::getEmployeeCode)
-                .filter(ec -> ec != null && !ec.isBlank())
-                .collect(Collectors.toSet());
+        List<FormSubmission> departmentSubmissions =
+                formSubmissionRepository.findScoredEvaluationsForDepartment(
+                        departmentId,
+                        from.atStartOfDay(zoneId).toInstant(),
+                        to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1)
+                );
 
-        List<FormSubmission> allSubmissions = formSubmissionRepository.findAll();
+        List<CompetencyTechniqueOptionResponse> forms = departmentSubmissions.stream()
+                .map(FormSubmission::getFormVersion)
+                .filter(java.util.Objects::nonNull)
+                .map(version -> version.getForm())
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toMap(
+                        Form::getId,
+                        form -> new CompetencyTechniqueOptionResponse(form.getId(), form.getTitle()),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ))
+                .values().stream()
+                .sorted(Comparator.comparing(CompetencyTechniqueOptionResponse::title))
+                .toList();
 
-        // Filter submissions matching users in the department
-        List<FormSubmission> matched = allSubmissions.stream()
-                .filter(s -> s.getStatus() == FormSubmissionStatus.SUBMITTED)
-                .filter(s -> s.getSubmittedAt() != null)
-                .filter(s -> {
-                    java.time.Instant instant = s.getSubmittedAt();
-                    LocalDateTime dt = LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault());
-                    return !dt.isBefore(fromDateTime) && !dt.isAfter(toDateTime);
-                })
-                .filter(s -> {
-                    try {
-                        if (s.getSubmittedBy() == null) return false;
-                        String ec = s.getSubmittedBy().getEmployeeCode();
-                        return ec != null && employeeCodes.contains(ec);
-                    } catch (Exception e) {
-                        return false;
-                    }
-                })
-                .filter(s -> {
-                    FormSubmissionContext ctx = s.getSubjectContext();
-                    if (ctx == null) return true;
-                    String ctxEc = ctx.getEmployeeCode();
-                    return ctxEc == null || ctxEc.isBlank() || employeeCodes.contains(ctxEc);
-                })
-                .collect(Collectors.toList());
+        List<FormSubmission> matched = departmentSubmissions.stream()
+                .filter(submission -> formId == null
+                        || (submission.getFormVersion() != null
+                        && submission.getFormVersion().getForm() != null
+                        && formId.equals(submission.getFormVersion().getForm().getId())))
+                .toList();
 
-        if (matched.isEmpty()) {
-            String formName = null;
-            if (formId != null) {
-                var form = foundById(formId);
-                formName = form != null ? form.getTitle() : null;
-            }
-            return new CompetencyByTechniqueResponse(
-                    department.getId(), department.getName(),
-                    formId, formName, defaultComplianceTarget,
-                    from.format(DATE_FMT), to.format(DATE_FMT), List.of()
-            );
-        }
-
-        // Group by user + form
-        Map<String, List<FormSubmission>> grouped = new LinkedHashMap<>();
-        for (FormSubmission s : matched) {
-            Form form = s.getFormVersion() != null ? s.getFormVersion().getForm() : null;
-            if (form == null) continue;
-            Long submitterId = null;
-            try {
-                if (s.getSubmittedBy() != null) {
-                    submitterId = s.getSubmittedBy().getId();
-                }
-            } catch (Exception e) {}
-            if (submitterId == null) continue;
-
-            String key = submitterId + ":" + form.getId();
-            grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(s);
-        }
+        Map<Long, List<FormSubmission>> grouped = matched.stream()
+                .filter(submission -> submission.getSubjectContext() != null)
+                .filter(submission -> submission.getSubjectContext().getSubjectUser() != null)
+                .collect(Collectors.groupingBy(
+                        submission -> submission.getSubjectContext().getSubjectUser().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
 
         List<CompetencyByTechniqueItemResponse> items = new ArrayList<>();
         for (var entry : grouped.entrySet()) {
             List<FormSubmission> subs = entry.getValue();
-            User firstUser = subs.get(0).getSubmittedBy();
+            User subject = subs.get(0).getSubjectContext().getSubjectUser();
 
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
@@ -292,7 +268,7 @@ public class CompetencyService {
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
             items.add(new CompetencyByTechniqueItemResponse(
-                    firstUser.getId(), firstUser.getEmployeeCode(), firstUser.getName(),
+                    subject.getId(), subject.getEmployeeCode(), subject.getName(),
                     department.getName(),
                     subs.size(), avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
@@ -312,7 +288,7 @@ public class CompetencyService {
         return new CompetencyByTechniqueResponse(
                 department.getId(), department.getName(),
                 formId, formName, defaultComplianceTarget,
-                from.format(DATE_FMT), to.format(DATE_FMT), items
+                from.format(DATE_FMT), to.format(DATE_FMT), forms, items
         );
     }
 
@@ -320,23 +296,15 @@ public class CompetencyService {
     public CompetencyEmployeeByTechniqueResponse getEmployeeByTechnique(Long employeeId, LocalDate fromDate, LocalDate toDate) {
         LocalDate from = fromDate != null ? fromDate : LocalDate.of(LocalDate.now().getYear(), 1, 1);
         LocalDate to = toDate != null ? toDate : LocalDate.now();
-        LocalDateTime fromDateTime = from.atStartOfDay();
-        LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
-
         User user = userRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy nhân viên"));
-
-        List<FormSubmission> allSubmissions = formSubmissionRepository.findAll();
-        List<FormSubmission> matched = allSubmissions.stream()
-                .filter(s -> s.getSubmittedBy().getId().equals(user.getId()))
-                .filter(s -> s.getStatus() == FormSubmissionStatus.SUBMITTED)
-                .filter(s -> s.getSubmittedAt() != null)
-                .filter(s -> {
-                    java.time.Instant instant = s.getSubmittedAt();
-                    LocalDateTime dt = LocalDateTime.ofInstant(instant, java.time.ZoneId.systemDefault());
-                    return !dt.isBefore(fromDateTime) && !dt.isAfter(toDateTime);
-                })
-                .collect(Collectors.toList());
+        ZoneId zoneId = ZoneId.systemDefault();
+        List<FormSubmission> matched = formSubmissionRepository.findScoredEvaluationsForSubject(
+                user.getId(),
+                user.getEmployeeCode(),
+                from.atStartOfDay(zoneId).toInstant(),
+                to.plusDays(1).atStartOfDay(zoneId).toInstant().minusNanos(1)
+        );
 
         Map<Form, List<FormSubmission>> grouped = new LinkedHashMap<>();
         for (FormSubmission s : matched) {
@@ -553,9 +521,6 @@ public class CompetencyService {
     }
 
     private Form foundById(Long formId) {
-        return formSubmissionRepository.findAll().stream()
-                .map(s -> s.getFormVersion() != null ? s.getFormVersion().getForm() : null)
-                .filter(f -> f != null && f.getId().equals(formId))
-                .findFirst().orElse(null);
+        return formRepository.findByIdAndDeletedFalse(formId).orElse(null);
     }
 }

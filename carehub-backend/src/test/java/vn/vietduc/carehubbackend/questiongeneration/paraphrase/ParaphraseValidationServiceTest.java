@@ -109,6 +109,34 @@ class ParaphraseValidationServiceTest {
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("Trùng ngữ nghĩa mạnh"));
     }
 
+    @Test
+    void rejectsPromptLeakageFromModelOutput() {
+        QuestionBankQuestion source = sourceQuestion("Cần xác định đúng người bệnh như thế nào?");
+        ParaphrasedMcq candidate = validCandidate(
+                "SEM_85 SYN_85 LEX_65 : Cần xác định đúng người bệnh theo cách nào?"
+        );
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("prompt"));
+    }
+
+    @Test
+    void rejectsChangedNegationOrQuantifier() {
+        QuestionBankQuestion source = sourceQuestion(
+                "Điều dưỡng không được bỏ qua ít nhất hai thông tin nhận diện?"
+        );
+        ParaphrasedMcq candidate = validCandidate(
+                "Điều dưỡng được bỏ qua thông tin nhận diện người bệnh?"
+        );
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("phủ định"));
+    }
+
     private QuestionBankQuestion sourceQuestion(String stem) {
         return QuestionBankQuestion.builder()
                 .id(10L)

@@ -20,6 +20,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentR
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentTargetResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
@@ -265,12 +266,23 @@ public class ExamAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExamAssignmentResponse> listForUser(Long userId) {
+    public List<MyExamAssignmentResponse> listForUser(Long userId) {
         User user = findUser(userId);
+        Map<Long, List<ExamAttempt>> attemptsByAssignmentId = attemptRepository
+                .findByUserOrderByStartedAtDesc(user)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        attempt -> attempt.getAssignment().getId(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
         return targetRepository.findByUserOrderByAssignmentUpdatedAtDesc(user).stream()
                 .map(ExamAssignmentTarget::getAssignment)
                 .filter(assignment -> assignment.getStatus() != ExamAssignmentStatus.ARCHIVED)
-                .map(assignment -> toResponse(assignment, false))
+                .map(assignment -> toMyExamResponse(
+                        assignment,
+                        attemptsByAssignmentId.getOrDefault(assignment.getId(), List.of())
+                ))
                 .toList();
     }
 
@@ -534,6 +546,90 @@ public class ExamAssignmentService {
                 assignment.getClosedAt(),
                 assignment.getCreatedAt(),
                 assignment.getUpdatedAt()
+        );
+    }
+
+    private MyExamAssignmentResponse toMyExamResponse(
+            ExamAssignment assignment,
+            List<ExamAttempt> attempts
+    ) {
+        LocalDateTime now = LocalDateTime.now();
+        ExamAttempt currentAttempt = attempts.stream()
+                .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.IN_PROGRESS)
+                .filter(attempt -> attempt.getExpiresAt() == null || !now.isAfter(attempt.getExpiresAt()))
+                .findFirst()
+                .orElse(null);
+        ExamAttempt latestAttempt = attempts.stream().findFirst().orElse(null);
+        int usedAttempts = attempts.size();
+        int maxAttempts = assignment.getMaxAttempts() == null
+                ? DEFAULT_MAX_ATTEMPTS
+                : assignment.getMaxAttempts();
+        int remainingAttempts = Math.max(0, maxAttempts - usedAttempts);
+        boolean due = assignment.getDueAt() != null && now.isAfter(assignment.getDueAt());
+        boolean canStartNew = assignment.getStatus() == ExamAssignmentStatus.OPEN
+                && !due
+                && remainingAttempts > 0;
+
+        String availabilityStatus;
+        String availabilityText;
+        String actionLabel;
+        boolean actionable;
+        if (currentAttempt != null) {
+            availabilityStatus = "IN_PROGRESS";
+            availabilityText = "Đang làm";
+            actionLabel = "Tiếp tục";
+            actionable = true;
+        } else if (canStartNew) {
+            availabilityStatus = usedAttempts > 0 ? "RETAKE_AVAILABLE" : "AVAILABLE";
+            availabilityText = usedAttempts > 0 ? "Có thể làm lại" : "Sẵn sàng";
+            actionLabel = usedAttempts > 0 ? "Làm lại" : "Bắt đầu";
+            actionable = true;
+        } else if (due) {
+            availabilityStatus = "OVERDUE";
+            availabilityText = "Đã quá hạn";
+            actionLabel = "Đã quá hạn";
+            actionable = false;
+        } else if (remainingAttempts == 0) {
+            availabilityStatus = "COMPLETED";
+            availabilityText = "Đã hoàn thành";
+            actionLabel = "Đã hết lượt";
+            actionable = false;
+        } else {
+            availabilityStatus = "CLOSED";
+            availabilityText = "Đã đóng";
+            actionLabel = "Đã đóng";
+            actionable = false;
+        }
+
+        return new MyExamAssignmentResponse(
+                assignment.getId(),
+                assignment.getName(),
+                assignment.getDescription(),
+                assignment.getExamPaper().getId(),
+                assignment.getExamPaper().getCode(),
+                assignment.getExamPaper().getName(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
+                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
+                assignment.getStatus().name(),
+                QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
+                assignment.getDueAt(),
+                assignment.getOpenedAt(),
+                assignment.getCreatedAt(),
+                maxAttempts,
+                usedAttempts,
+                remainingAttempts,
+                currentAttempt == null ? null : currentAttempt.getId(),
+                currentAttempt == null
+                        ? (latestAttempt == null ? null : latestAttempt.getStatus().name())
+                        : currentAttempt.getStatus().name(),
+                currentAttempt == null
+                        ? (latestAttempt == null ? "Chưa làm" : QuestionGenerationLabels.examAttemptStatus(latestAttempt.getStatus()))
+                        : QuestionGenerationLabels.examAttemptStatus(currentAttempt.getStatus()),
+                currentAttempt == null ? null : currentAttempt.getExpiresAt(),
+                availabilityStatus,
+                availabilityText,
+                actionLabel,
+                actionable
         );
     }
 

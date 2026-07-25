@@ -23,8 +23,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 public class ParaphraseValidationService {
-    private static final double LOW_SOURCE_SEMANTIC_SIMILARITY = 0.55;
-    private static final double REVIEW_SOURCE_SEMANTIC_SIMILARITY = 0.75;
+    private static final double LOW_SOURCE_SEMANTIC_SIMILARITY = 0.72;
+    private static final double REVIEW_SOURCE_SEMANTIC_SIMILARITY = 0.85;
+    private static final double LOW_OPTION_SEMANTIC_SIMILARITY = 0.72;
     private static final double LOW_LEXICAL_DIFFERENCE = 0.08;
     private static final List<String> BANNED_OPTION_PATTERNS = List.of(
             "tat ca deu dung",
@@ -33,6 +34,25 @@ public class ParaphraseValidationService {
             "cả a và b",
             "khong co dap an nao",
             "không có đáp án nào"
+    );
+    private static final List<String> PROMPT_LEAKAGE_PATTERNS = List.of(
+            "sem_",
+            "syn_",
+            "lex_",
+            "biến thể số",
+            "mức độ thay đổi",
+            "yêu cầu:",
+            "paraphrase:"
+    );
+    private static final List<List<String>> LOGICAL_MARKER_GROUPS = List.of(
+            List.of("không"),
+            List.of("chưa"),
+            List.of("ngoại trừ"),
+            List.of("ít nhất", "tối thiểu"),
+            List.of("nhiều nhất", "tối đa"),
+            List.of("duy nhất", "chỉ một"),
+            List.of("luôn luôn"),
+            List.of("không bao giờ")
     );
 
     private final ProtectedTermService protectedTermService;
@@ -50,9 +70,18 @@ public class ParaphraseValidationService {
             warnings.add("Thiếu nội dung câu hỏi");
             rejected = true;
         }
-        List<String> options = List.of(candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD());
+        List<String> options = java.util.Arrays.asList(
+                candidate.optionA(),
+                candidate.optionB(),
+                candidate.optionC(),
+                candidate.optionD()
+        );
         if (options.stream().anyMatch(this::isBlank)) {
             warnings.add("Thiếu một hoặc nhiều phương án A/B/C/D");
+            rejected = true;
+        }
+        if (containsPromptLeakage(candidate)) {
+            warnings.add("Output chứa nội dung điều khiển hoặc prompt của model");
             rejected = true;
         }
         Set<String> normalizedOptions = new HashSet<>();
@@ -103,6 +132,37 @@ public class ParaphraseValidationService {
             } else if (semanticSimilarity < REVIEW_SOURCE_SEMANTIC_SIMILARITY) {
                 warnings.add("Biến thể cần xem lại vì độ tương đồng ngữ nghĩa với câu gốc chưa cao");
             }
+        } else if (embeddingProperties.isE5Provider()) {
+            rejected = true;
+        }
+
+        if (!hasSameLogicalMarkers(source.getStem(), candidate.stem())) {
+            warnings.add("Câu hỏi có thay đổi từ phủ định hoặc từ định lượng quan trọng");
+            rejected = true;
+        }
+
+        List<String> sourceOptions = List.of(
+                source.getOptionA(),
+                source.getOptionB(),
+                source.getOptionC(),
+                source.getOptionD()
+        );
+        for (int index = 0; index < sourceOptions.size(); index++) {
+            String sourceOption = sourceOptions.get(index);
+            String candidateOption = options.get(index);
+            String optionLabel = String.valueOf((char) ('A' + index));
+            if (!hasSameLogicalMarkers(sourceOption, candidateOption)) {
+                warnings.add("Phương án " + optionLabel + " có thay đổi từ phủ định hoặc từ định lượng quan trọng");
+                rejected = true;
+            }
+            if (!normalizeForCompare(sourceOption).equals(normalizeForCompare(candidateOption))
+                    && embeddingProperties.isE5Provider()) {
+                Double optionSimilarity = fieldSemanticSimilarity(sourceOption, candidateOption, optionLabel, warnings);
+                if (optionSimilarity == null || optionSimilarity < LOW_OPTION_SEMANTIC_SIMILARITY) {
+                    warnings.add("Phương án " + optionLabel + " có nguy cơ đổi nghĩa so với câu gốc");
+                    rejected = true;
+                }
+            }
         }
 
         DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.stem(), Set.of(source.getId()));
@@ -145,6 +205,49 @@ public class ParaphraseValidationService {
             warnings.add("Không chạy được E5 để so ngữ nghĩa với câu gốc");
             return null;
         }
+    }
+
+    private Double fieldSemanticSimilarity(
+            String source,
+            String candidate,
+            String optionLabel,
+            List<String> warnings
+    ) {
+        try {
+            double[] sourceVector = embeddingService.embedSourceStem(source);
+            double[] candidateVector = embeddingService.embedCandidateStem(candidate);
+            return CosineUtil.cosine(sourceVector, candidateVector);
+        } catch (RuntimeException ex) {
+            warnings.add("Không kiểm tra được ngữ nghĩa phương án " + optionLabel);
+            return null;
+        }
+    }
+
+    private boolean containsPromptLeakage(ParaphrasedMcq candidate) {
+        String combined = normalizeForCompare(String.join(" ",
+                safe(candidate.stem()),
+                safe(candidate.optionA()),
+                safe(candidate.optionB()),
+                safe(candidate.optionC()),
+                safe(candidate.optionD())
+        ));
+        return PROMPT_LEAKAGE_PATTERNS.stream()
+                .map(this::normalizeForCompare)
+                .anyMatch(combined::contains);
+    }
+
+    private boolean hasSameLogicalMarkers(String source, String candidate) {
+        String normalizedSource = normalizeForCompare(source);
+        String normalizedCandidate = normalizeForCompare(candidate);
+        return LOGICAL_MARKER_GROUPS.stream().allMatch(group -> {
+            boolean sourceContains = group.stream()
+                    .map(this::normalizeForCompare)
+                    .anyMatch(normalizedSource::contains);
+            boolean candidateContains = group.stream()
+                    .map(this::normalizeForCompare)
+                    .anyMatch(normalizedCandidate::contains);
+            return sourceContains == candidateContains;
+        });
     }
 
     private String sourceCombined(QuestionBankQuestion source) {

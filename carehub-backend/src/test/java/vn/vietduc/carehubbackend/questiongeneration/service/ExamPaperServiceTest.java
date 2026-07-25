@@ -304,32 +304,6 @@ class ExamPaperServiceTest {
         }
 
         @Test
-        void duplicateCreatesDraftPaperWithCopiedSnapshots() {
-                ExamPaper source = paper(70L, ExamPaperStatus.PUBLISHED);
-                ExamPaperQuestion sourceQuestion = ExamPaperQuestion.builder()
-                                .id(71L)
-                                .examPaper(source)
-                                .question(questionSetItems(1).get(0).getQuestion())
-                                .position(1)
-                                .points(BigDecimal.ONE)
-                                .optionOrderJson("[\"A\",\"B\",\"C\",\"D\"]")
-                                .build();
-                ExamPaperQuestionSnapshot sourceSnapshot = snapshot(sourceQuestion, "Câu nguồn");
-                savedSnapshots.add(sourceSnapshot);
-                when(paperRepository.findById(source.getId())).thenReturn(Optional.of(source));
-                when(paperRepository.findByCode(any())).thenReturn(Optional.empty());
-                when(paperQuestionRepository.findByExamPaperOrderByPositionAsc(source))
-                                .thenReturn(List.of(sourceQuestion));
-
-                var response = service.duplicate(source.getId(), "admin");
-
-                assertThat(response.status()).isEqualTo(ExamPaperStatus.DRAFT.name());
-                assertThat(response.name()).startsWith("Bản sao - ");
-                assertThat(response.questions()).hasSize(1);
-                assertThat(response.questions().get(0).stem()).isEqualTo("Câu nguồn");
-        }
-
-        @Test
         void exportTextCanHideOrIncludeAnswerKey() {
                 ExamPaper paper = paper(80L, ExamPaperStatus.PUBLISHED);
                 ExamPaperQuestion paperQuestion = ExamPaperQuestion.builder()

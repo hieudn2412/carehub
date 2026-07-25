@@ -10,8 +10,6 @@ import Sidebar from '../components/sidebar.jsx'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import '../styles/TrainingStatusScreen.css'
 
-const TARGET_HOURS = 120
-
 export default function TrainingStatusScreen() {
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -33,11 +31,17 @@ export default function TrainingStatusScreen() {
   }, [])
 
   const configured = status && status.status !== 'NOT_CONFIGURED'
+  const requiredHours = configured ? Number(status.requiredHours) || 0 : 0
   const completedHours = configured ? Number(status.submittedHours) || 0 : 0
-  const missingHours = Math.max(0, TARGET_HOURS - completedHours)
-  const completed = configured && completedHours >= TARGET_HOURS
-  const progress = Math.max(0, Math.min(100, completedHours * 100 / TARGET_HOURS))
+  const missingHours = configured
+    ? Number(status.remainingHours) || Math.max(0, requiredHours - completedHours)
+    : 0
+  const completed = configured && status.status === 'COMPLIANT'
+  const progress = configured
+    ? Math.max(0, Math.min(100, Number(status.progressPercentage) || 0))
+    : 0
   const tone = completed ? 'success' : 'danger'
+  const formattedRequiredHours = requiredHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })
 
   return (
     <div className="dashboard-layout training-status-page">
@@ -49,7 +53,7 @@ export default function TrainingStatusScreen() {
             <header className="ts-heading">
               <div>
                 <span>ĐÀO TẠO CỦA TÔI</span>
-                <h1>Tiến độ hoàn thành 120 giờ</h1>
+                <h1>Tiến độ hoàn thành chuẩn đào tạo</h1>
                 <p>Dashboard chỉ hiển thị số liệu tổng quan. Hồ sơ chi tiết được quản lý tại màn Giờ đào tạo.</p>
               </div>
               {configured && (
@@ -66,8 +70,8 @@ export default function TrainingStatusScreen() {
               <div className="ts-error"><ExclamationCircleOutlined /> {error}</div>
             ) : !configured ? (
               <div className="ts-not-configured" role="status">
-                <strong>Backend chưa trả cấu hình giờ đào tạo áp dụng cho tài khoản này.</strong>
-                <span>Cần cấu hình yêu cầu đào tạo trước khi hệ thống có thể tính tiến độ 120 giờ.</span>
+                <strong>Chưa có chuẩn giờ đào tạo áp dụng cho bạn.</strong>
+                <span>Vui lòng liên hệ quản trị viên để kiểm tra cấu hình yêu cầu đào tạo.</span>
               </div>
             ) : (
               <>
@@ -78,7 +82,7 @@ export default function TrainingStatusScreen() {
                   </article>
                   <article className="ts-stat-card ts-stat-card--neutral">
                     <span className="ts-stat-card__icon"><CheckCircleOutlined /></span>
-                    <div><p>Mục tiêu</p><strong>{TARGET_HOURS} giờ</strong><small>Chuẩn đào tạo cần hoàn thành</small></div>
+                    <div><p>Mục tiêu</p><strong>{formattedRequiredHours} giờ</strong><small>Chuẩn đào tạo đang áp dụng</small></div>
                   </article>
                   <article className={`ts-stat-card ts-stat-card--${tone}`}>
                     <span className="ts-stat-card__icon"><ExclamationCircleOutlined /></span>
@@ -87,11 +91,11 @@ export default function TrainingStatusScreen() {
                 </section>
 
                 <section className={`ts-progress-card ts-progress-card--${tone}`}>
-                  <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{TARGET_HOURS} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
-                  <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="120" aria-valuenow={Math.min(TARGET_HOURS, completedHours)}>
+                  <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{formattedRequiredHours} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
+                  <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
                     <span style={{ width: `${progress}%` }} />
                   </div>
-                  <p>{completed ? 'Đã đạt yêu cầu 120 giờ đào tạo.' : `Chưa đủ yêu cầu. Bạn còn thiếu ${missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ.`}</p>
+                  <p>{completed ? `Đã đạt yêu cầu ${formattedRequiredHours} giờ đào tạo.` : `Chưa đủ yêu cầu. Bạn còn thiếu ${missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ.`}</p>
                 </section>
               </>
             )}

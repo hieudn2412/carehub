@@ -39,6 +39,8 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuest
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -68,7 +70,7 @@ public class ParaphraseService {
 
         ParaphraseJob job = ParaphraseJob.builder()
                 .sourceQuestion(source)
-                .mode(ParaphraseMode.FULL_MCQ)
+                .mode(properties.isParaphraseOptions() ? ParaphraseMode.FULL_MCQ : ParaphraseMode.STEM_ONLY)
                 .targetLanguage("vi")
                 .requestedCount(requestedCount)
                 .changeStrength(changeStrength)
@@ -138,12 +140,22 @@ public class ParaphraseService {
     public void completeJob(Long jobId, List<ParaphrasedMcq> generated) {
         ParaphraseJob job = findJob(jobId);
         QuestionBankQuestion source = job.getSourceQuestion();
-        if (generated == null || generated.size() < job.getRequestedCount()) {
+        if (generated == null || generated.isEmpty()) {
             throw new BadRequestException("VietQuill không tạo đủ số biến thể được yêu cầu");
+        }
+        List<ParaphrasedMcq> uniqueCandidates = new ArrayList<>();
+        Set<String> fingerprints = new LinkedHashSet<>();
+        for (ParaphrasedMcq candidate : generated) {
+            if (candidate != null && fingerprints.add(candidateFingerprint(candidate))) {
+                uniqueCandidates.add(candidate);
+            }
+            if (uniqueCandidates.size() == job.getRequestedCount()) {
+                break;
+            }
         }
         job.setStatus(ParaphraseJobStatus.VALIDATING);
         jobRepository.save(job);
-        for (ParaphrasedMcq mcq : generated) {
+        for (ParaphrasedMcq mcq : uniqueCandidates) {
             persistCandidate(job, source, mcq);
         }
         job.setStatus(ParaphraseJobStatus.COMPLETED);
@@ -432,6 +444,25 @@ public class ParaphraseService {
 
     private String trimToNull(String value) {
         return value == null || value.trim().isEmpty() ? null : value.trim();
+    }
+
+    private String candidateFingerprint(ParaphrasedMcq candidate) {
+        return List.of(
+                        candidate.stem(),
+                        candidate.optionA(),
+                        candidate.optionB(),
+                        candidate.optionC(),
+                        candidate.optionD()
+                ).stream()
+                .map(this::normalizeForFingerprint)
+                .reduce("", (left, right) -> left + "|" + right);
+    }
+
+    private String normalizeForFingerprint(String value) {
+        return java.text.Normalizer.normalize(value == null ? "" : value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]", "");
     }
 
     private String toJson(Object value) {

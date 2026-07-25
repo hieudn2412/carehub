@@ -577,8 +577,19 @@ function QuestionBankListPage() {
             <h2 id="create-paraphrase-title">Tạo phiên diễn đạt lại</h2>
             <p className="qbl-modal-subtitle">{paraphraseTarget.content}</p>
 
+            <ModelStatusCard
+              title="Model diễn đạt lại"
+              status={modelStatus?.paraphrase}
+              isLoading={isModelStatusLoading}
+            />
+            {modelStatus?.paraphrase?.provider === 'mock' && (
+              <div className="qbl-model-warning">
+                Hệ thống đang dùng dữ liệu mô phỏng. Kết quả chỉ phù hợp để kiểm thử giao diện.
+              </div>
+            )}
+
             <label className="qbl-field">
-              <span>Số biến thể</span>
+              <span>Số biến thể tối đa</span>
               <input
                 type="number"
                 min="1"
@@ -613,7 +624,11 @@ function QuestionBankListPage() {
                 type="button"
                 className="qbl-btn-primary"
                 onClick={createParaphraseJob}
-                disabled={jobQuestionId === paraphraseTarget.id}
+                disabled={
+                  jobQuestionId === paraphraseTarget.id
+                  || isModelStatusLoading
+                  || !modelStatus?.paraphrase?.filesPresent
+                }
               >
                 {jobQuestionId === paraphraseTarget.id ? <LoadingOutlined /> : <SyncOutlined />}
                 <span>Tạo câu hỏi tương tự</span>

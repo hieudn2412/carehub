@@ -53,8 +53,9 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     private final AiParaphraseProperties properties;
     private final ObjectMapper objectMapper;
     private final VietQuillPromptBuilder promptBuilder;
-    private final VietQuillMcqParser mcqParser;
     private final VietQuillHandlePool handlePool;
+    private final VietQuillCandidateSelector candidateSelector = new VietQuillCandidateSelector();
+    private final VietQuillStructuralRewriter structuralRewriter = new VietQuillStructuralRewriter();
 
     private volatile boolean initialized = false;
     private ExecutorService inferenceExecutor;
@@ -76,11 +77,17 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     private void warmup() {
         // Warmup tất cả handles trong pool để trigger JIT compilation trong ONNX Runtime
-        String warmupPrompt = "paraphrase mcq:\nCâu hỏi: test\nA. test\nB. test\nC. test\nD. test\nĐáp án đúng: A\nYêu cầu: giữ nguyên.";
+        String warmupPrompt = promptBuilder.buildControlledInput("Đây là câu hỏi kiểm tra?", "medium");
         try {
             handlePool.processAllHandles(handle -> {
-                generate(handle.question(), warmupPrompt, 0);
-                generate(handle.sentence(), "test", 0);
+                generateCandidates(handle.question(), warmupPrompt, "Đây là câu hỏi kiểm tra?", "medium", 1);
+                generateCandidates(
+                        handle.sentence(),
+                        promptBuilder.buildControlledInput("Đây là câu kiểm tra.", "medium"),
+                        "Đây là câu kiểm tra.",
+                        "medium",
+                        1
+                );
             });
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -171,81 +178,90 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     }
 
     private List<ParaphrasedMcq> doParaphrase(RuntimeHandle handle, ParaphraseModelInput input, int count) {
+        List<String> stems = generateCandidates(
+                handle.question(),
+                promptBuilder.buildControlledInput(input.stem(), input.changeStrength()),
+                input.stem(),
+                input.changeStrength(),
+                count
+        );
+        List<String> optionAs = fieldCandidates(handle, input.optionA(), input.changeStrength(), count);
+        List<String> optionBs = fieldCandidates(handle, input.optionB(), input.changeStrength(), count);
+        List<String> optionCs = fieldCandidates(handle, input.optionC(), input.changeStrength(), count);
+        List<String> optionDs = fieldCandidates(handle, input.optionD(), input.changeStrength(), count);
+
         List<ParaphrasedMcq> results = new ArrayList<>();
-        for (int index = 0; index < count; index++) {
-            ParaphrasedMcq candidate;
-            try {
-                candidate = properties.isSinglePassEnabled()
-                        ? paraphraseSinglePassVariant(handle, input, index, false)
-                        : paraphrasePerFieldVariant(handle, input, index, false);
-            } catch (RuntimeException firstFailure) {
-                log.warn("VietQuill full-MCQ attempt failed for variant {}: {}", index + 1, firstFailure.getMessage());
-                candidate = null;
+        int available = List.of(stems, optionAs, optionBs, optionCs, optionDs).stream()
+                .mapToInt(List::size)
+                .min()
+                .orElse(0);
+        for (int index = 0; index < available && results.size() < count; index++) {
+            ParaphrasedMcq candidate = new ParaphrasedMcq(
+                    stems.get(index),
+                    optionAs.get(index),
+                    optionBs.get(index),
+                    optionCs.get(index),
+                    optionDs.get(index),
+                    rawMcq(stems.get(index), optionAs.get(index), optionBs.get(index), optionCs.get(index), optionDs.get(index))
+            );
+            if (isAcceptable(input, candidate, results)) {
+                results.add(candidate);
             }
-            if (!isAcceptable(input, candidate, results)) {
-                candidate = paraphrasePerFieldVariant(handle, input, index, true);
-            }
-            if (!isAcceptable(input, candidate, results)) {
-                throw new ParaphraseModelException(
-                        "VietQuill không tạo được biến thể hợp lệ số " + (index + 1)
-                                + ": output thiếu field, trùng câu nguồn hoặc trùng biến thể khác");
-            }
-            results.add(candidate);
+        }
+        if (results.isEmpty()) {
+            throw new ParaphraseModelException("VietQuill không tạo được biến thể khác câu gốc");
+        }
+        if (results.size() < count) {
+            log.info(
+                    "VietQuill giữ lại {}/{} biến thể khác nhau sau khi loại câu gốc và output trùng",
+                    results.size(),
+                    count
+            );
         }
         return results;
     }
 
-    /**
-     * Generate one complete MCQ in a single model pass.
-     */
-    private ParaphrasedMcq paraphraseSinglePassVariant(
+    private List<String> fieldCandidates(
             RuntimeHandle handle,
-            ParaphraseModelInput input,
-            int index,
-            boolean retry
+            String source,
+            String changeStrength,
+            int count
     ) {
-        String prompt = promptBuilder.buildFullMcq(input, index, retry);
-        EncoderState encoderState = encodePrompt(handle.question(), prompt);
-        String rawOutput = decode(handle.question(), encoderState, index);
-        if (rawOutput.isBlank()) {
-            throw new ParaphraseModelException("VietQuill trả về output rỗng");
+        if (!properties.isParaphraseOptions()) {
+            return java.util.Collections.nCopies(count, safe(source));
         }
-        return mcqParser.parseFullMcq(rawOutput);
+        return generateCandidates(
+                handle.sentence(),
+                promptBuilder.buildControlledInput(source, changeStrength),
+                source,
+                changeStrength,
+                count
+        );
     }
 
-    /**
-     * Retry path: generate each field separately with the sentence model.
-     */
-    private ParaphrasedMcq paraphrasePerFieldVariant(
-            RuntimeHandle handle,
-            ParaphraseModelInput input,
-            int index,
-            boolean retry
+    private List<String> generateCandidates(
+            Seq2SeqHandle handle,
+            String prompt,
+            String source,
+            String changeStrength,
+            int requestedCount
     ) {
-        String stem = generate(handle.question(),
-                promptBuilder.buildSingleField(input.stem(), input.changeStrength(), index, retry), index);
-        String optionA = generate(handle.sentence(),
-                promptBuilder.buildSingleField(input.optionA(), input.changeStrength(), index, retry), index);
-        String optionB = generate(handle.sentence(),
-                promptBuilder.buildSingleField(input.optionB(), input.changeStrength(), index, retry), index);
-        String optionC = generate(handle.sentence(),
-                promptBuilder.buildSingleField(input.optionC(), input.changeStrength(), index, retry), index);
-        String optionD = generate(handle.sentence(),
-                promptBuilder.buildSingleField(input.optionD(), input.changeStrength(), index, retry), index);
-        if (List.of(stem, optionA, optionB, optionC, optionD).stream().anyMatch(this::isBlank)) {
-            throw new ParaphraseModelException("VietQuill per-field trả về field rỗng");
-        }
-        return new ParaphrasedMcq(stem, optionA, optionB, optionC, optionD,
-                rawMcq(stem, optionA, optionB, optionC, optionD));
-    }
-
-    /**
-     * Generate text from a Seq2SeqHandle.
-     * Convenience wrapper — encode + decode trong 1 lần gọi.
-     */
-    private String generate(Seq2SeqHandle handle, String prompt, int variantIndex) {
         EncoderState state = encodePrompt(handle, prompt);
-        return decode(handle, state, variantIndex);
+        int candidatePoolSize = Math.max(requestedCount * 2, requestedCount + 3);
+        int desiredBeamWidth = Math.max(properties.getNumBeams(), candidatePoolSize);
+        List<String> decoded;
+        try {
+            List<String> stableCandidates = properties.isKvCacheEnabled() && handle.kvCacheSupported()
+                    ? beamDecodeWithKvCache(handle, state.hiddenStates(), state.attentionMask(), desiredBeamWidth)
+                    : beamDecode(handle, state.hiddenStates(), state.attentionMask(), desiredBeamWidth);
+            decoded = Stream.concat(structuralRewriter.rewrite(source).stream(), stableCandidates.stream())
+                    .distinct()
+                    .toList();
+        } catch (Exception ex) {
+            throw new ParaphraseModelException("Không decode được với VietQuill ONNX", ex);
+        }
+
+        return candidateSelector.select(source, decoded, changeStrength, requestedCount);
     }
 
     private boolean isAcceptable(
@@ -257,13 +273,19 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
                 .stream().anyMatch(this::isBlank)) {
             return false;
         }
-        List<String> source = List.of(input.stem(), input.optionA(), input.optionB(), input.optionC(), input.optionD());
-        List<String> generated = List.of(candidate.stem(), candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD());
-        for (int i = 0; i < source.size(); i++) {
-            if (normalizeForCompare(source.get(i)).equals(normalizeForCompare(generated.get(i)))) {
-                return false;
+        if (normalizeForCompare(input.stem()).equals(normalizeForCompare(candidate.stem()))) {
+            return false;
+        }
+        if (properties.isParaphraseOptions()) {
+            List<String> source = List.of(input.optionA(), input.optionB(), input.optionC(), input.optionD());
+            List<String> generated = List.of(candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD());
+            for (int i = 0; i < source.size(); i++) {
+                if (normalizeForCompare(source.get(i)).equals(normalizeForCompare(generated.get(i)))) {
+                    return false;
+                }
             }
         }
+        List<String> generated = List.of(candidate.stem(), candidate.optionA(), candidate.optionB(), candidate.optionC(), candidate.optionD());
         String candidateKey = generated.stream().map(this::normalizeForCompare).reduce("", (left, right) -> left + "|" + right);
         return existing.stream().noneMatch(previous -> {
             String previousKey = List.of(previous.stem(), previous.optionA(), previous.optionB(), previous.optionC(), previous.optionD())
@@ -358,7 +380,16 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             float[][][] encoderHiddenStates,
             long[] attentionMask
     ) throws OrtException {
-        int beamWidth = Math.max(1, Math.min(6, properties.getNumBeams()));
+        return beamDecode(handle, encoderHiddenStates, attentionMask, properties.getNumBeams());
+    }
+
+    private List<String> beamDecode(
+            Seq2SeqHandle handle,
+            float[][][] encoderHiddenStates,
+            long[] attentionMask,
+            int requestedBeamWidth
+    ) throws OrtException {
+        int beamWidth = Math.max(1, Math.min(12, requestedBeamWidth));
         int maxTokens = Math.max(8, Math.min(properties.getMaxOutputLength(), properties.getMaxDecodeLength()));
         List<Beam> beams = List.of(new Beam(
                 List.of((long) handle.modelConfig().decoderStartTokenId()),
@@ -752,15 +783,22 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     }
 
     private List<ParaphrasedMcq> mock(ParaphraseModelInput input, int count) {
+        List<String> prefixes = List.of(
+                "Theo cách diễn đạt khác, ",
+                "Có thể đặt câu hỏi theo cách khác: ",
+                "Xét theo một cách trình bày khác, ",
+                "Câu hỏi này cũng có thể được diễn đạt: ",
+                "Một cách hỏi tương đương là: "
+        );
         List<ParaphrasedMcq> results = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             int variant = i + 1;
             results.add(new ParaphrasedMcq(
-                    "Theo cách diễn đạt khác, " + decapitalize(input.stem()),
-                    "Phương án A: " + input.optionA(),
-                    "Phương án B: " + input.optionB(),
-                    "Phương án C: " + input.optionC(),
-                    "Phương án D: " + input.optionD(),
+                    prefixes.get(i % prefixes.size()) + decapitalize(input.stem()),
+                    input.optionA(),
+                    input.optionB(),
+                    input.optionC(),
+                    input.optionD(),
                     "mock-vietquill-variant-" + variant
             ));
         }
@@ -802,7 +840,16 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             float[][][] encoderHiddenStates,
             long[] encoderAttentionMask
     ) throws OrtException {
-        int beamWidth = Math.max(1, Math.min(6, properties.getNumBeams()));
+        return beamDecodeWithKvCache(handle, encoderHiddenStates, encoderAttentionMask, properties.getNumBeams());
+    }
+
+    private List<String> beamDecodeWithKvCache(
+            Seq2SeqHandle handle,
+            float[][][] encoderHiddenStates,
+            long[] encoderAttentionMask,
+            int requestedBeamWidth
+    ) throws OrtException {
+        int beamWidth = Math.max(1, Math.min(12, requestedBeamWidth));
         int maxTokens = Math.max(8, Math.min(properties.getMaxOutputLength(), properties.getMaxDecodeLength()));
 
         // Mỗi beam có KV-cache riêng (null ở step 0)

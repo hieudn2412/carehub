@@ -7,8 +7,6 @@ import { staffApi } from '../api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import { useDashboard } from '../hooks/useDashboard.js'
 
-const TRAINING_TARGET_HOURS = 120
-
 function unavailable(message) {
   return { total: 0, passed: 0, failed: 0, rate: 0, available: false, emptyMessage: message }
 }
@@ -18,10 +16,7 @@ export default function DashboardStaffScreen() {
   const { data: examData, loading: examLoading, error: examError } = useDashboard()
   const [profile, setProfile] = useState(null)
   const [training, setTraining] = useState(unavailable('Chưa cấu hình chuẩn giờ đào tạo cho bạn.'))
-  const quality = useMemo(
-    () => unavailable('Backend chưa có API kết quả chất lượng cá nhân dành cho User.'),
-    [],
-  )
+  const [quality, setQuality] = useState(unavailable('Bạn chưa có kết quả đánh giá checklist nào trong 30 ngày gần đây.'))
   const [loadingPersonal, setLoadingPersonal] = useState(true)
   const [error, setError] = useState('')
 
@@ -30,7 +25,8 @@ export default function DashboardStaffScreen() {
     Promise.allSettled([
       staffApi.getProfile(),
       trainingApi.getMyTrainingStatus(),
-    ]).then(([profileResult, trainingResult]) => {
+      staffApi.getMyDashboardFormSummary(),
+    ]).then(([profileResult, trainingResult, qualityResult]) => {
       if (cancelled) return
       if (profileResult.status === 'fulfilled') setProfile(profileResult.value?.data?.data || null)
 
@@ -38,20 +34,39 @@ export default function DashboardStaffScreen() {
         const status = trainingResult.value?.data?.data || {}
         if (status.status !== 'NOT_CONFIGURED') {
           const submitted = Number(status.submittedHours) || 0
-          const passed = submitted >= TRAINING_TARGET_HOURS ? 1 : 0
+          const required = Number(status.requiredHours) || 0
+          const passed = status.status === 'COMPLIANT' ? 1 : 0
           setTraining({
             total: 1,
             passed,
             failed: passed ? 0 : 1,
-            rate: Math.min(100, submitted * 100 / TRAINING_TARGET_HOURS),
+            rate: Number(status.progressPercentage) || 0,
             available: true,
-            note: `${submitted.toFixed(1).replace('.', ',')} / ${TRAINING_TARGET_HOURS} giờ đã hoàn thành.`,
+            note: `${submitted.toFixed(1).replace('.', ',')} / ${required.toFixed(1).replace('.', ',')} giờ đã hoàn thành.`,
             path: '/staff/training-status',
           })
         }
       }
 
-      if ([profileResult, trainingResult].every((result) => result.status === 'rejected')) {
+      if (qualityResult.status === 'fulfilled') {
+        const summary = qualityResult.value?.data?.data || {}
+        const total = Number(summary.submittedCount) || 0
+        const passed = Number(summary.passedCount) || 0
+        const failed = (Number(summary.failedScoreCount) || 0)
+          + (Number(summary.failedCriticalCount) || 0)
+        if (total > 0) {
+          setQuality({
+            total,
+            passed,
+            failed,
+            rate: Number(summary.passRate) || 0,
+            available: true,
+            note: `${Number(summary.formCount) || 0} bảng kiểm · Điểm trung bình ${Number(summary.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
+          })
+        }
+      }
+
+      if ([profileResult, trainingResult, qualityResult].every((result) => result.status === 'rejected')) {
         setError('Không thể tải dữ liệu cá nhân. Vui lòng thử lại sau.')
       }
       setLoadingPersonal(false)

@@ -451,4 +451,11 @@ export const adminApi = {
       params,
     })
   },
+
+  getDashboardFormFilterOptions(params) {
+    return httpClient.get('/dashboard/forms/filter-options', {
+      headers: authHeaders(),
+      params,
+    })
+  },
 }

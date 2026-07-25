@@ -34,8 +34,11 @@ function ManagerExamResultDetailPage() {
     return () => window.clearTimeout(timer)
   }, [id])
 
-  const getStatusBadge = (score, passThreshold = 50) => {
-    const passed = score >= passThreshold
+  const getStatusBadge = (item) => {
+    const passed = item.latestPassed ?? item.bestPassed
+    if (passed == null) {
+      return { label: 'Chưa có kết quả', color: 'gray' }
+    }
     return {
       label: passed ? 'Đạt' : 'Chưa đạt',
       color: passed ? 'green' : 'red'
@@ -98,20 +101,19 @@ function ManagerExamResultDetailPage() {
                   <th>Điểm</th>
                   <th>Kết quả</th>
                   <th>Thời gian</th>
-                  <th>Phân loại năng lực</th>
                 </tr>
               </thead>
               <tbody>
                 {results.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: '#6b7280', padding: 40 }}>
+                    <td colSpan={4} style={{ textAlign: 'center', color: '#6b7280', padding: 40 }}>
                       Chưa có nhân viên nào làm bài.
                     </td>
                   </tr>
                 ) : (
                   results.map((item, idx) => {
-                    const score = item.latestScore ?? item.bestScore ?? 0
-                    const badge = getStatusBadge(score)
+                    const score = item.latestScore ?? item.bestScore
+                    const badge = getStatusBadge(item)
                     return (
                       <tr key={item.id || idx}>
                         <td>
@@ -123,7 +125,7 @@ function ManagerExamResultDetailPage() {
                             color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                             fontSize: 14
                           }}>
-                            {score}%
+                            {score == null ? '--' : `${score}%`}
                           </strong>
                         </td>
                         <td>
@@ -131,19 +133,6 @@ function ManagerExamResultDetailPage() {
                         </td>
                         <td style={{ color: '#475569' }}>
                           {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
-                        </td>
-                        <td>
-                          {item.competencyLevel ? (
-                            <span className={`mgr-badge mgr-badge--${item.competencyLevel === 'NOT_COMPETENT' ? 'red' : item.competencyLevel === 'BEGINNER' || item.competencyLevel === 'BASIC' ? 'amber' : 'green'}`}>
-                              {item.competencyLevel === 'NOT_COMPETENT' ? 'Chưa đạt' :
-                               item.competencyLevel === 'BEGINNER' ? 'Sơ cấp' :
-                               item.competencyLevel === 'BASIC' ? 'Cơ bản' :
-                               item.competencyLevel === 'PROFICIENT' ? 'Thành thạo' :
-                               item.competencyLevel === 'ADVANCED' ? 'Chuyên sâu' : item.competencyLevel}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8' }}>--</span>
-                          )}
                         </td>
                       </tr>
                     )
