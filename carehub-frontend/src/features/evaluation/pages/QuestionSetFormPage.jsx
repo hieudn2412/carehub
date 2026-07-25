@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
@@ -67,6 +68,7 @@ function QuestionSetFormPage() {
   const [previewQuestionCount, setPreviewQuestionCount] = useState(10)
   const [previewResult, setPreviewResult] = useState(null)
   const [isPreviewing, setIsPreviewing] = useState(false)
+  const [pendingStatusChange, setPendingStatusChange] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -330,10 +332,11 @@ function QuestionSetFormPage() {
       showToast('Bộ đang hoạt động chỉ có thể chuyển sang Tạm ngưng.', 'warning')
       return
     }
-    if (!window.confirm('Tạm ngưng bộ câu hỏi này để mở khóa chỉnh sửa? Bộ sẽ không còn xuất hiện khi tạo bài kiểm tra.')) {
-      return
-    }
+    setPendingStatusChange(true)
+  }
 
+  async function confirmStatusChange() {
+    setPendingStatusChange(false)
     setIsChangingStatus(true)
     try {
       await questionSetApi.deactivateQuestionSet(id)
@@ -432,8 +435,17 @@ function QuestionSetFormPage() {
                   <div>
                     <h2 className="qsf-title">{isEditMode ? 'Cập nhật bộ câu hỏi' : 'Tạo bộ câu hỏi'}</h2>
                     <p className="qsf-subtitle">Gom nhóm, sắp xếp và quản lý trạng thái sử dụng của bộ câu hỏi</p>
-                  </div>
-                </div>
+      </div>
+      <ConfirmModal
+        isOpen={pendingStatusChange}
+        title="Tạm ngưng bộ câu hỏi?"
+        message="Bộ câu hỏi sẽ không còn xuất hiện khi tạo bài kiểm tra. Bạn có thể chỉnh sửa nội dung sau khi tạm ngưng."
+        confirmText="Tạm ngưng bộ"
+        danger
+        onCancel={() => setPendingStatusChange(false)}
+        onConfirm={confirmStatusChange}
+      />
+    </div>
 
                 {isLoading ? (
                   <section className="qsf-questions-card">Đang tải dữ liệu bộ câu hỏi...</section>

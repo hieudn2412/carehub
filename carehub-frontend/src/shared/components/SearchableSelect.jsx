@@ -19,6 +19,7 @@ function SearchableSelect({
   emptyMessage = 'Không tìm thấy kết quả phù hợp',
   disabled = false,
   ariaLabel,
+  id,
 }) {
   const rootRef = useRef(null)
   const listboxId = useId()
@@ -110,6 +111,7 @@ function SearchableSelect({
     >
       <SearchOutlined className="searchable-select__search-icon" aria-hidden="true" />
       <input
+        id={id}
         type="text"
         role="combobox"
         aria-label={ariaLabel || placeholder}

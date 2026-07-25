@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { EditOutlined, DeleteOutlined, PlusCircleOutlined, CloseOutlined, WarningOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { examConfigApi } from '../api/examConfigApi.js'
@@ -40,6 +41,7 @@ function TestConfigPage() {
   const [modalIndex, setModalIndex] = useState(null)
   const [modalCategoryId, setModalCategoryId] = useState('')
   const [modalQuestions, setModalQuestions] = useState(5)
+  const [pendingConfigAction, setPendingConfigAction] = useState(null)
 
   const hydrateForm = useCallback((config) => {
     if (!config) {
@@ -94,6 +96,8 @@ function TestConfigPage() {
   }, [hydrateForm, showToast])
 
   useEffect(() => {
+    // Hydrate exam configuration data on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
   }, [loadData])
 
@@ -166,9 +170,7 @@ function TestConfigPage() {
   }
 
   function handleResetDefault() {
-    if (window.confirm('Thiết lập lại form về mặc định? Dữ liệu backend chỉ thay đổi sau khi bấm Lưu.')) {
-      hydrateForm(null)
-    }
+    setPendingConfigAction({ type: 'reset' })
   }
 
   function handleNewConfig() {
@@ -232,9 +234,7 @@ function TestConfigPage() {
   }
 
   function handleDeleteRule(index) {
-    if (window.confirm('Xóa phân bổ danh mục này khỏi cấu hình?')) {
-      updateForm('distributions', form.distributions.filter((_, itemIndex) => itemIndex !== index))
-    }
+    setPendingConfigAction({ type: 'delete-distribution', index })
   }
 
   const warnings = preview?.warnings || []
@@ -493,6 +493,21 @@ function TestConfigPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={Boolean(pendingConfigAction)}
+        title={pendingConfigAction?.type === 'reset' ? 'Thiết lập lại cấu hình?' : 'Xóa phân bổ danh mục?'}
+        message={pendingConfigAction?.type === 'reset'
+          ? 'Các thay đổi hiện tại chỉ bị xóa trên biểu mẫu. Dữ liệu backend chỉ thay đổi sau khi bạn bấm Lưu.'
+          : 'Phân bổ này sẽ bị xóa khỏi cấu hình hiện tại. Bạn có thể thêm lại trước khi lưu.'}
+        confirmText={pendingConfigAction?.type === 'reset' ? 'Thiết lập mặc định' : 'Xóa phân bổ'}
+        danger={pendingConfigAction?.type !== 'reset'}
+        onCancel={() => setPendingConfigAction(null)}
+        onConfirm={() => {
+          if (pendingConfigAction?.type === 'reset') hydrateForm(null)
+          if (pendingConfigAction?.type === 'delete-distribution') updateForm('distributions', form.distributions.filter((_, itemIndex) => itemIndex !== pendingConfigAction.index))
+          setPendingConfigAction(null)
+        }}
+      />
     </div>
   )
 }

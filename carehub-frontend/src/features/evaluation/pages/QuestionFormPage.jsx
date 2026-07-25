@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { ArrowLeftOutlined, CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
@@ -51,6 +52,7 @@ function QuestionFormPage() {
     correctOptionIndices: [0],
   }))
   const [pendingDestination, setPendingDestination] = useState(null)
+  const [pendingSavePayload, setPendingSavePayload] = useState(null)
 
   const currentSnapshot = useMemo(() => formSnapshot({
     content,
@@ -235,10 +237,15 @@ function QuestionFormPage() {
       status: 'APPROVED',
     }
 
-    if (isEditMode && impactWarning?.warning && !window.confirm(`${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi?`)) {
+    if (isEditMode && impactWarning?.warning) {
+      setPendingSavePayload(payload)
       return
     }
 
+    await persistQuestion(payload)
+  }
+
+  async function persistQuestion(payload) {
     setIsSaving(true)
     try {
       const response = isEditMode
@@ -469,6 +476,19 @@ function QuestionFormPage() {
           </section>
         </div>
       )}
+      <ConfirmModal
+        isOpen={Boolean(pendingSavePayload)}
+        title="Câu hỏi đang được sử dụng"
+        message={impactWarning?.warning ? `${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi? Thay đổi có thể ảnh hưởng đến các bộ đang sử dụng câu hỏi này.` : ''}
+        confirmText="Tiếp tục cập nhật"
+        danger
+        onCancel={() => setPendingSavePayload(null)}
+        onConfirm={async () => {
+          const payload = pendingSavePayload
+          setPendingSavePayload(null)
+          if (payload) await persistQuestion(payload)
+        }}
+      />
     </div>
   )
 }

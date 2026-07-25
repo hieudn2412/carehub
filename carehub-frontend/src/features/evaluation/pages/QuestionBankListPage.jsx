@@ -16,6 +16,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { apiData, apiErrorMessage, difficultyText, normalizeText } from '../utils/documentQuestionUi.js'
@@ -103,6 +104,7 @@ function QuestionBankListPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState('')
   const [page, setPage] = useState(0)
+  const [questionToArchive, setQuestionToArchive] = useState(null)
 
   const loadQuestions = useCallback(async () => {
     setIsLoading(true)
@@ -163,13 +165,17 @@ function QuestionBankListPage() {
       showToast(apiErrorMessage(error), 'warning')
     }
     if (impactWarning?.blocksArchive) {
-      window.alert(impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể lưu trữ.')
+      showToast(impactWarning.warning || 'Câu hỏi đang được dùng nên chưa thể lưu trữ.', 'warning')
       return
     }
     const impactText = impactWarning?.warning ? `${impactWarning.warning}\n\n` : ''
-    if (!window.confirm(`${impactText}Lưu trữ câu hỏi này? Câu hỏi sẽ không còn dùng để tạo bộ câu hỏi mới.`)) {
-      return
-    }
+    setQuestionToArchive({ ...item, impactText })
+  }
+
+  async function confirmArchiveQuestion() {
+    if (!questionToArchive) return
+    const item = questionToArchive
+    setQuestionToArchive(null)
 
     questionBankApi.archiveQuestion(item.id)
       .then(() => {
@@ -746,11 +752,11 @@ function QuestionBankListPage() {
               </button>
               <button type="button" className="qbl-btn-secondary" onClick={previewImport} disabled={isImporting || !importFile}>
                 {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
-                <span>Preview</span>
+                <span>Xem trước</span>
               </button>
               <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).every((row) => !row.valid)}>
                 {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
-                <span>Commit dòng hợp lệ</span>
+                <span>Nhập các dòng hợp lệ</span>
               </button>
             </div>
           </div>
@@ -823,6 +829,15 @@ function QuestionBankListPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={Boolean(questionToArchive)}
+        title="Lưu trữ câu hỏi?"
+        message={questionToArchive ? `${questionToArchive.impactText || ''}Câu hỏi sẽ không còn dùng để tạo bộ câu hỏi mới.` : ''}
+        confirmText="Lưu trữ câu hỏi"
+        danger
+        onCancel={() => setQuestionToArchive(null)}
+        onConfirm={confirmArchiveQuestion}
+      />
     </>
   )
 }

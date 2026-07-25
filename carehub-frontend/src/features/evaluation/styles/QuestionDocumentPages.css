@@ -290,6 +290,22 @@
   display: block;
 }
 
+.qdoc-file-link {
+  display: block;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #16324f;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.qdoc-file-link:hover { color: #0f766e; text-decoration: underline; }
+
 .qdoc-file-cell span {
   margin-top: 4px;
   color: #b45309;
