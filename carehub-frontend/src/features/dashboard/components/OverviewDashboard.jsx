@@ -53,16 +53,22 @@ function LoadingBlock() {
   )
 }
 
-function SummaryCard({ icon, label, value, detail, tone = 'neutral' }) {
+function SummaryCard({ icon, label, value, detail, tone = 'neutral', onOpen }) {
+  const Component = onOpen ? 'button' : 'article'
+
   return (
-    <article className={`overview-summary-card overview-summary-card--${tone}`}>
+    <Component
+      className={`overview-summary-card overview-summary-card--${tone}${onOpen ? ' overview-summary-card--interactive' : ''}`}
+      onClick={onOpen}
+      type={onOpen ? 'button' : undefined}
+    >
       <span className="overview-summary-card__icon">{icon}</span>
       <div>
         <p>{label}</p>
         <strong>{value}</strong>
         <span>{detail}</span>
       </div>
-    </article>
+    </Component>
   )
 }
 
@@ -130,6 +136,7 @@ export default function OverviewDashboard({
   onFilterChange,
   onExport,
   onNavigate,
+  onSummaryOpen,
   summary,
   domains,
   warnings = [],
@@ -219,10 +226,38 @@ export default function OverviewDashboard({
         <section className="overview-summary overview-summary--loading"><LoadingBlock /></section>
       ) : (
         <section className="overview-summary">
-          <SummaryCard icon={<TeamOutlined />} label={isStaff ? 'Hồ sơ theo dõi' : 'Tổng nhân viên'} value={formatNumber(summary.total)} detail={summary.totalDetail} tone="blue" />
-          <SummaryCard icon={<CheckCircleOutlined />} label="Đạt yêu cầu" value={formatNumber(summary.passed)} detail={summary.passedDetail} tone="green" />
-          <SummaryCard icon={<AlertOutlined />} label="Chưa đạt" value={formatNumber(summary.failed)} detail={summary.failedDetail} tone="red" />
-          <SummaryCard icon={<SafetyCertificateOutlined />} label="Tỷ lệ đạt" value={formatPercent(summary.rate)} detail={summary.rateDetail} tone="violet" />
+          <SummaryCard
+            icon={<TeamOutlined />}
+            label={isStaff ? 'Hồ sơ theo dõi' : 'Tổng nhân viên'}
+            value={formatNumber(summary.total)}
+            detail={summary.totalDetail}
+            tone="blue"
+            onOpen={onSummaryOpen ? () => onSummaryOpen('total') : undefined}
+          />
+          <SummaryCard
+            icon={<CheckCircleOutlined />}
+            label="Đạt yêu cầu"
+            value={formatNumber(summary.passed)}
+            detail={summary.passedDetail}
+            tone="green"
+            onOpen={onSummaryOpen ? () => onSummaryOpen('passed') : undefined}
+          />
+          <SummaryCard
+            icon={<AlertOutlined />}
+            label="Chưa đạt"
+            value={formatNumber(summary.failed)}
+            detail={summary.failedDetail}
+            tone="red"
+            onOpen={onSummaryOpen ? () => onSummaryOpen('failed') : undefined}
+          />
+          <SummaryCard
+            icon={<SafetyCertificateOutlined />}
+            label="Tỷ lệ đạt"
+            value={formatPercent(summary.rate)}
+            detail={summary.rateDetail}
+            tone="violet"
+            onOpen={onSummaryOpen ? () => onSummaryOpen('rate') : undefined}
+          />
         </section>
       )}
 

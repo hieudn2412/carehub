@@ -10,7 +10,17 @@ function normalizeSearch(value = '') {
     .trim()
 }
 
-function DepartmentCombobox({ id, departments, value, onChange, disabled = false, placeholder = 'Chọn phòng ban...' }) {
+function DepartmentCombobox({
+  id,
+  departments,
+  value,
+  onChange,
+  disabled = false,
+  placeholder = 'Chọn phòng ban...',
+  allLabel,
+  emptyValue = '',
+  required = true,
+}) {
   const rootRef = useRef(null)
   const inputRef = useRef(null)
   const listboxRef = useRef(null)
@@ -20,20 +30,30 @@ function DepartmentCombobox({ id, departments, value, onChange, disabled = false
   const [isSearching, setIsSearching] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
 
+  const allOption = useMemo(
+    () => allLabel ? { id: emptyValue, name: allLabel, isAllOption: true } : null,
+    [allLabel, emptyValue],
+  )
+
+  const options = useMemo(
+    () => allOption ? [allOption, ...departments] : departments,
+    [allOption, departments],
+  )
+
   const selectedDepartment = useMemo(
-    () => departments.find(department => String(department.id) === String(value)),
-    [departments, value]
+    () => options.find(department => String(department.id) === String(value)),
+    [options, value]
   )
 
   const filteredDepartments = useMemo(() => {
     const normalizedQuery = normalizeSearch(isSearching ? query : '')
-    if (!normalizedQuery) return departments
+    if (!normalizedQuery) return options
 
     return departments.filter(department => {
       const searchableText = `${department.name || ''} ${department.departmentCode || ''}`
       return normalizeSearch(searchableText).includes(normalizedQuery)
     })
-  }, [departments, isSearching, query])
+  }, [departments, isSearching, options, query])
 
   const displayValue = isSearching ? query : (selectedDepartment?.name || '')
   const safeActiveIndex = activeIndex >= 0 && activeIndex < filteredDepartments.length ? activeIndex : -1
@@ -75,7 +95,7 @@ function DepartmentCombobox({ id, departments, value, onChange, disabled = false
     setIsSearching(true)
     setIsOpen(true)
     setActiveIndex(0)
-    if (value) onChange('')
+    if (String(value) !== String(emptyValue)) onChange(emptyValue)
   }
 
   const handleKeyDown = (event) => {
@@ -130,7 +150,7 @@ function DepartmentCombobox({ id, departments, value, onChange, disabled = false
         aria-controls={listboxId}
         aria-expanded={isOpen}
         aria-activedescendant={safeActiveIndex >= 0 ? `${listboxId}-option-${safeActiveIndex}` : undefined}
-        aria-required="true"
+        aria-required={required}
         autoComplete="off"
         value={displayValue}
         disabled={disabled}

@@ -100,6 +100,23 @@
   box-shadow: 0 0 0 2px rgba(26, 170, 132, 0.15);
 }
 
+.am-filter-department {
+  position: relative;
+  z-index: 5;
+  flex: 0 1 320px;
+  min-width: 240px;
+}
+
+.am-filter-department .am-department-combobox__input {
+  min-height: 39px;
+  border-radius: 8px;
+}
+
+.am-filter-department .am-department-combobox__menu {
+  min-width: 320px;
+  max-height: 320px;
+}
+
 .am-results-count {
   font-size: 13px;
   color: #64748b;

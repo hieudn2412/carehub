@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.training.service.impl;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSearchRequest;
 import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
@@ -90,7 +91,7 @@ class TrainingStatusServiceImplTest {
                 .thenReturn(ComplianceStatus.NON_COMPLIANT);
 
         var response = service.getDashboardSummary(new EmployeeTrainingStatusSearchRequest(
-                null, null, null, null, null, null, null, null, asOf
+                null, null, null, null, null, null, null, null, null, asOf
         ));
 
         assertThat(response.asOf()).isEqualTo(asOf);
@@ -102,6 +103,16 @@ class TrainingStatusServiceImplTest {
         assertThat(response.byDepartment())
                 .extracting("departmentName")
                 .containsExactly("Cấp cứu", "Ngoại");
+
+        var attentionPage = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
+                null, null, null, null, null, null, null, null, false, asOf
+        ), PageRequest.of(0, 20));
+        var compliantPage = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
+                null, null, null, null, null, null, null, null, true, asOf
+        ), PageRequest.of(0, 20));
+
+        assertThat(attentionPage.getTotalElements()).isEqualTo(2);
+        assertThat(compliantPage).isEmpty();
     }
 
     private User employee(Long id, String employeeCode, Department department) {

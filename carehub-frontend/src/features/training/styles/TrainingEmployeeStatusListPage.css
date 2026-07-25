@@ -80,6 +80,47 @@
   padding-left: 4px;
 }
 
+.tes-export-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 39px;
+  padding: 0 14px;
+  border: 1px solid #087e68;
+  border-radius: 8px;
+  background: #087e68;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tes-export-button:hover:not(:disabled) {
+  background: #066b59;
+}
+
+.tes-export-button:focus-visible {
+  outline: 3px solid rgba(26, 170, 132, .2);
+  outline-offset: 2px;
+}
+
+.tes-export-button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.tes-export-error {
+  padding: 11px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #b42318;
+  font-size: 13px;
+}
+
 .tes-filter-select {
   border: 1px solid #e2e8f0;
   border-radius: 8px;

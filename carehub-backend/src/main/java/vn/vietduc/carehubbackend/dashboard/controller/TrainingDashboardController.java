@@ -29,6 +29,7 @@ public class TrainingDashboardController {
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long professionalFieldId,
             @RequestParam(required = false) ComplianceStatus complianceStatus,
+            @RequestParam(required = false) Boolean compliant,
             @RequestParam(required = false) LocalDate asOf
     ) {
         Long scopedDepartmentId = dashboardAccessPolicy.resolveDepartmentScope(departmentId);
@@ -41,6 +42,7 @@ public class TrainingDashboardController {
                 null,
                 null,
                 null,
+                compliant,
                 asOf
         );
         return ResponseEntity.ok(ApiResponse.success(

@@ -53,8 +53,6 @@ import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateF
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage.jsx'
 import TrainingDashboardPage from '../features/admin/pages/TrainingDashboardPage.jsx'
-import ExportTrainingPage from '../features/admin/pages/ExportTrainingPage.jsx'
-import ExportQualityPage from '../features/admin/pages/ExportQualityPage.jsx'
 
 import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
@@ -274,11 +272,11 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/export-training"
-        element={adminElement(<ExportTrainingPage />)}
+        element={adminElement(<Navigate to="/training/employees" replace />)}
       />
       <Route
         path="/admin/reports/export-quality"
-        element={adminElement(<ExportQualityPage />)}
+        element={adminElement(<Navigate to="/admin/reports/checklist-dashboard" replace />)}
       />
       <Route
         path="/admin/profile"

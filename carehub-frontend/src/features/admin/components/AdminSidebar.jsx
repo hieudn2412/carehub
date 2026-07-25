@@ -20,7 +20,6 @@ import {
   ScheduleOutlined,
   BarChartOutlined,
   LineChartOutlined,
-  DownloadOutlined,
   MailOutlined,
   UserOutlined,
   AppstoreOutlined,
@@ -144,8 +143,6 @@ const navSections = [
         path: '/admin/reports/competency-dashboard',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
-      { icon: <DownloadOutlined />, label: 'Xuất báo cáo đào tạo', path: '/admin/reports/export-training' },
-      { icon: <DownloadOutlined />, label: 'Xuất báo cáo chất lượng', path: '/admin/reports/export-quality' },
     ],
   },
   {

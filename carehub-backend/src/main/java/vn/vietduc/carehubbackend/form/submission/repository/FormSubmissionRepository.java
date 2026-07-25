@@ -107,6 +107,24 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                                                @Param("status") FormSubmissionStatus status,
                                                Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "answers", "answers.question", "answers.question.section", "answers.selectedOption"
+    })
+    @Query("""
+            select distinct s from FormSubmission s
+            where s.formVersion.form.id = :formId
+              and s.formVersion.id = :versionId
+              and s.status = 'SUBMITTED'
+              and (:result is null or s.result = :result)
+            order by s.submittedAt desc, s.id desc
+            """)
+    List<FormSubmission> findSubmittedForVersionExport(
+            @Param("formId") Long formId,
+            @Param("versionId") Long versionId,
+            @Param("result") FormSubmissionResult result
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from FormSubmission s where s.id = :id")
     Optional<FormSubmission> findByIdForUpdate(@Param("id") Long id);
