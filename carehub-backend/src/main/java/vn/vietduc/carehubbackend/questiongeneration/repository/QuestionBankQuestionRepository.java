@@ -9,6 +9,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBankQuestion, Long> {
     /** @deprecated use {@link #findByStatus(QuestionBankStatus, Pageable)} with pagination instead */
@@ -28,6 +29,8 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
     long countByTopicIgnoreCaseAndStatus(String topic, QuestionBankStatus status);
 
     boolean existsBySourceDocumentAndStem(String sourceDocument, String stem);
+
+    Optional<QuestionBankQuestion> findFirstBySourceDocumentAndStemOrderByIdAsc(String sourceDocument, String stem);
 
     long countByStatus(QuestionBankStatus status);
 

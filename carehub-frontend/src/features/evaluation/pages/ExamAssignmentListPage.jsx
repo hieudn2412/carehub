@@ -4,11 +4,17 @@ import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, 
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 
-function ExamAssignmentListPage() {
+function ExamAssignmentListPage({
+  activeView = 'assignments',
+  canViewPapers = true,
+  canViewAssignments = true,
+  onViewChange = () => {},
+}) {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [assignments, setAssignments] = useState([])
@@ -104,7 +110,7 @@ function ExamAssignmentListPage() {
     setResults(null)
   }
 
-  const breadcrumbs = [{ label: 'Bài kiểm tra đã giao' }]
+  const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
 
   return (
     <div className="dashboard-layout">
@@ -116,7 +122,7 @@ function ExamAssignmentListPage() {
             <div className="exp-page">
               <div className="exp-title-card">
                 <div>
-                  <h1 className="exp-title">Bài kiểm tra đã giao</h1>
+                  <h1 className="exp-title">Quản lý bài kiểm tra</h1>
                   <p className="exp-subtitle">Theo dõi bài đã giao và xem điểm từng nhân viên ngay tại đây</p>
                 </div>
                 <div className="exp-title-actions">
@@ -128,6 +134,13 @@ function ExamAssignmentListPage() {
                   </button>
                 </div>
               </div>
+
+              <ExamManagementViewSwitch
+                activeView={activeView}
+                canViewPapers={canViewPapers}
+                canViewAssignments={canViewAssignments}
+                onChange={onViewChange}
+              />
 
               <div className="exp-filter-bar">
                 <div className="exp-search">

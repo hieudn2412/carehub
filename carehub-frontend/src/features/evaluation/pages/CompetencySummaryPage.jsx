@@ -161,8 +161,8 @@ function CompetencySummaryPage() {
 
   const handleSaveTarget = async () => {
     const targetScore = Number(targetInput)
-    if (!Number.isFinite(targetScore) || targetScore < 0 || targetScore > 100) {
-      showToast('Điểm mục tiêu phải nằm trong khoảng 0 đến 100.', 'warning')
+    if (!Number.isFinite(targetScore) || targetScore < 0 || targetScore > 10) {
+      showToast('Điểm mục tiêu phải nằm trong khoảng 0 đến 10.', 'warning')
       return
     }
 
@@ -400,11 +400,11 @@ function CompetencySummaryPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
                       <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Điểm / 100</span>
+                        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Điểm / 10</span>
                         <input
                           type="number"
                           min="0"
-                          max="100"
+                          max="10"
                           step="0.01"
                           value={targetInput}
                           onChange={(event) => setTargetInput(event.target.value)}

@@ -86,6 +86,9 @@ public class MyCompetencyService {
             int passCount = 0;
             for (ExamAttempt a : catAttempts) {
                 BigDecimal score = a.getScore() != null ? a.getScore() : BigDecimal.ZERO;
+                if (score.compareTo(BigDecimal.valueOf(10)) > 0) {
+                    score = score.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+                }
                 sum = sum.add(score);
                 if (Boolean.TRUE.equals(a.getPassed())) {
                     passCount++;
@@ -275,14 +278,18 @@ public class MyCompetencyService {
     }
 
     private ExamAttemptBriefResponse toExamAttemptBrief(ExamAttempt attempt) {
+        BigDecimal score = attempt.getScore();
+        if (score != null && score.compareTo(BigDecimal.valueOf(10)) > 0) {
+            score = score.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        }
         CompetencyLevel level = attempt.getClassification() != null
                 ? attempt.getClassification()
-                : classificationService.classifyOverall(attempt.getScore());
+                : classificationService.classifyOverall(score);
         return new ExamAttemptBriefResponse(
                 attempt.getId(),
                 attempt.getExamPaper() == null ? "Bài kiểm tra" : attempt.getExamPaper().getName(),
                 attempt.getSubmittedAt() == null ? null : attempt.getSubmittedAt().toLocalDate(),
-                attempt.getScore(),
+                score,
                 attempt.getCorrectCount(),
                 attempt.getTotalQuestions(),
                 attempt.getPassed(),
@@ -320,20 +327,24 @@ public class MyCompetencyService {
 
     private BigDecimal practicalScore(FormSubmission submission) {
         if (submission.getConvertedScore() != null) {
-            return submission.getConvertedScore().multiply(BigDecimal.TEN).setScale(2, RoundingMode.HALF_UP);
+            return submission.getConvertedScore().setScale(2, RoundingMode.HALF_UP);
         }
         if (submission.getTotalScore() != null
                 && submission.getMaxScore() != null
                 && submission.getMaxScore().compareTo(BigDecimal.ZERO) > 0) {
             return submission.getTotalScore()
-                    .multiply(BigDecimal.valueOf(100))
+                    .multiply(BigDecimal.valueOf(10))
                     .divide(submission.getMaxScore(), 2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
 
     private BigDecimal departmentTarget(User user) {
-        return user.getDepartment() == null ? null : user.getDepartment().getCompetencyTargetScore();
+        BigDecimal target = user.getDepartment() == null ? null : user.getDepartment().getCompetencyTargetScore();
+        if (target != null && target.compareTo(BigDecimal.valueOf(10)) > 0) {
+            return target.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
+        }
+        return target;
     }
 
     private String getCategoryName(ExamAttempt attempt) {

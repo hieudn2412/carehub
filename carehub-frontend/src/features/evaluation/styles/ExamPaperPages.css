@@ -44,6 +44,41 @@
   gap: 10px;
 }
 
+.exp-view-switch {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.exp-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.exp-view-switch button:hover {
+  color: #0069d9;
+}
+
+.exp-view-switch button.is-active {
+  background: #fff;
+  color: #0069d9;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+}
+
 .exp-btn-primary,
 .exp-btn-secondary,
 .exp-actions button {
@@ -378,6 +413,14 @@
 
   .exp-search {
     min-width: 0;
+  }
+
+  .exp-view-switch {
+    align-self: stretch;
+  }
+
+  .exp-view-switch button {
+    flex: 1;
   }
 
   .exp-form-grid {

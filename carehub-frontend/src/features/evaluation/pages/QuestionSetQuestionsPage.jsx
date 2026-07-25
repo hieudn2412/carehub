@@ -68,6 +68,8 @@ function QuestionSetQuestionsPage() {
   }, [id, showToast])
 
   useEffect(() => {
+    // Hydrate the selected set and approved question bank when the route changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData()
   }, [loadData])
 
@@ -248,10 +250,6 @@ function QuestionSetQuestionsPage() {
                         <div className="qsq-info-item">
                           <span className="qsq-info-label">Tên bộ</span>
                           <span className="qsq-info-value">{questionSet.name}</span>
-                        </div>
-                        <div className="qsq-info-item">
-                          <span className="qsq-info-label">Danh mục</span>
-                          <span className="qsq-info-value">{questionSet.category || '---'}</span>
                         </div>
                         <div className="qsq-info-item">
                           <span className="qsq-info-label">Trạng thái</span>

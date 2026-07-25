@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  CheckCircleOutlined,
   CopyOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -10,6 +11,7 @@ import {
   FileTextOutlined,
   FileWordOutlined,
   LoadingOutlined,
+  PauseCircleOutlined,
   PlusCircleOutlined,
   PrinterOutlined,
   SearchOutlined,
@@ -20,8 +22,6 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionSetApi } from '../api/questionSetApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetListPage.css'
-
-const DEFAULT_CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'An toàn sử dụng thuốc', 'An toàn người bệnh', 'Quy trình lâm sàng']
 
 const EXPORT_MIME_TYPES = {
   csv: 'text/csv;charset=utf-8',
@@ -46,7 +46,6 @@ function QuestionSetListPage() {
   const [actionId, setActionId] = useState(null)
   const [exportMenuId, setExportMenuId] = useState(null)
   const [keyword, setKeyword] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('')
   const [page, setPage] = useState(0)
 
   const loadSets = useCallback(async () => {
@@ -54,7 +53,6 @@ function QuestionSetListPage() {
     try {
       const response = await questionSetApi.listQuestionSets({
         q: keyword || undefined,
-        category: categoryFilter || undefined,
       })
       setSets(apiData(response, []).filter((item) => item.status !== 'ARCHIVED'))
     } catch (error) {
@@ -62,7 +60,7 @@ function QuestionSetListPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [categoryFilter, keyword, showToast])
+  }, [keyword, showToast])
 
   useEffect(() => {
     // Hydrate the list from the API when its server-side filters change.
@@ -86,10 +84,6 @@ function QuestionSetListPage() {
       document.removeEventListener('keydown', closeMenuOnEscape)
     }
   }, [exportMenuId])
-
-  const categories = useMemo(() => {
-    return Array.from(new Set([...DEFAULT_CATEGORIES, ...sets.map((item) => item.category).filter(Boolean)]))
-  }, [sets])
 
   const pageSize = 10
   const totalElements = sets.length
@@ -116,6 +110,23 @@ function QuestionSetListPage() {
       if (duplicated?.id && window.confirm('Mở bản sao để chỉnh sửa ngay?')) {
         navigate(`/admin/evaluation/question-sets/${duplicated.id}/edit`)
       }
+    })
+  }
+
+  async function toggleSetStatus(item) {
+    const activating = item.status !== 'ACTIVE'
+    const actionLabel = activating ? 'kích hoạt' : 'tạm ngưng'
+    if (!window.confirm(`Bạn có chắc chắn muốn ${actionLabel} bộ câu hỏi "${item.name}" không?`)) {
+      return
+    }
+    await runAction(item.id, async () => {
+      if (activating) {
+        await questionSetApi.activateQuestionSet(item.id)
+      } else {
+        await questionSetApi.deactivateQuestionSet(item.id)
+      }
+      showToast(activating ? 'Đã kích hoạt bộ câu hỏi.' : 'Đã tạm ngưng bộ câu hỏi.', 'success')
+      await loadSets()
     })
   }
 
@@ -157,7 +168,7 @@ function QuestionSetListPage() {
             <div className="qsl-page">
               <div className="qsl-title-card">
                 <h1 className="qsl-title">Bộ câu hỏi</h1>
-                <p className="qsl-subtitle">Quản lý các nhóm ngân hàng câu hỏi theo chủ đề và độ khó</p>
+                <p className="qsl-subtitle">Quản lý các bộ câu hỏi sẵn sàng dùng để tạo bài kiểm tra</p>
               </div>
 
               <div className="qsl-filter-bar">
@@ -178,22 +189,6 @@ function QuestionSetListPage() {
                     />
                   </div>
 
-                  <select
-                    className="qsl-filter-select"
-                    value={categoryFilter}
-                    onChange={(event) => {
-                      setCategoryFilter(event.target.value)
-                      setPage(0)
-                    }}
-                  >
-                    <option value="">Danh mục</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-
                 </div>
 
                 <button className="qsl-btn-add" onClick={() => navigate('/admin/evaluation/question-sets/new')}>
@@ -206,10 +201,10 @@ function QuestionSetListPage() {
                   <thead>
                     <tr>
                       <th>Tên bộ câu hỏi</th>
-                      <th>Danh mục</th>
                       <th>Số câu hỏi</th>
                       <th>Độ khó</th>
-                      <th style={{ width: '230px', textAlign: 'center' }}>Hành động</th>
+                      <th>Trạng thái</th>
+                      <th style={{ width: '270px', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -229,7 +224,6 @@ function QuestionSetListPage() {
                       displayRows.map((item) => (
                         <tr key={item.id}>
                           <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
-                          <td style={{ color: '#475569' }}>{item.category || '---'}</td>
                           <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
                           <td>
                             <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>
@@ -237,7 +231,23 @@ function QuestionSetListPage() {
                             </span>
                           </td>
                           <td>
+                            <span className={`qsl-status-badge qsl-status-badge--${String(item.status || 'DRAFT').toLowerCase()}`}>
+                              {item.statusText || statusText(item.status)}
+                            </span>
+                          </td>
+                          <td>
                             <div className="qsl-actions">
+                              <button
+                                type="button"
+                                className={`qsl-action-btn ${item.status === 'ACTIVE' ? 'qsl-action-btn--pause' : 'qsl-action-btn--activate'}`}
+                                onClick={() => toggleSetStatus(item)}
+                                title={item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'}
+                                disabled={actionId === item.id}
+                              >
+                                {actionId === item.id
+                                  ? <LoadingOutlined />
+                                  : item.status === 'ACTIVE' ? <PauseCircleOutlined /> : <CheckCircleOutlined />}
+                              </button>
                               <button
                                 type="button"
                                 className="qsl-action-btn qsl-action-btn--edit"
@@ -356,6 +366,13 @@ function difficultyText(value) {
   return value || '---'
 }
 
+function statusText(value) {
+  if (value === 'ACTIVE') return 'Hoạt động'
+  if (value === 'INACTIVE') return 'Tạm ngưng'
+  if (value === 'DRAFT') return 'Bản nháp'
+  return value || '---'
+}
+
 function downloadFile(filename, content, type) {
   const blob = content instanceof Blob ? content : new Blob([content], { type })
   const url = URL.createObjectURL(blob)
@@ -408,7 +425,7 @@ function printQuestionSet(detail) {
       </head>
       <body>
         <h1>${escapeHtml(detail.name)}</h1>
-        <div class="meta">${escapeHtml(detail.category || '')} ${escapeHtml(detail.difficulty || '')} - ${detail.questionCount || 0} câu hỏi</div>
+        <div class="meta">${escapeHtml(difficultyText(detail.difficulty))} - ${detail.questionCount || 0} câu hỏi</div>
         ${rows}
       </body>
     </html>

@@ -195,6 +195,32 @@
   color: #d32f2f;
 }
 
+.qsl-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 5px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.qsl-status-badge--active {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.qsl-status-badge--inactive {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.qsl-status-badge--draft {
+  color: #475569;
+  background: #e2e8f0;
+}
+
 /* Action Buttons */
 .qsl-actions {
   position: relative;
@@ -222,6 +248,28 @@
 .qsl-action-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.qsl-action-btn--activate {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.qsl-action-btn--activate:hover:not(:disabled) {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.qsl-action-btn--pause {
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.qsl-action-btn--pause:hover:not(:disabled) {
+  background: #ffedd5;
+  border-color: #f97316;
 }
 
 .qsl-action-btn--export {

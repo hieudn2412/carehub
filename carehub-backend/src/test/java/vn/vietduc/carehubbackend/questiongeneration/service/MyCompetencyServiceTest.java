@@ -44,7 +44,7 @@ class MyCompetencyServiceTest {
         Department department = Department.builder()
                 .id(10L)
                 .name("Khoa Nội")
-                .competencyTargetScore(new BigDecimal("84.00"))
+                .competencyTargetScore(new BigDecimal("8.40"))
                 .build();
         user = User.builder()
                 .id(20L)
@@ -59,7 +59,7 @@ class MyCompetencyServiceTest {
                 .user(user)
                 .examPaper(paper)
                 .submittedAt(LocalDateTime.now())
-                .score(new BigDecimal("80.00"))
+                .score(new BigDecimal("8.00"))
                 .correctCount(8)
                 .totalQuestions(10)
                 .passed(true)
@@ -92,22 +92,22 @@ class MyCompetencyServiceTest {
         var skills = service.getSkillCompetency(user, from, to);
         var summary = service.getCompetencySummary(user, from, to);
 
-        assertThat(knowledge.overallAverage()).isEqualByComparingTo("80.00");
+        assertThat(knowledge.overallAverage()).isEqualByComparingTo("8.00");
         assertThat(knowledge.items().get(0).attempts()).hasSize(1);
-        assertThat(skills.overallAverage()).isEqualByComparingTo("90.00");
+        assertThat(skills.overallAverage()).isEqualByComparingTo("9.00");
         assertThat(skills.items().get(0).attempts()).hasSize(1);
-        assertThat(summary.overallScore()).isEqualByComparingTo("85.00");
-        assertThat(summary.targetScore()).isEqualByComparingTo("84.00");
+        assertThat(summary.overallScore()).isEqualByComparingTo("8.50");
+        assertThat(summary.targetScore()).isEqualByComparingTo("8.40");
         assertThat(summary.isPassed()).isTrue();
     }
 
     @Test
     void totalMustBeStrictlyGreaterThanDepartmentTarget() {
-        user.getDepartment().setCompetencyTargetScore(new BigDecimal("85.00"));
+        user.getDepartment().setCompetencyTargetScore(new BigDecimal("8.50"));
 
         var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
 
-        assertThat(summary.overallScore()).isEqualByComparingTo("85.00");
+        assertThat(summary.overallScore()).isEqualByComparingTo("8.50");
         assertThat(summary.isPassed()).isFalse();
     }
 }
