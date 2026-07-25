@@ -5,9 +5,12 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse;
+import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.util.Optional;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 public interface FormSubmissionRepository extends JpaRepository<FormSubmission, Long> {
@@ -31,7 +34,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
 
     @EntityGraph(attributePaths = {
             "formVersion", "formVersion.form", "submittedBy",
-            "subjectContext", "subjectContext.subjectUser"
+            "subjectContext", "subjectContext.subjectUser", "subjectContext.subjectUser.department"
     })
     @Query("""
             select s from FormSubmission s
@@ -45,6 +48,109 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             """)
     List<FormSubmission> findScoredEvaluationsForDepartment(
             @Param("departmentId") Long departmentId,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate
+    );
+
+    @Query(value = """
+            select distinct subject
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            order by subject.name asc, subject.id asc
+            """,
+            countQuery = """
+            select count(distinct subject.id)
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:formId is null or s.formVersion.form.id = :formId)
+              and (:keyword is null
+                   or lower(subject.name) like :keyword
+                   or lower(subject.employeeCode) like :keyword)
+            """)
+    Page<User> findCompetencyTechniqueCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("formId") Long formId,
+            @Param("keyword") String keyword,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate,
+            Pageable pageable
+    );
+
+    @Query("""
+            select distinct new vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse(
+                form.id, form.title
+            )
+            from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            join s.formVersion version
+            join version.form form
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and (:departmentId is null or subject.department.id = :departmentId)
+            order by form.title
+            """)
+    List<CompetencyTechniqueOptionResponse> findCompetencyTechniqueOptions(
+            @Param("departmentId") Long departmentId,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate
+    );
+
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy",
+            "subjectContext", "subjectContext.subjectUser", "subjectContext.subjectUser.department"
+    })
+    @Query("""
+            select s from FormSubmission s
+            join s.subjectContext context
+            left join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and (subject.id in :userIds
+                   or (subject is null and lower(context.employeeCode) in :employeeCodes))
+            order by s.submittedAt desc
+            """)
+    List<FormSubmission> findScoredEvaluationsForCandidateUsers(
+            @Param("userIds") Collection<Long> userIds,
+            @Param("employeeCodes") Collection<String> employeeCodes,
+            @Param("fromDate") Instant fromDate,
+            @Param("toDate") Instant toDate
+    );
+
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy",
+            "subjectContext", "subjectContext.subjectUser", "subjectContext.subjectUser.department"
+    })
+    @Query("""
+            select s from FormSubmission s
+            join s.subjectContext context
+            join context.subjectUser subject
+            where s.status = 'SUBMITTED'
+              and s.scoringStatus = 'CALCULATED'
+              and s.submittedAt between :fromDate and :toDate
+              and subject.id in :userIds
+              and (:formId is null or s.formVersion.form.id = :formId)
+            order by s.submittedAt desc
+            """)
+    List<FormSubmission> findScoredEvaluationsForTechniqueCandidates(
+            @Param("userIds") Collection<Long> userIds,
+            @Param("formId") Long formId,
             @Param("fromDate") Instant fromDate,
             @Param("toDate") Instant toDate
     );

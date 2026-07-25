@@ -2,6 +2,8 @@ package vn.vietduc.carehubbackend.questiongeneration.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -192,13 +194,17 @@ public class CompetencyController {
     @GetMapping("/by-field")
     @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyByFieldResponse>> getByField(
-            @RequestParam Long departmentId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication) {
         requireManagerDepartmentScope(departmentId, authentication);
-        CompetencyByFieldResponse data = competencyService.getByField(departmentId, categoryId, fromDate, toDate);
+        CompetencyByFieldResponse data = competencyService.getByField(
+                departmentId, categoryId, fromDate, toDate, keyword, pageable
+        );
         return ResponseEntity.ok(ApiResponse.success("Lấy năng lực theo lĩnh vực thành công", data));
     }
 
@@ -217,13 +223,17 @@ public class CompetencyController {
     @GetMapping("/by-technique")
     @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyByTechniqueResponse>> getByTechnique(
-            @RequestParam Long departmentId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long formId,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication) {
         requireManagerDepartmentScope(departmentId, authentication);
-        CompetencyByTechniqueResponse data = competencyService.getByTechnique(departmentId, formId, fromDate, toDate);
+        CompetencyByTechniqueResponse data = competencyService.getByTechnique(
+                departmentId, formId, fromDate, toDate, keyword, pageable
+        );
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật thành công", data));
     }
 
@@ -242,12 +252,16 @@ public class CompetencyController {
     @GetMapping("/summary")
     @PreAuthorize("hasAnyRole('MANAGER','ADMIN') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencySummaryResponse>> getSummary(
-            @RequestParam Long departmentId,
+            @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
+            @RequestParam(required = false) String keyword,
+            @PageableDefault(size = 10) Pageable pageable,
             Authentication authentication) {
         requireManagerDepartmentScope(departmentId, authentication);
-        CompetencySummaryResponse data = competencyService.getSummary(departmentId, fromDate, toDate);
+        CompetencySummaryResponse data = competencyService.getSummary(
+                departmentId, fromDate, toDate, keyword, pageable
+        );
         return ResponseEntity.ok(ApiResponse.success("Lấy tổng hợp năng lực thành công", data));
     }
 
@@ -273,6 +287,12 @@ public class CompetencyController {
     private void requireManagerDepartmentScope(Long departmentId, Authentication authentication) {
         boolean admin = hasAuthority(authentication, "ROLE_ADMIN", "ADMIN");
         boolean manager = hasAuthority(authentication, "ROLE_MANAGER", "MANAGER");
+        if (departmentId == null) {
+            if (!admin) {
+                throw new ForbiddenException("Chỉ Admin được xem dữ liệu năng lực toàn viện");
+            }
+            return;
+        }
         if (!manager || admin) {
             return;
         }

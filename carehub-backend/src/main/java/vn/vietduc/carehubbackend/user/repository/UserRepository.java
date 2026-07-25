@@ -3,6 +3,8 @@ package vn.vietduc.carehubbackend.user.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -41,6 +43,83 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
 
     @EntityGraph(attributePaths = {"department", "position"})
     List<User> findByIsDeletedFalseAndStatus(UserStatus status);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            ORDER BY u.name ASC, u.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            """)
+    Page<User> findCompetencySummaryCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+              AND EXISTS (
+                  SELECT a.id
+                  FROM ExamAttempt a
+                  WHERE a.user = u
+                    AND a.status IN ('SUBMITTED', 'GRADED')
+                    AND a.score IS NOT NULL
+                    AND a.submittedAt >= :fromDate
+                    AND a.submittedAt <= :toDate
+                    AND (:category IS NULL
+                         OR a.examPaper.examConfig.questionSet.category = :category)
+              )
+            ORDER BY u.name ASC, u.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+              AND EXISTS (
+                  SELECT a.id
+                  FROM ExamAttempt a
+                  WHERE a.user = u
+                    AND a.status IN ('SUBMITTED', 'GRADED')
+                    AND a.score IS NOT NULL
+                    AND a.submittedAt >= :fromDate
+                    AND a.submittedAt <= :toDate
+                    AND (:category IS NULL
+                         OR a.examPaper.examConfig.questionSet.category = :category)
+              )
+            """)
+    Page<User> findCompetencyFieldCandidates(
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            @Param("category") String category,
+            @Param("fromDate") java.time.LocalDateTime fromDate,
+            @Param("toDate") java.time.LocalDateTime toDate,
+            Pageable pageable
+    );
 
     @EntityGraph(attributePaths = {"department", "position"})
     @Query("""

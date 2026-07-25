@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountB
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -52,6 +53,24 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             """)
     List<ExamAttempt> findScoredAttemptsByUserAndDateRange(
             @Param("user") User user,
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate);
+
+    @Query("""
+            SELECT a FROM ExamAttempt a
+            JOIN FETCH a.user u
+            LEFT JOIN FETCH u.department
+            JOIN FETCH a.examPaper ep
+            JOIN FETCH ep.examConfig ec
+            JOIN FETCH ec.questionSet qs
+            WHERE a.user.id IN :userIds
+              AND a.status IN ('SUBMITTED', 'GRADED')
+              AND a.submittedAt >= :fromDate
+              AND a.submittedAt <= :toDate
+            ORDER BY a.submittedAt DESC
+            """)
+    List<ExamAttempt> findScoredAttemptsByUserIdsAndDateRange(
+            @Param("userIds") Collection<Long> userIds,
             @Param("fromDate") LocalDateTime fromDate,
             @Param("toDate") LocalDateTime toDate);
 }
