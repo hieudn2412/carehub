@@ -214,7 +214,7 @@ function EmailTemplateFormPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/notifications/email-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="etf-page">

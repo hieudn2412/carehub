@@ -49,49 +49,6 @@ export const trainingApi = {
     })
   },
 
-  getRequirements(params) {
-    return httpClient.get('/training/requirements', {
-      headers: authHeaders(),
-      params,
-    })
-  },
-
-  getRequirement(id) {
-    return httpClient.get(`/training/requirements/${id}`, {
-      headers: authHeaders(),
-    })
-  },
-
-  createRequirement(payload) {
-    return httpClient.post('/training/requirements', payload, {
-      headers: authHeaders(),
-    })
-  },
-
-  updateRequirement(id, payload) {
-    return httpClient.put(`/training/requirements/${id}`, payload, {
-      headers: authHeaders(),
-    })
-  },
-
-  updateRequirementStatus(id, payload) {
-    return httpClient.patch(`/training/requirements/${id}/status`, payload, {
-      headers: authHeaders(),
-    })
-  },
-
-  getApplicableDepartments() {
-    return httpClient.get('/training/requirements/applicable-departments', {
-      headers: authHeaders(),
-    })
-  },
-
-  updateApplicableDepartments(payload) {
-    return httpClient.put('/training/requirements/applicable-departments', payload, {
-      headers: authHeaders(),
-    })
-  },
-
   getDepartments() {
     return httpClient.get('/departments', {
       headers: authHeaders(),

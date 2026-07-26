@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, SaveOutlined, SendOutlined } from '@ant-design/icons'
+import { SaveOutlined, SendOutlined } from '@ant-design/icons'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -223,7 +223,7 @@ function ChecklistFormScreen() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Phiếu kiểm tra" />
+          <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra" />
           <div className="dashboard-layout__body"><div className="cfs-loading">Đang tải phiếu kiểm tra...</div></div>
         </div>
       </div>
@@ -235,13 +235,10 @@ function ChecklistFormScreen() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Phiếu kiểm tra" />
+          <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra" />
           <div className="dashboard-layout__body">
             <div className="cfs-error">
               <p>{errorMessage}</p>
-              <button className="btn btn--secondary" onClick={() => navigate('/staff/checklists')}>
-                <ArrowLeftOutlined /> Quay lại danh sách
-              </button>
             </div>
           </div>
         </div>
@@ -253,13 +250,10 @@ function ChecklistFormScreen() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header title={assignedForm?.formName || 'Phiếu kiểm tra'} />
+        <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title={assignedForm?.formName || 'Phiếu kiểm tra'} />
         <div className="dashboard-layout__body">
           <div className="cfs-container">
             <div className="cfs-header">
-              <button className="btn btn--secondary" onClick={() => navigate('/staff/checklists')}>
-                <ArrowLeftOutlined /> Quay lại
-              </button>
               <div>
                 <h2>{assignedForm?.formName || `Phiếu #${id}`}</h2>
                 {assignedForm?.description && <p className="cfs-subtitle">{assignedForm.description}</p>}

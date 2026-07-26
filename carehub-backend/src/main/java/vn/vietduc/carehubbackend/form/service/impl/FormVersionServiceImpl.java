@@ -13,6 +13,8 @@ import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.UnauthorizedException;
 import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.form.dto.request.CreateFormVersionRequest;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentStatus;
+import vn.vietduc.carehubbackend.form.assignment.repository.FormAssignmentItemRepository;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionResponse;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionSummaryResponse;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -49,6 +51,7 @@ public class FormVersionServiceImpl implements FormVersionService {
     private final FormScoringPolicy scoringPolicy;
     private final FormSchemaSnapshotService schemaSnapshotService;
     private final EntityManager entityManager;
+    private final FormAssignmentItemRepository assignmentItemRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -142,6 +145,13 @@ public class FormVersionServiceImpl implements FormVersionService {
         version.setPublishedBy(currentUser());
         schemaSnapshotService.update(version);
         FormVersion published = versionRepository.saveAndFlush(version);
+
+        if (previous != null && !previous.getId().equals(published.getId())) {
+            var activeItems = assignmentItemRepository.findAllByFormVersion_IdAndStatus(
+                    previous.getId(), FormAssignmentStatus.ACTIVE);
+            activeItems.forEach(item -> item.setFormVersion(published));
+            assignmentItemRepository.saveAll(activeItems);
+        }
 
         form.setCurrentPublishedVersion(published);
         form.setCurrentVersionNumber(published.getVersionNumber());

@@ -1,14 +1,12 @@
 import { useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { MOCK_LOGS } from '../api/mockLogs'
-import { ArrowLeftOutlined } from '@ant-design/icons'
 import '../styles/SystemLogs.css'
 
 function SystemLogDetailScreen() {
   const { id } = useParams()
-  const navigate = useNavigate()
 
   const log = useMemo(() => {
     return MOCK_LOGS.find(l => l.id === parseInt(id))
@@ -33,7 +31,7 @@ function SystemLogDetailScreen() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/system-logs', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             
@@ -95,13 +93,6 @@ function SystemLogDetailScreen() {
                     Lỗi: Không tìm thấy nhật ký kiểm toán tương ứng với ID này.
                   </div>
                 )}
-
-                {/* Back Navigation Bar */}
-                <div className="log-back-bar">
-                  <button className="log-btn-back" onClick={() => navigate('/admin/system-logs')}>
-                    <ArrowLeftOutlined /> Quay lại
-                  </button>
-                </div>
 
               </div>
               

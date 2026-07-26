@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/training.css'
 
 const EMPTY_FORM = {
@@ -287,17 +288,17 @@ function TrainingRecordFormPage() {
               </label>
               <label>
                 Professional field
-                <select
-                  onChange={(event) => updateField('professionalFieldId', event.target.value)}
+                <SearchableSelect
+                  onChange={(value) => updateField('professionalFieldId', value)}
                   value={form.professionalFieldId}
-                >
-                  <option value="">None</option>
-                  {(options.professionalFields || []).map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'None' },
+                    ...(options.professionalFields || []).map((field) => ({ value: field.id, label: field.name })),
+                  ]}
+                  placeholder="None"
+                  searchPlaceholder="Tìm tên lĩnh vực..."
+                  ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                />
               </label>
             </div>
 

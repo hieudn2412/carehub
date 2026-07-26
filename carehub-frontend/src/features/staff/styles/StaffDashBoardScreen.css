@@ -406,14 +406,15 @@
 
 /* ── Header ── */
 .dashboard-header {
-  height: 64px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
+  min-height: 64px;
+  background: #fbfdfc;
+  border-bottom: 1px solid #eef2f1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 9px 28px;
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .dashboard-header__main {

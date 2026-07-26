@@ -7,6 +7,18 @@ function authHeaders() {
 }
 
 export const adminApi = {
+  getSystemSettings() {
+    return httpClient.get('/admin/system-settings', {
+      headers: authHeaders(),
+    })
+  },
+
+  updateSystemSettings(data) {
+    return httpClient.put('/admin/system-settings', data, {
+      headers: authHeaders(),
+    })
+  },
+
   getUsers(params) {
     return httpClient.get('/users', {
       headers: authHeaders(),
@@ -304,6 +316,12 @@ export const adminApi = {
     })
   },
 
+  getFormScoringConfiguration(formId, versionId) {
+    return httpClient.get(`/forms/${formId}/versions/${versionId}/scoring-configuration`, {
+      headers: authHeaders(),
+    })
+  },
+
   updateFormScoringConfiguration(formId, versionId, data) {
     return httpClient.patch(`/forms/${formId}/versions/${versionId}/scoring-configuration`, data, {
       headers: authHeaders(),
@@ -414,6 +432,19 @@ export const adminApi = {
     return httpClient.get('/form-submissions', {
       headers: authHeaders(),
       params,
+    })
+  },
+
+  getFormVersionSubmissions(formId, versionId, params) {
+    return httpClient.get(`/forms/${formId}/versions/${versionId}/responses`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormVersionSubmissionSummary(formId, versionId) {
+    return httpClient.get(`/forms/${formId}/versions/${versionId}/responses/summary`, {
+      headers: authHeaders(),
     })
   },
 

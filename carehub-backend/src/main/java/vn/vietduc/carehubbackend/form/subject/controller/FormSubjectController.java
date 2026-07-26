@@ -19,7 +19,7 @@ public class FormSubjectController {
     private final FormSubjectService service;
 
     @GetMapping("/users")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<FormSubjectUserResponse>> findUser(
             @RequestParam(required = false) Long assignmentItemId,
             @RequestParam @NotBlank @Size(max = 100) String employeeCode) {

@@ -104,15 +104,11 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
             JOIN r.activityType activityType
             LEFT JOIN r.professionalField professionalField
             WHERE r.employee.id = :employeeId
-              AND r.startDate >= :windowStart
-              AND r.startDate <= :windowEnd
               AND r.workflowStatus IN :workflowStatuses
             ORDER BY r.startDate ASC, r.id ASC
             """)
     List<EmployeeTrainingRecordLedgerResponse> findEmployeeLedgerRecords(
             @Param("employeeId") Long employeeId,
-            @Param("windowStart") LocalDate windowStart,
-            @Param("windowEnd") LocalDate windowEnd,
             @Param("workflowStatuses") List<TrainingRecordStatus> workflowStatuses
     );
 
@@ -158,23 +154,20 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     )
                     FROM TrainingRecord r
                     JOIN r.employee employee
+                    LEFT JOIN employee.department employeeDepartment
                     LEFT JOIN r.employeeDepartmentSnapshot department
                     JOIN r.activityType activityType
                     LEFT JOIN r.professionalField professionalField
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
-                      AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
-                      AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE :keyword
-                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
-                           OR LOWER(employee.employeeCode) LIKE :keyword
-                           OR LOWER(employee.name) LIKE :keyword)
+                      AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
+                      AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
                       AND (:professionalFieldId IS NULL OR professionalField.id = :professionalFieldId)
                       AND (:workflowStatus IS NULL OR r.workflowStatus = :workflowStatus)
                       AND (:employeeId IS NULL OR employee.id = :employeeId)
-                      AND (:departmentId IS NULL OR employee.department.id = :departmentId)
+                      AND (:departmentId IS NULL OR employeeDepartment.id = :departmentId)
                       AND (:sourceType IS NULL OR r.sourceType = :sourceType)
                       AND (:hasEvidence IS NULL
                            OR (:hasEvidence = true AND EXISTS (
@@ -201,22 +194,19 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     SELECT COUNT(r)
                     FROM TrainingRecord r
                     JOIN r.employee employee
+                    LEFT JOIN employee.department employeeDepartment
                     LEFT JOIN r.professionalField professionalField
                     JOIN r.activityType activityType
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
-                      AND (:scopeDepartmentId IS NULL OR employee.department.id = :scopeDepartmentId)
-                      AND (:keyword IS NULL
-                           OR LOWER(r.title) LIKE :keyword
-                           OR LOWER(COALESCE(r.provider, '')) LIKE :keyword
-                           OR LOWER(employee.employeeCode) LIKE :keyword
-                           OR LOWER(employee.name) LIKE :keyword)
+                      AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
+                      AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
                       AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
                       AND (:dateTo IS NULL OR r.startDate <= :dateTo)
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
                       AND (:professionalFieldId IS NULL OR professionalField.id = :professionalFieldId)
                       AND (:workflowStatus IS NULL OR r.workflowStatus = :workflowStatus)
                       AND (:employeeId IS NULL OR employee.id = :employeeId)
-                      AND (:departmentId IS NULL OR employee.department.id = :departmentId)
+                      AND (:departmentId IS NULL OR employeeDepartment.id = :departmentId)
                       AND (:sourceType IS NULL OR r.sourceType = :sourceType)
                       AND (:hasEvidence IS NULL
                            OR (:hasEvidence = true AND EXISTS (

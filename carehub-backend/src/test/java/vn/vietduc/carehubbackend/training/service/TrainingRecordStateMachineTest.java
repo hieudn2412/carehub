@@ -20,16 +20,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <pre>
  *   DRAFT     -> SUBMITTED  : allowed, any actor
  *   DRAFT     -> CANCELLED  : allowed, any actor
- *   SUBMITTED -> DRAFT      : allowed, any actor  (return-to-draft, commit 5a9bc66c)
+ *   SUBMITTED -> DRAFT      : allowed only when adminActor == true
  *   SUBMITTED -> CANCELLED  : allowed only when adminActor == true
  *   CANCELLED -> *          : rejected (terminal)
  *   from == to / null       : rejected
  * </pre>
+ *
+ * <p>The {@code adminActor} guard covers BOTH targets out of SUBMITTED — as of the merge of
+ * origin/main a plain owner can no longer return their own submitted record to draft.
+ * {@code L1-TRSM-17} pins that full truth table.
  */
 class TrainingRecordStateMachineTest {
     private final TrainingRecordStateMachine stateMachine = new TrainingRecordStateMachine();
 
-    // ── Block: canTransition() — valid transitions ────────────────────────────
+    // ── Block: canTransition() — valid transitions out of DRAFT ───────────────
 
     @Test
     @DisplayName("L1-TRSM-01 | State-Valid: DRAFT + submit by owner → allowed")
@@ -56,18 +60,18 @@ class TrainingRecordStateMachineTest {
         )).isTrue();
     }
 
+    // ── Block: canTransition() — the adminActor guard out of SUBMITTED ─────────
+
     @Test
-    @DisplayName("L1-TRSM-04 | State-Valid: SUBMITTED + return-to-draft by owner → allowed")
-    void submittedCanBeReturnedToDraftByOwner() {
-        // Ownership is enforced one layer up, in TrainingRecordServiceImpl.returnToDraft (line 252);
-        // the state machine itself does not distinguish owner from admin for this transition.
+    @DisplayName("L1-TRSM-04 | Guard-FALSE: SUBMITTED + return-to-draft by owner → rejected")
+    void submittedCannotBeReturnedToDraftByOwner() {
         assertThat(stateMachine.canTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.DRAFT, false
-        )).isTrue();
+        )).isFalse();
     }
 
     @Test
-    @DisplayName("L1-TRSM-05 | State-Valid: SUBMITTED + return-to-draft by admin → allowed")
+    @DisplayName("L1-TRSM-05 | Guard-TRUE: SUBMITTED + return-to-draft by admin → allowed")
     void submittedCanBeReturnedToDraftByAdmin() {
         assertThat(stateMachine.canTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.DRAFT, true
@@ -88,6 +92,19 @@ class TrainingRecordStateMachineTest {
         assertThat(stateMachine.canTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.CANCELLED, false
         )).isFalse();
+    }
+
+    @ParameterizedTest(name = "SUBMITTED -> {0}, adminActor={1} → {2}")
+    @CsvSource({
+            "DRAFT,     false, false",
+            "DRAFT,     true,  true",
+            "CANCELLED, false, false",
+            "CANCELLED, true,  true"
+    })
+    @DisplayName("L1-TRSM-17 | CC: full truth table of adminActor × target for transitions out of SUBMITTED")
+    void submittedGuardTruthTable(TrainingRecordStatus target, boolean adminActor, boolean expected) {
+        assertThat(stateMachine.canTransition(TrainingRecordStatus.SUBMITTED, target, adminActor))
+                .isEqualTo(expected);
     }
 
     // ── Block: canTransition() — invalid transitions ──────────────────────────
@@ -123,7 +140,7 @@ class TrainingRecordStateMachineTest {
     // ── Block: requireTransition() — exception path ───────────────────────────
 
     @Test
-    @DisplayName("L1-TRSM-12 | Guard-FALSE + Negative: requireTransition SUBMITTED→CANCELLED as non-admin throws")
+    @DisplayName("L1-TRSM-12 | Guard-FALSE: requireTransition SUBMITTED→CANCELLED as non-admin throws")
     void requireTransitionThrowsWhenAdminGuardFails() {
         assertThatThrownBy(() -> stateMachine.requireTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.CANCELLED, false
@@ -134,7 +151,18 @@ class TrainingRecordStateMachineTest {
     }
 
     @Test
-    @DisplayName("L1-TRSM-13 | State-Invalid + Negative: requireTransition from CANCELLED throws naming both states")
+    @DisplayName("L1-TRSM-18 | Guard-FALSE: requireTransition SUBMITTED→DRAFT as non-admin throws")
+    void requireTransitionThrowsForOwnerReturnToDraft() {
+        assertThatThrownBy(() -> stateMachine.requireTransition(
+                TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.DRAFT, false
+        ))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("SUBMITTED")
+                .hasMessageContaining("DRAFT");
+    }
+
+    @Test
+    @DisplayName("L1-TRSM-13 | State-Invalid: requireTransition from CANCELLED throws naming both states")
     void requireTransitionThrowsFromTerminalState() {
         assertThatThrownBy(() -> stateMachine.requireTransition(
                 TrainingRecordStatus.CANCELLED, TrainingRecordStatus.DRAFT, true
@@ -167,7 +195,7 @@ class TrainingRecordStateMachineTest {
     }
 
     @Test
-    @DisplayName("L1-TRSM-16 | Negative: requireEditable on a SUBMITTED record throws naming the status")
+    @DisplayName("L1-TRSM-16 | BC-FALSE: requireEditable on a SUBMITTED record throws naming the status")
     void requireEditableThrowsForSubmittedRecord() {
         assertThatThrownBy(() -> stateMachine.requireEditable(TrainingRecordStatus.SUBMITTED))
                 .isInstanceOf(BadRequestException.class)

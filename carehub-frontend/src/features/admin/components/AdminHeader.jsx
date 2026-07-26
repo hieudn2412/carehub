@@ -13,13 +13,14 @@ import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import EvaluationWorkflow from '../../evaluation/components/EvaluationWorkflow.jsx'
+import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
 import '../styles/AdminHeader.css'
 
 function getFallbackLink(label, roles = []) {
   const isAdm = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
   const isMgr = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
   const lbl = String(label).toLowerCase().trim()
-  
+
   if (lbl === 'đánh giá' || lbl === 'evaluation') {
     return isAdm ? '/admin/evaluation/question-documents' : '/manager/quality/history'
   }
@@ -41,7 +42,7 @@ function getFallbackLink(label, roles = []) {
   if (lbl.includes('tạo câu hỏi từ tài liệu')) {
     return '/admin/evaluation/question-documents'
   }
-  if (lbl.includes('chất lượng') || lbl.includes('checklist') || lbl.includes('bảng kiểm')) {
+  if (lbl.includes('chất lượng') || lbl.includes('checklist') || lbl.includes('quy trình')) {
     return isAdm ? '/admin/quality/checklists' : '/manager/quality/checklists'
   }
   if (lbl.includes('đào tạo')) {
@@ -71,10 +72,10 @@ function getFallbackLink(label, roles = []) {
   return null
 }
 
-function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs }) {
+function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs, back }) {
   const [profile, setProfile] = useState(null)
   const location = useLocation()
-  
+
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
 
@@ -168,35 +169,38 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
         <MenuOutlined aria-hidden="true" />
       </button>
       <div className="dashboard-header__main">
-      {breadcrumbs && breadcrumbs.length > 0 ? (
-        <div className="dashboard-header__breadcrumbs">
-          {breadcrumbs.map((item, index) => {
-            const isLast = index === breadcrumbs.length - 1
-            const resolvedLink = item.link || getFallbackLink(item.label, roles)
-            if (isLast) {
-              return (
-                <span key={index} className="dashboard-header__breadcrumb-current">
-                  {item.label}
-                </span>
-              )
-            }
-            return (
-              <span key={index} className="dashboard-header__breadcrumb-item">
-                {resolvedLink ? (
-                  <Link to={resolvedLink}>
-                    {item.label}
-                  </Link>
-                ) : (
-                  <span>{item.label}</span>
-                )}
-                <span className="dashboard-header__breadcrumb-separator">›</span>
-              </span>
-            )
-          })}
+        <div className="dashboard-header__navigation">
+          {back ? <HeaderBackNavigation {...back} /> : null}
+          {breadcrumbs && breadcrumbs.length > 0 ? (
+            <div className="dashboard-header__breadcrumbs">
+              {breadcrumbs.map((item, index) => {
+                const isLast = index === breadcrumbs.length - 1
+                const resolvedLink = item.link || item.path || item.route || getFallbackLink(item.label, roles)
+                if (isLast) {
+                  return (
+                    <span key={index} className="dashboard-header__breadcrumb-current">
+                      {item.label}
+                    </span>
+                  )
+                }
+                return (
+                  <span key={index} className="dashboard-header__breadcrumb-item">
+                    {resolvedLink ? (
+                      <Link to={resolvedLink}>
+                        {item.label}
+                      </Link>
+                    ) : (
+                      <span>{item.label}</span>
+                    )}
+                    <span className="dashboard-header__breadcrumb-separator">›</span>
+                  </span>
+                )
+              })}
+            </div>
+          ) : (
+            <h1 className="dashboard-header__title">{title}</h1>
+          )}
         </div>
-      ) : (
-        <h1 className="dashboard-header__title">{title}</h1>
-      )}
       {location.pathname.startsWith('/admin/evaluation/') && <EvaluationWorkflow />}
       </div>
 

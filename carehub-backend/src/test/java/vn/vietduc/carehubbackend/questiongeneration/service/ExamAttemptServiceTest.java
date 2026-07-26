@@ -91,7 +91,7 @@ class ExamAttemptServiceTest {
                 .questionSet(questionSet)
                 .totalQuestions(2)
                 .timeLimitMinutes(30)
-                .passingScore(60)
+                .passingScore(6)
                 .status(ExamConfigStatus.ACTIVE)
                 .build();
         ExamPaper paper = ExamPaper.builder()
@@ -105,7 +105,7 @@ class ExamAttemptServiceTest {
                 .status(ExamPaperStatus.PUBLISHED)
                 .totalQuestions(2)
                 .timeLimitMinutes(30)
-                .passingScore(60)
+                .passingScore(6)
                 .build();
         ExamAssignment assignment = ExamAssignment.builder()
                 .id(50L)
@@ -166,7 +166,7 @@ class ExamAttemptServiceTest {
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
         assertThat(response.correctCount()).isEqualTo(1);
         assertThat(response.totalQuestions()).isEqualTo(2);
-        assertThat(response.score()).isEqualByComparingTo("50.00");
+        assertThat(response.score()).isEqualByComparingTo("5.00");
         assertThat(response.passed()).isFalse();
         assertThat(response.answers()).hasSize(2);
         assertThat(savedAnswers).extracting(ExamAttemptAnswer::getCorrect).containsExactly(true, false);
@@ -181,7 +181,7 @@ class ExamAttemptServiceTest {
         var response = service.submit(attempt.getId(), user.getId(), request);
 
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
-        assertThat(response.score()).isEqualByComparingTo("50.00");
+        assertThat(response.score()).isEqualByComparingTo("5.00");
         assertThat(response.questions()).hasSize(2);
         assertThat(response.answers()).isEmpty();
     }
@@ -208,7 +208,7 @@ class ExamAttemptServiceTest {
         var response = service.saveAnswers(attempt.getId(), user.getId(), request);
 
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
-        assertThat(response.score()).isEqualByComparingTo("50.00");
+        assertThat(response.score()).isEqualByComparingTo("5.00");
         assertThat(savedAnswers).extracting(ExamAttemptAnswer::getSelectedAnswer).contains("A");
     }
 

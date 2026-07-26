@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
-import { ArrowLeftOutlined, CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
+import { CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -278,16 +278,13 @@ function QuestionFormPage() {
     <div className="dashboard-layout" onClickCapture={handleNavigationCapture}>
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ onClick: () => requestLeave(), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qf-page">
               <div className="qf-container">
                 {/* Header */}
                 <div className="qf-header">
-                  <button type="button" className="qf-back-btn" onClick={() => requestLeave()}>
-                    <ArrowLeftOutlined /> Quay lại ngân hàng câu hỏi
-                  </button>
                   <div>
                     <h2 className="qf-title">
                       {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}

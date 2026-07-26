@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
@@ -124,7 +124,7 @@ function ActivityTypeFormPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="training-form-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -134,11 +134,6 @@ function ActivityTypeFormPage() {
                 <div>
                   <h1 className="atl-title">{isEdit ? 'Cập nhật hình thức đào tạo' : 'Thêm hình thức đào tạo mới'}</h1>
                   <p className="atl-subtitle">Thiết lập các thông số hoạt động và giới hạn tích lũy giờ</p>
-                </div>
-                <div>
-                  <Link className="training-button" to="/admin/training/activity-types" style={{ textDecoration: 'none' }}>
-                    Quay lại
-                  </Link>
                 </div>
               </div>
 

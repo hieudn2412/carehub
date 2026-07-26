@@ -33,6 +33,7 @@ import vn.vietduc.carehubbackend.training.repository.TrainingRequirementReposito
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.PositionRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -105,6 +106,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
     private TrainingRecord submittedRecord1;
     private TrainingRecord draftRecord;
     private TrainingRecord cancelledRecord;
+    private TrainingRecord oldRecord;
 
     @BeforeEach
     void setUp() {
@@ -164,7 +166,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 TrainingRecordStatus.CANCELLED,
                 BigDecimal.valueOf(5)
         );
-        saveRecord(
+        oldRecord = saveRecord(
                 doctorEmployee,
                 "Old Phase 9 Course",
                 LocalDate.of(2020, 1, 1),
@@ -214,22 +216,22 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
                 .andExpect(jsonPath("$.data.content[0].employeeCode").value("P9_EMP1"))
-                .andExpect(jsonPath("$.data.content[0].requirementName").value("Anesthesia Doctor Requirement"))
+                .andExpect(jsonPath("$.data.content[0].requirementName").value("Mục tiêu giờ đào tạo toàn viện"))
                 .andExpect(jsonPath("$.data.content[0].requiredHours").value(120))
                 .andExpect(jsonPath("$.data.content[0].submittedHours").value(60.0))
                 .andExpect(jsonPath("$.data.content[0].remainingHours").value(60.0))
                 .andExpect(jsonPath("$.data.content[0].complianceStatus").value("NON_COMPLIANT"))
                 .andExpect(jsonPath("$.data.content[0].lastTrainingDate").value("2026-04-01"));
 
-        // NOT_CONFIGURED filter for nurse (no matching requirement)
+        // The global target applies to every active employee.
         mockMvc.perform(get("/api/v1/training/employees/status")
                         .with(jwtFor(admin, "ADMIN"))
                         .param("keyword", "P9_NURSE")
-                        .param("requirementConfigured", "false")
+                        .param("requirementConfigured", "true")
                         .param("asOf", "2026-06-20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].complianceStatus").value("NOT_CONFIGURED"));
+                .andExpect(jsonPath("$.data.content[0].complianceStatus").value("NON_COMPLIANT"));
 
         // Filter by submitted hours range + sort
         mockMvc.perform(get("/api/v1/training/employees/status")
@@ -266,28 +268,32 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.submittedHours").value(60.0));
 
-        // Employee ledger records - shows SUBMITTED, DRAFT, CANCELLED records in window
-        // (4 records in window: 2024-01-01 SUBMITTED 60h, 2025-06-01 DRAFT 20h, 2025-07-01 CANCELLED 5h, 2026-04-01 DRAFT 9h)
+        // Employee ledger shows the full history, while expired records do not contribute to running hours.
         mockMvc.perform(get("/api/v1/training/employees/{employeeId}/records", doctorEmployee.getId())
                         .with(jwtFor(manager, "MANAGER"))
                         .param("asOf", "2026-06-20")
                         .param("sort", "startDate,asc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalElements").value(4))
-                .andExpect(jsonPath("$.data.content[0].id").value(submittedRecord1.getId()))
-                .andExpect(jsonPath("$.data.content[0].workflowStatus").value("SUBMITTED"))
-                .andExpect(jsonPath("$.data.content[0].runningSubmittedHours").value(60.0))
-                .andExpect(jsonPath("$.data.content[0].evidenceCount").value(1))
-                .andExpect(jsonPath("$.data.content[0].passedEvidenceCount").value(1))
-                .andExpect(jsonPath("$.data.content[0].changeLogCount").value(1))
-                // DRAFT record: running stays at 60 (draft doesn't add)
-                .andExpect(jsonPath("$.data.content[1].id").value(draftRecord.getId()))
-                .andExpect(jsonPath("$.data.content[1].workflowStatus").value("DRAFT"))
+                .andExpect(jsonPath("$.data.totalElements").value(5))
+                .andExpect(jsonPath("$.data.content[0].id").value(oldRecord.getId()))
+                .andExpect(jsonPath("$.data.content[0].expired").value(true))
+                .andExpect(jsonPath("$.data.content[0].validUntil").value("2025-01-01"))
+                .andExpect(jsonPath("$.data.content[0].runningSubmittedHours").value(0))
+                .andExpect(jsonPath("$.data.content[1].id").value(submittedRecord1.getId()))
+                .andExpect(jsonPath("$.data.content[1].workflowStatus").value("SUBMITTED"))
+                .andExpect(jsonPath("$.data.content[1].expired").value(false))
                 .andExpect(jsonPath("$.data.content[1].runningSubmittedHours").value(60.0))
+                .andExpect(jsonPath("$.data.content[1].evidenceCount").value(1))
+                .andExpect(jsonPath("$.data.content[1].passedEvidenceCount").value(1))
+                .andExpect(jsonPath("$.data.content[1].changeLogCount").value(1))
+                // DRAFT record: running stays at 60 (draft doesn't add)
+                .andExpect(jsonPath("$.data.content[2].id").value(draftRecord.getId()))
+                .andExpect(jsonPath("$.data.content[2].workflowStatus").value("DRAFT"))
+                .andExpect(jsonPath("$.data.content[2].runningSubmittedHours").value(60.0))
                 // CANCELLED record: running stays at 60 (cancelled doesn't add)
-                .andExpect(jsonPath("$.data.content[2].id").value(cancelledRecord.getId()))
-                .andExpect(jsonPath("$.data.content[2].workflowStatus").value("CANCELLED"))
-                .andExpect(jsonPath("$.data.content[2].runningSubmittedHours").value(60.0));
+                .andExpect(jsonPath("$.data.content[3].id").value(cancelledRecord.getId()))
+                .andExpect(jsonPath("$.data.content[3].workflowStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.content[3].runningSubmittedHours").value(60.0));
 
         // Forbidden for out-of-scope employee
         mockMvc.perform(get("/api/v1/training/employees/{employeeId}/records", otherDepartmentDoctor.getId())
@@ -304,6 +310,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .password("encoded")
                 .department(department)
                 .position(position)
+                .status(UserStatus.ACTIVE)
                 .build());
     }
 

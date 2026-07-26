@@ -15,7 +15,7 @@ import vn.vietduc.carehubbackend.form.scoring.*;
 
 @RestController
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
 public class FormScoringConfigurationController {
     private final FormScoringConfigurationService configurationService;
     private final FormScoringRecalculationJobService jobService;
@@ -27,6 +27,14 @@ public class FormScoringConfigurationController {
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.success("Get form scoring configurations successfully",
                 PageResponse.from(configurationService.search(keyword, status, pageable))));
+    }
+
+    @GetMapping("${app.api-prefix}/forms/{formId}/versions/{versionId}/scoring-configuration")
+    public ResponseEntity<ApiResponse<FormScoringConfigurationResponse>> get(
+            @PathVariable Long formId,
+            @PathVariable Long versionId) {
+        return ResponseEntity.ok(ApiResponse.success("Get form scoring configuration successfully",
+                configurationService.get(formId, versionId)));
     }
 
     @PatchMapping("${app.api-prefix}/forms/{formId}/versions/{versionId}/scoring-configuration")
@@ -44,12 +52,14 @@ public class FormScoringConfigurationController {
     }
 
     @GetMapping("${app.api-prefix}/form-scoring-recalculation-jobs/{jobId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<FormScoringRecalculationJobResponse>> getJob(@PathVariable Long jobId) {
         return ResponseEntity.ok(ApiResponse.success("Get scoring recalculation job successfully",
                 jobService.get(jobId)));
     }
 
     @PostMapping("${app.api-prefix}/form-scoring-recalculation-jobs/{jobId}/retry")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<FormScoringRecalculationJobResponse>> retryJob(@PathVariable Long jobId) {
         return ResponseEntity.accepted().body(ApiResponse.success("Scoring recalculation job queued again",
                 jobService.retry(jobId)));

@@ -43,10 +43,16 @@ public class FormAssignmentService {
         if (request.validUntil() != null && !request.validUntil().isAfter(from)) {
             throw ValidationException.field("validUntil", "validUntil must be after validFrom");
         }
-        User manager = activeUser(request.managerId(), "Manager not found");
-        boolean managerRole = userRoleRepository.findRolesByUserId(manager.getId()).stream()
-                .anyMatch(role -> "MANAGER".equalsIgnoreCase(role.getCode()));
-        if (!managerRole) throw ValidationException.field("managerId", "The selected user does not have MANAGER role");
+        List<Long> assigneeIds = request.effectiveAssigneeIds().stream().distinct().toList();
+        if (assigneeIds.isEmpty()) {
+            throw ValidationException.field("assigneeIds", "Vui lòng chọn ít nhất một người nhận");
+        }
+        if (assigneeIds.size() != request.effectiveAssigneeIds().size()) {
+            throw ValidationException.field("assigneeIds", "Danh sách người nhận không được trùng lặp");
+        }
+        List<User> assignees = assigneeIds.stream()
+                .map(id -> activeUser(id, "Không tìm thấy người nhận đang hoạt động"))
+                .toList();
 
         List<Long> distinctVersionIds = request.formVersionIds().stream().distinct().toList();
         if (distinctVersionIds.size() != request.formVersionIds().size()) {
@@ -62,20 +68,34 @@ public class FormAssignmentService {
                     || version.getForm().getStatus() != FormStatus.PUBLISHED) {
                 throw ValidationException.field("formVersionIds", "Only published form versions can be assigned");
             }
-            if (hasOverlappingActiveAssignment(manager.getId(), version.getId(), from, request.validUntil())) {
-                throw new ConflictException("Manager already has an active assignment for form "
-                        + version.getForm().getCode() + " version " + version.getVersionNumber());
-            }
         }
 
-        FormAssignment assignment = FormAssignment.builder()
-                .manager(manager).assignedBy(activeUser(securityUtils.getCurrentUserId(), "Current user not found"))
-                .assignedAt(now).effectiveFrom(from).effectiveTo(request.validUntil())
-                .status(FormAssignmentStatus.ACTIVE).build();
-        versions.forEach(version -> assignment.getItems().add(FormAssignmentItem.builder()
-                .assignment(assignment).form(version.getForm()).formVersion(version)
-                .status(FormAssignmentStatus.ACTIVE).build()));
-        return toResponse(assignmentRepository.saveAndFlush(assignment));
+        User assignedBy = activeUser(securityUtils.getCurrentUserId(), "Không tìm thấy tài khoản hiện tại");
+        FormAssignmentResponse firstResponse = null;
+        for (User assignee : assignees) {
+            List<FormVersion> newVersions = versions.stream()
+                    .filter(version -> !hasOverlappingActiveAssignment(assignee.getId(), version.getId(), from, request.validUntil()))
+                    .toList();
+            if (newVersions.isEmpty()) {
+                if (firstResponse == null) {
+                    firstResponse = itemRepository
+                            .findFirstByAssignment_Manager_IdAndFormVersion_IdAndStatusOrderByIdDesc(
+                                    assignee.getId(), versions.get(0).getId(), FormAssignmentStatus.ACTIVE)
+                            .map(item -> toResponse(item.getAssignment())).orElse(null);
+                }
+                continue;
+            }
+            FormAssignment assignment = FormAssignment.builder()
+                    .manager(assignee).assignedBy(assignedBy).assignedAt(now).effectiveFrom(from)
+                    .effectiveTo(request.validUntil()).status(FormAssignmentStatus.ACTIVE).build();
+            newVersions.forEach(version -> assignment.getItems().add(FormAssignmentItem.builder()
+                    .assignment(assignment).form(version.getForm()).formVersion(version)
+                    .status(FormAssignmentStatus.ACTIVE).build()));
+            FormAssignmentResponse response = toResponse(assignmentRepository.saveAndFlush(assignment));
+            if (firstResponse == null) firstResponse = response;
+        }
+        if (firstResponse == null) throw new ConflictException("Không thể tạo phân công biểu mẫu");
+        return firstResponse;
     }
 
     @Transactional(readOnly = true)

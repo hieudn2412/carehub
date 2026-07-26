@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSearchRequest;
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse;
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingStatusSummaryResponse;
@@ -21,15 +22,13 @@ import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryR
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusRecordSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusYearlyHoursResponse;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
-import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
-import vn.vietduc.carehubbackend.training.service.CmeScopeService;
 import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
+import vn.vietduc.carehubbackend.training.service.TrainingRecordValidity;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -44,7 +43,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -52,7 +50,6 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class TrainingStatusServiceImpl implements TrainingStatusService {
     private static final Logger log = LoggerFactory.getLogger(TrainingStatusServiceImpl.class);
-    private static final int DEFAULT_WINDOW_YEARS = 5;
     private static final int MAX_PAGE_SIZE = 100;
 
     private static final List<TrainingRecordStatus> LEDGER_STATUSES = List.of(
@@ -64,9 +61,8 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     private final TrainingAccessPolicy accessPolicy;
     private final TrainingComplianceCalculator complianceCalculator;
     private final TrainingRecordRepository recordRepository;
-    private final TrainingRequirementRepository requirementRepository;
     private final UserRepository userRepository;
-    private final CmeScopeService cmeScopeService;
+    private final SystemSettingsService settingsService;
 
     @Override
     @Transactional(readOnly = true)
@@ -149,19 +145,24 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             return new PageImpl<>(List.of(), normalizedPageable, 0);
         }
 
-        PersonalTrainingStatusResponse status = statusFor(employee, professionalFieldId, asOf);
-        if (status.status() == ComplianceStatus.NOT_CONFIGURED || status.windowStart() == null) {
-            return new PageImpl<>(List.of(), normalizedPageable, 0);
-        }
-
+        LocalDate asOfDate = asOf == null ? LocalDate.now() : asOf;
+        int windowYears = settingsService.trainingWindowYears();
         List<TrainingRecordStatus> statuses = workflowStatus == null ? LEDGER_STATUSES : List.of(workflowStatus);
         List<EmployeeTrainingRecordLedgerResponse> ledgerRows = recordRepository.findEmployeeLedgerRecords(
                 employeeId,
-                status.windowStart(),
-                status.windowEnd(),
                 statuses
         );
-        List<EmployeeTrainingRecordLedgerResponse> withRunningTotals = withRunningSubmittedTotals(ledgerRows).stream()
+        List<EmployeeTrainingRecordLedgerResponse> withValidity = ledgerRows.stream()
+                .map(row -> row.withValidity(
+                        TrainingRecordValidity.validUntil(row.startDate(), windowYears),
+                        TrainingRecordValidity.isExpired(row.startDate(), asOfDate, windowYears)
+                ))
+                .toList();
+        List<EmployeeTrainingRecordLedgerResponse> withRunningTotals = withRunningSubmittedTotals(
+                withValidity,
+                asOfDate,
+                windowYears
+        ).stream()
                 .sorted(ledgerComparator(normalizedPageable.getSort()))
                 .toList();
 
@@ -200,27 +201,21 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             return List.of();
         }
 
-        List<TrainingRequirement> activeRequirements = requirementRepository.findActiveRequirementsAsOf(asOfDate);
-        Set<Long> applicableDepartmentIds = cmeScopeService.getApplicableDepartmentIds();
-        int maxCycleYears = activeRequirements.stream()
-                .map(TrainingRequirement::getCycleYears)
-                .filter(years -> years != null && years > 0)
-                .max(Integer::compareTo)
-                .orElse(DEFAULT_WINDOW_YEARS);
+        int windowYears = settingsService.trainingWindowYears();
+        BigDecimal requiredHours = settingsService.globalTrainingHours();
         Map<Long, List<TrainingRecord>> recordsByEmployee = recordsByEmployee(
                 candidates,
-                asOfDate.minusYears(maxCycleYears),
+                asOfDate.minusYears(windowYears),
                 asOfDate
         );
 
         return candidates.stream()
                 .map(employee -> summarizeEmployee(
                         employee,
-                        criteria.professionalFieldId(),
                         asOfDate,
-                        activeRequirements,
                         recordsByEmployee.getOrDefault(employee.getId(), List.of()),
-                        applicableDepartmentIds
+                        requiredHours,
+                        windowYears
                 ))
                 .filter(summary -> matchesStatusFilters(summary, criteria))
                 .sorted(summaryComparator(sort))
@@ -230,12 +225,11 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     private TrainingDashboardSummaryResponse.Totals dashboardTotals(
             List<EmployeeTrainingStatusSummaryResponse> summaries
     ) {
-        long configured = summaries.stream().filter(item -> item.requirementId() != null).count();
+        long configured = summaries.size();
         long compliant = countStatus(summaries, ComplianceStatus.COMPLIANT);
         BigDecimal averageProgress = configured == 0
                 ? BigDecimal.ZERO
                 : summaries.stream()
-                        .filter(item -> item.requirementId() != null)
                         .map(EmployeeTrainingStatusSummaryResponse::progressPercentage)
                         .map(this::safe)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -351,56 +345,23 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
 
     private EmployeeTrainingStatusSummaryResponse summarizeEmployee(
             User employee,
-            Long professionalFieldId,
             LocalDate asOf,
-            List<TrainingRequirement> activeRequirements,
             List<TrainingRecord> records,
-            Set<Long> applicableDepartmentIds
+            BigDecimal requiredHours,
+            int windowYears
     ) {
-        Optional<TrainingRequirement> selectedRequirement = complianceCalculator.selectRequirementFromCandidates(
-                employee,
-                professionalFieldId,
-                activeRequirements,
-                applicableDepartmentIds
-        );
         Department department = employee.getDepartment();
         Position position = employee.getPosition();
-
-        if (selectedRequirement.isEmpty()) {
-            return new EmployeeTrainingStatusSummaryResponse(
-                    employee.getId(),
-                    employee.getEmployeeCode(),
-                    employee.getName(),
-                    idOf(department),
-                    department == null ? null : department.getName(),
-                    idOf(position),
-                    position == null ? null : position.getName(),
-                    null,
-                    null,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    BigDecimal.ZERO,
-                    null,
-                    null,
-                    asOf,
-                    ComplianceStatus.NOT_CONFIGURED,
-                    null,
-                    "No active training requirement is configured"
-            );
-        }
-
-        TrainingRequirement requirement = selectedRequirement.get();
-        LocalDate windowStart = asOf.minusYears(requirement.getCycleYears());
+        LocalDate windowStart = asOf.minusYears(windowYears);
         List<TrainingRecord> windowRecords = records.stream()
                 .filter(record -> !record.getStartDate().isBefore(windowStart))
                 .filter(record -> !record.getStartDate().isAfter(asOf))
                 .toList();
         BigDecimal submittedHours = sumSubmitted(windowRecords);
-        BigDecimal requiredHours = safe(requirement.getRequiredHours());
-        BigDecimal remainingHours = requiredHours.subtract(submittedHours).max(BigDecimal.ZERO);
-        BigDecimal progressPercentage = progressPercentage(requiredHours, submittedHours);
-        ComplianceStatus status = complianceCalculator.resolveStatus(requirement, submittedHours);
+        BigDecimal normalizedRequiredHours = safe(requiredHours);
+        BigDecimal remainingHours = normalizedRequiredHours.subtract(submittedHours).max(BigDecimal.ZERO);
+        BigDecimal progressPercentage = progressPercentage(normalizedRequiredHours, submittedHours);
+        ComplianceStatus status = complianceCalculator.resolveStatus(normalizedRequiredHours, submittedHours);
         LocalDate lastTrainingDate = windowRecords.stream()
                 .map(TrainingRecord::getStartDate)
                 .max(LocalDate::compareTo)
@@ -414,13 +375,13 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 department == null ? null : department.getName(),
                 idOf(position),
                 position == null ? null : position.getName(),
-                requirement.getId(),
-                requirement.getName(),
-                requiredHours,
+                null,
+                "Mục tiêu giờ đào tạo toàn viện",
+                normalizedRequiredHours,
                 submittedHours,
                 remainingHours,
                 progressPercentage,
-                requirement.getCycleYears(),
+                windowYears,
                 windowStart,
                 asOf,
                 status,
@@ -448,17 +409,21 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 && summary.submittedHours().compareTo(criteria.submittedHoursMax()) > 0) {
             return false;
         }
-        return criteria.requirementConfigured() == null
-                || (summary.requirementId() != null) == criteria.requirementConfigured();
+        // The global training target is configured for every ACTIVE account.
+        return criteria.requirementConfigured() == null || criteria.requirementConfigured();
     }
 
     private List<EmployeeTrainingRecordLedgerResponse> withRunningSubmittedTotals(
-            List<EmployeeTrainingRecordLedgerResponse> rows
+            List<EmployeeTrainingRecordLedgerResponse> rows,
+            LocalDate asOf,
+            int windowYears
     ) {
         BigDecimal running = BigDecimal.ZERO;
         List<EmployeeTrainingRecordLedgerResponse> result = new ArrayList<>();
         for (EmployeeTrainingRecordLedgerResponse row : rows) {
-            if (row.workflowStatus() == TrainingRecordStatus.SUBMITTED) {
+            if (TrainingRecordValidity.countsTowardTotal(
+                    row.startDate(), row.workflowStatus(), asOf, windowYears
+            )) {
                 running = running.add(safe(row.declaredHours()));
             }
             result.add(row.withRunningSubmittedHours(running));

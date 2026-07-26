@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CheckCircleOutlined,
   LoadingOutlined,
   PrinterOutlined,
@@ -65,7 +64,6 @@ function getDetailErrorMessage(error) {
 
 function AdminQualityHistoryDetailPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const [submission, setSubmission] = useState(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -103,6 +101,7 @@ function AdminQualityHistoryDetailPage() {
       <AdminSidebar />
       <div className="dashboard-layout__content">
         <AdminHeader
+          back={{ to: '/admin/quality/history', label: 'Quay lại' }}
           breadcrumbs={[
             { label: 'Chất lượng' },
             { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
@@ -111,15 +110,6 @@ function AdminQualityHistoryDetailPage() {
         />
 
         <main className="admin-quality-history admin-quality-history--detail">
-          <button
-            type="button"
-            className="admin-quality-history__back"
-            onClick={() => navigate('/admin/quality/history')}
-          >
-            <ArrowLeftOutlined />
-            Quay lại lịch sử đánh giá
-          </button>
-
           {loading ? (
             <div className="admin-quality-history__detail-state">
               <LoadingOutlined />

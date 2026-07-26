@@ -41,7 +41,7 @@ export default function AdminDashboard() {
     totalEmployees: 0,
     training: emptyDomain('Chưa có dữ liệu giờ đào tạo.'),
     exams: emptyDomain('Chưa có dữ liệu bài kiểm tra.'),
-    quality: emptyDomain('Chưa có dữ liệu bảng kiểm.'),
+    quality: emptyDomain('Chưa có dữ liệu quy trình.'),
   })
 
   useEffect(() => {
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
   const warnings = useMemo(() => [
     dashboard.training.failed > 0 && { id: 'training', title: 'Nhân viên chưa đạt giờ đào tạo', detail: 'Cần rà soát tiến độ và minh chứng', value: dashboard.training.failed, tone: 'danger', path: '/admin/reports/training-dashboard' },
     dashboard.exams.failed > 0 && { id: 'exams', title: 'Lượt kiểm tra chưa đạt', detail: 'Cần xem kết quả chuyên môn', value: dashboard.exams.failed, tone: 'warning', path: '/admin/reports/quality-dashboard' },
-    dashboard.quality.failed > 0 && { id: 'quality', title: 'Bảng kiểm chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/checklist-dashboard' },
+    dashboard.quality.failed > 0 && { id: 'quality', title: 'Quy trình chưa đạt', detail: 'Cần ưu tiên kiểm tra tuân thủ', value: dashboard.quality.failed, tone: 'danger', path: '/admin/reports/checklist-dashboard' },
   ].filter(Boolean), [dashboard])
 
   const domains = {

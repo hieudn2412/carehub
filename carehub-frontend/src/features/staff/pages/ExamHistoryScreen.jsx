@@ -6,6 +6,7 @@ import { CheckCircleOutlined, EyeOutlined, FileTextOutlined, PieChartOutlined, S
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 
 const COMPETENCY_COLORS = {
   NOT_COMPETENT: ['#ef4444', '#fef2f2'],
@@ -136,10 +137,19 @@ function ExamHistoryScreen() {
                 <option value="fail">Không đạt</option>
                 <option value="expired">Hết thời gian</option>
               </select>
-              <select value={professionalFieldId} onChange={(event) => setProfessionalFieldId(event.target.value)}>
-                <option value="">Tất cả lĩnh vực chuyên môn</option>
-                {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
-              </select>
+              <div className="eh-field-filter">
+                <SearchableSelect
+                  value={professionalFieldId}
+                  onChange={setProfessionalFieldId}
+                  options={[
+                    { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+                    ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                  ]}
+                  placeholder="Tất cả lĩnh vực chuyên môn"
+                  searchPlaceholder="Tìm tên lĩnh vực..."
+                  ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                />
+              </div>
             </div>
 
             <div className="eh-table-card">

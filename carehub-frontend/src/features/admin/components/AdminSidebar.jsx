@@ -14,7 +14,6 @@ import {
   LogoutOutlined,
   HistoryOutlined,
   BookOutlined,
-  AuditOutlined,
   CalculatorOutlined,
   FileSearchOutlined,
   ScheduleOutlined,
@@ -56,9 +55,8 @@ const navSections = [
   {
     label: 'ĐÀO TẠO',
     items: [
-      { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
-      { icon: <ScheduleOutlined />, label: 'Giờ đào tạo của tôi', path: '/staff/training' },
-      { icon: <AuditOutlined />, label: 'Cấu hình yêu cầu', path: '/admin/training/requirements' },
+      { icon: <BookOutlined />, label: 'Giờ đào tạo liên tục', path: '/training/employees' },
+      { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
       { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
@@ -66,7 +64,7 @@ const navSections = [
   {
     label: 'CHẤT LƯỢNG',
     items: [
-      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm', path: '/admin/quality/checklists' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
     ],
@@ -104,7 +102,7 @@ const navSections = [
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Quản lý bài kiểm tra',
+        label: 'Quản lý năng lực chuyên môn',
         path: '/admin/evaluation/exam-management',
         requiredPermissions: [
           EVALUATION_PERMISSION.examConfigManager,
@@ -130,8 +128,9 @@ const navSections = [
     label: 'BÁO CÁO & THỐNG KÊ',
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
-      { icon: <LineChartOutlined />, label: 'Dashboard lý thuyết', path: '/admin/reports/quality-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Dashboard thực hành', path: '/admin/reports/checklist-dashboard' },
+      { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Chất lượng chăm sóc', path: '/admin/reports/checklist-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
         label: 'Dashboard năng lực',

@@ -154,6 +154,18 @@
   border-color: #2563eb;
 }
 
+.eh-field-filter {
+  flex: 0 1 240px;
+  min-width: 190px;
+}
+
+.eh-field-filter .searchable-select > input {
+  height: 39px;
+  border-color: #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
 /* Table Card */
 .eh-table-card {
   background: #fff;
@@ -661,4 +673,32 @@
   .eh-exam-submit-bar .eh-btn {
     justify-content: center;
   }
+}
+.eh-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.eh-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.eh-summary-card strong { font-size: 24px; color: #1f2937; }
+.eh-summary-card--success strong { color: #15803d; }
+.eh-summary-card--danger strong { color: #b91c1c; }
+.eh-row--danger td { background: #fff1f2; }
+.eh-badge--passed { background: #dcfce7; color: #15803d; }
+.eh-badge--failed { background: #fee2e2; color: #b91c1c; }
+.eh-badge--not_taken { background: #f1f5f9; color: #475569; }
+
+@media (max-width: 768px) {
+  .eh-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

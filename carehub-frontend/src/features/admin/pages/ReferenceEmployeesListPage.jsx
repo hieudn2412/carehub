@@ -4,6 +4,7 @@ import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { adminApi } from '../api/adminApi.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/ReferenceEmployeesListPage.css'
 
 // Generate 248 mock reference employees to match mockup details (kept as fallback helper)
@@ -309,17 +310,23 @@ function ReferenceEmployeesListPage() {
 
                 {/* Row 2 */}
                 <div className="rel-filter-row">
-                  <select
-                    className="rel-filter-select"
-                    value={deptFilter}
-                    onChange={(e) => setDeptFilter(e.target.value)}
-                    disabled={loading}
-                  >
-                    <option value="all">Đơn vị</option>
-                    {filterOptions.departments.map(dept => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
+                  <div className="rel-department-filter">
+                    <SearchableSelect
+                      value={deptFilter}
+                      onChange={setDeptFilter}
+                      disabled={loading}
+                      options={[
+                        { value: 'all', label: 'Tất cả đơn vị' },
+                        ...filterOptions.departments.map((department) => ({
+                          value: department,
+                          label: department,
+                        })),
+                      ]}
+                      placeholder="Tất cả đơn vị"
+                      searchPlaceholder="Tìm khoa/phòng, đơn vị..."
+                      ariaLabel="Tìm và chọn khoa/phòng, đơn vị"
+                    />
+                  </div>
 
                   <select
                     className="rel-filter-select"

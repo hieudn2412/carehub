@@ -46,8 +46,11 @@ import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 import vn.vietduc.carehubbackend.notification.service.NotificationService;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
+import vn.vietduc.carehubbackend.training.service.TrainingRecordValidity;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -73,6 +76,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final TrainingAuditService auditService;
     private final NotificationService notificationService;
     private final UserRoleRepository userRoleRepository;
+    private final SystemSettingsService settingsService;
 
     @Value("${app.training.records.max-edit-count:2}")
     private int maxEditCount;
@@ -81,7 +85,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     @Transactional(readOnly = true)
     public Page<TrainingRecordListResponse> search(TrainingRecordSearchRequest request, Pageable pageable) {
         TrainingRecordSearchRequest criteria = request == null
-                ? new TrainingRecordSearchRequest(null, null, null, null, null, null, null, null, null, null, null)
+                ? new TrainingRecordSearchRequest(null, null, null, null, null, null, null, null, null, null, null, null)
                 : request;
         if (criteria.dateFrom() != null && criteria.dateTo() != null && criteria.dateTo().isBefore(criteria.dateFrom())) {
             throw new BadRequestException("dateTo must be greater than or equal to dateFrom");
@@ -100,10 +104,12 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
             scopeEmployeeId = actor.getId();
         }
 
+        LocalDate asOf = LocalDate.now();
+        int windowYears = settingsService.trainingWindowYears();
         return recordRepository.searchRecords(
                 scopeEmployeeId,
                 scopeDepartmentId,
-                normalizeKeywordPattern(criteria.keyword()),
+                normalizeKeywordPattern(criteria.titleKeyword() == null ? criteria.keyword() : criteria.titleKeyword()),
                 criteria.dateFrom(),
                 criteria.dateTo(),
                 criteria.activityTypeId(),
@@ -115,7 +121,10 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                 criteria.departmentId(),
                 criteria.sourceType(),
                 normalizePageable(pageable)
-        );
+        ).map(record -> record.withValidity(
+                TrainingRecordValidity.validUntil(record.startDate(), windowYears),
+                TrainingRecordValidity.isExpired(record.startDate(), asOf, windowYears)
+        ));
     }
 
     @Override
@@ -163,6 +172,9 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
 
         long duplicateCount = duplicateCount(employee.getId(), request, null);
         TrainingRecord record = mapper.toEntity(request);
+        if (record.getStartDate() == null) {
+            record.setStartDate(java.time.LocalDate.now());
+        }
         record.setEmployee(employee);
         record.setEmployeeDepartmentSnapshot(employee.getDepartment());
         record.setActivityType(activityType);

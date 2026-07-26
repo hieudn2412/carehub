@@ -7,7 +7,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.*;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignment;
 import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentItem;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentStatus;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.entity.*;
 import vn.vietduc.carehubbackend.form.entity.enums.*;
@@ -53,19 +55,33 @@ public class FormSubmissionService {
     public FormSubmissionResponse create(CreateFormSubmissionRequest request) {
         long actorId = securityUtils.getCurrentUserId();
         User actor = activeUser(actorId);
-        FormAssignmentItem item = assignmentAccessService.requireActiveOwnedItemForUpdate(request.assignmentItemId(), actorId);
-        if (item.getForm().getSubjectType() != FormSubjectType.USER
+        FormAssignmentItem item = null;
+        FormVersion selectedVersion;
+        if (request.assignmentItemId() != null) {
+            item = assignmentAccessService.requireActiveOwnedItemForUpdate(request.assignmentItemId(), actorId);
+            selectedVersion = item.getFormVersion();
+        } else {
+            if (!isAdmin()) {
+                throw new ForbiddenException("Chỉ Admin được đánh giá trực tiếp không qua phân công");
+            }
+            selectedVersion = versionRepository.findById(request.formVersionId())
+                    .filter(version -> version.getStatus() == vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus.PUBLISHED
+                            && !version.getForm().isDeleted())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên bản biểu mẫu đã công bố"));
+        }
+        if (selectedVersion.getForm().getSubjectType() != FormSubjectType.USER
                 || request.subject().type() != FormSubjectType.USER) {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
         User subject = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(request.subject().employeeCode().trim())
+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng đối tượng biểu mẫu"));
-        if (submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
+        if (item != null && submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                 item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)) {
             throw new ConflictException("An open draft already exists for this employee and assigned form");
         }
 
-        FormSubmission submission = FormSubmission.builder().assignmentItem(item).formVersion(item.getFormVersion())
+        FormSubmission submission = FormSubmission.builder().assignmentItem(item).formVersion(selectedVersion)
                 .submittedBy(actor).status(FormSubmissionStatus.DRAFT)
                 .scoringStatus(FormScoringStatus.NOT_CONFIGURED).build();
         FormSubmissionContext context = FormSubmissionContext.builder().submission(submission)
@@ -189,13 +205,39 @@ public class FormSubmissionService {
 
     @Transactional(readOnly = true)
     public Page<FormSubmissionResponse> searchByFormVersion(Long formId, Long versionId, FormSubmissionStatus status,
-                                                            boolean includeAnswers, Pageable pageable) {
+                                                            FormSubmissionResult result, boolean includeAnswers,
+                                                            Pageable pageable) {
         formRepository.findByIdAndDeletedFalse(formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
-        return submissionRepository.searchByFormVersionId(formId, versionId, status, normalize(pageable))
+        return submissionRepository.searchByFormVersionId(formId, versionId, status, result, normalize(pageable))
                 .map(submission -> toResponse(submission, includeAnswers));
+    }
+
+    @Transactional(readOnly = true)
+    public FormSubmissionSummaryResponse summarizeByFormVersion(Long formId, Long versionId) {
+        formRepository.findByIdAndDeletedFalse(formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
+        versionRepository.findByIdAndForm_Id(versionId, formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
+
+        long total = submissionRepository.countByFormVersion_IdAndStatus(
+                versionId, FormSubmissionStatus.SUBMITTED);
+        long passed = submissionRepository.countByFormVersion_IdAndStatusAndResult(
+                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.PASSED);
+        long failedScore = submissionRepository.countByFormVersion_IdAndStatusAndResult(
+                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.FAILED_SCORE);
+        long failedCritical = submissionRepository.countByFormVersion_IdAndStatusAndResult(
+                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.FAILED_CRITICAL);
+
+        return new FormSubmissionSummaryResponse(
+                total,
+                passed,
+                failedScore + failedCritical,
+                submissionRepository.averageConvertedScoreByVersionAndStatus(
+                        versionId, FormSubmissionStatus.SUBMITTED)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -233,7 +275,19 @@ public class FormSubmissionService {
         if (!submission.getSubmittedBy().getId().equals(actorId)) {
             throw new ResourceNotFoundException("Form submission not found");
         }
-        assignmentAccessService.requireActiveOwnedItem(submission.getAssignmentItem().getId(), actorId);
+        FormAssignmentItem item = submission.getAssignmentItem();
+        if (item == null) {
+            if (!isAdmin()) throw new ResourceNotFoundException("Form submission not found");
+        } else {
+            Instant now = Instant.now(clock);
+            FormAssignment assignment = item.getAssignment();
+            boolean inactive = !assignment.getManager().getId().equals(actorId)
+                    || item.getStatus() != FormAssignmentStatus.ACTIVE
+                    || assignment.getStatus() != FormAssignmentStatus.ACTIVE
+                    || (assignment.getEffectiveFrom() != null && assignment.getEffectiveFrom().isAfter(now))
+                    || (assignment.getEffectiveTo() != null && assignment.getEffectiveTo().isBefore(now));
+            if (inactive) throw new ResourceNotFoundException("Phân công đã bị thu hồi hoặc hết hạn");
+        }
         if (submission.getStatus() != FormSubmissionStatus.DRAFT) {
             throw new ConflictException("Only a draft submission can be modified");
         }
@@ -365,7 +419,7 @@ public class FormSubmissionService {
     private FormSubmissionResponse toResponse(FormSubmission submission, boolean detail) {
         FormSubmissionContext context = submission.getSubjectContext();
         return FormSubmissionResponse.builder().id(submission.getId())
-                .assignmentItemId(submission.getAssignmentItem().getId())
+                .assignmentItemId(submission.getAssignmentItem() == null ? null : submission.getAssignmentItem().getId())
                 .formId(submission.getFormVersion().getForm().getId())
                 .formCode(submission.getFormVersion().getForm().getCode())
                 .formVersionId(submission.getFormVersion().getId())

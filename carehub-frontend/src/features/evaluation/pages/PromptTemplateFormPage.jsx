@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { SaveOutlined, ArrowLeftOutlined, CloseOutlined } from '@ant-design/icons'
+import { SaveOutlined, CloseOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -92,7 +92,7 @@ function PromptTemplateFormPage() {
       <div className="dashboard-layout">
         <AdminSidebar />
         <div className="dashboard-layout__content">
-          <AdminHeader breadcrumbs={[{ label: 'Prompt Templates' }]} />
+          <AdminHeader back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={[{ label: 'Prompt Templates' }]} />
           <div className="dashboard-root"><main className="dashboard-body"><div className="evd-page"><section className="evd-panel evd-empty">Đang tải...</section></div></main></div>
         </div>
       </div>
@@ -108,7 +108,7 @@ function PromptTemplateFormPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">

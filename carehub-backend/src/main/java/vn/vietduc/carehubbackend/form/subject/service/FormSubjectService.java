@@ -28,6 +28,7 @@ public class FormSubjectService {
             if (item.getForm().getSubjectType() != FormSubjectType.USER) throw notFound();
         }
         User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
+                .filter(user -> user.getStatus() == vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE)
                 .orElseThrow(this::notFound);
         return FormSubjectUserResponse.builder()
                 .employeeCode(target.getEmployeeCode()).fullName(target.getName())

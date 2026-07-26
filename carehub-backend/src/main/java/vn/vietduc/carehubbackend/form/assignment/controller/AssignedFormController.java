@@ -12,7 +12,7 @@ import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentService;
 @RestController
 @RequestMapping("${app.api-prefix}/assigned-forms")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('MANAGER')")
+@PreAuthorize("isAuthenticated()")
 public class AssignedFormController {
     private final FormAssignmentService service;
 

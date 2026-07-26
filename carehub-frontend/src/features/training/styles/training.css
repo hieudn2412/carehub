@@ -188,6 +188,12 @@
   width: 100%;
 }
 
+.training-filters .searchable-select > input,
+.training-form .searchable-select > input {
+  min-height: 38px;
+  padding: 0 34px;
+}
+
 .training-form {
   display: grid;
   gap: 14px;

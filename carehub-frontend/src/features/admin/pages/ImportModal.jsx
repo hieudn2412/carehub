@@ -118,7 +118,7 @@ export default function ImportModal() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="im-container">
@@ -266,4 +266,4 @@ export default function ImportModal() {
       </div>
     </div>
   );
-}
+}

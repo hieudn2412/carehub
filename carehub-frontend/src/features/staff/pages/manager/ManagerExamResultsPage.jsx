@@ -5,6 +5,7 @@ import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
 import { trainingApi } from '../../../training/api/trainingApi'
+import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultsPage() {
@@ -68,10 +69,19 @@ function ManagerExamResultsPage() {
               />
               <SearchOutlined />
             </div>
-            <select className="mgr-select" value={professionalFieldId} onChange={e => setProfessionalFieldId(e.target.value)}>
-              <option value="">Tất cả lĩnh vực chuyên môn</option>
-              {professionalFields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}
-            </select>
+            <div className="mgr-field-filter">
+              <SearchableSelect
+                value={professionalFieldId}
+                onChange={setProfessionalFieldId}
+                options={[
+                  { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+                  ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                ]}
+                placeholder="Tất cả lĩnh vực chuyên môn"
+                searchPlaceholder="Tìm tên lĩnh vực..."
+                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              />
+            </div>
           </div>
 
           {/* Loading */}

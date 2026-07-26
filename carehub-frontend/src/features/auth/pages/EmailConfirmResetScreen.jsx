@@ -30,14 +30,9 @@ function EmailConfirmResetScreen() {
     return <Navigate to={AUTH_ROUTES.emailConfirm} replace />
   }
 
-  const hasMinLength = password.length >= 8
-  const hasUppercase = /[A-Z]/.test(password)
-  const hasLowercase = /[a-z]/.test(password)
-  const hasNumber = /\d/.test(password)
-  const hasSpecialChar = /[^A-Za-z0-9\s]/.test(password)
-  const hasNoWhitespace = password.length > 0 && !/\s/.test(password)
-  const ruleComplex = hasUppercase && hasLowercase && hasNumber && hasSpecialChar
-  const isStrongPassword = hasMinLength && ruleComplex && hasNoWhitespace
+  const hasMinLength = password.length >= 4
+  const hasVisibleCharacter = password.trim().length > 0
+  const isValidPassword = hasMinLength && hasVisibleCharacter
 
   const getRuleClass = (isValid) => {
     if (!password) return 'rule-item'
@@ -58,8 +53,8 @@ function EmailConfirmResetScreen() {
       return
     }
 
-    if (!isStrongPassword) {
-      setErrorMessage('Mật khẩu chưa đạt đủ điều kiện')
+    if (!isValidPassword) {
+      setErrorMessage('Mật khẩu phải có ít nhất 4 ký tự và không được chỉ gồm khoảng trắng')
       return
     }
 
@@ -111,15 +106,11 @@ function EmailConfirmResetScreen() {
           <ul className="password-rules">
             <li className={getRuleClass(hasMinLength)}>
               {getRuleIcon(hasMinLength)}
-              <span>Ít nhất 8 ký tự</span>
+              <span>Ít nhất 4 ký tự</span>
             </li>
-            <li className={getRuleClass(ruleComplex)}>
-              {getRuleIcon(ruleComplex)}
-              <span>Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt</span>
-            </li>
-            <li className={getRuleClass(hasNoWhitespace)}>
-              {getRuleIcon(hasNoWhitespace)}
-              <span>Không chứa khoảng trắng</span>
+            <li className={getRuleClass(hasVisibleCharacter)}>
+              {getRuleIcon(hasVisibleCharacter)}
+              <span>Không chỉ gồm khoảng trắng</span>
             </li>
           </ul>
 

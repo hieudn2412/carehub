@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import {
   DeleteOutlined,
   DownOutlined,
-  EditOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
+  CheckSquareOutlined,
   ImportOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
@@ -21,6 +21,7 @@ import {
   resolveChecklistSearchKeyword,
 } from '../utils/formCode.js'
 import ConfirmModal from '../components/ConfirmModal.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
@@ -186,7 +187,7 @@ function getVisiblePages(currentPage, totalPages) {
 
 function FormListPage() {
   const navigate = useNavigate()
-  
+
   // Confirm Modal state
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -610,7 +611,7 @@ function FormListPage() {
                 <div className="flp-header-info">
                   <h1 className="flp-title">Danh sách biểu mẫu checklist</h1>
                   <p className="flp-subtitle">
-                    Thiết kế và quản trị các bảng kiểm đánh giá chất lượng lâm sàng và an
+                    Thiết kế và quản trị các quy trình đánh giá chất lượng lâm sàng và an
                     toàn người bệnh
                   </p>
                 </div>
@@ -752,23 +753,27 @@ function FormListPage() {
 
                   <label className="flp-filter-group">
                     <span>Khoa/phòng</span>
-                    <select
-                      className="flp-select"
-                      onChange={(event) => {
+                    <div className="flp-department-filter">
+                      <SearchableSelect
+                        onChange={(value) => {
                         setErrorMessage('')
                         setLoading(true)
-                        setDepartmentId(event.target.value)
+                        setDepartmentId(value)
                         setPage(1)
                       }}
-                      value={departmentId}
-                    >
-                      <option value="all">Tất cả khoa/phòng</option>
-                      {departments.map((department) => (
-                        <option key={department.id} value={department.id}>
-                          {department.name || department.code}
-                        </option>
-                      ))}
-                    </select>
+                        value={departmentId}
+                        options={[
+                          { value: 'all', label: 'Tất cả khoa/phòng' },
+                          ...departments.map((department) => ({
+                            value: department.id,
+                            label: department.name || department.code,
+                          })),
+                        ]}
+                        placeholder="Tất cả khoa/phòng"
+                        searchPlaceholder="Tìm tên khoa/phòng..."
+                        ariaLabel="Tìm và chọn khoa/phòng"
+                      />
+                    </div>
                   </label>
 
                   {hasFilters && (
@@ -784,9 +789,9 @@ function FormListPage() {
                   <table className="flp-table">
                     <thead>
                       <tr>
-                        <th>Tên bảng kiểm</th>
-                        <th>Phiên bản hiện tại</th>
-                        <th>Khởi tạo / cập nhật</th>
+                        <th>Tên quy trình</th>
+                        <th>Phiên bản</th>
+                        <th>Ngày tạo</th>
                         <th>Người được giao</th>
                         <th>Lượt đánh giá</th>
                         <th>Điểm sàn</th>
@@ -834,10 +839,7 @@ function FormListPage() {
                               )}
                             </td>
                             <td>
-                              <span className="flp-date-stack">
-                                <span>Tạo: {formatChecklistDate(form.createdAt)}</span>
-                                <small>Cập nhật: {formatChecklistDate(form.updatedAt)}</small>
-                              </span>
+                              <span className="flp-date-stack">{formatChecklistDate(form.createdAt)}</span>
                             </td>
                             <td>
                               <button
@@ -879,14 +881,14 @@ function FormListPage() {
                                 >
                                   <EyeOutlined /> Chi tiết
                                 </button>
-                                {getEffectiveStatus(form) !== 'RETIRED' && (
+                                {form.currentPublishedVersion?.id && (
                                   <button
-                                    className="flp-btn-action flp-btn-edit"
-                                    onClick={() => navigate(`/admin/quality/checklists/${form.id}/edit`)}
-                                    title="Quản lý phiên bản và chỉnh sửa"
+                                    className="flp-btn-action flp-btn-evaluate"
+                                    onClick={() => navigate(`/admin/quality/checklists/${form.id}/evaluate/${form.currentPublishedVersion.id}`)}
+                                    title="Thực hiện đánh giá trực tiếp"
                                     type="button"
                                   >
-                                    <EditOutlined /> Sửa / phiên bản
+                                    <CheckSquareOutlined /> Đánh giá
                                   </button>
                                 )}
                                 {getEffectiveStatus(form) !== 'RETIRED' && (

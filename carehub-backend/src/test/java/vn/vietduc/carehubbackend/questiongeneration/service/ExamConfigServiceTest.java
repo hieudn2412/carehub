@@ -117,7 +117,7 @@ class ExamConfigServiceTest {
                 questionSet.getId(),
                 3,
                 45,
-                70,
+                7,
                 0,
                 true,
                 true,
@@ -139,7 +139,7 @@ class ExamConfigServiceTest {
                 .questionSet(questionSet)
                 .totalQuestions(4)
                 .timeLimitMinutes(45)
-                .passingScore(70)
+                .passingScore(7)
                 .maxRetakes(3)
                 .shuffleQuestions(true)
                 .shuffleOptions(true)
@@ -168,7 +168,7 @@ class ExamConfigServiceTest {
                 questionSet.getId(),
                 totalQuestions,
                 45,
-                70,
+                7,
                 3,
                 true,
                 true,

@@ -5,7 +5,6 @@ import {
   ClockCircleOutlined,
   BarChartOutlined,
   TrophyOutlined,
-  EditOutlined,
   HistoryOutlined,
   UserOutlined,
   LogoutOutlined,
@@ -57,6 +56,14 @@ function Sidebar() {
         { icon: <DashboardOutlined />, label: 'Dashboard', path: isAdmin ? '/admin/dashboard' : isManager ? '/manager/dashboard' : '/staff/dashboard' },
       ],
     },
+    {
+      label: 'Theo dõi cá nhân',
+      items: [
+        { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo liên tục', path: '/staff/training' },
+        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/staff/competency' },
+        { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
+      ],
+    },
   ]
 
   // Manager specific features
@@ -65,51 +72,16 @@ function Sidebar() {
       label: 'Quản lý khoa',
       items: [
         { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
-        { icon: <TrophyOutlined />, label: 'Dashboard lý thuyết', path: '/manager/reports/quality-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Dashboard thực hành', path: '/manager/reports/checklist-dashboard' },
+        { icon: <TrophyOutlined />, label: 'Dashboard năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/reports/checklist-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/compliance-by-technique' },
         { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
         { icon: <TeamOutlined />, label: 'Nhân sự & Giờ đào tạo', path: '/manager/employees' },
-        { icon: <FileDoneOutlined />, label: 'Kết quả thi nhân sự', path: '/manager/exam-results' },
-        { icon: <CheckSquareOutlined />, label: 'Bảng kiểm chất lượng', path: '/manager/quality/checklists' },
+        { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
+        { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
       ],
     })
-  }
-
-  // Personal/Staff features
-  navSections.push(
-    {
-      label: 'Năng lực của tôi',
-      items: [
-        { icon: <TrophyOutlined />, label: 'Năng lực của tôi', path: '/staff/competency' },
-      ],
-    },
-    {
-      label: 'Đào tạo của tôi',
-      items: [
-        { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo', path: '/staff/training' },
-        { icon: <BarChartOutlined />, label: 'Trạng thái đào tạo', path: '/staff/training-status' },
-      ],
-    }
-  )
-
-  // Admin không cần Kiểm tra và Phiếu kiểm tra
-  if (!isAdmin) {
-    navSections.push(
-      ...(!isManager ? [{
-        label: 'Kiểm tra',
-        items: [
-          { icon: <EditOutlined />, label: 'Làm bài thi', path: '/staff/exam/take' },
-          { icon: <HistoryOutlined />, label: 'Lịch sử thi', path: '/staff/exam/history' },
-        ],
-      }] : []),
-      ...(!isManager ? [{
-        label: 'Phiếu kiểm tra',
-        items: [
-          { icon: <CheckSquareOutlined />, label: 'Phiếu được giao', path: '/staff/checklists' },
-        ],
-      }] : [])
-    )
   }
 
   navSections.push(

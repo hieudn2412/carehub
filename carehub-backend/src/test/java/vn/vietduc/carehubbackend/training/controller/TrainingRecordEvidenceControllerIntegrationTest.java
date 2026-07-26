@@ -226,7 +226,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                         .with(jwtFor(user, "USER"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(recordJson(null, evidenceOptionalType.getId(), "Too much", "24.01", null)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -263,7 +263,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(recordJson(null, evidenceOptionalType.getId(), "Cancelled edit", "2", "\"version\":" + cancelled.getVersion() + ",")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("cannot be edited")));
+                .andExpect(jsonPath("$.message", containsString("không thể chỉnh sửa")));
 
         // Edit limit: SUBMITTED record with max edits exceeded
         TrainingRecord submitted = recordRepository.save(TrainingRecord.builder()
@@ -285,7 +285,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(recordJson(null, evidenceOptionalType.getId(), "Submitted changed", "2", "\"version\":" + submitted.getVersion() + ",")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("cannot be edited")));
+                .andExpect(jsonPath("$.message", containsString("không thể chỉnh sửa")));
 
         // Optimistic locking
         TrainingRecord draft = recordRepository.save(TrainingRecord.builder()
@@ -330,7 +330,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(recordJson(null, evidenceOptionalType.getId(), "Submitted changed", "2", "\"version\":" + submitted.getVersion() + ",")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message", containsString("cannot be edited")));
+                .andExpect(jsonPath("$.message", containsString("không thể chỉnh sửa")));
 
         mockMvc.perform(multipart("/api/v1/training/records/{id}/evidences", submitted.getId())
                         .file(jpegFile("submitted.jpg", 1024))

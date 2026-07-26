@@ -306,6 +306,18 @@
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
+.mgr-field-filter {
+  flex: 0 1 260px;
+  min-width: 200px;
+}
+
+.mgr-field-filter .searchable-select > input {
+  height: 38px;
+  border-color: var(--mgr-border);
+  border-radius: var(--mgr-radius-sm);
+  font-size: 13px;
+}
+
 .mgr-feedback {
   display: flex;
   align-items: center;

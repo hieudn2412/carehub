@@ -209,7 +209,30 @@ class FormSubmissionControllerIntegrationTest {
                         .with(adminJwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createSubmissionJson(fixture.assignmentItemId())))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void adminCreatesDirectSubmissionFromPublishedVersionWithoutAssignment() throws Exception {
+        Fixture fixture = publishedAssignedForm();
+
+        mockMvc.perform(post("/api/v1/form-submissions")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formVersionId": %d,
+                                  "subject": {
+                                    "type": "USER",
+                                    "employeeCode": "FORM_SUB_SUBJECT"
+                                  }
+                                }
+                                """.formatted(fixture.versionId())))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(jsonPath("$.data.status", is("DRAFT")))
+                .andExpect(jsonPath("$.data.assignmentItemId").doesNotExist())
+                .andExpect(jsonPath("$.data.subject.employeeCode", is("FORM_SUB_SUBJECT")));
     }
 
     private Fixture publishedAssignedForm() throws Exception {

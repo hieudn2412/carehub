@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import AdminHeader from '../../admin/components/AdminHeader'
 import Sidebar from '../../staff/components/sidebar'
@@ -9,7 +8,14 @@ import Header from '../../staff/components/Header'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
-import { ClockCircleOutlined, FileTextOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
+import {
+  ClockCircleOutlined,
+  FileTextOutlined,
+  EyeOutlined,
+  LeftOutlined,
+  LoadingOutlined,
+  RightOutlined,
+} from '@ant-design/icons'
 import '../styles/TrainingEmployeeStatusDetailPage.css'
 
 function TrainingEmployeeStatusDetailPage() {
@@ -30,6 +36,10 @@ function TrainingEmployeeStatusDetailPage() {
   })
 
   const [recordsList, setRecordsList] = useState([])
+  const [page, setPage] = useState(0)
+  const [totalElements, setTotalElements] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const pageSize = 10
 
   useEffect(() => {
     async function loadData() {
@@ -38,11 +48,12 @@ function TrainingEmployeeStatusDetailPage() {
       try {
         const [statusResponse, recordsResponse] = await Promise.all([
           trainingApi.getEmployeeTrainingStatus(employeeId, {}),
-          trainingApi.getEmployeeTrainingRecords(employeeId, { size: 50 })
+          trainingApi.getEmployeeTrainingRecords(employeeId, { page, size: pageSize })
         ])
 
         const statusData = statusResponse.data?.data
-        const recordsData = recordsResponse.data?.data?.content
+        const recordsPage = recordsResponse.data?.data
+        const recordsData = recordsPage?.content
 
         if (statusData) {
           setEmployeeInfo({
@@ -60,11 +71,15 @@ function TrainingEmployeeStatusDetailPage() {
             title: item.title,
             hours: item.declaredHours || 0,
             date: item.startDate || '---',
+            validUntil: item.validUntil,
+            expired: Boolean(item.expired),
             workflowStatus: item.workflowStatus,
-            evidenceUrl: item.evidenceCount > 0 ? `/training/records/${item.id}/evidence` : null
+            evidenceUrl: item.evidenceCount > 0 ? `/training/records/${item.id}#evidence` : null
           }))
           setRecordsList(mappedRecords)
         }
+        setTotalElements(recordsPage?.totalElements || 0)
+        setTotalPages(recordsPage?.totalPages || 0)
       } catch (err) {
         console.error('API fetch error in employee training status details:', err)
         setError("Không thể tải chi tiết đào tạo nhân viên.")
@@ -73,7 +88,7 @@ function TrainingEmployeeStatusDetailPage() {
       }
     }
     loadData()
-  }, [employeeId])
+  }, [employeeId, page])
 
   const breadcrumbs = [
     { label: 'Quản lý chất lượng' },
@@ -85,7 +100,9 @@ function TrainingEmployeeStatusDetailPage() {
     <div className="dashboard-layout">
       {isAdmin ? <AdminSidebar /> : <Sidebar />}
       <div className="dashboard-layout__content">
-        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header breadcrumbs={breadcrumbs} />}
+        {isAdmin
+          ? <AdminHeader back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
+          : <Header back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />}
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="ted-page">
@@ -177,7 +194,21 @@ function TrainingEmployeeStatusDetailPage() {
                                 <tr key={item.id || idx}>
                                   <td style={{ fontWeight: 500 }}>{item.title}</td>
                                   <td>{item.hours}h</td>
-                                  <td>{item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}</td>
+                                  <td>
+                                    <span className="ted-training-date">
+                                      {item.date ? new Date(item.date).toLocaleDateString('vi-VN') : '---'}
+                                    </span>
+                                    {item.expired && (
+                                      <span
+                                        className="ted-expired-tag"
+                                        title={item.validUntil
+                                          ? `Hết hạn từ ${new Date(item.validUntil).toLocaleDateString('vi-VN')}`
+                                          : 'Hồ sơ đã hết hạn'}
+                                      >
+                                        Hết hạn
+                                      </span>
+                                    )}
+                                  </td>
                                   <td>
                                     <span className={`ted-status-badge ${
                                       item.workflowStatus === 'SUBMITTED'
@@ -221,6 +252,30 @@ function TrainingEmployeeStatusDetailPage() {
                             )}
                           </tbody>
                         </table>
+                        {totalElements > 0 && (
+                          <div className="ted-pagination">
+                            <span>Hiển thị {recordsList.length} / {totalElements} hồ sơ</span>
+                            <div className="ted-pagination__controls">
+                              <button
+                                type="button"
+                                onClick={() => setPage(current => Math.max(0, current - 1))}
+                                disabled={page === 0}
+                                aria-label="Trang trước"
+                              >
+                                <LeftOutlined />
+                              </button>
+                              <span>{page + 1} / {Math.max(totalPages, 1)}</span>
+                              <button
+                                type="button"
+                                onClick={() => setPage(current => Math.min(totalPages - 1, current + 1))}
+                                disabled={page >= totalPages - 1}
+                                aria-label="Trang sau"
+                              >
+                                <RightOutlined />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>

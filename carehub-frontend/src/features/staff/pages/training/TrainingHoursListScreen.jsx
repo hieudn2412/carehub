@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   SearchOutlined,
   PlusOutlined,
-  EditOutlined,
   PaperClipOutlined,
   LeftOutlined,
   RightOutlined,
-  SendOutlined,
   EyeOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
@@ -16,29 +15,26 @@ import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
 import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
-import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursListScreen() {
   const navigate = useNavigate()
-  const { showToast } = useToast()
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
   const isManager = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
   const dashboardPath = isAdmin ? '/admin/dashboard' : isManager ? '/manager/dashboard' : '/staff/dashboard'
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
+  const [listError, setListError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
   const [requiredHours, setRequiredHours] = useState(120)
   const [cmeConfigured, setCmeConfigured] = useState(false)
-  const [submittingId, setSubmittingId] = useState(null)
   const [myEmployeeId, setMyEmployeeId] = useState(null)
-  const [trigger, setTrigger] = useState(0)
   const size = 10
 
   useEffect(() => {
@@ -62,71 +58,34 @@ function TrainingHoursListScreen() {
         }
       })
       .catch(err => console.error("Error fetching training status", err))
-  }, [trigger])
+  }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(true)
+      setListError('')
       const params = {
         page,
         size,
-        keyword: search || undefined,
-        workflowStatus: status || undefined,
+        titleKeyword: search || undefined,
         ...(myEmployeeId != null && { employeeId: myEmployeeId }),
       }
       trainingApi.listRecords(params)
         .then(res => {
-          const content = res.data?.data?.content || []
-          const fiveYearsAgo = new Date()
-          fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
-          fiveYearsAgo.setHours(0, 0, 0, 0)
-          
-          const filtered = content.filter(r => {
-            if (!r.startDate) return false
-            const d = new Date(r.startDate)
-            d.setHours(0, 0, 0, 0)
-            return d >= fiveYearsAgo
-          })
-          
-          setRecords(filtered)
-          setTotalElements(filtered.length)
+          const data = res.data?.data || {}
+          setRecords(data.content || [])
+          setTotalElements(data.totalElements || 0)
         })
-        .catch(err => console.error("Error fetching training records", err))
+        .catch(err => {
+          console.error("Error fetching training records", err)
+          setRecords([])
+          setTotalElements(0)
+          setListError('Không thể tải danh sách giờ đào tạo. Vui lòng thử lại.')
+        })
         .finally(() => setLoading(false))
     }, 300)
     return () => clearTimeout(timer)
-  }, [page, search, status, trigger, myEmployeeId])
-
-  const handleDirectSubmit = (recordId, version, startDate) => {
-    if (startDate) {
-      const recordDate = new Date(startDate)
-      const fiveYearsAgo = new Date()
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
-      fiveYearsAgo.setHours(0, 0, 0, 0)
-      recordDate.setHours(0, 0, 0, 0)
-      if (recordDate < fiveYearsAgo) {
-        showToast("Hồ sơ đào tạo quá 5 năm không được phép nộp.", "error")
-        return
-      }
-    }
-    setSubmittingId(recordId)
-    trainingApi.submitRecord(recordId, { version })
-      .then(() => {
-        showToast("Nộp hồ sơ thành công!", "success")
-        setTrigger(t => t + 1)
-      })
-      .catch(() => showToast("Nộp hồ sơ thất bại.", "error"))
-      .finally(() => setSubmittingId(null))
-  }
-
-  const getStatusLabel = (s) => {
-    switch (s) {
-      case 'SUBMITTED': return 'Đã nộp'
-      case 'DRAFT': return 'Nháp'
-      case 'CANCELLED': return 'Đã hủy'
-      default: return s
-    }
-  }
+  }, [page, search, myEmployeeId, reloadKey])
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -145,7 +104,7 @@ function TrainingHoursListScreen() {
       <div className="dashboard-layout__content">
         <Header breadcrumbs={[
           { label: 'Tổng quan', link: dashboardPath },
-          { label: 'Giờ đào tạo' }
+          { label: 'Giờ đào tạo liên tục' }
         ]} />
         <div className="dashboard-layout__body">
           <div className="training-page">
@@ -157,8 +116,8 @@ function TrainingHoursListScreen() {
                 : 'th-compliance-banner--warning'
             }`}>
               <div className="th-compliance-banner__left">
-                <h1 className="th-page-title">Giờ đào tạo của tôi</h1>
-                <p className="th-page-subtitle">Hồ sơ đào tạo · Chu kỳ 5 năm cuốn chiều</p>
+                <h1 className="th-page-title">Giờ đào tạo liên tục</h1>
+                <p className="th-page-subtitle">Theo dõi mục tiêu 120 giờ trong 5 năm liên tục</p>
               </div>
               <div className="th-compliance-banner__right">
                 {cmeConfigured ? (
@@ -202,7 +161,7 @@ function TrainingHoursListScreen() {
                 <input
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(0) }}
-                  placeholder="Tìm theo tên khóa đào tạo..."
+                  placeholder="Tìm theo nội dung đào tạo..."
                   className="th-search-input"
                   aria-label="Tìm theo tên khóa đào tạo"
                 />
@@ -219,7 +178,7 @@ function TrainingHoursListScreen() {
                 <option value="CANCELLED">Đã hủy</option>
               </select>
               <button className="th-btn-primary" onClick={() => navigate('/staff/training/new')}>
-                <PlusOutlined /> Thêm hồ sơ
+                <PlusOutlined /> Cập nhật giờ đào tạo
               </button>
             </div>
 
@@ -227,11 +186,18 @@ function TrainingHoursListScreen() {
             <div className="th-table-card">
               {loading ? (
                 <div className="th-table-state">Đang tải danh sách...</div>
+              ) : listError ? (
+                <div className="th-table-state th-table-state--error" role="alert">
+                  <p>{listError}</p>
+                  <button className="th-retry-btn" onClick={() => setReloadKey(value => value + 1)}>
+                    <ReloadOutlined /> Thử lại
+                  </button>
+                </div>
               ) : records.length === 0 ? (
                 <div className="th-table-state">
                   <p style={{ margin: '0 0 8px', fontSize: 15, fontWeight: 600, color: '#374151' }}>Chưa có hồ sơ nào</p>
                   <p style={{ margin: 0, fontSize: 13, color: '#9ca3af' }}>
-                    {search || status ? 'Không tìm thấy kết quả phù hợp.' : 'Nhấn "Thêm hồ sơ" để bắt đầu khai báo giờ đào tạo.'}
+                    {search ? 'Không tìm thấy kết quả phù hợp.' : 'Nhấn "Cập nhật giờ đào tạo" để bắt đầu khai báo.'}
                   </p>
                 </div>
               ) : (
@@ -239,10 +205,9 @@ function TrainingHoursListScreen() {
                   <table className="th-table">
                     <thead>
                       <tr>
-                        <th>Ngày bắt đầu</th>
-                        <th>Tên khóa đào tạo</th>
+                        <th>Ngày đào tạo liên tục</th>
+                        <th>Nội dung đào tạo</th>
                         <th className="th-col-num">Số giờ đào tạo</th>
-                        <th>Ngày nộp</th>
                         <th className="th-col-center">Minh chứng</th>
                         <th className="th-col-actions">Thao tác</th>
                       </tr>
@@ -250,7 +215,14 @@ function TrainingHoursListScreen() {
                     <tbody>
                       {records.map(r => (
                         <tr key={r.id} onClick={() => navigate(`/staff/training/${r.id}`)} className="th-clickable-row">
-                          <td data-label="Ngày bắt đầu">{formatDate(r.startDate)}</td>
+                          <td data-label="Ngày bắt đầu">
+                            <span className="th-training-date">{formatDate(r.startDate)}</span>
+                            {r.expired && (
+                              <span className="th-expired-tag" title={`Hết hạn từ ${formatDate(r.validUntil)}`}>
+                                Hết hạn
+                              </span>
+                            )}
+                          </td>
                           <td data-label="Khóa đào tạo">
                             <span className="th-record-title">{r.title}</span>
                             {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
@@ -270,6 +242,7 @@ function TrainingHoursListScreen() {
                             )}
                           </td>
                           <td className="th-col-center" data-label="Minh chứng">
+
                             {r.evidenceCount > 0 ? (
                               <span className="th-evidence-count">
                                 <PaperClipOutlined /> {r.evidenceCount}
