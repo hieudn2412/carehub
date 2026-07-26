@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.repository;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,6 +47,7 @@ class TrainingRepositoryIntegrationTest {
     @Autowired
     private TrainingRecordRepository recordRepository;
 
+    @DisplayName("L2-CMP-10 | Query Correctness: sumApprovedHoursForEmployee counts SUBMITTED rows only (DRAFT excluded) inside the window")
     @Test
     void repositoriesPersistAndQueryTrainingFoundation() {
         Department department = departmentRepository.save(Department.builder()

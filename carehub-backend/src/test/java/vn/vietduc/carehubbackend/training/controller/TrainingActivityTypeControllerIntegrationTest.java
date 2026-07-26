@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.training.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +71,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-REF-08 | Happy Path: activity-type create normalizes ' cme ' → CME and writes an audit timeline entry")
     @Test
     void createValidActivityTypeNormalizesCodeAndWritesAudit() throws Exception {
         ActivityTypeFormRequest request = form(" cme ", "Đào tạo liên tục", BigDecimal.valueOf(8));
@@ -83,6 +85,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.auditTimeline.length()", greaterThanOrEqualTo(1)));
     }
 
+    @DisplayName("L2-REF-09 | Constraint Violation: duplicate activity-type code → 409 SYS_409")
     @Test
     void duplicateCodeReturnsConflict() throws Exception {
         activityTypeRepository.save(TrainingActivityType.builder()
@@ -99,6 +102,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("SYS_409")));
     }
 
+    @DisplayName("L2-REF-10 | Negative: maxHours = 0 → 422 VAL_001")
     @Test
     void invalidMaxHoursReturnsUnprocessableEntity() throws Exception {
         mockMvc.perform(post("/api/v1/training/activity-types")
@@ -109,6 +113,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("VAL_001")));
     }
 
+    @DisplayName("L2-REF-11 | Query Correctness: case-insensitive keyword filter and usageCount derived from referencing records")
     @Test
     void listFiltersKeywordCaseInsensitiveAndReturnsUsageCount() throws Exception {
         TrainingActivityType activityType = activityTypeRepository.save(TrainingActivityType.builder()
@@ -134,6 +139,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].usageCount", is(1)));
     }
 
+    @DisplayName("L2-REF-12 | Happy Path: referenced type deactivates with current version; DELETE endpoint → 405")
     @Test
     void deactivateReferencedTypeSucceedsAndDeleteEndpointDoesNotExist() throws Exception {
         TrainingActivityType activityType = activityTypeRepository.save(TrainingActivityType.builder()
@@ -162,6 +168,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(status().isMethodNotAllowed());
     }
 
+    @DisplayName("L2-REF-13 | Optimistic Lock: stale version (+10) → 409 'updated by another user'")
     @Test
     void staleVersionReturnsConflict() throws Exception {
         TrainingActivityType activityType = activityTypeRepository.save(TrainingActivityType.builder()
@@ -189,6 +196,7 @@ class TrainingActivityTypeControllerIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("updated by another user")));
     }
 
+    @DisplayName("L2-REF-14 | Constraint Violation: changing the code of a referenced type → 409")
     @Test
     void referencedTypeCannotChangeCode() throws Exception {
         TrainingActivityType activityType = activityTypeRepository.save(TrainingActivityType.builder()

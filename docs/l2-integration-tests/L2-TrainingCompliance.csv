@@ -1,0 +1,22 @@
+﻿"L2-TrainingCompliance  |  status list, ledger running totals, scope filters  |  SC-04 compliance tracking","","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","Services Involved","Infrastructure (Testcontainers)","External Mocks (WireMock)","Given (DB State / Setup)","When (Action / HTTP Call)","Then (Expected DB State + Events + Response)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: employee status aggregation  |  the query-correctness core of FT-05","","","","","","","","","","","","","",""
+"L2-CMP-01","Query Correctness","SC-04; FR-021; FR-022; AC-05-01","FT-05","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","2 departments, CME scope on one, 5 users, 7 records across SUBMITTED/DRAFT/CANCELLED in/out of window","GET /training/employee-status with keyword/sort/pagination as MANAGER and ADMIN","Manager list excludes other departments
+Aggregates: requiredHours 120 (global target), submittedHours, remainingHours, complianceStatus NON_COMPLIANT, lastTrainingDate
+submittedHoursMin/Max filters and sort respected; USER → 403","No","Pass","",""
+"L2-CMP-02","Query Correctness","SC-04; AC-05-03; FR-023","FT-05","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Employee ledger with DRAFT/CANCELLED/expired rows interleaved","GET employee detail ledger","Rows sorted startDate asc with per-row expired/validUntil
+runningSubmittedHours stays FLAT across DRAFT, CANCELLED and expired rows — only valid SUBMITTED rows accumulate
+evidenceCount/passedEvidenceCount/changeLogCount correct","No","Pass","",""
+"  ▶  Block: list scoping + filters  |  TrainingRecordListDetail IT","","","","","","","","","","","","","",""
+"L2-CMP-03","Query Correctness","BR-29; NAC-05-03","FT-04","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Two employees","GET /training/records?employeeId=<other> as USER","Empty list, not 403 — self-scope silently overrides the filter (no data leak, no oracle)","No","Pass","",""
+"L2-CMP-04","Query Correctness","BR-29","FT-04","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Manager + records in two departments","GET /training/records as MANAGER","Only own-department records; other-department titles absent from the payload","No","Pass","",""
+"L2-CMP-05","Query Correctness","FR-022; AC-04-02","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","5 mixed records","GET with 9 simultaneous filters + page/size/sort","Exactly the one matching record; evidence counts present; sort echoed back","No","Pass","",""
+"L2-CMP-06","Query Correctness","FR-022","FT-04","P3","carehub-backend + PostgreSQL","PostgreSQL 17","None","Admin with department = null (edge case)","GET own records with date filters","Own records listed; computed validUntil and expired=false correct","No","Pass","",""
+"L2-CMP-07","Negative","NAC; REQ_001","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","—","GET with dateFrom > dateTo; GET with sort=employee.name,asc","Reversed range → 400
+Sort outside the allow-list → 400 (no property traversal)","Yes","Pass","",""
+"L2-CMP-08","Query Correctness","NFR-SEC; A01","FT-04","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Record with evidence whose objectKey = 'object-key-secret'","GET record detail","Evidence + change history + duplicate warning present
+Response body NEVER contains the internal storage objectKey (information-leak guard)","No","Pass","",""
+"L2-CMP-09","Negative","BR-29; SYS_404","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","Out-of-scope record + a missing id","GET detail for each","Out of scope → 403; missing → 404 — the two cases are distinguishable","Yes","Pass","",""
+"  ▶  Block: repository query proof","","","","","","","","","","","","","",""
+"L2-CMP-10","Query Correctness","FR-023; BR-05","FT-05","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","One SUBMITTED (8h) + one DRAFT (20h) record inside the window","recordRepository.sumApprovedHoursForEmployee(employeeId, windowStart, windowEnd)","Returns exactly 8 — DRAFT rows are excluded by the query itself
+(the custom @Query proven against a real schema)","No","Pass","",""

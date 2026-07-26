@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.auth.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -74,6 +75,7 @@ class AuthControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-AUTH-01 | Happy Path: login → refresh → logout persists refresh-token revocation; replayed refresh → 401 AUTH_001")
     @Test
     void loginRefreshAndLogoutLifecyclePersistsRevocation() throws Exception {
         String loginBody = """
@@ -112,6 +114,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("AUTH_001")));
     }
 
+    @DisplayName("L2-AUTH-02 | Query Correctness: a second login keeps the first session's refresh token valid (concurrent sessions)")
     @Test
     void secondLoginKeepsFirstSessionRefreshTokenValid() throws Exception {
         String firstRefreshToken = loginAndGetRefreshToken();
@@ -128,6 +131,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())));
     }
 
+    @DisplayName("L2-AUTH-03 | Negative: LOCKED account → 401; blank payload → 422 VAL_001")
     @Test
     void loginRejectsLockedAccountAndInvalidPayload() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login")
@@ -147,6 +151,7 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("VAL_001")));
     }
 
+    @DisplayName("L2-AUTH-04 | Happy Path: forgot-password persists an OTP row and reset consumes it (used=true, new bcrypt hash)")
     @Test
     void forgotPasswordAndResetPasswordConsumeOtp() throws Exception {
         mockMvc.perform(post("/api/v1/auth/forgot-password")

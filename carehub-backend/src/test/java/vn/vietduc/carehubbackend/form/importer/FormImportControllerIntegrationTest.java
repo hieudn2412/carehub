@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.form.importer;
 
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,7 @@ class FormImportControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-QLT-06 | Happy Path: Google Form import preview (202 VALIDATED) → apply (202 APPLIED) creates the form, without network")
     @Test
     void previewAndApplyGoogleFormImportWithoutCallingNetwork() throws Exception {
         String previewResponse = mockMvc.perform(post("/api/v1/form-import-batches")
@@ -109,6 +111,7 @@ class FormImportControllerIntegrationTest {
         assertTrue(formRepository.findByCodeIgnoreCaseAndDeletedFalse("HAND_HYGIENE").isPresent());
     }
 
+    @DisplayName("L2-QLT-07 | Negative: case-insensitive duplicate codes inside a batch → 422; USER → 403")
     @Test
     void previewRejectsDuplicateCodesAndRequiresAdmin() throws Exception {
         String duplicateRequest = """

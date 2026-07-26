@@ -337,6 +337,165 @@ per-requirement (xem D6 và phần dựng lại sheet `TrainingComplianceCalcula
 
 ---
 
+## D24 — FR-037 nói thang điểm 0–100, code chuyển đổi về 0–10
+
+**SRS**: FR-037 — converted score trên thang 0–100. **Code**: `FormScoreCalculator` trả
+`convertedScore` thang 0–10 (scale 2). Cùng họ với D6 (đã chốt sửa SRS theo code ở D6). Được ghi
+trong Defect ID của `L1-FSC-10` và các dòng liên quan sheet `FormScoreCalculator`.
+
+**Đề xuất**: sửa FR-037 theo code như đã làm với D6 ở SRS v1.4.
+
+---
+
+## D25–D35 — Phát hiện trong đợt L2 Integration Tests
+
+Nhóm này lộ ra khi viết test tích hợp L2 (`docs/l2-integration-tests/`) — đa số chỉ quan sát được
+khi transaction **thật sự commit**, nên toàn bộ suite unit L1 và các integration test
+`@Transactional` cũ không thể bắt được. Mỗi mục có ít nhất một Test ID L2 chứng minh; 4 mục là
+**EXPECTED FAIL** (D28, D33, D34, D35).
+
+| ID | Mức | Nội dung | Bằng chứng |
+|----|-----|----------|------------|
+| **D25** | Trung bình | Refresh token **không rotation** — trái CLAUDE.md/TDS 2.2 | `L2-AUTH-05` (pass, pin) |
+| **D26** | **Cao (bảo mật)** | User soft-deleted vẫn refresh được access token | `L2-AUTH-09` (pass, pin) |
+| **D27** | **Cao** | Dual-write: email publish **trước** commit ở `createUser`/`forgotPassword` | `L2-AUTH-10` (pass, pin) |
+| **D28** | **Nghiêm trọng** | Direct-evaluation submission FAILED → NPE → 500 + rollback cả bài nộp | `L2-SCR-04` **EXPECTED FAIL** |
+| **D29** | Trung bình | `EmailConsumer` không idempotent — redelivery gửi email lần 2 | ghi nhận khi khảo sát (retry ladder: `L2-NTF-09/10`) |
+| **D30** | **Cao** | Không có handler `DataIntegrityViolationException` → vi phạm unique = **500 `SYS_001`** thay vì 409 | `L2-FLOW-02`, `L2-REF-01` (pass, pin) |
+| **D31** | Thấp | `spring.rabbitmq.listener.*.auto-startup: false` trong test yaml vô hiệu (app tự khai `SimpleRabbitListenerContainerFactory`) | `RabbitMQConfig.java:48-58` |
+| **D32** | Thấp | Registry mã lỗi TDS 8.1 (`TRN_001`…) lệch hoàn toàn code (`REQ_001`/`VAL_001`/`SYS_409`…) | mọi CSV L2, cột Then |
+| **D33** | **Nghiêm trọng** | Thi **đậu** nhưng không bao giờ được cộng giờ CME + không có notification | `L2-EXM-10` **EXPECTED FAIL** |
+| **D34** | **Cao** | Xoá minh chứng: `storage_deleted_at` không bao giờ được stamp ở lượt đầu | `L2-TRN-17` **EXPECTED FAIL** |
+| **D35** | **Nghiêm trọng** | Mọi notification phát từ flow transactional bị **nuốt im lặng** | `L2-SCR-05` **EXPECTED FAIL** |
+
+### D25 — Refresh token không rotation
+
+**Code**: `auth/service/impl/AuthServiceImpl.java:65-91` — `refreshToken()` chỉ mint access token
+mới rồi trả lại **đúng token cũ** (`refreshToken.getToken()`, dòng 87). Không revoke, không tạo
+token mới, không có khái niệm supersession. CLAUDE.md và TDS 2.2 mô tả "refresh token rotation".
+
+**Test**: `L2-AUTH-05` — refresh 2 lần, cả hai trả nguyên chuỗi cũ, DB vẫn đúng 1 row
+`revoked=false`. Pass vì pin theo code.
+
+**Đề xuất**: hoặc làm rotation thật (revoke row cũ + phát row mới mỗi lần refresh), hoặc sửa
+CLAUDE.md/TDS bỏ chữ "rotation".
+
+### D26 — Soft delete không kết thúc phiên đăng nhập
+
+**Code**: `AuthServiceImpl.refreshToken` dòng 75-80 chỉ check `status` (LOCKED / chưa ACTIVE) —
+**không check `user.isDeleted()`**, và cũng không có chỗ nào revoke refresh token khi admin xoá
+user (`UserServiceImpl` soft delete chỉ set flag).
+
+**Hệ quả**: nhân viên đã bị xoá khỏi hệ thống vẫn tự gia hạn access token đến 7 ngày sau.
+
+**Test**: `L2-AUTH-09` — xoá mềm user sau khi login, refresh vẫn 200. Pass vì pin theo code.
+
+**Đề xuất**: thêm check `isDeleted` vào `refreshToken()` **và** revoke mọi refresh token của user
+trong flow xoá.
+
+### D27 — Dual-write: email đi trước khi transaction commit
+
+**Code**: `PasswordResetServiceImpl.forgotPassword` và `UserServiceImpl.createUser` gọi
+`EmailProducer.send(...)` **bên trong** method `@Transactional`. Publish RabbitMQ không tham gia
+transaction DB.
+
+**Hệ quả**: nếu transaction rollback sau khi publish (lỗi DB, constraint…), email vẫn được gửi —
+người dùng nhận OTP không tồn tại trong DB (nhập vào là "Mã OTP không hợp lệ"), hoặc nhận welcome
+email cho account chưa được tạo.
+
+**Test**: `L2-AUTH-10` — gọi `forgotPassword` trong `TransactionTemplate` rồi ép rollback: DB
+không còn row OTP nhưng CapturingEmailProducer đã giữ 1 email OTP. Pass vì pin đúng hành vi lỗi.
+
+**Đề xuất**: chuyển các publish này sang `@TransactionalEventListener(AFTER_COMMIT)` (kèm fix D35)
+hoặc transactional outbox.
+
+### D28 — Bug nghiêm trọng: direct-evaluation FAILED → NPE → mất luôn bài nộp
+
+**Code**: `form/submission/service/FormSubmissionService.java:153` —
+`submission.getAssignmentItem().getForm().getTitle()` trong `publishPersonalComplianceIssue`.
+Submission tạo theo đường direct-evaluation (UC-13, `L2-SCR-03`) có `assignmentItem = null` →
+NPE ngay trong transaction submit → 500 `SYS_001` **và rollback toàn bộ bài nộp** (điểm đã chấm,
+kết quả FAILED — mất hết).
+
+**Test**: `L2-SCR-04` — **EXPECTED FAIL**: assert 200 + FAILED_SCORE persisted, thực tế 500 +
+DB không đổi.
+
+**Đề xuất**: guard null trước dòng 153 (skip publish khi không có assignment item, hoặc lấy tên
+form qua `formVersion.getForm()`), rồi mới tính đến D35 để notification thật sự đi.
+
+### D29 — EmailConsumer không idempotent
+
+**Code**: `notification/messaging/EmailConsumer` — MANUAL ack, retry bằng counter `attempts` trong
+payload (`MAX_EMAIL_ATTEMPTS = 5` → DLQ) nhưng **không có dedup theo message id**: broker
+redelivery (mất kết nối sau khi gửi SMTP thành công nhưng trước khi `basicAck`) sẽ gửi email lần 2.
+
+**Test**: retry ladder được chứng minh ở `L2-NTF-09` (fail → retry exchange, attempts+1) và
+`L2-NTF-10` (attempts=4 fail → DLQ). Case redelivery-idempotency không viết được thiếu broker thật.
+
+**Đề xuất**: thêm bảng/redis key `email_message_id đã xử lý` trước khi gửi.
+
+### D30 — Vi phạm unique constraint trả 500 thay vì 409
+
+**Code**: `exception/GlobalExceptionHandler` không có handler cho
+`DataIntegrityViolationException`. Mọi race check-then-insert (ví dụ
+`SystemSettingsService.get()` tạo row GLOBAL lần đầu) khi thua cuộc đua sẽ rơi vào handler
+`Exception` chung → **500 `SYS_001`** với message chung chung, thay vì 409 `SYS_409`.
+
+**Test**: `L2-FLOW-02` — 2 transaction thật đua check-then-insert `scope_key`: loser nhận
+`DataIntegrityViolationException`. Pass vì pin hiện trạng; Notes ghi rõ thiếu handler.
+
+**Đề xuất**: thêm `@ExceptionHandler(DataIntegrityViolationException.class)` → 409 `SYS_409`
+message tiếng Việt.
+
+### D31 / D32 — Ghi nhận cấu hình & tài liệu
+
+- **D31**: `application-test.yaml` đặt `spring.rabbitmq.listener.simple.auto-startup: false` nhưng
+  `RabbitMQConfig.java:48-58` tự khai `SimpleRabbitListenerContainerFactory` không đọc property đó
+  → container vẫn retry connect nền trong test (vô hại nhưng ồn log, và property gây hiểu nhầm).
+- **D32**: registry mã lỗi trong TDS 8.1 (`TRN_001`, `EXM_002`…) không tồn tại trong code — code
+  dùng `REQ_001`/`VAL_001`/`AUTH_001`/`AUTH_002`/`SYS_404`/`SYS_409`/`SYS_503`/`SYS_001`. Mọi cột
+  Then trong CSV L2 trích mã thật của code. Đề xuất: viết lại TDS 8.1 theo code.
+
+### D33–D35 — Họ bug chung một gốc: listener `AFTER_COMMIT` làm việc transactional
+
+**Gốc rễ chung**: cả ba chỗ dưới đây chạy trong `@TransactionalEventListener(phase = AFTER_COMMIT)`.
+Ở phase đó Spring **vẫn còn** transaction synchronization của transaction vừa commit, nên mọi
+`@Transactional(propagation = REQUIRED)` bên trong listener **join vào transaction đã commit**
+thay vì mở transaction mới:
+
+- write qua `save()` không bao giờ được flush → **bị vứt bỏ im lặng** (D35);
+- entity IDENTITY cần insert ngay để lấy id, Hibernate hoãn bằng `DelayedPostInsertIdentifier` →
+  **`ClassCastException` khi cast id sang `Long`** (D33);
+- query `@Modifying` đòi transaction đang hoạt động → **`InvalidDataAccessApiUsageException:
+  No active transaction`** (D34).
+
+Cả ba exception đều bị `try/catch` + log nuốt, nên production **không có dấu hiệu gì ngoài log
+warn** — tính năng chỉ đơn giản là không chạy.
+
+**D33** — `training/service/ExamPassedTrainingListener.java:40` (`onExamPassed`, save tại dòng 80):
+người thi **đậu** không bao giờ nhận được training record 1.0h `EXAM_ATTEMPT:<id>` lẫn notification
+EXAM_PASSED. Test: `L2-EXM-10` **EXPECTED FAIL** (transaction commit thật, đếm 0 record).
+
+**D34** — `training/service/impl/EvidenceObjectDeletionService.java:27-30` → `deleteAndMark:44`
+gọi `markStorageDeleted` (`@Modifying`): object storage bị xoá nhưng stamp `storage_deleted_at`
+ném "No active transaction" (bị catch dòng 45-47) → row treo mãi trong danh sách retry; sweep
+`retryPendingDeletes` (10 phút/lần, có transaction riêng) là thứ duy nhất cứu lại. Test:
+`L2-TRN-17` **EXPECTED FAIL**; `L2-TRN-18` chứng minh sweep hội tụ.
+
+**D35** — `notification/messaging/NotificationEventListener.java:16` → `NotificationDispatcher
+.dispatch`: insert notification join transaction đã commit → **vứt bỏ im lặng, không log, không
+row**. Blast radius = **mọi** notification phát từ flow transactional: EXAM_ASSIGNED, EXAM_PASSED,
+PERSONAL_COMPLIANCE_ISSUE. Các flow không transactional (scheduler `scanCme`) vẫn hoạt động — vì
+vậy bug sống sót đến giờ. Test: `L2-SCR-05` **EXPECTED FAIL** (đã cô lập bằng 2 probe: dispatch
+tay không transaction → có row; dispatch trong transaction đã commit → không gì).
+
+**Fix chung cho cả họ** (1 dòng mỗi chỗ): đặt
+`@Transactional(propagation = Propagation.REQUIRES_NEW)` lên method listener (hoặc chuyển sang
+`@Async` như 3 worker recalculation đã làm đúng). Sau khi fix, 3 test EXPECTED FAIL ở trên sẽ tự
+chuyển xanh — chúng assert theo hành vi đúng.
+
+---
+
 ## Ghi chú về các failure có sẵn, ngoài phạm vi L1
 
 **Đã được `origin/main` sửa hết.** Trước khi merge, suite backend có 11 failure + 24 error ngoài phạm

@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.questiongeneration.controller;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,7 @@ class EvaluationDashboardControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-EXM-01 | Query Correctness: manager sees the theory dashboard of their own department without evaluation permissions")
     @Test
     void managerWithoutEvaluationPermissionCanViewOwnDepartmentTheoryDashboard() throws Exception {
         mockMvc.perform(get("/api/v1/evaluation-dashboard/exam-overview")
@@ -69,6 +71,7 @@ class EvaluationDashboardControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.targetCount").value(0));
     }
 
+    @DisplayName("L2-EXM-02 | Negative: manager requesting another department's dashboard → 403")
     @Test
     void managerCannotViewAnotherDepartmentTheoryDashboard() throws Exception {
         mockMvc.perform(get("/api/v1/evaluation-dashboard/exam-overview")
@@ -77,6 +80,7 @@ class EvaluationDashboardControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-EXM-03 | Negative: USER role → 403 on the theory dashboard")
     @Test
     void regularUserCannotViewTheoryDashboard() throws Exception {
         mockMvc.perform(get("/api/v1/evaluation-dashboard/exam-overview")

@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.controller;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -121,6 +122,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
         noDepartmentRecord = saveRecord(adminWithoutDepartment, "No Department Course", "Internal", LocalDate.of(2026, 3, 20), TrainingRecordStatus.SUBMITTED);
     }
 
+    @DisplayName("L2-CMP-03 | Query Correctness: USER list is self-scoped; another employeeId filter yields empty, not 403")
     @Test
     void userListIsScopedToCurrentUserAndCannotUseEmployeeFilterToSeeOthers() throws Exception {
         mockMvc.perform(get("/api/v1/training/records")
@@ -136,6 +138,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 
+    @DisplayName("L2-CMP-04 | Query Correctness: manager list contains only own-department records")
     @Test
     void managerListIsScopedToOwnDepartment() throws Exception {
         mockMvc.perform(get("/api/v1/training/records")
@@ -151,6 +154,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.totalElements").value(0));
     }
 
+    @DisplayName("L2-CMP-05 | Query Correctness: nine simultaneous filters + pagination + sort echo resolve to the exact record")
     @Test
     void adminListSupportsCombinationFiltersPaginationAndSort() throws Exception {
         mockMvc.perform(get("/api/v1/training/records")
@@ -174,6 +178,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.sort[0]").value("startDate,asc"));
     }
 
+    @DisplayName("L2-CMP-06 | Query Correctness: admin without a department lists own records; validUntil and expired computed per row")
     @Test
     void adminWithoutDepartmentCanListOwnRecordsWithDateFilters() throws Exception {
         mockMvc.perform(get("/api/v1/training/records")
@@ -190,6 +195,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].expired").value(false));
     }
 
+    @DisplayName("L2-CMP-07 | Negative: reversed date range → 400; sort field outside the allow-list → 400")
     @Test
     void listRejectsInvalidDateRangeAndUnsupportedSort() throws Exception {
         mockMvc.perform(get("/api/v1/training/records")
@@ -204,6 +210,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    @DisplayName("L2-CMP-08 | Query Correctness: detail includes evidence + change history but never leaks the internal storage objectKey")
     @Test
     void detailIncludesEvidenceChangeHistoryAndDuplicateWarningWithoutInternalObjectKey() throws Exception {
         mockMvc.perform(get("/api/v1/training/records/{id}", ownSubmittedWithEvidence.getId())
@@ -215,6 +222,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(content().string(not(containsString("object-key-secret"))));
     }
 
+    @DisplayName("L2-CMP-09 | Negative: 403 outside department scope vs 404 for a missing id")
     @Test
     void detailReturnsForbiddenOutsideScopeAndNotFoundWhenMissing() throws Exception {
         mockMvc.perform(get("/api/v1/training/records/{id}", otherDepartmentRecord.getId())

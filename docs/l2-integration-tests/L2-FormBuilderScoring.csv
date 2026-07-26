@@ -1,0 +1,30 @@
+﻿"L2-FormBuilderScoring  |  builder lifecycle, publish + assignment re-pointing, scoring config + recalculation job  |  SC-02","","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","Services Involved","Infrastructure (Testcontainers)","External Mocks (WireMock)","Given (DB State / Setup)","When (Action / HTTP Call)","Then (Expected DB State + Events + Response)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: builder lifecycle  |  DRAFT→PUBLISHED→RETIRED with lockVersion","","","","","","","","","","","","","",""
+"L2-QLT-01","Happy Path + Optimistic Lock","FR-031; FR-034; UC-11","FT-08","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Admin JWT; empty forms table","POST /forms (code ' safety-round ') → POST version → PUT with lockVersion → publish → clone v2 → PUT v1 with lockVersion 0","Code normalized SAFETY-ROUND; Location header
+Publish → PUBLISHED + schemaHash
+Clone preserves sectionKey/question code into v2 DRAFT
+Stale lockVersion → 409","No","Pass","",""
+"L2-QLT-02","Query Correctness","FR-031; NAC-01-03","FT-08","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","Forms seeded","GET /forms with filters as ADMIN; builder endpoints as USER","Filtering works; USER → 403 on every builder endpoint","Yes","Pass","",""
+"L2-QLT-03","Constraint Violation","VAL_001; SYS_409; DC-06","FT-08","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","One form exists","POST invalid payload; POST duplicate code","Invalid → 422 VAL_001
+Duplicate code → 409 SYS_409","Yes","Pass","",""
+"L2-QLT-04","Query Correctness","FR-032","FT-08","P3","carehub-backend + PostgreSQL","PostgreSQL 17","None","Draft with nested structure","GET /form-previews list + detail; as USER","Full draft structure returned; USER → 403","No","Pass","",""
+"  ▶  Block: scoring configuration  |  lockVersion + RETIRED recalculation","","","","","","","","","","","","","",""
+"L2-QLT-05","Optimistic Lock","FR-035; FR-039; DC; SC-02","FT-09","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Published v1 with scoring config","PATCH scoring-configuration with lockVersion → replay stale → publish v2 → PATCH passing-score on RETIRED v1 → PATCH criticalWeightPercent on RETIRED","First PATCH 200; stale replay → 409
+Publishing v2 retires v1
+Passing-score on RETIRED → 202 with recalculationScheduled=true
+criticalWeight on RETIRED → 409; USER → 403","No","Pass","",""
+"  ▶  Block: Google Form import  |  non-transactional committed-state pattern","","","","","","","","","","","","","",""
+"L2-QLT-06","Happy Path","FR-031; UC-12","FT-08","P2","carehub-backend + PostgreSQL","PostgreSQL 17","Google Forms fetch replaced by a canned FB_PUBLIC_LOAD_DATA_ payload (bean subclass)","Import batch registered","POST import batch → POST application","Preview 202 VALIDATED with totals and row WARNING
+Apply 202 APPLIED; row IMPORTED with formId/versionId; form findable by code","No","Pass","",""
+"L2-QLT-07","Negative","VAL_001; NAC-01-03","FT-08","P2","carehub-backend + PostgreSQL","PostgreSQL 17","Google client stubbed as above","—","POST batch with codes DUP_FORM and dup_form; as USER","Case-insensitive intra-batch duplicate → 422
+USER → 403","Yes","Pass","",""
+"  ▶  Block: publish re-pointing + recalculation job  |  written new","","","","","","","","","","","","","",""
+"L2-QLT-08","Transaction Boundary","FR-034; FR-039; TDS 6.3","FT-08","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","v1 PUBLISHED with one ACTIVE and one REVOKED assignment item","Create v2 → publish v2 (one transaction)","v1 → RETIRED, v2 → PUBLISHED, form.currentVersion updated atomically
+ACTIVE item re-pointed to v2
+REVOKED item still points at v1 — only ACTIVE items follow","No","Pass","",""
+"L2-QLT-09","Event Published","FR-039; SC-02; TDS 6.3","FT-09","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","PUBLISHED version, no pending job","PATCH scoring-configuration {passingScore CUSTOM 7.5, lockVersion} → await the async worker","202 with recalculationScheduled=true
+Job row PENDING → (AFTER_COMMIT @Async worker) → COMPLETED
+version.passing_score_override = 7.5","No","Pass","",""
+"L2-QLT-10","Idempotency","TDS 6.4","FT-09","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","Job row forced to RUNNING with started_at = now − 10 min (crashed worker)","jobService.recoverAndFindPending(); then start(jobId) twice","Stale RUNNING recovered to PENDING and returned
+start() → true once, false the second time (CAS) — no double execution","No","Pass","",""

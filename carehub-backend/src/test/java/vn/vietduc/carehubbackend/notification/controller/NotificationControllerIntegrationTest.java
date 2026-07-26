@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.notification.controller;
 
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,6 +77,7 @@ class NotificationControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-NTF-01 | Query Correctness: in-app notifications are owner-isolated (search, mark-read, unread-count, delete; foreign id → 404)")
     @Test
     void currentUserCanListReadUnreadAndDeleteOnlyOwnNotifications() throws Exception {
         Notification own = notificationRepository.save(Notification.builder()
@@ -128,6 +130,7 @@ class NotificationControllerIntegrationTest {
         assertTrue(notificationRepository.findById(other.getId()).isPresent());
     }
 
+    @DisplayName("L2-NTF-02 | Optimistic Lock: email-template CRUD is ADMIN-only; second active template deactivates the first; stale version → 409 SYS_409")
     @Test
     void emailTemplateCrudPreviewAndVersionConflictAreAdminOnly() throws Exception {
         mockMvc.perform(get("/api/v1/email/templates")
@@ -185,6 +188,7 @@ class NotificationControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.body", is("Hello Lan, due 2026-07-20")));
     }
 
+    @DisplayName("L2-NTF-03 | Negative: event catalogue and config are ADMIN-only; partial policy set → 422 VAL_001")
     @Test
     void notificationEventsAndConfigAreAdminOnlyAndValidateCompletePolicies() throws Exception {
         mockMvc.perform(get("/api/v1/notification-events")

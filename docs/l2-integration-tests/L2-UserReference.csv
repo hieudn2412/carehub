@@ -1,0 +1,30 @@
+﻿"L2-UserReference  |  user CRUD + Excel import + training activity-type catalog  |  reference data on a real DB","","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","Services Involved","Infrastructure (Testcontainers)","External Mocks (WireMock)","Given (DB State / Setup)","When (Action / HTTP Call)","Then (Expected DB State + Events + Response)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: user lifecycle  |  UserControllerIntegrationTest","","","","","","","","","","","","","",""
+"L2-REF-01","Happy Path + Constraint Violation","FR-003; NAC-01-02; DC-06","FT-01","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","Department CARD, roles ADMIN/USER seeded; admin JWT","POST /api/v1/users {employeeCode, email, roleIds}; then re-POST the same body","DB: users row + user_roles link created; welcome email captured
+Duplicate employeeCode → 409 SYS_409 (application-level existsBy pre-check, not a DB constraint)","No","Pass","",""
+"L2-REF-02","Query Correctness","FR-006; NAC-01-03","FT-01","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","Admin + regular user seeded","GET /users as USER; GET /users/me as USER","/users → 403 for USER
+/me resolves the JWT subject to the right employee and joins departmentName","Yes","Pass","",""
+"L2-REF-03","Happy Path","FR-004; AC-01-04","FT-01","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","Target user ACTIVE","PATCH lock → unlock → reset-password → DELETE (soft)","Status chain ACTIVE → LOCKED → ACTIVE persisted
+Reset returns a plaintext password whose bcrypt lands in DB
+Soft delete: users.is_deleted = true and re-read → 404","No","Pass","",""
+"L2-REF-04","Negative","FR-005","FT-01","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None — AMQP captured at the EmailProducer boundary (CapturingEmailProducerConfig)","User with a known password","POST change-password with wrong old password, then with the right one","Wrong old password → 400 REQ_001
+Success: users.password re-encoded (bcrypt matches the new value)","Yes","Pass","",""
+"  ▶  Block: user Excel import  |  partial-batch semantics","","","","","","","","","","","","","",""
+"L2-REF-05","Happy Path","FR-011; FR-012; AC-03-01","FT-03","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Role USER seeded; one-row Excel built with POI","POST /api/v1/imports/users (multipart .xlsx) as admin","DB: INACTIVE first-login user created; Department/Position/EducationLevel auto-created (1 each); USER role attached
+import log status COMPLETED; list endpoint filters by status + q","No","Pass","",""
+"L2-REF-06","Constraint Violation","NAC-03-01; FR-013","FT-03","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Excel with two rows sharing one employeeCode","POST /imports/users","One row inserted, one row FAILED
+import log status COMPLETED_WITH_ERRORS
+One bad row does not kill the batch","Yes","Pass","",""
+"L2-REF-07","Negative","NAC-03-03; FR-011","FT-03","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","USER-role JWT; a .txt upload","POST /imports/users as USER; then as admin with file.txt","USER → 403
+.txt extension → 400 REQ_001","Yes","Pass","",""
+"  ▶  Block: training activity-type catalog  |  optimistic lock + unique code","","","","","","","","","","","","","",""
+"L2-REF-08","Happy Path","AC-04-03; FR-019","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","Admin JWT","POST /training/activity-types with code ' cme '","Code normalized to CME; row persisted
+auditTimeline non-empty (change log written in the same transaction)","No","Pass","",""
+"L2-REF-09","Constraint Violation","NAC-04-04; DC-06","FT-04","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Activity type CME exists","POST the same code again","409 SYS_409","Yes","Pass","",""
+"L2-REF-10","Negative","VAL; FR-019","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","—","POST with maxCreditedHoursPerRecord = 0","422 VAL_001","Yes","Pass","",""
+"L2-REF-11","Query Correctness","FR-014","FT-04","P3","carehub-backend + PostgreSQL","PostgreSQL 17","None","Type referenced by one training record","GET /training/activity-types?keyword=cme (case-insensitive)","Row matched case-insensitively; usageCount = 1 derived from referencing records","No","Pass","",""
+"L2-REF-12","Happy Path","FR-019; NAC-04-04","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","Type referenced by a record","PATCH status {active:false, version}; then DELETE /training/activity-types/{id}","Deactivation succeeds (referenced types may be hidden, not removed)
+DELETE endpoint does not exist → 405 REQ_001","No","Pass","",""
+"L2-REF-13","Optimistic Lock","DC; SYS_409","FT-04","P1","carehub-backend + PostgreSQL","PostgreSQL 17","None","Type at version N","PUT with version N+10","409 with message containing 'updated by another user'","Yes","Pass","",""
+"L2-REF-14","Constraint Violation","NAC-04-04","FT-04","P2","carehub-backend + PostgreSQL","PostgreSQL 17","None","Type referenced by a record","PUT changing the code","409 — a referenced type cannot change its code","Yes","Pass","",""
