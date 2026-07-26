@@ -147,7 +147,9 @@ public class ExamAttemptService {
         requireOwner(attempt, userId);
         ensureInProgress(attempt);
         if (isExpired(attempt)) {
-            ExamAttempt saved = gradeAttempt(attempt, request, effectiveExpiry(attempt));
+            // Hết giờ: chốt bài bằng đáp án ĐÃ lưu trước hạn, bỏ qua payload gửi kèm
+            // (nếu không, client sửa giờ máy vẫn nộp được đáp án mới sau khi hết giờ).
+            ExamAttempt saved = gradeAttempt(attempt, null, effectiveExpiry(attempt));
             return toResponse(saved, true, canRevealAnswers(saved));
         }
         upsertAnswers(attempt, request);
@@ -159,10 +161,10 @@ public class ExamAttemptService {
         ExamAttempt attempt = find(attemptId);
         requireOwner(attempt, userId);
         ensureInProgress(attempt);
-        LocalDateTime submittedAt = isExpired(attempt)
-                ? effectiveExpiry(attempt)
-                : LocalDateTime.now();
-        ExamAttempt saved = gradeAttempt(attempt, request, submittedAt);
+        boolean expired = isExpired(attempt);
+        LocalDateTime submittedAt = expired ? effectiveExpiry(attempt) : LocalDateTime.now();
+        // Quá hạn thì chỉ chấm phần đã lưu trước hạn — đáp án gửi kèm lần nộp muộn bị bỏ qua.
+        ExamAttempt saved = gradeAttempt(attempt, expired ? null : request, submittedAt);
         return toResponse(saved, true, canRevealAnswers(saved));
     }
 

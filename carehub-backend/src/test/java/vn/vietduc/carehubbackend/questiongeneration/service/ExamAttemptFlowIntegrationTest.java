@@ -206,7 +206,7 @@ class ExamAttemptFlowIntegrationTest {
 
     // ── expiry semantics ──────────────────────────────────────────────────────
 
-    @DisplayName("L2-EXM-08 | Transaction Boundary: a save after the deadline auto-grades with submittedAt = expiresAt and still counts the late answers")
+    @DisplayName("L2-EXM-08 | Transaction Boundary: a save after the deadline auto-grades with submittedAt = expiresAt and DISCARDS the late answers")
     @Test
     void lateSaveAutoGradesAtTheExpiryInstant() {
         ExamAssignment assignment = seedAssignment(1, null);
@@ -216,17 +216,37 @@ class ExamAttemptFlowIntegrationTest {
         LocalDateTime forcedExpiry = LocalDateTime.now().minusMinutes(5).withNano(0);
         forceExpiry(started.id(), forcedExpiry);
 
-        attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "A")); // both correct
+        attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "A")); // both correct, but late
 
         ExamAttempt graded = attemptRepository.findById(started.id()).orElseThrow();
         assertThat(graded.getStatus()).isEqualTo(ExamAttemptStatus.GRADED);
         assertThat(graded.getSubmittedAt()).isEqualTo(forcedExpiry); // capped at the deadline
-        assertThat(graded.getCorrectCount()).isEqualTo(2);           // late answers still counted
-        assertThat(graded.getScore()).isEqualByComparingTo("10.00");
+        // The time limit is enforced server-side: answers arriving after expiry are dropped, so the
+        // attempt is graded on whatever was autosaved before the deadline (nothing, in this case).
+        assertThat(graded.getCorrectCount()).isZero();
+        assertThat(graded.getScore()).isEqualByComparingTo("0.00");
 
         assertThatThrownBy(() -> attemptService.saveAnswers(started.id(), employee.getId(), answers("B", "B")))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Lượt làm bài không còn ở trạng thái đang làm");
+    }
+
+    @DisplayName("L2-EXM-08b | Security: answers autosaved BEFORE the deadline are kept when a late save closes the attempt")
+    @Test
+    void lateSaveKeepsAnswersSavedBeforeExpiry() {
+        ExamAssignment assignment = seedAssignment(1, null);
+        ExamAttemptResponse started = attemptService.start(assignment.getId(), employee.getId());
+
+        attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "B")); // in time: 1 correct
+
+        forceExpiry(started.id(), LocalDateTime.now().minusMinutes(5).withNano(0));
+        // A late attempt to "fix" the second answer must not change the outcome.
+        attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "A"));
+
+        ExamAttempt graded = attemptRepository.findById(started.id()).orElseThrow();
+        assertThat(graded.getStatus()).isEqualTo(ExamAttemptStatus.GRADED);
+        assertThat(graded.getCorrectCount()).isEqualTo(1);
+        assertThat(graded.getScore()).isEqualByComparingTo("5.00");
     }
 
     @DisplayName("L2-EXM-09 | Query Correctness: a read (listForUser) grades an expired IN_PROGRESS attempt — a write on a GET")
@@ -249,14 +269,11 @@ class ExamAttemptFlowIntegrationTest {
     @DisplayName("L2-EXM-10 | Event Published: a passed submit must create the EXAM_PASSED training record and notification after commit (D33)")
     @Test
     void passedSubmitTriggersTheAfterCommitChain() {
-        // EXPECTED TO FAIL until D33 is resolved. ExamPassedTrainingListener (AFTER_COMMIT, no
-        // @Transactional of its own) calls trainingRecordRepository.save() while the committed
-        // transaction's EntityManager is still thread-bound; Hibernate defers the IDENTITY insert
-        // and hands back a DelayedPostInsertIdentifier, which explodes with
-        // "ClassCastException: DelayedPostInsertIdentifier cannot be cast to java.lang.Long" —
-        // and the listener's catch(Exception) swallows it. Net effect in production: passing an
-        // exam NEVER creates the CME record or the congratulation notification.
-        // Fix: annotate the listener @Transactional(propagation = REQUIRES_NEW) (or @Async).
+        // D33 (fixed): ExamPassedTrainingListener now runs in its own transaction
+        // (@Transactional REQUIRES_NEW). Without it the AFTER_COMMIT save reused the committed
+        // transaction's EntityManager, Hibernate handed back a DelayedPostInsertIdentifier and
+        // the resulting ClassCastException was swallowed by the listener's catch — so passing an
+        // exam never created the CME record nor the notification.
         ExamAssignment assignment = seedAssignment(1, null);
         ExamAttemptResponse started = attemptService.start(assignment.getId(), employee.getId());
 
@@ -270,8 +287,9 @@ class ExamAttemptFlowIntegrationTest {
         assertThat(attempt.getClassification()).isNotNull();
 
         // AFTER_COMMIT listener effects (this class is not @Transactional, so the commit is real):
+        String cmeRef = "EXAM_ASSIGNMENT:" + assignment.getId() + ":USER:" + employee.getId();
         List<TrainingRecord> records = trainingRecordRepository.findAll().stream()
-                .filter(r -> ("EXAM_ATTEMPT:" + attempt.getId()).equals(r.getSourceReference()))
+                .filter(r -> cmeRef.equals(r.getSourceReference()))
                 .toList();
         assertThat(records).hasSize(1);
         assertThat(records.get(0).getWorkflowStatus()).isEqualTo(TrainingRecordStatus.SUBMITTED);
@@ -300,7 +318,7 @@ class ExamAttemptFlowIntegrationTest {
         assertThat(attempt.getPassed()).isFalse();
 
         assertThat(trainingRecordRepository.findAll().stream()
-                .filter(r -> ("EXAM_ATTEMPT:" + attempt.getId()).equals(r.getSourceReference()))
+                .filter(r -> r.getSourceReference() != null && r.getSourceReference().startsWith("EXAM_"))
                 .toList()).isEmpty();
         assertThat(notificationRepository.findAll().stream()
                 .filter(n -> n.getDedupKey() != null && n.getDedupKey().contains("EXAM_PASSED:" + attempt.getId()))

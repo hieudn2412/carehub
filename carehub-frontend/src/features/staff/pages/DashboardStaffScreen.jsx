@@ -85,7 +85,7 @@ export default function DashboardStaffScreen() {
         failed: failedExams,
         rate: Number(examSummary.examPassRate) || 0,
         available: true,
-        note: `Điểm trung bình hiện tại ${averageScore.toFixed(1).replace('.', ',')}.`,
+        note: `Điểm trung bình hiện tại ${averageScore.toFixed(1).replace('.', ',')}/10.`,
         path: '/staff/exam/history',
       }
     : unavailable('Bạn chưa có kết quả bài kiểm tra nào.'), [averageScore, completedExams, examSummary.examPassRate, failedExams, passedExams])

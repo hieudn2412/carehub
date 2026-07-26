@@ -3,8 +3,11 @@ package vn.vietduc.carehubbackend.training.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
 import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
@@ -36,14 +39,43 @@ public class ExamPassedTrainingListener {
     private final TrainingActivityTypeRepository activityTypeRepository;
     private final NotificationEventPublisher notificationEventPublisher;
     private final TrainingComplianceCalculator complianceCalculator;
+    private final PlatformTransactionManager transactionManager;
 
+    /**
+     * Chạy sau khi transaction chấm bài commit, và BẮT BUỘC phải mở transaction MỚI.
+     * Nếu không: save() dùng lại EntityManager của transaction đã commit, Hibernate
+     * hoãn INSERT và trả về DelayedPostInsertIdentifier nên bản ghi không bao giờ
+     * được ghi thật (triệu chứng: log "recordId=null") — trước đây thi đạt không
+     * tạo được bản ghi CME lẫn thông báo.
+     *
+     * <p>Dùng TransactionTemplate thay cho {@code @Transactional}: Spring gọi
+     * phương thức lắng nghe sự kiện trực tiếp trên bean đích nên annotation không
+     * đi qua proxy và không có hiệu lực.
+     */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onExamPassed(ExamAttemptPassedEvent event) {
+        TransactionTemplate template = new TransactionTemplate(transactionManager);
+        template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        template.executeWithoutResult(status -> handleExamPassed(event));
+    }
+
+    private void handleExamPassed(ExamAttemptPassedEvent event) {
         ExamAttempt attempt = event.attempt();
         User user = attempt.getUser();
         String examName = attempt.getAssignment() != null
                 ? attempt.getAssignment().getName()
                 : (attempt.getExamPaper() != null ? attempt.getExamPaper().getName() : "Bài kiểm tra");
+
+        // Mỗi bài được giao chỉ cộng giờ CME MỘT LẦN cho mỗi nhân viên — nếu tính theo
+        // từng lượt thì thi lại nhiều lần sẽ cộng giờ nhiều lần.
+        String cmeSourceReference = attempt.getAssignment() != null
+                ? "EXAM_ASSIGNMENT:" + attempt.getAssignment().getId() + ":USER:" + user.getId()
+                : "EXAM_ATTEMPT:" + attempt.getId();
+        if (trainingRecordRepository.existsBySourceReference(cmeSourceReference)) {
+            log.debug("Bỏ qua ghi nhận CME trùng: userId={}, attemptId={}, ref={}",
+                    user.getId(), attempt.getId(), cmeSourceReference);
+            return;
+        }
 
         try {
             // Find or create a "Kiểm tra năng lực" activity type for auto-created records
@@ -73,13 +105,13 @@ public class ExamPassedTrainingListener {
                     .declaredHours(BigDecimal.valueOf(1.0)) // Default 1 CME hour per passed exam
                     .workflowStatus(TrainingRecordStatus.SUBMITTED)
                     .sourceType(TrainingSourceType.MANUAL)
-                    .sourceReference("EXAM_ATTEMPT:" + attempt.getId())
+                    .sourceReference(cmeSourceReference)
                     .createdByUser(user)
                     .submittedAt(LocalDateTime.now())
                     .build();
-            trainingRecordRepository.save(record);
+            TrainingRecord savedRecord = trainingRecordRepository.saveAndFlush(record);
             log.info("Created training record for exam passed: userId={}, attemptId={}, recordId={}",
-                    user.getId(), attempt.getId(), record.getId());
+                    user.getId(), attempt.getId(), savedRecord.getId());
 
             // Calculate new compliance and send notification
             sendExamPassedNotification(attempt, user, examName);

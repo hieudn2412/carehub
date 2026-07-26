@@ -13,6 +13,7 @@
 .exam-flow .exp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .exam-flow .searchable-select > input { height: 38px; padding: 0 34px; border: 1.5px solid #cbd5e1; border-radius: 8px; }
 .exam-flow__wide { grid-column: 1 / -1; }
+.exam-flow__field-hint { color: #64748b; font-size: 12px; font-weight: 500; }
 .exam-flow__set-field { display: flex; flex-direction: column; gap: 10px; }
 .exam-flow__set-summary {
   display: flex;

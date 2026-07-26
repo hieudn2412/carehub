@@ -4,6 +4,7 @@ import { BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/ico
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
+import { formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerEmployeeDetailPage() {
@@ -161,7 +162,7 @@ function ManagerEmployeeDetailPage() {
           <div className="mgr-metric-card" style={{ cursor: 'default' }}>
             <div className="mgr-metric-label">Điểm thi trung bình</div>
             <div className="mgr-metric-val" style={{ color: '#10b981' }}>
-              {employee.examScore == null ? '---' : `${employee.examScore}%`}
+              {employee.examScore == null ? '---' : `${formatNumber(employee.examScore)}/10`}
             </div>
             <div className="mgr-metric-sub">{employee.totalAttempts} lượt thi đã có điểm</div>
           </div>

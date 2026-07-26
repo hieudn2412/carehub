@@ -199,7 +199,7 @@ class ExamAttemptServiceTest {
     }
 
     @Test
-    void saveAfterDeadlineAutoGradesLatestAnswers() {
+    void saveAfterDeadlineAutoGradesAndDiscardsLateAnswers() {
         attempt.setExpiresAt(LocalDateTime.now().minusSeconds(1));
         var request = new SaveExamAttemptAnswersRequest(List.of(
                 new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
@@ -207,9 +207,11 @@ class ExamAttemptServiceTest {
 
         var response = service.saveAnswers(attempt.getId(), user.getId(), request);
 
+        // Time limit is enforced server-side: the attempt closes on whatever was saved before the
+        // deadline, and the answers riding along with this late call are dropped.
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
-        assertThat(response.score()).isEqualByComparingTo("5.00");
-        assertThat(savedAnswers).extracting(ExamAttemptAnswer::getSelectedAnswer).contains("A");
+        assertThat(response.score()).isEqualByComparingTo("0.00");
+        assertThat(savedAnswers).extracting(ExamAttemptAnswer::getSelectedAnswer).doesNotContain("A");
     }
 
     @Test

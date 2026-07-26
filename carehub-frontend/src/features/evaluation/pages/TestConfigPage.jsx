@@ -15,7 +15,7 @@ const DEFAULT_FORM = {
   status: 'DRAFT',
   totalQuestions: 30,
   timeLimitMinutes: 45,
-  passingScore: 70,
+  passingScore: 7,
   maxRetakes: 3,
   shuffleQuestions: true,
   shuffleOptions: true,
@@ -56,7 +56,8 @@ function TestConfigPage() {
       status: config.status || 'DRAFT',
       totalQuestions: config.totalQuestions || 30,
       timeLimitMinutes: config.timeLimitMinutes || 45,
-      passingScore: config.passingScore || 70,
+      // Dùng ?? vì 0 là điểm đạt hợp lệ trên thang 10 (backend chỉ chặn < 0 và > 10).
+      passingScore: config.passingScore ?? 7,
       maxRetakes: config.maxRetakes ?? 3,
       shuffleQuestions: config.shuffleQuestions !== false,
       shuffleOptions: config.shuffleOptions !== false,
@@ -340,9 +341,10 @@ function TestConfigPage() {
 
               <div className="tcf-field-row">
                 <div className="tcf-field-left">
-                  <span className="tcf-field-label">Điểm đạt (%)</span>
+                  <span className="tcf-field-label">Điểm đạt (thang 10)</span>
+                  <span className="tcf-field-subtext">Số nguyên từ 0 đến 10 (backend lưu kiểu số nguyên)</span>
                 </div>
-                <input type="number" className="tcf-field-input" min="0" max="100" required value={form.passingScore} onChange={(event) => updateForm('passingScore', event.target.value)} />
+                <input type="number" className="tcf-field-input" min="0" max="10" step="1" required value={form.passingScore} onChange={(event) => updateForm('passingScore', event.target.value)} />
               </div>
 
               <div className="tcf-field-row">

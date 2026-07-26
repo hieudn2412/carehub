@@ -28,7 +28,7 @@ const DEFAULT_FORM = {
   professionalFieldId: '',
   totalQuestions: 30,
   timeLimitMinutes: 45,
-  passingScore: 70,
+  passingScore: 7,
   dueAt: '',
   maxAttempts: 1,
   departmentIds: [],
@@ -143,6 +143,12 @@ function ExamConfigPage() {
     if (!form.professionalFieldId) return 'Vui lòng chọn lĩnh vực chuyên môn.'
     if (Number(form.totalQuestions) > Number(selectedSet?.questionCount || 0)) {
       return `Bộ câu hỏi chỉ có ${selectedSet?.questionCount || 0} câu.`
+    }
+    // Backend lưu passingScore kiểu Integer (ExamConfig/ExamPaper) nên chỉ nhận số nguyên;
+    // gửi 8.5 sẽ bị Jackson cắt âm thầm thành 8.
+    const passingScore = Number(form.passingScore)
+    if (form.passingScore === '' || !Number.isInteger(passingScore) || passingScore < 0 || passingScore > 10) {
+      return 'Điểm đạt phải là số nguyên trong khoảng 0-10.'
     }
     if (!form.departmentIds.length && !form.userIds.length) return 'Vui lòng chọn khoa/phòng hoặc nhân viên nhận bài.'
     return ''
@@ -352,8 +358,9 @@ function ExamConfigPage() {
                     <input type="number" min="1" value={form.timeLimitMinutes} onChange={(event) => update('timeLimitMinutes', event.target.value)} required />
                   </label>
                   <label>
-                    Điểm đạt (%)
-                    <input type="number" min="0" max="100" value={form.passingScore} onChange={(event) => update('passingScore', event.target.value)} required />
+                    Điểm đạt (thang 10)
+                    <input type="number" min="0" max="10" step="1" value={form.passingScore} onChange={(event) => update('passingScore', event.target.value)} required />
+                    <small className="exam-flow__field-hint">Nhập số nguyên theo thang 10, ví dụ 7 hoặc 8.</small>
                   </label>
                   <label>
                     Số lượt làm tối đa

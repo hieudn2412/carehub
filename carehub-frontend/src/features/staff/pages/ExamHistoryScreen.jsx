@@ -3,7 +3,7 @@ import '../styles/ExamHistoryScreen.css'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { CheckCircleOutlined, EyeOutlined, FileTextOutlined, PieChartOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 
@@ -52,7 +52,7 @@ function ExamHistoryScreen() {
     const passed = completedAttempts.filter((attempt) => attempt.passed === true).length
     const scored = completedAttempts.filter((attempt) => attempt.score !== null && attempt.score !== undefined)
     const avgScore = scored.length
-      ? Math.round(scored.reduce((sum, attempt) => sum + Number(attempt.score || 0), 0) / scored.length)
+      ? Math.round((scored.reduce((sum, attempt) => sum + Number(attempt.score || 0), 0) / scored.length) * 10) / 10
       : 0
     return {
       total: completedAttempts.length,
@@ -108,7 +108,7 @@ function ExamHistoryScreen() {
           {[
             { label: 'Tổng bài đã thi', value: summary.total, mod: 'blue', icon: <FileTextOutlined /> },
             { label: 'Số bài đạt', value: summary.passed, mod: 'green', icon: <CheckCircleOutlined /> },
-            { label: 'Điểm TB', value: `${summary.avgScore}%`, mod: 'amber', icon: <TrophyOutlined /> },
+            { label: 'Điểm TB', value: `${formatNumber(summary.avgScore)}/10`, mod: 'amber', icon: <TrophyOutlined /> },
             { label: 'Tỉ lệ đạt', value: `${summary.passRate}%`, mod: 'purple', icon: <PieChartOutlined /> },
           ].map(({ label, value, mod, icon }) => (
             <div key={label} className="eh-summary-card">
@@ -175,7 +175,7 @@ function ExamHistoryScreen() {
                   <td data-label="Điểm số">
                     <span className={`eh-score ${
                       attempt.passed === true ? 'eh-score--pass' : attempt.passed === false ? 'eh-score--fail' : 'eh-score--pending'
-                    }`}>{attempt.score ?? '---'}{attempt.score !== null && attempt.score !== undefined ? '%' : ''}</span>
+                    }`}>{attempt.score == null ? '---' : `${formatNumber(attempt.score)}/10`}</span>
                   </td>
                   <td data-label="Phân loại">
                     {attempt.classification ? (
@@ -219,7 +219,7 @@ function ExamHistoryScreen() {
           <div className="eh-table-card eh-detail-card">
             <div className="eh-detail-header">
               <strong>{selectedAttempt.examPaperName}</strong>
-              <span>{selectedAttempt.score ?? '---'} điểm</span>
+              <span>{selectedAttempt.score == null ? '---' : `${formatNumber(selectedAttempt.score)}/10`}</span>
             </div>
             {(selectedAttempt.answers || []).length === 0 && (
               <div className="eh-answer-line">Phân công này chỉ hiển thị điểm, không hiển thị đáp án đúng và giải thích.</div>

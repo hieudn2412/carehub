@@ -638,7 +638,8 @@ public class ExamAssignmentService {
                 availabilityText,
                 actionLabel,
                 actionable,
-                bestAttempt == null ? null : bestAttempt.getScore().divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP),
+                // Điểm đã ở thang 0-10 (ExamAttemptService.gradeAttempt) — trả nguyên, không chia lại.
+                bestAttempt == null ? null : bestAttempt.getScore(),
                 assessmentStatus,
                 bestAttempt == null ? (currentAttempt == null ? null : currentAttempt.getId()) : bestAttempt.getId()
         );

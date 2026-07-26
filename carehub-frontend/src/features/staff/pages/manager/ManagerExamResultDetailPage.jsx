@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
+import { formatNumber } from '../../../../features/evaluation/utils/documentQuestionUi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultDetailPage() {
@@ -104,7 +105,7 @@ function ManagerExamResultDetailPage() {
                         color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                         fontSize: 14
                       }}>
-                        {score == null ? '--' : `${score}%`}
+                        {score == null ? '--' : `${formatNumber(score)}/10`}
                       </strong>
                     </td>
                     <td data-label="Kết quả">
