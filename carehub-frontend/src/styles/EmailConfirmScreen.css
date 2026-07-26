@@ -1,3 +1,7 @@
+/* TODO(ui-refactor): bộ UI này song song với features/auth/styles/auth/*
+   (steps vs stepper, primary-btn vs primary-button, otp-inputs định nghĩa
+   trùng tên). Kế hoạch dài hạn: hợp nhất về auth styles rồi xoá file này.
+   Hiện chỉ vá responsive tối thiểu để không chặn mobile. */
 .email-confirm-page.modal-bg {
   position: fixed;
   top: 0;
@@ -401,4 +405,32 @@
 @keyframes email-confirm-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* bp-xs — phone nhỏ */
+@media (max-width: 560px) {
+  .email-confirm-page .forgot-card {
+    padding: 32px 20px;
+    border-radius: 18px;
+  }
+
+  .email-confirm-page .forgot-card h1 {
+    font-size: 24px;
+  }
+
+  .email-confirm-page .otp-inputs {
+    gap: 8px;
+  }
+
+  .email-confirm-page .otp-inputs input {
+    width: 42px;
+    height: 48px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .email-confirm-page .primary-btn,
+  .email-confirm-page .input-wrap input {
+    transition: none;
+  }
 }
