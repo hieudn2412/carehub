@@ -45,6 +45,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExamAttemptService {
     private static final Set<String> VALID_ANSWERS = Set.of("A", "B", "C", "D");
+    // Giữ đồng bộ với ExamAssignmentService.DEFAULT_MAX_ATTEMPTS
+    private static final int DEFAULT_MAX_ATTEMPTS = 1;
 
     private final ExamAssignmentService assignmentService;
     private final ExamAttemptRepository attemptRepository;
@@ -361,14 +363,57 @@ public class ExamAttemptService {
     }
 
     private boolean canRevealAnswers(ExamAttempt attempt) {
-        return resultVisibility(attempt) == ExamResultVisibility.SCORE_AND_ANSWERS
-                && (attempt.getStatus() == ExamAttemptStatus.SUBMITTED || attempt.getStatus() == ExamAttemptStatus.GRADED);
+        if (resultVisibility(attempt) != ExamResultVisibility.SCORE_AND_ANSWERS) {
+            return false;
+        }
+        if (attempt.getStatus() != ExamAttemptStatus.SUBMITTED && attempt.getStatus() != ExamAttemptStatus.GRADED) {
+            return false;
+        }
+        // Chống lỗ hổng "xem đáp án rồi thi lại trên cùng một đề": mọi lượt của một phân công
+        // đều dùng chung một bộ đề, nên chỉ tiết lộ đáp án đúng + giải thích khi người dùng
+        // KHÔNG còn cách nào tác động tới kết quả nữa (không còn lượt đang làm dở và không
+        // bắt đầu thêm lượt mới được vì hết lượt / phân công đã đóng / đã quá hạn).
+        return !hasRemainingExamAccess(attempt);
+    }
+
+    /**
+     * Người dùng còn có thể tác động tới kết quả của phân công này hay không:
+     * đang có một lượt làm dở chưa hết giờ, hoặc còn được bắt đầu thêm một lượt mới.
+     */
+    private boolean hasRemainingExamAccess(ExamAttempt attempt) {
+        ExamAssignment assignment = attempt.getAssignment();
+        if (assignment == null) {
+            // Không xác định được phân công: giữ nguyên hành vi cũ (cho phép tiết lộ).
+            return false;
+        }
+        List<ExamAttempt> attempts = attemptRepository
+                .findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, attempt.getUser());
+        // Còn lượt đang làm dở trên cùng bộ đề (kể cả khi phân công đã đóng, vì submit()
+        // chỉ kiểm tra trạng thái lượt) — chưa được lộ đáp án của các lượt trước.
+        boolean hasLiveAttempt = attempts.stream()
+                .anyMatch(other -> other.getStatus() == ExamAttemptStatus.IN_PROGRESS && !isExpired(other));
+        if (hasLiveAttempt) {
+            return true;
+        }
+        if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
+            return false;
+        }
+        if (assignment.getDueAt() != null && LocalDateTime.now().isAfter(assignment.getDueAt())) {
+            return false;
+        }
+        // Đếm y hệt cách start() đang chặn vượt số lượt (countByAssignmentAndUser = số dòng lượt).
+        int maxAttempts = assignment.getMaxAttempts() == null
+                ? DEFAULT_MAX_ATTEMPTS
+                : assignment.getMaxAttempts();
+        return attempts.size() < maxAttempts;
     }
 
     private ExamResultVisibility resultVisibility(ExamAttempt attempt) {
-        return attempt.getAssignment().getResultVisibility() == null
-                ? ExamResultVisibility.SCORE_ONLY
-                : attempt.getAssignment().getResultVisibility();
+        ExamAssignment assignment = attempt.getAssignment();
+        if (assignment == null || assignment.getResultVisibility() == null) {
+            return ExamResultVisibility.SCORE_ONLY;
+        }
+        return assignment.getResultVisibility();
     }
 
     private void requireOwner(ExamAttempt attempt, Long userId) {

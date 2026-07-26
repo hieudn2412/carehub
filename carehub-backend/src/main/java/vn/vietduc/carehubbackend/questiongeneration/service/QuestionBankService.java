@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
@@ -78,6 +79,27 @@ public class QuestionBankService {
                 "DRAFT"
         );
         return createInternal(draftRequest, actor, false);
+    }
+
+    /**
+     * Dùng cho import theo lô: mỗi dòng chạy trong transaction riêng nên một dòng lỗi
+     * (trùng mạnh hoặc lỗi khác) không đánh dấu rollback-only cho cả lô.
+     * Chỉ có tác dụng khi được gọi từ bean khác (qua proxy Spring).
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public QuestionBankQuestionResponse createInNewTransaction(UpsertQuestionBankQuestionRequest request, String actor) {
+        return createInternal(request, actor, true);
+    }
+
+    /**
+     * Bản REQUIRES_NEW của {@link #createImportDraftAllowingDuplicate}, dùng cho import theo lô.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public QuestionBankQuestionResponse createImportDraftAllowingDuplicateInNewTransaction(
+            UpsertQuestionBankQuestionRequest request,
+            String actor
+    ) {
+        return createImportDraftAllowingDuplicate(request, actor);
     }
 
     private QuestionBankQuestionResponse createInternal(UpsertQuestionBankQuestionRequest request, String actor, boolean rejectStrongDuplicate) {

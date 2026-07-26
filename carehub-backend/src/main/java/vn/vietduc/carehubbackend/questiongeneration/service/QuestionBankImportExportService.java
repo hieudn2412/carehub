@@ -174,6 +174,10 @@ public class QuestionBankImportExportService {
         return importHistoryService.recordQuestionBankPreview(file, preview, actor);
     }
 
+    /**
+     * Mỗi dòng được tạo qua {@code questionBankService.*InNewTransaction} (REQUIRES_NEW) để một dòng lỗi
+     * chỉ rollback dòng đó, không đánh dấu rollback-only cho transaction của cả lô import.
+     */
     @Transactional
     public QuestionBankImportCommitResponse commit(QuestionBankImportCommitRequest request, String actor) {
         if (request == null || request.rows() == null || request.rows().isEmpty()) {
@@ -187,7 +191,7 @@ public class QuestionBankImportExportService {
             boolean skipped = false;
             if (errors.isEmpty()) {
                 try {
-                    QuestionBankQuestionResponse created = questionBankService.create(toUpsertRequest(row), actor);
+                    QuestionBankQuestionResponse created = questionBankService.createInNewTransaction(toUpsertRequest(row), actor);
                     createdQuestionId = created.id();
                 } catch (ConflictException ex) {
                     if (duplicateMode == DuplicateHandlingMode.SKIP_DUPLICATES) {
@@ -195,7 +199,8 @@ public class QuestionBankImportExportService {
                         errors.add("Bỏ qua do trùng mạnh: " + safeMessage(ex));
                     } else if (duplicateMode == DuplicateHandlingMode.IMPORT_DUPLICATES_AS_DRAFT) {
                         try {
-                            QuestionBankQuestionResponse created = questionBankService.createImportDraftAllowingDuplicate(toUpsertRequest(row), actor);
+                            QuestionBankQuestionResponse created = questionBankService
+                                    .createImportDraftAllowingDuplicateInNewTransaction(toUpsertRequest(row), actor);
                             createdQuestionId = created.id();
                         } catch (Exception draftEx) {
                             errors.add(safeMessage(draftEx));

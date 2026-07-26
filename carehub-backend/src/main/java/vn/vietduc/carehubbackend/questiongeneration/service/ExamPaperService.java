@@ -33,8 +33,10 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItem;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersionItem;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
@@ -81,6 +83,7 @@ public class ExamPaperService {
     private final QuestionSetVersionRepository questionSetVersionRepository;
     private final QuestionSetVersionItemRepository questionSetVersionItemRepository;
     private final QuestionBankQuestionRepository questionRepository;
+    private final ExamAssignmentRepository examAssignmentRepository;
 
     @Transactional(readOnly = true)
     public List<ExamPaperResponse> list(String query, String status) {
@@ -101,7 +104,15 @@ public class ExamPaperService {
 
     @Transactional(readOnly = true)
     public ExamPaperResponse get(Long paperId) {
-        return toResponse(find(paperId), true);
+        return get(paperId, true);
+    }
+
+    /**
+     * @param includeAnswerKey khi false, các trường đáp án đúng và giải thích được ẩn (null)
+     */
+    @Transactional(readOnly = true)
+    public ExamPaperResponse get(Long paperId, boolean includeAnswerKey) {
+        return toResponse(find(paperId), true, includeAnswerKey);
     }
 
     @Transactional
@@ -153,6 +164,11 @@ public class ExamPaperService {
     @Transactional
     public ExamPaperResponse archive(Long paperId) {
         ExamPaper paper = find(paperId);
+        if (paper.getStatus() != ExamPaperStatus.ARCHIVED
+                && examAssignmentRepository.countByExamPaperAndStatus(paper, ExamAssignmentStatus.OPEN) > 0) {
+            throw new BadRequestException(
+                    "Không thể lưu trữ đề đang có bài kiểm tra được giao. Vui lòng đóng các bài kiểm tra liên quan trước.");
+        }
         paper.setStatus(ExamPaperStatus.ARCHIVED);
         return toResponse(examPaperRepository.save(paper), false);
     }
@@ -593,9 +609,13 @@ public class ExamPaperService {
     }
 
     private ExamPaperResponse toResponse(ExamPaper paper, boolean includeQuestions) {
+        return toResponse(paper, includeQuestions, true);
+    }
+
+    private ExamPaperResponse toResponse(ExamPaper paper, boolean includeQuestions, boolean includeAnswerKey) {
         List<ExamPaperQuestionResponse> questions = includeQuestions
                 ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).stream()
-                .map(this::toQuestionResponse)
+                .map(paperQuestion -> toQuestionResponse(paperQuestion, includeAnswerKey))
                 .toList()
                 : List.of();
         return new ExamPaperResponse(
@@ -620,7 +640,7 @@ public class ExamPaperService {
         );
     }
 
-    private ExamPaperQuestionResponse toQuestionResponse(ExamPaperQuestion paperQuestion) {
+    private ExamPaperQuestionResponse toQuestionResponse(ExamPaperQuestion paperQuestion, boolean includeAnswerKey) {
         ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(paperQuestion)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
         return new ExamPaperQuestionResponse(
@@ -633,8 +653,8 @@ public class ExamPaperService {
                 snapshot.getOptionB(),
                 snapshot.getOptionC(),
                 snapshot.getOptionD(),
-                snapshot.getCorrectAnswer(),
-                snapshot.getExplanation(),
+                includeAnswerKey ? snapshot.getCorrectAnswer() : null,
+                includeAnswerKey ? snapshot.getExplanation() : null,
                 snapshot.getDifficulty(),
                 snapshot.getTopic(),
                 snapshot.getSourceDocument()

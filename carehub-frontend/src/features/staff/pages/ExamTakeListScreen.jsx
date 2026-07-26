@@ -131,7 +131,7 @@ export default function ExamTakeListScreen() {
           </label>
         </div>
       </div>
-      <div className="eh-table-card"><table className="eh-table eh-table--cards"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Kết quả bài kiểm tra</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
+      <div className="eh-table-card"><table className="eh-table eh-table--cards"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm cao nhất</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
         {loading ? <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="6">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
           <td data-label="Tên bài kiểm tra"><strong>{item.name}</strong></td><td data-label="Thời hạn">{formatDateTime(item.dueAt)}</td>
           <td data-label="Lượt làm bài"><span className="eh-attempt-cell">
@@ -140,7 +140,7 @@ export default function ExamTakeListScreen() {
               ? <span className="ch-badge ch-badge--amber">{item.availabilityText || 'Đang làm'}</span>
               : !item.actionable && item.availabilityText ? <span className="ch-badge ch-badge--neutral">{item.availabilityText}</span> : null}
           </span></td>
-          <td data-label="Kết quả">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
+          <td data-label="Điểm cao nhất">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
           <td data-label="Đánh giá"><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
           <td><span className="eh-row-actions">
             {detailIdOf(item) ? <button type="button" className="eh-btn eh-btn--view" onClick={() => openAttempt(detailIdOf(item))} title="Xem chi tiết lượt điểm cao nhất">

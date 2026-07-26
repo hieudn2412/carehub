@@ -34,7 +34,7 @@ class QuestionBankImportExportServiceTest {
         service = new QuestionBankImportExportService(questionBankService, importHistoryService, new ObjectMapper());
         when(importHistoryService.recordQuestionBankPreview(any(), any(), eq("admin"))).thenAnswer(invocation -> invocation.getArgument(1));
         when(importHistoryService.recordQuestionBankCommit(any(), any(), eq("admin"))).thenAnswer(invocation -> invocation.getArgument(1));
-        when(questionBankService.create(any(), eq("admin"))).thenAnswer(invocation -> {
+        when(questionBankService.createInNewTransaction(any(), eq("admin"))).thenAnswer(invocation -> {
             var request = (vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest) invocation.getArgument(0);
             Long id = ids.incrementAndGet();
             return new QuestionBankQuestionResponse(
@@ -166,7 +166,7 @@ class QuestionBankImportExportServiceTest {
     @Test
     void commitCanSkipDuplicateRows() {
         reset(questionBankService);
-        when(questionBankService.create(any(), eq("admin"))).thenThrow(new ConflictException("Câu hỏi bị trùng mạnh"));
+        when(questionBankService.createInNewTransaction(any(), eq("admin"))).thenThrow(new ConflictException("Câu hỏi bị trùng mạnh"));
         MockMultipartFile file = csv("""
                 stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,topic,difficulty,language,sourceDocument,status
                 Câu hỏi đã có?,A,B,C,D,A,Giải thích,Chủ đề,EASY,vi,Nguồn,APPROVED

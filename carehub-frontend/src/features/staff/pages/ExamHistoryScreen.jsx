@@ -222,7 +222,10 @@ function ExamHistoryScreen() {
               <span>{selectedAttempt.score == null ? '---' : `${formatNumber(selectedAttempt.score)}/10`}</span>
             </div>
             {(selectedAttempt.answers || []).length === 0 && (
-              <div className="eh-answer-line">Phân công này chỉ hiển thị điểm, không hiển thị đáp án đúng và giải thích.</div>
+              <div className="eh-answer-line">
+                Chưa hiển thị đáp án đúng và giải thích. Nếu bài kiểm tra cho phép xem đáp án,
+                phần này sẽ hiện sau khi bạn dùng hết lượt làm hoặc khi bài kiểm tra đóng.
+              </div>
             )}
             {(selectedAttempt.questions || []).map((question) => {
               const answer = (selectedAttempt.answers || []).find((item) => item.paperQuestionId === question.paperQuestionId)

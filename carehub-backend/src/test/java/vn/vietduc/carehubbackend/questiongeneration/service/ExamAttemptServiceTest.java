@@ -132,6 +132,11 @@ class ExamAttemptServiceTest {
         savedAnswers.clear();
 
         when(attemptRepository.findById(attempt.getId())).thenReturn(Optional.of(attempt));
+        // Lượt đang xét đã tồn tại trong DB: mọi truy vấn đếm/liệt kê lượt phải nhìn thấy nó,
+        // nếu không canRevealAnswers sẽ tưởng người dùng còn lượt chưa dùng.
+        when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user))
+                .thenReturn(List.of(attempt));
+        when(attemptRepository.countByAssignmentAndUser(assignment, user)).thenReturn(1L);
         when(attemptRepository.save(any(ExamAttempt.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(answerRepository.save(any(ExamAttemptAnswer.class))).thenAnswer(invocation -> {
             ExamAttemptAnswer answer = invocation.getArgument(0);
@@ -184,6 +189,35 @@ class ExamAttemptServiceTest {
         assertThat(response.score()).isEqualByComparingTo("5.00");
         assertThat(response.questions()).hasSize(2);
         assertThat(response.answers()).isEmpty();
+    }
+
+    @Test
+    void getForUserHidesAnswerKeyWhileAnotherAttemptIsStillInProgress() {
+        // Cùng một phân công dùng chung một bộ đề: nếu còn lượt đang làm dở thì xem lại lượt cũ
+        // không được lộ đáp án, nếu không người dùng chép đáp án sang lượt đang làm.
+        ExamAssignment assignment = attempt.getAssignment();
+        assignment.setResultVisibility(ExamResultVisibility.SCORE_AND_ANSWERS);
+        assignment.setMaxAttempts(2);
+        attempt.setStatus(ExamAttemptStatus.GRADED);
+        attempt.setExpiresAt(null);
+        ExamAttempt secondAttempt = ExamAttempt.builder()
+                .id(71L)
+                .assignment(assignment)
+                .examPaper(attempt.getExamPaper())
+                .user(user)
+                .attemptNumber(2)
+                .status(ExamAttemptStatus.IN_PROGRESS)
+                .startedAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusMinutes(20))
+                .totalQuestions(2)
+                .build();
+        when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user))
+                .thenReturn(List.of(secondAttempt, attempt));
+
+        var response = service.getForUser(attempt.getId(), user.getId());
+
+        assertThat(response.answers()).isEmpty();
+        assertThat(response.questions()).hasSize(2);
     }
 
     @Test

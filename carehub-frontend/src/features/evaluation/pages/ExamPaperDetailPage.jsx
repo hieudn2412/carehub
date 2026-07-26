@@ -131,7 +131,7 @@ function ExamPaperDetailPage() {
                           <li>{question.optionC}</li>
                           <li>{question.optionD}</li>
                         </ol>
-                        {showAnswers && (
+                        {showAnswers && question.correctAnswer && (
                           <div className="exp-answer-box">
                             <strong>Đáp án đúng: {question.correctAnswer}</strong>
                             {question.explanation && <span>{question.explanation}</span>}

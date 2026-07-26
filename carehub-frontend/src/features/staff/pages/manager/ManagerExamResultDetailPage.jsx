@@ -33,8 +33,9 @@ function ManagerExamResultDetailPage() {
     return () => window.clearTimeout(timer)
   }, [id])
 
+  // Chỉ số chính thống nhất với màn hình nhân viên: điểm cao nhất (bestScore/bestPassed).
   const getStatusBadge = (item) => {
-    const passed = item.latestPassed ?? item.bestPassed
+    const passed = item.bestPassed ?? item.latestPassed
     if (passed == null) {
       return { label: 'Chưa có kết quả', color: 'gray' }
     }
@@ -65,6 +66,9 @@ function ManagerExamResultDetailPage() {
           {assignment?.name || `Kỳ thi #${id}`}
           {assignment?.professionalFieldName ? ` · ${assignment.professionalFieldName}` : ''}
         </p>
+        <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>
+          Điểm hiển thị là điểm cao nhất trong các lượt thi (thang 0–10), giống điểm nhân viên nhìn thấy.
+        </p>
       </div>
 
       {loading ? (
@@ -78,9 +82,9 @@ function ManagerExamResultDetailPage() {
           <thead>
             <tr>
               <th>Nhân viên</th>
-              <th>Điểm</th>
+              <th>Điểm cao nhất</th>
               <th>Kết quả</th>
-              <th>Thời gian</th>
+              <th>Thời gian (lượt mới nhất)</th>
             </tr>
           </thead>
           <tbody>
@@ -92,26 +96,36 @@ function ManagerExamResultDetailPage() {
               </tr>
             ) : (
               results.map((item, idx) => {
-                const score = item.latestScore ?? item.bestScore
+                const score = item.bestScore ?? item.latestScore
                 const badge = getStatusBadge(item)
+                const showLatest = item.latestScore != null
+                  && item.bestScore != null
+                  && Number(item.latestScore) !== Number(item.bestScore)
                 return (
-                  <tr key={item.id || idx}>
+                  <tr key={item.userId ?? item.id ?? idx}>
                     <td data-label="Nhân viên">
                       <div style={{ fontWeight: 500 }}>{item.userName || item.employeeName || item.fullName || '--'}</div>
                       <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeCode || item.employeeId || '--'}</div>
                     </td>
-                    <td data-label="Điểm">
+                    <td data-label="Điểm cao nhất">
                       <strong style={{
-                        color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
+                        color: badge.color === 'green'
+                          ? 'var(--mgr-green)'
+                          : badge.color === 'red' ? 'var(--mgr-red)' : '#64748b',
                         fontSize: 14
                       }}>
                         {score == null ? '--' : `${formatNumber(score)}/10`}
                       </strong>
+                      {showLatest && (
+                        <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                          Lượt mới nhất: {formatNumber(item.latestScore)}/10
+                        </div>
+                      )}
                     </td>
                     <td data-label="Kết quả">
                       <span className={`mgr-badge mgr-badge--${badge.color}`}>{badge.label}</span>
                     </td>
-                    <td data-label="Thời gian" style={{ color: '#475569' }}>
+                    <td data-label="Thời gian (lượt mới nhất)" style={{ color: '#475569' }}>
                       {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
                     </td>
                   </tr>
