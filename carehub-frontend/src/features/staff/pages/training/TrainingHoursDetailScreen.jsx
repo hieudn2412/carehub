@@ -179,7 +179,7 @@ function TrainingHoursDetailScreen() {
           ]}
         />
         <div className="dashboard-layout__body">
-          <div className="training-page">
+          <div className="training-page th-detail-page">
 
             {loading ? (
               <div className="th-table-state">Đang tải thông tin...</div>

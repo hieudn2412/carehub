@@ -211,17 +211,6 @@
   text-decoration: none;
 }
 
-.atl-action-btn--view {
-  color: #8b5cf6;
-  border-color: #8b5cf6;
-  background: #f5f3ff;
-}
-
-.atl-action-btn--view:hover {
-  background: #ede9fe;
-  color: #6d28d9;
-}
-
 .atl-action-btn--edit {
   color: #0ea5e9;
   border-color: #0ea5e9;

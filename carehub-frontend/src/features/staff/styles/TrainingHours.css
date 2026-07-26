@@ -284,6 +284,7 @@
   letter-spacing: 0.04em;
   border-bottom: 1px solid #f1f5f9;
   background: #fafbfc;
+  white-space: nowrap;
 }
 
 .th-table td {
@@ -315,12 +316,14 @@
 
 .th-col-num {
   text-align: right;
-  width: 60px;
+  width: 140px;
+  min-width: 140px;
 }
 
 .th-col-center {
   text-align: center;
-  width: 90px;
+  width: 120px;
+  min-width: 120px;
 }
 
 .th-col-actions {
@@ -712,6 +715,27 @@
 }
 
 /* ── Detail Page ── */
+.th-detail-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.th-detail-page .th-detail-header {
+  order: 1;
+}
+
+.th-detail-page .th-detail-section {
+  order: 2;
+}
+
+.th-detail-page .th-detail-grid {
+  order: 3;
+}
+
+.th-detail-page .th-detail-actions {
+  order: 4;
+}
+
 .th-back-link {
   display: inline-flex;
   align-items: center;
