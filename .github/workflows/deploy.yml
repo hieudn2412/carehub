@@ -82,9 +82,12 @@ jobs:
           test -n "$VPS_HOST"
           test -n "$VPS_SSH_KEY"
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/carehub_deploy_key"
+          printf '%s' "$VPS_SSH_KEY" | base64 --decode > "$HOME/.ssh/carehub_deploy_key"
           chmod 600 "$HOME/.ssh/carehub_deploy_key"
           ssh-keygen -y -f "$HOME/.ssh/carehub_deploy_key" > /dev/null
+          echo "Deployment key fingerprint:"
+          ssh-keygen -y -f "$HOME/.ssh/carehub_deploy_key" \
+            | ssh-keygen -lf - -E sha256
           ssh-keyscan -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null
           chmod 600 "$HOME/.ssh/known_hosts"
 
@@ -95,6 +98,7 @@ jobs:
         run: |
           test -n "$VPS_USER"
           ssh \
+            -v \
             -i "$HOME/.ssh/carehub_deploy_key" \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
