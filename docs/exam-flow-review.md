@@ -119,10 +119,19 @@ Ghi chú: `@Transactional` đặt trực tiếp trên phương thức `@Transact
 - [x] **2.2 / 2.3** Nối lại nút thi lại; bỏ mặc định lọc ngày; hiển thị số lượt đã dùng và lý do khi nút bị khoá.
 - [x] **Mục 3 (CME)** Chỉ cộng CME một lần cho mỗi bài được giao mỗi người — và sửa D33 để chuỗi này thực sự chạy (xem 4b).
 
+### ĐÃ SỬA (commit `7b9dccb3`)
+
+- [x] **1.2** Chỉ tiết lộ đáp án khi người dùng không còn tác động được tới kết quả (hết lượt / phân công đóng / quá hạn, và không còn lượt làm dở). Kèm sửa thông báo ở màn Lịch sử thi cho đúng ngữ cảnh.
+- [x] **1.3** `GET /exam-papers/{id}` chỉ trả `correctAnswer`/`explanation` cho `EXAM_PUBLISHER`/ADMIN; ghi audit `EXAM_PAPER_VIEW_ANSWER_KEY`; frontend guard nhãn rỗng.
+- [x] **2.8** Chặn lưu trữ đề đang có bài kiểm tra được giao ở trạng thái mở.
+- [x] **2.9** Import ngân hàng câu hỏi: mỗi dòng một transaction riêng.
+- [x] **Mục 3 (latest vs best)** Quản lý và nhân viên cùng nhìn điểm cao nhất, nhãn cột nói rõ.
+- [x] **Ngưỡng năng lực** `CompetencyThresholdPage` chuyển 0–100 → 0–10 khớp `CompetencyClassificationService`.
+
 ### CÒN LẠI
 
-1. **Không tiết lộ đáp án khi còn lượt thi** (1.2) + **siết quyền endpoint chi tiết đề** (1.3) — hai lỗ hổng thi cử còn lại.
-2. Thống nhất manager/user cùng nhìn một chỉ số điểm (latest vs best — mục 3).
-3. Import từng dòng `REQUIRES_NEW` (2.9); chặn archive đề đang giao (2.8); nối "Phát hành" với luồng giao bài (2.6); dọn rollback cho chuỗi 4 API (2.7).
-4. Đọc `passingScore` theo độ khó khi sinh đề (mục 3) và bỏ/nối `ExamConfig.maxRetakes`.
-5. Phần còn lại (mục 4) xử lý dần theo mức ảnh hưởng. Lưu ý `CompetencyThresholdPage` đang cấu hình ngưỡng năng lực theo thang 0–100 trong khi backend phân loại theo thang 0–10 — lệch 10×, nên làm cùng đợt với mục 2.
+1. **Nối "Phát hành" với luồng giao bài** (2.6) — cần thêm UI giao một đề đã phát hành sẵn; hiện chỉ giao được qua luồng gộp tự sinh đề mới.
+2. **Dọn rollback cho chuỗi 4 API "Tạo & giao bài"** (2.7) — nên gộp thành một endpoint giao dịch ở backend thay vì 4 lời gọi tuần tự ở client.
+3. **Phân bổ độ khó bị bỏ qua khi sinh đề** và **`ExamConfig.maxRetakes` là cấu hình chết** (mục 3) — chọn một trong hai: nối vào logic hoặc bỏ khỏi giao diện để khỏi gây hiểu nhầm.
+4. Mục 4 (quyền & dữ liệu) xử lý dần theo mức ảnh hưởng — ưu tiên: `QUESTION_AUTHOR` tự duyệt câu hỏi, manager thấy target mọi khoa, lọc user không nhất quán khi mở rộng target.
+5. **Điểm form thực hành chưa quy về thang 0–10.** `CompetencyService` phân loại thẳng `FormSubmission.totalScore` (điểm thô của phiếu) bằng ngưỡng thang 0–10, trong khi `MyCompetencyService` và hàm `practicalScore()` (đã có sẵn trong chính file đó, dòng ~644) quy đổi `totalScore * 10 / maxScore`. Đã thử sửa nhưng revert: `practicalScore()` trả 0 khi bản ghi thiếu `maxScore`/`convertedScore`, làm điểm 85 thành 0 (`CompetencyServiceTest` đỏ). Cần khảo sát dữ liệu thật xem bao nhiêu phiếu thiếu `maxScore` rồi mới quyết cách quy đổi + fallback.
