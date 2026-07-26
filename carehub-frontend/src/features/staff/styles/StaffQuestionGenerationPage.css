@@ -1,0 +1,156 @@
+/* ── StaffQuestionGenerationPage (.sqg-) ─────────────────────
+   Trang tạo câu hỏi từ tài liệu (staff).
+   Dùng chung .dashboard/.welcome-banner từ StaffDashBoardScreen.css;
+   file này chỉ chứa phần layout riêng của trang. */
+
+.sqg-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sqg-upload-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sqg-file-name {
+  font-size: 13px;
+  color: #1677ff;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sqg-upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px dashed #1677ff;
+  color: #1677ff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sqg-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #1677ff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.sqg-upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sqg-select {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #d9d9d9;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+/* Bảng danh sách tài liệu — dùng .ch-table + .ch-table--cards (card-mode ở bp-xs) */
+.sqg-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sqg-table .sqg-col-center {
+  text-align: center;
+}
+
+.sqg-table .sqg-col-right {
+  text-align: right;
+}
+
+.sqg-doc-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sqg-link-btn {
+  background: none;
+  border: none;
+  color: #1677ff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.sqg-generate-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  background: #1677ff;
+  color: #fff;
+}
+
+.sqg-generate-btn:disabled {
+  background: #d9d9d9;
+  color: #999;
+  cursor: default;
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .sqg-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sqg-select {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .sqg-upload-actions {
+    width: 100%;
+  }
+
+  .sqg-upload-label,
+  .sqg-upload-btn {
+    flex: 1;
+    min-height: 44px;
+  }
+
+  .sqg-file-name {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .sqg-select,
+  .sqg-generate-btn,
+  .sqg-link-btn {
+    min-height: 44px;
+  }
+}

@@ -1,15 +1,13 @@
 import { useState } from 'react'
 import {
   LockOutlined,
-  CloseOutlined,
-  SaveOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
   CheckCircleFilled,
   CloseCircleFilled,
   ExclamationCircleFilled,
-  EditOutlined,
 } from '@ant-design/icons'
+import Modal from '../../../shared/components/Modal.jsx'
 import { staffApi } from '../api/staffApi'
 import { getApiErrorMessage } from '../../auth/utils/apiError'
 
@@ -116,154 +114,142 @@ function ChangePasswordModal({ isOpen, onClose }) {
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-container change-password-modal">
-        {/* Header */}
-        <div className="modal-header">
-          <div className="modal-header__left">
-            <div className="modal-header__icon-wrapper">
-              <EditOutlined />
-            </div>
-            <div className="modal-header__title-area">
-              <h3 className="modal-header__title">Đổi mật khẩu</h3>
-              <p className="modal-header__sub">Đổi mật khẩu mới</p>
-            </div>
-          </div>
-          <button type="button" className="modal-header__close" onClick={handleClose}>
-            <CloseOutlined />
+    <Modal
+      title="Đổi mật khẩu"
+      onClose={handleClose}
+      footer={
+        <>
+          <button
+            type="button"
+            className="ch-btn ch-btn--secondary change-password-modal__action"
+            onClick={handleClose}
+            disabled={isSubmitting}
+          >
+            Hủy
           </button>
-        </div>
+          <button
+            type="submit"
+            form="change-password-form"
+            className="ch-btn ch-btn--primary change-password-modal__action"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Đang lưu...' : 'Đổi mật khẩu'}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="change-password-form"
+        className="change-password-modal modal-body"
+        onSubmit={handleSubmit}
+        autoComplete="off"
+      >
+        <p className="modal-section-title">
+          <LockOutlined /> Đổi mật khẩu
+        </p>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} autoComplete="off">
-          <div className="modal-body">
-            <p className="modal-section-title">
-              <LockOutlined /> Đổi mật khẩu
-            </p>
-
-            {errorMessage && (
-              <div className="modal-alert modal-alert--error">
-                <ExclamationCircleFilled style={{ marginRight: 6 }} />
-                {errorMessage}
-              </div>
-            )}
-
-            {successMessage && (
-              <div className="modal-alert modal-alert--success">
-                <CheckCircleFilled style={{ marginRight: 6 }} />
-                {successMessage}
-              </div>
-            )}
-
-            {/* Mật khẩu hiện tại */}
-            <div className="form-field">
-              <div className="form-field__label-row">
-                <label className="form-field__label">
-                  Mật khẩu hiện tại <span className="required">*</span>
-                </label>
-                <span className="form-field__link">Quên mật khẩu?</span>
-              </div>
-              <div className="form-field__input-container">
-                <input
-                  type={showOldPassword ? 'text' : 'password'}
-                  className="form-field__input"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  autoComplete="off"
-                  aria-label="Mật khẩu hiện tại"
-                />
-                <button
-                  type="button"
-                  className="form-field__toggle-visibility"
-                  onClick={() => setShowOldPassword(!showOldPassword)}
-                >
-                  {showOldPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                </button>
-              </div>
-            </div>
-
-            {/* Mật khẩu mới */}
-            <div className="form-field">
-              <label className="form-field__label">
-                Mật khẩu mới <span className="required">*</span>
-              </label>
-              <div className="form-field__input-container">
-                <input
-                  type={showNewPassword ? 'text' : 'password'}
-                  className="form-field__input"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                  aria-label="Mật khẩu mới"
-                />
-                <button
-                  type="button"
-                  className="form-field__toggle-visibility"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                >
-                  {showNewPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                </button>
-              </div>
-
-              {/* Quy tắc mật khẩu */}
-              <ul className="password-rules">
-                <li className={`password-rule ${getRuleClass(hasMinLength)}`}>
-                  <span className="password-rule__icon">{renderRuleIcon(hasMinLength)}</span>
-                  Ít nhất 4 ký tự
-                </li>
-                <li className={`password-rule ${getRuleClass(hasVisibleCharacter)}`}>
-                  <span className="password-rule__icon">{renderRuleIcon(hasVisibleCharacter)}</span>
-                  Không chỉ gồm khoảng trắng
-                </li>
-              </ul>
-            </div>
-
-            {/* Xác nhận mật khẩu mới */}
-            <div className="form-field">
-              <label className="form-field__label">
-                Xác nhận mật khẩu mới <span className="required">*</span>
-              </label>
-              <div className="form-field__input-container">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  className="form-field__input"
-                  value={confirmNewPassword}
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                  aria-label="Xác nhận mật khẩu mới"
-                />
-                <button
-                  type="button"
-                  className="form-field__toggle-visibility"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-                </button>
-              </div>
-            </div>
+        {errorMessage && (
+          <div className="modal-alert modal-alert--error">
+            <ExclamationCircleFilled style={{ marginRight: 6 }} />
+            {errorMessage}
           </div>
+        )}
 
-          {/* Footer */}
-          <div className="modal-footer">
-            <button
-              type="submit"
-              className="btn btn--primary"
-              disabled={isSubmitting}
-            >
-              <SaveOutlined /> {isSubmitting ? 'Đang lưu...' : 'Lưu'}
-            </button>
+        {successMessage && (
+          <div className="modal-alert modal-alert--success">
+            <CheckCircleFilled style={{ marginRight: 6 }} />
+            {successMessage}
+          </div>
+        )}
+
+        {/* Mật khẩu hiện tại */}
+        <div className="form-field">
+          <div className="form-field__label-row">
+            <label className="form-field__label">
+              Mật khẩu hiện tại <span className="required">*</span>
+            </label>
+            <span className="form-field__link">Quên mật khẩu?</span>
+          </div>
+          <div className="form-field__input-container">
+            <input
+              type={showOldPassword ? 'text' : 'password'}
+              className="form-field__input"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              autoComplete="off"
+              aria-label="Mật khẩu hiện tại"
+            />
             <button
               type="button"
-              className="btn btn--secondary"
-              onClick={handleClose}
-              disabled={isSubmitting}
+              className="form-field__toggle-visibility"
+              onClick={() => setShowOldPassword(!showOldPassword)}
             >
-              <CloseOutlined /> Huỷ
+              {showOldPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        {/* Mật khẩu mới */}
+        <div className="form-field">
+          <label className="form-field__label">
+            Mật khẩu mới <span className="required">*</span>
+          </label>
+          <div className="form-field__input-container">
+            <input
+              type={showNewPassword ? 'text' : 'password'}
+              className="form-field__input"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+              aria-label="Mật khẩu mới"
+            />
+            <button
+              type="button"
+              className="form-field__toggle-visibility"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+            >
+              {showNewPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            </button>
+          </div>
+
+          {/* Quy tắc mật khẩu */}
+          <ul className="password-rules">
+            <li className={`password-rule ${getRuleClass(hasMinLength)}`}>
+              <span className="password-rule__icon">{renderRuleIcon(hasMinLength)}</span>
+              Ít nhất 4 ký tự
+            </li>
+            <li className={`password-rule ${getRuleClass(hasVisibleCharacter)}`}>
+              <span className="password-rule__icon">{renderRuleIcon(hasVisibleCharacter)}</span>
+              Không chỉ gồm khoảng trắng
+            </li>
+          </ul>
+        </div>
+
+        {/* Xác nhận mật khẩu mới */}
+        <div className="form-field">
+          <label className="form-field__label">
+            Xác nhận mật khẩu mới <span className="required">*</span>
+          </label>
+          <div className="form-field__input-container">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              className="form-field__input"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              autoComplete="new-password"
+              aria-label="Xác nhận mật khẩu mới"
+            />
+            <button
+              type="button"
+              className="form-field__toggle-visibility"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
+            </button>
+          </div>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

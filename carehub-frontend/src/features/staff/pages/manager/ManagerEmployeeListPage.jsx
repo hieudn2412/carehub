@@ -129,7 +129,8 @@ function ManagerEmployeeListPage() {
                 Không tìm thấy nhân sự nào.
               </div>
             ) : (
-              <table className="mgr-table">
+              <div className="mgr-table-wrap">
+              <table className="mgr-table mgr-table--cards">
                 <thead>
                   <tr>
                     <th>Mã NV</th>
@@ -144,11 +145,11 @@ function ManagerEmployeeListPage() {
                 <tbody>
                   {employees.map((emp) => (
                     <tr key={emp.employeeId}>
-                      <td style={{ color: '#64748b', fontWeight: 600 }}>{emp.employeeCode}</td>
-                      <td style={{ fontWeight: 600, color: '#0f172a' }}>{emp.employeeName}</td>
-                      <td>{emp.jobPositionName || '---'}</td>
-                      <td>{emp.departmentName || '---'}</td>
-                      <td>
+                      <td data-label="Mã NV" style={{ color: '#64748b', fontWeight: 600 }}>{emp.employeeCode}</td>
+                      <td data-label="Họ và tên" style={{ fontWeight: 600, color: '#0f172a' }}>{emp.employeeName}</td>
+                      <td data-label="Chức danh">{emp.jobPositionName || '---'}</td>
+                      <td data-label="Khoa / Phòng">{emp.departmentName || '---'}</td>
+                      <td data-label="Giờ đào tạo">
                         <strong style={{ 
                           color: getStatusColor(emp.complianceStatus) === 'green' ? 'var(--mgr-green)' : getStatusColor(emp.complianceStatus) === 'red' ? 'var(--mgr-red)' : 'var(--mgr-amber)',
                           fontSize: 14
@@ -156,7 +157,7 @@ function ManagerEmployeeListPage() {
                           {emp.submittedHours || 0}h / {emp.requiredHours || 0}h
                         </strong>
                       </td>
-                      <td>
+                      <td data-label="Trạng thái">
                         <span className={`mgr-badge mgr-badge--${getStatusColor(emp.complianceStatus)}`}>
                           {getStatusText(emp.complianceStatus)}
                         </span>
@@ -185,6 +186,7 @@ function ManagerEmployeeListPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

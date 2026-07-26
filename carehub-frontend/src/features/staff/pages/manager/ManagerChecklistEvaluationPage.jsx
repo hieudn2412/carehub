@@ -7,6 +7,7 @@ import {
 } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
+import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { adminApi } from '../../../admin/api/adminApi.js'
@@ -360,9 +361,8 @@ function ManagerChecklistEvaluationPage() {
       case 'DROPDOWN':
         return (
           <select
-            className="mgr-select"
+            className="mgr-select mgr-eval-select"
             onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            style={{ minWidth: 280 }}
             value={value}
           >
             <option value="">Chọn một đáp án</option>
@@ -449,10 +449,8 @@ function ManagerChecklistEvaluationPage() {
           </div>
 
           {loading ? (
-            <div className="mgr-card" style={{ minHeight: 220, display: 'grid', placeItems: 'center', color: '#64748b' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <LoadingOutlined spin /> Đang tải checklist...
-              </span>
+            <div className="mgr-card">
+              <LoadingState label="Đang tải checklist..." />
             </div>
           ) : errorMessage ? (
             <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>
@@ -464,9 +462,9 @@ function ManagerChecklistEvaluationPage() {
                 <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
                   Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
+                <div className="mgr-eval-lookup-row">
                   <input
-                    className="mgr-select"
+                    className="mgr-select mgr-eval-lookup-input"
                     disabled={subjectLoading}
                     onChange={(event) => {
                       setEmployeeCode(event.target.value)
@@ -482,22 +480,13 @@ function ManagerChecklistEvaluationPage() {
                       }
                     }}
                     placeholder="Nhập mã nhân viên, ví dụ: NV001"
-                    style={{ cursor: 'text', maxWidth: 320, width: '100%' }}
                     type="text"
                     value={employeeCode}
                   />
                   <button
-                    className="training-button training-button--primary"
+                    className="training-button training-button--primary mgr-eval-lookup-btn"
                     disabled={subjectLoading || !employeeCode.trim()}
                     onClick={() => handleSubjectLookup()}
-                    style={{
-                      borderRadius: 8,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      height: 38,
-                      fontSize: 13.5,
-                    }}
                     type="button"
                   >
                     {subjectLoading ? <LoadingOutlined spin /> : null}
@@ -515,23 +504,10 @@ function ManagerChecklistEvaluationPage() {
                 {subjectSuggestion && (
                   <button
                     onClick={() => handleConfirmSubject(subjectSuggestion)}
-                    style={{
-                      alignItems: 'center',
-                      background: '#f0fdf4',
-                      border: '1px solid #34d399',
-                      borderRadius: 10,
-                      boxShadow: '0 10px 24px rgba(16, 185, 129, 0.12)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginTop: 12,
-                      padding: '12px 14px',
-                      textAlign: 'left',
-                      width: '100%',
-                    }}
+                    className="mgr-eval-suggest"
                     type="button"
                   >
-                    <span style={{ display: 'grid', gap: 3 }}>
+                    <span className="mgr-eval-suggest__info">
                       <span style={{ color: '#00866b', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' }}>
                         Kết quả tìm thấy
                       </span>
@@ -628,11 +604,10 @@ function ManagerChecklistEvaluationPage() {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
+              <div className="mgr-eval-actions">
                 <button
                   onClick={() => navigate(listPath)}
-                  className="training-button"
-                  style={{ height: 38, borderRadius: 8, fontSize: 13.5 }}
+                  className="training-button mgr-eval-action-btn"
                   disabled={submitting}
                   type="button"
                 >
@@ -640,8 +615,7 @@ function ManagerChecklistEvaluationPage() {
                 </button>
                 <button
                   onClick={() => handleSubmit(true)}
-                  className="training-button"
-                  style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
+                  className="training-button mgr-eval-action-btn"
                   disabled={submitting}
                   type="button"
                 >
@@ -649,8 +623,7 @@ function ManagerChecklistEvaluationPage() {
                 </button>
                 <button
                   onClick={() => handleSubmit(false)}
-                  className="training-button training-button--primary"
-                  style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
+                  className="training-button training-button--primary mgr-eval-action-btn"
                   disabled={submitting}
                   type="button"
                 >

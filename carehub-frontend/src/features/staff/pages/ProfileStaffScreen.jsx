@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import Sidebar from '../components/sidebar'
-import Header from '../components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ChangePasswordModal from '../components/ChangePasswordModal'
 import ProfileDetails from '../components/ProfileDetails'
 import { staffApi } from '../api/staffApi'
@@ -23,23 +22,17 @@ function ProfileStaffScreen() {
   }, [])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Hồ sơ cá nhân" />
-        <div className="dashboard-layout__body">
-          <ProfileDetails
-            profile={profile}
-            loading={loading}
-            errorMessage={errorMessage}
-            fallbackRole="Nhân viên"
-            fallbackInitials="U"
-            onChangePassword={() => setIsModalOpen(true)}
-          />
-          <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-        </div>
-      </div>
-    </div>
+    <AppShell title="Hồ sơ cá nhân">
+      <ProfileDetails
+        profile={profile}
+        loading={loading}
+        errorMessage={errorMessage}
+        fallbackRole="Nhân viên"
+        fallbackInitials="U"
+        onChangePassword={() => setIsModalOpen(true)}
+      />
+      <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </AppShell>
   )
 }
 

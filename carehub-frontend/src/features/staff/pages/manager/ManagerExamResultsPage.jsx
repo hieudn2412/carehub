@@ -95,8 +95,8 @@ function ManagerExamResultsPage() {
               <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
             </div>
           ) : (
-          <div className="mgr-card" style={{ padding: 0, overflowX: 'auto' }}>
-            <table className="mgr-table">
+          <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
+            <table className="mgr-table mgr-table--cards">
               <thead>
                 <tr>
                   <th>Tên kỳ thi</th>
@@ -110,17 +110,17 @@ function ManagerExamResultsPage() {
               <tbody>
                 {assignments.map((item) => (
                   <tr key={item.id}>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
-                    <td>{item.professionalFieldName || '—'}</td>
-                    <td style={{ color: '#475569' }}>
+                    <td data-label="Tên kỳ thi" style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
+                    <td data-label="Lĩnh vực chuyên môn">{item.professionalFieldName || '—'}</td>
+                    <td data-label="Ngày tạo" style={{ color: '#475569' }}>
                       {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
                     </td>
-                    <td>
+                    <td data-label="Trạng thái">
                       <span className={`mgr-badge mgr-badge--${item.status === 'OPEN' ? 'green' : item.status === 'CLOSED' ? 'red' : 'amber'}`}>
                         {item.status === 'OPEN' ? 'Đang mở' : item.status === 'CLOSED' ? 'Đã đóng' : item.status || '--'}
                       </span>
                     </td>
-                    <td style={{ color: '#475569' }}>
+                    <td data-label="Hạn nộp" style={{ color: '#475569' }}>
                       {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
                     </td>
                     <td style={{ textAlign: 'center' }}>

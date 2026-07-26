@@ -157,7 +157,8 @@ function ManagerEvaluationHistoryPage() {
                 Không có lịch sử đánh giá nào.
               </div>
             ) : (
-              <table className="mgr-table">
+              <div className="mgr-table-wrap">
+              <table className="mgr-table mgr-table--cards">
                 <thead>
                   <tr>
                     <th>Tên quy trình</th>
@@ -172,7 +173,7 @@ function ManagerEvaluationHistoryPage() {
                 <tbody>
                   {history.map((item) => (
                     <tr key={item.id}>
-                      <td style={{ fontWeight: 600, color: '#0f172a' }}>
+                      <td data-label="Tên quy trình" style={{ fontWeight: 600, color: '#0f172a' }}>
                         <span>{item.title}</span>
                         {getSubmissionVersionNumber(item) && (
                           <span
@@ -193,15 +194,15 @@ function ManagerEvaluationHistoryPage() {
                           </span>
                         )}
                       </td>
-                      <td>
+                      <td data-label="Nhân viên được đánh giá">
                         <div style={{ fontWeight: 500 }}>{item.subject?.fullName}</div>
                         <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.subject?.employeeCode}</div>
                       </td>
-                      <td>{item.submittedBy?.fullName || 'Trưởng khoa'}</td>
-                      <td style={{ color: '#475569' }}>
+                      <td data-label="Người đánh giá">{item.submittedBy?.fullName || 'Trưởng khoa'}</td>
+                      <td data-label="Ngày đánh giá" style={{ color: '#475569' }}>
                         {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('vi-VN') : new Date(item.updatedAt).toLocaleDateString('vi-VN')}
                       </td>
-                      <td>
+                      <td data-label="Điểm số đạt">
                         <strong style={{
                           color: getResultColor(item.result) === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                           fontSize: 14
@@ -209,7 +210,7 @@ function ManagerEvaluationHistoryPage() {
                           {formatScore(item.convertedScore)}
                         </strong>
                       </td>
-                      <td>
+                      <td data-label="Xếp loại kết quả">
                         <span className={`mgr-badge mgr-badge--${getResultColor(item.result)}`}>
                           {getResultText(item.result)}
                         </span>
@@ -237,6 +238,7 @@ function ManagerEvaluationHistoryPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {!loading && !error && totalItems > 0 && (

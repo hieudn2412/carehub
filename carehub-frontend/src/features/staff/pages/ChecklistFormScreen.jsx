@@ -4,6 +4,7 @@ import { SaveOutlined, SendOutlined } from '@ant-design/icons'
 import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { staffApi } from '../api/staffApi.js'
 import '../styles/ChecklistFormScreen.css'
 
@@ -28,6 +29,7 @@ function ChecklistFormScreen() {
   const [submission, setSubmission] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [confirmSubmitCount, setConfirmSubmitCount] = useState(null)
 
   const loadAssignedForm = useCallback(() => {
     setLoading(true)
@@ -126,15 +128,19 @@ function ChecklistFormScreen() {
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const unansweredCount = sections.flatMap(s => sortByDisplayOrder(s.items || []))
       .filter(item => item.itemType === 'QUESTION' && item.question)
       .filter(item => !hasAnswerValue(answers[item.question.questionKey])).length
 
     if (unansweredCount > 0) {
-      if (!window.confirm(`Còn ${unansweredCount} câu chưa trả lời. Bạn có chắc muốn nộp?`)) return
+      setConfirmSubmitCount(unansweredCount)
+      return
     }
+    doSubmit()
+  }
 
+  const doSubmit = async () => {
     setSubmitting(true)
     try {
       const draft = await ensureDraft()
@@ -309,6 +315,19 @@ function ChecklistFormScreen() {
           </div>
         </div>
       </div>
+
+      {confirmSubmitCount !== null && (
+        <ConfirmDialog
+          title="Nộp phiếu kiểm tra"
+          message={`Còn ${confirmSubmitCount} câu chưa trả lời. Bạn có chắc muốn nộp?`}
+          confirmLabel="Nộp phiếu"
+          onConfirm={() => {
+            setConfirmSubmitCount(null)
+            doSubmit()
+          }}
+          onCancel={() => setConfirmSubmitCount(null)}
+        />
+      )}
     </div>
   )
 }

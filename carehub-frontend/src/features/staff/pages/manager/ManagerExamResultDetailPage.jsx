@@ -77,8 +77,8 @@ function ManagerExamResultDetailPage() {
               <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
             </div>
           ) : (
-          <div className="mgr-card" style={{ padding: 0, overflowX: 'auto' }}>
-            <table className="mgr-table">
+          <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
+            <table className="mgr-table mgr-table--cards">
               <thead>
                 <tr>
                   <th>Nhân viên</th>
@@ -90,7 +90,7 @@ function ManagerExamResultDetailPage() {
               <tbody>
                 {results.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', color: '#6b7280', padding: 40 }}>
+                    <td colSpan={4} className="ch-empty">
                       Chưa có nhân viên nào làm bài.
                     </td>
                   </tr>
@@ -100,22 +100,22 @@ function ManagerExamResultDetailPage() {
                     const badge = getStatusBadge(item)
                     return (
                       <tr key={item.id || idx}>
-                        <td>
+                        <td data-label="Nhân viên">
                           <div style={{ fontWeight: 500 }}>{item.userName || item.employeeName || item.fullName || '--'}</div>
                           <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeCode || item.employeeId || '--'}</div>
                         </td>
-                        <td>
-                          <strong style={{ 
+                        <td data-label="Điểm">
+                          <strong style={{
                             color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                             fontSize: 14
                           }}>
                             {score == null ? '--' : `${score}%`}
                           </strong>
                         </td>
-                        <td>
+                        <td data-label="Kết quả">
                           <span className={`mgr-badge mgr-badge--${badge.color}`}>{badge.label}</span>
                         </td>
-                        <td style={{ color: '#475569' }}>
+                        <td data-label="Thời gian" style={{ color: '#475569' }}>
                           {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
                         </td>
                       </tr>

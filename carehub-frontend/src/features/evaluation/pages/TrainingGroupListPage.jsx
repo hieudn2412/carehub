@@ -4,6 +4,7 @@ import AdminHeader from '../../admin/components/AdminHeader'
 import TrainingGroupFormPage from './TrainingGroupFormPage'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
 
 function TrainingGroupListPage() {
@@ -16,6 +17,7 @@ function TrainingGroupListPage() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const loadGroups = useCallback(async () => {
     setIsLoading(true)
@@ -52,8 +54,10 @@ function TrainingGroupListPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (group) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa nhóm "${group.name}"?`)) return
+  const confirmDelete = async () => {
+    const group = deleteTarget
+    setDeleteTarget(null)
+    if (!group) return
     try {
       await trainingGroupApi.delete(group.id)
       showToast('Đã xóa nhóm đào tạo', 'success')
@@ -121,7 +125,7 @@ function TrainingGroupListPage() {
                         <button className="ch-btn-icon" title="Sửa" aria-label="Sửa nhóm" onClick={() => handleEdit(group)}>
                           <EditOutlined />
                         </button>
-                        <button className="ch-btn-icon ch-btn-icon--danger" title="Xóa" aria-label="Xóa nhóm" onClick={() => handleDelete(group)}>
+                        <button className="ch-btn-icon ch-btn-icon--danger" title="Xóa" aria-label="Xóa nhóm" onClick={() => setDeleteTarget(group)}>
                           <DeleteOutlined />
                         </button>
                       </td>
@@ -146,6 +150,17 @@ function TrainingGroupListPage() {
         <TrainingGroupFormPage
           group={editingGroup}
           onClose={handleModalClose}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Xóa nhóm đào tạo"
+          message={`Bạn có chắc muốn xóa nhóm "${deleteTarget.name}"?`}
+          confirmLabel="Xóa"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>

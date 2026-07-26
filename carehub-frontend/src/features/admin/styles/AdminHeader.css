@@ -403,7 +403,8 @@
   margin: 4px 0 0;
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .dashboard-header { padding: 9px 14px; }
   .dashboard-header__menu-button { display: inline-grid; place-items: center; flex: 0 0 auto; }
   .dashboard-header__right { gap: 8px; }
@@ -413,7 +414,8 @@
   .dashboard-header__title { font-size: 14px; }
 }
 
-@media (max-width: 520px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .dashboard-header__navigation { gap: 8px; }
   .dashboard-header__back { width: 36px; padding: 0; justify-content: center; }
   .dashboard-header__back span { display: none; }

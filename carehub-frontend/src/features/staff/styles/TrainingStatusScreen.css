@@ -1,8 +1,3 @@
-.training-status-page .dashboard-layout__content {
-  overflow-y: auto;
-  background: #f4f7fb;
-}
-
 .ts-page {
   display: grid;
   gap: 18px;
@@ -54,7 +49,6 @@
 .ts-status--success { background: #e8faf3; color: #087f5f; }
 .ts-status--danger { background: #fff0f1; color: #c81e3a; }
 
-.ts-loading,
 .ts-error,
 .ts-not-configured {
   display: flex;
@@ -67,7 +61,6 @@
   background: #fff;
 }
 
-.ts-loading { border: 1px solid #dce7ef; color: #64748b; }
 .ts-error { border: 1px solid #fecaca; background: #fff5f5; color: #b91c1c; }
 
 .ts-not-configured {
@@ -163,13 +156,19 @@
 .ts-progress-card--danger p { color: #c81e3a; }
 .ts-progress-card p { margin: 14px 0 0; font-size: 13px; font-weight: 600; }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .ts-stat-cards { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 640px) {
-  .ts-page { padding: 14px; }
+/* bp-sm */
+@media (max-width: 768px) {
   .ts-heading { align-items: flex-start; flex-direction: column; }
-  .ts-heading h1 { font-size: 24px; }
   .ts-progress-card header { align-items: flex-start; flex-direction: column; }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .ts-page { padding: 14px; }
+  .ts-heading h1 { font-size: 24px; }
 }

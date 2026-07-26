@@ -12,6 +12,7 @@ import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 
 const AUTOSAVE_DEBOUNCE_MS = 1200
 const AUTOSAVE_INTERVAL_MS = 15000
@@ -78,6 +79,7 @@ function ExamTakeScreen() {
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [saveStatus, setSaveStatus] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [confirmSubmitMessage, setConfirmSubmitMessage] = useState(null)
 
   const attemptRef = useRef(null)
   const answersRef = useRef({})
@@ -330,8 +332,7 @@ function ExamTakeScreen() {
     const warning = unansweredCount > 0
       ? `Bạn còn ${unansweredCount} câu chưa trả lời. Vẫn nộp bài?`
       : 'Nộp bài kiểm tra? Sau khi nộp không thể sửa đáp án.'
-    if (!window.confirm(warning)) return
-    submitCurrentAttempt(false)
+    setConfirmSubmitMessage(warning)
   }
 
   function leaveExam() {
@@ -471,6 +472,19 @@ function ExamTakeScreen() {
           </div>
         </div>
       </div>
+
+      {confirmSubmitMessage && (
+        <ConfirmDialog
+          title="Nộp bài kiểm tra"
+          message={confirmSubmitMessage}
+          confirmLabel="Nộp bài"
+          onConfirm={() => {
+            setConfirmSubmitMessage(null)
+            submitCurrentAttempt(false)
+          }}
+          onCancel={() => setConfirmSubmitMessage(null)}
+        />
+      )}
     </div>
   )
 }
