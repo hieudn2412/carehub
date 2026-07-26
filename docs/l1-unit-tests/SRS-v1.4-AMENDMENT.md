@@ -36,8 +36,8 @@ Mọi giá trị dưới đây đã đối chiếu trực tiếp với code, kè
 | BV-04 | Evidence optimisation limits | — | input 20 MB · stored 5 MB · 2048 px · 40 000 000 px ảnh · 150 000 000 px ảnh trong PDF · 100 trang PDF | — | `EvidenceOptimizationService:38-43` | Bỏ qua tối ưu hoặc từ chối xử lý |
 | BV-05 | Minute part of the legacy `NhMM` duration format | 0 | 59 | — | `TrainingLegacyDurationParser:33-35` | `parsed = false`, cảnh báo "Minute part must be between 0 and 59" |
 | BV-06 | Bare-number legacy duration confidence threshold | — | 24 | — | `TrainingLegacyDurationParser:68-73` | ≤ 24 → confidence 0.85; > 24 → 0.60 + yêu cầu manager xác nhận |
-| BV-07 | Semantic duplicate — strong threshold | — | — | 0.93 | `ValidationRulesProperties:18` (`validation.duplicate.strong-min`) | ≥ ngưỡng → `strongDuplicate = true`, chặn lưu |
-| BV-08 | Semantic duplicate — review threshold | — | — | 0.80 | `ValidationRulesProperties:18` (`validation.duplicate.review-min`) | ≥ ngưỡng → `needsReview = true` |
+| BV-07 | Semantic duplicate — strong threshold | — | — | 0.95 | `ValidationRulesProperties:18` (`validation.duplicate.strong-min`) | ≥ ngưỡng → `strongDuplicate = true`, chặn lưu |
+| BV-08 | Semantic duplicate — review threshold | — | — | 0.88 | `ValidationRulesProperties:18` (`validation.duplicate.review-min`) | ≥ ngưỡng → `needsReview = true` |
 | BV-09 | Question quality — reject threshold | — | — | 0.55 | `ValidationRulesProperties:25` (`validation.quality.reject-min`) | < ngưỡng → loại câu hỏi ứng viên |
 | BV-10 | Exam assignment attempts per user | 1 | 10 | 1 | `ExamAssignmentService:68, 424` | Giá trị ngoài dải bị clamp về biên (không báo lỗi) |
 | BV-11 | Competency tier bands, thang 0–10 | 0 | 10 | ranh giới 4.0 / 6.0 / 7.5 / 9.0 | `CompetencyClassificationService:24-27` | Điểm > 10 bị clamp về 10. ⚠️ Band mặc định có khe — xem defect D5 |
