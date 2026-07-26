@@ -1,9 +1,9 @@
 ﻿"FormScoringPolicy  |  methods: resolve, scoredQuestions, criticalWeightPercent, effectiveGroupWeights, ensurePublishDefault","","","","","","","","","","",""
 "Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
 "  ▶  Block: resolve() — the four 'not configured' branches  |  FR-031, FR-036","","","","","","","","","","",""
-"L1-FSP-01","BC-TRUE","version with no scored question → NOT configured","FR-031; FR-036","P1","FormVersion with a section but zero questions","policy.resolve(version)","definition.configured() = false","No","Pass","",""
-"L1-FSP-02","CC","question with zero options → NOT configured (options.isEmpty() = TRUE)","FR-031; FR-036","P1","question with options = []","policy.resolve(version)","definition.configured() = false","No","Pass","","CC: first sub-condition of notConfigured()"
-"L1-FSP-03","CC","option with null scoreValue → NOT configured (second sub-condition TRUE)","FR-031; FR-036","P1","question with one option whose scoreValue = null","policy.resolve(version)","definition.configured() = false","No","Pass","","CC: second sub-condition of notConfigured()"
+"L1-FSP-01","BC-TRUE","version with no scored question → NOT configured","FR-031","P1","FormVersion with a section but zero questions","policy.resolve(version)","definition.configured() = false","No","Pass","",""
+"L1-FSP-02","CC","question with zero options → NOT configured (options.isEmpty() = TRUE)","FR-031","P1","question with options = []","policy.resolve(version)","definition.configured() = false","No","Pass","","CC: first sub-condition of notConfigured()"
+"L1-FSP-03","CC","option with null scoreValue → NOT configured (second sub-condition TRUE)","FR-031","P1","question with one option whose scoreValue = null","policy.resolve(version)","definition.configured() = false","No","Pass","","CC: second sub-condition of notConfigured()"
 "L1-FSP-04","BVA-Min","every option scores 0 → maxScore <= 0 → NOT configured","FR-037","P1","question with two options, both scoreValue = 0","policy.resolve(version)","definition.configured() = false — maxScore <= 0","No","Pass","","BVA-Min on maxScore"
 "  ▶  Block: scoredQuestions() — the two filter sub-conditions","","","","","","","","","","",""
 "L1-FSP-05","CC","non-QUESTION item types are excluded from scoring","FR-031","P2","@ParameterizedTest — itemType = TITLE_DESCRIPTION / IMAGE / INSTRUCTION","policy.scoredQuestions(version)","Returns empty — only itemType = QUESTION is scored","No","Pass","","@ParameterizedTest @CsvSource"
@@ -13,7 +13,7 @@
 hasConfiguredCriticalWeight() = false","No","Pass","",""
 "L1-FSP-08","BC-FALSE","settingsJson null → default 60% without NPE","BV-12","P2","settingsJson = null","policy.criticalWeightPercent(version)","Returns 60, no NPE
 hasConfiguredCriticalWeight() = false","No","Pass","",""
-"L1-FSP-09","EP-Invalid","non-numeric criticalWeightPercent → sentinel -1","BV-12; FR-036","P2","settingsJson.scoring.criticalWeightPercent = 'sáu mươi' (not a number)","policy.criticalWeightPercent(version)","Returns −1 sentinel instead of throwing","No","Pass","","NumberFormatException branch"
+"L1-FSP-09","EP-Invalid","non-numeric criticalWeightPercent → sentinel -1","BV-12","P2","settingsJson.scoring.criticalWeightPercent = 'sáu mươi' (not a number)","policy.criticalWeightPercent(version)","Returns −1 sentinel instead of throwing","No","Pass","","NumberFormatException branch"
 "L1-FSP-10","BVA","0 and 100 boundaries round-trip through set/read","BV-12","P1","@ParameterizedTest @CsvSource — 0, 1, 60, 99, 100","policy.setCriticalWeightPercent(version, value) then policy.criticalWeightPercent(version)","Every value round-trips exactly
 hasConfiguredCriticalWeight() = true","No","Pass","","BVA both boundaries of BV-12"
 "L1-FSP-11","State","setCriticalWeightPercent preserves unrelated settings keys","BV-12","P3","settingsJson = {theme: dark}","policy.setCriticalWeightPercent(version, 40)","settingsJson still contains theme = dark

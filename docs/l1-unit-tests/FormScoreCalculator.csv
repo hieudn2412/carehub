@@ -1,9 +1,9 @@
 ﻿"FormScoreCalculator  |  method: calculate()  |  weighted scoring, critical failure, pass/fail boundary","","","","","","","","","","",""
 "Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
 "  ▶  Block: calculate() — not-configured short circuit  |  FR-036","","","","","","","","","","",""
-"L1-FSC-01","BC-TRUE","unscorable version → NOT_CONFIGURED with a null result","FR-036","P1","single question whose only option has scoreValue = null","calculator.calculate(version, answers)","scoringStatus = NOT_CONFIGURED
+"L1-FSC-01","BC-TRUE","unscorable version → NOT_CONFIGURED with a null result","FR-031","P1","single question whose only option has scoreValue = null","calculator.calculate(version, answers)","scoringStatus = NOT_CONFIGURED
 result = null
-breakdown is empty","No","Pass","",""
+breakdown is empty","No","Pass","","Verifies a missing option score value, not a formula expression (the form module has no formula engine, so FR-036 does not apply)"
 "  ▶  Block: calculate() — missing answer partitions  |  CC on answer == null || selectedOption == null","","","","","","","","","","",""
 "L1-FSC-02","CC-TRUE","question with no answer at all scores 0 (first sub-condition)","FR-035","P1","two questions, only the first is answered (value 1)","calculator.calculate(version, [answer(first)])","totalScore = 0.5
 breakdown[1].baseScore = 0 — unanswered scores 0","No","Pass","","CC: first sub-condition TRUE"
@@ -31,10 +31,10 @@ passingScoreOverride = 7.5 → rawPassingScore = 0.75","calculator.calculate(ver
 total 0.5 → FAILED_SCORE
 total 1.0 → PASSED","No","Pass","",""
 "  ▶  Block: calculate() — converted score, breakdown, answer mutation  |  FR-037","","","","","","","","","","",""
-"L1-FSC-10","BVA-Max","full marks → converted score is exactly 10","FR-037","P1","two scored questions answered at their maximum
+"L1-FSC-10","BVA-Max","full marks → converted score is exactly 10","FR-035; FR-037 (xem D24: SRS nói thang 0–100, code dùng 0–10)","P1","two scored questions answered at their maximum
 one LONG_TEXT question with excludeFromScore = true","calculator.calculate(version, answers)","result = PASSED
 totalScore = 1.25; convertedScore = 10 exactly
-breakdown has 2 rows — the excluded item is absent","No","Pass","","FR-037: the index is constrained to the 0–10 scale"
+breakdown has 2 rows — the excluded item is absent","No","Pass","","D24: FR-037 mandates 0–100 but convertedScore is 0–10 — scale divergence, same family as D6"
 "L1-FSC-11","State","the FormAnswer entity is stamped with score, weight and weighted score","FR-035","P2","one normal + one critical question, both answered 1
 default critical share 60%","calculator.calculate(version, [normalAnswer, criticalAnswer])","criticalAnswer.scoreValue = 1
 criticalAnswer.weight = 0.6000

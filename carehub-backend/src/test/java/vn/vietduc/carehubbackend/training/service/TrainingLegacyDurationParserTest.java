@@ -11,9 +11,9 @@ import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * L1 unit tests — sheet {@code BoundaryValues}, Test ID prefix {@code L1-BV} (IDs 11–16 live here).
+ * L1 unit tests — sheet {@code BoundaryValues}, Test ID prefix {@code L1-BV} (IDs 11–19 live here).
  *
- * <p>Boundary references: BV-04 (the {@code NhMM} minute part must be 0–59) and BV-05 (a bare numeric
+ * <p>Boundary references: BV-05 (the {@code NhMM} minute part must be 0–59) and BV-06 (a bare numeric
  * legacy duration above 24 drops confidence from 0.85 to 0.60 and requires manager confirmation)
  * in SRS 4.5 Boundary Value Register.
  */

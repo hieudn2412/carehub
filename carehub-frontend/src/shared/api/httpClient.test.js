@@ -140,9 +140,11 @@ describe('httpClient response interceptor — silent refresh', () => {
     expect(window.location.replace).toHaveBeenCalledWith('/auth/login')
   })
 
+  // /auth/refresh-token is deliberately NOT in this list: registering a counting handler for it
+  // while the request under test also targets it means the 401 handler shadows the counter, so the
+  // assertion could never fail. That path gets its own falsifiable case in L1-FE-53.
   it.each([
     '/auth/login',
-    '/auth/refresh-token',
     '/auth/logout',
     '/auth/forgot-password',
     '/auth/reset-password',
@@ -159,8 +161,23 @@ describe('httpClient response interceptor — silent refresh', () => {
 
     await expect(httpClient.post(path, {})).rejects.toBeDefined()
 
-    // The refresh-token path is itself ignored, so it is only ever hit as the original request.
     expect(refreshCalls).toBe(0)
+  })
+
+  it('L1-FE-53 | CC-TRUE: a 401 from /auth/refresh-token itself is not retried', async () => {
+    tokenStorage.setRefreshToken('refresh-1')
+    let refreshCalls = 0
+    server.use(http.post(`${API_BASE_URL}/auth/refresh-token`, () => {
+      refreshCalls += 1
+      return new HttpResponse(null, { status: 401 })
+    }))
+
+    await expect(httpClient.post('/auth/refresh-token', { refreshToken: 'refresh-1' }))
+      .rejects.toBeDefined()
+
+    // Exactly one call: the ignore-list keeps the interceptor from refreshing the refresh call.
+    // A single counting handler makes this falsifiable - drop the guard and this becomes 2.
+    expect(refreshCalls).toBe(1)
   })
 
   it('L1-FE-09 | CC-TRUE: a retried request that 401s again is rejected instead of looping', async () => {
@@ -255,4 +272,12 @@ describe('httpClient response interceptor — silent refresh', () => {
 // Guard against the suite silently losing its jsdom location stub.
 it('L1-FE-23 | State: window.location.replace is stubbed so redirects are observable', () => {
   expect(vi.isMockFunction(window.location.replace)).toBe(true)
+})
+
+// Without this, every assertion above would stay green under any VITE_API_BASE_URL, because the MSW
+// handlers derive their URLs from the same expression the client does. This pins the resolved base
+// so a config change cannot silently move the whole harness.
+it('L1-FE-54 | State: the client baseURL matches the configured API base', () => {
+  expect(httpClient.defaults.baseURL).toBe(API_BASE_URL)
+  expect(API_BASE_URL).toBe(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1')
 })

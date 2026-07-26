@@ -83,9 +83,9 @@ describe('isPathAllowedForRoles / isPathAllowedForAccess', () => {
     expect(isPathAllowedForRoles('', ['ROLE_ADMIN'])).toBe(false)
 
     // isPathAllowedForAccess: the evaluation branch adds the permission side.
-    expect(isPathAllowedForAccess('/admin/evaluation/bank', ['ROLE_ADMIN'], [])).toBe(true)
-    expect(isPathAllowedForAccess('/admin/evaluation/bank', [], ['QUESTION_AUTHOR'])).toBe(true)
-    expect(isPathAllowedForAccess('/admin/evaluation/bank', ['ROLE_USER'], [])).toBe(false)
+    expect(isPathAllowedForAccess('/admin/evaluation/question-bank', ['ROLE_ADMIN'], [])).toBe(true)
+    expect(isPathAllowedForAccess('/admin/evaluation/question-bank', [], ['QUESTION_AUTHOR'])).toBe(true)
+    expect(isPathAllowedForAccess('/admin/evaluation/question-bank', ['ROLE_USER'], [])).toBe(false)
     // A non-evaluation admin path is NOT opened up by an evaluation permission.
     expect(isPathAllowedForAccess('/admin/accounts', [], ['QUESTION_AUTHOR'])).toBe(false)
   })
@@ -113,7 +113,7 @@ describe('getPostLoginRoute', () => {
   it('L1-FE-35 | EP: an evaluation-permission user is routed into the evaluation dashboard', () => {
     const token = accessToken({ roles: [], permissions: ['EXAM_PUBLISHER'] })
 
-    expect(getPostLoginRoute(token, '/admin/evaluation/papers')).toBe('/admin/evaluation/papers')
+    expect(getPostLoginRoute(token, '/admin/evaluation/exam-papers')).toBe('/admin/evaluation/exam-papers')
     expect(getPostLoginRoute(token, '/admin/accounts')).toBe('/admin/evaluation/dashboard')
   })
 })

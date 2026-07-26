@@ -1,6 +1,6 @@
 # L1 Unit Tests — hướng dẫn điền `Report 5.2_L1-UnitTests_Template.xlsx`
 
-Bộ dữ liệu này để Claude cowork (hoặc bạn) paste vào workbook L1. **211 test case / 9 sheet**, mỗi
+Bộ dữ liệu này để Claude cowork (hoặc bạn) paste vào workbook L1. **217 test case / 9 sheet**, mỗi
 dòng CSV tương ứng 1-1 với một `@Test` / `it()` thật trong repo.
 
 > Cập nhật sau khi merge `origin/main` (commit merge `d08e504c`). Hai sheet bị ảnh hưởng semantics:
@@ -20,9 +20,9 @@ dòng CSV tương ứng 1-1 với một `@Test` / `it()` thật trong repo.
 | `CompetencyClassificationService` | `CompetencyClassificationService.csv` | 14 | 12 | **2** |
 | `DuplicateCheckService` | `DuplicateCheckService.csv` | 22 | 22 | 0 |
 | `AccessPolicy-EvaluationSecurity` | `AccessPolicy-EvaluationSecurity.csv` | 26 | 26 | 0 |
-| `BoundaryValues` | `BoundaryValues.csv` | 24 | 21 | **3** |
-| `Frontend` | `Frontend.csv` | 51 | 48 | **3** |
-| **Tổng** | | **211** | **203** | **8** |
+| `BoundaryValues` | `BoundaryValues.csv` | 27 | 24 | **3** |
+| `Frontend` | `Frontend.csv` | 54 | 51 | **3** |
+| **Tổng** | | **217** | **209** | **8** |
 
 **8 case Fail là cố ý** — chúng assert theo SRS nên fail chính là bằng chứng của defect:
 `L1-CCS-13`, `L1-CCS-14` (D5) · `L1-BV-04` (D3) · `L1-BV-10` (D12) · `L1-BV-19` (D13) ·
@@ -116,9 +116,43 @@ chối ghi CSV khi `check` thất bại, nên CSV không bao giờ lệch khỏi
 
 Rule JaCoCo trong `carehub-backend/pom.xml` (`jacoco-check-branch-coverage`) chốt ở mức CLASS, không
 phải PACKAGE — vì `training.service` và `form.submission.service` còn chứa các service orchestration
-lớn không thuộc phạm vi L1. Danh sách 11 class phải khớp giữa `pom.xml` và bảng chú giải ở trên.
+lớn không thuộc phạm vi L1. Danh sách chính xác 11 class nằm trong `pom.xml`:
+
+`TrainingRecordStateMachine` · `TrainingComplianceCalculator` · `TrainingAccessPolicy` ·
+`TrainingLegacyDurationParser` · `TrainingDomainValidator` · `FormScoringPolicy` ·
+`FormScoreCalculator` · `CompetencyClassificationService` · `DuplicateCheckService` ·
+`EvaluationSecurity` · `CosineUtil`
+
+**`ExamAssignmentService` KHÔNG nằm trong rule** dù sheet `BoundaryValues` có `L1-BV-24` test nó —
+class này ở 43,2 % branch (là service orchestration lớn, phần lớn thuộc L2) nên không thể đưa vào
+gate 80 %. Bảng chú giải tiền tố ở trên liệt kê class *được test*, không phải class *được gate*.
 
 Chạy `./mvnw verify` để enforce mốc ≥ 80 % branch.
+
+## Việc còn tồn (review sau merge đã xác nhận, chưa làm)
+
+Một lượt review 7 vùng × verify đối kháng (14 agent) trên code sau merge xác nhận 54 finding. Phần
+đã xử lý: sửa 2 sheet bị đổi semantics, làm 2 case D14 deterministic, tách assertion không thể fail
+của `L1-FE-08`, bỏ tautology `L1-BV-08`, vá nhánh `startDate == null`, sửa loạt SRS ref sai. Phần
+còn lại, xếp theo giá trị:
+
+1. **Sheet mới `L1-TRV` cho `TrainingRecordValidity`** — logic thuần, và là thứ **duy nhất** quyết
+   định tổng giờ trên ledger (main đã bỏ filter ngày khỏi SQL). Test của main chỉ phủ 2/3 status,
+   không có case null / `windowYears = 0` / ngày nhuận. Cần thêm vào cả rule JaCoCo.
+2. **Sheet mới `L1-SS` cho `SystemSettingsService`** — `trainingWindowYears()` và
+   `globalTrainingHours()` điều khiển toàn bộ tính toán compliance. Nhánh optimistic-lock của
+   `update()` (version `null` = last-write-wins im lặng), đường ghi của `getOrCreate()` và
+   `normalize()` chưa có test nào. Test của main còn tautology (so kết quả với chính hằng số nó trả).
+2 sheet này là lý do 2 class mới của main **không xuất hiện trong workbook**: test của họ không mang
+`@DisplayName` dạng `L1-XX-NN` nên `scripts/l1-testcases.py check` không thấy được. Nên siết `check`
+để fail nếu một class nằm trong rule JaCoCo mà có `@Test` không có L1 ID.
+3. **Nới biên `TrainingAccessPolicy`** — 80,9 % branch, sát gate 80 %; 13 nhánh chưa phủ đều dễ đạt.
+4. **`FormScoringPolicy`**: chưa gọi `resolve()` trên version chỉ có câu critical, nên nhánh
+   `normal.isEmpty()` chưa phủ; `hasConfiguredCriticalWeight()` chưa gặp settings có `scoring` nhưng
+   thiếu key `criticalWeightPercent`.
+5. **Ngoài phạm vi L1 (thuộc L2)**: `FormSubmissionService` direct-evaluation, `authorizeVersionUpdate`
+   nhánh MANAGER, `effectiveAssigneeIds` fallback, `summarizeByFormVersion`, re-point assignment item
+   sang version mới. Đều cần DB → thuộc workbook L2.
 
 ## Tài liệu liên quan
 

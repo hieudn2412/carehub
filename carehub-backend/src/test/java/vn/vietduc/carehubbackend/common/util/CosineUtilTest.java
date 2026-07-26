@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.within;
  * L1 unit tests — sheet {@code BoundaryValues}, Test ID prefix {@code L1-BV} (IDs 20–23 live here).
  *
  * <p>{@code CosineUtil.cosine} is the similarity primitive behind every duplicate and paraphrase
- * threshold (BV-06 … BV-09), so its exact contract matters: it returns the <em>dot product</em>
+ * threshold (BV-07, BV-08, BV-09 and BV-13), so its exact contract matters: it returns the <em>dot product</em>
  * clamped at 0, which only equals the cosine when both inputs are L2-normalised. These cases pin
  * that precondition so a future change to non-normalised vectors fails loudly here rather than
  * silently shifting every similarity threshold.

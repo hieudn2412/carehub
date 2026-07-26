@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * L1 unit tests — sheet {@code BoundaryValues}, Test ID prefix {@code L1-BV} (IDs 01–09 live here).
+ * L1 unit tests — sheet {@code BoundaryValues}, Test ID prefix {@code L1-BV} (IDs 01–10 and 25–27 live here).
  *
  * <p>Boundary references: BV-01 (manual declaredHours 0.5–999), BV-02 (evidence file size 1 byte–5 MB)
  * in SRS 4.5 Boundary Value Register; DC-01 for the start/end ordering rules; BR-04 / FR-017 for the
@@ -115,7 +115,7 @@ class TrainingDomainValidatorTest {
             "2026-06-01, null,  08:00, true",  // startTime missing → check skipped
             "2026-06-01, 09:00, null,  true"   // endTime missing → check skipped
     })
-    @DisplayName("L1-BV-06 | CC: the four-term time-ordering guard, each sub-condition driven independently")
+    @DisplayName("L1-BV-06 | CC: the five-term time-ordering guard, each sub-condition driven independently")
     void timeOrderingGuardTruthTable(String endDate, String startTime, String endTime, boolean valid) {
         TrainingRecordFormRequest request = record(
                 START,
@@ -158,8 +158,6 @@ class TrainingDomainValidatorTest {
     @Test
     @DisplayName("L1-BV-08 | EP: only image/jpeg, image/png and application/pdf are accepted")
     void evidenceMimeTypePartitions() {
-        assertThat(MAX_EVIDENCE_BYTES).isEqualTo(5_242_880L);
-
         for (String allowed : new String[]{"image/jpeg", "image/png", "application/pdf"}) {
             assertThatCode(() -> validator.validateEvidenceMetadata(allowed, ONE_MB))
                     .as("allowed MIME type %s", allowed)
@@ -183,6 +181,46 @@ class TrainingDomainValidatorTest {
                 .as("D12: a null MIME type must produce a BadRequestException, not an NPE")
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("JPG, PNG hoặc PDF");
+    }
+
+    // ── Block: validateRecordForm() — the startDate == null partition (D16) ───
+
+    @Test
+    @DisplayName("L1-BV-25 | CC-FALSE: startDate null disables the endDate ordering check")
+    void nullStartDateSkipsDateOrderingCheck() {
+        // The merge added "startDate() != null &&" to this guard and dropped @NotNull from the DTO.
+        // Before the merge this input was an NPE (endDate.isBefore(null)); now it is silently accepted.
+        TrainingRecordFormRequest request = record(null, LocalDate.of(2026, 5, 31), null, null, BigDecimal.ONE);
+
+        assertThatCode(() -> validator.validateRecordForm(request, false)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("L1-BV-26 | CC-FALSE: startDate null also disables the time ordering check (D16)")
+    void nullStartDateSkipsTimeOrderingCheck() {
+        // Pre-merge this threw BadRequestException("End time must be greater than or equal to start
+        // time") because the old guard short-circuited on endDate == null and reached the time
+        // comparison. The new first conjunct turns a rejected record into an accepted one, so DC-01
+        // is no longer enforced when startDate is absent — tracked as D16.
+        TrainingRecordFormRequest request = record(
+                null, null, LocalTime.of(9, 0), LocalTime.of(8, 0), BigDecimal.ONE);
+
+        assertThatCode(() -> validator.validateRecordForm(request, false)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("L1-BV-27 | BVA-Min: the 5 MB evidence ceiling is exactly 5 242 880 bytes")
+    void evidenceCeilingIsFiveMegabytes() {
+        // Pins the production constant by driving the validator, not by comparing the test's own
+        // copy of it against itself.
+        assertThatCode(() -> validator.validateEvidenceMetadata("image/jpeg", 5_242_880L))
+                .doesNotThrowAnyException();
+        assertThatThrownBy(() -> validator.validateEvidenceMetadata("image/jpeg", 5_242_881L))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("5 MB");
+        assertThat(MAX_EVIDENCE_BYTES)
+                .as("the test fixture must track the production limit")
+                .isEqualTo(5_242_880L);
     }
 
     // ── Block: validateRequirementForm() ─────────────────────────────────────

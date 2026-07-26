@@ -24,7 +24,7 @@ Inputs (endDate):
   2026-05-31 → invalid (BVA-Min-1)
   2026-06-01 → valid   (BVA-Min, same day)
   2026-06-02 → valid","Invalid input throws BadRequestException containing 'End date'","Yes","Pass","","@ParameterizedTest @CsvSource"
-"L1-BV-06","CC","the four-term time-ordering guard, each sub-condition driven independently","DC-01","P1","startDate = 2026-06-01, startTime/endTime vary
+"L1-BV-06","CC","the five-term time-ordering guard, each sub-condition driven independently","DC-01","P1","startDate = 2026-06-01, startTime/endTime vary
 @ParameterizedTest @CsvSource — 7 combinations","validator.validateRecordForm(request, false)
 
 Inputs (endDate, startTime, endTime):
@@ -116,3 +116,12 @@ Inputs:
   11   → 10 (BVA-Max+1, clamped down)
   -5   → 1","Persisted assignment.maxAttempts equals the expected clamped value
 Note: out-of-range input is clamped silently, not rejected — confirm this is intended for FR-050","No","Pass","","@ParameterizedTest @CsvSource"
+"  ▶  Block: validateRecordForm() — the startDate == null partition, new in the origin/main merge (D16)","","","","","","","","","","",""
+"L1-BV-25","CC-FALSE","startDate null disables the endDate ordering check","DC-01; FR-015","P1","startDate = null (the DTO lost @NotNull upstream)
+endDate = 2026-05-31","validator.validateRecordForm(request, false)","Does not throw — the new 'startDate != null' conjunct disables the ordering check
+Pre-merge this same input was an NPE (endDate.isBefore(null))","No","Pass","","Covers the FALSE arm of the guard main added; behaviour change tracked as D16"
+"L1-BV-26","CC-FALSE","startDate null also disables the time ordering check (D16)","DC-01; FR-015","P1","startDate = null, endDate = null
+startTime = 09:00, endTime = 08:00 (out of order)","validator.validateRecordForm(request, false)","Does not throw — DC-01 time ordering is no longer enforced when startDate is absent
+Pre-merge this threw BadRequestException('End time must be greater than or equal to start time')","No","Pass","","Documents the DC-01 regression behind D16"
+"L1-BV-27","BVA-Min","the 5 MB evidence ceiling is exactly 5 242 880 bytes","BV-02; BR-04; FR-017","P2","mimeType = image/jpeg, sizes 5 242 880 then 5 242 881","validator.validateEvidenceMetadata('image/jpeg', size)","5 242 880 accepted, 5 242 881 rejected with a message containing '5 MB'
+The limit is pinned by driving the validator, not by comparing the test's own constant against itself","Yes","Pass","","Replaces a tautological assertion in L1-BV-08"

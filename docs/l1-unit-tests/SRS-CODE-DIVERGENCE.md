@@ -198,16 +198,22 @@ FR-048). **Đã cập nhật** SRS → v1.4.
 
 ---
 
-## D11 — Test lạc hậu sau khi thêm feature return-to-draft *(đã sửa)*
+## D11 — Test lạc hậu về return-to-draft *(đã đóng, semantics đã đảo 2 lần)*
 
-Commit `5a9bc66c` ("feat: download evidence, return-to-draft, …") cho phép `SUBMITTED → DRAFT`, nhưng
-`TrainingRecordStateMachineTest` viết trước đó (`a45de56a`) vẫn assert transition này bị chặn → 2
-test fail trong suite trước khi bắt đầu công việc này:
-- `submittedCannotBeChangedToDraft:59`
-- `invalidTransitionThrowsBadRequest:84`
+Lịch sử đầy đủ, vì mục này đã đảo chiều:
 
-Code đúng: `TrainingRecordServiceImpl.returnToDraft` (dòng 247–265) là endpoint có thật, quyền sở hữu
-được kiểm ở dòng 252. **Đã sửa test**, giờ là `L1-TRSM-04` / `L1-TRSM-05`.
+1. Commit `5a9bc66c` ("feat: … return-to-draft …") cho phép `SUBMITTED → DRAFT` với **mọi** actor,
+   nhưng `TrainingRecordStateMachineTest` viết trước đó (`a45de56a`) vẫn assert bị chặn → 2 test
+   fail sẵn trong suite trước khi công việc này bắt đầu.
+2. Tôi sửa test theo code lúc đó (owner được phép).
+3. **Merge `origin/main` đảo lại**: `case SUBMITTED -> adminActor && (to == DRAFT || to == CANCELLED)`
+   — chỉ admin. Test đã cập nhật lần hai: `L1-TRSM-04` giờ là `Guard-FALSE` (owner **không** được),
+   `L1-TRSM-05` là `Guard-TRUE` (admin được), thêm `L1-TRSM-17` (bảng chân lý đầy đủ
+   `adminActor × target`) và `L1-TRSM-18` (đường exception).
+
+Trạng thái hiện tại: **test khớp code**. Nhưng chính thay đổi ở bước 3 tạo ra defect **D15** —
+`TrainingRecordServiceImpl.returnToDraft` vẫn còn nhánh dành cho owner mà giờ không bao giờ chạy
+được. Đây là lý do "suite xanh" không đồng nghĩa "hệ thống đúng".
 
 ---
 
@@ -270,9 +276,11 @@ const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:808
 ...
 return new URL(value, new URL(API_BASE_URL).origin).toString()   // dòng 9
 ```
-`new URL(API_BASE_URL)` **ném lỗi** khi `API_BASE_URL` là đường dẫn tương đối, và
-`carehub-frontend/.env` đang commit đặt đúng như vậy: `VITE_API_BASE_URL=/api/v1` (để dùng proxy của
-Vite dev server). Catch ngoài cùng trả `''`.
+`new URL(API_BASE_URL)` **ném lỗi** khi `API_BASE_URL` là đường dẫn tương đối. `.env` thực tế bị
+git-ignore, nhưng **`carehub-frontend/.env.example` (được commit) và `carehub-frontend/README.md:45`
+đều hướng dẫn đúng giá trị tương đối đó**: `VITE_API_BASE_URL=/api/v1` (để dùng proxy của Vite dev
+server), và `CLAUDE.md` nói rõ `.env` được copy từ `.env.example`. Nên mọi dev làm theo hướng dẫn
+đều gặp lỗi. Catch ngoài cùng trả `''`.
 
 **Đã kiểm chứng**:
 ```
@@ -289,13 +297,43 @@ phản hồi gì**, không lỗi, không log. Ảnh minh chứng cũng không hi
 — pass vì lý do sai, không hề chạm cấu hình thật. Chuyển sang vitest (đọc `.env`) là lúc lỗi lộ ra.
 
 **Test**: `L1-FE-46` (resolve trả rỗng) và `L1-FE-51` (click không mở tab) — **EXPECTED FAIL**.
-`L1-FE-45`, `L1-FE-49` dùng URL tuyệt đối nên vẫn pass, khoanh vùng lỗi chỉ ở nhánh base tương đối.
+`L1-FE-45`, `L1-FE-49` dùng URL tuyệt đối và `L1-FE-52` dùng base tuyệt đối nên đều pass — khoanh
+vùng lỗi chính xác vào nhánh base tương đối.
+
+Hai case D14 **stub env rồi re-import module** (`vi.stubEnv` + `vi.resetModules`) thay vì dựa vào
+`.env` local, nên fail giống nhau trên mọi máy và trên CI. Đã kiểm chứng: kết quả không đổi khi tạm
+ẩn `.env`.
 
 **Đề xuất**: lấy origin từ `window.location` khi base là tương đối —
 ```js
 return new URL(value, new URL(API_BASE_URL, window.location.origin).origin).toString()
 ```
 Rà thêm mọi chỗ khác dùng `new URL(API_BASE_URL)` với giả định base tuyệt đối.
+
+---
+
+## D15–D23 — Defect do `origin/main` mang vào, phát hiện khi review test sau merge
+
+Nhóm này tìm được bằng một lượt review 7 vùng × verify đối kháng trên code **sau merge** (14 agent,
+54/60 finding được xác nhận độc lập). Tất cả đều là code của `origin/main`, **không nằm trong phạm
+vi công việc làm test** — ghi lại để bạn xử lý, chưa sửa dòng nào.
+
+| ID | Mức | Nội dung | Bằng chứng |
+|----|-----|----------|------------|
+| **D15** | **Chặn release** | `returnToDraft` chết hẳn với mọi non-admin. State machine giờ yêu cầu `adminActor` cho `SUBMITTED→DRAFT`, nhưng service vẫn có nhánh cho owner: owner qua được check quyền ở dòng 252 rồi **luôn** bị `requireTransition` chặn → trả **400** thay vì 403, và nhánh owner thành dead code | `TrainingRecordStateMachine.java:23-24` vs `TrainingRecordServiceImpl.java:252,257` |
+| **D16** | **Cao** | `startDate` mất `@NotNull`: `create()` tự điền hôm nay, nhưng `update()` ghi thẳng `null` qua mapper vào cột `NOT NULL` → **HTTP 500** (`SYS_001`) thay cho 400 (`VAL_001`) như trước merge | `TrainingRecordFormRequest.java:21`, `TrainingRecordServiceImpl.java:175-177` vs `TrainingRecordMapper.java:35`, `TrainingRecord.java:69` |
+| **D17** | **Cao** | `bestScore` chia điểm 0–10 cho 10 **lần nữa** → mọi điểm cao nhất báo về nhỏ đi 10 lần | `MyExamAssignmentResponse` + `ExamAssignmentService` (3 field mới `bestScore`/`assessmentStatus`/`detailAttemptId`, không có test nào) |
+| **D18** | **Cao (phân quyền)** | Route `/staff/checklists` mất guard MANAGER, và `/staff/checklists/:id/evaluate` mới thêm **không có guard** → USER thường mở được cả hai | `carehub-frontend/src/app/router.jsx` |
+| **D19** | **Cao (phân quyền)** | `FormAssignmentService.create` bị xoá gate role MANAGER → user ACTIVE nào cũng gán được form đánh giá. Field `UserRoleRepository` còn lại nhưng không dùng là dấu vết | `form/assignment/service/FormAssignmentService.java` |
+| **D20** | **Trung bình (phân quyền)** | Policy mật khẩu nới xuống "≥4 ký tự, không toàn khoảng trắng" ở cả 2 màn reset và DTO backend | `ResetPasswordRequest.java`, `ResetPasswordScreen.jsx`, `EmailConfirmResetScreen.jsx` |
+| **D21** | **Trung bình** | `ownedDraft()` thay call helper bằng check inline 5 nhánh, **bỏ mất** điều kiện `FormStatus.PUBLISHED` và `FormVersionStatus.PUBLISHED` → draft trên form đã RETIRED vẫn sửa được | `form/submission/service/FormSubmissionService.java` |
+| **D22** | **Trung bình** | Trung bình năng lực đổi sang "best attempt mỗi paper": gom nhóm deref `getExamPaper()` **không guard null**, và chọn best theo điểm **thô** nên paper có cả attempt thang 0–10 và 0–100 sẽ chọn sai | `questiongeneration/service/MyCompetencyService.java` |
+| **D23** | **Thấp** | `validUntil()` dùng `startDate.plusYears(w)` còn `isExpired()` dùng `asOf.minusYears(w)` — hai đầu ngược nhau, lệch nhau ở ngày nhuận. Đã chạy kiểm chứng: `startDate=2015-02-28, w=5` → `validUntil=2020-02-28`, `asOf=2020-02-29` → `expired=false`, tức hồ sơ vẫn được tính 1 ngày sau khi chính nó hết hạn | `TrainingRecordValidity.java:12` vs `:19`, cùng phát ra trên một dòng response tại `TrainingStatusServiceImpl.java:157-158` |
+
+**Ngoài ra**: `AT_RISK` và `NOT_CONFIGURED` giờ **không được sinh ra bởi bất kỳ class nào** trong
+backend, nên `atRiskCount` / `notConfiguredCount` trên dashboard cấu trúc luôn bằng 0 và
+`warningMessage` có 2 nhánh không tới được. Đây là hệ quả trực tiếp của việc main bỏ model
+per-requirement (xem D6 và phần dựng lại sheet `TrainingComplianceCalculator`).
 
 ---
 
