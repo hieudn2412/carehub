@@ -84,6 +84,8 @@ Backend requires a `.env.properties` or `env.properties` file at the project roo
 - *Paraphrasing*: `VietQuillParaphraseModelService` uses a T5-based Vietnamese paraphraser. Model files must be placed in `models/` directory (not in repo).
 - Models are loaded from local `models/` paths (configured via `E5_MODEL_PATH`, `VIETQUILL_MODEL_PATH` env vars). These are NOT committed — download separately.
 - Pipeline: Document upload → chunking → AI question generation → embedding → semantic dedup → candidate review → question bank
+- **Full documentation lives in `docs/ai/`** (repo root, not `carehub-backend/docs/`) — `docs/ai/ai-models.md` covers the three flows end to end, every tunable and its range, all decision thresholds, measured benchmarks, and a troubleshooting table. Read it before changing anything under `questiongeneration/`. Benchmark reports are regenerated into `docs/ai/benchmarks/` by env-gated tests (`RUN_E5_BENCH`, `RUN_E5_CALIBRATION`, `RUN_VIETQUILL_BENCH`).
+- Two config names are misleading and documented as such: `document.chunk.target-tokens` counts **words** and does **not** cut chunks (`max-tokens` does), and `ai.paraphrase.num-beams` is overridden by `requestedCount` so changing it has no effect.
 
 **Database**: PostgreSQL 17, timezone set to `Asia/Ho_Chi_Minh` via HikariCP. Hibernate `ddl-auto: update` — schema evolves from entity classes, no migration framework used. Batch inserts configured (batch_size: 100).
 

@@ -15,7 +15,17 @@ import java.util.regex.Pattern;
 public class DocumentSectionDetectionService {
     private static final Pattern CHAPTER = Pattern.compile("^(?:Chương|CHUONG|CHƯƠNG)\\s+\\S+.*", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern MARKDOWN_HEADING = Pattern.compile("^(#{1,6})\\s+\\S.+");
-    private static final Pattern NUMBERED = Pattern.compile("^(\\d+(?:\\.\\d+){0,3})[.)]?\\s+\\S.+");
+    /**
+     * Tiêu đề đánh số. Dấu phân cách sau số là BẮT BUỘC với số một cấp ({@code "1. "}, {@code "1) "});
+     * số nhiều cấp ({@code "1.2.1 Đặc điểm sinh lý"}) thì không cần vì bản thân dạng đó đã đủ đặc trưng.
+     *
+     * <p>Trước đây dấu phân cách là tuỳ chọn ({@code [.)]?}), khiến MỌI đoạn văn mở đầu bằng một
+     * con số bị nhận nhầm là tiêu đề — "5 phút sau khi tiêm cần theo dõi mạch.",
+     * "24 giờ đầu sau mổ là giai đoạn nguy hiểm nhất." — và nội dung của chúng biến mất khỏi
+     * chunk gửi cho LLM.</p>
+     */
+    private static final Pattern NUMBERED =
+            Pattern.compile("^(\\d+(?:\\.\\d+){1,3}|\\d+(?=[.)]))[.)]?\\s+\\S.+");
     private static final Pattern ROMAN = Pattern.compile("^(?:[IVXLCDM]{1,6})[.)]\\s+\\S.+");
     private static final Pattern LETTER = Pattern.compile("^[A-Z][.)]\\s+\\S.+");
 
@@ -42,6 +52,14 @@ public class DocumentSectionDetectionService {
                 sections.add(current);
                 stack.put(level, current);
                 stack.keySet().removeIf(existingLevel -> existingLevel > level);
+                // Giữ luôn dòng tiêu đề làm nội dung của chính section đó.
+                //
+                // Nhận diện tiêu đề là heuristic nên chắc chắn có lúc sai. Nếu sai mà text bị bỏ
+                // đi thì nội dung biến mất khỏi chunk và KHÔNG có log nào — đó chính là cách một
+                // danh sách quy trình đánh số từng bị nuốt trọn. Giữ lại thì trường hợp nhận nhầm
+                // vẫn an toàn, còn trường hợp nhận đúng chỉ tốn thêm một dòng tiêu đề ngắn làm
+                // ngữ cảnh cho LLM — hoàn toàn vô hại.
+                current.paragraphs.add(paragraph);
                 continue;
             }
             if (current == null) {

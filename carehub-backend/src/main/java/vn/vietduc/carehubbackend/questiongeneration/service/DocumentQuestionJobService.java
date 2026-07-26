@@ -56,13 +56,33 @@ import java.util.concurrent.Future;
 @RequiredArgsConstructor
 @Slf4j
 public class DocumentQuestionJobService {
+    /**
+     * Trạng thái coi như "đã có kết quả dùng được, không cần sinh lại".
+     *
+     * <p><b>REJECTED cố ý KHÔNG nằm trong danh sách này.</b> Danh sách được dùng ở hai chỗ:
+     * cổng bỏ qua cấp chunk (dựa trên ứng viên chỉ số 0) và cổng bỏ qua từng ứng viên. Khi có
+     * REJECTED:</p>
+     * <ul>
+     *   <li>ứng viên chỉ số 0 từng bị validation từ chối sẽ khoá CẢ CHUNK vĩnh viễn — không lần
+     *       chạy lại nào, kể cả retry hay đổi cấu hình, sinh lại được nội dung đó;</li>
+     *   <li>nếu chỉ mở cổng cấp chunk mà vẫn chặn ở cấp ứng viên thì còn tệ hơn: hệ thống gọi
+     *       LLM (tốn tiền) rồi vứt luôn câu hỏi mới vì chỉ số đó từng bị từ chối.</li>
+     * </ul>
+     * <p>Bỏ REJECTED ra thì chunk được xử lý lại, câu mới ở chỉ số từng bị từ chối được giữ,
+     * còn những chỉ số đã có ứng viên dùng được vẫn bị bỏ qua nên không sinh bản ghi trùng.
+     * Bản ghi REJECTED cũ được giữ nguyên làm lịch sử.</p>
+     */
     private static final List<CandidateStatus> IDEMPOTENT_STATUSES = List.of(
             CandidateStatus.VALIDATED,
             CandidateStatus.NEED_REVIEW,
             CandidateStatus.APPROVED,
-            CandidateStatus.REJECTED,
             CandidateStatus.SAVED
     );
+
+    /** Cho test khẳng định thành phần của danh sách — đây là quyết định dễ bị vô tình đảo lại. */
+    /* package */ static List<CandidateStatus> idempotentStatuses() {
+        return IDEMPOTENT_STATUSES;
+    }
 
     private final QuestionDocumentService documentService;
     private final DocumentChunkRepository chunkRepository;
@@ -389,6 +409,7 @@ public class DocumentQuestionJobService {
                     chunk.getTextHash(),
                     "vi",
                     categoryId(job),
+                    job.getDocument().getId(),
                     0
             );
             long duplicateCheckStarted = System.nanoTime();
@@ -412,6 +433,15 @@ public class DocumentQuestionJobService {
                     "vi"
             ));
             generatorMs = elapsedMs(generatorStarted);
+            // Kiểm tra huỷ LẠI ngay trước khi ghi. Lượt kiểm tra lúc task bắt đầu là chưa đủ:
+            // giữa hai thời điểm đó có một lời gọi LLM kéo dài tới hàng chục giây, thừa sức để
+            // người dùng bấm huỷ. Ghi tiếp thì phiên kết thúc CANCELLED với candidateCount=0
+            // nhưng DB lại có ứng viên — số đếm mâu thuẫn với danh sách, và chính các ứng viên
+            // đó khoá luôn chunk cho mọi lần chạy sau.
+            if (isCancellationRequested(job.getId())) {
+                log.info("Bỏ ghi ứng viên vì phiên đã bị huỷ jobId={} chunkId={}", job.getId(), chunk.getId());
+                return ChunkOutcome.cancelledOutcome();
+            }
             long persistKnowledgeStarted = System.nanoTime();
             persistKnowledgePoints(job, chunk, generated.knowledgePoints());
             long persistKnowledgeMs = elapsedMs(persistKnowledgeStarted);
@@ -513,6 +543,7 @@ public class DocumentQuestionJobService {
                     chunk.getTextHash(),
                     "vi",
                     categoryId(job),
+                    job.getDocument().getId(),
                     i
             );
             long duplicateStarted = System.nanoTime();

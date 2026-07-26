@@ -182,7 +182,10 @@ public class QuestionBankService {
             throw new BadRequestException(impact.warning());
         }
         question.setStatus(QuestionBankStatus.DRAFT);
-        return withWarnings(questionRepository.save(question), null, true);
+        QuestionBankQuestion saved = questionRepository.save(question);
+        // Câu vừa rời khỏi tập APPROVED nên không được tham gia so trùng nữa.
+        questionEmbeddingService.invalidateApprovedSetCache();
+        return withWarnings(saved, null, true);
     }
 
     @Transactional
@@ -193,7 +196,10 @@ public class QuestionBankService {
             throw new BadRequestException(impact.warning());
         }
         question.setStatus(QuestionBankStatus.ARCHIVED);
-        return withWarnings(questionRepository.save(question), null, true);
+        QuestionBankQuestion saved = questionRepository.save(question);
+        // Xem ghi chú ở deactivate(): tập APPROVED đổi thì cache và chỉ mục ANN phải biết.
+        questionEmbeddingService.invalidateApprovedSetCache();
+        return withWarnings(saved, null, true);
     }
 
     public QuestionBankQuestion find(Long questionId) {

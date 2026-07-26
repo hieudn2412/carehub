@@ -14,8 +14,12 @@ import java.util.Locale;
  * Bộ thu thập số đo dùng chung cho các benchmark model local.
  *
  * <p>Ghi ra hai nơi: stdout (để thấy ngay khi chạy {@code mvnw test}) và
- * {@code target/benchmarks/<slug>.md} (để đính kèm vào tài liệu). Định dạng markdown
- * để dán thẳng vào {@code docs/ai-models.md} không cần chỉnh.</p>
+ * {@code docs/ai/benchmarks/<slug>.md} ở gốc repo. Định dạng markdown để dán thẳng vào
+ * {@code docs/ai/ai-models.md} không cần chỉnh.</p>
+ *
+ * <p>Cố ý KHÔNG ghi vào {@code target/}: thư mục đó nằm trong {@code .gitignore} và bị xoá
+ * mỗi lần {@code mvn clean}, nên báo cáo biến mất ngay sau lần build kế tiếp — trong khi đây
+ * là số liệu tốn hàng chục phút mới đo lại được.</p>
  *
  * <p>Không phải JMH: các benchmark ở đây đo thời gian tường (wall-clock) của một luồng
  * inference thật, có warmup, và báo cáo phân vị thay vì chỉ trung bình. Đủ để so sánh
@@ -23,7 +27,27 @@ import java.util.Locale;
  */
 public final class BenchmarkReport {
 
-    private static final Path OUTPUT_DIR = Path.of("target", "benchmarks");
+    private static final Path OUTPUT_DIR = repositoryRoot().resolve("docs").resolve("ai").resolve("benchmarks");
+
+    /**
+     * Tìm gốc repo bằng cách đi ngược lên từ thư mục làm việc cho tới khi gặp {@code .git}.
+     *
+     * <p>Cần thiết vì thư mục làm việc lúc chạy test là {@code carehub-backend/}, còn thư mục
+     * tài liệu nằm ở gốc repo. Dùng đường dẫn tương đối kiểu {@code ../docs} sẽ vỡ ngay khi ai
+     * đó chạy test từ chỗ khác (IDE, CI).</p>
+     */
+    private static Path repositoryRoot() {
+        Path current = Path.of("").toAbsolutePath();
+        for (Path candidate = current; candidate != null; candidate = candidate.getParent()) {
+            if (Files.isDirectory(candidate.resolve(".git"))) {
+                return candidate;
+            }
+        }
+        // Không tìm thấy .git (bản export, sandbox CI): lùi về thư mục cha của working dir nếu
+        // đang đứng trong module con, ngược lại dùng luôn working dir.
+        Path parent = current.getParent();
+        return parent != null && Files.isDirectory(parent.resolve("docs")) ? parent : current;
+    }
 
     private final String title;
     private final List<String> lines = new ArrayList<>();
@@ -83,7 +107,7 @@ public final class BenchmarkReport {
         return this;
     }
 
-    /** In ra stdout và ghi file {@code target/benchmarks/<slug>.md}. */
+    /** In ra stdout và ghi file {@code docs/ai/benchmarks/<slug>.md} ở gốc repo. */
     public Path write() {
         String body = String.join(System.lineSeparator(), lines) + System.lineSeparator();
         System.out.println();

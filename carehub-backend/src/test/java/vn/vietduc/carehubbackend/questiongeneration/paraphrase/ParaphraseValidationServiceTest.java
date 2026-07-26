@@ -55,6 +55,46 @@ class ParaphraseValidationServiceTest {
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("Mất thuật ngữ"));
     }
 
+    /**
+     * Chốt chặn dấu hiệu logic phải so theo RANH GIỚI TỪ. Sau khi bỏ dấu, "chuẩn bị" thành
+     * "chuan bi" — chứa chuỗi con "chua" của từ phủ định "chưa". Với {@code contains}, câu gốc
+     * bị coi là có từ phủ định còn biến thể "sửa soạn" thì không, nên biến thể hoàn toàn hợp lệ
+     * bị từ chối cứng kèm cảnh báo sai sự thật.
+     */
+    @Test
+    void doesNotTreatChuanBiAsTheNegationWordChua() {
+        QuestionBankQuestion source = sourceQuestion("Điều dưỡng chuẩn bị dụng cụ vô khuẩn theo thứ tự nào?");
+        ParaphrasedMcq candidate = validCandidate("Theo thứ tự nào điều dưỡng sửa soạn dụng cụ vô khuẩn?");
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.warnings()).noneMatch(warning -> warning.contains("từ phủ định"));
+        assertThat(result.rejected()).isFalse();
+    }
+
+    @Test
+    void doesNotTreatKhongCheAsTheNegationWordKhong() {
+        QuestionBankQuestion source = sourceQuestion("Khống chế nhiễm khuẩn bệnh viện dựa vào biện pháp nào?");
+        ParaphrasedMcq candidate = validCandidate("Biện pháp nào giúp kiểm soát nhiễm khuẩn bệnh viện?");
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.warnings()).noneMatch(warning -> warning.contains("từ phủ định"));
+        assertThat(result.rejected()).isFalse();
+    }
+
+    /** Mất một chữ "không" là đảo ngược đáp án đúng — chốt chặn này vẫn phải bắt được. */
+    @Test
+    void stillRejectsWhenARealNegationWordIsDropped() {
+        QuestionBankQuestion source = sourceQuestion("Trường hợp nào KHÔNG được dùng adrenalin đường tĩnh mạch?");
+        ParaphrasedMcq candidate = validCandidate("Trường hợp nào được dùng adrenalin đường tĩnh mạch?");
+
+        ParaphraseValidationResult result = service.validate(source, candidate);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("từ phủ định"));
+    }
+
     @Test
     void rejectsBannedAnswerOptionPatterns() {
         QuestionBankQuestion source = sourceQuestion("Biện pháp nào giúp xác định đúng người bệnh?");

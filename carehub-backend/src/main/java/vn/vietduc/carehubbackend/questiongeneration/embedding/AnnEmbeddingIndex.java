@@ -42,13 +42,13 @@ public class AnnEmbeddingIndex {
      *                    và index sẽ giữ vector cũ mãi mãi.
      */
     public void rebuild(List<QuestionEmbeddingSnapshot> embeddings, long dataVersion) {
-        if (!properties.isAnnEnabled() || builtVersion.get() == dataVersion) {
+        if (!properties.isAnnEnabled() || isUpToDate(dataVersion, embeddings.size())) {
             return;
         }
         rebuildLock.writeLock().lock();
         try {
             // Kiểm tra lại sau khi lấy khoá: thread khác có thể vừa build xong đúng version này.
-            if (builtVersion.get() == dataVersion) {
+            if (isUpToDate(dataVersion, embeddings.size())) {
                 return;
             }
             if (embeddings.isEmpty()) {
@@ -160,6 +160,21 @@ public class AnnEmbeddingIndex {
         } finally {
             rebuildLock.readLock().unlock();
         }
+    }
+
+    /**
+     * Index còn dùng được không.
+     *
+     * <p>Hai điều kiện, cố ý dư thừa. {@code dataVersion} là tín hiệu chính xác nhưng chỉ đúng
+     * khi MỌI đường làm đổi ngân hàng đều nhớ gọi {@code invalidate()} — chỉ cần một đường quên
+     * là index sai vĩnh viễn. So thêm số lượng phần tử để trường hợp đó vẫn tự khỏi sau một chu
+     * kỳ cache: gỡ hoặc thêm câu hỏi đều làm số lượng đổi.</p>
+     *
+     * <p>Số lượng không bắt được trường hợp sửa NỘI DUNG một câu (số lượng giữ nguyên, vector
+     * đổi) — đó là phần {@code dataVersion} lo. Hai tín hiệu bù cho nhau.</p>
+     */
+    private boolean isUpToDate(long dataVersion, int incomingSize) {
+        return builtVersion.get() == dataVersion && size() == incomingSize;
     }
 
     public int size() {

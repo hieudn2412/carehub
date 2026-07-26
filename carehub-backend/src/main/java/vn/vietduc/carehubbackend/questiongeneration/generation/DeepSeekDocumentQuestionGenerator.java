@@ -137,6 +137,9 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     private GeneratedChunkResult generateMultiStageWithModel(RestClient client, GenerationInput input, String model) {
         DeepSeekCall knowledgeCall = callDeepSeek("knowledge", client, knowledgeMessages(input), model);
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(knowledgeCall.content());
+        // Ở đây danh sách rỗng dừng sớm là ĐÚNG: chưa gọi lượt sinh câu hỏi nào nên không mất gì,
+        // và không có knowledge point thì lượt sau cũng không có gì để bám vào.
+        // (Khác hẳn parseSingleCallResult — chỗ đó câu hỏi đã sinh và đã tính tiền rồi.)
         if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
             return new GeneratedChunkResult(
                     provider(),
@@ -180,7 +183,12 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(json);
         List<GeneratedQuestion> questions = parseQuestions(json);
         int parsedQuestionCount = questions.size();
-        if (knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
+        // Chỉ áp cổng lọc khi model THỰC SỰ có trả knowledge point và đánh dấu tất cả là không
+        // dùng được. `noneMatch` trên danh sách RỖNG trả true (chân lý rỗng) — mà prompt lại cho
+        // phép trả 0 knowledge point, nên nếu không chặn thì mọi câu hỏi hợp lệ kèm
+        // `knowledgePoints: []` đều bị vứt sau khi đã gọi API và đã tính tiền token.
+        if (!knowledgePoints.isEmpty()
+                && knowledgePoints.stream().noneMatch(GeneratedKnowledgePoint::generationEligible)) {
             log.info(
                     "Silent drop: all knowledge points ineligible. totalKPs={} eligibleKPs=0 parsedQuestions={}",
                     knowledgePoints.size(), parsedQuestionCount
@@ -213,6 +221,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 - Không dùng "tất cả đều đúng", "cả A và B", "không có đáp án nào".
                                 - Mỗi câu có đúng 1 đáp án tốt nhất.
                                 - Nếu chunk không đủ thông tin độc lập → questions là mảng rỗng [].
+                                - sourceExcerpt phải là đoạn TRÍCH NGUYÊN VĂN, copy y hệt từ chunk, không diễn đạt lại.
+                                - generationEligible chỉ đặt false khi knowledge point đó KHÔNG đủ để ra một câu hỏi
+                                  tự đứng độc lập (ví dụ chỉ là tiêu đề, mục lục, hoặc câu dẫn không mang nội dung).
+                                  Knowledge point dùng được thì luôn để true.
 
                                 ĐA DẠNG CÂU HỎI — xoay vòng các kiểu sau, tránh lặp:
                                 1. Tình huống lâm sàng (bệnh nhân + triệu chứng → chẩn đoán/xử trí)
@@ -240,8 +252,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Mỗi câu hỏi phong cách khác nhau.
                                 Trả JSON:
                                 {
-                                  "knowledgePoints": [{"id":"KP1","statement":"...","type":"definition|fact|procedure|warning|principle","importance":"low|medium|high","sourceExcerpt":"...","generationEligible":true}],
-                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"...","knowledgePointId":"KP1"}]
+                                  "knowledgePoints": [{"id":"KP1","statement":"...","type":"definition|fact|procedure|warning|principle","importance":"low|medium|high","sourceExcerpt":"trích dẫn nguyên văn ngắn từ chunk","generationEligible":true}],
+                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"trích dẫn nguyên văn ngắn từ chunk","knowledgePointId":"KP1"}]
                                 }
                                 """.formatted(input.sectionPath(), input.chunkText(), input.questionsPerChunk())
                 )

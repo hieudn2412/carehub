@@ -150,6 +150,51 @@ class DeepSeekDocumentQuestionGeneratorTest {
         assertThat(result.questions().get(0).stem()).startsWith("Dấu hiệu nào");
     }
 
+    /**
+     * Prompt cho phép model trả "0-8 knowledge point". Khi nó thật sự trả mảng rỗng kèm câu hỏi
+     * hợp lệ, những câu đó PHẢI được giữ — chúng đã được sinh và đã tính tiền token.
+     * {@code Stream.noneMatch} trên danh sách rỗng trả true nên nếu không chặn sẽ vứt sạch.
+     */
+    @Test
+    void keepsQuestionsWhenTheModelReturnsNoKnowledgePointsAtAll() {
+        GeneratedChunkResult result = generator.parseSingleCallResult("""
+                {
+                  "knowledgePoints": [],
+                  "questions": [
+                    {
+                      "stem": "Dấu hiệu nào gợi ý người bệnh đang bị sốc phản vệ?",
+                      "optionA": "Mạch nhanh, huyết áp tụt, khó thở.",
+                      "optionB": "Ăn ngon miệng hơn.",
+                      "optionC": "Ngủ sâu hơn bình thường.",
+                      "optionD": "Da khô và ấm.",
+                      "correctAnswer": "A",
+                      "explanation": "Bám nguồn.",
+                      "difficulty": "medium",
+                      "topic": "Phản vệ",
+                      "sourceExcerpt": "mạch nhanh, huyết áp tụt",
+                      "knowledgePointId": null
+                    },
+                    {
+                      "stem": "Thuốc đầu tay trong xử trí phản vệ là gì?",
+                      "optionA": "Adrenalin.",
+                      "optionB": "Paracetamol.",
+                      "optionC": "Vitamin C.",
+                      "optionD": "Kháng sinh.",
+                      "correctAnswer": "A",
+                      "explanation": "Bám nguồn.",
+                      "difficulty": "easy",
+                      "topic": "Phản vệ",
+                      "sourceExcerpt": "adrenalin theo phác đồ",
+                      "knowledgePointId": null
+                    }
+                  ]
+                }
+                """, LlmUsage.empty());
+
+        assertThat(result.knowledgePoints()).isEmpty();
+        assertThat(result.questions()).hasSize(2);
+    }
+
     @Test
     void recordsTheModelActuallyUsedSoFallbackCallsArePricedCorrectly() {
         GeneratedChunkResult result = generator.parseSingleCallResult(

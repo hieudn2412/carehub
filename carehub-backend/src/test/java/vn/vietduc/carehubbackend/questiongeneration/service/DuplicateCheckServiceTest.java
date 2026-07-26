@@ -82,12 +82,12 @@ class DuplicateCheckServiceTest {
     // ── Block: configured thresholds (BV-07 / BV-08 / BV-09) ──────────────────
 
     @Test
-    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.93, reviewMin 0.80, qualityReject 0.55")
+    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.95, reviewMin 0.88, qualityReject 0.55")
     void defaultThresholdsMatchTheBoundaryRegister() {
         ValidationRulesProperties defaults = new ValidationRulesProperties();
 
-        assertThat(defaults.getDuplicate().getStrongMin()).isEqualTo(0.93);
-        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.80);
+        assertThat(defaults.getDuplicate().getStrongMin()).isEqualTo(0.95);
+        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.88);
         assertThat(defaults.getQuality().getRejectMin()).isEqualTo(0.55);
     }
 
@@ -96,12 +96,12 @@ class DuplicateCheckServiceTest {
     @ParameterizedTest(name = "similarity={0} → strong={1}, review={2}")
     @CsvSource({
             "1.00, true,  true",   // identical stem
-            "0.94, true,  true",   // BVA-Max+1: just above strongMin
-            "0.93, true,  true",   // BVA-Max: exactly strongMin — inclusive
-            "0.92, false, true",   // BVA-Max-1: just below strongMin, still needs review
-            "0.81, false, true",   // inside the review band
-            "0.80, false, true",   // BVA-Min: exactly reviewMin — inclusive
-            "0.79, false, false",  // BVA-Min-1: just below reviewMin
+            "0.96, true,  true",   // BVA-Max+1: just above strongMin
+            "0.95, true,  true",   // BVA-Max: exactly strongMin — inclusive
+            "0.94, false, true",   // BVA-Max-1: just below strongMin, still needs review
+            "0.89, false, true",   // inside the review band
+            "0.88, false, true",   // BVA-Min: exactly reviewMin — inclusive
+            "0.87, false, false",  // BVA-Min-1: just below reviewMin
             "0.00, false, false"   // no similarity at all
     })
     @DisplayName("L1-DUP-02 | BVA: strongDuplicate/needsReview flags across every threshold edge")

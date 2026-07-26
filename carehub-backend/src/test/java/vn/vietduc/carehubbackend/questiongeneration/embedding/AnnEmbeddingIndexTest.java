@@ -55,14 +55,37 @@ class AnnEmbeddingIndexTest {
     }
 
     @Test
-    void doesNotRebuildWhenDataVersionIsUnchanged() {
+    void doesNotRebuildWhenBothVersionAndSizeAreUnchanged() {
         QuestionEmbeddingSnapshot first = snapshot(1L, "câu một", normalize(new double[]{1, 0, 0, 0}));
         index.rebuild(List.of(first), 7L);
 
-        // Cùng version → coi như dữ liệu chưa đổi, bỏ qua việc build lại.
-        index.rebuild(List.of(first, snapshot(2L, "câu hai", normalize(new double[]{0, 1, 0, 0}))), 7L);
+        // Cùng version VÀ cùng số lượng → coi như dữ liệu chưa đổi, bỏ qua việc build lại.
+        index.rebuild(List.of(snapshot(1L, "câu một", normalize(new double[]{1, 0, 0, 0}))), 7L);
 
         assertThat(index.size()).isEqualTo(1);
+    }
+
+    /**
+     * Lưới an toàn cho trường hợp một đường nào đó quên gọi {@code invalidate()}: số lượng phần
+     * tử lệch thì vẫn phải build lại, dù {@code dataVersion} không đổi. Nếu không, một câu hỏi
+     * bị lưu trữ sẽ còn nằm trong chỉ mục so trùng vĩnh viễn.
+     */
+    @Test
+    void rebuildsWhenSizeChangesEvenIfNobodyBumpedTheDataVersion() {
+        index.rebuild(List.of(
+                snapshot(1L, "câu một", normalize(new double[]{1, 0, 0, 0})),
+                snapshot(2L, "câu hai", normalize(new double[]{0, 1, 0, 0}))
+        ), 7L);
+        assertThat(index.size()).isEqualTo(2);
+
+        // Một câu bị gỡ khỏi tập APPROVED nhưng version không được tăng.
+        index.rebuild(List.of(snapshot(1L, "câu một", normalize(new double[]{1, 0, 0, 0}))), 7L);
+
+        assertThat(index.size()).isEqualTo(1);
+        assertThat(index.searchBestMatch(normalize(new double[]{0, 1, 0, 0}), STRONG_MIN, 50))
+                .satisfiesAnyOf(
+                        result -> assertThat(result).isNull(),
+                        result -> assertThat(result.questionId()).isNotEqualTo(2L));
     }
 
     @Test

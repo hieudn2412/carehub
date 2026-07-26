@@ -257,6 +257,17 @@ public class QuestionEmbeddingService {
                 .build();
     }
 
+    /**
+     * Báo cho cache biết TẬP CÂU HỎI ĐÃ DUYỆT vừa thay đổi, dù bản thân embedding không đổi.
+     *
+     * <p>Dùng khi một câu hỏi bị gỡ khỏi trạng thái APPROVED (lưu trữ, hạ về nháp): vector của nó
+     * vẫn còn trong bảng nhưng không được phép tham gia so trùng nữa. Không gọi thì cache và
+     * chỉ mục ANN vẫn tiếp tục đối chiếu với câu đã gỡ.</p>
+     */
+    public void invalidateApprovedSetCache() {
+        embeddingCache.invalidate();
+    }
+
     /** Xoá các embedding sinh bằng cách nhúng cũ (bất đối xứng) — chỉ cần chạy một lần. */
     @Transactional
     public long deleteLegacyStemEmbeddings() {
