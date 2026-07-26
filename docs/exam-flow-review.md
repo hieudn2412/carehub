@@ -104,12 +104,25 @@ Backend yêu cầu `passingScore` trong khoảng 0–10 (`ExamConfigService.java
 
 ---
 
+## 4b. Phát hiện bổ sung khi sửa (không có trong 35 mục trên)
+
+**Chuỗi sau khi thi đạt chưa từng chạy được.** Test `L2-EXM-10` đã ghi chú sẵn bug D33: `ExamPassedTrainingListener` chạy ở pha `AFTER_COMMIT` mà không mở transaction riêng, nên bản ghi CME không bao giờ được ghi. Khi sửa mới lộ ra tầng thứ hai: `NotificationDispatcher` mắc đúng lỗi đó — `@Transactional` mặc định (REQUIRED) *join* transaction cha đã commit (synchronization còn gắn thread) và mọi thao tác ghi ném `No active transaction`, bị `catch` của listener nuốt. Hệ quả rộng hơn exam: **mọi thông báo in-app phát từ listener AFTER_COMMIT đều không được lưu**. Sau khi sửa, một test khác vốn fail (`FormLifecycleFlowIntegrationTest.failedAssignedSubmissionNotifiesOnce`) cũng xanh trở lại.
+
+Ghi chú: `@Transactional` đặt trực tiếp trên phương thức `@TransactionalEventListener` **không có tác dụng** — Spring gọi listener không qua proxy. Phải dùng `TransactionTemplate` hoặc tách sang bean khác.
+
 ## 5. Thứ tự đề xuất sửa
 
-1. **Chặn nộp sau khi hết giờ ở server** (1.1) — lỗ hổng thi cử nặng nhất, sửa cục bộ trong `ExamAttemptService`.
-2. **Bỏ `/10` thừa ở `bestScore`** (2.1) + thống nhất đơn vị điểm toàn hệ thống về thang 0–10 (2.4, 2.5) — user đang nhìn điểm sai.
-3. **Nối lại nút thi lại** (2.2) và **bỏ mặc định lọc ngày** (2.3) — hai lỗi làm tính năng hiện có không dùng được.
-4. **Không tiết lộ đáp án khi còn lượt thi** (1.2) + **siết quyền endpoint chi tiết đề** (1.3).
-5. Thống nhất manager/user cùng nhìn một chỉ số điểm (mục 3) và chỉ cộng CME cho lần đạt đầu tiên.
-6. Import từng dòng `REQUIRES_NEW` (2.9); chặn archive đề đang giao (2.8).
-7. Phần còn lại (mục 4) xử lý dần theo mức ảnh hưởng.
+### ĐÃ SỬA (commit `2053a9dc`)
+
+- [x] **1.1** Chặn nộp/lưu sau khi hết giờ ở server (`ExamAttemptService`) + 2 test cập nhật, thêm `L2-EXM-08b`.
+- [x] **2.1 / 2.4 / 2.5** Bỏ phép chia 10 thừa ở `bestScore`; thống nhất đơn vị "/10" trên toàn frontend (ExamHistory, ExamPaperList/Detail, EvaluationDashboard kèm trục biểu đồ, Manager*, dashboard admin/staff); `ExamConfigPage`/`TestConfigPage` đổi nhãn + mặc định 7 + validate 0–10.
+- [x] **2.2 / 2.3** Nối lại nút thi lại; bỏ mặc định lọc ngày; hiển thị số lượt đã dùng và lý do khi nút bị khoá.
+- [x] **Mục 3 (CME)** Chỉ cộng CME một lần cho mỗi bài được giao mỗi người — và sửa D33 để chuỗi này thực sự chạy (xem 4b).
+
+### CÒN LẠI
+
+1. **Không tiết lộ đáp án khi còn lượt thi** (1.2) + **siết quyền endpoint chi tiết đề** (1.3) — hai lỗ hổng thi cử còn lại.
+2. Thống nhất manager/user cùng nhìn một chỉ số điểm (latest vs best — mục 3).
+3. Import từng dòng `REQUIRES_NEW` (2.9); chặn archive đề đang giao (2.8); nối "Phát hành" với luồng giao bài (2.6); dọn rollback cho chuỗi 4 API (2.7).
+4. Đọc `passingScore` theo độ khó khi sinh đề (mục 3) và bỏ/nối `ExamConfig.maxRetakes`.
+5. Phần còn lại (mục 4) xử lý dần theo mức ảnh hưởng. Lưu ý `CompetencyThresholdPage` đang cấu hình ngưỡng năng lực theo thang 0–100 trong khi backend phân loại theo thang 0–10 — lệch 10×, nên làm cùng đợt với mục 2.
