@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
 import '../../styles/ManagerPages.css'
@@ -79,130 +78,120 @@ function ManagerEmployeeDetailPage() {
 
   if (loading || error) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar />
-        <div className="dashboard-layout__content">
-          <Header back={{ to: '/manager/employees', label: 'Quay lại' }} title="Chi tiết nhân sự" />
-          <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 80 }}>
-            {loading ? (
-              <>
-                <LoadingOutlined style={{ fontSize: 28, color: '#2563eb' }} />
-                <p style={{ color: '#6b7280' }}>Đang tải thông tin nhân viên...</p>
-              </>
-            ) : (
-              <>
-                <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
-              </>
-            )}
-          </div>
+      <AppShell back={{ to: '/manager/employees', label: 'Quay lại' }} title="Chi tiết nhân sự">
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          {loading ? (
+            <>
+              <LoadingOutlined style={{ fontSize: 28, color: '#2563eb' }} />
+              <p style={{ color: '#6b7280' }}>Đang tải thông tin nhân viên...</p>
+            </>
+          ) : (
+            <>
+              <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
+            </>
+          )}
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: '/manager/employees', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Nhân sự trong khoa', link: '/manager/employees' },
-            { label: 'Chi tiết nhân sự' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết nhân sự</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Thông tin hồ sơ và hoạt động kiểm tra chuyên môn
-            </p>
+    <AppShell
+      back={{ to: '/manager/employees', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Nhân sự trong khoa', link: '/manager/employees' },
+        { label: 'Chi tiết nhân sự' }
+      ]}
+    >
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết nhân sự</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+          Thông tin hồ sơ và hoạt động kiểm tra chuyên môn
+        </p>
+      </div>
+
+      <div className="mgr-card">
+        {/* Detail Head */}
+        <div className="mgr-detail-header">
+          <div className="mgr-avatar">{avatar || 'NV'}</div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{employee.name}</div>
+            <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
+              {employee.code} · {employee.dept}
+            </div>
           </div>
+          <span className={`mgr-badge mgr-badge--${employee.status.color}`} style={{ marginLeft: 'auto' }}>
+            {employee.status.label}
+          </span>
+        </div>
 
-          <div className="mgr-card">
-            {/* Detail Head */}
-            <div className="mgr-detail-header">
-              <div className="mgr-avatar">{avatar || 'NV'}</div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a' }}>{employee.name}</div>
-                <div style={{ fontSize: 13, color: '#475569', marginTop: 4 }}>
-                  {employee.code} · {employee.dept}
-                </div>
-              </div>
-              <span className={`mgr-badge mgr-badge--${employee.status.color}`} style={{ marginLeft: 'auto' }}>
-                {employee.status.label}
-              </span>
-            </div>
-
-            {/* Information Grid */}
-            <div className="mgr-kv-grid" style={{ marginBottom: 24 }}>
-              <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Mã nhân viên</span>
-                <div className="mgr-kv-val">{employee.code}</div>
-              </div>
-              <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Khoa / Phòng</span>
-                <div className="mgr-kv-val">{employee.dept}</div>
-              </div>
-              <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Chu kỳ đào tạo</span>
-                <div className="mgr-kv-val">{formatDate(employee.windowStart)} - {formatDate(employee.windowEnd)}</div>
-              </div>
-              <div className="mgr-kv-item">
-                <span className="mgr-kv-label">Lần thi gần nhất</span>
-                <div className="mgr-kv-val">{formatDate(employee.lastAttemptAt)}</div>
-              </div>
-            </div>
-
-            {/* Metrics cards inside Detail */}
-            <div className="mgr-card-title" style={{ border: 'none', margin: '24px 0 12px', padding: 0 }}>
-              Tổng hợp hoạt động
-            </div>
-            <div className="mgr-dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 24 }}>
-              <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-                <div className="mgr-metric-label">Giờ đào tạo tích lũy</div>
-                <div className="mgr-metric-val" style={{ color: '#d97706' }}>{employee.hours}h</div>
-                <div className="mgr-metric-sub">
-                  yêu cầu: {employee.requiredHours}h · còn {employee.remainingHours}h
-                </div>
-              </div>
-
-              <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-                <div className="mgr-metric-label">Điểm thi trung bình</div>
-                <div className="mgr-metric-val" style={{ color: '#10b981' }}>
-                  {employee.examScore == null ? '---' : `${employee.examScore}%`}
-                </div>
-                <div className="mgr-metric-sub">{employee.totalAttempts} lượt thi đã có điểm</div>
-              </div>
-
-              <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-                <div className="mgr-metric-label">Xếp loại năng lực</div>
-                <div className="mgr-metric-val" style={{ color: '#2563eb', fontSize: 26 }}>{employee.performance}</div>
-                <div className="mgr-metric-sub">Đánh giá chu kỳ hiện tại</div>
-              </div>
-            </div>
-
-            {/* Actions Footer */}
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
-              <button 
-                onClick={() => navigate(`/training/employees/${employee.id}`)}
-                className="training-button"
-                style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-              >
-                <BookOutlined /> Hồ sơ đào tạo
-              </button>
-              <button 
-                onClick={() => navigate('/manager/exam-results')}
-                className="training-button training-button--primary"
-                style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-              >
-                <FileDoneOutlined /> Danh sách kết quả thi
-              </button>
-            </div>
+        {/* Information Grid */}
+        <div className="mgr-kv-grid" style={{ marginBottom: 24 }}>
+          <div className="mgr-kv-item">
+            <span className="mgr-kv-label">Mã nhân viên</span>
+            <div className="mgr-kv-val">{employee.code}</div>
+          </div>
+          <div className="mgr-kv-item">
+            <span className="mgr-kv-label">Khoa / Phòng</span>
+            <div className="mgr-kv-val">{employee.dept}</div>
+          </div>
+          <div className="mgr-kv-item">
+            <span className="mgr-kv-label">Chu kỳ đào tạo</span>
+            <div className="mgr-kv-val">{formatDate(employee.windowStart)} - {formatDate(employee.windowEnd)}</div>
+          </div>
+          <div className="mgr-kv-item">
+            <span className="mgr-kv-label">Lần thi gần nhất</span>
+            <div className="mgr-kv-val">{formatDate(employee.lastAttemptAt)}</div>
           </div>
         </div>
+
+        {/* Metrics cards inside Detail */}
+        <div className="mgr-card-title" style={{ border: 'none', margin: '24px 0 12px', padding: 0 }}>
+          Tổng hợp hoạt động
+        </div>
+        <div className="mgr-dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 24 }}>
+          <div className="mgr-metric-card" style={{ cursor: 'default' }}>
+            <div className="mgr-metric-label">Giờ đào tạo tích lũy</div>
+            <div className="mgr-metric-val" style={{ color: '#d97706' }}>{employee.hours}h</div>
+            <div className="mgr-metric-sub">
+              yêu cầu: {employee.requiredHours}h · còn {employee.remainingHours}h
+            </div>
+          </div>
+
+          <div className="mgr-metric-card" style={{ cursor: 'default' }}>
+            <div className="mgr-metric-label">Điểm thi trung bình</div>
+            <div className="mgr-metric-val" style={{ color: '#10b981' }}>
+              {employee.examScore == null ? '---' : `${employee.examScore}%`}
+            </div>
+            <div className="mgr-metric-sub">{employee.totalAttempts} lượt thi đã có điểm</div>
+          </div>
+
+          <div className="mgr-metric-card" style={{ cursor: 'default' }}>
+            <div className="mgr-metric-label">Xếp loại năng lực</div>
+            <div className="mgr-metric-val" style={{ color: '#2563eb', fontSize: 26 }}>{employee.performance}</div>
+            <div className="mgr-metric-sub">Đánh giá chu kỳ hiện tại</div>
+          </div>
+        </div>
+
+        {/* Actions Footer */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
+          <button
+            onClick={() => navigate(`/training/employees/${employee.id}`)}
+            className="training-button"
+            style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          >
+            <BookOutlined /> Hồ sơ đào tạo
+          </button>
+          <button
+            onClick={() => navigate('/manager/exam-results')}
+            className="training-button training-button--primary"
+            style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          >
+            <FileDoneOutlined /> Danh sách kết quả thi
+          </button>
+        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

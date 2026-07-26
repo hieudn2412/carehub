@@ -16,8 +16,7 @@ import {
   PrinterOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionSetApi } from '../api/questionSetApi.js'
@@ -171,196 +170,188 @@ function QuestionSetListPage() {
   const breadcrumbs = [{ label: 'Bộ câu hỏi' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qsl-page">
-              <div className="qsl-title-card">
-                <h1 className="qsl-title">Bộ câu hỏi</h1>
-                <p className="qsl-subtitle">Quản lý các bộ câu hỏi sẵn sàng dùng để tạo bài kiểm tra</p>
-              </div>
+    <AppShell breadcrumbs={breadcrumbs}>
+      <div className="qsl-page">
+        <div className="qsl-title-card">
+          <h1 className="qsl-title">Bộ câu hỏi</h1>
+          <p className="qsl-subtitle">Quản lý các bộ câu hỏi sẵn sàng dùng để tạo bài kiểm tra</p>
+        </div>
 
-              <div className="qsl-filter-bar">
-                <div className="qsl-filter-left">
-                  <div className="qsl-search">
-                    <span className="qsl-search-icon">
-                      <SearchOutlined />
-                    </span>
-                    <input
-                      type="text"
-                      className="qsl-search-input"
-                      placeholder="Tìm bộ câu hỏi..."
-                      value={keyword}
-                      onChange={(event) => {
-                        setKeyword(event.target.value)
-                        setPage(0)
-                      }}
-                    />
-                  </div>
-
-                </div>
-
-                <button className="qsl-btn-add" onClick={() => navigate('/admin/evaluation/question-sets/new')}>
-                  <PlusCircleOutlined /> Tạo bộ câu hỏi
-                </button>
-              </div>
-
-              <div className="qsl-table-card">
-                <table className="qsl-table">
-                  <thead>
-                    <tr>
-                      <th>Tên bộ câu hỏi</th>
-                      <th>Số câu hỏi</th>
-                      <th>Độ khó</th>
-                      <th>Trạng thái</th>
-                      <th style={{ width: '270px', textAlign: 'center' }}>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
-                          <LoadingOutlined /> Đang tải bộ câu hỏi...
-                        </td>
-                      </tr>
-                    ) : displayRows.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
-                          Không tìm thấy bộ câu hỏi nào.
-                        </td>
-                      </tr>
-                    ) : (
-                      displayRows.map((item) => (
-                        <tr key={item.id}>
-                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
-                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
-                          <td>
-                            <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>
-                              {difficultyText(item.difficulty)}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`qsl-status-badge qsl-status-badge--${String(item.status || 'DRAFT').toLowerCase()}`}>
-                              {item.statusText || statusText(item.status)}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="qsl-actions">
-                              <button
-                                type="button"
-                                className={`qsl-action-btn ${item.status === 'ACTIVE' ? 'qsl-action-btn--pause' : 'qsl-action-btn--activate'}`}
-                                onClick={() => toggleSetStatus(item)}
-                                title={item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'}
-                                aria-label={`${item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'} bộ ${item.name}`}
-                                disabled={actionId === item.id}
-                              >
-                                {actionId === item.id
-                                  ? <LoadingOutlined />
-                                  : item.status === 'ACTIVE' ? <PauseCircleOutlined /> : <CheckCircleOutlined />}
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn qsl-action-btn--edit"
-                                onClick={() => navigate(`/admin/evaluation/question-sets/${item.id}/edit`)}
-                                title="Chỉnh sửa"
-                                aria-label={`Chỉnh sửa bộ ${item.name}`}
-                              >
-                                <EditOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qsl-action-btn"
-                                onClick={() => duplicateSet(item)}
-                                title="Nhân bản"
-                                aria-label={`Nhân bản bộ ${item.name}`}
-                                disabled={actionId === item.id}
-                              >
-                                <CopyOutlined />
-                              </button>
-                              <div
-                                className={`qsl-export-radial${exportMenuId === item.id ? ' qsl-export-radial--open' : ''}`}
-                                onClick={(event) => event.stopPropagation()}
-                              >
-                                <button
-                                  type="button"
-                                  className="qsl-action-btn qsl-action-btn--export"
-                                  onClick={() => setExportMenuId((currentId) => currentId === item.id ? null : item.id)}
-                                  title="Chọn định dạng xuất"
-                                  aria-label="Chọn định dạng xuất"
-                                  aria-haspopup="menu"
-                                  aria-expanded={exportMenuId === item.id}
-                                  disabled={actionId === item.id}
-                                >
-                                  {actionId === item.id ? <LoadingOutlined /> : <ExportOutlined />}
-                                </button>
-
-                                <div className="qsl-export-radial__menu" role="menu" aria-label={`Xuất ${item.name}`}>
-                                  {EXPORT_ACTIONS.map((exportAction) => (
-                                    <button
-                                      key={exportAction.key}
-                                      type="button"
-                                      className={`qsl-export-radial__item qsl-export-radial__item--${exportAction.key}`}
-                                      onClick={() => {
-                                        setExportMenuId(null)
-                                        if (exportAction.key === 'print') {
-                                          printSet(item)
-                                        } else {
-                                          exportSet(item, exportAction.key)
-                                        }
-                                      }}
-                                      role="menuitem"
-                                      tabIndex={exportMenuId === item.id ? 0 : -1}
-                                    >
-                                      <span aria-hidden="true">{exportAction.icon}</span>
-                                      <span>{exportAction.label}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                className="qsl-action-btn qsl-action-btn--delete"
-                                onClick={() => archiveSet(item)}
-                                title="Xóa"
-                                aria-label={`Lưu trữ bộ ${item.name}`}
-                                disabled={actionId === item.id}
-                              >
-                                <DeleteOutlined />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-
-                <div className="qsl-pagination-bar">
-                  <div className="qsl-pagination-info">Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả</div>
-                  <div className="qsl-pagination-buttons">
-                    <button className="qsl-page-btn" disabled={page <= 0} onClick={() => setPage(page - 1)}>
-                      &lt;
-                    </button>
-                    {Array.from({ length: totalPages }).map((_, index) => (
-                      <button
-                        key={index}
-                        className={`qsl-page-btn ${page === index ? 'qsl-page-btn--active' : ''}`}
-                        onClick={() => setPage(index)}
-                      >
-                        {index + 1}
-                      </button>
-                    ))}
-                    <button className="qsl-page-btn" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
-                      &gt;
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div className="qsl-filter-bar">
+          <div className="qsl-filter-left">
+            <div className="qsl-search">
+              <span className="qsl-search-icon">
+                <SearchOutlined />
+              </span>
+              <input
+                type="text"
+                className="qsl-search-input"
+                placeholder="Tìm bộ câu hỏi..."
+                value={keyword}
+                onChange={(event) => {
+                  setKeyword(event.target.value)
+                  setPage(0)
+                }}
+              />
             </div>
-          </main>
+
+          </div>
+
+          <button className="qsl-btn-add" onClick={() => navigate('/admin/evaluation/question-sets/new')}>
+            <PlusCircleOutlined /> Tạo bộ câu hỏi
+          </button>
+        </div>
+
+        <div className="qsl-table-card">
+          <table className="qsl-table">
+            <thead>
+              <tr>
+                <th>Tên bộ câu hỏi</th>
+                <th>Số câu hỏi</th>
+                <th>Độ khó</th>
+                <th>Trạng thái</th>
+                <th style={{ width: '270px', textAlign: 'center' }}>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
+                    <LoadingOutlined /> Đang tải bộ câu hỏi...
+                  </td>
+                </tr>
+              ) : displayRows.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                    Không tìm thấy bộ câu hỏi nào.
+                  </td>
+                </tr>
+              ) : (
+                displayRows.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
+                    <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
+                    <td>
+                      <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>
+                        {difficultyText(item.difficulty)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`qsl-status-badge qsl-status-badge--${String(item.status || 'DRAFT').toLowerCase()}`}>
+                        {item.statusText || statusText(item.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="qsl-actions">
+                        <button
+                          type="button"
+                          className={`qsl-action-btn ${item.status === 'ACTIVE' ? 'qsl-action-btn--pause' : 'qsl-action-btn--activate'}`}
+                          onClick={() => toggleSetStatus(item)}
+                          title={item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'}
+                          aria-label={`${item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'} bộ ${item.name}`}
+                          disabled={actionId === item.id}
+                        >
+                          {actionId === item.id
+                            ? <LoadingOutlined />
+                            : item.status === 'ACTIVE' ? <PauseCircleOutlined /> : <CheckCircleOutlined />}
+                        </button>
+                        <button
+                          type="button"
+                          className="qsl-action-btn qsl-action-btn--edit"
+                          onClick={() => navigate(`/admin/evaluation/question-sets/${item.id}/edit`)}
+                          title="Chỉnh sửa"
+                          aria-label={`Chỉnh sửa bộ ${item.name}`}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          type="button"
+                          className="qsl-action-btn"
+                          onClick={() => duplicateSet(item)}
+                          title="Nhân bản"
+                          aria-label={`Nhân bản bộ ${item.name}`}
+                          disabled={actionId === item.id}
+                        >
+                          <CopyOutlined />
+                        </button>
+                        <div
+                          className={`qsl-export-radial${exportMenuId === item.id ? ' qsl-export-radial--open' : ''}`}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="qsl-action-btn qsl-action-btn--export"
+                            onClick={() => setExportMenuId((currentId) => currentId === item.id ? null : item.id)}
+                            title="Chọn định dạng xuất"
+                            aria-label="Chọn định dạng xuất"
+                            aria-haspopup="menu"
+                            aria-expanded={exportMenuId === item.id}
+                            disabled={actionId === item.id}
+                          >
+                            {actionId === item.id ? <LoadingOutlined /> : <ExportOutlined />}
+                          </button>
+
+                          <div className="qsl-export-radial__menu" role="menu" aria-label={`Xuất ${item.name}`}>
+                            {EXPORT_ACTIONS.map((exportAction) => (
+                              <button
+                                key={exportAction.key}
+                                type="button"
+                                className={`qsl-export-radial__item qsl-export-radial__item--${exportAction.key}`}
+                                onClick={() => {
+                                  setExportMenuId(null)
+                                  if (exportAction.key === 'print') {
+                                    printSet(item)
+                                  } else {
+                                    exportSet(item, exportAction.key)
+                                  }
+                                }}
+                                role="menuitem"
+                                tabIndex={exportMenuId === item.id ? 0 : -1}
+                              >
+                                <span aria-hidden="true">{exportAction.icon}</span>
+                                <span>{exportAction.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="qsl-action-btn qsl-action-btn--delete"
+                          onClick={() => archiveSet(item)}
+                          title="Xóa"
+                          aria-label={`Lưu trữ bộ ${item.name}`}
+                          disabled={actionId === item.id}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          <div className="qsl-pagination-bar">
+            <div className="qsl-pagination-info">Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả</div>
+            <div className="qsl-pagination-buttons">
+              <button className="qsl-page-btn" disabled={page <= 0} onClick={() => setPage(page - 1)}>
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }).map((_, index) => (
+                <button
+                  key={index}
+                  className={`qsl-page-btn ${page === index ? 'qsl-page-btn--active' : ''}`}
+                  onClick={() => setPage(index)}
+                >
+                  {index + 1}
+                </button>
+              ))}
+              <button className="qsl-page-btn" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
+                &gt;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <ConfirmModal
@@ -376,7 +367,7 @@ function QuestionSetListPage() {
           await confirmation?.action?.()
         }}
       />
-    </div>
+    </AppShell>
   )
 }
 

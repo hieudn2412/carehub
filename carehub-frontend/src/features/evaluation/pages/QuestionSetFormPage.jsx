@@ -13,8 +13,7 @@ import {
   SearchOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
@@ -419,423 +418,414 @@ function QuestionSetFormPage() {
   const activeQuestionFilterCount = [qCategory, qDifficulty, qSource, qType].filter(Boolean).length
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qsf-page">
-              <div className="qsf-container">
-                <div className="qsf-header">
+    <AppShell back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+      <div className="qsf-page">
+        <div className="qsf-container">
+          <div className="qsf-header">
+            <div>
+              <h2 className="qsf-title">{isEditMode ? 'Cập nhật bộ câu hỏi' : 'Tạo bộ câu hỏi'}</h2>
+              <p className="qsf-subtitle">Gom nhóm, sắp xếp và quản lý trạng thái sử dụng của bộ câu hỏi</p>
+            </div>
+            <ConfirmModal
+              isOpen={pendingStatusChange}
+              title="Tạm ngưng bộ câu hỏi?"
+              message="Bộ câu hỏi sẽ không còn xuất hiện khi tạo bài kiểm tra. Bạn có thể chỉnh sửa nội dung sau khi tạm ngưng."
+              confirmText="Tạm ngưng bộ"
+              danger
+              onCancel={() => setPendingStatusChange(false)}
+              onConfirm={confirmStatusChange}
+            />
+          </div>
+
+          {isLoading ? (
+            <section className="qsf-questions-card">Đang tải dữ liệu bộ câu hỏi...</section>
+          ) : (
+            <form onSubmit={handleSave} className="qsf-form">
+              {isActiveLocked && (
+                <section className="qsf-lock-banner">
+                  <LockOutlined />
                   <div>
-                    <h2 className="qsf-title">{isEditMode ? 'Cập nhật bộ câu hỏi' : 'Tạo bộ câu hỏi'}</h2>
-                    <p className="qsf-subtitle">Gom nhóm, sắp xếp và quản lý trạng thái sử dụng của bộ câu hỏi</p>
-      </div>
-      <ConfirmModal
-        isOpen={pendingStatusChange}
-        title="Tạm ngưng bộ câu hỏi?"
-        message="Bộ câu hỏi sẽ không còn xuất hiện khi tạo bài kiểm tra. Bạn có thể chỉnh sửa nội dung sau khi tạm ngưng."
-        confirmText="Tạm ngưng bộ"
-        danger
-        onCancel={() => setPendingStatusChange(false)}
-        onConfirm={confirmStatusChange}
-      />
-    </div>
+                    <strong>Bộ câu hỏi này đang được sử dụng</strong>
+                    <p>Để bảo toàn các bài kiểm tra hiện có, hãy tạo một bản sao trước khi thay đổi nội dung.</p>
+                  </div>
+                  <button type="button" className="qsf-btn-save" onClick={createDraftCopy} disabled={isSaving}>
+                    {isSaving ? <LoadingOutlined /> : <CopyOutlined />}
+                    Tạo bản sao để chỉnh sửa
+                  </button>
+                </section>
+              )}
+              <section className="qsf-section-card qsf-metadata-card">
+                <div className="qsf-section-heading">
+                  <div>
+                    <h3>Thông tin bộ câu hỏi</h3>
+                    <p>Thiết lập thông tin nhận diện và nội dung sử dụng.</p>
+                  </div>
+                  <span className="qsf-selected-count">{selectedIds.length} câu đã chọn</span>
+                </div>
 
-                {isLoading ? (
-                  <section className="qsf-questions-card">Đang tải dữ liệu bộ câu hỏi...</section>
+              <div className="qsf-form-group">
+                  <label>Tên bộ câu hỏi <span className="qsf-required-star">*</span></label>
+                  <input
+                    type="text"
+                    className="qsf-input-green"
+                    required
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Nhập tên bộ câu hỏi..."
+                    disabled={isActiveLocked}
+                  />
+              </div>
+
+              <div className="qsf-form-group">
+                <label>Mô tả</label>
+                <textarea
+                  className="qsf-input-green"
+                  rows={3}
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Mô tả ngắn để người quản trị khác hiểu mục đích của bộ câu hỏi..."
+                  disabled={isActiveLocked}
+                />
+              </div>
+
+              <div className="qsf-form-row">
+                <div className="qsf-form-group">
+                  <label>Trạng thái</label>
+                  <select
+                    className="qsf-input-red"
+                    value={status}
+                    onChange={(event) => handleStatusChange(event.target.value)}
+                    disabled={isChangingStatus}
+                  >
+                    <option value="DRAFT" disabled={persistedStatus === 'ACTIVE'}>Bản nháp</option>
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="INACTIVE">Tạm ngưng</option>
+                  </select>
+                  <small>
+                    {persistedStatus === 'ACTIVE'
+                      ? 'Chuyển sang Tạm ngưng để mở khóa và chỉnh sửa nội dung.'
+                      : 'Bộ Hoạt động sẽ xuất hiện khi tạo bài kiểm tra.'}
+                  </small>
+                </div>
+              </div>
+
+              </section>
+
+              {isEditMode && (
+                <details className="qsf-disclosure qsf-version-card">
+                  <summary className="qsf-disclosure__summary">
+                    <div>
+                      <strong>Thông tin phiên bản</strong>
+                      <span>
+                        {snapshotInfo.activeVersion
+                          ? `Đang hoạt động: v${snapshotInfo.activeVersion}`
+                          : 'Chưa có phiên bản hoạt động'}
+                      </span>
+                    </div>
+                    <span>{snapshotInfo.versions.length} phiên bản</span>
+                  </summary>
+                  <div className="qsf-disclosure__content">
+                  <div className="qsf-version-head">
+                    <div>
+                      <strong>Phiên bản đang hoạt động</strong>
+                      <span>
+                        {snapshotInfo.activeVersion
+                          ? `Version ${snapshotInfo.activeVersion} · ${formatDateTime(snapshotInfo.snapshotAt)}`
+                          : 'Chưa có snapshot active'}
+                      </span>
+                    </div>
+                    <span>{snapshotInfo.versions.length} phiên bản</span>
+                  </div>
+
+                  {snapshotInfo.versions.length > 0 && (
+                    <div className="qsf-version-list">
+                      {snapshotInfo.versions.slice(0, 4).map((version) => (
+                        <div className="qsf-version-pill" key={version.id || version.version}>
+                          <strong>v{version.version}</strong>
+                          <span>{version.questionCount} câu · {formatDateTime(version.snapshotAt)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {snapshotInfo.activeSnapshotItems.length > 0 && (
+                    <div className="qsf-snapshot-preview">
+                      {snapshotInfo.activeSnapshotItems.slice(0, 5).map((item) => (
+                        <div className="qsf-snapshot-row" key={item.id || `${item.position}-${item.sourceQuestionId}`}>
+                          <span>{item.position}</span>
+                          <p>{item.stem}</p>
+                          <strong>{item.correctAnswer}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  </div>
+                </details>
+              )}
+
+              <details className="qsf-disclosure qsf-advanced-tools">
+                <summary className="qsf-disclosure__summary">
+                  <div>
+                    <strong>Tạo nhanh theo danh mục</strong>
+                    <span>Tự động chọn câu hỏi theo danh mục từ ngân hàng.</span>
+                  </div>
+                  <ThunderboltOutlined />
+                </summary>
+                <div className="qsf-disclosure__content qsf-advanced-tools__content">
+                <div className="qsf-form-row">
+                  <div className="qsf-form-group">
+                    <label>Danh mục <span className="qsf-required-star">*</span></label>
+                    <select
+                      className="qsf-input-red"
+                      value={previewCategory}
+                      onChange={(event) => setPreviewCategory(event.target.value)}
+                      disabled={isActiveLocked}
+                    >
+                      <option value="">-- Chọn danh mục --</option>
+                      {topics.map((topic) => (
+                        <option key={topic} value={topic}>{topic}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="qsf-form-group">
+                    <label>Số lượng câu hỏi</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      className="qsf-input-green"
+                      value={previewQuestionCount}
+                      onChange={(event) => setPreviewQuestionCount(event.target.value)}
+                      disabled={isActiveLocked}
+                    />
+                  </div>
+                  <div className="qsf-form-group">
+                    <label>Tránh cùng nguồn</label>
+                    <select className="qsf-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')} disabled={isActiveLocked}>
+                      <option value="true">Có</option>
+                      <option value="false">Không</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="qsf-form-actions qsf-form-actions--inline">
+                  <button type="button" className="qsf-btn-save" onClick={previewQuestionSet} disabled={isPreviewing || isActiveLocked || !previewCategory}>
+                    {isPreviewing ? <LoadingOutlined /> : <ThunderboltOutlined />}
+                    Tìm câu hỏi
+                  </button>
+                  <button type="button" className="qsf-btn-cancel" onClick={applyPreview} disabled={!previewResult?.questionIds?.length || isActiveLocked}>
+                    Thêm vào bộ
+                  </button>
+                </div>
+                {previewResult && (
+                  <div className="qsf-preview-box">
+                    <strong>{previewResult.questionIds?.length || 0} câu hỏi phù hợp</strong>
+                    {(previewResult.warnings || []).map((warning) => <p key={warning}>{warning}</p>)}
+                  </div>
+                )}
+                </div>
+              </details>
+
+              <div className="qsf-section-divider">
+                <span className="qsf-divider-title">CÂU HỎI TRONG BỘ</span>
+              </div>
+
+              <div className="qsf-selected-card">
+                <div className="qsf-card-heading">
+                  <div>
+                    <h3>Câu đã chọn</h3>
+                    <p>Kéo tay nắm để sắp xếp. Danh sách sẽ tự cuộn khi kéo sát mép.</p>
+                  </div>
+                  <span>{selectedIds.length}</span>
+                </div>
+                {selectedQuestions.length === 0 ? (
+                  <p className="qsf-empty-text">Chưa có câu hỏi nào trong bộ.</p>
                 ) : (
-                  <form onSubmit={handleSave} className="qsf-form">
-                    {isActiveLocked && (
-                      <section className="qsf-lock-banner">
-                        <LockOutlined />
-                        <div>
-                          <strong>Bộ câu hỏi này đang được sử dụng</strong>
-                          <p>Để bảo toàn các bài kiểm tra hiện có, hãy tạo một bản sao trước khi thay đổi nội dung.</p>
-                        </div>
-                        <button type="button" className="qsf-btn-save" onClick={createDraftCopy} disabled={isSaving}>
-                          {isSaving ? <LoadingOutlined /> : <CopyOutlined />}
-                          Tạo bản sao để chỉnh sửa
-                        </button>
-                      </section>
-                    )}
-                    <section className="qsf-section-card qsf-metadata-card">
-                      <div className="qsf-section-heading">
-                        <div>
-                          <h3>Thông tin bộ câu hỏi</h3>
-                          <p>Thiết lập thông tin nhận diện và nội dung sử dụng.</p>
-                        </div>
-                        <span className="qsf-selected-count">{selectedIds.length} câu đã chọn</span>
-                      </div>
-
-                    <div className="qsf-form-group">
-                        <label>Tên bộ câu hỏi <span className="qsf-required-star">*</span></label>
-                        <input
-                          type="text"
-                          className="qsf-input-green"
-                          required
-                          value={name}
-                          onChange={(event) => setName(event.target.value)}
-                          placeholder="Nhập tên bộ câu hỏi..."
-                          disabled={isActiveLocked}
-                        />
-                    </div>
-
-                    <div className="qsf-form-group">
-                      <label>Mô tả</label>
-                      <textarea
-                        className="qsf-input-green"
-                        rows={3}
-                        value={description}
-                        onChange={(event) => setDescription(event.target.value)}
-                        placeholder="Mô tả ngắn để người quản trị khác hiểu mục đích của bộ câu hỏi..."
+                  <div
+                    className="qsf-selected-list"
+                    ref={selectedListRef}
+                    onDragOver={handleSelectedListDragOver}
+                    onDrop={handleSelectedListDrop}
+                  >
+                  {selectedQuestions.map((question, index) => (
+                    <div
+                      className={`qsf-selected-row ${draggedQuestionId === question.id ? 'qsf-selected-row--dragging' : ''} ${dragOverQuestionId === question.id ? 'qsf-selected-row--drag-over' : ''} ${getDragGapClass(question.id)}`}
+                      key={question.id}
+                      onDragOver={(event) => handleDragOver(event, question.id)}
+                      onDrop={(event) => handleDrop(event, question.id)}
+                    >
+                      <button
+                        type="button"
+                        className="qsf-drag-handle"
+                        draggable={!isActiveLocked}
                         disabled={isActiveLocked}
-                      />
-                    </div>
-
-                    <div className="qsf-form-row">
-                      <div className="qsf-form-group">
-                        <label>Trạng thái</label>
-                        <select
-                          className="qsf-input-red"
-                          value={status}
-                          onChange={(event) => handleStatusChange(event.target.value)}
-                          disabled={isChangingStatus}
-                        >
-                          <option value="DRAFT" disabled={persistedStatus === 'ACTIVE'}>Bản nháp</option>
-                          <option value="ACTIVE">Hoạt động</option>
-                          <option value="INACTIVE">Tạm ngưng</option>
-                        </select>
-                        <small>
-                          {persistedStatus === 'ACTIVE'
-                            ? 'Chuyển sang Tạm ngưng để mở khóa và chỉnh sửa nội dung.'
-                            : 'Bộ Hoạt động sẽ xuất hiện khi tạo bài kiểm tra.'}
-                        </small>
-                      </div>
-                    </div>
-
-                    </section>
-
-                    {isEditMode && (
-                      <details className="qsf-disclosure qsf-version-card">
-                        <summary className="qsf-disclosure__summary">
-                          <div>
-                            <strong>Thông tin phiên bản</strong>
-                            <span>
-                              {snapshotInfo.activeVersion
-                                ? `Đang hoạt động: v${snapshotInfo.activeVersion}`
-                                : 'Chưa có phiên bản hoạt động'}
-                            </span>
-                          </div>
-                          <span>{snapshotInfo.versions.length} phiên bản</span>
-                        </summary>
-                        <div className="qsf-disclosure__content">
-                        <div className="qsf-version-head">
-                          <div>
-                            <strong>Phiên bản đang hoạt động</strong>
-                            <span>
-                              {snapshotInfo.activeVersion
-                                ? `Version ${snapshotInfo.activeVersion} · ${formatDateTime(snapshotInfo.snapshotAt)}`
-                                : 'Chưa có snapshot active'}
-                            </span>
-                          </div>
-                          <span>{snapshotInfo.versions.length} phiên bản</span>
-                        </div>
-
-                        {snapshotInfo.versions.length > 0 && (
-                          <div className="qsf-version-list">
-                            {snapshotInfo.versions.slice(0, 4).map((version) => (
-                              <div className="qsf-version-pill" key={version.id || version.version}>
-                                <strong>v{version.version}</strong>
-                                <span>{version.questionCount} câu · {formatDateTime(version.snapshotAt)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {snapshotInfo.activeSnapshotItems.length > 0 && (
-                          <div className="qsf-snapshot-preview">
-                            {snapshotInfo.activeSnapshotItems.slice(0, 5).map((item) => (
-                              <div className="qsf-snapshot-row" key={item.id || `${item.position}-${item.sourceQuestionId}`}>
-                                <span>{item.position}</span>
-                                <p>{item.stem}</p>
-                                <strong>{item.correctAnswer}</strong>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        </div>
-                      </details>
-                    )}
-
-                    <details className="qsf-disclosure qsf-advanced-tools">
-                      <summary className="qsf-disclosure__summary">
-                        <div>
-                          <strong>Tạo nhanh theo danh mục</strong>
-                          <span>Tự động chọn câu hỏi theo danh mục từ ngân hàng.</span>
-                        </div>
-                        <ThunderboltOutlined />
-                      </summary>
-                      <div className="qsf-disclosure__content qsf-advanced-tools__content">
-                      <div className="qsf-form-row">
-                        <div className="qsf-form-group">
-                          <label>Danh mục <span className="qsf-required-star">*</span></label>
-                          <select
-                            className="qsf-input-red"
-                            value={previewCategory}
-                            onChange={(event) => setPreviewCategory(event.target.value)}
-                            disabled={isActiveLocked}
-                          >
-                            <option value="">-- Chọn danh mục --</option>
-                            {topics.map((topic) => (
-                              <option key={topic} value={topic}>{topic}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="qsf-form-group">
-                          <label>Số lượng câu hỏi</label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="50"
-                            className="qsf-input-green"
-                            value={previewQuestionCount}
-                            onChange={(event) => setPreviewQuestionCount(event.target.value)}
-                            disabled={isActiveLocked}
-                          />
-                        </div>
-                        <div className="qsf-form-group">
-                          <label>Tránh cùng nguồn</label>
-                          <select className="qsf-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')} disabled={isActiveLocked}>
-                            <option value="true">Có</option>
-                            <option value="false">Không</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="qsf-form-actions qsf-form-actions--inline">
-                        <button type="button" className="qsf-btn-save" onClick={previewQuestionSet} disabled={isPreviewing || isActiveLocked || !previewCategory}>
-                          {isPreviewing ? <LoadingOutlined /> : <ThunderboltOutlined />}
-                          Tìm câu hỏi
-                        </button>
-                        <button type="button" className="qsf-btn-cancel" onClick={applyPreview} disabled={!previewResult?.questionIds?.length || isActiveLocked}>
-                          Thêm vào bộ
+                        onDragStart={(event) => handleDragStart(event, question.id)}
+                        onDragEnd={handleDragEnd}
+                        onKeyDown={(event) => handleDragHandleKeyDown(event, question.id)}
+                        aria-label={`Kéo để sắp xếp câu ${index + 1}`}
+                        title="Kéo để sắp xếp. Dùng Alt + mũi tên khi thao tác bằng bàn phím."
+                      >
+                        <HolderOutlined />
+                      </button>
+                      <span>{index + 1}</span>
+                      <strong>{question.stem}</strong>
+                      <div>
+                        <button type="button" onClick={() => toggleQuestion(question.id)} title="Bỏ khỏi bộ" disabled={isActiveLocked}>
+                          <CloseOutlined />
                         </button>
                       </div>
-                      {previewResult && (
-                        <div className="qsf-preview-box">
-                          <strong>{previewResult.questionIds?.length || 0} câu hỏi phù hợp</strong>
-                          {(previewResult.warnings || []).map((warning) => <p key={warning}>{warning}</p>)}
-                        </div>
-                      )}
-                      </div>
-                    </details>
-
-                    <div className="qsf-section-divider">
-                      <span className="qsf-divider-title">CÂU HỎI TRONG BỘ</span>
                     </div>
-
-                    <div className="qsf-selected-card">
-                      <div className="qsf-card-heading">
-                        <div>
-                          <h3>Câu đã chọn</h3>
-                          <p>Kéo tay nắm để sắp xếp. Danh sách sẽ tự cuộn khi kéo sát mép.</p>
-                        </div>
-                        <span>{selectedIds.length}</span>
-                      </div>
-                      {selectedQuestions.length === 0 ? (
-                        <p className="qsf-empty-text">Chưa có câu hỏi nào trong bộ.</p>
-                      ) : (
-                        <div
-                          className="qsf-selected-list"
-                          ref={selectedListRef}
-                          onDragOver={handleSelectedListDragOver}
-                          onDrop={handleSelectedListDrop}
-                        >
-                        {selectedQuestions.map((question, index) => (
-                          <div
-                            className={`qsf-selected-row ${draggedQuestionId === question.id ? 'qsf-selected-row--dragging' : ''} ${dragOverQuestionId === question.id ? 'qsf-selected-row--drag-over' : ''} ${getDragGapClass(question.id)}`}
-                            key={question.id}
-                            onDragOver={(event) => handleDragOver(event, question.id)}
-                            onDrop={(event) => handleDrop(event, question.id)}
-                          >
-                            <button
-                              type="button"
-                              className="qsf-drag-handle"
-                              draggable={!isActiveLocked}
-                              disabled={isActiveLocked}
-                              onDragStart={(event) => handleDragStart(event, question.id)}
-                              onDragEnd={handleDragEnd}
-                              onKeyDown={(event) => handleDragHandleKeyDown(event, question.id)}
-                              aria-label={`Kéo để sắp xếp câu ${index + 1}`}
-                              title="Kéo để sắp xếp. Dùng Alt + mũi tên khi thao tác bằng bàn phím."
-                            >
-                              <HolderOutlined />
-                            </button>
-                            <span>{index + 1}</span>
-                            <strong>{question.stem}</strong>
-                            <div>
-                              <button type="button" onClick={() => toggleQuestion(question.id)} title="Bỏ khỏi bộ" disabled={isActiveLocked}>
-                                <CloseOutlined />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="qsf-questions-card">
-                      <div className="qsf-bank-heading">
-                        <div>
-                          <h3>Ngân hàng câu hỏi</h3>
-                          <p>Tìm và chọn các câu hỏi đã được phê duyệt.</p>
-                        </div>
-                      </div>
-                      <div className="qsf-qfilter-bar">
-                        <div className="qsf-qsearch">
-                          <span className="qsf-qsearch-icon"><SearchOutlined /></span>
-                          <input
-                            type="text"
-                            className="qsf-qsearch-input"
-                            placeholder="Tìm câu hỏi..."
-                            value={qKeyword}
-                            onChange={(event) => {
-                              setQKeyword(event.target.value)
-                              setQPage(0)
-                            }}
-                          />
-                        </div>
-                        <details className="qsf-filter-disclosure">
-                          <summary>
-                            <FilterOutlined /> Bộ lọc
-                            {activeQuestionFilterCount > 0 && <span className="qsf-filter-count">{activeQuestionFilterCount}</span>}
-                          </summary>
-                          <div className="qsf-filter-panel">
-                            <select className="qsf-qfilter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
-                              <option value="">Tất cả danh mục</option>
-                              {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
-                            </select>
-                            <select className="qsf-qfilter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
-                              <option value="">Tất cả độ khó</option>
-                              {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                            </select>
-                            <select className="qsf-qfilter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
-                              <option value="">Tất cả nguồn</option>
-                              {sources.map((source) => <option key={source} value={source}>{source}</option>)}
-                            </select>
-                            <select className="qsf-qfilter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
-                              <option value="">Tất cả loại câu hỏi</option>
-                              <option value="ORIGINAL">Gốc</option>
-                              <option value="PARAPHRASE">Diễn đạt lại</option>
-                            </select>
-                          </div>
-                        </details>
-                      </div>
-
-                      <div className="qsf-bank-selection-bar">
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={isAllDisplayChecked}
-                            onChange={toggleSelectAllDisplay}
-                            disabled={isActiveLocked || displayQuestions.length === 0}
-                          />
-                          Chọn tất cả {displayQuestions.length} câu trên trang này
-                        </label>
-                        <span>{selectedIds.length} câu trong bộ</span>
-                      </div>
-
-                      <div className="qsf-bank-list">
-                        {displayQuestions.length === 0 ? (
-                          <div className="qsf-bank-empty">
-                            <SearchOutlined />
-                            <strong>Không tìm thấy câu hỏi phù hợp</strong>
-                            <span>Thử thay đổi từ khóa hoặc bộ lọc đang sử dụng.</span>
-                          </div>
-                        ) : (
-                          displayQuestions.map((question) => {
-                            const isSelected = selectedIds.includes(question.id)
-                            return (
-                              <article className={`qsf-bank-item ${isSelected ? 'qsf-bank-item--selected' : ''}`} key={question.id}>
-                                <label className="qsf-bank-checkbox" aria-label={isSelected ? 'Bỏ chọn câu hỏi' : 'Chọn câu hỏi'}>
-                                  <input
-                                    type="checkbox"
-                                    checked={isSelected}
-                                    onChange={() => toggleQuestion(question.id)}
-                                    disabled={isActiveLocked}
-                                  />
-                                </label>
-                                <div className="qsf-bank-item__content">
-                                  <h4>{question.stem}</h4>
-                                  <div className="qsf-bank-item__meta">
-                                    {question.topic && <span className="qsf-meta-chip">{question.topic}</span>}
-                                    <span className={`qsf-diff-badge ${getDifficultyClass(question.difficulty)}`}>
-                                      {difficultyText(question.difficulty)}
-                                    </span>
-                                    <span className="qsf-source-text" title={question.sourceDocument || question.questionType || ''}>
-                                      {question.sourceDocument || question.questionType || 'Nguồn nội bộ'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <button
-                                  type="button"
-                                  className={`qsf-bank-action ${isSelected ? 'qsf-bank-action--selected' : ''}`}
-                                  onClick={() => toggleQuestion(question.id)}
-                                  disabled={isActiveLocked}
-                                >
-                                  {isSelected ? <CheckOutlined /> : <PlusOutlined />}
-                                  {isSelected ? 'Đã chọn' : 'Thêm'}
-                                </button>
-                              </article>
-                            )
-                          })
-                        )}
-                      </div>
-
-                      <div className="qsf-qpagination-bar">
-                        <div className="qsf-qpagination-info">
-                          Hiển thị {displayQuestions.length} trong tổng số {qTotalElements} kết quả ({selectedIds.length} câu hỏi đã chọn)
-                        </div>
-                        <div className="qsf-qpagination-buttons">
-                          <button type="button" className="qsf-page-btn" disabled={qPage <= 0} onClick={() => setQPage(qPage - 1)}>&lt;</button>
-                          {paginationItems.map((item, index) => (
-                            item === 'ellipsis' ? (
-                              <span className="qsf-page-ellipsis" key={`ellipsis-${index}`}>...</span>
-                            ) : (
-                              <button
-                                type="button"
-                                key={item}
-                                className={`qsf-page-btn ${qPage === item ? 'qsf-page-btn--active' : ''}`}
-                                onClick={() => setQPage(item)}
-                              >
-                                {item + 1}
-                              </button>
-                            )
-                          ))}
-                          <button type="button" className="qsf-page-btn" disabled={qPage + 1 >= qTotalPages} onClick={() => setQPage(qPage + 1)}>&gt;</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="qsf-form-actions">
-                      <button type="submit" className="qsf-btn-save" disabled={isSaving || isActiveLocked}>
-                        {isSaving ? <LoadingOutlined /> : <SaveOutlined />}
-                        {isActiveLocked ? 'Đã khóa snapshot' : 'Lưu bộ câu hỏi'}
-                      </button>
-                      <button type="button" className="qsf-btn-cancel" onClick={() => navigate('/admin/evaluation/question-sets')} disabled={isSaving}>
-                        Hủy
-                      </button>
-                    </div>
-                  </form>
+                  ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </main>
+
+              <div className="qsf-questions-card">
+                <div className="qsf-bank-heading">
+                  <div>
+                    <h3>Ngân hàng câu hỏi</h3>
+                    <p>Tìm và chọn các câu hỏi đã được phê duyệt.</p>
+                  </div>
+                </div>
+                <div className="qsf-qfilter-bar">
+                  <div className="qsf-qsearch">
+                    <span className="qsf-qsearch-icon"><SearchOutlined /></span>
+                    <input
+                      type="text"
+                      className="qsf-qsearch-input"
+                      placeholder="Tìm câu hỏi..."
+                      value={qKeyword}
+                      onChange={(event) => {
+                        setQKeyword(event.target.value)
+                        setQPage(0)
+                      }}
+                    />
+                  </div>
+                  <details className="qsf-filter-disclosure">
+                    <summary>
+                      <FilterOutlined /> Bộ lọc
+                      {activeQuestionFilterCount > 0 && <span className="qsf-filter-count">{activeQuestionFilterCount}</span>}
+                    </summary>
+                    <div className="qsf-filter-panel">
+                      <select className="qsf-qfilter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
+                        <option value="">Tất cả danh mục</option>
+                        {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+                      </select>
+                      <select className="qsf-qfilter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
+                        <option value="">Tất cả độ khó</option>
+                        {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                      <select className="qsf-qfilter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
+                        <option value="">Tất cả nguồn</option>
+                        {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+                      </select>
+                      <select className="qsf-qfilter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
+                        <option value="">Tất cả loại câu hỏi</option>
+                        <option value="ORIGINAL">Gốc</option>
+                        <option value="PARAPHRASE">Diễn đạt lại</option>
+                      </select>
+                    </div>
+                  </details>
+                </div>
+
+                <div className="qsf-bank-selection-bar">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={isAllDisplayChecked}
+                      onChange={toggleSelectAllDisplay}
+                      disabled={isActiveLocked || displayQuestions.length === 0}
+                    />
+                    Chọn tất cả {displayQuestions.length} câu trên trang này
+                  </label>
+                  <span>{selectedIds.length} câu trong bộ</span>
+                </div>
+
+                <div className="qsf-bank-list">
+                  {displayQuestions.length === 0 ? (
+                    <div className="qsf-bank-empty">
+                      <SearchOutlined />
+                      <strong>Không tìm thấy câu hỏi phù hợp</strong>
+                      <span>Thử thay đổi từ khóa hoặc bộ lọc đang sử dụng.</span>
+                    </div>
+                  ) : (
+                    displayQuestions.map((question) => {
+                      const isSelected = selectedIds.includes(question.id)
+                      return (
+                        <article className={`qsf-bank-item ${isSelected ? 'qsf-bank-item--selected' : ''}`} key={question.id}>
+                          <label className="qsf-bank-checkbox" aria-label={isSelected ? 'Bỏ chọn câu hỏi' : 'Chọn câu hỏi'}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleQuestion(question.id)}
+                              disabled={isActiveLocked}
+                            />
+                          </label>
+                          <div className="qsf-bank-item__content">
+                            <h4>{question.stem}</h4>
+                            <div className="qsf-bank-item__meta">
+                              {question.topic && <span className="qsf-meta-chip">{question.topic}</span>}
+                              <span className={`qsf-diff-badge ${getDifficultyClass(question.difficulty)}`}>
+                                {difficultyText(question.difficulty)}
+                              </span>
+                              <span className="qsf-source-text" title={question.sourceDocument || question.questionType || ''}>
+                                {question.sourceDocument || question.questionType || 'Nguồn nội bộ'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className={`qsf-bank-action ${isSelected ? 'qsf-bank-action--selected' : ''}`}
+                            onClick={() => toggleQuestion(question.id)}
+                            disabled={isActiveLocked}
+                          >
+                            {isSelected ? <CheckOutlined /> : <PlusOutlined />}
+                            {isSelected ? 'Đã chọn' : 'Thêm'}
+                          </button>
+                        </article>
+                      )
+                    })
+                  )}
+                </div>
+
+                <div className="qsf-qpagination-bar">
+                  <div className="qsf-qpagination-info">
+                    Hiển thị {displayQuestions.length} trong tổng số {qTotalElements} kết quả ({selectedIds.length} câu hỏi đã chọn)
+                  </div>
+                  <div className="qsf-qpagination-buttons">
+                    <button type="button" className="qsf-page-btn" disabled={qPage <= 0} onClick={() => setQPage(qPage - 1)}>&lt;</button>
+                    {paginationItems.map((item, index) => (
+                      item === 'ellipsis' ? (
+                        <span className="qsf-page-ellipsis" key={`ellipsis-${index}`}>...</span>
+                      ) : (
+                        <button
+                          type="button"
+                          key={item}
+                          className={`qsf-page-btn ${qPage === item ? 'qsf-page-btn--active' : ''}`}
+                          onClick={() => setQPage(item)}
+                        >
+                          {item + 1}
+                        </button>
+                      )
+                    ))}
+                    <button type="button" className="qsf-page-btn" disabled={qPage + 1 >= qTotalPages} onClick={() => setQPage(qPage + 1)}>&gt;</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="qsf-form-actions">
+                <button type="submit" className="qsf-btn-save" disabled={isSaving || isActiveLocked}>
+                  {isSaving ? <LoadingOutlined /> : <SaveOutlined />}
+                  {isActiveLocked ? 'Đã khóa snapshot' : 'Lưu bộ câu hỏi'}
+                </button>
+                <button type="button" className="qsf-btn-cancel" onClick={() => navigate('/admin/evaluation/question-sets')} disabled={isSaving}>
+                  Hủy
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
-
-    </div>
+    </AppShell>
   )
 }
 

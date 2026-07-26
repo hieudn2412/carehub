@@ -12,8 +12,7 @@ import {
   UserSwitchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader'
-import AdminSidebar from '../components/AdminSidebar'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
@@ -388,19 +387,16 @@ function AdminQualityHistoryVersionPage() {
   }
 
   return (
-    <div className="dashboard-layout admin-quality-history-page">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ to: `/admin/quality/history?formId=${encodeURIComponent(formId)}`, label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Chất lượng' },
-            { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
-            { label: 'Chi tiết phiên bản' },
-          ]}
-        />
-
-        <main className="admin-quality-history admin-quality-history--version">
+    <AppShell
+      className="admin-quality-history-page"
+      back={{ to: `/admin/quality/history?formId=${encodeURIComponent(formId)}`, label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Chất lượng' },
+        { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
+        { label: 'Chi tiết phiên bản' },
+      ]}
+    >
+        <div className="admin-quality-history admin-quality-history--version">
           {loading ? (
             <section className="aqh-empty-state">
               <LoadingOutlined />
@@ -583,8 +579,7 @@ function AdminQualityHistoryVersionPage() {
               </section>
             </>
           )}
-        </main>
-      </div>
+        </div>
 
       {managerModalOpen && (
         <div
@@ -728,7 +723,7 @@ function AdminQualityHistoryVersionPage() {
         onConfirm={revokeAssignment}
         title="Thu hồi phân quyền"
       />
-    </div>
+    </AppShell>
   )
 }
 

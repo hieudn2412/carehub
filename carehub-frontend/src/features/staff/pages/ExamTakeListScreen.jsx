@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EyeOutlined, LoadingOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../components/sidebar.jsx'
-import Header from '../components/Header.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../evaluation/utils/documentQuestionUi.js'
@@ -64,9 +63,7 @@ export default function ExamTakeListScreen() {
 
   const assessmentLabel = value => value === 'PASSED' ? 'Đạt' : value === 'FAILED' ? 'Chưa đạt' : 'Chưa làm'
 
-  return <div className="dashboard-layout"><Sidebar /><div className="dashboard-layout__content">
-    <Header title="Năng lực chuyên môn" />
-    <div className="dashboard-layout__body"><div className="eh-page">
+  return <AppShell title="Năng lực chuyên môn"><div className="eh-page">
       <div className="eh-header"><h1 className="eh-page-title">Năng lực chuyên môn</h1><p className="eh-page-sub">Theo dõi và hoàn thành các bài kiểm tra được giao</p></div>
       <div className="eh-summary-grid">
         <div className="eh-take-summary-card"><span>Tổng</span><strong>{stats.total}</strong></div>
@@ -99,6 +96,5 @@ export default function ExamTakeListScreen() {
           </button></td>
         </tr>)}
       </tbody></table></div>
-    </div></div>
-  </div></div>
+  </div></AppShell>
 }

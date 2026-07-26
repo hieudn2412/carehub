@@ -8,8 +8,7 @@ import {
   DownOutlined,
   CloseOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
@@ -522,18 +521,14 @@ function TrainingHoursFormScreen() {
   })
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo', link: '/staff/training' },
-            { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell
+      back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo', link: '/staff/training' },
+        { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
+      ]}
+    >
+      <div className="training-page">
 
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Đang tải thông tin biểu mẫu...</div>
@@ -783,8 +778,6 @@ function TrainingHoursFormScreen() {
                 <div className="th-form-bottom-space" aria-hidden="true" />
               </div>
             )}
-          </div>
-        </div>
       </div>
 
       {/* Modal đề xuất lĩnh vực mới */}
@@ -882,7 +875,7 @@ function TrainingHoursFormScreen() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

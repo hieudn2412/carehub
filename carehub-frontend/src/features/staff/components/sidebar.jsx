@@ -25,6 +25,10 @@ import logo from '../../../assets/logo.png'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
 
+/* TODO(ui-refactor): component này đang là "facade" sidebar duy nhất của app
+   (AppShell dùng nó; khi user là admin nó render AdminSidebar). Bước hợp nhất
+   vật lý AdminSidebar + Sidebar thành một AppSidebar nhận config menu theo
+   role vẫn còn nợ — làm khi có điều kiện test đủ 3 role trên trình duyệt. */
 function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()

@@ -9,8 +9,7 @@ import {
   RollbackOutlined,
   FolderOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
@@ -170,18 +169,14 @@ function TrainingHoursDetailScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: '/staff/training', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo', link: '/staff/training' },
-            { label: 'Chi tiết' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell
+      back={{ to: '/staff/training', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo', link: '/staff/training' },
+        { label: 'Chi tiết' }
+      ]}
+    >
+      <div className="training-page">
 
             {loading ? (
               <div className="th-table-state">Đang tải thông tin...</div>
@@ -355,8 +350,6 @@ function TrainingHoursDetailScreen() {
                 </div>
               </>
             )}
-          </div>
-        </div>
       </div>
       <ConfirmModal
         isOpen={returnConfirmOpen}
@@ -366,7 +359,7 @@ function TrainingHoursDetailScreen() {
         onConfirm={handleReturnToDraft}
         onCancel={() => setReturnConfirmOpen(false)}
       />
-    </div>
+    </AppShell>
   )
 }
 

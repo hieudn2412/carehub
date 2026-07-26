@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SaveOutlined, CloseOutlined } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { promptTemplateApi } from '../api/promptTemplateApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -89,13 +88,9 @@ function PromptTemplateFormPage() {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <AdminSidebar />
-        <div className="dashboard-layout__content">
-          <AdminHeader back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={[{ label: 'Prompt Templates' }]} />
-          <div className="dashboard-root"><main className="dashboard-body"><div className="evd-page"><section className="evd-panel evd-empty">Đang tải...</section></div></main></div>
-        </div>
-      </div>
+      <AppShell back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={[{ label: 'Prompt Templates' }]}>
+        <div className="evd-page"><section className="evd-panel evd-empty">Đang tải...</section></div>
+      </AppShell>
     )
   }
 
@@ -105,139 +100,131 @@ function PromptTemplateFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="evd-page">
-              <section className="evd-title-card">
-                <div>
-                  <h1>{isEditMode ? 'Chỉnh sửa Prompt Template' : 'Tạo Prompt Template mới'}</h1>
-                  <p>Định nghĩa prompt template cho AI question generation</p>
-                </div>
-              </section>
+    <AppShell back={{ to: '/admin/evaluation/prompt-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+      <div className="evd-page">
+        <section className="evd-title-card">
+          <div>
+            <h1>{isEditMode ? 'Chỉnh sửa Prompt Template' : 'Tạo Prompt Template mới'}</h1>
+            <p>Định nghĩa prompt template cho AI question generation</p>
+          </div>
+        </section>
 
-              <section className="evd-panel">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Tên template <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      value={form.name}
-                      onChange={e => setForm({ ...form, name: e.target.value })}
-                      placeholder="VD: docgen-mvp-flash-v1"
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Provider <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <select
-                      value={form.provider}
-                      onChange={e => setForm({ ...form, provider: e.target.value })}
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, background: '#fff' }}
-                    >
-                      <option value="deepseek">DeepSeek</option>
-                      <option value="openai">OpenAI</option>
-                      <option value="gemini">Gemini</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Model <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      value={form.model}
-                      onChange={e => setForm({ ...form, model: e.target.value })}
-                      placeholder="VD: deepseek-chat"
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Mô tả
-                    </label>
-                    <input
-                      value={form.description}
-                      onChange={e => setForm({ ...form, description: e.target.value })}
-                      placeholder="Mô tả ngắn về prompt này"
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Temperature
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="2"
-                      value={form.temperature}
-                      onChange={e => setForm({ ...form, temperature: e.target.value })}
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                      Max Tokens
-                    </label>
-                    <input
-                      type="number"
-                      step="100"
-                      min="100"
-                      max="8000"
-                      value={form.maxTokens}
-                      onChange={e => setForm({ ...form, maxTokens: e.target.value })}
-                      style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                    System Prompt
-                  </label>
-                  <textarea
-                    value={form.systemPrompt}
-                    onChange={e => setForm({ ...form, systemPrompt: e.target.value })}
-                    placeholder="Hướng dẫn hệ thống cho AI..."
-                    rows={6}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, resize: 'vertical', fontFamily: 'monospace' }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: 28 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                    User Prompt Template <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <textarea
-                    value={form.userPromptTemplate}
-                    onChange={e => setForm({ ...form, userPromptTemplate: e.target.value })}
-                    placeholder="Template cho user prompt, có thể chứa các placeholder như {{chunk_content}}..."
-                    rows={8}
-                    style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, resize: 'vertical', fontFamily: 'monospace' }}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-                  <button type="button" className="evd-btn" onClick={() => navigate('/admin/evaluation/prompt-templates')} disabled={saving}>
-                    <CloseOutlined /> Huỷ bỏ
-                  </button>
-                  <button type="button" className="evd-btn evd-btn--primary" onClick={handleSave} disabled={saving}>
-                    <SaveOutlined /> {saving ? 'Đang lưu...' : isEditMode ? 'Cập nhật' : 'Tạo mới'}
-                  </button>
-                </div>
-              </section>
+        <section className="evd-panel">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Tên template <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+                placeholder="VD: docgen-mvp-flash-v1"
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
+              />
             </div>
-          </main>
-        </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Provider <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <select
+                value={form.provider}
+                onChange={e => setForm({ ...form, provider: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, background: '#fff' }}
+              >
+                <option value="deepseek">DeepSeek</option>
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Model <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                value={form.model}
+                onChange={e => setForm({ ...form, model: e.target.value })}
+                placeholder="VD: deepseek-chat"
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Mô tả
+              </label>
+              <input
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+                placeholder="Mô tả ngắn về prompt này"
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Temperature
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max="2"
+                value={form.temperature}
+                onChange={e => setForm({ ...form, temperature: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                Max Tokens
+              </label>
+              <input
+                type="number"
+                step="100"
+                min="100"
+                max="8000"
+                value={form.maxTokens}
+                onChange={e => setForm({ ...form, maxTokens: e.target.value })}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14 }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              System Prompt
+            </label>
+            <textarea
+              value={form.systemPrompt}
+              onChange={e => setForm({ ...form, systemPrompt: e.target.value })}
+              placeholder="Hướng dẫn hệ thống cho AI..."
+              rows={6}
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, resize: 'vertical', fontFamily: 'monospace' }}
+            />
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+              User Prompt Template <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <textarea
+              value={form.userPromptTemplate}
+              onChange={e => setForm({ ...form, userPromptTemplate: e.target.value })}
+              placeholder="Template cho user prompt, có thể chứa các placeholder như {{chunk_content}}..."
+              rows={8}
+              style={{ width: '100%', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, resize: 'vertical', fontFamily: 'monospace' }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <button type="button" className="evd-btn" onClick={() => navigate('/admin/evaluation/prompt-templates')} disabled={saving}>
+              <CloseOutlined /> Huỷ bỏ
+            </button>
+            <button type="button" className="evd-btn evd-btn--primary" onClick={handleSave} disabled={saving}>
+              <SaveOutlined /> {saving ? 'Đang lưu...' : isEditMode ? 'Cập nhật' : 'Tạo mới'}
+            </button>
+          </div>
+        </section>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

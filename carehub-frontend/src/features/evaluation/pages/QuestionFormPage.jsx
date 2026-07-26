@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -275,217 +274,212 @@ function QuestionFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout" onClickCapture={handleNavigationCapture}>
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ onClick: () => requestLeave(), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qf-page">
-              <div className="qf-container">
-                {/* Header */}
-                <div className="qf-header">
-                  <div>
-                    <h2 className="qf-title">
-                      {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
-                    </h2>
-                    <p className="qf-subtitle">
-                      {isEditMode ? 'Điều chỉnh nội dung và đáp án của câu hỏi.' : 'Soạn câu hỏi trắc nghiệm với một đáp án đúng.'}
-                    </p>
-                  </div>
-                </div>
-
-                {isLoadingQuestion && (
-                  <div className="qf-info-banner">Đang tải chi tiết câu hỏi...</div>
-                )}
-                {loadError && !isLoadingQuestion && (
-                  <div className="qf-error-banner">
-                    <strong>Không tải được câu hỏi</strong>
-                    <p>{loadError}</p>
-                    <button type="button" onClick={() => requestLeave()}>
-                      Quay lại ngân hàng câu hỏi
-                    </button>
-                  </div>
-                )}
-                {impactWarning?.warning && !isLoadingQuestion && (
-                  <div className="qf-impact-banner">
-                    <strong>Cảnh báo sử dụng</strong>
-                    <p>{impactWarning.warning}</p>
-                  </div>
-                )}
-
-                <form onSubmit={handleSave} className="qf-form">
-                  {/* Question Text */}
-                  <div className="qf-form-group">
-                    <label>
-                      Nội dung câu hỏi <span className="qf-required-star">*</span>
-                    </label>
-                    <textarea
-                      className="qf-input-green"
-                      rows={3}
-                      required
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
-                      disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                    />
-                    <small className="qf-field-hint">Viết ngắn gọn, rõ nghĩa và tránh đưa gợi ý đáp án vào câu hỏi.</small>
-                  </div>
-
-                  {/* Inputs Grid */}
-                  <div className="qf-form-row">
-                    <div className="qf-form-group">
-                      <label>
-                        Danh mục <span className="qf-required-star">*</span>
-                      </label>
-                      <select
-                        className="qf-input-red"
-                        required
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                      >
-                        {categoryOptions.map((cat, idx) => (
-                          <option key={idx} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="qf-form-group">
-                      <label>
-                        Độ khó <span className="qf-required-star">*</span>
-                      </label>
-                      <select
-                        className="qf-input-red"
-                        required
-                        value={difficulty}
-                        onChange={(e) => setDifficulty(e.target.value)}
-                        disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                      >
-                        {DIFFICULTIES.map((diff, idx) => (
-                          <option key={idx} value={diff}>
-                            {diff}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Section Divider */}
-                  <div className="qf-section-divider">
-                    <div>
-                      <span className="qf-divider-title">Các phương án trả lời</span>
-                      <p>Nhập đủ bốn phương án và chọn một đáp án đúng.</p>
-                    </div>
-                  </div>
-
-                  {/* Options List */}
-                  <div className="qf-options-list">
-                    {options.map((optionText, idx) => {
-                      const isCorrect = correctOptionIndices.includes(idx)
-                      return (
-                        <div
-                          key={idx}
-                          className={`qf-option-card ${isCorrect ? 'qf-option-card--correct' : ''}`}
-                          onClick={() => {
-                            if (!isSaving && !isLoadingQuestion && !loadError) {
-                              handleSelectCorrect(idx)
-                            }
-                          }}
-                        >
-                          <div className="qf-option-left">
-                            <input
-                              type="radio"
-                              name="correctAnswer"
-                              checked={isCorrect}
-                              onChange={() => handleSelectCorrect(idx)}
-                              className="qf-option-control"
-                              onClick={(e) => e.stopPropagation()} // Prevent double triggers
-                              disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                            />
-                            <span className="qf-option-letter">{getOptionLetter(idx)}</span>
-                            <input
-                              type="text"
-                              className="qf-option-text-input"
-                              placeholder={`Đáp án ${getOptionLetter(idx)}...`}
-                              value={optionText}
-                              onChange={(e) => handleOptionChange(idx, e.target.value)}
-                              onClick={(e) => e.stopPropagation()} // Prevent selecting checkbox on text focus
-                              disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                            />
-                          </div>
-
-                          <div className="qf-option-right" onClick={(e) => e.stopPropagation()}>
-                            {isCorrect && (
-                              <span className="qf-option-correct-badge">
-                                <CheckOutlined /> Đúng
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Actions Footer */}
-                  <div className="qf-form-actions">
-                    <button
-                      type="button"
-                      className="qf-btn-cancel"
-                      onClick={() => requestLeave()}
-                    >
-                      Hủy
-                    </button>
-                    <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
-                      {isSaving ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo câu hỏi')}
-                    </button>
-                  </div>
-                </form>
+    // Giữ onClickCapture bao trọn Sidebar/Header để chặn điều hướng khi còn thay đổi chưa lưu.
+    <div onClickCapture={handleNavigationCapture}>
+      <AppShell back={{ onClick: () => requestLeave(), label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+        <div className="qf-page">
+          <div className="qf-container">
+            {/* Header */}
+            <div className="qf-header">
+              <div>
+                <h2 className="qf-title">
+                  {isEditMode ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
+                </h2>
+                <p className="qf-subtitle">
+                  {isEditMode ? 'Điều chỉnh nội dung và đáp án của câu hỏi.' : 'Soạn câu hỏi trắc nghiệm với một đáp án đúng.'}
+                </p>
               </div>
             </div>
-          </main>
+
+            {isLoadingQuestion && (
+              <div className="qf-info-banner">Đang tải chi tiết câu hỏi...</div>
+            )}
+            {loadError && !isLoadingQuestion && (
+              <div className="qf-error-banner">
+                <strong>Không tải được câu hỏi</strong>
+                <p>{loadError}</p>
+                <button type="button" onClick={() => requestLeave()}>
+                  Quay lại ngân hàng câu hỏi
+                </button>
+              </div>
+            )}
+            {impactWarning?.warning && !isLoadingQuestion && (
+              <div className="qf-impact-banner">
+                <strong>Cảnh báo sử dụng</strong>
+                <p>{impactWarning.warning}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSave} className="qf-form">
+              {/* Question Text */}
+              <div className="qf-form-group">
+                <label>
+                  Nội dung câu hỏi <span className="qf-required-star">*</span>
+                </label>
+                <textarea
+                  className="qf-input-green"
+                  rows={3}
+                  required
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Nhập nội dung câu hỏi trắc nghiệm..."
+                  disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                />
+                <small className="qf-field-hint">Viết ngắn gọn, rõ nghĩa và tránh đưa gợi ý đáp án vào câu hỏi.</small>
+              </div>
+
+              {/* Inputs Grid */}
+              <div className="qf-form-row">
+                <div className="qf-form-group">
+                  <label>
+                    Danh mục <span className="qf-required-star">*</span>
+                  </label>
+                  <select
+                    className="qf-input-red"
+                    required
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                  >
+                    {categoryOptions.map((cat, idx) => (
+                      <option key={idx} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="qf-form-group">
+                  <label>
+                    Độ khó <span className="qf-required-star">*</span>
+                  </label>
+                  <select
+                    className="qf-input-red"
+                    required
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                  >
+                    {DIFFICULTIES.map((diff, idx) => (
+                      <option key={idx} value={diff}>
+                        {diff}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Section Divider */}
+              <div className="qf-section-divider">
+                <div>
+                  <span className="qf-divider-title">Các phương án trả lời</span>
+                  <p>Nhập đủ bốn phương án và chọn một đáp án đúng.</p>
+                </div>
+              </div>
+
+              {/* Options List */}
+              <div className="qf-options-list">
+                {options.map((optionText, idx) => {
+                  const isCorrect = correctOptionIndices.includes(idx)
+                  return (
+                    <div
+                      key={idx}
+                      className={`qf-option-card ${isCorrect ? 'qf-option-card--correct' : ''}`}
+                      onClick={() => {
+                        if (!isSaving && !isLoadingQuestion && !loadError) {
+                          handleSelectCorrect(idx)
+                        }
+                      }}
+                    >
+                      <div className="qf-option-left">
+                        <input
+                          type="radio"
+                          name="correctAnswer"
+                          checked={isCorrect}
+                          onChange={() => handleSelectCorrect(idx)}
+                          className="qf-option-control"
+                          onClick={(e) => e.stopPropagation()} // Prevent double triggers
+                          disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                        />
+                        <span className="qf-option-letter">{getOptionLetter(idx)}</span>
+                        <input
+                          type="text"
+                          className="qf-option-text-input"
+                          placeholder={`Đáp án ${getOptionLetter(idx)}...`}
+                          value={optionText}
+                          onChange={(e) => handleOptionChange(idx, e.target.value)}
+                          onClick={(e) => e.stopPropagation()} // Prevent selecting checkbox on text focus
+                          disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                        />
+                      </div>
+
+                      <div className="qf-option-right" onClick={(e) => e.stopPropagation()}>
+                        {isCorrect && (
+                          <span className="qf-option-correct-badge">
+                            <CheckOutlined /> Đúng
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Actions Footer */}
+              <div className="qf-form-actions">
+                <button
+                  type="button"
+                  className="qf-btn-cancel"
+                  onClick={() => requestLeave()}
+                >
+                  Hủy
+                </button>
+                <button type="submit" className="qf-btn-save" disabled={isLoadingQuestion || isSaving || Boolean(loadError)}>
+                  {isSaving ? 'Đang lưu...' : (isEditMode ? 'Lưu thay đổi' : 'Tạo câu hỏi')}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
-      {pendingDestination && (
-        <div className="qf-leave-backdrop" role="presentation" onMouseDown={() => setPendingDestination(null)}>
-          <section
-            className="qf-leave-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="qf-leave-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <span className="qf-leave-dialog__icon" aria-hidden="true"><ExclamationCircleOutlined /></span>
-            <div>
-              <h3 id="qf-leave-title">Rời trang mà không lưu?</h3>
-              <p>Các thay đổi bạn đang chỉnh sửa sẽ bị mất.</p>
-            </div>
-            <div className="qf-leave-dialog__actions">
-              <button type="button" className="qf-btn-cancel" onClick={() => setPendingDestination(null)}>
-                Tiếp tục chỉnh sửa
-              </button>
-              <button type="button" className="qf-btn-leave" onClick={confirmLeave}>
-                Rời trang, không lưu
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-      <ConfirmModal
-        isOpen={Boolean(pendingSavePayload)}
-        title="Câu hỏi đang được sử dụng"
-        message={impactWarning?.warning ? `${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi? Thay đổi có thể ảnh hưởng đến các bộ đang sử dụng câu hỏi này.` : ''}
-        confirmText="Tiếp tục cập nhật"
-        danger
-        onCancel={() => setPendingSavePayload(null)}
-        onConfirm={async () => {
-          const payload = pendingSavePayload
-          setPendingSavePayload(null)
-          if (payload) await persistQuestion(payload)
-        }}
-      />
+        {pendingDestination && (
+          <div className="qf-leave-backdrop" role="presentation" onMouseDown={() => setPendingDestination(null)}>
+            <section
+              className="qf-leave-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="qf-leave-title"
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <span className="qf-leave-dialog__icon" aria-hidden="true"><ExclamationCircleOutlined /></span>
+              <div>
+                <h3 id="qf-leave-title">Rời trang mà không lưu?</h3>
+                <p>Các thay đổi bạn đang chỉnh sửa sẽ bị mất.</p>
+              </div>
+              <div className="qf-leave-dialog__actions">
+                <button type="button" className="qf-btn-cancel" onClick={() => setPendingDestination(null)}>
+                  Tiếp tục chỉnh sửa
+                </button>
+                <button type="button" className="qf-btn-leave" onClick={confirmLeave}>
+                  Rời trang, không lưu
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        <ConfirmModal
+          isOpen={Boolean(pendingSavePayload)}
+          title="Câu hỏi đang được sử dụng"
+          message={impactWarning?.warning ? `${impactWarning.warning}\n\nTiếp tục cập nhật nội dung câu hỏi? Thay đổi có thể ảnh hưởng đến các bộ đang sử dụng câu hỏi này.` : ''}
+          confirmText="Tiếp tục cập nhật"
+          danger
+          onCancel={() => setPendingSavePayload(null)}
+          onConfirm={async () => {
+            const payload = pendingSavePayload
+            setPendingSavePayload(null)
+            if (payload) await persistQuestion(payload)
+          }}
+        />
+      </AppShell>
     </div>
   )
 }

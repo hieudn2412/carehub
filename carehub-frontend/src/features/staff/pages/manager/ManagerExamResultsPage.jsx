@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
 import { trainingApi } from '../../../training/api/trainingApi'
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
@@ -46,111 +45,105 @@ function ManagerExamResultsPage() {
   }, [professionalFieldId, debouncedSearch])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Kết quả thi nhân sự" />
-        <div className="dashboard-layout__body">
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả thi nhân sự</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Theo dõi kết quả các kỳ thi năng lực của điều dưỡng trong khoa
-            </p>
-          </div>
+    <AppShell title="Kết quả thi nhân sự">
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả thi nhân sự</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+          Theo dõi kết quả các kỳ thi năng lực của điều dưỡng trong khoa
+        </p>
+      </div>
 
-          {/* Search toolbar */}
-          <div className="mgr-toolbar">
-            <div className="mgr-search-box">
-              <input 
-                type="text" 
-                placeholder="Tìm theo tên kỳ thi..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              <SearchOutlined />
-            </div>
-            <div className="mgr-field-filter">
-              <SearchableSelect
-                value={professionalFieldId}
-                onChange={setProfessionalFieldId}
-                options={[
-                  { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
-                  ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                ]}
-                placeholder="Tất cả lĩnh vực chuyên môn"
-                searchPlaceholder="Tìm tên lĩnh vực..."
-                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-              />
-            </div>
-          </div>
-
-          {/* Loading */}
-          {loading ? (
-            <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
-              <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
-              <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
-            </div>
-          ) : assignments.length === 0 ? (
-            <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
-              <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
-            </div>
-          ) : (
-          <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
-            <table className="mgr-table mgr-table--cards">
-              <thead>
-                <tr>
-                  <th>Tên kỳ thi</th>
-                  <th>Lĩnh vực chuyên môn</th>
-                  <th>Ngày tạo</th>
-                  <th>Trạng thái</th>
-                  <th>Hạn nộp</th>
-                  <th style={{ width: 80, textAlign: 'center' }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map((item) => (
-                  <tr key={item.id}>
-                    <td data-label="Tên kỳ thi" style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
-                    <td data-label="Lĩnh vực chuyên môn">{item.professionalFieldName || '—'}</td>
-                    <td data-label="Ngày tạo" style={{ color: '#475569' }}>
-                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
-                    </td>
-                    <td data-label="Trạng thái">
-                      <span className={`mgr-badge mgr-badge--${item.status === 'OPEN' ? 'green' : item.status === 'CLOSED' ? 'red' : 'amber'}`}>
-                        {item.status === 'OPEN' ? 'Đang mở' : item.status === 'CLOSED' ? 'Đã đóng' : item.status || '--'}
-                      </span>
-                    </td>
-                    <td data-label="Hạn nộp" style={{ color: '#475569' }}>
-                      {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button 
-                        onClick={() => navigate(`/manager/exam-results/detail/${item.id}`)}
-                        style={{
-                          border: '1px solid #e2e8f0',
-                          background: '#fff',
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          color: '#475569',
-                          transition: 'all 0.15s'
-                        }}
-                        title="Xem kết quả"
-                        onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
-                        onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
-                      >
-                        <EyeOutlined />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          )}
+      {/* Search toolbar */}
+      <div className="mgr-toolbar">
+        <div className="mgr-search-box">
+          <input 
+            type="text" 
+            placeholder="Tìm theo tên kỳ thi..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <SearchOutlined />
+        </div>
+        <div className="mgr-field-filter">
+          <SearchableSelect
+            value={professionalFieldId}
+            onChange={setProfessionalFieldId}
+            options={[
+              { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+              ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+            ]}
+            placeholder="Tất cả lĩnh vực chuyên môn"
+            searchPlaceholder="Tìm tên lĩnh vực..."
+            ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+          />
         </div>
       </div>
-    </div>
+
+      {/* Loading */}
+      {loading ? (
+        <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
+          <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
+          <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
+        </div>
+      ) : assignments.length === 0 ? (
+        <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
+          <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
+        </div>
+      ) : (
+      <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
+        <table className="mgr-table mgr-table--cards">
+          <thead>
+            <tr>
+              <th>Tên kỳ thi</th>
+              <th>Lĩnh vực chuyên môn</th>
+              <th>Ngày tạo</th>
+              <th>Trạng thái</th>
+              <th>Hạn nộp</th>
+              <th style={{ width: 80, textAlign: 'center' }}>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {assignments.map((item) => (
+              <tr key={item.id}>
+                <td data-label="Tên kỳ thi" style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
+                <td data-label="Lĩnh vực chuyên môn">{item.professionalFieldName || '—'}</td>
+                <td data-label="Ngày tạo" style={{ color: '#475569' }}>
+                  {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
+                </td>
+                <td data-label="Trạng thái">
+                  <span className={`mgr-badge mgr-badge--${item.status === 'OPEN' ? 'green' : item.status === 'CLOSED' ? 'red' : 'amber'}`}>
+                    {item.status === 'OPEN' ? 'Đang mở' : item.status === 'CLOSED' ? 'Đã đóng' : item.status || '--'}
+                  </span>
+                </td>
+                <td data-label="Hạn nộp" style={{ color: '#475569' }}>
+                  {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button 
+                    onClick={() => navigate(`/manager/exam-results/detail/${item.id}`)}
+                    style={{
+                      border: '1px solid #e2e8f0',
+                      background: '#fff',
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      color: '#475569',
+                      transition: 'all 0.15s'
+                    }}
+                    title="Xem kết quả"
+                    onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
+                  >
+                    <EyeOutlined />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      )}
+    </AppShell>
   )
 }
 

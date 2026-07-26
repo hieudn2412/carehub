@@ -6,8 +6,7 @@ import {
   SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../components/sidebar'
-import Header from '../components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
@@ -363,114 +362,108 @@ function ExamTakeScreen() {
   }, [autoSaving, saveStatus])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header back={{ onClick: leaveExam, label: 'Quay lại' }} title="Làm bài thi" />
-        <div className="dashboard-layout__body">
-          <div className="eh-page">
-            {isLoading ? (
-              <div className="eh-table-card eh-loading-state"><LoadingOutlined spin /> Đang tải bài kiểm tra...</div>
-            ) : loadError ? (
-              <div className="eh-table-card eh-loading-state">{loadError}</div>
-            ) : (
-              <>
-                <div className="eh-header eh-detail-header eh-exam-toolbar">
-                  <div>
-                    <h2 className="eh-page-title">{attempt?.examPaperName || 'Bài kiểm tra'}</h2>
-                    <p className="eh-page-sub">Hạn lượt làm: {formatDateTime(attempt?.expiresAt)}</p>
-                    <p className="eh-page-sub eh-save-indicator">
-                      {saveLabel}
-                      {lastSavedAt ? ` lúc ${lastSavedAt.toLocaleTimeString('vi-VN')}` : ''}
-                    </p>
-                  </div>
-                  <div className="eh-exam-toolbar__right">
-                    <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
-                      <span>Thời gian còn lại</span>
-                      <strong>{formatRemaining(remainingSeconds)}</strong>
-                    </div>
-                    <div className="eh-actions">
-                      <button className="eh-btn eh-btn--view" onClick={() => saveAnswers(false, true)} disabled={saving || autoSaving || !isWritable}>
-                        <SaveOutlined /> Lưu
-                      </button>
-                      <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving || !isWritable}>
-                        <SendOutlined /> Nộp bài
-                      </button>
-                    </div>
-                  </div>
+    <AppShell back={{ onClick: leaveExam, label: 'Quay lại' }} title="Làm bài thi">
+      <div className="eh-page">
+        {isLoading ? (
+          <div className="eh-table-card eh-loading-state"><LoadingOutlined spin /> Đang tải bài kiểm tra...</div>
+        ) : loadError ? (
+          <div className="eh-table-card eh-loading-state">{loadError}</div>
+        ) : (
+          <>
+            <div className="eh-header eh-detail-header eh-exam-toolbar">
+              <div>
+                <h2 className="eh-page-title">{attempt?.examPaperName || 'Bài kiểm tra'}</h2>
+                <p className="eh-page-sub">Hạn lượt làm: {formatDateTime(attempt?.expiresAt)}</p>
+                <p className="eh-page-sub eh-save-indicator">
+                  {saveLabel}
+                  {lastSavedAt ? ` lúc ${lastSavedAt.toLocaleTimeString('vi-VN')}` : ''}
+                </p>
+              </div>
+              <div className="eh-exam-toolbar__right">
+                <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
+                  <span>Thời gian còn lại</span>
+                  <strong>{formatRemaining(remainingSeconds)}</strong>
                 </div>
+                <div className="eh-actions">
+                  <button className="eh-btn eh-btn--view" onClick={() => saveAnswers(false, true)} disabled={saving || autoSaving || !isWritable}>
+                    <SaveOutlined /> Lưu
+                  </button>
+                  <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving || !isWritable}>
+                    <SendOutlined /> Nộp bài
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                <section className="eh-table-card eh-exam-progress">
-                  <div className="eh-exam-progress__summary">
-                    <div>
-                      <strong>{answeredCount}/{questions.length} câu đã trả lời</strong>
-                      <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Đã trả lời tất cả câu hỏi'}</span>
-                    </div>
-                    <strong>{progressPercent}%</strong>
-                  </div>
-                  <div className="eh-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
-                  <div className="eh-question-nav" aria-label="Điều hướng câu hỏi">
-                    {questions.map((question) => (
-                      <button
-                        type="button"
-                        key={question.paperQuestionId}
-                        className={answers[question.paperQuestionId] ? 'is-answered' : ''}
-                        onClick={() => scrollToQuestion(question.paperQuestionId)}
-                        title={`Câu ${question.position}${answers[question.paperQuestionId] ? ' - đã trả lời' : ' - chưa trả lời'}`}
-                      >
-                        {answers[question.paperQuestionId] ? <CheckCircleOutlined /> : question.position}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                {!isWritable && attempt && (
-                  <div className="eh-table-card">
-                    <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
-                  </div>
-                )}
-
+            <section className="eh-table-card eh-exam-progress">
+              <div className="eh-exam-progress__summary">
+                <div>
+                  <strong>{answeredCount}/{questions.length} câu đã trả lời</strong>
+                  <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Đã trả lời tất cả câu hỏi'}</span>
+                </div>
+                <strong>{progressPercent}%</strong>
+              </div>
+              <div className="eh-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
+              <div className="eh-question-nav" aria-label="Điều hướng câu hỏi">
                 {questions.map((question) => (
-                  <section
-                    id={`exam-question-${question.paperQuestionId}`}
+                  <button
+                    type="button"
                     key={question.paperQuestionId}
-                    className="eh-table-card eh-question-review eh-exam-question"
+                    className={answers[question.paperQuestionId] ? 'is-answered' : ''}
+                    onClick={() => scrollToQuestion(question.paperQuestionId)}
+                    title={`Câu ${question.position}${answers[question.paperQuestionId] ? ' - đã trả lời' : ' - chưa trả lời'}`}
                   >
-                    <div className="eh-detail-header">
-                      <strong>Câu {question.position}</strong>
-                      <span>{answers[question.paperQuestionId] ? `Đã chọn ${answers[question.paperQuestionId]}` : 'Chưa trả lời'}</span>
-                    </div>
-                    <p>{question.stem}</p>
-                    {['A', 'B', 'C', 'D'].map((optionKey) => (
-                      <label
-                        key={optionKey}
-                        className={`eh-option-row ${answers[question.paperQuestionId] === optionKey ? 'eh-option-row--selected' : ''}`}
-                      >
-                        <input
-                          type="radio"
-                          name={`question-${question.paperQuestionId}`}
-                          checked={answers[question.paperQuestionId] === optionKey}
-                          disabled={!isWritable}
-                          onChange={() => selectAnswer(question.paperQuestionId, optionKey)}
-                        />
-                        <span><strong>{optionKey}.</strong> {question[`option${optionKey}`]}</span>
-                      </label>
-                    ))}
-                  </section>
+                    {answers[question.paperQuestionId] ? <CheckCircleOutlined /> : question.position}
+                  </button>
                 ))}
+              </div>
+            </section>
 
-                {isWritable && questions.length > 0 && (
-                  <div className="eh-exam-submit-bar">
-                    <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Bạn đã hoàn thành tất cả câu hỏi'}</span>
-                    <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving}>
-                      <SendOutlined /> Nộp bài kiểm tra
-                    </button>
-                  </div>
-                )}
-              </>
+            {!isWritable && attempt && (
+              <div className="eh-table-card">
+                <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
+              </div>
             )}
-          </div>
-        </div>
+
+            {questions.map((question) => (
+              <section
+                id={`exam-question-${question.paperQuestionId}`}
+                key={question.paperQuestionId}
+                className="eh-table-card eh-question-review eh-exam-question"
+              >
+                <div className="eh-detail-header">
+                  <strong>Câu {question.position}</strong>
+                  <span>{answers[question.paperQuestionId] ? `Đã chọn ${answers[question.paperQuestionId]}` : 'Chưa trả lời'}</span>
+                </div>
+                <p>{question.stem}</p>
+                {['A', 'B', 'C', 'D'].map((optionKey) => (
+                  <label
+                    key={optionKey}
+                    className={`eh-option-row ${answers[question.paperQuestionId] === optionKey ? 'eh-option-row--selected' : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name={`question-${question.paperQuestionId}`}
+                      checked={answers[question.paperQuestionId] === optionKey}
+                      disabled={!isWritable}
+                      onChange={() => selectAnswer(question.paperQuestionId, optionKey)}
+                    />
+                    <span><strong>{optionKey}.</strong> {question[`option${optionKey}`]}</span>
+                  </label>
+                ))}
+              </section>
+            ))}
+
+            {isWritable && questions.length > 0 && (
+              <div className="eh-exam-submit-bar">
+                <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Bạn đã hoàn thành tất cả câu hỏi'}</span>
+                <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving}>
+                  <SendOutlined /> Nộp bài kiểm tra
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {confirmSubmitMessage && (
@@ -485,7 +478,7 @@ function ExamTakeScreen() {
           onCancel={() => setConfirmSubmitMessage(null)}
         />
       )}
-    </div>
+    </AppShell>
   )
 }
 

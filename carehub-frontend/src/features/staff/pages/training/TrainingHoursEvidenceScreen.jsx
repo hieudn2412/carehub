@@ -10,8 +10,7 @@ import {
   InboxOutlined,
   LoadingOutlined
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
@@ -233,19 +232,15 @@ function TrainingHoursEvidenceScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: `/staff/training/${id}`, label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo', link: '/staff/training' },
-            { label: 'Chi tiết', link: `/staff/training/${id}` },
-            { label: 'Minh chứng' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell
+      back={{ to: `/staff/training/${id}`, label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo', link: '/staff/training' },
+        { label: 'Chi tiết', link: `/staff/training/${id}` },
+        { label: 'Minh chứng' }
+      ]}
+    >
+      <div className="training-page">
             {loading ? (
               <div style={{ padding: '60px 0', textAlign: 'center', color: '#6b7280' }}>
                 <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin minh chứng...
@@ -398,8 +393,6 @@ function TrainingHoursEvidenceScreen() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
       </div>
 
       <ConfirmModal
@@ -413,7 +406,7 @@ function TrainingHoursEvidenceScreen() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, evidenceId: null })}
       />
-    </div>
+    </AppShell>
   )
 }
 

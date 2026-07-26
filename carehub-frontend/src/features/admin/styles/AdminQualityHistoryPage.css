@@ -1,4 +1,4 @@
-.admin-quality-history-page .dashboard-layout__content {
+.admin-quality-history-page .app-shell__content {
   min-width: 0;
 }
 
@@ -9,6 +9,14 @@
   overflow-x: hidden;
   overflow-y: auto;
   background: #f4f7fa;
+}
+
+/* Trang nằm trong AppShell (app-shell__body đã có padding + cuộn sẵn) */
+.app-shell__body .admin-quality-history {
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .admin-quality-history--detail {

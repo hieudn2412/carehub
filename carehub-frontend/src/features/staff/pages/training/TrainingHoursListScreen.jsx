@@ -9,8 +9,7 @@ import {
   EyeOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
@@ -99,15 +98,11 @@ function TrainingHoursListScreen() {
   const progressPct = requiredHours > 0 ? Math.min(Math.round((totalSubmittedHours / requiredHours) * 100), 100) : 0
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Tổng quan', link: dashboardPath },
-          { label: 'Giờ đào tạo liên tục' }
-        ]} />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell breadcrumbs={[
+      { label: 'Tổng quan', link: dashboardPath },
+      { label: 'Giờ đào tạo liên tục' }
+    ]}>
+      <div className="training-page">
 
             {/* Compliance Summary Banner */}
             <div className={`th-compliance-banner ${
@@ -327,10 +322,8 @@ function TrainingHoursListScreen() {
                 </>
               )}
             </div>
-          </div>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

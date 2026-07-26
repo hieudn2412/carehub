@@ -6,8 +6,7 @@ import {
   PrinterOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader'
-import AdminSidebar from '../components/AdminSidebar'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -97,19 +96,16 @@ function AdminQualityHistoryDetailPage() {
   const resultClass = getResultClass(submission?.result)
 
   return (
-    <div className="dashboard-layout admin-quality-history-page">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ to: '/admin/quality/history', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Chất lượng' },
-            { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
-            { label: 'Chi tiết kết quả' },
-          ]}
-        />
-
-        <main className="admin-quality-history admin-quality-history--detail">
+    <AppShell
+      className="admin-quality-history-page"
+      back={{ to: '/admin/quality/history', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Chất lượng' },
+        { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
+        { label: 'Chi tiết kết quả' },
+      ]}
+    >
+        <div className="admin-quality-history admin-quality-history--detail">
           {loading ? (
             <div className="admin-quality-history__detail-state">
               <LoadingOutlined />
@@ -220,9 +216,8 @@ function AdminQualityHistoryDetailPage() {
               </section>
             </>
           )}
-        </main>
-      </div>
-    </div>
+        </div>
+    </AppShell>
   )
 }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -149,170 +148,162 @@ function QuestionCategoryListPage() {
   const breadcrumbs = [{ label: 'Danh mục câu hỏi' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qcl-page">
-              {/* Title Card */}
-              <div className="qcl-title-card">
-                <h1 className="qcl-title">Danh mục câu hỏi</h1>
-                <p className="qcl-subtitle">
-                  Quản lý các danh mục câu hỏi theo chủ đề và mục tiêu đánh giá
-                </p>
-              </div>
+    <AppShell breadcrumbs={breadcrumbs}>
+      <div className="qcl-page">
+        {/* Title Card */}
+        <div className="qcl-title-card">
+          <h1 className="qcl-title">Danh mục câu hỏi</h1>
+          <p className="qcl-subtitle">
+            Quản lý các danh mục câu hỏi theo chủ đề và mục tiêu đánh giá
+          </p>
+        </div>
 
-              {/* Filter Bar */}
-              <div className="qcl-filter-bar">
-                <div className="qcl-filter-left">
-                  <div className="qcl-search">
-                    <span className="qcl-search-icon">
-                      <SearchOutlined />
-                    </span>
-                    <input
-                      type="text"
-                      className="qcl-search-input"
-                      placeholder="Tìm danh mục..."
-                      value={keyword}
-                      onChange={(e) => {
-                        setKeyword(e.target.value)
-                        setPage(0)
-                      }}
-                    />
-                  </div>
-
-                  <select
-                    className="qcl-filter-select"
-                    value={status}
-                    onChange={(e) => {
-                      setStatus(e.target.value)
-                      setPage(0)
-                    }}
-                  >
-                    <option value="">Trạng thái</option>
-                    <option value="ACTIVE">Hoạt động</option>
-                    <option value="INACTIVE">Tạm ngưng</option>
-                    <option value="ARCHIVED">Đã lưu trữ</option>
-                  </select>
-                </div>
-
-                <button className="qcl-btn-add" onClick={handleOpenCreateModal}>
-                  <PlusCircleOutlined /> Thêm danh mục
-                </button>
-              </div>
-
-              {/* Table Card */}
-              <div className="qcl-table-card">
-                <table className="qcl-table">
-                  <thead>
-                    <tr>
-                      <th>Tên danh mục</th>
-                      <th>Mô tả</th>
-                      <th>Số câu hỏi</th>
-                      <th>Trạng thái</th>
-                      <th style={{ width: '120px', textAlign: 'center' }}>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
-                          Đang tải danh mục câu hỏi...
-                        </td>
-                      </tr>
-                    ) : displayRows.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
-                          Không tìm thấy danh mục câu hỏi nào.
-                        </td>
-                      </tr>
-                    ) : (
-                      displayRows.map((item) => (
-                        <tr key={item.id}>
-                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
-                          <td style={{ color: '#475569' }}>{item.description || '-'}</td>
-                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
-                          <td>
-                            <span className={`qcl-badge ${item.status === 'ACTIVE' ? 'qcl-badge--active' : 'qcl-badge--inactive'}`}>
-                              {item.statusText || (item.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng')}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                              <button
-                                type="button"
-                                className="qcl-action-btn qcl-action-btn--edit"
-                                onClick={() => handleOpenEditModal(item)}
-                                title="Chỉnh sửa"
-                                aria-label={`Chỉnh sửa danh mục ${item.name}`}
-                              >
-                                <EditOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qcl-action-btn qcl-action-btn--delete"
-                                onClick={() => handleDeleteCategory(item)}
-                                title="Lưu trữ"
-                                aria-label={`Lưu trữ danh mục ${item.name}`}
-                                disabled={item.status === 'ARCHIVED'}
-                              >
-                                <DeleteOutlined />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Pagination Footer */}
-                <div className="qcl-pagination-bar">
-                  <div className="qcl-pagination-info">
-                    Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả
-                  </div>
-                  <div className="qcl-pagination-buttons">
-                    <button
-                      className="qcl-page-btn"
-                      disabled={page <= 0}
-                      onClick={() => setPage(page - 1)}
-                    >
-                      &lt;
-                    </button>
-                    {(() => {
-                      const maxVisible = 5
-                      const half = Math.floor(maxVisible / 2)
-                      let start = Math.max(0, page - half)
-                      const end = Math.min(totalPages, start + maxVisible)
-                      if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
-                      const buttons = []
-                      if (start > 0) {
-                        buttons.push(<button key={0} className={`qcl-page-btn ${page === 0 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
-                        if (start > 1) buttons.push(<span key="se" className="qcl-page-ellipsis">&hellip;</span>)
-                      }
-                      for (let i = start; i < end; i++) {
-                        buttons.push(<button key={i} className={`qcl-page-btn ${page === i ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
-                      }
-                      if (end < totalPages) {
-                        if (end < totalPages - 1) buttons.push(<span key="ee" className="qcl-page-ellipsis">&hellip;</span>)
-                        buttons.push(<button key={totalPages - 1} className={`qcl-page-btn ${page === totalPages - 1 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
-                      }
-                      return buttons
-                    })()}
-                    <button
-                      className="qcl-page-btn"
-                      disabled={page + 1 >= totalPages}
-                      onClick={() => setPage(page + 1)}
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                </div>
-              </div>
+        {/* Filter Bar */}
+        <div className="qcl-filter-bar">
+          <div className="qcl-filter-left">
+            <div className="qcl-search">
+              <span className="qcl-search-icon">
+                <SearchOutlined />
+              </span>
+              <input
+                type="text"
+                className="qcl-search-input"
+                placeholder="Tìm danh mục..."
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value)
+                  setPage(0)
+                }}
+              />
             </div>
-          </main>
+
+            <select
+              className="qcl-filter-select"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="">Trạng thái</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="INACTIVE">Tạm ngưng</option>
+              <option value="ARCHIVED">Đã lưu trữ</option>
+            </select>
+          </div>
+
+          <button className="qcl-btn-add" onClick={handleOpenCreateModal}>
+            <PlusCircleOutlined /> Thêm danh mục
+          </button>
+        </div>
+
+        {/* Table Card */}
+        <div className="qcl-table-card">
+          <table className="qcl-table">
+            <thead>
+              <tr>
+                <th>Tên danh mục</th>
+                <th>Mô tả</th>
+                <th>Số câu hỏi</th>
+                <th>Trạng thái</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                    Đang tải danh mục câu hỏi...
+                  </td>
+                </tr>
+              ) : displayRows.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                    Không tìm thấy danh mục câu hỏi nào.
+                  </td>
+                </tr>
+              ) : (
+                displayRows.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
+                    <td style={{ color: '#475569' }}>{item.description || '-'}</td>
+                    <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
+                    <td>
+                      <span className={`qcl-badge ${item.status === 'ACTIVE' ? 'qcl-badge--active' : 'qcl-badge--inactive'}`}>
+                        {item.statusText || (item.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng')}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          className="qcl-action-btn qcl-action-btn--edit"
+                          onClick={() => handleOpenEditModal(item)}
+                          title="Chỉnh sửa"
+                          aria-label={`Chỉnh sửa danh mục ${item.name}`}
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          type="button"
+                          className="qcl-action-btn qcl-action-btn--delete"
+                          onClick={() => handleDeleteCategory(item)}
+                          title="Lưu trữ"
+                          aria-label={`Lưu trữ danh mục ${item.name}`}
+                          disabled={item.status === 'ARCHIVED'}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination Footer */}
+          <div className="qcl-pagination-bar">
+            <div className="qcl-pagination-info">
+              Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả
+            </div>
+            <div className="qcl-pagination-buttons">
+              <button
+                className="qcl-page-btn"
+                disabled={page <= 0}
+                onClick={() => setPage(page - 1)}
+              >
+                &lt;
+              </button>
+              {(() => {
+                const maxVisible = 5
+                const half = Math.floor(maxVisible / 2)
+                let start = Math.max(0, page - half)
+                const end = Math.min(totalPages, start + maxVisible)
+                if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
+                const buttons = []
+                if (start > 0) {
+                  buttons.push(<button key={0} className={`qcl-page-btn ${page === 0 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
+                  if (start > 1) buttons.push(<span key="se" className="qcl-page-ellipsis">&hellip;</span>)
+                }
+                for (let i = start; i < end; i++) {
+                  buttons.push(<button key={i} className={`qcl-page-btn ${page === i ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
+                }
+                if (end < totalPages) {
+                  if (end < totalPages - 1) buttons.push(<span key="ee" className="qcl-page-ellipsis">&hellip;</span>)
+                  buttons.push(<button key={totalPages - 1} className={`qcl-page-btn ${page === totalPages - 1 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
+                }
+                return buttons
+              })()}
+              <button
+                className="qcl-page-btn"
+                disabled={page + 1 >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -422,7 +413,7 @@ function QuestionCategoryListPage() {
         onCancel={() => setCategoryToArchive(null)}
         onConfirm={confirmDeleteCategory}
       />
-    </div>
+    </AppShell>
   )
 }
 

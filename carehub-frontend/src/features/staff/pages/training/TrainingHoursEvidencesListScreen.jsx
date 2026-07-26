@@ -8,8 +8,7 @@ import {
   FileExclamationOutlined,
   SearchOutlined
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import '../../styles/TrainingHours.css'
 
@@ -61,12 +60,8 @@ function TrainingHoursEvidencesListScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header breadcrumbs={[{ label: 'Minh chứng của tôi' }]} />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell breadcrumbs={[{ label: 'Minh chứng của tôi' }]}>
+      <div className="training-page">
             <div className="th-page-heading">
               <div>
                 <h1 className="th-page-title">Quản lý minh chứng</h1>
@@ -161,10 +156,8 @@ function TrainingHoursEvidencesListScreen() {
                 ))}
               </div>
             )}
-          </div>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

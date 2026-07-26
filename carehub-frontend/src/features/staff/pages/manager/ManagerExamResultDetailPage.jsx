@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { LoadingOutlined } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
 import '../../styles/ManagerPages.css'
 
@@ -52,83 +51,77 @@ function ManagerExamResultDetailPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: '/manager/exam-results', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Kết quả thi nhân sự', link: '/manager/exam-results' },
-            { label: 'Chi tiết kết quả' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết kết quả kỳ thi</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              {assignment?.name || `Kỳ thi #${id}`}
-              {assignment?.professionalFieldName ? ` · ${assignment.professionalFieldName}` : ''}
-            </p>
-          </div>
+    <AppShell
+      back={{ to: '/manager/exam-results', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Kết quả thi nhân sự', link: '/manager/exam-results' },
+        { label: 'Chi tiết kết quả' }
+      ]}
+    >
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết kết quả kỳ thi</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+          {assignment?.name || `Kỳ thi #${id}`}
+          {assignment?.professionalFieldName ? ` · ${assignment.professionalFieldName}` : ''}
+        </p>
+      </div>
 
-          {loading ? (
-            <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
-              <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
-              <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
-            </div>
-          ) : (
-          <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
-            <table className="mgr-table mgr-table--cards">
-              <thead>
-                <tr>
-                  <th>Nhân viên</th>
-                  <th>Điểm</th>
-                  <th>Kết quả</th>
-                  <th>Thời gian</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="ch-empty">
-                      Chưa có nhân viên nào làm bài.
+      {loading ? (
+        <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
+          <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />
+          <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
+        </div>
+      ) : (
+      <div className="mgr-card mgr-table-wrap" style={{ padding: 0 }}>
+        <table className="mgr-table mgr-table--cards">
+          <thead>
+            <tr>
+              <th>Nhân viên</th>
+              <th>Điểm</th>
+              <th>Kết quả</th>
+              <th>Thời gian</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="ch-empty">
+                  Chưa có nhân viên nào làm bài.
+                </td>
+              </tr>
+            ) : (
+              results.map((item, idx) => {
+                const score = item.latestScore ?? item.bestScore
+                const badge = getStatusBadge(item)
+                return (
+                  <tr key={item.id || idx}>
+                    <td data-label="Nhân viên">
+                      <div style={{ fontWeight: 500 }}>{item.userName || item.employeeName || item.fullName || '--'}</div>
+                      <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeCode || item.employeeId || '--'}</div>
+                    </td>
+                    <td data-label="Điểm">
+                      <strong style={{
+                        color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
+                        fontSize: 14
+                      }}>
+                        {score == null ? '--' : `${score}%`}
+                      </strong>
+                    </td>
+                    <td data-label="Kết quả">
+                      <span className={`mgr-badge mgr-badge--${badge.color}`}>{badge.label}</span>
+                    </td>
+                    <td data-label="Thời gian" style={{ color: '#475569' }}>
+                      {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
                     </td>
                   </tr>
-                ) : (
-                  results.map((item, idx) => {
-                    const score = item.latestScore ?? item.bestScore
-                    const badge = getStatusBadge(item)
-                    return (
-                      <tr key={item.id || idx}>
-                        <td data-label="Nhân viên">
-                          <div style={{ fontWeight: 500 }}>{item.userName || item.employeeName || item.fullName || '--'}</div>
-                          <div style={{ fontSize: 11.5, color: '#64748b' }}>{item.employeeCode || item.employeeId || '--'}</div>
-                        </td>
-                        <td data-label="Điểm">
-                          <strong style={{
-                            color: badge.color === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
-                            fontSize: 14
-                          }}>
-                            {score == null ? '--' : `${score}%`}
-                          </strong>
-                        </td>
-                        <td data-label="Kết quả">
-                          <span className={`mgr-badge mgr-badge--${badge.color}`}>{badge.label}</span>
-                        </td>
-                        <td data-label="Thời gian" style={{ color: '#475569' }}>
-                          {formatDuration(item.latestTimeSpentSeconds || item.duration || item.durationSeconds)}
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-          )}
-        </div>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
-    </div>
+      )}
+    </AppShell>
   )
 }
 

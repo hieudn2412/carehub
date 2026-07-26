@@ -13,12 +13,12 @@ import { AUTH_ROLE, hasAnyRole } from '../../features/auth/utils/authNavigation.
  *   ...nội dung trang...
  * </AppShell>
  */
-function AppShell({ title, breadcrumbs, back, children }) {
+function AppShell({ title, breadcrumbs, back, className, children }) {
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${className ? ` ${className}` : ''}`}>
       <Sidebar />
       <div className="app-shell__content">
         {isAdmin ? (
