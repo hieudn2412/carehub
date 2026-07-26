@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import { legacyGoogleFormImports } from '../data/legacyGoogleFormImports.js'
 import {
@@ -347,12 +346,7 @@ function FormImportWizardPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="form-import-wizard-page">
               <section className="fiw-hero">
                 <div className="fiw-hero-top">
@@ -721,10 +715,7 @@ function FormImportWizardPage() {
               )}
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

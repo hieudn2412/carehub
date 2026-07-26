@@ -14,32 +14,49 @@ function SearchableSelect({
   value,
   options = [],
   onChange,
-  placeholder = 'Chọn một giá trị',
+  placeholder,
   searchPlaceholder = 'Nhập để tìm kiếm...',
   emptyMessage = 'Không tìm thấy kết quả phù hợp',
   disabled = false,
+  multiple = false,
   ariaLabel,
   id,
 }) {
   const rootRef = useRef(null)
+  const inputRef = useRef(null)
   const listboxId = useId()
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(-1)
 
+  const effectivePlaceholder = placeholder ?? (multiple ? 'Tìm và chọn...' : 'Chọn một giá trị')
+
+  const normalizedValues = useMemo(
+    () => (multiple && Array.isArray(value) ? value.map(String) : []),
+    [multiple, value],
+  )
+  const selectedValueSet = useMemo(() => new Set(normalizedValues), [normalizedValues])
+
   const selectedOption = useMemo(
-    () => options.find((option) => String(option.value) === String(value)),
-    [options, value],
+    () => (multiple ? null : options.find((option) => String(option.value) === String(value))),
+    [multiple, options, value],
   )
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = normalizeSearch(query)
     if (!normalizedQuery) return options
 
-    return options.filter((option) => (
-      normalizeSearch(`${option.label} ${option.searchText || ''}`).includes(normalizedQuery)
-    ))
-  }, [options, query])
+    return options.filter((option) => {
+      const haystack = multiple
+        ? `${option.label} ${option.description || ''} ${option.searchText || ''}`
+        : `${option.label} ${option.searchText || ''}`
+      return normalizeSearch(haystack).includes(normalizedQuery)
+    })
+  }, [multiple, options, query])
+
+  const safeActiveIndex = multiple && activeIndex >= filteredOptions.length
+    ? filteredOptions.length - 1
+    : activeIndex
 
   useEffect(() => {
     const closeWhenClickingOutside = (event) => {
@@ -57,11 +74,28 @@ function SearchableSelect({
   const openDropdown = () => {
     if (disabled) return
     setIsOpen(true)
+    if (multiple) {
+      window.setTimeout(() => inputRef.current?.focus(), 0)
+      return
+    }
     setQuery('')
     setActiveIndex(-1)
   }
 
   const selectOption = (option) => {
+    if (multiple) {
+      const optionValue = String(option.value)
+      onChange(
+        selectedValueSet.has(optionValue)
+          ? normalizedValues.filter((selectedValue) => selectedValue !== optionValue)
+          : [...normalizedValues, optionValue],
+      )
+      setActiveIndex(-1)
+      setIsOpen(true)
+      window.setTimeout(() => inputRef.current?.focus(), 0)
+      return
+    }
+
     onChange(String(option.value))
     setIsOpen(false)
     setQuery('')
@@ -74,8 +108,11 @@ function SearchableSelect({
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       if (!isOpen) {
-        openDropdown()
-        return
+        if (!multiple) {
+          openDropdown()
+          return
+        }
+        setIsOpen(true)
       }
       setActiveIndex((current) => Math.min(current + 1, filteredOptions.length - 1))
       return
@@ -84,16 +121,19 @@ function SearchableSelect({
     if (event.key === 'ArrowUp') {
       event.preventDefault()
       if (!isOpen) {
-        openDropdown()
-        return
+        if (!multiple) {
+          openDropdown()
+          return
+        }
+        setIsOpen(true)
       }
       setActiveIndex((current) => (current <= 0 ? filteredOptions.length - 1 : current - 1))
       return
     }
 
-    if (event.key === 'Enter' && isOpen && activeIndex >= 0) {
+    if (event.key === 'Enter' && isOpen && safeActiveIndex >= 0) {
       event.preventDefault()
-      selectOption(filteredOptions[activeIndex])
+      selectOption(filteredOptions[safeActiveIndex])
       return
     }
 
@@ -104,42 +144,66 @@ function SearchableSelect({
     }
   }
 
+  const inputElement = (
+    <input
+      ref={inputRef}
+      id={id}
+      type="text"
+      role="combobox"
+      aria-label={ariaLabel || effectivePlaceholder}
+      aria-autocomplete="list"
+      aria-controls={listboxId}
+      aria-expanded={isOpen}
+      aria-activedescendant={safeActiveIndex >= 0 ? `${listboxId}-option-${safeActiveIndex}` : undefined}
+      autoComplete="off"
+      disabled={disabled}
+      value={multiple || isOpen ? query : (selectedOption?.label || '')}
+      placeholder={!multiple && isOpen ? searchPlaceholder : effectivePlaceholder}
+      onClick={multiple ? undefined : openDropdown}
+      onFocus={openDropdown}
+      onChange={(event) => {
+        setQuery(event.target.value)
+        setIsOpen(true)
+        setActiveIndex(-1)
+      }}
+      onKeyDown={handleKeyDown}
+    />
+  )
+
   return (
     <div
       ref={rootRef}
-      className={`searchable-select${isOpen ? ' searchable-select--open' : ''}${disabled ? ' searchable-select--disabled' : ''}`}
+      className={`searchable-select${multiple ? ' searchable-select--multi' : ''}${isOpen ? ' searchable-select--open' : ''}${disabled ? ' searchable-select--disabled' : ''}`}
     >
-      <SearchOutlined className="searchable-select__search-icon" aria-hidden="true" />
-      <input
-        id={id}
-        type="text"
-        role="combobox"
-        aria-label={ariaLabel || placeholder}
-        aria-autocomplete="list"
-        aria-controls={listboxId}
-        aria-expanded={isOpen}
-        aria-activedescendant={activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined}
-        autoComplete="off"
-        disabled={disabled}
-        value={isOpen ? query : (selectedOption?.label || '')}
-        placeholder={isOpen ? searchPlaceholder : placeholder}
-        onClick={openDropdown}
-        onFocus={openDropdown}
-        onChange={(event) => {
-          setQuery(event.target.value)
-          setIsOpen(true)
-          setActiveIndex(-1)
-        }}
-        onKeyDown={handleKeyDown}
-      />
-      <DownOutlined className="searchable-select__arrow" aria-hidden="true" />
+      {multiple ? (
+        <div className="searchable-select__control" onClick={openDropdown}>
+          <div className="searchable-select__input-wrap">
+            <SearchOutlined className="searchable-select__search-icon" aria-hidden="true" />
+            {inputElement}
+          </div>
+          <DownOutlined className="searchable-select__arrow" aria-hidden="true" />
+        </div>
+      ) : (
+        <>
+          <SearchOutlined className="searchable-select__search-icon" aria-hidden="true" />
+          {inputElement}
+          <DownOutlined className="searchable-select__arrow" aria-hidden="true" />
+        </>
+      )}
 
       {isOpen && (
-        <div id={listboxId} className="searchable-select__menu" role="listbox">
+        <div
+          id={listboxId}
+          className="searchable-select__menu"
+          role="listbox"
+          aria-multiselectable={multiple || undefined}
+        >
           {filteredOptions.length === 0 ? (
             <div className="searchable-select__empty" role="status">{emptyMessage}</div>
           ) : filteredOptions.map((option, index) => {
-            const isSelected = String(option.value) === String(value)
+            const isSelected = multiple
+              ? selectedValueSet.has(String(option.value))
+              : String(option.value) === String(value)
             return (
               <button
                 id={`${listboxId}-option-${index}`}
@@ -147,7 +211,7 @@ function SearchableSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
-                className={`searchable-select__option${index === activeIndex ? ' searchable-select__option--active' : ''}`}
+                className={`searchable-select__option${multiple && isSelected ? ' searchable-select__option--selected' : ''}${index === safeActiveIndex ? ' searchable-select__option--active' : ''}`}
                 onMouseDown={(event) => event.preventDefault()}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectOption(option)}
@@ -156,7 +220,7 @@ function SearchableSelect({
                   <strong>{option.label}</strong>
                   {option.description && <small>{option.description}</small>}
                 </span>
-                {isSelected && <CheckOutlined aria-hidden="true" />}
+                {(multiple || isSelected) && <CheckOutlined aria-hidden="true" />}
               </button>
             )
           })}

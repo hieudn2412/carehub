@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
 const FALLBACK_FOUNDATION = {
@@ -48,7 +49,8 @@ function TrainingFoundationPage() {
   }, [])
 
   return (
-    <main className="training-page">
+    <AppShell title="Tổng quan đào tạo">
+    <div className="training-page">
       <section className="training-header">
         <div>
           <p className="training-eyebrow">CareHub</p>
@@ -79,7 +81,8 @@ function TrainingFoundationPage() {
           </ul>
         </article>
       </section>
-    </main>
+    </div>
+    </AppShell>
   )
 }
 

@@ -409,7 +409,8 @@
   background: #166236;
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .fpp-subject-details-grid {
     grid-template-columns: 1fr 1fr;
   }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ClockCircleOutlined, LoadingOutlined, SaveOutlined } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -55,12 +54,7 @@ function SystemSettingsScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Hệ thống' }, { label: 'Cấu hình hệ thống' }]} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={[{ label: 'Hệ thống' }, { label: 'Cấu hình hệ thống' }]}>
             <div className="ss-page">
               <div className="ss-card">
                 <div className="ss-settings-heading">
@@ -113,10 +107,7 @@ function SystemSettingsScreen() {
                 </div>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

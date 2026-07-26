@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -146,164 +145,156 @@ function QuestionSetCategoryListPage() {
   const breadcrumbs = [{ label: 'Danh mục bộ câu hỏi' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qscl-page">
-              <div className="qscl-title-card">
-                <h1 className="qscl-title">Danh mục bộ câu hỏi</h1>
-                <p className="qscl-subtitle">
-                  Quản lý các danh mục dùng để phân loại bộ câu hỏi
-                </p>
-              </div>
+    <AppShell breadcrumbs={breadcrumbs}>
+      <div className="qscl-page">
+        <div className="qscl-title-card">
+          <h1 className="qscl-title">Danh mục bộ câu hỏi</h1>
+          <p className="qscl-subtitle">
+            Quản lý các danh mục dùng để phân loại bộ câu hỏi
+          </p>
+        </div>
 
-              <div className="qscl-filter-bar">
-                <div className="qscl-filter-left">
-                  <div className="qscl-search">
-                    <span className="qscl-search-icon">
-                      <SearchOutlined />
-                    </span>
-                    <input
-                      type="text"
-                      className="qscl-search-input"
-                      placeholder="Tìm danh mục..."
-                      value={keyword}
-                      onChange={(e) => {
-                        setKeyword(e.target.value)
-                        setPage(0)
-                      }}
-                    />
-                  </div>
-
-                  <select
-                    className="qscl-filter-select"
-                    value={status}
-                    onChange={(e) => {
-                      setStatus(e.target.value)
-                      setPage(0)
-                    }}
-                  >
-                    <option value="">Trạng thái</option>
-                    <option value="ACTIVE">Hoạt động</option>
-                    <option value="INACTIVE">Tạm ngưng</option>
-                    <option value="ARCHIVED">Đã lưu trữ</option>
-                  </select>
-                </div>
-
-                <button className="qscl-btn-add" onClick={handleOpenCreateModal}>
-                  <PlusCircleOutlined /> Thêm danh mục
-                </button>
-              </div>
-
-              <div className="qscl-table-card">
-                <table className="qscl-table">
-                  <thead>
-                    <tr>
-                      <th>Tên danh mục</th>
-                      <th>Mô tả</th>
-                      <th>Thứ tự</th>
-                      <th>Trạng thái</th>
-                      <th style={{ width: '120px', textAlign: 'center' }}>Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoading ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
-                          Đang tải danh mục bộ câu hỏi...
-                        </td>
-                      </tr>
-                    ) : displayRows.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
-                          Không tìm thấy danh mục bộ câu hỏi nào.
-                        </td>
-                      </tr>
-                    ) : (
-                      displayRows.map((item) => (
-                        <tr key={item.id}>
-                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
-                          <td style={{ color: '#475569' }}>{item.description || '-'}</td>
-                          <td style={{ fontWeight: 600, color: '#334155' }}>{item.sortOrder || 0}</td>
-                          <td>
-                            <span className={`qscl-badge ${item.status === 'ACTIVE' ? 'qscl-badge--active' : 'qscl-badge--inactive'}`}>
-                              {item.statusText || (item.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng')}
-                            </span>
-                          </td>
-                          <td>
-                            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                              <button
-                                type="button"
-                                className="qscl-action-btn qscl-action-btn--edit"
-                                onClick={() => handleOpenEditModal(item)}
-                                title="Chỉnh sửa"
-                              >
-                                <EditOutlined />
-                              </button>
-                              <button
-                                type="button"
-                                className="qscl-action-btn qscl-action-btn--delete"
-                                onClick={() => handleDeleteCategory(item)}
-                                title="Lưu trữ"
-                                disabled={item.status === 'ARCHIVED'}
-                              >
-                                <DeleteOutlined />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-
-                <div className="qscl-pagination-bar">
-                  <div className="qscl-pagination-info">
-                    Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả
-                  </div>
-                  <div className="qscl-pagination-buttons">
-                    <button
-                      className="qscl-page-btn"
-                      disabled={page <= 0}
-                      onClick={() => setPage(page - 1)}
-                    >
-                      &lt;
-                    </button>
-                    {(() => {
-                      const maxVisible = 5
-                      const half = Math.floor(maxVisible / 2)
-                      let start = Math.max(0, page - half)
-                      const end = Math.min(totalPages, start + maxVisible)
-                      if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
-                      const buttons = []
-                      if (start > 0) {
-                        buttons.push(<button key={0} className={`qscl-page-btn ${page === 0 ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
-                        if (start > 1) buttons.push(<span key="se" className="qscl-page-ellipsis">&hellip;</span>)
-                      }
-                      for (let i = start; i < end; i++) {
-                        buttons.push(<button key={i} className={`qscl-page-btn ${page === i ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
-                      }
-                      if (end < totalPages) {
-                        if (end < totalPages - 1) buttons.push(<span key="ee" className="qscl-page-ellipsis">&hellip;</span>)
-                        buttons.push(<button key={totalPages - 1} className={`qscl-page-btn ${page === totalPages - 1 ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
-                      }
-                      return buttons
-                    })()}
-                    <button
-                      className="qscl-page-btn"
-                      disabled={page + 1 >= totalPages}
-                      onClick={() => setPage(page + 1)}
-                    >
-                      &gt;
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div className="qscl-filter-bar">
+          <div className="qscl-filter-left">
+            <div className="qscl-search">
+              <span className="qscl-search-icon">
+                <SearchOutlined />
+              </span>
+              <input
+                type="text"
+                className="qscl-search-input"
+                placeholder="Tìm danh mục..."
+                value={keyword}
+                onChange={(e) => {
+                  setKeyword(e.target.value)
+                  setPage(0)
+                }}
+              />
             </div>
-          </main>
+
+            <select
+              className="qscl-filter-select"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="">Trạng thái</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="INACTIVE">Tạm ngưng</option>
+              <option value="ARCHIVED">Đã lưu trữ</option>
+            </select>
+          </div>
+
+          <button className="qscl-btn-add" onClick={handleOpenCreateModal}>
+            <PlusCircleOutlined /> Thêm danh mục
+          </button>
+        </div>
+
+        <div className="qscl-table-card">
+          <table className="qscl-table">
+            <thead>
+              <tr>
+                <th>Tên danh mục</th>
+                <th>Mô tả</th>
+                <th>Thứ tự</th>
+                <th>Trạng thái</th>
+                <th className="qscl-th-actions">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan="5" className="ch-empty">
+                    Đang tải danh mục bộ câu hỏi...
+                  </td>
+                </tr>
+              ) : displayRows.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="ch-empty">
+                    Không tìm thấy danh mục bộ câu hỏi nào.
+                  </td>
+                </tr>
+              ) : (
+                displayRows.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
+                    <td style={{ color: '#475569' }}>{item.description || '-'}</td>
+                    <td style={{ fontWeight: 600, color: '#334155' }}>{item.sortOrder || 0}</td>
+                    <td>
+                      <span className={`qscl-badge ${item.status === 'ACTIVE' ? 'qscl-badge--active' : 'qscl-badge--inactive'}`}>
+                        {item.statusText || (item.status === 'ACTIVE' ? 'Hoạt động' : 'Tạm ngưng')}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          className="qscl-action-btn qscl-action-btn--edit"
+                          onClick={() => handleOpenEditModal(item)}
+                          title="Chỉnh sửa"
+                        >
+                          <EditOutlined />
+                        </button>
+                        <button
+                          type="button"
+                          className="qscl-action-btn qscl-action-btn--delete"
+                          onClick={() => handleDeleteCategory(item)}
+                          title="Lưu trữ"
+                          disabled={item.status === 'ARCHIVED'}
+                        >
+                          <DeleteOutlined />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+
+          <div className="qscl-pagination-bar">
+            <div className="qscl-pagination-info">
+              Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả
+            </div>
+            <div className="qscl-pagination-buttons">
+              <button
+                className="qscl-page-btn"
+                disabled={page <= 0}
+                onClick={() => setPage(page - 1)}
+              >
+                &lt;
+              </button>
+              {(() => {
+                const maxVisible = 5
+                const half = Math.floor(maxVisible / 2)
+                let start = Math.max(0, page - half)
+                const end = Math.min(totalPages, start + maxVisible)
+                if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
+                const buttons = []
+                if (start > 0) {
+                  buttons.push(<button key={0} className={`qscl-page-btn ${page === 0 ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
+                  if (start > 1) buttons.push(<span key="se" className="qscl-page-ellipsis">&hellip;</span>)
+                }
+                for (let i = start; i < end; i++) {
+                  buttons.push(<button key={i} className={`qscl-page-btn ${page === i ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
+                }
+                if (end < totalPages) {
+                  if (end < totalPages - 1) buttons.push(<span key="ee" className="qscl-page-ellipsis">&hellip;</span>)
+                  buttons.push(<button key={totalPages - 1} className={`qscl-page-btn ${page === totalPages - 1 ? 'qscl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
+                }
+                return buttons
+              })()}
+              <button
+                className="qscl-page-btn"
+                disabled={page + 1 >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -409,7 +400,7 @@ function QuestionSetCategoryListPage() {
         onCancel={() => setCategoryToArchive(null)}
         onConfirm={confirmDeleteCategory}
       />
-    </div>
+    </AppShell>
   )
 }
 

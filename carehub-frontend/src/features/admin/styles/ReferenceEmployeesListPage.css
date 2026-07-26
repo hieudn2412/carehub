@@ -258,3 +258,52 @@
 .rel-pagination span {
   white-space: nowrap;
 }
+
+/* Thông báo lỗi tải dữ liệu (thay inline style) */
+.rel-error-msg {
+  padding: 20px;
+  color: #dc2626;
+  text-align: center;
+}
+
+/* bp-lg */
+@media (max-width: 1280px) {
+  .rel-filter-row {
+    gap: 10px;
+  }
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .rel-table {
+    min-width: 960px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .rel-search-wrapper {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 100%;
+  }
+
+  .rel-filter-select {
+    min-width: 0;
+    flex: 1 1 130px;
+  }
+
+  .rel-department-filter {
+    min-width: 0;
+    flex: 1 1 180px;
+  }
+
+  .rel-results-count {
+    margin-left: 0;
+  }
+
+  .rel-pagination {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}

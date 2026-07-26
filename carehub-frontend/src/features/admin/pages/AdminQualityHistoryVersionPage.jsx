@@ -15,7 +15,7 @@ import {
 import AdminHeader from '../components/AdminHeader'
 import AdminSidebar from '../components/AdminSidebar'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import MultiSearchSelect from '../../../shared/components/MultiSearchSelect.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -622,7 +622,8 @@ function AdminQualityHistoryVersionPage() {
                 <form className="aqh-manager-assign" onSubmit={submitAssignment}>
                   <div className="aqh-manager-assign__field aqh-manager-assign__field--people">
                     <label htmlFor="aqh-manager-search">Người nhận mới</label>
-                    <MultiSearchSelect
+                    <SearchableSelect
+                      multiple
                       ariaLabel="Tìm và chọn người nhận mới"
                       disabled={managerBusy || !managerUsersLoaded}
                       emptyMessage="Không còn người nhận phù hợp"

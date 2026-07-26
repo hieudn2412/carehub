@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import {
@@ -271,12 +270,7 @@ function FormPreviewPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: `/admin/quality/checklists/${id}/edit`, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: `/admin/quality/checklists/${id}/edit`, label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="form-preview-page">
               
               {loading ? (
@@ -463,10 +457,7 @@ function FormPreviewPage() {
               )}
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

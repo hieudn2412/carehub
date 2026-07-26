@@ -671,7 +671,8 @@
   opacity: 0.6;
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .fmp-form-grid {
     grid-template-columns: 1fr;
   }

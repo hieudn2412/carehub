@@ -269,3 +269,45 @@
   background: #158f6e;
   border-color: #158f6e;
 }
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .etl-search-wrapper {
+    max-width: none;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .etl-title-card {
+    padding: 20px;
+  }
+
+  .etl-search-wrapper {
+    flex: 1 1 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .etl-filter-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .etl-btn-create {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Bảng cuộn ngang trong .etl-table-card (overflow-x: auto) */
+  .etl-table {
+    min-width: 680px;
+  }
+
+  .etl-pagination {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}

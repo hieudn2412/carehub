@@ -347,3 +347,44 @@
 .tes-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .tes-page-btn--dots { border: none; background: transparent; cursor: default; }
 .tes-page-btn--dots:hover { background: transparent; }
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .tes-department-filter,
+  .tes-field-filter {
+    flex: 1 1 200px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .tes-search {
+    flex: 1 1 100%;
+  }
+
+  .tes-department-filter,
+  .tes-field-filter,
+  .tes-filter-select {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+
+  .tes-export-button {
+    flex: 1 1 auto;
+  }
+
+  .tes-table {
+    min-width: 640px;
+  }
+
+  .tes-col-progress {
+    width: 150px;
+  }
+
+  .tes-pagination-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}

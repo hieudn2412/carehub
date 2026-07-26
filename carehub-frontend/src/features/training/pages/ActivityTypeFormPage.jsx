@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import '../styles/training.css'
+import '../styles/ActivityTypeListPage.css'
 
 const DURATION_UNITS = [
   { value: 'HOUR', label: 'Tính theo giờ' },
@@ -121,16 +122,11 @@ function ActivityTypeFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="training-form-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              
+    <AppShell back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+            <div className="training-form-page-container atl-page">
+
               {/* Header Panel */}
-              <div className="atl-title-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="atl-title-card">
                 <div>
                   <h1 className="atl-title">{isEdit ? 'Cập nhật hình thức đào tạo' : 'Thêm hình thức đào tạo mới'}</h1>
                   <p className="atl-subtitle">Thiết lập các thông số hoạt động và giới hạn tích lũy giờ</p>
@@ -138,11 +134,9 @@ function ActivityTypeFormPage() {
               </div>
 
               {/* Form Content */}
-              <div className="training-panel training-panel--form" style={{ background: '#fff', borderRadius: 16, border: '1px solid #cbd5e1', padding: 32, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)' }}>
+              <div className="training-panel training-panel--form atf-card">
                 {isLoading ? (
-                  <div className="training-skeleton" style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
-                    Đang tải thông tin biểu mẫu...
-                  </div>
+                  <LoadingState label="Đang tải thông tin biểu mẫu..." />
                 ) : (
                   <form className="training-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     {errorMessage && (
@@ -151,11 +145,11 @@ function ActivityTypeFormPage() {
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Mã hình thức *</label>
+                    <div className="atf-field">
+                      <label className="atf-label">Mã hình thức *</label>
                       <input
                         type="text"
-                        style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155', background: codeLocked ? '#f1f5f9' : '#fff' }}
+                        className="atf-input"
                         disabled={codeLocked}
                         maxLength={50}
                         minLength={2}
@@ -164,14 +158,14 @@ function ActivityTypeFormPage() {
                         required
                         value={form.code}
                       />
-                      {codeLocked && <small style={{ color: '#64748b', fontSize: 12 }}>Hình thức này đã phát sinh dữ liệu liên kết nên không thể đổi mã.</small>}
+                      {codeLocked && <small className="atf-hint">Hình thức này đã phát sinh dữ liệu liên kết nên không thể đổi mã.</small>}
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Tên hình thức đào tạo *</label>
+                    <div className="atf-field">
+                      <label className="atf-label">Tên hình thức đào tạo *</label>
                       <input
                         type="text"
-                        style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155' }}
+                        className="atf-input"
                         maxLength={255}
                         placeholder="Nhập tên gọi hình thức..."
                         onChange={(event) => updateField('name', event.target.value)}
@@ -180,10 +174,10 @@ function ActivityTypeFormPage() {
                       />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Mô tả chi tiết</label>
+                    <div className="atf-field">
+                      <label className="atf-label">Mô tả chi tiết</label>
                       <textarea
-                        style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155', fontFamily: 'inherit' }}
+                        className="atf-input"
                         maxLength={2000}
                         rows={4}
                         placeholder="Mô tả tóm tắt ý nghĩa hình thức đào tạo này..."
@@ -192,11 +186,11 @@ function ActivityTypeFormPage() {
                       />
                     </div>
 
-                    <div className="training-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Đơn vị tính thời gian *</label>
+                    <div className="ch-form-grid ch-form-grid--3">
+                      <div className="atf-field">
+                        <label className="atf-label">Đơn vị tính thời gian *</label>
                         <select
-                          style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155', background: '#fff', cursor: 'pointer' }}
+                          className="atf-input"
                           onChange={(event) => updateField('defaultDurationUnit', event.target.value)}
                           required
                           value={form.defaultDurationUnit}
@@ -209,11 +203,11 @@ function ActivityTypeFormPage() {
                         </select>
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Tối đa giờ / hồ sơ</label>
+                      <div className="atf-field">
+                        <label className="atf-label">Tối đa giờ / hồ sơ</label>
                         <input
                           type="number"
-                          style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155' }}
+                          className="atf-input"
                           min="0.01"
                           step="0.01"
                           placeholder="Không giới hạn"
@@ -222,11 +216,11 @@ function ActivityTypeFormPage() {
                         />
                       </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label style={{ fontSize: 13.5, fontWeight: 600, color: '#475569' }}>Thứ tự hiển thị *</label>
+                      <div className="atf-field">
+                        <label className="atf-label">Thứ tự hiển thị *</label>
                         <input
                           type="number"
-                          style={{ border: '1.5px solid #cbd5e1', borderRadius: 8, padding: '9px 12px', fontSize: 14, outline: 'none', color: '#334155' }}
+                          className="atf-input"
                           min="0"
                           onChange={(event) => updateField('sortOrder', event.target.value)}
                           required
@@ -279,10 +273,7 @@ function ActivityTypeFormPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

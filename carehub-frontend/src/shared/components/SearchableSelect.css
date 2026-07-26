@@ -121,3 +121,69 @@
   background: #f4f6f8;
   cursor: not-allowed;
 }
+
+/* Chế độ multiple (multiple prop) */
+.searchable-select__control {
+  position: relative;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 3px 34px 3px 12px;
+  border: 1px solid #d6e0e8;
+  border-radius: 6px;
+  background: #fff;
+  cursor: text;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.searchable-select--open .searchable-select__control {
+  border-color: #16a085;
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.12);
+}
+
+.searchable-select__input-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 24px;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchable-select__input-wrap > input {
+  width: 100%;
+  min-width: 90px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.searchable-select--multi .searchable-select__search-icon {
+  position: static;
+  translate: none;
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.searchable-select__option--selected {
+  background: #e7f8f3;
+  color: #087b68;
+}
+
+.searchable-select--multi .searchable-select__option > .anticon {
+  color: #16a085;
+  opacity: 0;
+}
+
+.searchable-select--multi .searchable-select__option--selected > .anticon {
+  opacity: 1;
+}
+
+.searchable-select--disabled .searchable-select__control {
+  background: #f4f6f8;
+  cursor: not-allowed;
+}

@@ -9,8 +9,9 @@ import {
   SearchOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import EmptyState from '../../../shared/components/EmptyState.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
@@ -222,254 +223,246 @@ function QuestionSetQuestionsPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qsq-page">
-              <div className="qsq-container">
-                <div className="qsq-header">
-                  <div>
-                    <h2 className="qsq-title">Chọn câu hỏi cho bộ</h2>
-                    <p className="qsq-subtitle">Thêm, sắp xếp và quản lý câu hỏi trong bộ</p>
+    <AppShell back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+      <div className="qsq-page">
+        <div className="qsq-container">
+          <div className="qsq-header">
+            <div>
+              <h2 className="qsq-title">Chọn câu hỏi cho bộ</h2>
+              <p className="qsq-subtitle">Thêm, sắp xếp và quản lý câu hỏi trong bộ</p>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <LoadingState label="Đang tải dữ liệu..." />
+          ) : questionSet ? (
+            <>
+              <div className="qsq-info-card">
+                <div className="qsq-info-row">
+                  <div className="qsq-info-item">
+                    <span className="qsq-info-label">Tên bộ</span>
+                    <span className="qsq-info-value">{questionSet.name}</span>
+                  </div>
+                  <div className="qsq-info-item">
+                    <span className="qsq-info-label">Trạng thái</span>
+                    <span className={`qsq-status-badge ${questionSet.status === 'ACTIVE' ? 'qsq-status-badge--active' : 'qsq-status-badge--draft'}`}>
+                      {questionSet.statusText || questionSet.status}
+                    </span>
+                  </div>
+                  <div className="qsq-info-item">
+                    <span className="qsq-count-badge">{selectedIds.length} câu hỏi đã chọn</span>
                   </div>
                 </div>
+              </div>
 
-                {isLoading ? (
-                  <section className="qsq-loading">Đang tải dữ liệu...</section>
-                ) : questionSet ? (
-                  <>
-                    <div className="qsq-info-card">
-                      <div className="qsq-info-row">
-                        <div className="qsq-info-item">
-                          <span className="qsq-info-label">Tên bộ</span>
-                          <span className="qsq-info-value">{questionSet.name}</span>
-                        </div>
-                        <div className="qsq-info-item">
-                          <span className="qsq-info-label">Trạng thái</span>
-                          <span className={`qsq-status-badge ${questionSet.status === 'ACTIVE' ? 'qsq-status-badge--active' : 'qsq-status-badge--draft'}`}>
-                            {questionSet.statusText || questionSet.status}
-                          </span>
-                        </div>
-                        <div className="qsq-info-item">
-                          <span className="qsq-count-badge">{selectedIds.length} câu hỏi đã chọn</span>
-                        </div>
-                      </div>
-                    </div>
+              {isActiveLocked && (
+                <div className="qsq-lock-banner">
+                  <strong>⚠️ Bộ câu hỏi đang hoạt động</strong>
+                  <span>Không thể thay đổi câu hỏi. Hãy tạo bản nháp chỉnh sửa từ trang chi tiết.</span>
+                </div>
+              )}
 
-                    {isActiveLocked && (
-                      <div className="qsq-lock-banner">
-                        <strong>⚠️ Bộ câu hỏi đang hoạt động</strong>
-                        <span>Không thể thay đổi câu hỏi. Hãy tạo bản nháp chỉnh sửa từ trang chi tiết.</span>
-                      </div>
+              <div className="qsq-filter-bar">
+                <div className="qsq-search">
+                  <span className="qsq-search-icon"><SearchOutlined /></span>
+                  <input
+                    type="text"
+                    className="qsq-search-input"
+                    placeholder="Tìm câu hỏi..."
+                    value={qKeyword}
+                    onChange={(event) => { setQKeyword(event.target.value); setQPage(0) }}
+                  />
+                </div>
+                <select className="qsq-filter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
+                  <option value="">Danh mục</option>
+                  {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+                </select>
+                <select className="qsq-filter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
+                  <option value="">Độ khó</option>
+                  {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+                <select className="qsq-filter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
+                  <option value="">Nguồn</option>
+                  {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+                </select>
+                <select className="qsq-filter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
+                  <option value="">Loại</option>
+                  <option value="ORIGINAL">Gốc</option>
+                  <option value="PARAPHRASE">Diễn đạt lại</option>
+                </select>
+                <div className="qsq-filter-actions">
+                  <button type="button" className="qsq-btn-quick" onClick={openQuickCreate} disabled={isActiveLocked}>
+                    <ThunderboltOutlined /> Tạo nhanh
+                  </button>
+                  <button type="button" className="qsq-btn-save" onClick={handleSave} disabled={isSaving || isActiveLocked}>
+                    {isSaving ? <LoadingOutlined /> : <SaveOutlined />}
+                    Lưu
+                  </button>
+                </div>
+              </div>
+
+              <div className="qsq-table-card">
+                <table className="qsq-table">
+                  <thead>
+                    <tr>
+                      <th className="qsq-th-check">
+                        <input type="checkbox" checked={isAllDisplayChecked} onChange={toggleSelectAllDisplay} disabled={isActiveLocked} />
+                      </th>
+                      <th>Nội dung câu hỏi</th>
+                      <th>Danh mục</th>
+                      <th>Độ khó</th>
+                      <th>Nguồn</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayQuestions.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="ch-empty">
+                          Không tìm thấy câu hỏi nào.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayQuestions.map((question) => (
+                        <tr key={question.id} onClick={() => toggleQuestion(question.id)} style={{ cursor: isActiveLocked ? 'default' : 'pointer' }}>
+                          <td style={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(question.id)}
+                              onChange={() => toggleQuestion(question.id)}
+                              disabled={isActiveLocked}
+                            />
+                          </td>
+                          <td style={{ fontWeight: 500, color: '#1e293b' }}>{question.stem}</td>
+                          <td style={{ color: '#475569' }}>{question.topic || '---'}</td>
+                          <td>
+                            <span className={`qsq-diff-badge ${getDifficultyClass(question.difficulty)}`}>
+                              {difficultyText(question.difficulty)}
+                            </span>
+                          </td>
+                          <td style={{ color: '#64748b' }}>{question.sourceDocument || question.questionType || '---'}</td>
+                        </tr>
+                      ))
                     )}
+                  </tbody>
+                </table>
 
-                    <div className="qsq-filter-bar">
-                      <div className="qsq-search">
-                        <span className="qsq-search-icon"><SearchOutlined /></span>
-                        <input
-                          type="text"
-                          className="qsq-search-input"
-                          placeholder="Tìm câu hỏi..."
-                          value={qKeyword}
-                          onChange={(event) => { setQKeyword(event.target.value); setQPage(0) }}
-                        />
-                      </div>
-                      <select className="qsq-filter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
-                        <option value="">Danh mục</option>
-                        {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
-                      </select>
-                      <select className="qsq-filter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
-                        <option value="">Độ khó</option>
-                        {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                      </select>
-                      <select className="qsq-filter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
-                        <option value="">Nguồn</option>
-                        {sources.map((source) => <option key={source} value={source}>{source}</option>)}
-                      </select>
-                      <select className="qsq-filter-select" value={qType} onChange={(event) => { setQType(event.target.value); setQPage(0) }}>
-                        <option value="">Loại</option>
-                        <option value="ORIGINAL">Gốc</option>
-                        <option value="PARAPHRASE">Diễn đạt lại</option>
-                      </select>
-                      <div className="qsq-filter-actions">
-                        <button type="button" className="qsq-btn-quick" onClick={openQuickCreate} disabled={isActiveLocked}>
-                          <ThunderboltOutlined /> Tạo nhanh
-                        </button>
-                        <button type="button" className="qsq-btn-save" onClick={handleSave} disabled={isSaving || isActiveLocked}>
-                          {isSaving ? <LoadingOutlined /> : <SaveOutlined />}
-                          Lưu
-                        </button>
-                      </div>
-                    </div>
+                <div className="qsq-pagination-bar">
+                  <div className="qsq-pagination-info">
+                    Hiển thị {displayQuestions.length}/{qTotalElements} kết quả ({selectedIds.length} đã chọn)
+                  </div>
+                  <div className="qsq-pagination-buttons">
+                    <button type="button" className="qsq-page-btn" disabled={qPage <= 0} onClick={() => setQPage(qPage - 1)}>&lt;</button>
+                    {(() => {
+                      const maxVisible = 5
+                      const half = Math.floor(maxVisible / 2)
+                      let start = Math.max(0, qPage - half)
+                      const end = Math.min(qTotalPages, start + maxVisible)
+                      if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
+                      const buttons = []
+                      if (start > 0) {
+                        buttons.push(<button key={0} className={`qsq-page-btn ${qPage === 0 ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(0)}>1</button>)
+                        if (start > 1) buttons.push(<span key="se" className="qsq-page-btn qsq-page-btn--dots">&hellip;</span>)
+                      }
+                      for (let i = start; i < end; i++) {
+                        buttons.push(<button key={i} className={`qsq-page-btn ${qPage === i ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(i)}>{i + 1}</button>)
+                      }
+                      if (end < qTotalPages) {
+                        if (end < qTotalPages - 1) buttons.push(<span key="ee" className="qsq-page-btn qsq-page-btn--dots">&hellip;</span>)
+                        buttons.push(<button key={qTotalPages - 1} className={`qsq-page-btn ${qPage === qTotalPages - 1 ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(qTotalPages - 1)}>{qTotalPages}</button>)
+                      }
+                      return buttons
+                    })()}
+                    <button type="button" className="qsq-page-btn" disabled={qPage + 1 >= qTotalPages} onClick={() => setQPage(qPage + 1)}>&gt;</button>
+                  </div>
+                </div>
+              </div>
 
-                    <div className="qsq-table-card">
-                      <table className="qsq-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: '50px', textAlign: 'center' }}>
-                              <input type="checkbox" checked={isAllDisplayChecked} onChange={toggleSelectAllDisplay} disabled={isActiveLocked} />
-                            </th>
-                            <th>Nội dung câu hỏi</th>
-                            <th>Danh mục</th>
-                            <th>Độ khó</th>
-                            <th>Nguồn</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {displayQuestions.length === 0 ? (
-                            <tr>
-                              <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0' }}>
-                                Không tìm thấy câu hỏi nào.
-                              </td>
-                            </tr>
-                          ) : (
-                            displayQuestions.map((question) => (
-                              <tr key={question.id} onClick={() => toggleQuestion(question.id)} style={{ cursor: isActiveLocked ? 'default' : 'pointer' }}>
-                                <td style={{ textAlign: 'center' }} onClick={(event) => event.stopPropagation()}>
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedIds.includes(question.id)}
-                                    onChange={() => toggleQuestion(question.id)}
-                                    disabled={isActiveLocked}
-                                  />
-                                </td>
-                                <td style={{ fontWeight: 500, color: '#1e293b' }}>{question.stem}</td>
-                                <td style={{ color: '#475569' }}>{question.topic || '---'}</td>
-                                <td>
-                                  <span className={`qsq-diff-badge ${getDifficultyClass(question.difficulty)}`}>
-                                    {difficultyText(question.difficulty)}
-                                  </span>
-                                </td>
-                                <td style={{ color: '#64748b' }}>{question.sourceDocument || question.questionType || '---'}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-
-                      <div className="qsq-pagination-bar">
-                        <div className="qsq-pagination-info">
-                          Hiển thị {displayQuestions.length}/{qTotalElements} kết quả ({selectedIds.length} đã chọn)
-                        </div>
-                        <div className="qsq-pagination-buttons">
-                          <button type="button" className="qsq-page-btn" disabled={qPage <= 0} onClick={() => setQPage(qPage - 1)}>&lt;</button>
-                          {(() => {
-                            const maxVisible = 5
-                            const half = Math.floor(maxVisible / 2)
-                            let start = Math.max(0, qPage - half)
-                            const end = Math.min(qTotalPages, start + maxVisible)
-                            if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
-                            const buttons = []
-                            if (start > 0) {
-                              buttons.push(<button key={0} className={`qsq-page-btn ${qPage === 0 ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(0)}>1</button>)
-                              if (start > 1) buttons.push(<span key="se" className="qsq-page-btn qsq-page-btn--dots">&hellip;</span>)
-                            }
-                            for (let i = start; i < end; i++) {
-                              buttons.push(<button key={i} className={`qsq-page-btn ${qPage === i ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(i)}>{i + 1}</button>)
-                            }
-                            if (end < qTotalPages) {
-                              if (end < qTotalPages - 1) buttons.push(<span key="ee" className="qsq-page-btn qsq-page-btn--dots">&hellip;</span>)
-                              buttons.push(<button key={qTotalPages - 1} className={`qsq-page-btn ${qPage === qTotalPages - 1 ? 'qsq-page-btn--active' : ''}`} onClick={() => setQPage(qTotalPages - 1)}>{qTotalPages}</button>)
-                            }
-                            return buttons
-                          })()}
-                          <button type="button" className="qsq-page-btn" disabled={qPage + 1 >= qTotalPages} onClick={() => setQPage(qPage + 1)}>&gt;</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="qsq-selected-card">
-                      <h3>Câu đã chọn ({selectedQuestions.length})</h3>
-                      {selectedQuestions.length === 0 ? (
-                        <p className="qsq-empty-text">Chưa có câu hỏi nào trong bộ.</p>
-                      ) : (
-                        selectedQuestions.map((question, index) => (
-                          <div className="qsq-selected-row" key={question.id}>
-                            <span>{index + 1}</span>
-                            <strong>{question.stem}</strong>
-                            <div>
-                              <button type="button" onClick={() => moveSelected(question.id, -1)} disabled={index === 0 || isActiveLocked} title="Đưa lên">
-                                <ArrowUpOutlined />
-                              </button>
-                              <button type="button" onClick={() => moveSelected(question.id, 1)} disabled={index === selectedQuestions.length - 1 || isActiveLocked} title="Đưa xuống">
-                                <ArrowDownOutlined />
-                              </button>
-                              <button type="button" onClick={() => toggleQuestion(question.id)} title="Bỏ khỏi bộ" disabled={isActiveLocked}>
-                                <CloseOutlined />
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </>
+              <div className="qsq-selected-card">
+                <h3>Câu đã chọn ({selectedQuestions.length})</h3>
+                {selectedQuestions.length === 0 ? (
+                  <p className="qsq-empty-text">Chưa có câu hỏi nào trong bộ.</p>
                 ) : (
-                  <section className="qsq-loading">Không tìm thấy bộ câu hỏi.</section>
+                  selectedQuestions.map((question, index) => (
+                    <div className="qsq-selected-row" key={question.id}>
+                      <span>{index + 1}</span>
+                      <strong>{question.stem}</strong>
+                      <div>
+                        <button type="button" onClick={() => moveSelected(question.id, -1)} disabled={index === 0 || isActiveLocked} title="Đưa lên">
+                          <ArrowUpOutlined />
+                        </button>
+                        <button type="button" onClick={() => moveSelected(question.id, 1)} disabled={index === selectedQuestions.length - 1 || isActiveLocked} title="Đưa xuống">
+                          <ArrowDownOutlined />
+                        </button>
+                        <button type="button" onClick={() => toggleQuestion(question.id)} title="Bỏ khỏi bộ" disabled={isActiveLocked}>
+                          <CloseOutlined />
+                        </button>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
-            </div>
-
-            {showQuickCreate && (
-              <div className="qsq-modal-backdrop" onClick={() => setShowQuickCreate(false)}>
-                <div className="qsq-modal" onClick={(event) => event.stopPropagation()}>
-                  <div className="qsq-modal-header">
-                    <h2 className="qsq-modal-title">Tạo nhanh theo cấu hình</h2>
-                    <button className="qsq-modal-close" onClick={() => setShowQuickCreate(false)}>✕</button>
-                  </div>
-                  <div className="qsq-modal-body">
-                    <div className="qsq-modal-row">
-                      {DIFFICULTY_OPTIONS.map((option) => (
-                        <div className="qsq-modal-group" key={option.value}>
-                          <label>{option.label}</label>
-                          <input
-                            type="number"
-                            min="0"
-                            className="qsq-input-green"
-                            value={previewCounts[option.value]}
-                            onChange={(event) => setPreviewCounts((current) => ({
-                              ...current,
-                              [option.value]: event.target.value,
-                            }))}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="qsq-modal-group">
-                      <label>Tránh cùng nguồn tài liệu</label>
-                      <select className="qsq-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')}>
-                        <option value="true">Có</option>
-                        <option value="false">Không</option>
-                      </select>
-                    </div>
-                    {previewResult && (
-                      <div className="qsq-preview-box">
-                        <strong>{previewResult.questionIds?.length || 0} câu hỏi gợi ý</strong>
-                        {(previewResult.warnings || []).map((warning) => <p key={warning}>{warning}</p>)}
-                        {(previewResult.shortage || []).map((item) => (
-                          <p key={item.difficulty}>Thiếu {difficultyText(item.difficulty)}: cần {item.requested}, có {item.available}</p>
-                        ))}
-                      </div>
-                    )}
-                    <div className="qsq-modal-actions">
-                      <button type="button" className="qsq-btn-save" onClick={previewQuickCreate} disabled={isPreviewing}>
-                        {isPreviewing ? <LoadingOutlined /> : <SearchOutlined />}
-                        Xem trước
-                      </button>
-                      <button type="button" className="qsq-btn-cancel" onClick={applyPreview} disabled={!previewResult?.questionIds?.length}>
-                        Áp dụng
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
+            </>
+          ) : (
+            <EmptyState>Không tìm thấy bộ câu hỏi.</EmptyState>
+          )}
         </div>
       </div>
-    </div>
+
+      {showQuickCreate && (
+        <div className="qsq-modal-backdrop" onClick={() => setShowQuickCreate(false)}>
+          <div className="qsq-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="qsq-modal-header">
+              <h2 className="qsq-modal-title">Tạo nhanh theo cấu hình</h2>
+              <button className="qsq-modal-close" onClick={() => setShowQuickCreate(false)}>✕</button>
+            </div>
+            <div className="qsq-modal-body">
+              <div className="qsq-modal-row">
+                {DIFFICULTY_OPTIONS.map((option) => (
+                  <div className="qsq-modal-group" key={option.value}>
+                    <label>{option.label}</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="qsq-input-green"
+                      value={previewCounts[option.value]}
+                      onChange={(event) => setPreviewCounts((current) => ({
+                        ...current,
+                        [option.value]: event.target.value,
+                      }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="qsq-modal-group">
+                <label>Tránh cùng nguồn tài liệu</label>
+                <select className="qsq-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')}>
+                  <option value="true">Có</option>
+                  <option value="false">Không</option>
+                </select>
+              </div>
+              {previewResult && (
+                <div className="qsq-preview-box">
+                  <strong>{previewResult.questionIds?.length || 0} câu hỏi gợi ý</strong>
+                  {(previewResult.warnings || []).map((warning) => <p key={warning}>{warning}</p>)}
+                  {(previewResult.shortage || []).map((item) => (
+                    <p key={item.difficulty}>Thiếu {difficultyText(item.difficulty)}: cần {item.requested}, có {item.available}</p>
+                  ))}
+                </div>
+              )}
+              <div className="qsq-modal-actions">
+                <button type="button" className="qsq-btn-save" onClick={previewQuickCreate} disabled={isPreviewing}>
+                  {isPreviewing ? <LoadingOutlined /> : <SearchOutlined />}
+                  Xem trước
+                </button>
+                <button type="button" className="qsq-btn-cancel" onClick={applyPreview} disabled={!previewResult?.questionIds?.length}>
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
   )
 }
 

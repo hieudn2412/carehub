@@ -184,3 +184,35 @@
   background: #64748b;
   border-color: #64748b;
 }
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .etf-card {
+    padding: 24px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .etf-title-card {
+    padding: 20px;
+  }
+
+  .etf-card {
+    padding: 20px;
+  }
+
+  .etf-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .etf-actions {
+    flex-wrap: wrap;
+  }
+
+  .etf-btn-submit,
+  .etf-btn-cancel {
+    flex: 1;
+  }
+}

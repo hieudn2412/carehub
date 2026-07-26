@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
 function TrainingLegacyImportPage() {
@@ -115,7 +116,8 @@ function TrainingLegacyImportPage() {
   }
 
   return (
-    <main className="training-page">
+    <AppShell title="Import dữ liệu đào tạo cũ">
+    <div className="training-page">
       <section className="training-header">
         <div>
           <p className="training-eyebrow">Manager / Admin</p>
@@ -327,7 +329,8 @@ function TrainingLegacyImportPage() {
           )}
         </div>
       </section>
-    </main>
+    </div>
+    </AppShell>
   )
 }
 

@@ -19,10 +19,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import Sidebar from '../../staff/components/sidebar.jsx'
-import Header from '../../staff/components/Header.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { evaluationDashboardApi } from '../api/evaluationDashboardApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -213,19 +210,14 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
 
-  const LayoutSidebar = isManager ? Sidebar : AdminSidebar
-  const LayoutHeader = isManager ? Header : AdminHeader
   const pageTitle = 'Dashboard lý thuyết'
 
   return (
-    <div className="dashboard-layout exam-dashboard-page">
-      <LayoutSidebar />
-      <div className="dashboard-layout__content">
-        <LayoutHeader
-          breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
-          title={isManager ? pageTitle : undefined}
-        />
-        <main className="exam-dashboard">
+    <AppShell
+      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
+      title={isManager ? pageTitle : undefined}
+    >
+        <div className="exam-dashboard">
           <section className="exam-dashboard__hero">
             <div>
               <span>ĐIỂM LÝ THUYẾT</span>
@@ -373,9 +365,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
               </section>
             </>
           )}
-        </main>
-      </div>
-    </div>
+        </div>
+    </AppShell>
   )
 }
 

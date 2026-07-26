@@ -23,10 +23,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
@@ -294,26 +291,17 @@ function CompetencySummaryPage() {
   const renderPagination = () => {
     if (loading || totalElements === 0) return null
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 12,
-        padding: '14px 16px',
-        borderTop: '1px solid #e5e7eb',
-        flexWrap: 'wrap',
-      }}>
-        <span style={{ fontSize: 13, color: '#6b7280' }}>
+      <div className="evd-x-pagination">
+        <span className="evd-x-pagination__info">
           Hiển thị {filteredItems.length} trong tổng số {totalElements} kết quả
         </span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <div className="evd-x-pagination__pages">
           <button
             type="button"
-            className="evd-btn-text"
+            className="evd-x-page-btn"
             aria-label="Trang trước"
             onClick={() => setPage(current => Math.max(0, current - 1))}
             disabled={page === 0}
-            style={{ width: 34, height: 34 }}
           >
             <LeftOutlined />
           </button>
@@ -326,16 +314,7 @@ function CompetencySummaryPage() {
                   key={pageItem}
                   onClick={() => setPage(pageItem)}
                   aria-current={pageItem === page ? 'page' : undefined}
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 6,
-                    border: pageItem === page ? '1px solid #2563eb' : '1px solid #d1d5db',
-                    background: pageItem === page ? '#eff6ff' : '#fff',
-                    color: pageItem === page ? '#1d4ed8' : '#374151',
-                    fontWeight: pageItem === page ? 700 : 500,
-                    cursor: 'pointer',
-                  }}
+                  className={pageItem === page ? 'evd-x-page-btn is-active' : 'evd-x-page-btn'}
                 >
                   {pageItem + 1}
                 </button>
@@ -343,11 +322,10 @@ function CompetencySummaryPage() {
           ))}
           <button
             type="button"
-            className="evd-btn-text"
+            className="evd-x-page-btn"
             aria-label="Trang sau"
             onClick={() => setPage(current => Math.min(totalPages - 1, current + 1))}
             disabled={page + 1 >= totalPages}
-            style={{ width: 34, height: 34 }}
           >
             <RightOutlined />
           </button>
@@ -355,9 +333,6 @@ function CompetencySummaryPage() {
       </div>
     )
   }
-
-  const Layout = isAdmin ? AdminSidebar : Sidebar
-  const PageHeader = isAdmin ? AdminHeader : Header
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
@@ -374,12 +349,7 @@ function CompetencySummaryPage() {
     : 'Tuân thủ kỹ thuật'
 
   return (
-    <div className="dashboard-layout">
-      <Layout />
-      <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? pageTitle : undefined} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? pageTitle : undefined}>
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
@@ -395,8 +365,8 @@ function CompetencySummaryPage() {
               </section>
 
               {/* Segmented Control Filter for Dashboard Screen */}
-              <section className="evd-panel" style={{ padding: '8px 12px', marginBottom: 16, display: 'inline-flex', background: '#f3f4f6', borderRadius: 8 }}>
-                <div style={{ display: 'flex', gap: 4 }}>
+              <section className="evd-panel evd-x-segmented">
+                <div className="evd-x-segmented__list">
                   {[
                     { key: 'summary', label: 'Lý thuyết + thực hành' },
                     { key: 'field', label: 'Năng lực theo lĩnh vực' },
@@ -409,18 +379,7 @@ function CompetencySummaryPage() {
                         setSearchTerm('')
                         setPage(0)
                       }}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: 6,
-                        border: 'none',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        background: reportType === tab.key ? '#ffffff' : 'transparent',
-                        color: reportType === tab.key ? '#2563eb' : '#4b5563',
-                        boxShadow: reportType === tab.key ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                      }}
+                      className={reportType === tab.key ? 'evd-x-segmented__btn is-active' : 'evd-x-segmented__btn'}
                     >
                       {tab.label}
                     </button>
@@ -429,11 +388,8 @@ function CompetencySummaryPage() {
               </section>
 
               {/* Filters panel */}
-              <section className="evd-filter-bar" style={{
-                display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap',
-                marginBottom: 16, padding: '12px 16px', background: '#f9fafb', borderRadius: 8,
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
+              <section className="evd-filter-bar evd-x-filter-bar">
+                <div className="evd-x-filter-field evd-x-filter-field--wide">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
                   <SearchableSelect
                     value={departmentId}
@@ -452,26 +408,26 @@ function CompetencySummaryPage() {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="evd-x-filter-field">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
                   <input type="date" value={fromDate} onChange={(e) => {
                     setFromDate(e.target.value)
                     setPage(0)
                   }}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+                    className="evd-x-input" />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="evd-x-filter-field">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Đến ngày</label>
                   <input type="date" value={toDate} onChange={(e) => {
                     setToDate(e.target.value)
                     setPage(0)
                   }}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+                    className="evd-x-input" />
                 </div>
 
                 {reportType === 'field' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
+                  <div className="evd-x-filter-field evd-x-filter-field--wide">
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Lĩnh vực</label>
                     <SearchableSelect
                       value={selectedCategory}
@@ -491,13 +447,13 @@ function CompetencySummaryPage() {
                 )}
 
                 {reportType === 'technique' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div className="evd-x-filter-field">
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Kỹ thuật</label>
                     <select value={selectedFormId} onChange={(e) => {
                       setSelectedFormId(e.target.value)
                       setPage(0)
                     }}
-                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 200 }}>
+                      className="evd-x-input evd-x-input--wide">
                       <option value="">-- Tất cả kỹ thuật --</option>
                       {forms.map(f => (
                         <option key={f.id} value={f.id}>{f.title}</option>
@@ -507,7 +463,7 @@ function CompetencySummaryPage() {
                 )}
 
                 {reportType === 'summary' && data && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div className="evd-x-filter-field">
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Trọng số</label>
                     <span style={{ fontSize: 13, color: '#374151', padding: '6px 0' }}>
                       Lý thuyết: {knowledgeWeight}% — Thực hành: {skillWeight}%
@@ -603,7 +559,7 @@ function CompetencySummaryPage() {
                     </div>
                   </section>
 
-                  <div className="evd-card" style={{ overflow: 'auto' }}>
+                  <div className="evd-card evd-x-table-card">
                     <table className="evd-table">
                       <thead>
                         <tr>
@@ -626,13 +582,13 @@ function CompetencySummaryPage() {
                       <tbody>
                         {loading ? (
                           <tr>
-                            <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                            <td colSpan={isAdmin ? 8 : 7} className="ch-empty">
                               Đang tải dữ liệu...
                             </td>
                           </tr>
                         ) : !data || filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={isAdmin ? 8 : 7} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                            <td colSpan={isAdmin ? 8 : 7} className="ch-empty">
                               Chưa có dữ liệu năng lực trong phạm vi đã chọn.
                             </td>
                           </tr>
@@ -700,7 +656,7 @@ function CompetencySummaryPage() {
                     </div>
                   </section>
 
-                  <div className="evd-card" style={{ overflow: 'auto' }}>
+                  <div className="evd-card evd-x-table-card">
                     <table className="evd-table">
                       <thead>
                         <tr>
@@ -718,13 +674,13 @@ function CompetencySummaryPage() {
                       <tbody>
                         {loading ? (
                           <tr>
-                            <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                            <td colSpan={isAdmin ? 9 : 8} className="ch-empty">
                               Đang tải dữ liệu...
                             </td>
                           </tr>
                         ) : filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={isAdmin ? 9 : 8} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                            <td colSpan={isAdmin ? 9 : 8} className="ch-empty">
                               Chưa có dữ liệu đánh giá cho lĩnh vực này.
                             </td>
                           </tr>
@@ -810,7 +766,7 @@ function CompetencySummaryPage() {
                     </div>
                   </section>
 
-                  <div className="evd-card" style={{ overflow: 'auto' }}>
+                  <div className="evd-card evd-x-table-card">
                     <table className="evd-table">
                       <thead>
                         <tr>
@@ -829,13 +785,13 @@ function CompetencySummaryPage() {
                       <tbody>
                         {loading ? (
                           <tr>
-                            <td colSpan={isAdmin ? 10 : 9} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                            <td colSpan={isAdmin ? 10 : 9} className="ch-empty">
                               Đang tải dữ liệu...
                             </td>
                           </tr>
                         ) : filteredItems.length === 0 ? (
                           <tr>
-                            <td colSpan={isAdmin ? 10 : 9} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                            <td colSpan={isAdmin ? 10 : 9} className="ch-empty">
                               {!isAdmin && !departmentId
                                 ? 'Vui lòng chọn khoa/phòng.'
                                 : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
@@ -904,10 +860,7 @@ function CompetencySummaryPage() {
                 </>
               )}
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

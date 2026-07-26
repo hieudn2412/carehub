@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import DepartmentCombobox from '../components/DepartmentCombobox'
 import { adminApi } from '../api/adminApi'
 import {
@@ -11,7 +11,6 @@ import {
   LeftOutlined,
   RightOutlined,
   CloseOutlined,
-  LoadingOutlined,
   PlusOutlined,
   UploadOutlined,
   EditOutlined,
@@ -607,12 +606,7 @@ function AdminAccountsScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader title="Quản lý tài khoản" />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell title="Quản lý tài khoản">
             <div className="am-page">
               
               {/* Title Header Card */}
@@ -710,13 +704,13 @@ function AdminAccountsScreen() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                          <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải danh sách tài khoản...
+                        <td colSpan="6">
+                          <LoadingState label="Đang tải danh sách tài khoản..." />
                         </td>
                       </tr>
                     ) : users.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="6" className="ch-empty">
                           Không tìm thấy tài khoản người dùng phù hợp.
                         </td>
                       </tr>
@@ -781,9 +775,6 @@ function AdminAccountsScreen() {
                 )}
               </div>
             </div>
-          </main>
-        </div>
-      </div>
 
       {/* Account Detail Modal overlay */}
       {selectedUserId && (
@@ -798,9 +789,7 @@ function AdminAccountsScreen() {
             
             <div className="am-modal-body">
               {modalLoading ? (
-                <div style={{ textAlign: 'center', padding: '30px 0', color: '#64748b' }}>
-                  <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải thông tin nhân viên...
-                </div>
+                <LoadingState label="Đang tải thông tin nhân viên..." />
               ) : selectedUserDetail ? (
                 <>
                   <div className="am-detail-header">
@@ -869,22 +858,22 @@ function AdminAccountsScreen() {
 
                   {/* Admin Actions Block */}
                   <div className="am-detail-actions">
-                    <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
+                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleOpenEditModal(selectedUserDetail.id)}>
                       <EditOutlined /> Sửa thông tin
                     </button>
                     {selectedUserDetail.status === 'LOCKED' ? (
-                      <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleUnlockUser(selectedUserDetail.id)}>
+                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleUnlockUser(selectedUserDetail.id)}>
                         <UnlockOutlined /> Mở khoá
                       </button>
                     ) : (
-                      <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleLockUser(selectedUserDetail.id)}>
+                      <button className="am-btn-secondary am-btn-sm" onClick={() => handleLockUser(selectedUserDetail.id)}>
                         <LockOutlined /> Khoá tài khoản
                       </button>
                     )}
-                    <button className="am-btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }} onClick={() => handleResetPassword(selectedUserDetail.id)}>
+                    <button className="am-btn-secondary am-btn-sm" onClick={() => handleResetPassword(selectedUserDetail.id)}>
                       <KeyOutlined /> Đổi mật khẩu tự động
                     </button>
-                    <button className="am-modal-btn" style={{ padding: '6px 12px', fontSize: '12px', background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
+                    <button className="am-modal-btn am-btn-sm" style={{ background: '#fef2f2', color: '#b91c1c', borderColor: '#fca5a5' }} onClick={() => handleDeleteUser(selectedUserDetail.id)}>
                       <DeleteOutlined /> Xoá tài khoản
                     </button>
                   </div>
@@ -900,7 +889,7 @@ function AdminAccountsScreen() {
                   )}
                 </>
               ) : (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: '#dc2626' }}>
+                <div className="ch-empty am-modal-error">
                   Lỗi: Không tìm thấy dữ liệu người dùng.
                 </div>
               )}
@@ -916,7 +905,7 @@ function AdminAccountsScreen() {
       {/* Create or Edit Form Modal overlay */}
       {isFormModalOpen && (
         <div className="am-modal-overlay" onClick={() => { setIsFormModalOpen(false); setEditingUser(null); }}>
-          <div className="am-modal" style={{ maxWidth: '640px' }} onClick={(e) => e.stopPropagation()}>
+          <div className="am-modal am-modal--wide" onClick={(e) => e.stopPropagation()}>
             <div className="am-modal-header">
               <h3 className="am-modal-title">
                 {editingUser ? 'Sửa thông tin tài khoản' : 'Thêm tài khoản nhân viên'}
@@ -1161,9 +1150,7 @@ function AdminAccountsScreen() {
                 </div>
 
                 {importLoading && (
-                  <div style={{ textAlign: 'center', padding: '10px 0', color: '#64748b', fontSize: '13.5px' }}>
-                    <LoadingOutlined /> Đang tải lên và phân tích dữ liệu, vui lòng đợi...
-                  </div>
+                  <LoadingState label="Đang tải lên và phân tích dữ liệu, vui lòng đợi..." />
                 )}
 
                 {importResult && (
@@ -1250,7 +1237,7 @@ function AdminAccountsScreen() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

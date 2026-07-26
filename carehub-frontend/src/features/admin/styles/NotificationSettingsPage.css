@@ -200,3 +200,36 @@ input:checked + .ns-slider:before {
   background: #64748b;
   border-color: #64748b;
 }
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .ns-card {
+    padding: 24px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .ns-title-card {
+    padding: 20px;
+  }
+
+  .ns-card {
+    padding: 20px;
+  }
+
+  .ns-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .ns-select {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .ns-actions {
+    flex-wrap: wrap;
+  }
+}

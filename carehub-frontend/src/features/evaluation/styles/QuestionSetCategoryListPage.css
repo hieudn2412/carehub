@@ -126,7 +126,7 @@
   border-radius: 16px;
   border: 1px solid #cbd5e1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .qscl-table {
@@ -324,6 +324,7 @@
   background: #fff;
   border-radius: 16px;
   width: 640px;
+  max-width: calc(100vw - 32px);
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -516,4 +517,63 @@ select.qscl-input-green {
 
 .qscl-btn-cancel:hover {
   background: #7c7c80;
+}
+
+/* Cột hành động — thay width inline trên <th> */
+.qscl-th-actions {
+  width: 120px;
+  text-align: center;
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .qscl-title-card,
+  .qscl-filter-bar {
+    padding: 16px;
+  }
+
+  .qscl-table {
+    min-width: 640px;
+  }
+
+  .qscl-table th,
+  .qscl-table td {
+    padding: 12px;
+  }
+
+  .qscl-table th:first-child,
+  .qscl-table td:first-child {
+    padding-left: 16px;
+  }
+
+  .qscl-table th:last-child,
+  .qscl-table td:last-child {
+    padding-right: 16px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .qscl-filter-bar {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .qscl-filter-left {
+    flex-wrap: wrap;
+    max-width: none;
+  }
+
+  .qscl-search {
+    min-width: 200px;
+  }
+
+  .qscl-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .qscl-pagination-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }

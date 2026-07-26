@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import '../styles/training.css'
 
 function ActivityTypeDetailPage() {
@@ -54,12 +54,7 @@ function ActivityTypeDetailPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="training-detail-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               
               {/* Header Panel */}
@@ -83,9 +78,7 @@ function ActivityTypeDetailPage() {
               </div>
 
               {isLoading && (
-                <div className="training-panel training-skeleton" style={{ textAlign: 'center', padding: 40 }}>
-                  Đang tải thông tin chi tiết...
-                </div>
+                <LoadingState label="Đang tải thông tin chi tiết..." />
               )}
 
               {errorMessage && (
@@ -156,7 +149,8 @@ function ActivityTypeDetailPage() {
                     {activityType.recentRecords.length === 0 ? (
                       <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có hồ sơ đào tạo nào áp dụng hình thức này.</p>
                     ) : (
-                      <table className="training-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 12 }}>
+                      <div className="training-table-wrap" style={{ marginTop: 12 }}>
+                      <table className="training-table">
                         <thead>
                           <tr>
                             <th>Tên chuyên đề / Khóa học</th>
@@ -178,6 +172,7 @@ function ActivityTypeDetailPage() {
                           ))}
                         </tbody>
                       </table>
+                      </div>
                     )}
                   </article>
 
@@ -200,10 +195,7 @@ function ActivityTypeDetailPage() {
                 </div>
               )}
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -328,7 +328,7 @@
 .atl-modal {
   background: #fff;
   border-radius: 16px;
-  width: 640px;
+  width: min(640px, calc(100vw - 40px));
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -525,5 +525,104 @@ select.atl-input-green {
 
 .atl-btn-cancel:hover {
   background: #7c7c80;
+}
+
+/* ── Activity Type Form Page (.atf-*) — thay inline style của ActivityTypeFormPage ── */
+.atf-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.atf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.training-form .atf-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.training-form .atf-input {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  outline: none;
+  color: #334155;
+  background: #fff;
+}
+
+.training-form .atf-input:disabled {
+  background: #f1f5f9;
+}
+
+.training-form select.atf-input {
+  cursor: pointer;
+}
+
+.training-form textarea.atf-input {
+  font-family: inherit;
+}
+
+.training-form .atf-hint {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .atl-filter-bar {
+    flex-wrap: wrap;
+  }
+
+  .atl-filter-left {
+    max-width: none;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .atl-filter-left {
+    flex-wrap: wrap;
+  }
+
+  .atl-search {
+    flex: 1 1 100%;
+  }
+
+  .atl-btn-add {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .atl-table {
+    min-width: 640px;
+  }
+
+  .atl-pagination-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .atl-modal {
+    padding: 16px;
+  }
+
+  .atl-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .atf-card {
+    padding: 20px;
+  }
 }
 

@@ -13,8 +13,7 @@ import {
   SearchOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   getChecklistDisplayCode,
@@ -600,12 +599,7 @@ function FormListPage() {
   const breadcrumbs = [{ label: 'Quản lý chất lượng' }, { label: 'Danh sách checklist' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="form-list-page">
               <section className="flp-header-card">
                 <div className="flp-header-info">
@@ -959,9 +953,6 @@ function FormListPage() {
                 )}
               </section>
             </div>
-          </main>
-        </div>
-      </div>
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title="Ngừng hoạt động checklist"
@@ -1127,7 +1118,7 @@ function FormListPage() {
           </form>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

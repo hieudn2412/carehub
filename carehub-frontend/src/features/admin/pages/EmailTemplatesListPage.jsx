@@ -4,13 +4,11 @@ import {
   DeleteOutlined,
   EditOutlined,
   LeftOutlined,
-  LoadingOutlined,
   PlusCircleOutlined,
   RightOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -94,12 +92,7 @@ function EmailTemplatesListPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Danh sách biểu mẫu email thông báo' }]} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={[{ label: 'Danh sách biểu mẫu email thông báo' }]}>
             <div className="etl-page">
               <div className="etl-title-card">
                 <h1 className="etl-title">Biểu mẫu</h1>
@@ -154,13 +147,13 @@ function EmailTemplatesListPage() {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                        <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải danh sách biểu mẫu...
+                      <tr><td colSpan="5" className="ch-empty">
+                        <span className="ch-spinner" aria-hidden="true" /> Đang tải danh sách biểu mẫu...
                       </td></tr>
                     ) : error ? (
-                      <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#dc2626' }}>{error}</td></tr>
+                      <tr><td colSpan="5" className="ch-empty" style={{ color: '#dc2626' }}>{error}</td></tr>
                     ) : templates.length === 0 ? (
-                      <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                      <tr><td colSpan="5" className="ch-empty">
                         Không tìm thấy biểu mẫu email phù hợp.
                       </td></tr>
                     ) : templates.map((template) => (
@@ -213,9 +206,6 @@ function EmailTemplatesListPage() {
                 )}
               </div>
             </div>
-          </main>
-        </div>
-      </div>
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title="Xóa biểu mẫu email"
@@ -227,7 +217,7 @@ function EmailTemplatesListPage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, id: null })}
       />
-    </div>
+    </AppShell>
   )
 }
 

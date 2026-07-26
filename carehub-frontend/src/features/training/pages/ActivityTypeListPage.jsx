@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
+import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { SearchOutlined, EyeOutlined, EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import '../styles/ActivityTypeListPage.css'
 
@@ -163,12 +164,7 @@ function ActivityTypeListPage() {
   const breadcrumbs = [{ label: 'Các hình thức đào tạo' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="atl-page">
               {/* Title Card */}
               <div className="atl-title-card">
@@ -228,13 +224,11 @@ function ActivityTypeListPage() {
               {/* Table Card */}
               <div className="atl-table-card">
                 {isLoading && rows.length === 0 ? (
-                  <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
-                    Đang tải danh sách các hình thức đào tạo...
-                  </div>
+                  <LoadingState label="Đang tải danh sách các hình thức đào tạo..." />
                 ) : rows.length === 0 ? (
-                  <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b', fontSize: 14 }}>
+                  <EmptyState>
                     {debouncedKeyword || status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có hình thức đào tạo nào.'}
-                  </div>
+                  </EmptyState>
                 ) : (
                   <>
                     <table className="atl-table">
@@ -336,9 +330,6 @@ function ActivityTypeListPage() {
                 )}
               </div>
             </div>
-          </main>
-        </div>
-      </div>
 
       {/* Add / Edit Modal Popup */}
       {isModalOpen && (
@@ -440,7 +431,7 @@ function ActivityTypeListPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

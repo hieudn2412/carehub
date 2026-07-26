@@ -480,7 +480,8 @@
   padding: 10px 12px;
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .training-page {
     padding: 20px;
   }
