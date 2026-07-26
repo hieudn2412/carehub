@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import DepartmentCombobox from '../components/DepartmentCombobox'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   SearchOutlined,
@@ -637,19 +638,25 @@ function AdminAccountsScreen() {
                 </div>
 
                 <div className="am-filter-department">
-                  <DepartmentCombobox
+                  <SearchableSelect
                     id="account-department-filter"
-                    departments={departments}
                     value={deptFilter}
                     onChange={(value) => {
                       setDeptFilter(value || 'all')
                       setPage(1)
                     }}
                     disabled={departmentLoading}
-                    placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tìm khoa/phòng...'}
-                    allLabel="Tất cả phòng ban"
-                    emptyValue="all"
-                    required={false}
+                    options={[
+                      { value: 'all', label: 'Tất cả phòng ban' },
+                      ...departments.map((department) => ({
+                        value: String(department.id),
+                        label: department.name,
+                      })),
+                    ]}
+                    placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tất cả phòng ban'}
+                    searchPlaceholder="Tìm tên phòng ban..."
+                    emptyMessage="Không tìm thấy phòng ban phù hợp"
+                    ariaLabel="Tìm và chọn phòng ban"
                   />
                 </div>
 

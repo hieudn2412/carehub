@@ -14,9 +14,13 @@ function SearchableSelect({
   value,
   options = [],
   onChange,
+  onSearch,
+  selectedOption: selectedOptionProp,
   placeholder = 'Chọn một giá trị',
   searchPlaceholder = 'Nhập để tìm kiếm...',
   emptyMessage = 'Không tìm thấy kết quả phù hợp',
+  loading = false,
+  loadingMessage = 'Đang tải dữ liệu...',
   disabled = false,
   ariaLabel,
   id,
@@ -28,8 +32,9 @@ function SearchableSelect({
   const [activeIndex, setActiveIndex] = useState(-1)
 
   const selectedOption = useMemo(
-    () => options.find((option) => String(option.value) === String(value)),
-    [options, value],
+    () => selectedOptionProp
+      || options.find((option) => String(option.value) === String(value)),
+    [options, selectedOptionProp, value],
   )
 
   const filteredOptions = useMemo(() => {
@@ -50,12 +55,13 @@ function SearchableSelect({
       }
     }
 
-    document.addEventListener('mousedown', closeWhenClickingOutside)
-    return () => document.removeEventListener('mousedown', closeWhenClickingOutside)
+    document.addEventListener('mousedown', closeWhenClickingOutside, true)
+    return () => document.removeEventListener('mousedown', closeWhenClickingOutside, true)
   }, [])
 
   const openDropdown = () => {
     if (disabled) return
+    if (!isOpen) onSearch?.('')
     setIsOpen(true)
     setQuery('')
     setActiveIndex(-1)
@@ -126,7 +132,9 @@ function SearchableSelect({
         onClick={openDropdown}
         onFocus={openDropdown}
         onChange={(event) => {
-          setQuery(event.target.value)
+          const nextQuery = event.target.value
+          setQuery(nextQuery)
+          onSearch?.(nextQuery)
           setIsOpen(true)
           setActiveIndex(-1)
         }}
@@ -136,7 +144,9 @@ function SearchableSelect({
 
       {isOpen && (
         <div id={listboxId} className="searchable-select__menu" role="listbox">
-          {filteredOptions.length === 0 ? (
+          {loading ? (
+            <div className="searchable-select__empty" role="status">{loadingMessage}</div>
+          ) : filteredOptions.length === 0 ? (
             <div className="searchable-select__empty" role="status">{emptyMessage}</div>
           ) : filteredOptions.map((option, index) => {
             const isSelected = String(option.value) === String(value)

@@ -107,12 +107,12 @@
   min-width: 240px;
 }
 
-.am-filter-department .am-department-combobox__input {
+.am-filter-department .searchable-select > input {
   min-height: 39px;
   border-radius: 8px;
 }
 
-.am-filter-department .am-department-combobox__menu {
+.am-filter-department .searchable-select__menu {
   min-width: 320px;
   max-height: 320px;
 }

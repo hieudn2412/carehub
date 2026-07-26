@@ -74,7 +74,7 @@ function normalizeEmployee(item) {
     requiredHours: Number(item.requiredHours) || 0,
     completedHours: Number(item.submittedHours) || 0,
     missingHours: Number(item.remainingHours) || 0,
-    complianceStatus: item.complianceStatus || 'NOT_CONFIGURED',
+    complianceStatus: item.complianceStatus === 'COMPLIANT' ? 'COMPLIANT' : 'NON_COMPLIANT',
   }
 }
 
@@ -93,10 +93,8 @@ function exportCsv(rows) {
     row.requiredHours,
     row.missingHours,
     {
-      COMPLIANT: 'Đạt yêu cầu',
-      AT_RISK: 'Có nguy cơ',
+      COMPLIANT: 'Đạt',
       NON_COMPLIANT: 'Chưa đạt',
-      NOT_CONFIGURED: 'Chưa cấu hình',
     }[row.complianceStatus] || row.complianceStatus,
   ].map(escapeCsv).join(','))
   const csvContent = [headers.map(escapeCsv).join(','), ...lines].join('\n')
