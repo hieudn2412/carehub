@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.embedding;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Pageable;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionEmbedding;
@@ -19,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +64,7 @@ class QuestionEmbeddingServiceTest {
             savedEmbeddings.add(embedding);
             return embedding;
         });
-        when(embeddingModelService.embedPassage(any(String.class))).thenReturn(new double[]{0.1, 0.2, 0.3});
+        when(embeddingModelService.embedSymmetric(any(String.class))).thenReturn(new double[]{0.1, 0.2, 0.3});
     }
 
     @Test
@@ -96,7 +98,7 @@ class QuestionEmbeddingServiceTest {
         QuestionBankQuestion alreadyEmbedded = approvedQuestion(3L, "Câu hỏi đã có embedding?");
         QuestionBankQuestion newQuestion = approvedQuestion(4L, "Câu hỏi mới cần embedding?");
         service.saveStemEmbedding(alreadyEmbedded);
-        when(questionRepository.findByStatusOrderByIdAsc(QuestionBankStatus.APPROVED))
+        when(questionRepository.findByStatus(eq(QuestionBankStatus.APPROVED), any(Pageable.class)))
                 .thenReturn(List.of(alreadyEmbedded, newQuestion));
 
         QuestionEmbeddingService.BackfillResult result = service.backfillApprovedQuestionEmbeddings();
@@ -105,7 +107,17 @@ class QuestionEmbeddingServiceTest {
         assertThat(result.skipped()).isEqualTo(1);
         assertThat(result.failed()).isZero();
         assertThat(savedEmbeddings).hasSize(2);
-        verify(questionRepository).findByStatusOrderByIdAsc(QuestionBankStatus.APPROVED);
+        verify(questionRepository).findByStatus(eq(QuestionBankStatus.APPROVED), any(Pageable.class));
+    }
+
+    @Test
+    void backfillUsesSymmetricEmbeddingSoBankAndCandidatesShareOneEmbeddingSpace() {
+        QuestionBankQuestion question = approvedQuestion(5L, "Rửa tay thường quy gồm mấy bước?");
+
+        service.saveStemEmbedding(question);
+
+        verify(embeddingModelService).embedSymmetric(question.getStem());
+        verify(embeddingModelService, never()).embedPassage(any(String.class));
     }
 
     @Test

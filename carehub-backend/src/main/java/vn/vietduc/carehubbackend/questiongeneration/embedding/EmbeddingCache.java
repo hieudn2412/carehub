@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @Component
@@ -22,6 +23,9 @@ public class EmbeddingCache {
     private final AnnEmbeddingIndex annIndex;
 
     private volatile LoadingCache<String, List<QuestionEmbeddingSnapshot>> cache;
+
+    /** Tăng mỗi lần ngân hàng câu hỏi đổi; ANN index dùng số này để biết có cần build lại. */
+    private final AtomicLong dataVersion = new AtomicLong();
 
     @PostConstruct
     void init() {
@@ -44,10 +48,13 @@ public class EmbeddingCache {
         if (cache == null) {
             return embeddingService.loadAllApprovedStemEmbeddings();
         }
+        long versionAtLoad = dataVersion.get();
         List<QuestionEmbeddingSnapshot> result = cache.get(APPROVED_STEMS_KEY);
-        // Rebuild ANN index sau khi cache load (khi số lượng thay đổi)
-        if (result != null && properties.isAnnEnabled() && annIndex.size() != result.size()) {
-            annIndex.rebuild(result);
+        // Rebuild ANN index theo version của dữ liệu, không theo số lượng: sửa nội dung một
+        // câu hỏi làm vector đổi mà số lượng giữ nguyên. AnnEmbeddingIndex tự bỏ qua nếu
+        // đã build đúng version này rồi.
+        if (result != null && properties.isAnnEnabled()) {
+            annIndex.rebuild(result, versionAtLoad);
         }
         return result;
     }
@@ -57,9 +64,10 @@ public class EmbeddingCache {
      * Gọi từ QuestionEmbeddingService hoặc QuestionBankService.
      */
     public void invalidate() {
+        dataVersion.incrementAndGet();
         if (cache != null) {
             cache.invalidateAll();
-            log.info("Embedding cache invalidated");
+            log.info("Embedding cache invalidated (dataVersion={})", dataVersion.get());
         }
     }
 

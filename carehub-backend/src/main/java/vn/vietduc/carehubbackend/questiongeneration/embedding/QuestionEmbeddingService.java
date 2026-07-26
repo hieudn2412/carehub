@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.embedding;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +25,27 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
 public class QuestionEmbeddingService {
-    public static final String STEM_TEXT_TYPE = "stem";
+    /**
+     * Phiên bản của cách nhúng stem. Đổi giá trị này làm mọi bản ghi cũ không còn khớp
+     * khoá tra cứu (text_type nằm trong unique constraint và trong mọi query), nên backfill
+     * sẽ tự sinh lại toàn bộ — dùng khi cách nhúng thay đổi về mặt ngữ nghĩa.
+     *
+     * <p>{@code stem} → {@code stem_sym_v2}: chuyển từ nhúng bất đối xứng (bank dùng
+     * {@code passage:}, ứng viên dùng {@code query:}) sang nhúng đối xứng dùng chung
+     * một tiền tố cho cả hai vế.</p>
+     */
+    public static final String STEM_TEXT_TYPE = "stem_sym_v2";
+
+    /** Giá trị text_type của cách nhúng cũ, chỉ còn dùng để dọn dẹp. */
+    public static final String LEGACY_STEM_TEXT_TYPE = "stem";
 
     private final QuestionEmbeddingRepository embeddingRepository;
     private final QuestionBankQuestionRepository questionRepository;
@@ -38,6 +53,7 @@ public class QuestionEmbeddingService {
     private final AiEmbeddingProperties properties;
     private final ObjectMapper objectMapper;
     private final EmbeddingCache embeddingCache;
+    private QuestionEmbeddingService self;
 
     public QuestionEmbeddingService(
             QuestionEmbeddingRepository embeddingRepository,
@@ -52,6 +68,14 @@ public class QuestionEmbeddingService {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.embeddingCache = embeddingCache;
+        this.self = this;
+    }
+
+    /** Tự tiêm để mỗi lô backfill chạy trong một transaction riêng. */
+    @Lazy
+    @Autowired
+    public void setSelf(QuestionEmbeddingService self) {
+        this.self = self;
     }
 
     @Transactional
@@ -93,31 +117,44 @@ public class QuestionEmbeddingService {
                 .isPresent()) {
             return PersistResult.SKIPPED;
         }
-        double[] vector = embeddingModelService.embedPassage(question.getStem());
-        QuestionEmbedding embedding = QuestionEmbedding.builder()
-                .question(question)
-                .textType(STEM_TEXT_TYPE)
-                .embeddingModel(properties.getModel())
-                .embeddingDimension(vector.length)
-                .inputTextHash(hash)
-                .normalizedText(normalizedText)
-                .vectorJson(toJson(vector))
-                .vector(toBytes(vector))
-                .build();
-        embeddingRepository.save(embedding);
+        double[] vector = embeddingModelService.embedSymmetric(question.getStem());
+        embeddingRepository.save(buildEmbedding(question, normalizedText, hash, vector));
         return PersistResult.CREATED;
     }
 
-    @Transactional
+    /**
+     * Không gắn {@code @Transactional} ở đây: quá trình nhúng cả ngân hàng câu hỏi có thể
+     * kéo dài hàng phút, giữ một transaction suốt thời gian đó sẽ chiếm connection HikariCP.
+     * Mỗi lô được commit riêng qua {@link #backfillBatch(List)}.
+     */
     public BackfillResult backfillApprovedQuestionEmbeddings() {
-        int created = 0;
-        int skipped = 0;
-        int failed = 0;
         if (!properties.isE5Provider()) {
             return new BackfillResult(0, 0, 0);
         }
-        List<QuestionBankQuestion> questions = questionRepository.findByStatusOrderByIdAsc(QuestionBankStatus.APPROVED);
+        int created = 0;
+        int skipped = 0;
+        int failed = 0;
+        int pageSize = Math.max(1, properties.getDedupPageSize());
 
+        int page = 0;
+        List<QuestionBankQuestion> batch;
+        do {
+            batch = questionRepository.findByStatus(
+                    QuestionBankStatus.APPROVED, PageRequest.of(page++, pageSize));
+            if (batch.isEmpty()) {
+                break;
+            }
+            BackfillResult result = self.backfillBatch(batch);
+            created += result.created();
+            skipped += result.skipped();
+            failed += result.failed();
+        } while (batch.size() == pageSize);
+
+        return new BackfillResult(created, skipped, failed);
+    }
+
+    @Transactional
+    public BackfillResult backfillBatch(List<QuestionBankQuestion> questions) {
         if (properties.isBatchEnabled()) {
             return backfillWithBatch(questions);
         }
@@ -145,51 +182,54 @@ public class QuestionEmbeddingService {
     }
 
     private BackfillResult backfillWithBatch(List<QuestionBankQuestion> questions) {
-        int created = 0;
         int skipped = 0;
-        int failed = 0;
 
-        // Lọc: chỉ giữ câu chưa có embedding (incremental)
+        // Một truy vấn lấy hết khoá đã có, thay vì gọi findFirst... cho từng câu.
+        Set<String> existingKeys = new HashSet<>(embeddingRepository.findExistingKeys(
+                STEM_TEXT_TYPE,
+                properties.getModel(),
+                questions.stream().map(QuestionBankQuestion::getId).toList()
+        ));
+
         List<QuestionBankQuestion> pending = new ArrayList<>();
-        for (QuestionBankQuestion q : questions) {
-            String normalizedText = E5TextPreprocessor.normalize(q.getStem());
+        List<String> pendingNormalized = new ArrayList<>();
+        List<String> pendingHashes = new ArrayList<>();
+        for (QuestionBankQuestion question : questions) {
+            String normalizedText = E5TextPreprocessor.normalize(question.getStem());
             if (normalizedText.isBlank()) {
                 skipped++;
                 continue;
             }
             String hash = sha256(normalizedText);
-            boolean exists = embeddingRepository
-                    .findFirstByQuestionAndTextTypeAndEmbeddingModelAndInputTextHash(
-                            q, STEM_TEXT_TYPE, properties.getModel(), hash)
-                    .isPresent();
-            if (exists) {
+            if (existingKeys.contains(question.getId() + ":" + hash)) {
                 skipped++;
-            } else {
-                pending.add(q);
+                continue;
             }
+            pending.add(question);
+            pendingNormalized.add(normalizedText);
+            pendingHashes.add(hash);
         }
 
         if (pending.isEmpty()) {
             return new BackfillResult(0, skipped, 0);
         }
 
-        // Batch embed
         List<String> stems = pending.stream().map(QuestionBankQuestion::getStem).toList();
         List<double[]> vectors;
         try {
-            vectors = embeddingModelService.embedPassageBatch(stems, progress -> {
-                log.info("E5 batch backfill progress: {}/{} questions", progress, stems.size());
-            });
+            vectors = embeddingModelService.embedSymmetricBatch(stems, progress ->
+                    log.info("E5 batch backfill progress: {}/{} questions", progress, stems.size()));
         } catch (RuntimeException ex) {
-            failed = pending.size();
             log.warn("E5 batch backfill failed: {}", ex.getMessage());
-            return new BackfillResult(0, skipped, failed);
+            return new BackfillResult(0, skipped, pending.size());
         }
 
-        // Persist từng kết quả
+        int created = 0;
+        int failed = 0;
         for (int i = 0; i < pending.size(); i++) {
             try {
-                persistStemEmbeddingFromVector(pending.get(i), vectors.get(i));
+                embeddingRepository.save(buildEmbedding(
+                        pending.get(i), pendingNormalized.get(i), pendingHashes.get(i), vectors.get(i)));
                 created++;
             } catch (RuntimeException ex) {
                 failed++;
@@ -199,22 +239,13 @@ public class QuestionEmbeddingService {
         return new BackfillResult(created, skipped, failed);
     }
 
-    private PersistResult persistStemEmbeddingFromVector(QuestionBankQuestion question, double[] vector) {
-        if (!properties.isE5Provider() || question == null || question.getId() == null) {
-            return PersistResult.SKIPPED;
-        }
-        String normalizedText = E5TextPreprocessor.normalize(question.getStem());
-        if (normalizedText.isBlank()) {
-            return PersistResult.SKIPPED;
-        }
-        String hash = sha256(normalizedText);
-        if (embeddingRepository
-                .findFirstByQuestionAndTextTypeAndEmbeddingModelAndInputTextHash(
-                        question, STEM_TEXT_TYPE, properties.getModel(), hash)
-                .isPresent()) {
-            return PersistResult.SKIPPED;
-        }
-        QuestionEmbedding embedding = QuestionEmbedding.builder()
+    private QuestionEmbedding buildEmbedding(
+            QuestionBankQuestion question,
+            String normalizedText,
+            String hash,
+            double[] vector
+    ) {
+        return QuestionEmbedding.builder()
                 .question(question)
                 .textType(STEM_TEXT_TYPE)
                 .embeddingModel(properties.getModel())
@@ -224,8 +255,16 @@ public class QuestionEmbeddingService {
                 .vectorJson(toJson(vector))
                 .vector(toBytes(vector))
                 .build();
-        embeddingRepository.save(embedding);
-        return PersistResult.CREATED;
+    }
+
+    /** Xoá các embedding sinh bằng cách nhúng cũ (bất đối xứng) — chỉ cần chạy một lần. */
+    @Transactional
+    public long deleteLegacyStemEmbeddings() {
+        long deleted = embeddingRepository.deleteByTextType(LEGACY_STEM_TEXT_TYPE);
+        if (deleted > 0) {
+            log.info("Đã xoá {} embedding cũ (textType={})", deleted, LEGACY_STEM_TEXT_TYPE);
+        }
+        return deleted;
     }
 
     @Transactional(readOnly = true)
@@ -252,20 +291,20 @@ public class QuestionEmbeddingService {
         int pageSize = Math.max(1, properties.getDedupPageSize());
         Pageable pageable = PageRequest.of(page, pageSize);
 
-        List<QuestionEmbedding> pageResult;
+        List<QuestionEmbeddingRepository.EmbeddingVectorProjection> pageResult;
         do {
             pageResult = embeddingRepository
-                    .findPageByTextTypeAndEmbeddingModelAndQuestionStatus(
+                    .findVectorPageByTextTypeAndEmbeddingModelAndQuestionStatus(
                             STEM_TEXT_TYPE,
                             properties.getModel(),
                             QuestionBankStatus.APPROVED,
                             pageable
                     );
-            for (QuestionEmbedding embedding : pageResult) {
+            for (QuestionEmbeddingRepository.EmbeddingVectorProjection embedding : pageResult) {
                 allEmbeddings.add(new QuestionEmbeddingSnapshot(
-                        embedding.getQuestion().getId(),
-                        embedding.getQuestion().getStem(),
-                        fromJson(embedding.getVectorJson())
+                        embedding.getQuestionId(),
+                        embedding.getStem(),
+                        fromBytes(embedding.getVector())
                 ));
             }
             page++;
@@ -275,12 +314,22 @@ public class QuestionEmbeddingService {
         return allEmbeddings;
     }
 
+    /**
+     * Nhúng một stem để so trùng. Cả câu ứng viên và câu trong ngân hàng đều đi qua đây,
+     * nên hai vế luôn nằm trong cùng một không gian nhúng.
+     */
     public double[] embedCandidateStem(String stem) {
-        return embeddingModelService.embedQuery(stem);
+        return embeddingModelService.embedSymmetric(stem);
     }
 
+    /** @see #embedCandidateStem(String) — cùng cách nhúng, tách tên cho dễ đọc ở nơi gọi. */
     public double[] embedSourceStem(String stem) {
-        return embeddingModelService.embedPassage(stem);
+        return embeddingModelService.embedSymmetric(stem);
+    }
+
+    /** Nhúng nhiều stem trong một lần chạy model — dùng khi kiểm tra trùng cả một lô ứng viên. */
+    public List<double[]> embedCandidateStems(List<String> stems) {
+        return embeddingModelService.embedSymmetricBatch(stems);
     }
 
     private String toJson(double[] vector) {
@@ -288,14 +337,6 @@ public class QuestionEmbeddingService {
             return objectMapper.writeValueAsString(vector);
         } catch (JsonProcessingException ex) {
             throw new IllegalStateException("Không serialize được embedding vector", ex);
-        }
-    }
-
-    private double[] fromJson(String json) {
-        try {
-            return objectMapper.readValue(json, double[].class);
-        } catch (Exception ex) {
-            return new double[0];
         }
     }
 
@@ -315,6 +356,18 @@ public class QuestionEmbeddingService {
             buffer.putDouble(v);
         }
         return buffer.array();
+    }
+
+    private double[] fromBytes(byte[] bytes) {
+        if (bytes == null || bytes.length < Double.BYTES) {
+            return new double[0];
+        }
+        ByteBuffer buffer = ByteBuffer.wrap(bytes).order(ByteOrder.nativeOrder());
+        double[] vector = new double[bytes.length / Double.BYTES];
+        for (int i = 0; i < vector.length; i++) {
+            vector[i] = buffer.getDouble();
+        }
+        return vector;
     }
 
     public record BackfillResult(int created, int skipped, int failed) {

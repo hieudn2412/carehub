@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
 import vn.vietduc.carehubbackend.questiongeneration.config.DocumentProcessingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
@@ -58,7 +59,8 @@ class DocumentQuestionJobServiceTest {
                 new AiGenerationProperties(),
                 new DocumentProcessingProperties(),
                 new ObjectMapper(),
-                eventPublisher
+                eventPublisher,
+                new SimpleAsyncTaskExecutor()
         );
         QuestionDocument document = QuestionDocument.builder()
                 .id(10L)

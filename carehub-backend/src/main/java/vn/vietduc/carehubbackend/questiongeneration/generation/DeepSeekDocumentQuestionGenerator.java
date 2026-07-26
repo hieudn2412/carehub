@@ -7,9 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedKnowledgePoint;
@@ -17,14 +18,17 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuest
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 @Slf4j
@@ -34,7 +38,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
 
     private final AiGenerationProperties properties;
     private final ObjectMapper objectMapper;
-    private volatile CircuitState circuitState = CircuitState.CLOSED;
+    /* package */ final AtomicReference<CircuitState> circuitState = new AtomicReference<>(CircuitState.CLOSED);
     private final AtomicInteger failureCount = new AtomicInteger();
     private final AtomicInteger halfOpenProbeCount = new AtomicInteger();
     private volatile Instant stateChangedAt = Instant.now();
@@ -42,9 +46,9 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     private volatile int callSemaphorePermits;
     private volatile RestClient restClient;
 
-    private enum CircuitState { CLOSED, OPEN, HALF_OPEN }
+    /* package */ enum CircuitState { CLOSED, OPEN, HALF_OPEN }
 
-    private enum DeepSeekErrorType {
+    /* package */ enum DeepSeekErrorType {
         AUTHENTICATION, RATE_LIMIT, SERVER_ERROR, TIMEOUT, PARSE_ERROR, UNKNOWN
     }
 
@@ -72,8 +76,19 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     }
 
     private RestClient buildRestClient() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(properties.getConnectTimeoutSeconds()));
+        // HttpClient của JDK giữ kết nối (keep-alive) giữa các lời gọi, khác với
+        // SimpleClientHttpRequestFactory vốn bắt tay TCP+TLS lại từ đầu mỗi lần.
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(properties.getConnectTimeoutSeconds()))
+                .executor(Executors.newFixedThreadPool(
+                        Math.max(1, properties.getMaxConnections()),
+                        runnable -> {
+                            Thread thread = new Thread(runnable, "deepseek-http");
+                            thread.setDaemon(true);
+                            return thread;
+                        }))
+                .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(Duration.ofSeconds(properties.getTimeoutSeconds()));
 
         return RestClient.builder()
@@ -116,7 +131,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
 
     private GeneratedChunkResult generateSingleCallWithModel(RestClient client, GenerationInput input, String model) {
         DeepSeekCall call = callDeepSeek("single_call", client, singleCallMessages(input), model);
-        return parseSingleCallResult(call.content(), call.usage());
+        return parseSingleCallResult(call.content(), call.usage(), model);
     }
 
     private GeneratedChunkResult generateMultiStageWithModel(RestClient client, GenerationInput input, String model) {
@@ -158,6 +173,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     }
 
     GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage) {
+        return parseSingleCallResult(json, usage, properties.getModel());
+    }
+
+    GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage, String model) {
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(json);
         List<GeneratedQuestion> questions = parseQuestions(json);
         int parsedQuestionCount = questions.size();
@@ -172,7 +191,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 knowledgePoints.size(), questions.size(), json != null ? json.length() : 0);
         return new GeneratedChunkResult(
                 provider(),
-                properties.getModel(),
+                model,
                 properties.getPromptVersion(),
                 usage,
                 knowledgePoints,
@@ -354,9 +373,9 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         checkCircuitBreaker();
         Semaphore semaphore = callSemaphore();
         acquirePermit(semaphore, stage);
+        boolean holdsPermit = true;
         DeepSeekErrorType lastErrorType = DeepSeekErrorType.UNKNOWN;
         RuntimeException lastError = null;
-        int httpStatus = 0;
         try {
             int maxRetries = properties.getMaxRetries();
             for (int attempt = 0; attempt <= maxRetries; attempt++) {
@@ -406,7 +425,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                     );
                 } catch (RuntimeException ex) {
                     long latencyMs = Duration.between(started, Instant.now()).toMillis();
-                    lastErrorType = classifyError(ex, httpStatus);
+                    lastErrorType = classifyError(ex);
                     log.warn(
                             "DeepSeek call failed model={} stage={} attempt={} latencyMs={} errorType={} message={}",
                             model, stage, attempt + 1, latencyMs, lastErrorType, ex.getMessage()
@@ -421,20 +440,27 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                     if (attempt >= typeRetries) {
                         break;
                     }
-                    // Backoff
+                    // Backoff: nhả permit trong lúc chờ để không khoá slot của các chunk khác,
+                    // rồi acquire lại trước khi thử lần kế tiếp.
                     Duration backoff = retryBackoffFor(lastErrorType, attempt);
+                    semaphore.release();
+                    holdsPermit = false;
                     try {
                         Thread.sleep(backoff.toMillis());
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
                     }
+                    acquirePermit(semaphore, stage);
+                    holdsPermit = true;
                 }
             }
             recordFailure(lastErrorType);
             throw lastError == null ? new IllegalStateException("Không gọi được DeepSeek") : lastError;
         } finally {
-            semaphore.release();
+            if (holdsPermit) {
+                semaphore.release();
+            }
         }
     }
 
@@ -468,50 +494,64 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         }
     }
 
-    // ── Half-open Circuit Breaker ──
+    // ── Circuit Breaker (AtomicReference + CAS) ──
 
     private static final int HALF_OPEN_MAX_PROBES = 2;
 
     private void checkCircuitBreaker() {
-        CircuitState state = circuitState;
+        CircuitState state = circuitState.get();
         Instant now = Instant.now();
 
-        switch (state) {
-            case CLOSED:
-                return;
+        if (state == CircuitState.CLOSED) {
+            return;
+        }
 
-            case OPEN:
-                long cooldownSeconds = Math.max(1, properties.getCircuitBreakerCooldownSeconds());
-                if (now.isAfter(stateChangedAt.plusSeconds(cooldownSeconds))) {
-                    circuitState = CircuitState.HALF_OPEN;
+        if (state == CircuitState.OPEN) {
+            long cooldownSeconds = Math.max(1, properties.getCircuitBreakerCooldownSeconds());
+            if (now.isAfter(stateChangedAt.plusSeconds(cooldownSeconds))) {
+                // CAS từ OPEN → HALF_OPEN: chỉ 1 thread thắng
+                if (circuitState.compareAndSet(CircuitState.OPEN, CircuitState.HALF_OPEN)) {
                     halfOpenProbeCount.set(0);
                     stateChangedAt = now;
                     log.info("DeepSeek circuit breaker: OPEN → HALF_OPEN");
                     return;
                 }
-                throw new IllegalStateException(
-                        "DeepSeek circuit breaker OPEN đến "
-                                + stateChangedAt.plusSeconds(cooldownSeconds));
-
-            case HALF_OPEN:
-                if (halfOpenProbeCount.incrementAndGet() <= HALF_OPEN_MAX_PROBES) {
-                    return;
+                // Thread khác đã transition rồi — đọc lại state
+                state = circuitState.get();
+                if (state == CircuitState.CLOSED) return;
+                if (state == CircuitState.HALF_OPEN) {
+                    if (halfOpenProbeCount.incrementAndGet() <= HALF_OPEN_MAX_PROBES) {
+                        return;
+                    }
+                    throw new IllegalStateException(
+                            "DeepSeek circuit breaker HALF_OPEN, đã đạt max probes=" + HALF_OPEN_MAX_PROBES);
                 }
-                throw new IllegalStateException(
-                        "DeepSeek circuit breaker HALF_OPEN, đã đạt max probes=" + HALF_OPEN_MAX_PROBES);
+            }
+            throw new IllegalStateException(
+                    "DeepSeek circuit breaker OPEN đến "
+                            + stateChangedAt.plusSeconds(cooldownSeconds));
         }
+
+        // HALF_OPEN
+        if (halfOpenProbeCount.incrementAndGet() <= HALF_OPEN_MAX_PROBES) {
+            return;
+        }
+        throw new IllegalStateException(
+                "DeepSeek circuit breaker HALF_OPEN, đã đạt max probes=" + HALF_OPEN_MAX_PROBES);
     }
 
     private void recordSuccess() {
-        CircuitState state = circuitState;
-        if (state == CircuitState.HALF_OPEN) {
-            circuitState = CircuitState.CLOSED;
-            failureCount.set(0);
-            stateChangedAt = Instant.now();
-            log.info("DeepSeek circuit breaker: HALF_OPEN → CLOSED (probe succeeded)");
-        } else if (state == CircuitState.CLOSED) {
-            failureCount.set(0);
-        }
+        circuitState.updateAndGet(state -> {
+            if (state == CircuitState.HALF_OPEN) {
+                stateChangedAt = Instant.now();
+                log.info("DeepSeek circuit breaker: HALF_OPEN → CLOSED (probe succeeded)");
+                return CircuitState.CLOSED;
+            }
+            if (state == CircuitState.CLOSED) {
+                failureCount.set(0);
+            }
+            return state; // OPEN: không thay đổi
+        });
     }
 
     private void recordFailure(DeepSeekErrorType errorType) {
@@ -523,43 +563,50 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             log.warn("DeepSeek rate limited, backing off");
         }
 
-        CircuitState state = circuitState;
-        if (state == CircuitState.HALF_OPEN) {
-            circuitState = CircuitState.OPEN;
-            stateChangedAt = Instant.now();
-            log.warn("DeepSeek circuit breaker: HALF_OPEN → OPEN (probe failed)");
-            return;
-        }
-
-        int failures = failureCount.incrementAndGet();
-        if (state == CircuitState.CLOSED
-                && failures >= Math.max(1, properties.getCircuitBreakerFailureThreshold())) {
-            circuitState = CircuitState.OPEN;
-            stateChangedAt = Instant.now();
-            log.warn("DeepSeek circuit breaker: CLOSED → OPEN ({} consecutive failures)", failures);
-        }
+        circuitState.updateAndGet(state -> {
+            if (state == CircuitState.HALF_OPEN) {
+                stateChangedAt = Instant.now();
+                log.warn("DeepSeek circuit breaker: HALF_OPEN → OPEN (probe failed)");
+                return CircuitState.OPEN;
+            }
+            if (state == CircuitState.CLOSED) {
+                int failures = failureCount.incrementAndGet();
+                if (failures >= Math.max(1, properties.getCircuitBreakerFailureThreshold())) {
+                    stateChangedAt = Instant.now();
+                    log.warn("DeepSeek circuit breaker: CLOSED → OPEN ({} consecutive failures)", failures);
+                    return CircuitState.OPEN;
+                }
+            }
+            return state;
+        });
     }
 
     // ── Error Classification ──
 
-    private DeepSeekErrorType classifyError(Throwable ex, int httpStatus) {
-        return switch (httpStatus) {
-            case 401, 403 -> DeepSeekErrorType.AUTHENTICATION;
-            case 429 -> DeepSeekErrorType.RATE_LIMIT;
-            case 500, 502, 503, 504 -> DeepSeekErrorType.SERVER_ERROR;
-            default -> {
-                if (ex instanceof java.net.SocketTimeoutException
-                        || ex instanceof java.util.concurrent.TimeoutException) {
-                    yield DeepSeekErrorType.TIMEOUT;
-                }
-                if (ex instanceof IllegalStateException
-                        && ex.getMessage() != null
-                        && ex.getMessage().contains("JSON")) {
-                    yield DeepSeekErrorType.PARSE_ERROR;
-                }
-                yield DeepSeekErrorType.UNKNOWN;
+    /* package */ DeepSeekErrorType classifyError(Throwable ex) {
+        // RestClient ném HttpClientErrorException/HttpServerErrorException — cả hai đều là
+        // RestClientResponseException và mang theo HTTP status thật.
+        for (Throwable current = ex; current != null; current = current.getCause()) {
+            if (current instanceof RestClientResponseException http) {
+                return switch (http.getStatusCode().value()) {
+                    case 401, 403 -> DeepSeekErrorType.AUTHENTICATION;
+                    case 429 -> DeepSeekErrorType.RATE_LIMIT;
+                    case 500, 502, 503, 504 -> DeepSeekErrorType.SERVER_ERROR;
+                    default -> DeepSeekErrorType.UNKNOWN;
+                };
             }
-        };
+            if (current instanceof java.net.SocketTimeoutException
+                    || current instanceof java.net.http.HttpConnectTimeoutException
+                    || current instanceof java.util.concurrent.TimeoutException) {
+                return DeepSeekErrorType.TIMEOUT;
+            }
+            if (current instanceof IllegalStateException
+                    && current.getMessage() != null
+                    && current.getMessage().contains("JSON")) {
+                return DeepSeekErrorType.PARSE_ERROR;
+            }
+        }
+        return DeepSeekErrorType.UNKNOWN;
     }
 
     private int retryCountFor(DeepSeekErrorType errorType) {

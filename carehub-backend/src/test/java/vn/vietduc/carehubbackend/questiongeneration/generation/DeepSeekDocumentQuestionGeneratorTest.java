@@ -2,9 +2,18 @@ package vn.vietduc.carehubbackend.questiongeneration.generation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
+import vn.vietduc.carehubbackend.questiongeneration.generation.DeepSeekDocumentQuestionGenerator.DeepSeekErrorType;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
+
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -139,5 +148,51 @@ class DeepSeekDocumentQuestionGeneratorTest {
 
         assertThat(result.questions()).hasSize(1);
         assertThat(result.questions().get(0).stem()).startsWith("Dấu hiệu nào");
+    }
+
+    @Test
+    void recordsTheModelActuallyUsedSoFallbackCallsArePricedCorrectly() {
+        GeneratedChunkResult result = generator.parseSingleCallResult(
+                "{\"knowledgePoints\":[],\"questions\":[]}",
+                LlmUsage.empty(),
+                "deepseek-v4-pro"
+        );
+
+        assertThat(result.model()).isEqualTo("deepseek-v4-pro");
+        assertThat(result.model()).isNotEqualTo(properties.getModel());
+    }
+
+    @Test
+    void classifiesHttpStatusCodesFromTheThrownRestClientException() {
+        assertThat(generator.classifyError(unauthorized(HttpStatus.UNAUTHORIZED)))
+                .isEqualTo(DeepSeekErrorType.AUTHENTICATION);
+        assertThat(generator.classifyError(unauthorized(HttpStatus.FORBIDDEN)))
+                .isEqualTo(DeepSeekErrorType.AUTHENTICATION);
+        assertThat(generator.classifyError(unauthorized(HttpStatus.TOO_MANY_REQUESTS)))
+                .isEqualTo(DeepSeekErrorType.RATE_LIMIT);
+        assertThat(generator.classifyError(
+                HttpServerErrorException.create(
+                        HttpStatus.BAD_GATEWAY, "Bad Gateway", HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8)))
+                .isEqualTo(DeepSeekErrorType.SERVER_ERROR);
+    }
+
+    @Test
+    void classifiesSocketTimeoutWrappedByRestClientAsTimeout() {
+        ResourceAccessException wrapped = new ResourceAccessException(
+                "I/O error", new SocketTimeoutException("Read timed out"));
+
+        assertThat(generator.classifyError(wrapped)).isEqualTo(DeepSeekErrorType.TIMEOUT);
+    }
+
+    @Test
+    void classifiesJsonParseFailureAsParseError() {
+        assertThat(generator.classifyError(
+                new IllegalStateException("DeepSeek trả về câu hỏi JSON không hợp lệ")))
+                .isEqualTo(DeepSeekErrorType.PARSE_ERROR);
+    }
+
+    private static HttpClientErrorException unauthorized(HttpStatus status) {
+        return HttpClientErrorException.create(
+                status, status.getReasonPhrase(), HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8);
     }
 }

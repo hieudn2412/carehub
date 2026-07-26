@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -24,6 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Component
 public class AnnEmbeddingIndex {
     private final AtomicReference<IndexState> state = new AtomicReference<>(IndexState.EMPTY);
+    private final AtomicLong builtVersion = new AtomicLong(-1);
     private final ReadWriteLock rebuildLock = new ReentrantReadWriteLock();
     private final AiEmbeddingProperties properties;
 
@@ -33,15 +35,25 @@ public class AnnEmbeddingIndex {
 
     /**
      * Build/rebuild index từ danh sách embedding mới.
+     *
+     * @param dataVersion phiên bản của tập embedding nguồn. Index chỉ build lại khi version
+     *                    khác với lần build trước — so theo số lượng phần tử là không đủ:
+     *                    sửa nội dung một câu hỏi làm vector đổi nhưng số lượng giữ nguyên,
+     *                    và index sẽ giữ vector cũ mãi mãi.
      */
-    public void rebuild(List<QuestionEmbeddingSnapshot> embeddings) {
-        if (!properties.isAnnEnabled()) {
+    public void rebuild(List<QuestionEmbeddingSnapshot> embeddings, long dataVersion) {
+        if (!properties.isAnnEnabled() || builtVersion.get() == dataVersion) {
             return;
         }
         rebuildLock.writeLock().lock();
         try {
+            // Kiểm tra lại sau khi lấy khoá: thread khác có thể vừa build xong đúng version này.
+            if (builtVersion.get() == dataVersion) {
+                return;
+            }
             if (embeddings.isEmpty()) {
                 state.set(IndexState.EMPTY);
+                builtVersion.set(dataVersion);
                 return;
             }
 
@@ -64,8 +76,9 @@ public class AnnEmbeddingIndex {
             }
 
             state.set(new IndexState(vectors, questionIds, stems, randomVectors, buckets));
-            log.info("ANN index rebuilt with {} vectors ({} bits, {} buckets)",
-                    embeddings.size(), numBits, buckets.size());
+            builtVersion.set(dataVersion);
+            log.info("ANN index rebuilt with {} vectors ({} bits, {} buckets, dataVersion={})",
+                    embeddings.size(), numBits, buckets.size(), dataVersion);
         } finally {
             rebuildLock.writeLock().unlock();
         }
@@ -73,8 +86,13 @@ public class AnnEmbeddingIndex {
 
     /**
      * Search best match với ANN + exact verify.
+     *
+     * @param earlyStopThreshold chỉ dừng sớm khi đã chạm mức chắc chắn là trùng (strongMin).
+     *                           Truyền ngưỡng thấp hơn (ví dụ reviewMin) sẽ khiến hàm trả về
+     *                           match ĐẦU TIÊN vượt ngưỡng chứ không phải match TỐT NHẤT,
+     *                           làm câu trùng mạnh bị hạ cấp thành "cần xem lại".
      */
-    public SearchResult searchBestMatch(double[] query, double threshold, int maxCandidates) {
+    public SearchResult searchBestMatch(double[] query, double earlyStopThreshold, int maxCandidates) {
         if (!properties.isAnnEnabled()) {
             return null;
         }
@@ -127,10 +145,15 @@ public class AnnEmbeddingIndex {
                 if (score > bestScore) {
                     bestScore = score;
                     best = new SearchResult(current.questionIds[idx], current.stems[idx], score, current.vectors[idx]);
-                    if (bestScore >= threshold) {
-                        break; // Early termination
+                    if (bestScore >= earlyStopThreshold) {
+                        break; // Đã chắc chắn trùng mạnh, không cần tìm tiếp
                     }
                 }
+            }
+
+            if (checked >= maxCandidates && candidateIndices.size() > maxCandidates) {
+                log.debug("ANN search cắt bớt {} ứng viên (đã kiểm tra {}/{}) — bestScore={}",
+                        candidateIndices.size() - checked, checked, candidateIndices.size(), bestScore);
             }
 
             return best;
