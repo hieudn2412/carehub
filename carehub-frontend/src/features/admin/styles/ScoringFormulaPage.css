@@ -27,6 +27,7 @@
 .sfp-count span { margin-top: 4px; color: #667085; font-size: 12px; }
 
 .sfp-toolbar {
+  align-items: flex-end;
   gap: 14px;
   min-height: 66px;
   border: 1px solid #dfe6ee;
@@ -35,13 +36,16 @@
   padding: 12px 14px;
 }
 
-.sfp-toolbar form { display: flex; flex: 1; min-width: 260px; align-items: center; gap: 10px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; padding-left: 13px; color: #7b8798; }
+.sfp-toolbar form { display: flex; flex: 1; min-width: 260px; align-items: center; gap: 10px; height: 40px; overflow: hidden; border: 1px solid #d5dee8; border-radius: 6px; padding-left: 13px; color: #7b8798; }
 .sfp-toolbar form:focus-within { border-color: #3a9f8d; box-shadow: 0 0 0 3px rgba(8, 127, 108, .1); }
 .sfp-toolbar input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #172033; font: inherit; }
-.sfp-toolbar form button { align-self: stretch; border: 0; border-left: 1px solid #d5dee8; background: #f7faf9; color: #087f6c; cursor: pointer; padding: 0 16px; font-weight: 700; }
-.sfp-toolbar > label { display: grid; gap: 3px; color: #667085; font-size: 11px; font-weight: 700; }
+.sfp-toolbar form button { align-self: stretch; flex: 0 0 auto; border: 0; border-left: 1px solid #d5dee8; border-radius: 0; background: #f7faf9; color: #087f6c; cursor: pointer; padding: 0 16px; font-weight: 700; }
+.sfp-toolbar form button:hover { background: #edf8f5; }
+.sfp-toolbar form button:focus-visible { outline: 2px solid #3a9f8d; outline-offset: -3px; }
+.sfp-toolbar > label { display: grid; gap: 5px; color: #667085; font-size: 11px; font-weight: 700; line-height: 1; }
 .sfp-toolbar select { min-width: 170px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; background: #fff; color: #172033; padding: 0 10px; font: inherit; }
 .sfp-refresh,.sfp-edit { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; background: #fff; color: #536174; cursor: pointer; }
+.sfp-refresh { flex: 0 0 40px; align-self: flex-end; }
 .sfp-refresh:hover,.sfp-edit:hover { border-color: #3a9f8d; color: #087f6c; }
 .sfp-edit:disabled { cursor: not-allowed; opacity: .45; }
 
@@ -85,6 +89,6 @@
 @media (max-width: 800px) {
   .sfp-main { padding: 20px 16px 34px; }
   .sfp-heading { align-items: flex-start; }.sfp-heading h1 { font-size: 23px; }.sfp-count { min-width: auto; }
-  .sfp-toolbar { align-items: stretch; flex-wrap: wrap; }.sfp-toolbar form { flex-basis: 100%; }.sfp-toolbar > label { flex: 1; }.sfp-toolbar select { width: 100%; min-width: 0; }
+  .sfp-toolbar { align-items: flex-end; flex-wrap: wrap; }.sfp-toolbar form { flex-basis: 100%; }.sfp-toolbar > label { flex: 1; }.sfp-toolbar select { width: 100%; min-width: 0; }
   .sfp-setting { flex-direction: column; }.sfp-weight-input,.sfp-mode { width: 100%; }.sfp-mode button { flex: 1; }.sfp-setting > small { margin-top: -8px; text-align: left; }
 }

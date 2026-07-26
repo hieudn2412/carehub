@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
-import { LeftOutlined } from '@ant-design/icons'
 import { adminApi } from '../api/adminApi.js'
 import '../styles/ReferenceEmployeeDetailPage.css'
 
 function ReferenceEmployeeDetailPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
 
   const [employee, setEmployee] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -59,20 +57,17 @@ function ReferenceEmployeeDetailPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="red-page">
               
-              {/* Title Card with Back Button */}
+              {/* Title Card */}
               <div className="red-title-card">
                 <div className="red-title-info">
                   <h1 className="red-title">Chi tiết nhân viên gốc</h1>
                   <p className="red-subtitle">Xem thông tin tham chiếu chi tiết được đồng bộ từ hệ thống nhân sự</p>
                 </div>
-                <button className="red-back-btn" onClick={() => navigate('/admin/reference/employees')}>
-                  <LeftOutlined /> Quay lại danh sách
-                </button>
               </div>
 
               {/* Detail Card Content */}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/training.css'
 
 const TODAY = new Date().toISOString().slice(0, 10)
@@ -77,17 +78,17 @@ function TrainingStatusPage() {
           </label>
           <label>
             Lĩnh vực chuyên môn
-            <select
-              onChange={(event) => setProfessionalFieldId(event.target.value)}
+            <SearchableSelect
+              onChange={setProfessionalFieldId}
               value={professionalFieldId}
-            >
-              <option value="">Mặc định</option>
-              {professionalFields.map((field) => (
-                <option key={field.id} value={field.id}>
-                  {field.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: '', label: 'Mặc định' },
+                ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+              ]}
+              placeholder="Mặc định"
+              searchPlaceholder="Tìm tên lĩnh vực..."
+              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+            />
           </label>
           <label>
             As of

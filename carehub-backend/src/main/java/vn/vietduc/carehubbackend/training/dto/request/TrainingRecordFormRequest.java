@@ -18,7 +18,7 @@ public record TrainingRecordFormRequest(
         @NotBlank @Size(max = 500) String title,
         @Size(max = 255) String provider,
         String description,
-        @NotNull LocalDate startDate,
+        LocalDate startDate,
         LocalDate endDate,
         LocalTime startTime,
         LocalTime endTime,

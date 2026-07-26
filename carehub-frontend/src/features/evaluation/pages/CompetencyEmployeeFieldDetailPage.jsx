@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
@@ -19,7 +18,6 @@ import '../styles/EvaluationDashboardPage.css'
 
 function CompetencyEmployeeFieldDetailPage() {
   const { employeeId } = useParams()
-  const navigate = useNavigate()
   const { showToast } = useToast()
 
   const accessToken = tokenStorage.getAccessToken()
@@ -77,16 +75,14 @@ function CompetencyEmployeeFieldDetailPage() {
     <div className="dashboard-layout">
       <Layout />
       <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined} />
+        <PageHeader
+          back={{ to: backPath, label: 'Quay lại' }}
+          breadcrumbs={isAdmin ? breadcrumbs : undefined}
+          title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined}
+        />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">
-              <div style={{ marginBottom: 16 }}>
-                <button className="evd-btn-text" onClick={() => navigate(backPath)} style={{ fontSize: 14, padding: '8px 0' }}>
-                  <ArrowLeftOutlined style={{ marginRight: 6 }} />Quay lại danh sách
-                </button>
-              </div>
-
               <section className="evd-title-card">
                 <div>
                   <h1>Chi tiết năng lực: {data?.employeeName || '...'}</h1>

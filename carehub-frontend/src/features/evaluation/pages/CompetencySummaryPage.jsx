@@ -34,6 +34,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
@@ -432,19 +433,23 @@ function CompetencySummaryPage() {
                 display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap',
                 marginBottom: 16, padding: '12px 16px', background: '#f9fafb', borderRadius: 8,
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                  <select value={departmentId} onChange={(e) => {
-                    setDepartmentId(e.target.value)
-                    setPage(0)
-                  }}
+                  <SearchableSelect
+                    value={departmentId}
+                    onChange={(value) => {
+                      setDepartmentId(value)
+                      setPage(0)
+                    }}
                     disabled={!isAdmin}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
-                    {isAdmin && <option value="">Toàn viện</option>}
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                    options={[
+                      ...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []),
+                      ...departments.map((department) => ({ value: department.id, label: department.name })),
+                    ]}
+                    placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'}
+                    searchPlaceholder="Tìm tên khoa/phòng..."
+                    ariaLabel="Tìm và chọn khoa/phòng"
+                  />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -466,18 +471,22 @@ function CompetencySummaryPage() {
                 </div>
 
                 {reportType === 'field' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Lĩnh vực</label>
-                    <select value={selectedCategory} onChange={(e) => {
-                      setSelectedCategory(e.target.value)
-                      setPage(0)
-                    }}
-                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
-                      <option value="">Tất cả lĩnh vực</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={selectedCategory}
+                      onChange={(value) => {
+                        setSelectedCategory(value)
+                        setPage(0)
+                      }}
+                      options={[
+                        { value: '', label: 'Tất cả lĩnh vực' },
+                        ...categories.map((category) => ({ value: category.id, label: category.name })),
+                      ]}
+                      placeholder="Tất cả lĩnh vực"
+                      searchPlaceholder="Tìm tên lĩnh vực..."
+                      ariaLabel="Tìm và chọn lĩnh vực"
+                    />
                   </div>
                 )}
 

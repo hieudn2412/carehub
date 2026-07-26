@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/training.css'
 
 function TrainingLegacyImportPage() {
@@ -149,17 +150,17 @@ function TrainingLegacyImportPage() {
             </label>
             <label>
               Professional field
-              <select
-                onChange={(event) => setForm((current) => ({ ...current, professionalFieldId: event.target.value }))}
+              <SearchableSelect
+                onChange={(value) => setForm((current) => ({ ...current, professionalFieldId: value }))}
                 value={form.professionalFieldId}
-              >
-                <option value="">None</option>
-                {options.professionalFields.map((field) => (
-                  <option key={field.id} value={field.id}>
-                    {field.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: 'None' },
+                  ...options.professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                ]}
+                placeholder="None"
+                searchPlaceholder="Tìm tên lĩnh vực..."
+                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              />
             </label>
             <label>
               Excel file

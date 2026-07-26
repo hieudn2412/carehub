@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
@@ -70,11 +69,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
     setExpandedRow(expandedRow === idx ? null : idx)
   }
 
-  const formatDateTime = (d) => {
-    if (!d) return '—'
-    return new Date(d).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-  }
-
   const formatDate = (d) => {
     if (!d) return '—'
     return new Date(d).toLocaleDateString('vi-VN')
@@ -99,16 +93,14 @@ function ComplianceEmployeeTechniqueDetailPage() {
     <div className="dashboard-layout">
       <Layout />
       <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined} />
+        <PageHeader
+          back={{ onClick: handleBack, label: 'Quay lại' }}
+          breadcrumbs={isAdmin ? breadcrumbs : undefined}
+          title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined}
+        />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">
-
-              <div style={{ marginBottom: 16 }}>
-                <button className="evd-btn-text" onClick={handleBack} style={{ fontSize: 14, padding: '8px 0' }}>
-                  <ArrowLeftOutlined style={{ marginRight: 6 }} />Quay lại danh sách
-                </button>
-              </div>
 
               {!loading && data && (
                 <section className="evd-title-card" style={{
@@ -251,7 +243,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                       <tr>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Ngày ĐG</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Người ĐG</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Bảng kiểm</th>
+                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Quy trình</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Điểm</th>
                                         <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Kết quả</th>
                                       </tr>

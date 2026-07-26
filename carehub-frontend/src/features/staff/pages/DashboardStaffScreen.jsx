@@ -61,7 +61,7 @@ export default function DashboardStaffScreen() {
             failed,
             rate: Number(summary.passRate) || 0,
             available: true,
-            note: `${Number(summary.formCount) || 0} bảng kiểm · Điểm trung bình ${Number(summary.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
+            note: `${Number(summary.formCount) || 0} quy trình · Điểm trung bình ${Number(summary.averageConvertedScore || 0).toFixed(2).replace('.', ',')}.`,
           })
         }
       }

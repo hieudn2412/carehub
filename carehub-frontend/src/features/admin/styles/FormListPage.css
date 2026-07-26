@@ -277,6 +277,17 @@
   border-color: var(--navy);
 }
 
+.flp-department-filter {
+  width: 220px;
+}
+
+.flp-department-filter .searchable-select > input {
+  height: 36px;
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
 .flp-clear-filters {
   padding: 8px 0;
   border: 0;
@@ -321,6 +332,7 @@
   color: var(--text-soft);
   background: #fafbfc;
   border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
 }
 
 .flp-table td {
@@ -339,7 +351,7 @@
 }
 
 .flp-table th:nth-child(1) {
-  width: 28%;
+  width: 24%;
 }
 
 .flp-table__actions-heading {
@@ -392,6 +404,7 @@
   border-radius: 99px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .form-badge--published {
@@ -431,6 +444,7 @@
   color: #0f6e56;
   font: inherit;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -461,7 +475,7 @@
   display: flex;
   gap: 8px;
   justify-content: center;
-  min-width: 280px;
+  min-width: 300px;
 }
 
 .flp-btn-action {
@@ -489,20 +503,23 @@
   color: var(--navy);
 }
 
-.flp-btn-edit {
-  color: #1d5fa8;
-  border-color: #b3d4f5;
-}
-
-.flp-btn-edit:hover {
-  background: #e3f0fb;
-  border-color: #7db7ed;
-}
-
 .flp-btn-detail:hover {
   background: var(--navy);
   color: #ffffff;
   border-color: var(--navy);
+}
+
+.flp-btn-evaluate {
+  border-color: #0f8065;
+  background: #0f8065;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(15, 128, 101, 0.2);
+}
+
+.flp-btn-evaluate:hover {
+  border-color: #0b684f;
+  background: #0b684f;
+  box-shadow: 0 4px 10px rgba(15, 128, 101, 0.28);
 }
 
 .flp-btn-delete {

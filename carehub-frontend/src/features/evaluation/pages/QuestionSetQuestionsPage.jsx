@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowDownOutlined,
-  ArrowLeftOutlined,
   ArrowUpOutlined,
   CloseOutlined,
   LoadingOutlined,
@@ -226,15 +225,12 @@ function QuestionSetQuestionsPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qsq-page">
               <div className="qsq-container">
                 <div className="qsq-header">
-                  <button type="button" className="qsq-btn-cancel" onClick={() => navigate('/admin/evaluation/question-sets')}>
-                    <ArrowLeftOutlined /> Quay lại
-                  </button>
                   <div>
                     <h2 className="qsq-title">Chọn câu hỏi cho bộ</h2>
                     <p className="qsq-subtitle">Thêm, sắp xếp và quản lý câu hỏi trong bộ</p>

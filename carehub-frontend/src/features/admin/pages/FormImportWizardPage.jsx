@@ -9,7 +9,6 @@ import {
   normalizeVietnameseFormCode,
 } from '../utils/formCode.js'
 import {
-  ArrowLeftOutlined,
   LoadingOutlined,
   CloudUploadOutlined,
   CheckCircleOutlined,
@@ -351,19 +350,12 @@ function FormImportWizardPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-import-wizard-page">
               <section className="fiw-hero">
                 <div className="fiw-hero-top">
-                  <button
-                    className="fiw-back"
-                    onClick={() => navigate('/admin/quality/checklists')}
-                    type="button"
-                  >
-                    <ArrowLeftOutlined /> Quay lại danh sách checklist
-                  </button>
                   <span className="fiw-mode-chip">{importModeTitle}</span>
                 </div>
 

@@ -40,6 +40,7 @@ public class TrainingRecordController {
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TrainingRecordListResponse>>> list(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String titleKeyword,
             @RequestParam(required = false) LocalDate dateFrom,
             @RequestParam(required = false) LocalDate dateTo,
             @RequestParam(required = false) Long activityTypeId,
@@ -55,6 +56,7 @@ public class TrainingRecordController {
     ) {
         TrainingRecordSearchRequest request = new TrainingRecordSearchRequest(
                 keyword,
+                titleKeyword,
                 dateFrom,
                 dateTo,
                 activityTypeId,

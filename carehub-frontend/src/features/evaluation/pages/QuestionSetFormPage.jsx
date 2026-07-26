@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CheckOutlined,
   CloseOutlined,
   CopyOutlined,
@@ -423,15 +422,12 @@ function QuestionSetFormPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qsf-page">
               <div className="qsf-container">
                 <div className="qsf-header">
-                  <button type="button" className="qsf-back-btn" onClick={() => navigate('/admin/evaluation/question-sets')}>
-                    <ArrowLeftOutlined /> Quay lại
-                  </button>
                   <div>
                     <h2 className="qsf-title">{isEditMode ? 'Cập nhật bộ câu hỏi' : 'Tạo bộ câu hỏi'}</h2>
                     <p className="qsf-subtitle">Gom nhóm, sắp xếp và quản lý trạng thái sử dụng của bộ câu hỏi</p>

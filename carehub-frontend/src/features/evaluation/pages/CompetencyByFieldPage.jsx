@@ -18,6 +18,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function CompetencyByFieldPage() {
@@ -154,28 +155,32 @@ function CompetencyByFieldPage() {
               <section className="evd-panel" style={{ padding: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
                   <label style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Khoa:</label>
-                  <select
-                    value={selectedDeptId}
-                    onChange={e => setSelectedDeptId(e.target.value)}
-                    disabled={!isAdmin}
-                    style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                  >
-                    {departments.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ width: 260, maxWidth: '100%' }}>
+                    <SearchableSelect
+                      value={selectedDeptId}
+                      onChange={setSelectedDeptId}
+                      disabled={!isAdmin}
+                      options={departments.map((department) => ({ value: department.id, label: department.name }))}
+                      placeholder="Chọn khoa/phòng"
+                      searchPlaceholder="Tìm tên khoa/phòng..."
+                      ariaLabel="Tìm và chọn khoa/phòng"
+                    />
+                  </div>
 
                   <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginLeft: 8 }}>Lĩnh vực:</label>
-                  <select
-                    value={selectedCategory}
-                    onChange={e => setSelectedCategory(e.target.value)}
-                    style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-                  >
-                    <option value="">Tất cả lĩnh vực</option>
-                    {categories.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <div style={{ width: 260, maxWidth: '100%' }}>
+                    <SearchableSelect
+                      value={selectedCategory}
+                      onChange={setSelectedCategory}
+                      options={[
+                        { value: '', label: 'Tất cả lĩnh vực' },
+                        ...categories.map((category) => ({ value: category.id, label: category.name })),
+                      ]}
+                      placeholder="Tất cả lĩnh vực"
+                      searchPlaceholder="Tìm tên lĩnh vực..."
+                      ariaLabel="Tìm và chọn lĩnh vực"
+                    />
+                  </div>
 
                   <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginLeft: 8 }}>Từ:</label>
                   <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}

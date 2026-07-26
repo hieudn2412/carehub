@@ -30,6 +30,7 @@ import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.PositionRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -99,6 +100,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .password("encoded")
                 .department(department)
                 .position(position)
+                .status(UserStatus.ACTIVE)
                 .build());
         employee = userRepository.save(User.builder()
                 .employeeCode("VD01506")
@@ -107,6 +109,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .password("encoded")
                 .department(department)
                 .position(position)
+                .status(UserStatus.ACTIVE)
                 .build());
         activityType = activityTypeRepository.save(TrainingActivityType.builder()
                 .code("LEGACY")

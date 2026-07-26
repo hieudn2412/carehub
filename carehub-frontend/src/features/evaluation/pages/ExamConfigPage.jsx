@@ -18,6 +18,7 @@ import { examPaperApi } from '../api/examPaperApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
 import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
 
@@ -267,7 +268,7 @@ function ExamConfigPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <form className="exp-page exam-flow" onSubmit={createAndAssign}>
@@ -296,10 +297,17 @@ function ExamConfigPage() {
                   </label>
                   <label>
                     Lĩnh vực chuyên môn
-                    <select value={form.professionalFieldId} onChange={(event) => update('professionalFieldId', event.target.value)} required>
-                      <option value="">Chọn lĩnh vực</option>
-                      {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
-                    </select>
+                    <SearchableSelect
+                      value={form.professionalFieldId}
+                      onChange={(value) => update('professionalFieldId', value)}
+                      options={[
+                        { value: '', label: 'Chọn lĩnh vực' },
+                        ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                      ]}
+                      placeholder="Chọn lĩnh vực"
+                      searchPlaceholder="Tìm tên lĩnh vực..."
+                      ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                    />
                   </label>
                   <div className="exam-flow__wide exam-flow__set-field">
                     <label>

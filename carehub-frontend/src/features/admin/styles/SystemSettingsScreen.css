@@ -134,3 +134,55 @@
 }
 
 .toggle--on .toggle__knob { left: 21px; }
+.ss-settings-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.ss-settings-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 14px;
+  color: #075985;
+  background: #e0f2fe;
+  font-size: 22px;
+}
+
+.ss-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 96px;
+  color: #64748b;
+}
+
+.ss-hours-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .ss-row,
+  .ss-hours-input {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ss-hours-input {
+    width: 100%;
+  }
+
+  .ss-num-input {
+    width: 100%;
+  }
+}

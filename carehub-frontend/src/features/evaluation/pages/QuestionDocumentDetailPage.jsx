@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CloseOutlined,
   EyeOutlined,
   FileSearchOutlined,
@@ -159,15 +158,10 @@ function QuestionDocumentDetailPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/evaluation/question-documents', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qdoc-page">
-              <button type="button" className="qdoc-back-btn" onClick={() => navigate('/admin/evaluation/question-documents')}>
-                <ArrowLeftOutlined />
-                <span>Quay lại danh sách</span>
-              </button>
-
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải chi tiết tài liệu...</section>
               ) : !documentDetail ? (

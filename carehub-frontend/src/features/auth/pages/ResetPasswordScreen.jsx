@@ -26,14 +26,9 @@ function ResetPasswordScreen() {
     return <Navigate to={AUTH_ROUTES.forgotPassword} replace />
   }
 
-  const hasMinLength = password.length >= 8
-  const hasUppercase = /[A-Z]/.test(password)
-  const hasLowercase = /[a-z]/.test(password)
-  const hasNumber = /\d/.test(password)
-  const hasSpecialChar = /[^A-Za-z0-9\s]/.test(password)
-  const hasNoWhitespace = password.length > 0 && !/\s/.test(password)
-  const isStrongPassword =
-    hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar && hasNoWhitespace
+  const hasMinLength = password.length >= 4
+  const hasVisibleCharacter = password.trim().length > 0
+  const isValidPassword = hasMinLength && hasVisibleCharacter
 
   const getRuleClass = (isValid) => {
     if (!password) {
@@ -52,8 +47,8 @@ function ResetPasswordScreen() {
       return
     }
 
-    if (!isStrongPassword) {
-      setErrorMessage('Mật khẩu chưa đạt đủ điều kiện')
+    if (!isValidPassword) {
+      setErrorMessage('Mật khẩu phải có ít nhất 4 ký tự và không được chỉ gồm khoảng trắng')
       return
     }
 
@@ -99,15 +94,8 @@ function ResetPasswordScreen() {
             value={password}
           />
           <ul className="password-rules">
-            <li className={getRuleClass(hasMinLength)}>Ít nhất 8 ký tự</li>
-            <li
-              className={getRuleClass(
-                hasUppercase && hasLowercase && hasNumber && hasSpecialChar,
-              )}
-            >
-              Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt
-            </li>
-            <li className={getRuleClass(hasNoWhitespace)}>Không chứa khoảng trắng</li>
+            <li className={getRuleClass(hasMinLength)}>Ít nhất 4 ký tự</li>
+            <li className={getRuleClass(hasVisibleCharacter)}>Không chỉ gồm khoảng trắng</li>
           </ul>
 
           <FormField

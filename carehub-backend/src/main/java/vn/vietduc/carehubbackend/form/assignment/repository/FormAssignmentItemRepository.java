@@ -15,8 +15,23 @@ import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.List;
 
 public interface FormAssignmentItemRepository extends JpaRepository<FormAssignmentItem, Long> {
+    @Query("""
+            select (count(i) > 0) from FormAssignmentItem i
+            where i.assignment.manager.id = :assigneeId and i.formVersion.id = :versionId
+              and i.status = :active and i.assignment.status = :active
+              and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
+              and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
+            """)
+    boolean existsActiveForAssigneeAndVersion(@Param("assigneeId") Long assigneeId,
+                                               @Param("versionId") Long versionId,
+                                               @Param("active") FormAssignmentStatus active,
+                                               @Param("now") Instant now);
+    List<FormAssignmentItem> findAllByFormVersion_IdAndStatus(Long versionId, FormAssignmentStatus status);
+    Optional<FormAssignmentItem> findFirstByAssignment_Manager_IdAndFormVersion_IdAndStatusOrderByIdDesc(
+            Long assigneeId, Long formVersionId, FormAssignmentStatus status);
     @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion"})
     @Query("select i from FormAssignmentItem i where i.id = :id")
     Optional<FormAssignmentItem> findDetailById(@Param("id") Long id);

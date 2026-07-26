@@ -125,16 +125,16 @@ function ManagerEvaluationHistoryPage() {
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Lịch sử đánh giá</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Danh sách kết quả các lần chấm bảng kiểm giám sát chất lượng tại khoa
+              Danh sách kết quả các lần chấm quy trình giám sát chất lượng tại khoa
             </p>
           </div>
 
           {/* Search toolbar */}
           <div className="mgr-toolbar">
             <div className="mgr-search-box">
-              <input 
-                type="text" 
-                placeholder="Tìm theo tên nhân viên, tên bảng kiểm..." 
+              <input
+                type="text"
+                placeholder="Tìm theo tên nhân viên, tên quy trình..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
@@ -160,7 +160,7 @@ function ManagerEvaluationHistoryPage() {
               <table className="mgr-table">
                 <thead>
                   <tr>
-                    <th>Tên bảng kiểm</th>
+                    <th>Tên quy trình</th>
                     <th>Nhân viên được đánh giá</th>
                     <th>Người đánh giá</th>
                     <th>Ngày đánh giá</th>
@@ -202,7 +202,7 @@ function ManagerEvaluationHistoryPage() {
                         {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('vi-VN') : new Date(item.updatedAt).toLocaleDateString('vi-VN')}
                       </td>
                       <td>
-                        <strong style={{ 
+                        <strong style={{
                           color: getResultColor(item.result) === 'green' ? 'var(--mgr-green)' : 'var(--mgr-red)',
                           fontSize: 14
                         }}>
@@ -215,7 +215,7 @@ function ManagerEvaluationHistoryPage() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <button 
+                        <button
                           onClick={() => navigate(`/manager/quality/history/${item.id}`)}
                           style={{
                             border: '1px solid #e2e8f0',

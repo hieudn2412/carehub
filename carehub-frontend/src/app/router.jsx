@@ -15,13 +15,11 @@ import ActivityTypeFormPage from '../features/training/pages/ActivityTypeFormPag
 import ActivityTypeListPage from '../features/training/pages/ActivityTypeListPage.jsx'
 import TrainingFoundationPage from '../features/training/pages/TrainingFoundationPage.jsx'
 import TrainingRecordDetailPage from '../features/training/pages/TrainingRecordDetailPage.jsx'
-import TrainingRecordEvidencePage from '../features/training/pages/TrainingRecordEvidencePage.jsx'
 import TrainingRecordFormPage from '../features/training/pages/TrainingRecordFormPage.jsx'
 import TrainingRecordListPage from '../features/training/pages/TrainingRecordListPage.jsx'
 import TrainingEmployeeStatusDetailPage from '../features/training/pages/TrainingEmployeeStatusDetailPage.jsx'
 import TrainingEmployeeStatusListPage from '../features/training/pages/TrainingEmployeeStatusListPage.jsx'
 import TrainingLegacyImportPage from '../features/training/pages/TrainingLegacyImportPage.jsx'
-import TrainingRequirementPage from '../features/training/pages/TrainingRequirementPage.jsx'
 import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
 import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
 import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
@@ -129,6 +127,11 @@ function QuestionSetQuestionsRedirect() {
   return <Navigate to={`/admin/evaluation/question-sets/${id}/edit`} replace />
 }
 
+function AdminTrainingEvidenceRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/training/records/${id}#evidence`} replace />
+}
+
 
 function managerOrAdminElement(element) {
   return protectedElement(element, { allowedRoles: [AUTH_ROLE.admin, AUTH_ROLE.manager] })
@@ -180,13 +183,14 @@ function AppRouter() {
       <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />
+      <Route path="/admin/quality/checklists/:id/evaluate/:versionId" element={adminElement(<ManagerChecklistEvaluationPage />)} />
       <Route path="/admin/form-imports/new" element={adminElement(<FormImportWizardPage />)} />
       <Route path="/training" element={protectedElement(<TrainingFoundationPage />)} />
       <Route path="/training/records" element={protectedElement(<TrainingRecordListPage />)} />
       <Route path="/training/records/new" element={protectedElement(<TrainingRecordFormPage />)} />
       <Route path="/training/records/:id" element={protectedElement(<TrainingRecordDetailPage />)} />
       <Route path="/training/records/:id/edit" element={protectedElement(<TrainingRecordFormPage />)} />
-      <Route path="/training/records/:id/evidence" element={protectedElement(<TrainingRecordEvidencePage />)} />
+      <Route path="/training/records/:id/evidence" element={adminElement(<AdminTrainingEvidenceRedirect />)} />
       <Route path="/training/status" element={protectedElement(<TrainingStatusPage />)} />
       <Route path="/training/status/:employeeId" element={protectedElement(<TrainingStatusPage />)} />
       <Route path="/training/employees" element={managerOrAdminElement(<TrainingEmployeeStatusListPage />)} />
@@ -197,7 +201,6 @@ function AppRouter() {
       <Route path="/admin/training/activity-types/:id" element={adminElement(<ActivityTypeDetailPage />)} />
       <Route path="/admin/training/activity-types/:id/edit" element={adminElement(<ActivityTypeFormPage />)} />
       <Route path="/admin/training/professional-fields" element={adminElement(<ProfessionalFieldManagementPage />)} />
-      <Route path="/admin/training/requirements" element={adminElement(<TrainingRequirementPage />)} />
       <Route path="/admin/evaluation/question-documents" element={evaluationElement(<QuestionDocumentListPage />)} />
       <Route path="/admin/evaluation/dashboard" element={evaluationElement(<EvaluationDashboardPage />)} />
       <Route path="/admin/evaluation/audit-logs" element={evaluationElement(<EvaluationAuditLogPage />)} />
@@ -323,6 +326,7 @@ function AppRouter() {
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/competency" element={protectedElement(<StaffCompetencyPage />)} />
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
+      <Route path="/staff/professional-competency" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />
 
@@ -330,10 +334,11 @@ function AppRouter() {
       <Route path={AUTH_ROUTES.staffDashboard} element={protectedElement(<StaffDashboard />)} />
       <Route
         path="/staff/checklists"
-        element={protectedElement(
-          <ManagerChecklistListPage />,
-          { allowedRoles: [AUTH_ROLE.manager] },
-        )}
+        element={protectedElement(<ManagerChecklistListPage />)}
+      />
+      <Route
+        path="/staff/checklists/:id/evaluate"
+        element={protectedElement(<ManagerChecklistEvaluationPage />)}
       />
       <Route path="/staff/checklists/:id" element={protectedElement(<ChecklistFormScreen />)} />
       <Route path="/staff/profile" element={protectedElement(<ProfileStaffScreen />)} />

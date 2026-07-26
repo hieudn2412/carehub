@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   LoadingOutlined,
   SaveOutlined,
   SendOutlined,
@@ -10,6 +9,7 @@ import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
+import { adminApi } from '../../../admin/api/adminApi.js'
 import '../../styles/ManagerPages.css'
 
 function sortByDisplayOrder(items = []) {
@@ -49,7 +49,14 @@ function getChecklistDetailError(error) {
 }
 
 function ManagerChecklistEvaluationPage() {
-  const { id } = useParams()
+  const { id, versionId } = useParams()
+  const location = useLocation()
+  const isDirectAdminEvaluation = Boolean(versionId)
+  const listPath = isDirectAdminEvaluation
+    ? '/admin/quality/checklists'
+    : location.pathname.startsWith('/staff/')
+      ? '/staff/checklists'
+      : '/manager/quality/checklists'
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -69,9 +76,15 @@ function ManagerChecklistEvaluationPage() {
     setLoading(true)
     setErrorMessage('')
 
-    staffApi.getAssignedForm(id)
+    const request = isDirectAdminEvaluation
+      ? adminApi.getFormVersionById(id, versionId)
+      : staffApi.getAssignedForm(id)
+    request
       .then((response) => {
-        const data = response.data?.data
+        const responseData = response.data?.data
+        const data = isDirectAdminEvaluation
+          ? { formId: Number(id), formCode: responseData?.formCode, title: responseData?.title, version: responseData }
+          : responseData
         if (!data?.version) {
           throw new Error('INVALID_ASSIGNED_FORM_RESPONSE')
         }
@@ -89,7 +102,7 @@ function ManagerChecklistEvaluationPage() {
       .finally(() => {
         setLoading(false)
       })
-  }, [id])
+  }, [id, isDirectAdminEvaluation, versionId])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -159,7 +172,7 @@ function ManagerChecklistEvaluationPage() {
     setSubjectDetails(null)
 
     staffApi.findAssignedFormSubject({
-      assignmentItemId: id,
+      assignmentItemId: isDirectAdminEvaluation ? undefined : id,
       employeeCode: normalizedEmployeeCode,
     })
       .then((response) => {
@@ -239,7 +252,9 @@ function ManagerChecklistEvaluationPage() {
     }
 
     const response = await staffApi.createFormSubmission({
-      assignmentItemId: Number(id),
+      ...(isDirectAdminEvaluation
+        ? { formVersionId: Number(versionId) }
+        : { assignmentItemId: Number(id) }),
       subject: {
         type: 'USER',
         employeeCode: subjectDetails.employeeCode,
@@ -286,7 +301,7 @@ function ManagerChecklistEvaluationPage() {
         lockVersion: updatedSubmission.lockVersion,
       })
       showToast('Đã nộp kết quả đánh giá checklist.', 'success')
-      navigate('/manager/quality/checklists')
+      navigate(listPath)
     } catch (error) {
       const statusCode = error?.response?.status
       const fallback = statusCode === 409
@@ -418,32 +433,16 @@ function ManagerChecklistEvaluationPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Bảng kiểm', link: '/manager/quality/checklists' },
-          { label: 'Thực hiện đánh giá' },
-        ]} />
+        <Header
+          back={{ to: listPath, label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Tuân thủ quy trình, quy định', link: listPath },
+            { label: 'Thực hiện đánh giá' },
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
-            <button
-              onClick={() => navigate('/manager/quality/checklists')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#475569',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 500,
-                padding: '4px 0',
-                marginBottom: 8,
-              }}
-              type="button"
-            >
-              <ArrowLeftOutlined /> Quay lại danh sách
-            </button>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Thực hiện đánh giá checklist</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Thực hiện đánh giá quy trình</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
               {assignedForm?.title || 'Đang tải checklist được phân quyền...'}
             </p>
@@ -631,7 +630,7 @@ function ManagerChecklistEvaluationPage() {
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
                 <button
-                  onClick={() => navigate('/manager/quality/checklists')}
+                  onClick={() => navigate(listPath)}
                   className="training-button"
                   style={{ height: 38, borderRadius: 8, fontSize: 13.5 }}
                   disabled={submitting}

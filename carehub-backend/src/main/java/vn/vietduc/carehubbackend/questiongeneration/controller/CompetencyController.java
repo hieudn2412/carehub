@@ -220,7 +220,7 @@ public class CompetencyController {
         return ResponseEntity.ok(ApiResponse.success("Lấy năng lực cá nhân theo lĩnh vực thành công", data));
     }
 
-    @GetMapping("/by-technique")
+    @GetMapping({"/by-technique", "/compliance"})
     @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyByTechniqueResponse>> getByTechnique(
             @RequestParam(required = false) Long departmentId,
@@ -237,7 +237,7 @@ public class CompetencyController {
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật thành công", data));
     }
 
-    @GetMapping("/employees/{employeeId}/by-technique")
+    @GetMapping({"/employees/{employeeId}/by-technique", "/compliance/{employeeId}"})
     @PreAuthorize("hasRole('MANAGER') or @evaluationSecurity.canViewResults(authentication)")
     public ResponseEntity<ApiResponse<CompetencyEmployeeByTechniqueResponse>> getEmployeeByTechnique(
             @PathVariable Long employeeId,

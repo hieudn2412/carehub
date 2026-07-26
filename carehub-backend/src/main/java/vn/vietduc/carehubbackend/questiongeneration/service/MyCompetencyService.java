@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -126,9 +127,19 @@ public class MyCompetencyService {
 
         items.sort(Comparator.comparing(KnowledgeCompetencyItemResponse::categoryName));
 
-        BigDecimal overallAvg = totalAttemptCount > 0
-                ? totalScoreSum.divide(BigDecimal.valueOf(totalAttemptCount), 2, RoundingMode.HALF_UP)
-                : null;
+        Map<Long, ExamAttempt> bestByPaper = attempts.stream().collect(Collectors.toMap(
+                attempt -> attempt.getExamPaper().getId(),
+                attempt -> attempt,
+                (left, right) -> left.getScore().compareTo(right.getScore()) >= 0 ? left : right,
+                LinkedHashMap::new
+        ));
+        BigDecimal bestScoreSum = bestByPaper.values().stream()
+                .map(ExamAttempt::getScore)
+                .map(score -> score.compareTo(BigDecimal.TEN) > 0
+                        ? score.divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP) : score)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal overallAvg = bestByPaper.isEmpty() ? null
+                : bestScoreSum.divide(BigDecimal.valueOf(bestByPaper.size()), 2, RoundingMode.HALF_UP);
 
         return new MyCompetencyKnowledgeResponse(
                 from.format(DATE_FMT), to.format(DATE_FMT),
