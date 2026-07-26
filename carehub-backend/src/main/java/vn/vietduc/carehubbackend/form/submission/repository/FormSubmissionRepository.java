@@ -15,6 +15,101 @@ import java.util.Collection;
 import java.util.List;
 
 public interface FormSubmissionRepository extends JpaRepository<FormSubmission, Long> {
+    interface FormHistoryProjection {
+        Long getFormId();
+        String getCode();
+        String getTitle();
+        Long getVersionCount();
+        Long getSubmissionCount();
+    }
+
+    interface FormVersionHistoryProjection {
+        Long getFormId();
+        Long getVersionId();
+        Integer getVersionNumber();
+        String getTitle();
+        String getDescription();
+        vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus getStatus();
+        Instant getPublishedAt();
+        String getPublishedBy();
+        Long getTotal();
+        Long getPassed();
+        Long getFailed();
+        Double getAverageConvertedScore();
+    }
+
+    interface FormSubmissionHistorySummaryProjection {
+        Long getTotal();
+        Long getPassed();
+        Long getFailed();
+        Double getAverageConvertedScore();
+    }
+
+    @Query(value = """
+            select v.form.id as formId,
+                   v.form.code as code,
+                   v.form.title as title,
+                   count(distinct v.id) as versionCount,
+                   count(distinct s.id) as submissionCount
+            from FormVersion v
+            left join FormSubmission s
+              on s.formVersion = v and s.status = :submittedStatus
+            where v.form.deleted = false
+              and v.status in :versionStatuses
+              and (:keyword is null
+                   or lower(v.form.code) like :keyword
+                   or lower(v.form.title) like :keyword)
+            group by v.form.id, v.form.code, v.form.title
+            order by max(v.createdAt) desc, v.form.id desc
+            """,
+            countQuery = """
+            select count(distinct v.form.id)
+            from FormVersion v
+            where v.form.deleted = false
+              and v.status in :versionStatuses
+              and (:keyword is null
+                   or lower(v.form.code) like :keyword
+                   or lower(v.form.title) like :keyword)
+            """)
+    Page<FormHistoryProjection> searchHistoryForms(
+            @Param("keyword") String keyword,
+            @Param("versionStatuses") Collection<vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus> versionStatuses,
+            @Param("submittedStatus") FormSubmissionStatus submittedStatus,
+            Pageable pageable
+    );
+
+    @Query("""
+            select v.form.id as formId,
+                   v.id as versionId,
+                   v.versionNumber as versionNumber,
+                   v.title as title,
+                   v.description as description,
+                   v.status as status,
+                   v.publishedAt as publishedAt,
+                   publisher.name as publishedBy,
+                   count(s.id) as total,
+                   coalesce(sum(case when s.result = :passedResult then 1 else 0 end), 0) as passed,
+                   coalesce(sum(case when s.result in :failedResults then 1 else 0 end), 0) as failed,
+                   avg(s.convertedScore) as averageConvertedScore
+            from FormVersion v
+            left join v.publishedBy publisher
+            left join FormSubmission s
+              on s.formVersion = v and s.status = :submittedStatus
+            where v.form.id = :formId
+              and v.form.deleted = false
+              and v.status in :versionStatuses
+            group by v.form.id, v.id, v.versionNumber, v.title, v.description,
+                     v.status, v.publishedAt, publisher.name
+            order by v.versionNumber desc
+            """)
+    List<FormVersionHistoryProjection> findHistoryVersions(
+            @Param("formId") Long formId,
+            @Param("versionStatuses") Collection<vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus> versionStatuses,
+            @Param("submittedStatus") FormSubmissionStatus submittedStatus,
+            @Param("passedResult") FormSubmissionResult passedResult,
+            @Param("failedResults") Collection<FormSubmissionResult> failedResults
+    );
+
     @EntityGraph(attributePaths = {"formVersion", "formVersion.form", "submittedBy", "subjectContext"})
     @Query("""
             select s from FormSubmission s
@@ -216,6 +311,74 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
                                                @Param("result") FormSubmissionResult result,
                                                Pageable pageable);
 
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "subjectContext.subjectUser", "subjectContext.subjectUser.department"
+    })
+    @Query("""
+            select s from FormSubmission s
+            left join s.subjectContext context
+            left join context.subjectUser subject
+            where s.formVersion.form.id = :formId
+              and s.formVersion.id = :versionId
+              and s.status = 'SUBMITTED'
+              and (:keyword is null
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword)
+              and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:filterResults = false or s.result in :results)
+              and s.submittedAt >= :fromInclusive
+              and s.submittedAt < :toExclusive
+            order by s.submittedAt desc, s.id desc
+            """)
+    Page<FormSubmission> searchHistoryByFormVersion(
+            @Param("formId") Long formId,
+            @Param("versionId") Long versionId,
+            @Param("keyword") String keyword,
+            @Param("submittedByUserId") Long submittedByUserId,
+            @Param("departmentId") Long departmentId,
+            @Param("filterResults") boolean filterResults,
+            @Param("results") Collection<FormSubmissionResult> results,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive,
+            Pageable pageable
+    );
+
+    @Query("""
+            select count(s.id) as total,
+                   coalesce(sum(case when s.result = :passedResult then 1 else 0 end), 0) as passed,
+                   coalesce(sum(case when s.result in :failedResults then 1 else 0 end), 0) as failed,
+                   avg(s.convertedScore) as averageConvertedScore
+            from FormSubmission s
+            left join s.subjectContext context
+            left join context.subjectUser subject
+            where s.formVersion.form.id = :formId
+              and s.formVersion.id = :versionId
+              and s.status = 'SUBMITTED'
+              and (:keyword is null
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword)
+              and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:filterResults = false or s.result in :results)
+              and s.submittedAt >= :fromInclusive
+              and s.submittedAt < :toExclusive
+            """)
+    FormSubmissionHistorySummaryProjection summarizeHistoryByFormVersion(
+            @Param("formId") Long formId,
+            @Param("versionId") Long versionId,
+            @Param("keyword") String keyword,
+            @Param("submittedByUserId") Long submittedByUserId,
+            @Param("departmentId") Long departmentId,
+            @Param("filterResults") boolean filterResults,
+            @Param("results") Collection<FormSubmissionResult> results,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive,
+            @Param("passedResult") FormSubmissionResult passedResult,
+            @Param("failedResults") Collection<FormSubmissionResult> failedResults
+    );
+
     long countByFormVersion_IdAndStatusAndResult(
             Long versionId,
             FormSubmissionStatus status,
@@ -248,6 +411,40 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             @Param("formId") Long formId,
             @Param("versionId") Long versionId,
             @Param("result") FormSubmissionResult result
+    );
+
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "subjectContext.subjectUser", "subjectContext.subjectUser.department",
+            "answers", "answers.question", "answers.question.section", "answers.selectedOption"
+    })
+    @Query("""
+            select distinct s from FormSubmission s
+            left join s.subjectContext context
+            left join context.subjectUser subject
+            where s.formVersion.form.id = :formId
+              and s.formVersion.id = :versionId
+              and s.status = 'SUBMITTED'
+              and (:keyword is null
+                   or lower(context.fullName) like :keyword
+                   or lower(context.employeeCode) like :keyword)
+              and (:submittedByUserId is null or s.submittedBy.id = :submittedByUserId)
+              and (:departmentId is null or subject.department.id = :departmentId)
+              and (:filterResults = false or s.result in :results)
+              and s.submittedAt >= :fromInclusive
+              and s.submittedAt < :toExclusive
+            order by s.submittedAt desc, s.id desc
+            """)
+    List<FormSubmission> findHistoryForVersionExport(
+            @Param("formId") Long formId,
+            @Param("versionId") Long versionId,
+            @Param("keyword") String keyword,
+            @Param("submittedByUserId") Long submittedByUserId,
+            @Param("departmentId") Long departmentId,
+            @Param("filterResults") boolean filterResults,
+            @Param("results") Collection<FormSubmissionResult> results,
+            @Param("fromInclusive") Instant fromInclusive,
+            @Param("toExclusive") Instant toExclusive
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -3,9 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BookOutlined,
   CheckCircleOutlined,
-  FilterOutlined,
   FileTextOutlined,
   LoadingOutlined,
+  ReloadOutlined,
   SearchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -15,89 +15,37 @@ import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
 
+const HISTORY_PAGE_SIZE = 12
 const VERSION_OPTIONS = [
   { value: '', label: 'Tất cả phiên bản' },
   { value: 'PUBLISHED', label: 'Đang hoạt động' },
-  { value: 'RETIRED', label: 'Đã retired' },
+  { value: 'RETIRED', label: 'Đã ngừng' },
 ]
-const HISTORY_VERSION_STATUSES = new Set(['PUBLISHED', 'RETIRED'])
-const HISTORY_FORM_PAGE_SIZE = 10
 
-function getPageContent(response) {
-  const data = response?.data?.data
-  if (Array.isArray(data)) return data
-  if (Array.isArray(data?.content)) return data.content
-  return []
-}
-
-function getPageTotalPages(response) {
-  const totalPages = Number(response?.data?.data?.totalPages)
-  return Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1
-}
-
-async function fetchAllPages(fetcher, baseParams = {}) {
-  const pageSize = 100
-  const firstResponse = await fetcher({
-    ...baseParams,
-    page: 0,
-    size: pageSize,
-  })
-  const firstContent = getPageContent(firstResponse)
-  const totalPages = getPageTotalPages(firstResponse)
-
-  if (totalPages <= 1) {
-    return firstContent
-  }
-
-  const restResponses = await Promise.all(
-    Array.from({ length: totalPages - 1 }, (_, index) =>
-      fetcher({
-        ...baseParams,
-        page: index + 1,
-        size: pageSize,
-      }),
-    ),
-  )
-
-  return [
-    ...firstContent,
-    ...restResponses.flatMap((response) => getPageContent(response)),
-  ]
-}
-
-async function fetchHistoryFormBatch(page, keyword = '') {
-  const formsResponse = await adminApi.getForms({
-    keyword: keyword || undefined,
-    sort: 'updatedAt,desc',
-    page,
-    size: HISTORY_FORM_PAGE_SIZE,
-  })
-  const nextForms = getPageContent(formsResponse)
-  const totalPages = getPageTotalPages(formsResponse)
-
-  const versionsEntries = await Promise.all(
-    nextForms.map(async (form) => {
-      try {
-        const versions = await fetchAllPages((params) => adminApi.getFormVersions(form.id, params), {
-          sort: 'versionNumber,desc',
-        })
-        return [form.id, versions]
-      } catch {
-        return [form.id, form.currentPublishedVersion ? [form.currentPublishedVersion] : []]
-      }
-    }),
-  )
-
+function getPageData(response) {
+  const data = response?.data?.data || {}
   return {
-    forms: nextForms,
-    hasMore: page + 1 < totalPages,
-    versionsByForm: Object.fromEntries(versionsEntries),
+    content: Array.isArray(data.content) ? data.content : [],
+    page: Number(data.page) || 0,
+    totalElements: Number(data.totalElements) || 0,
+    totalPages: Number(data.totalPages) || 0,
   }
+}
+
+function useDebouncedValue(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value)
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedValue(value), delay)
+    return () => window.clearTimeout(timer)
+  }, [delay, value])
+
+  return debouncedValue
 }
 
 function getVersionStatusLabel(status) {
   if (status === 'PUBLISHED') return 'Đang hoạt động'
-  if (status === 'RETIRED') return 'Đã retired'
+  if (status === 'RETIRED') return 'Đã ngừng'
   return 'Chưa công bố'
 }
 
@@ -107,230 +55,132 @@ function getVersionStatusClass(status) {
   return 'draft'
 }
 
-function getSubmissionVersionId(submission) {
-  return submission?.formVersionId
-    ?? submission?.versionId
-    ?? submission?.formVersion?.id
-    ?? submission?.version?.id
-    ?? null
+function formatDate(value) {
+  if (!value) return 'Chưa có ngày công bố'
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value))
 }
 
-function getHistoryErrorMessage(error) {
-  const backendMessage = error?.response?.data?.message
-  if (backendMessage) return backendMessage
-  return 'Không thể tải kho lịch sử quy trình. Vui lòng thử lại.'
-}
-
-function isActiveAssignment(assignment, item) {
-  return assignment?.status === 'ACTIVE' && item?.status === 'ACTIVE'
-}
-
-function getAssignedManagers(assignments, versionId) {
-  const managers = []
-
-  assignments.forEach((assignment) => {
-    assignment.items?.forEach((item) => {
-      if (String(item.formVersionId) !== String(versionId) || !isActiveAssignment(assignment, item)) {
-        return
-      }
-
-      managers.push({
-        assignmentId: assignment.id,
-        assignmentItemId: item.assignmentItemId,
-        validFrom: assignment.validFrom,
-        validUntil: assignment.validUntil,
-        manager: assignment.manager,
-      })
-    })
+function formatScore(value) {
+  const numberValue = Number(value)
+  if (!Number.isFinite(numberValue)) return '--'
+  return numberValue.toLocaleString('vi-VN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
+}
 
-  return managers
+function getErrorMessage(error, fallback) {
+  return error?.response?.data?.message || fallback
 }
 
 function AdminQualityHistoryPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedFormId = searchParams.get('formId')
-  const [forms, setForms] = useState([])
-  const [versionsByForm, setVersionsByForm] = useState({})
-  const [submissions, setSubmissions] = useState([])
-  const [assignments, setAssignments] = useState([])
-  const [search, setSearch] = useState('')
-  const [versionFilter, setVersionFilter] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const debouncedKeyword = useDebouncedValue(keyword.trim(), 300)
+  const [page, setPage] = useState(0)
+  const [historyData, setHistoryData] = useState({ content: [], page: 0, totalElements: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [formPage, setFormPage] = useState(0)
-  const [hasMoreForms, setHasMoreForms] = useState(false)
-  const [selectedFormId, setSelectedFormId] = useState(() => requestedFormId)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [selectedForm, setSelectedForm] = useState(null)
+  const [versions, setVersions] = useState([])
+  const [versionFilter, setVersionFilter] = useState('')
+  const [versionsLoading, setVersionsLoading] = useState(Boolean(requestedFormId))
+  const [versionsError, setVersionsError] = useState('')
 
   useEffect(() => {
     let alive = true
-    const keyword = search.trim()
 
-    const loadHistory = async () => {
-      try {
-        setLoading(true)
-        setErrorMessage('')
-
-        const [formBatch, nextSubmissions, nextAssignments] = await Promise.all([
-          fetchHistoryFormBatch(0, keyword),
-          fetchAllPages((params) => adminApi.getFormSubmissions(params), {
-            status: 'SUBMITTED',
-          }),
-          fetchAllPages((params) => adminApi.getFormAssignments(params)),
-        ])
-
+    adminApi.getFormHistory({
+      keyword: debouncedKeyword || undefined,
+      page,
+      size: HISTORY_PAGE_SIZE,
+    })
+      .then((response) => {
         if (!alive) return
-
-        let nextForms = formBatch.forms
-        let nextVersionsByForm = formBatch.versionsByForm
-
-        if (requestedFormId && !nextForms.some((form) => String(form.id) === String(requestedFormId))) {
-          try {
-            const [formResponse, versions] = await Promise.all([
-              adminApi.getFormById(requestedFormId),
-              fetchAllPages((params) => adminApi.getFormVersions(requestedFormId, params), {
-                sort: 'versionNumber,desc',
-              }),
-            ])
-
-            if (!alive) return
-
-            const requestedForm = formResponse.data?.data
-            if (requestedForm) {
-              nextForms = [requestedForm, ...nextForms]
-              nextVersionsByForm = {
-                ...nextVersionsByForm,
-                [requestedForm.id]: versions,
-              }
-            }
-          } catch {
-            // Keep the normal history list if the deep-linked form cannot be loaded.
-          }
+        const nextData = getPageData(response)
+        if (nextData.totalPages > 0 && page >= nextData.totalPages) {
+          setPage(nextData.totalPages - 1)
+          return
         }
-
-        setForms(nextForms)
-        setSubmissions(nextSubmissions)
-        setAssignments(nextAssignments)
-        setVersionsByForm(nextVersionsByForm)
-        setFormPage(0)
-        setHasMoreForms(formBatch.hasMore)
-        setSelectedFormId(requestedFormId || null)
-      } catch (error) {
+        setHistoryData(nextData)
+        setErrorMessage('')
+      })
+      .catch((error) => {
         if (!alive) return
-        setForms([])
-        setVersionsByForm({})
-        setSubmissions([])
-        setAssignments([])
-        setFormPage(0)
-        setHasMoreForms(false)
-        setSelectedFormId(null)
-        setErrorMessage(getHistoryErrorMessage(error))
-      } finally {
+        setHistoryData({ content: [], page: 0, totalElements: 0, totalPages: 0 })
+        setErrorMessage(getErrorMessage(error, 'Không thể tải kho lịch sử quy trình.'))
+      })
+      .finally(() => {
         if (alive) setLoading(false)
-      }
-    }
-
-    loadHistory()
+      })
 
     return () => {
       alive = false
     }
-  }, [requestedFormId, search])
+  }, [debouncedKeyword, page, refreshKey])
 
-  const versionCards = useMemo(() => (
-    forms.flatMap((form) => (
-      (versionsByForm[form.id] || [])
-        .filter((version) => HISTORY_VERSION_STATUSES.has(version.status))
-        .map((version) => {
-        const versionSubmissions = submissions.filter((submission) =>
-          String(getSubmissionVersionId(submission)) === String(version.id),
-        )
-        const assignedManagers = getAssignedManagers(assignments, version.id)
-
-        return {
-          ...version,
-          form,
-          responseCount: versionSubmissions.length,
-          managerCount: assignedManagers.length,
-        }
-      })
-    ))
-  ), [assignments, forms, submissions, versionsByForm])
-
-  const searchedVersionCards = useMemo(() => {
-    const keyword = search.trim().toLowerCase()
-    if (!keyword) return versionCards
-
-    return versionCards.filter((version) => {
-      const searchableText = [
-        version.form.title,
-        version.form.code,
-        getChecklistDisplayCode(version.form.code),
-        version.form.description,
-        version.title,
-        version.description,
-        `v${version.versionNumber}`,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      return searchableText.includes(keyword)
-    })
-  }, [search, versionCards])
-
-  const filteredVersionCards = useMemo(() => (
-    searchedVersionCards.filter((version) => !versionFilter || version.status === versionFilter)
-  ), [searchedVersionCards, versionFilter])
-
-  const formFolders = useMemo(() => (
-    forms.map((form) => {
-      const formVersions = versionCards.filter((version) => String(version.form.id) === String(form.id))
-
-      return {
-        form,
-        versionCount: formVersions.length,
-      }
-    }).filter((folder) => folder.versionCount > 0)
-  ), [forms, versionCards])
-
-  const selectedForm = useMemo(() => (
-    forms.find((form) => String(form.id) === String(selectedFormId)) || null
-  ), [forms, selectedFormId])
-
-  const selectedVersionCards = useMemo(() => (
-    filteredVersionCards.filter((version) => String(version.form.id) === String(selectedFormId))
-  ), [filteredVersionCards, selectedFormId])
-
-  const handleLoadMore = async () => {
-    if (loadingMore || !hasMoreForms) return
-
-    const nextPage = formPage + 1
-
-    try {
-      setLoadingMore(true)
-      setErrorMessage('')
-
-      const formBatch = await fetchHistoryFormBatch(nextPage, search.trim())
-
-      setForms((previousForms) => {
-        const existingIds = new Set(previousForms.map((form) => String(form.id)))
-        const uniqueForms = formBatch.forms.filter((form) => !existingIds.has(String(form.id)))
-        return [...previousForms, ...uniqueForms]
-      })
-      setVersionsByForm((previousVersions) => ({
-        ...previousVersions,
-        ...formBatch.versionsByForm,
-      }))
-      setFormPage(nextPage)
-      setHasMoreForms(formBatch.hasMore)
-    } catch (error) {
-      setErrorMessage(getHistoryErrorMessage(error))
-    } finally {
-      setLoadingMore(false)
+  useEffect(() => {
+    if (!requestedFormId) {
+      return undefined
     }
+
+    let alive = true
+    const formInPage = historyData.content.find((item) => String(item.formId) === String(requestedFormId))
+
+    Promise.all([
+      formInPage
+        ? Promise.resolve({ data: { data: formInPage } })
+        : adminApi.getFormHistoryById(requestedFormId),
+      adminApi.getFormHistoryVersions(requestedFormId),
+    ])
+      .then(([formResponse, versionsResponse]) => {
+        if (!alive) return
+        const formData = formResponse?.data?.data || null
+        setSelectedForm(formData?.formId ? formData : {
+          formId: formData?.id,
+          code: formData?.code,
+          title: formData?.title,
+        })
+        setVersions(Array.isArray(versionsResponse?.data?.data) ? versionsResponse.data.data : [])
+        setVersionsError('')
+      })
+      .catch((error) => {
+        if (!alive) return
+        setSelectedForm(null)
+        setVersions([])
+        setVersionsError(getErrorMessage(error, 'Không thể tải các phiên bản của quy trình.'))
+      })
+      .finally(() => {
+        if (alive) setVersionsLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [historyData.content, requestedFormId, refreshKey])
+
+  const filteredVersions = useMemo(() => (
+    versions.filter((version) => !versionFilter || version.status === versionFilter)
+  ), [versionFilter, versions])
+
+  const selectForm = (form) => {
+    setVersionFilter('')
+    setVersionsLoading(true)
+    setSearchParams({ formId: String(form.formId) })
+  }
+
+  const clearSelectedForm = () => {
+    setSelectedForm(null)
+    setVersions([])
+    setVersionFilter('')
+    setSearchParams({})
   }
 
   return (
@@ -338,13 +188,7 @@ function AdminQualityHistoryPage() {
       <AdminSidebar />
       <div className="dashboard-layout__content">
         <AdminHeader
-          back={selectedForm ? {
-            label: 'Quay lại',
-            onClick: () => {
-              setSelectedFormId(null)
-              setSearchParams({}, { replace: true })
-            },
-          } : undefined}
+          back={requestedFormId ? { label: 'Quay lại', onClick: clearSelectedForm } : undefined}
           breadcrumbs={[
             { label: 'Chất lượng' },
             { label: 'Lịch sử đánh giá' },
@@ -352,142 +196,150 @@ function AdminQualityHistoryPage() {
         />
 
         <main className="admin-quality-history admin-quality-history--archive">
-          {!selectedForm && (
+          {!requestedFormId && (
             <section className="aqh-search-hero">
               <div className="aqh-search-hero__copy">
                 <span>Kho lưu trữ quy trình</span>
-                <h1>Tìm kiếm quy trình</h1>
-                <p>Chỉ có thể tìm kiếm các quy trình đã được công bố.</p>
+                <h1>Lịch sử đánh giá</h1>
+                <p>Tìm quy trình đã công bố để xem các phiên bản và kết quả đánh giá.</p>
               </div>
               <label className="aqh-main-search">
                 <SearchOutlined />
                 <input
-                  value={search}
+                  value={keyword}
                   onChange={(event) => {
-                    setSearch(event.target.value)
-                    setSelectedFormId(null)
-                    setSearchParams({}, { replace: true })
+                    setKeyword(event.target.value)
+                    setPage(0)
+                    setLoading(true)
                   }}
-                  placeholder="Nhập tiêu đề biểu mẫu..."
+                  placeholder="Tìm theo tên hoặc mã quy trình..."
                 />
               </label>
             </section>
           )}
 
-          {errorMessage && (
-            <div className="admin-quality-history__alert" role="alert">
+          {!requestedFormId && errorMessage && (
+            <section className="aqh-error-state" role="alert">
               <WarningOutlined />
-              {errorMessage}
-            </div>
+              <strong>Không thể tải lịch sử đánh giá</strong>
+              <span>{errorMessage}</span>
+              <button onClick={() => { setLoading(true); setErrorMessage(''); setRefreshKey((value) => value + 1) }} type="button">
+                <ReloadOutlined /> Thử lại
+              </button>
+            </section>
           )}
 
-          {loading ? (
+          {!requestedFormId && loading ? (
             <section className="aqh-empty-state">
-              <LoadingOutlined />
+              <LoadingOutlined spin />
               <span>Đang tải kho lịch sử quy trình...</span>
             </section>
-          ) : formFolders.length === 0 ? (
+          ) : !requestedFormId && !errorMessage && historyData.content.length === 0 ? (
             <section className="aqh-empty-state">
               <CheckCircleOutlined />
               <strong>Không tìm thấy quy trình phù hợp</strong>
-              <span>Hãy thử từ khóa khác hoặc kiểm tra quy trình đã được công bố chưa.</span>
+              <span>Hãy thử từ khóa khác hoặc kiểm tra quy trình đã được công bố.</span>
             </section>
-          ) : selectedForm ? (
+          ) : !requestedFormId ? (
             <>
               <section className="aqh-version-toolbar">
                 <div>
-                  <h2>{selectedForm.title}</h2>
-                  <p>{selectedVersionCards.length} phiên bản trong quy trình này</p>
+                  <strong>{historyData.totalElements}</strong> quy trình có lịch sử đánh giá
+                </div>
+              </section>
+
+              <section className="aqh-folder-grid" aria-label="Danh sách quy trình">
+                {historyData.content.map((form) => (
+                  <button
+                    className="aqh-folder-card"
+                    key={form.formId}
+                    onClick={() => selectForm(form)}
+                    type="button"
+                  >
+                    <span className="aqh-folder-card__top">
+                      <span className="aqh-folder-card__icon"><FileTextOutlined /></span>
+                      <BookOutlined className="aqh-folder-card__bookmark" />
+                    </span>
+                    <span className="aqh-folder-card__code">{getChecklistDisplayCode(form.code)}</span>
+                    <strong>{form.title}</strong>
+                    <span className="aqh-folder-card__divider" />
+                    <span className="aqh-folder-card__stats">
+                      <span><FileTextOutlined /> {form.versionCount} phiên bản</span>
+                      <span>{form.submissionCount} lượt đánh giá</span>
+                    </span>
+                  </button>
+                ))}
+              </section>
+
+              {historyData.totalPages > 1 && (
+                <footer className="aqh-pagination aqh-pagination--archive">
+                  <span>Trang {historyData.page + 1}/{historyData.totalPages}</span>
+                  <div className="aqh-pagination__controls">
+                    <button disabled={page <= 0} onClick={() => { setLoading(true); setPage((value) => value - 1) }} type="button">Trước</button>
+                    <button
+                      disabled={page >= historyData.totalPages - 1}
+                      onClick={() => { setLoading(true); setPage((value) => value + 1) }}
+                      type="button"
+                    >Sau</button>
+                  </div>
+                </footer>
+              )}
+            </>
+          ) : versionsLoading ? (
+            <section className="aqh-empty-state"><LoadingOutlined spin /><span>Đang tải các phiên bản...</span></section>
+          ) : versionsError ? (
+            <section className="aqh-error-state" role="alert">
+              <WarningOutlined />
+              <strong>Không thể tải phiên bản</strong>
+              <span>{versionsError}</span>
+              <button onClick={() => { setVersionsLoading(true); setVersionsError(''); setRefreshKey((value) => value + 1) }} type="button"><ReloadOutlined /> Thử lại</button>
+            </section>
+          ) : (
+            <>
+              <section className="aqh-version-toolbar aqh-version-toolbar--selected">
+                <div>
+                  <span className="aqh-form-code">{getChecklistDisplayCode(selectedForm?.code)}</span>
+                  <h2>{selectedForm?.title || 'Quy trình'}</h2>
+                  <p>{versions.length} phiên bản có lịch sử</p>
                 </div>
                 <label>
-                  <FilterOutlined />
-                  <select
-                    value={versionFilter}
-                    onChange={(event) => setVersionFilter(event.target.value)}
-                  >
+                  <span className="sr-only">Lọc trạng thái phiên bản</span>
+                  <select value={versionFilter} onChange={(event) => setVersionFilter(event.target.value)}>
                     {VERSION_OPTIONS.map((option) => (
-                      <option key={option.value || 'all'} value={option.value}>
-                        {option.label}
-                      </option>
+                      <option key={option.value || 'all'} value={option.value}>{option.label}</option>
                     ))}
                   </select>
                 </label>
               </section>
 
-              <section className="aqh-version-grid" aria-label="Danh sách phiên bản quy trình">
-                {selectedVersionCards.map((version) => (
-                  <button
-                    className="aqh-version-card"
-                    key={version.id}
-                    onClick={() => navigate(`/admin/quality/history/forms/${version.form.id}/versions/${version.id}`)}
-                    type="button"
-                  >
-                    <div className="aqh-version-card__top">
-                      <span className="aqh-form-code">{getChecklistDisplayCode(version.form.code)}</span>
-                      <span className={`aqh-version-status aqh-version-status--${getVersionStatusClass(version.status)}`}>
-                        {getVersionStatusLabel(version.status)}
-                      </span>
-                    </div>
-                    <h2>
-                      {version.title || version.form.title}
-                      <span>v{version.versionNumber}</span>
-                    </h2>
-                    <p>{version.description || version.form.description || 'Chưa có mô tả'}</p>
-                    <div className="aqh-version-card__meta">
-                      <span>{version.responseCount} kết quả</span>
-                      <span>{version.managerCount} manager</span>
-                    </div>
-                  </button>
-                ))}
-              </section>
-            </>
-          ) : (
-            <>
-              <section className="aqh-version-toolbar">
-                <div>
-                  <strong>{formFolders.length}</strong> quy trình đã tải
-                  {search.trim() && <span> theo từ khóa tìm kiếm</span>}
-                </div>
-              </section>
-
-              <section className="aqh-folder-grid" aria-label="Kho folder quy trình">
-                {formFolders.map(({ form, versionCount }) => (
-                  <button
-                    className="aqh-folder-card"
-                    key={form.id}
-                    onClick={() => {
-                      setSelectedFormId(form.id)
-                      setSearchParams({ formId: String(form.id) }, { replace: true })
-                    }}
-                    type="button"
-                  >
-                    <span className="aqh-folder-card__top">
-                      <span className="aqh-folder-card__icon">
-                        <FileTextOutlined />
-                      </span>
-                      <BookOutlined className="aqh-folder-card__bookmark" />
-                    </span>
-                    <strong>{form.title}</strong>
-                    <span className="aqh-folder-card__divider" />
-                    <span className="aqh-folder-card__meta">
-                      <FileTextOutlined />
-                      {versionCount} phiên bản
-                    </span>
-                  </button>
-                ))}
-              </section>
-
-              {hasMoreForms && (
-                <div className="aqh-load-more">
-                  <button
-                    disabled={loadingMore}
-                    onClick={handleLoadMore}
-                    type="button"
-                  >
-                    {loadingMore && <LoadingOutlined />}
-                    {loadingMore ? 'Đang tải thêm...' : 'Xem thêm 10 quy trình'}
-                  </button>
-                </div>
+              {filteredVersions.length === 0 ? (
+                <section className="aqh-empty-state"><span>Không có phiên bản phù hợp với bộ lọc.</span></section>
+              ) : (
+                <section className="aqh-version-grid" aria-label="Danh sách phiên bản quy trình">
+                  {filteredVersions.map((version) => (
+                    <button
+                      className="aqh-version-card aqh-version-card--history"
+                      key={version.versionId}
+                      onClick={() => navigate(`/admin/quality/history/forms/${formIdOrFallback(selectedForm, requestedFormId)}/versions/${version.versionId}`)}
+                      type="button"
+                    >
+                      <div className="aqh-version-card__top">
+                        <span className="aqh-version-number">Phiên bản v{version.versionNumber}</span>
+                        <span className={`aqh-version-status aqh-version-status--${getVersionStatusClass(version.status)}`}>
+                          {getVersionStatusLabel(version.status)}
+                        </span>
+                      </div>
+                      <h2>{version.title || selectedForm?.title}</h2>
+                      <p>Công bố: {formatDate(version.publishedAt)}</p>
+                      <div className="aqh-version-card__metrics">
+                        <span><small>Tổng lượt</small><strong>{version.total}</strong></span>
+                        <span><small>Đạt</small><strong>{version.passed}</strong></span>
+                        <span><small>Chưa đạt</small><strong>{version.failed}</strong></span>
+                        <span><small>Điểm TB</small><strong>{formatScore(version.averageConvertedScore)}</strong></span>
+                      </div>
+                    </button>
+                  ))}
+                </section>
               )}
             </>
           )}
@@ -495,6 +347,10 @@ function AdminQualityHistoryPage() {
       </div>
     </div>
   )
+}
+
+function formIdOrFallback(form, fallback) {
+  return form?.formId || form?.id || fallback
 }
 
 export default AdminQualityHistoryPage
