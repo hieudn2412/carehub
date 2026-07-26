@@ -435,6 +435,25 @@ export const adminApi = {
     })
   },
 
+  getFormHistory(params) {
+    return httpClient.get('/forms/history', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormHistoryById(formId) {
+    return httpClient.get(`/forms/${formId}/history`, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormHistoryVersions(formId) {
+    return httpClient.get(`/forms/${formId}/history/versions`, {
+      headers: authHeaders(),
+    })
+  },
+
   getFormVersionSubmissions(formId, versionId, params) {
     return httpClient.get(`/forms/${formId}/versions/${versionId}/responses`, {
       headers: authHeaders(),
@@ -442,9 +461,10 @@ export const adminApi = {
     })
   },
 
-  getFormVersionSubmissionSummary(formId, versionId) {
+  getFormVersionSubmissionSummary(formId, versionId, params) {
     return httpClient.get(`/forms/${formId}/versions/${versionId}/responses/summary`, {
       headers: authHeaders(),
+      params,
     })
   },
 
@@ -454,13 +474,13 @@ export const adminApi = {
     })
   },
 
-  exportFormVersionResponses(formId, versionId, result) {
+  exportFormVersionResponses(formId, versionId, params = {}) {
     return httpClient.get('/form-submissions/exports/version', {
       headers: authHeaders(),
       params: {
         formId,
         versionId,
-        result: result || undefined,
+        ...params,
       },
       responseType: 'blob',
     })

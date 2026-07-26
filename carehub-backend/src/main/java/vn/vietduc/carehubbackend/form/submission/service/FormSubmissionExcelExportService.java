@@ -17,6 +17,7 @@ import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionReposi
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -35,9 +36,46 @@ public class FormSubmissionExcelExportService {
     public ExportFile exportVersion(Long formId, Long versionId, FormSubmissionResult result) {
         FormVersion version = versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
-        List<FormSubmission> submissions =
-                submissionRepository.findSubmittedForVersionExport(formId, versionId, result);
+        List<FormSubmission> submissions = submissionRepository.findSubmittedForVersionExport(
+                formId, versionId, result);
+        return createExport(version, submissions, result == null ? null : result.name());
+    }
 
+    @Transactional(readOnly = true)
+    public ExportFile exportVersion(
+            Long formId,
+            Long versionId,
+            String keyword,
+            Long submittedByUserId,
+            Long departmentId,
+            String result,
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
+        FormVersion version = versionRepository.findByIdAndForm_Id(versionId, formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
+        FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
+                keyword, submittedByUserId, departmentId, result, dateFrom, dateTo);
+        List<FormSubmission> submissions = submissionRepository.findHistoryForVersionExport(
+                formId,
+                versionId,
+                criteria.keyword(),
+                criteria.submittedByUserId(),
+                criteria.departmentId(),
+                criteria.filterResults(),
+                criteria.results(),
+                criteria.fromInclusive(),
+                criteria.toExclusive()
+        );
+
+        return createExport(version, submissions, result);
+    }
+
+    private ExportFile createExport(
+            FormVersion version,
+            List<FormSubmission> submissions,
+            String result
+    ) {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Styles styles = createStyles(workbook);
@@ -267,10 +305,10 @@ public class FormSubmissionExcelExportService {
         };
     }
 
-    private String filename(FormVersion version, FormSubmissionResult result) {
+    private String filename(FormVersion version, String result) {
         String code = version.getForm().getCode() == null ? "bang-kiem" : version.getForm().getCode();
         String safeCode = code.replaceAll("[^A-Za-z0-9._-]", "-");
-        String suffix = result == null ? "tat-ca" : result.name().toLowerCase(Locale.ROOT);
+        String suffix = result == null || result.isBlank() ? "tat-ca" : result.toLowerCase(Locale.ROOT);
         return "ket-qua-" + safeCode + "-v" + version.getVersionNumber() + "-" + suffix + ".xlsx";
     }
 
