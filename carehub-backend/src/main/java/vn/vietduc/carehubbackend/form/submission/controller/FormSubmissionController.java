@@ -21,13 +21,13 @@ import java.nio.charset.StandardCharsets;
 @RestController
 @RequestMapping("${app.api-prefix}/form-submissions")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+@PreAuthorize("isAuthenticated()")
 public class FormSubmissionController {
     private final FormSubmissionService service;
     private final FormSubmissionExcelExportService excelExportService;
 
     @PostMapping
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<FormSubmissionResponse>> create(
             @Valid @RequestBody CreateFormSubmissionRequest request) {
         FormSubmissionResponse response = service.create(request);
@@ -36,21 +36,21 @@ public class FormSubmissionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<FormSubmissionResponse> update(@PathVariable Long id,
                                                        @Valid @RequestBody UpdateFormSubmissionRequest request) {
         return ApiResponse.success("Update form submission successfully", service.update(id, request));
     }
 
     @PostMapping("/{id}/submission")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<FormSubmissionResponse> submit(@PathVariable Long id,
                                                        @Valid @RequestBody SubmitFormSubmissionRequest request) {
         return ApiResponse.success("Submit form successfully", service.submit(id, request));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> cancel(@PathVariable Long id) {
         service.cancel(id);
         return ResponseEntity.noContent().build();

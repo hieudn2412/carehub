@@ -560,6 +560,14 @@ public class ExamAssignmentService {
                 .findFirst()
                 .orElse(null);
         ExamAttempt latestAttempt = attempts.stream().findFirst().orElse(null);
+        List<ExamAttempt> scoredAttempts = attempts.stream()
+                .filter(attempt -> attempt.getScore() != null && attempt.getPassed() != null)
+                .toList();
+        ExamAttempt bestAttempt = scoredAttempts.stream()
+                .max(Comparator.comparing(ExamAttempt::getScore))
+                .orElse(null);
+        String assessmentStatus = scoredAttempts.isEmpty() ? "NOT_TAKEN"
+                : scoredAttempts.stream().anyMatch(attempt -> Boolean.TRUE.equals(attempt.getPassed())) ? "PASSED" : "FAILED";
         int usedAttempts = attempts.size();
         int maxAttempts = assignment.getMaxAttempts() == null
                 ? DEFAULT_MAX_ATTEMPTS
@@ -629,7 +637,10 @@ public class ExamAssignmentService {
                 availabilityStatus,
                 availabilityText,
                 actionLabel,
-                actionable
+                actionable,
+                bestAttempt == null ? null : bestAttempt.getScore().divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP),
+                assessmentStatus,
+                bestAttempt == null ? (currentAttempt == null ? null : currentAttempt.getId()) : bestAttempt.getId()
         );
     }
 

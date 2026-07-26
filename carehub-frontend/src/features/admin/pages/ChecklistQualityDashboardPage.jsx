@@ -65,7 +65,7 @@ function csvCell(value) {
 
 function downloadChecklistCsv(rows) {
   const csvRows = [
-    ['Mã bảng kiểm', 'Tên bảng kiểm', 'Người được kiểm tra', 'Lượt đánh giá', 'Số đạt', 'Số chưa đạt', 'Điểm trung bình', 'Tỷ lệ đạt']
+    ['Mã quy trình', 'Tên quy trình', 'Người được kiểm tra', 'Lượt đánh giá', 'Số đạt', 'Số chưa đạt', 'Điểm trung bình', 'Tỷ lệ đạt']
       .map(csvCell)
       .join(','),
     ...rows.map((item) => {
@@ -384,9 +384,9 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
             </div>
           </section>
 
-          <section className="checklist-quality-filters" aria-label="Bộ lọc dashboard bảng kiểm">
+          <section className="checklist-quality-filters" aria-label="Bộ lọc dashboard quy trình">
             <label className="checklist-quality-filter checklist-quality-filter--search">
-              <span>Tên bảng kiểm</span>
+              <span>Tên quy trình</span>
               <div><SearchOutlined /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc mã..." /></div>
             </label>
             <label className="checklist-quality-filter">
@@ -485,22 +485,22 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
 
           <section className="checklist-quality-processes">
             <div className="checklist-quality-section-heading">
-              <div><h2>Các bảng kiểm đã được đánh giá</h2><p>Chọn một thẻ để xem riêng kết quả của bảng kiểm đó.</p></div>
-              <span>{visibleForms.length} bảng kiểm</span>
+              <div><h2>Các quy trình đã được đánh giá</h2><p>Chọn một thẻ để xem riêng kết quả của quy trình đó.</p></div>
+              <span>{visibleForms.length} quy trình</span>
             </div>
 
             {loading ? (
-              <div className="checklist-quality-loading"><LoadingOutlined spin /><span>Đang tải dữ liệu bảng kiểm...</span></div>
+              <div className="checklist-quality-loading"><LoadingOutlined spin /><span>Đang tải dữ liệu quy trình...</span></div>
             ) : !visibleForms.length ? (
-              <div className="checklist-quality-empty"><FileSearchOutlined /><strong>Chưa có bảng kiểm phù hợp</strong><span>Backend chưa trả về dữ liệu trong phạm vi bộ lọc hiện tại.</span></div>
+              <div className="checklist-quality-empty"><FileSearchOutlined /><strong>Chưa có quy trình phù hợp</strong><span>Backend chưa trả về dữ liệu trong phạm vi bộ lọc hiện tại.</span></div>
             ) : (
               <div className="checklist-quality-process-grid">
                 {visibleForms.map((item) => {
                   const active = String(item.formId) === effectiveSelectedFormId
                   return (
                     <button type="button" key={item.formId} className={`checklist-quality-process-card${active ? ' checklist-quality-process-card--active' : ''}`} onClick={() => setSelectedFormId(String(item.formId))}>
-                      <span className="checklist-quality-process-card__code">{item.formCode || `Bảng kiểm #${item.formId}`}</span>
-                      <strong>{item.formTitle || 'Bảng kiểm chưa có tiêu đề'}</strong>
+                      <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
+                      <strong>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
                       <dl>
                         <div><dt>Người được kiểm tra</dt><dd>{Number(item.uniqueSubjectCount || 0)}</dd></div>
                         <div><dt>Lượt đánh giá</dt><dd>{Number(item.submittedCount || item.responseCount || 0)}</dd></div>
@@ -523,7 +523,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
 
               <div className="checklist-quality-metrics">
                 <Metric icon={<TeamOutlined />} label="Người được kiểm tra" value={Number(selectedForm.uniqueSubjectCount || 0)} note="Nhân viên duy nhất" />
-                <Metric icon={<BarChartOutlined />} label="Lượt đánh giá" value={submittedCount} note="Response đã nộp" />
+                <Metric icon={<BarChartOutlined />} label="Lượt đánh giá" value={submittedCount} note="Kết quả đã nộp" />
                 <Metric icon={<CheckCircleOutlined />} label="Số lượt đạt" value={passedCount} note="Theo kết quả backend" tone="success" />
                 <Metric icon={<CloseCircleOutlined />} label="Số lượt chưa đạt" value={failedCount} note="Gồm điểm và tiêu chí trọng yếu" tone="danger" />
                 <Metric icon={<BarChartOutlined />} label="Điểm trung bình" value={formatScore(selectedForm.averageConvertedScore)} note="Điểm quy đổi" />
@@ -531,7 +531,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
 
               <div className="checklist-quality-chart-grid">
                 <article className="checklist-quality-panel">
-                  <div className="checklist-quality-panel__heading"><div><h3>Phân bố kết quả</h3><p>Chỉ hiển thị dữ liệu của bảng kiểm đang chọn.</p></div></div>
+                  <div className="checklist-quality-panel__heading"><div><h3>Phân bố kết quả</h3><p>Chỉ hiển thị dữ liệu của quy trình đang chọn.</p></div></div>
                   <div className="checklist-quality-result-bars">
                     <ResultBar label="Đạt" value={passedCount} total={passedCount + failedCount} tone="success" />
                     <ResultBar label="Chưa đạt" value={failedCount} total={passedCount + failedCount} tone="danger" />
@@ -540,7 +540,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 <article className="checklist-quality-panel">
                   <div className="checklist-quality-panel__heading">
                     <div>
-                      <h3>Xu hướng của bảng kiểm đang chọn</h3>
+                      <h3>Xu hướng của quy trình đang chọn</h3>
                       <p>Tổng hợp theo thời gian và toàn bộ bộ lọc phía trên.</p>
                     </div>
                   </div>
@@ -584,13 +584,13 @@ function TrendChart({ items }) {
       <div className="checklist-quality-trend-empty">
         <BarChartOutlined />
         <strong>Chưa có dữ liệu xu hướng</strong>
-        <span>Không có response đã nộp trong khoảng thời gian đang lọc.</span>
+        <span>Không có kết quả đã nộp trong khoảng thời gian đang lọc.</span>
       </div>
     )
   }
 
   return (
-    <div className="checklist-quality-trend" role="img" aria-label="Xu hướng kết quả bảng kiểm theo thời gian">
+    <div className="checklist-quality-trend" role="img" aria-label="Xu hướng kết quả quy trình theo thời gian">
       {items.map((item) => {
         const submitted = Number(item.submittedCount || 0)
         const passed = Number(item.passedCount || 0)

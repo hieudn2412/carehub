@@ -4,7 +4,6 @@ import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import {
-  ArrowLeftOutlined,
   CheckCircleOutlined,
   DownOutlined,
   SaveOutlined,
@@ -138,6 +137,14 @@ function uuidv4() {
 }
 
 function createDefaultQuestion() {
+  const defaultOptions = [
+    { value: 'NOT_PERFORMED', label: 'Không thực hiện', scoreValue: -1 },
+    { value: 'PERFORMED_NOT_ACHIEVED', label: 'Thực hiện nhưng không đạt', scoreValue: 0 },
+    { value: 'ACHIEVED', label: 'Đạt', scoreValue: 1 },
+    { value: 'GOOD', label: 'Tốt', scoreValue: 1.2 },
+    { value: 'VERY_GOOD', label: 'Rất tốt', scoreValue: 1.5 },
+  ]
+
   return {
     questionKey: uuidv4(),
     code: `Q_${Date.now()}`,
@@ -152,26 +159,13 @@ function createDefaultQuestion() {
     weight: 1,
     validationConfig: null,
     displayConfig: null,
-    options: [
-      {
+    options: defaultOptions.map((option, index) => ({
         optionKey: uuidv4(),
-        value: 'YES',
-        label: 'Đạt',
-        scoreValue: 1,
-        compliant: true,
+        ...option,
+        compliant: option.scoreValue > 0,
         excludeFromDenominator: false,
-        displayOrder: 0,
-      },
-      {
-        optionKey: uuidv4(),
-        value: 'NO',
-        label: 'Không đạt',
-        scoreValue: 0,
-        compliant: false,
-        excludeFromDenominator: false,
-        displayOrder: 1,
-      },
-    ],
+        displayOrder: index,
+      })),
   }
 }
 
@@ -574,7 +568,7 @@ function FormBuilderPage() {
       value: `OPT_${Date.now()}_${opts.length}`,
       label: 'Lựa chọn mới',
       scoreValue: 0,
-      compliant: true,
+      compliant: false,
       excludeFromDenominator: false,
       displayOrder: opts.length,
     }
@@ -593,7 +587,11 @@ function FormBuilderPage() {
   const handleOptionChange = (sectionIndex, itemIndex, optionIndex, field, value) => {
     const updated = [...sections]
     const opts = updated[sectionIndex].items[itemIndex].question.options
-    opts[optionIndex] = { ...opts[optionIndex], [field]: value }
+    const nextOption = { ...opts[optionIndex], [field]: value }
+    if (field === 'scoreValue') {
+      nextOption.compliant = Number(value) > 0
+    }
+    opts[optionIndex] = nextOption
     updateSections(updated)
   }
 
@@ -710,7 +708,7 @@ function FormBuilderPage() {
           const q = item.question
           const isChoiceField = CHOICE_FIELD_TYPES.includes(q.fieldType)
           const isScorableField = SCORABLE_FIELD_TYPES.includes(q.fieldType)
-          
+
           cleanedItem.question = {
             ...q,
             code: q.code.trim().toUpperCase(),
@@ -724,6 +722,7 @@ function FormBuilderPage() {
               ...opt,
               displayOrder: optIdx,
               scoreValue: opt.scoreValue ? parseFloat(opt.scoreValue) : 0,
+              compliant: Number(opt.scoreValue) > 0,
             })) : [],
           }
         } else {
@@ -788,7 +787,7 @@ function FormBuilderPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ onClick: handleBack, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-builder-page">
@@ -809,18 +808,10 @@ function FormBuilderPage() {
                   )}
                 </div>
               )}
-              
+
               {/* Toolbar */}
               <div className="fbp-top-nav">
                 <div className="fbp-toolbar-main">
-                  <button
-                    className="fbp-back"
-                    onClick={handleBack}
-                    type="button"
-                  >
-                    <ArrowLeftOutlined />
-                    <span>Quay lại</span>
-                  </button>
                   <div className="fbp-toolbar-title">
                     <span>Trình thiết kế checklist</span>
                     <strong>{title || `Phiên bản ${versionNumber}`} · {versionStatus}</strong>
@@ -899,7 +890,7 @@ function FormBuilderPage() {
                   </aside>
 
                   <div className="fbp-editor-container">
-                  
+
                   {/* General settings */}
                   {isReadOnlyVersion && (
                     <div className="fbp-readonly-notice">
@@ -1015,7 +1006,7 @@ function FormBuilderPage() {
                         key={sec.sectionKey || secIdx}
                         className="fbp-section-card"
                       >
-                        
+
                         {/* Section Header */}
                         <div className="fbp-section-header">
                           <div className="fbp-section-header-info">
@@ -1037,7 +1028,7 @@ function FormBuilderPage() {
                             <DeleteOutlined /> Xóa phần
                           </button>
                         </div>
-                        
+
                         <div className="fbp-section-description-row">
                           <input
                             type="text"
@@ -1089,7 +1080,7 @@ function FormBuilderPage() {
 
                               {isExpanded && (
                               <div className="fbp-item-editor">
-                              
+
                               {/* Item Header */}
                               <div className="fbp-item-header">
                                 <div className="fbp-item-selector-group">
@@ -1199,7 +1190,7 @@ function FormBuilderPage() {
                                           <p>Thiết lập cách câu hỏi ảnh hưởng tới biểu mẫu.</p>
                                         </div>
                                         <div className="fbp-rule-group" aria-label="Quy tắc câu hỏi">
-                                          <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ bảng kiểm">
+                                          <label className="fbp-checkbox-label" title="Không đạt tiêu chí này sẽ làm rớt toàn bộ quy trình">
                                             <input
                                               type="checkbox"
                                               checked={
@@ -1331,20 +1322,12 @@ function FormBuilderPage() {
                                               <span>Điểm</span>
                                               <input
                                                 type="number"
+                                                step="0.1"
                                                 className="fbp-option-score-input"
                                                 value={opt.scoreValue !== null ? opt.scoreValue : ''}
                                                 onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'scoreValue', e.target.value)}
                                                 placeholder="1"
                                               />
-                                            </label>
-
-                                            <label className="fbp-option-compliant">
-                                              <input
-                                                type="checkbox"
-                                                checked={!!opt.compliant}
-                                                onChange={(e) => handleOptionChange(secIdx, itemIdx, optIdx, 'compliant', e.target.checked)}
-                                              />
-                                              <span>Đạt chuẩn</span>
                                             </label>
 
                                             <button

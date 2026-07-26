@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CheckCircleOutlined,
   LoadingOutlined,
   SaveOutlined,
@@ -366,7 +365,7 @@ function ExamTakeScreen() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header title="Làm bài thi" />
+        <Header back={{ onClick: leaveExam, label: 'Quay lại' }} title="Làm bài thi" />
         <div className="dashboard-layout__body">
           <div className="eh-page">
             {isLoading ? (
@@ -377,9 +376,6 @@ function ExamTakeScreen() {
               <>
                 <div className="eh-header eh-detail-header eh-exam-toolbar">
                   <div>
-                    <button type="button" className="eh-link-button" onClick={leaveExam}>
-                      <ArrowLeftOutlined /> Danh sách bài kiểm tra
-                    </button>
                     <h2 className="eh-page-title">{attempt?.examPaperName || 'Bài kiểm tra'}</h2>
                     <p className="eh-page-sub">Hạn lượt làm: {formatDateTime(attempt?.expiresAt)}</p>
                     <p className="eh-page-sub eh-save-indicator">

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
-  ClockCircleOutlined,
   DownloadOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
@@ -27,6 +26,7 @@ import Sidebar from '../../staff/components/sidebar.jsx'
 import Header from '../../staff/components/Header.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/TrainingDashboardPage.css'
 
 const PAGE_SIZE = 100
@@ -223,10 +223,8 @@ function DashboardContent({ role }) {
   }, [summary])
 
   const completionData = [
-    { name: 'Đạt yêu cầu', value: metrics.completed, color: '#10a77d' },
-    { name: 'Có nguy cơ', value: metrics.atRisk, color: '#f59e0b' },
-    { name: 'Chưa đạt', value: metrics.incomplete, color: '#ef4444' },
-    { name: 'Chưa cấu hình', value: metrics.notConfigured, color: '#94a3b8' },
+    { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
+    { name: 'Chưa đạt', value: metrics.total - metrics.completed, color: '#ef4444' },
   ]
 
   async function handleExport() {
@@ -270,18 +268,32 @@ function DashboardContent({ role }) {
           {isManager ? (
             <div>{profile?.departmentName || 'Khoa của tôi'}</div>
           ) : (
-            <select value={filters.departmentId} onChange={(event) => setFilters((current) => ({ ...current, departmentId: event.target.value }))}>
-              <option value="">Toàn viện</option>
-              {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
-            </select>
+            <SearchableSelect
+              value={filters.departmentId}
+              onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
+              options={[
+                { value: '', label: 'Toàn viện' },
+                ...departments.map((department) => ({ value: department.id, label: department.name })),
+              ]}
+              placeholder="Toàn viện"
+              searchPlaceholder="Tìm tên khoa/phòng..."
+              ariaLabel="Tìm và chọn khoa/phòng"
+            />
           )}
         </label>
         <label>
           <span>Lĩnh vực chuyên môn</span>
-          <select value={filters.professionalFieldId} onChange={(event) => setFilters((current) => ({ ...current, professionalFieldId: event.target.value }))}>
-            <option value="">Tất cả lĩnh vực</option>
-            {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
-          </select>
+          <SearchableSelect
+            value={filters.professionalFieldId}
+            onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
+            options={[
+              { value: '', label: 'Tất cả lĩnh vực' },
+              ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+            ]}
+            placeholder="Tất cả lĩnh vực"
+            searchPlaceholder="Tìm tên lĩnh vực..."
+            ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+          />
         </label>
         <label>
           <span>Tính đến ngày</span>
@@ -291,10 +303,8 @@ function DashboardContent({ role }) {
           <span>Trạng thái</span>
           <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
             <option value="">Tất cả trạng thái</option>
-            <option value="COMPLIANT">Đạt yêu cầu</option>
-            <option value="AT_RISK">Có nguy cơ</option>
+            <option value="COMPLIANT">Đạt</option>
             <option value="NON_COMPLIANT">Chưa đạt</option>
-            <option value="NOT_CONFIGURED">Chưa cấu hình chuẩn</option>
           </select>
         </label>
       </section>
@@ -306,10 +316,9 @@ function DashboardContent({ role }) {
       ) : (
         <>
           <section className="training-dashboard__kpis">
-            <MetricCard icon={<TeamOutlined />} label="Nhân viên trong phạm vi" value={metrics.total.toLocaleString('vi-VN')} detail="Theo bộ lọc đang chọn" tone="blue" />
-            <MetricCard icon={<CheckCircleOutlined />} label="Đạt chuẩn đào tạo" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên đã cấu hình`} tone="green" />
-            <MetricCard icon={<ExclamationCircleOutlined />} label="Cần theo dõi" value={(metrics.atRisk + metrics.incomplete).toLocaleString('vi-VN')} detail={`${metrics.notConfigured} nhân viên chưa có cấu hình`} tone="red" />
-            <MetricCard icon={<ClockCircleOutlined />} label="Tổng giờ hoàn thành" value={metrics.totalHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} detail={`Mục tiêu cộng dồn ${metrics.totalTarget.toLocaleString('vi-VN')} giờ`} tone="amber" />
+            <MetricCard icon={<TeamOutlined />} label="Tổng nhân viên" value={metrics.total.toLocaleString('vi-VN')} detail="Theo bộ lọc đang chọn" tone="blue" />
+            <MetricCard icon={<CheckCircleOutlined />} label="Đạt" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên`} tone="green" />
+            <MetricCard icon={<ExclamationCircleOutlined />} label="Chưa đạt" value={(metrics.total - metrics.completed).toLocaleString('vi-VN')} detail="Cần theo dõi tiến độ" tone="red" />
           </section>
 
           {metrics.total === 0 ? (
@@ -321,7 +330,7 @@ function DashboardContent({ role }) {
           ) : (
             <section className="training-dashboard__charts">
               <article className="training-chart-card">
-                <header><h2>Mức độ đáp ứng chuẩn đào tạo</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
+                <header><h2>Phân bố Đạt/Chưa đạt</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
                 <ResponsiveContainer width="100%" height={270}>
                   <PieChart>
                     <Pie data={completionData} dataKey="value" nameKey="name" innerRadius={72} outerRadius={102} paddingAngle={2} stroke="none">

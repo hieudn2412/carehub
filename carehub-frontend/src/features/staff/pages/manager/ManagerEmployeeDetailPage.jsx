@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/icons'
+import { BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { trainingApi } from '../../../training/api/trainingApi.js'
@@ -82,7 +82,7 @@ function ManagerEmployeeDetailPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Chi tiết nhân sự" />
+          <Header back={{ to: '/manager/employees', label: 'Quay lại' }} title="Chi tiết nhân sự" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 80 }}>
             {loading ? (
               <>
@@ -92,9 +92,6 @@ function ManagerEmployeeDetailPage() {
             ) : (
               <>
                 <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
-                <button className="training-button" onClick={() => navigate('/manager/employees')}>
-                  <ArrowLeftOutlined /> Quay lại danh sách
-                </button>
               </>
             )}
           </div>
@@ -107,30 +104,15 @@ function ManagerEmployeeDetailPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Nhân sự trong khoa', link: '/manager/employees' },
-          { label: 'Chi tiết nhân sự' }
-        ]} />
+        <Header
+          back={{ to: '/manager/employees', label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Nhân sự trong khoa', link: '/manager/employees' },
+            { label: 'Chi tiết nhân sự' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
-            <button 
-              onClick={() => navigate('/manager/employees')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#475569',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 500,
-                padding: '4px 0',
-                marginBottom: 8
-              }}
-            >
-              <ArrowLeftOutlined /> Quay lại danh sách
-            </button>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết nhân sự</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
               Thông tin hồ sơ và hoạt động kiểm tra chuyên môn

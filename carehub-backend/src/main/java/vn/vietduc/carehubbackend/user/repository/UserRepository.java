@@ -49,6 +49,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             SELECT u
             FROM User u
             WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
                    OR LOWER(u.name) LIKE :keyword
@@ -161,6 +162,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             SELECT u
             FROM User u
             WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:scopeDepartmentId IS NULL OR u.department.id = :scopeDepartmentId)
               AND (:keyword IS NULL
                    OR LOWER(u.employeeCode) LIKE :keyword

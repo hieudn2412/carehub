@@ -94,7 +94,7 @@ public class UserController {
     }
 
     @PatchMapping("/user/change-password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
         return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }

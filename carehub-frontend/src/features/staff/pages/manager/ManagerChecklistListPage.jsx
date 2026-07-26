@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   CalendarOutlined,
   FileTextOutlined,
@@ -25,7 +25,7 @@ function getAssignedFormsError(error) {
   }
 
   if (statusCode === 403) {
-    return 'Tài khoản hiện tại chưa có quyền manager để xem checklist được giao.'
+    return 'Tài khoản hiện tại không có quyền xem quy trình được giao.'
   }
 
   return 'Không thể tải danh sách checklist được phân quyền. Vui lòng thử lại.'
@@ -55,6 +55,10 @@ function getVersionNumber(checklist) {
 
 function ManagerChecklistListPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const evaluationBasePath = location.pathname.startsWith('/staff/')
+    ? '/staff/checklists'
+    : '/manager/quality/checklists'
   const [search, setSearch] = useState('')
   const [checklists, setChecklists] = useState([])
   const [loading, setLoading] = useState(true)
@@ -149,12 +153,12 @@ function ManagerChecklistListPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header title="Bảng kiểm chất lượng" />
+        <Header title="Quy trình chất lượng" />
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Bảng kiểm giám sát</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quy trình giám sát</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Danh sách các checklist đã được admin phân quyền để manager thực hiện giám sát.
+              Danh sách các quy trình đã được Admin giao để thực hiện đánh giá.
             </p>
           </div>
 
@@ -162,7 +166,7 @@ function ManagerChecklistListPage() {
             <div className="mgr-search-box">
               <input
                 type="text"
-                placeholder="Tìm bảng kiểm..."
+                placeholder="Tìm quy trình..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -190,16 +194,16 @@ function ManagerChecklistListPage() {
           {loading ? (
             <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', color: '#64748b' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <LoadingOutlined spin /> Đang tải checklist được giao...
+                <LoadingOutlined spin /> Đang tải quy trình được giao...
               </span>
             </div>
           ) : filteredChecklists.length === 0 ? (
             <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
               <div>
                 <FileTextOutlined style={{ fontSize: 32, color: '#94a3b8', marginBottom: 10 }} />
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 16 }}>Chưa có checklist được giao</h3>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 16 }}>Chưa có quy trình được giao</h3>
                 <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 13 }}>
-                  Checklist sẽ xuất hiện ở đây sau khi admin phân quyền cho manager.
+                  Quy trình sẽ xuất hiện ở đây sau khi Admin giao đánh giá.
                 </p>
               </div>
             </div>
@@ -243,7 +247,7 @@ function ManagerChecklistListPage() {
 
                   <div className="mgr-checklist-card__footer">
                     <button
-                      onClick={() => navigate(`/manager/quality/checklists/${checklist.assignmentItemId}/evaluate`)}
+                      onClick={() => navigate(`${evaluationBasePath}/${checklist.assignmentItemId}/evaluate`)}
                       className="training-button training-button--primary"
                       style={{ height: 36, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
                       type="button"

@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   SaveOutlined,
-  ReloadOutlined,
   LoadingOutlined,
 } from '@ant-design/icons'
 import Sidebar from '../../staff/components/sidebar'
@@ -17,7 +15,6 @@ import '../../evaluation/styles/QuestionDocumentPages.css'
 
 function StaffQuestionReviewPage() {
   const { jobId } = useParams()
-  const navigate = useNavigate()
   const { showToast } = useToast()
 
   const [job, setJob] = useState(null)
@@ -45,16 +42,6 @@ function StaffQuestionReviewPage() {
 
   // Polling for generating
   const candidates = useMemo(() => job?.candidates || [], [job])
-  const grouped = useMemo(() => {
-    const map = { VALIDATED: [], NEED_REVIEW: [], APPROVED: [], REJECTED: [], SAVED: [] }
-    candidates.forEach(c => {
-      const k = c.status === 'VALIDATED' || c.status === 'NEED_REVIEW' ? c.status : c.status
-      if (map[k]) map[k].push(c)
-      else map.VALIDATED.push(c)
-    })
-    return map
-  }, [candidates])
-
   const statusLabel = (s) => {
     const map = {
       CREATED: 'Đang chờ',
@@ -125,7 +112,7 @@ function StaffQuestionReviewPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Xem câu hỏi" />
+          <Header back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Xem câu hỏi" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 40 }}>
             <LoadingOutlined style={{ fontSize: 24 }} />
           </div>
@@ -140,14 +127,11 @@ function StaffQuestionReviewPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header title="Câu hỏi đã tạo" />
+        <Header back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Câu hỏi đã tạo" />
         <div className="dashboard-layout__body">
           <div className="qdoc-page">
             {/* Header */}
             <div className="qdoc-title-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <button type="button" className="qdoc-secondary-btn" onClick={() => navigate('/staff/generate-questions')}>
-                <ArrowLeftOutlined /> Quay lại
-              </button>
               <div style={{ flex: 1 }}>
                 <h1 className="qdoc-title" style={{ fontSize: 18 }}>Xem câu hỏi đã tạo</h1>
                 <p className="qdoc-subtitle">

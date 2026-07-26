@@ -20,10 +20,11 @@ public class TrainingDomainValidator {
     private static final long MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
 
     public void validateRecordForm(TrainingRecordFormRequest request, boolean legacyImport) {
-        if (request.endDate() != null && request.endDate().isBefore(request.startDate())) {
+        if (request.startDate() != null && request.endDate() != null && request.endDate().isBefore(request.startDate())) {
             throw new BadRequestException("End date must be greater than or equal to start date");
         }
-        if ((request.endDate() == null || request.endDate().isEqual(request.startDate()))
+        if (request.startDate() != null
+                && (request.endDate() == null || request.endDate().isEqual(request.startDate()))
                 && request.startTime() != null
                 && request.endTime() != null
                 && request.endTime().isBefore(request.startTime())) {

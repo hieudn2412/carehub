@@ -28,8 +28,8 @@ import java.util.*;
         @Index(name = "idx_form_submission_dashboard_version", columnList = "form_version_id,status,submitted_at")
 })
 public class FormSubmission extends BaseEntity {
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "assignment_item_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignment_item_id")
     private FormAssignmentItem assignmentItem;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

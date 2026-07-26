@@ -1,246 +1,129 @@
-import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ClockCircleOutlined, EditOutlined, PaperClipOutlined, RollbackOutlined } from '@ant-design/icons'
+import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
+import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
-import { formatEvidenceStorageSummary } from '../utils/evidenceFile.js'
-import '../styles/training.css'
+import { useToast } from '../../../shared/context/ToastContext.jsx'
+import EvidenceGallery from '../components/EvidenceGallery.jsx'
+import '../../staff/styles/TrainingHours.css'
 
-function TrainingRecordDetailPage() {
-  const { id } = useParams()
-  const [record, setRecord] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
-  const [returningToDraft, setReturningToDraft] = useState(false)
-
-  useEffect(() => {
-    let mounted = true
-
-    async function load() {
-      setIsLoading(true)
-      setErrorMessage('')
-      try {
-        const response = await trainingApi.getRecord(id)
-        if (!mounted) return
-        setRecord(response.data.data)
-      } catch (error) {
-        if (!mounted) return
-        setErrorMessage(getApiErrorMessage(error, 'Cannot load training record'))
-      } finally {
-        if (mounted) setIsLoading(false)
-      }
-    }
-
-    const timer = window.setTimeout(load, 0)
-    return () => {
-      mounted = false
-      window.clearTimeout(timer)
-    }
-  }, [id])
-
-  const handleDownloadEvidence = async (evidenceId) => {
-    try {
-      const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
-      const url = res.data?.data?.downloadUrl
-      if (url) {
-        window.open(url, '_blank')
-      }
-    } catch {
-      alert('Không thể tải minh chứng')
-    }
-  }
-
-  const handleReturnToDraft = async () => {
-    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
-    setReturningToDraft(true)
-    try {
-      await trainingApi.returnToDraft(id)
-      const response = await trainingApi.getRecord(id)
-      setRecord(response.data.data)
-    } catch (err) {
-      alert(getApiErrorMessage(err, 'Không thể trả hồ sơ về nháp'))
-    } finally {
-      setReturningToDraft(false)
-    }
-  }
-
-  return (
-    <main className="training-page">
-      <section className="training-header">
-        <div>
-          <p className="training-eyebrow">Đào tạo</p>
-          <h1>{record?.title ?? 'Hồ sơ đào tạo'}</h1>
-        </div>
-        <div className="training-header-actions">
-          {record && record.workflowStatus === 'DRAFT' ? (
-            <>
-              <Link className="training-button" to={`/training/records/${record.id}/edit`}>
-                Chỉnh sửa
-              </Link>
-              <Link className="training-button" to={`/training/records/${record.id}/evidence`}>
-                Minh chứng
-              </Link>
-            </>
-          ) : null}
-          {record && record.workflowStatus === 'SUBMITTED' ? (
-            <button
-              className="training-button"
-              onClick={handleReturnToDraft}
-              disabled={returningToDraft}
-            >
-              {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
-            </button>
-          ) : null}
-          <Link className="training-button" to="/training/records">
-            Quay lại
-          </Link>
-        </div>
-      </section>
-
-      {isLoading ? <div className="training-panel training-skeleton">Đang tải hồ sơ...</div> : null}
-      {errorMessage ? <section className="training-panel training-message training-message--error">{errorMessage}</section> : null}
-
-      {record ? (
-        <section className="training-detail-grid">
-          <article className="training-panel">
-            <h2>Nhân viên</h2>
-            <dl className="training-definition">
-              <dt>Mã</dt>
-              <dd>{record.employeeCode}</dd>
-              <dt>Tên</dt>
-              <dd>{record.employeeName}</dd>
-              <dt>Phòng ban</dt>
-              <dd>{record.employeeDepartmentNameSnapshot ?? '-'}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel">
-            <h2>Chương trình</h2>
-            <dl className="training-definition">
-              <dt>Trạng thái</dt>
-              <dd>
-                <span className={`training-badge ${record.workflowStatus === 'SUBMITTED' ? 'is-active' : 'is-inactive'}`}>
-                  {record.workflowStatus === 'SUBMITTED' ? 'Đã nộp' : record.workflowStatus === 'DRAFT' ? 'Nháp' : record.workflowStatus}
-                </span>
-              </dd>
-              <dt>Hình thức</dt>
-              <dd>{record.activityTypeName}</dd>
-              <dt>Lĩnh vực</dt>
-              <dd>{record.professionalFieldName ?? '-'}</dd>
-              <dt>Đơn vị tổ chức</dt>
-              <dd>{record.provider ?? '-'}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel">
-            <h2>Ngày & Giờ</h2>
-            <dl className="training-definition">
-              <dt>Bắt đầu</dt>
-              <dd>{formatDate(record.startDate)} {record.startTime ?? ''}</dd>
-              <dt>Kết thúc</dt>
-              <dd>{formatDate(record.endDate)} {record.endTime ?? ''}</dd>
-              <dt>Giờ khai báo</dt>
-              <dd>{record.declaredHours ?? '-'}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel">
-            <h2>Nguồn</h2>
-            <dl className="training-definition">
-              <dt>Loại</dt>
-              <dd>{record.sourceType}</dd>
-              <dt>Tham chiếu</dt>
-              <dd>{record.sourceReference ?? '-'}</dd>
-              <dt>Ngày nộp</dt>
-              <dd>{formatDateTime(record.submittedAt)}</dd>
-              <dt>Phiên bản</dt>
-              <dd>{record.version}</dd>
-            </dl>
-          </article>
-
-          <article className="training-panel training-panel--wide">
-            <h2>Mô tả</h2>
-            <p>{record.description || '-'}</p>
-          </article>
-
-          <article className="training-panel training-panel--wide">
-            <h2>Minh chứng</h2>
-            {!record.evidences || record.evidences.length === 0 ? (
-              <div className="training-empty">Không có minh chứng.</div>
-            ) : (
-              <table className="training-table training-table--compact">
-                <thead>
-                  <tr>
-                    <th>Tệp</th>
-                    <th>Loại</th>
-                    <th>Kích thước</th>
-                    <th>Kiểm duyệt</th>
-                    <th>Tải xuống</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {record.evidences.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.originalFilename}</td>
-                      <td>{item.mimeType}</td>
-                      <td>{formatEvidenceStorageSummary(item, formatSize)}</td>
-                      <td>{item.moderationStatus}</td>
-                      <td>
-                        <button
-                          className="training-button"
-                          onClick={() => handleDownloadEvidence(item.id)}
-                          style={{ padding: '2px 10px', fontSize: '0.85rem' }}
-                        >
-                          Tải xuống
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </article>
-
-          <article className="training-panel">
-            <h2>Lịch sử thay đổi</h2>
-            {!record.changeHistory || record.changeHistory.length === 0 ? (
-              <div className="training-empty">Không có thay đổi.</div>
-            ) : (
-              <ul className="training-timeline">
-                {record.changeHistory.map((item) => (
-                  <li key={item.id}>
-                    <strong>{item.changeType}</strong>
-                    <span>v{item.versionNo}</span>
-                    <span>{item.changedByUserName ?? '-'}</span>
-                    <span>{formatDateTime(item.changedAt)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        </section>
-      ) : null}
-    </main>
-  )
+const statusCfg = {
+  SUBMITTED: { label: 'Đã nộp', cls: 'th-badge--success' },
+  DRAFT: { label: 'Bản nháp', cls: 'th-badge--warning' },
+  CANCELLED: { label: 'Đã hủy', cls: 'th-badge--danger' },
 }
 
 function formatDate(value) {
   if (!value) return '-'
-  return new Intl.DateTimeFormat('vi-VN').format(new Date(value))
+  return new Intl.DateTimeFormat('vi-VN').format(new Date(`${value}T00:00:00`))
 }
 
-function formatDateTime(value) {
-  if (!value) return '-'
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
+export default function TrainingRecordDetailPage() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { showToast } = useToast()
+  const evidenceRef = useRef(null)
+  const [record, setRecord] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [returning, setReturning] = useState(false)
 
-function formatSize(value) {
-  if (!value) return '-'
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
-  return `${(value / 1024 / 1024).toFixed(2)} MB`
-}
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const response = await trainingApi.getRecord(id)
+      setRecord(response.data?.data || null)
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Không thể tải hồ sơ đào tạo.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [id])
 
-export default TrainingRecordDetailPage
+  useEffect(() => {
+    const timer = window.setTimeout(load, 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
+
+  useEffect(() => {
+    if (!loading && record && location.hash === '#evidence') {
+      window.setTimeout(() => evidenceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+    }
+  }, [loading, location.hash, record])
+
+  const goBack = () => navigate(record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees')
+
+  const returnToDraft = async () => {
+    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
+    setReturning(true)
+    try {
+      await trainingApi.returnToDraft(id)
+      showToast('Đã trả hồ sơ về bản nháp.', 'success')
+      await load()
+    } catch (requestError) {
+      showToast(getApiErrorMessage(requestError, 'Không thể trả hồ sơ về bản nháp.'), 'error')
+    } finally {
+      setReturning(false)
+    }
+  }
+
+  const status = statusCfg[record?.workflowStatus] || { label: record?.workflowStatus || '-', cls: 'th-badge--warning' }
+
+  return (
+    <div className="dashboard-layout">
+      <AdminSidebar />
+      <div className="dashboard-layout__content">
+        <AdminHeader
+          back={{ onClick: goBack, label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Giờ đào tạo liên tục', link: '/training/employees' },
+            { label: record?.employeeName || 'Nhân viên', link: record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees' },
+            { label: 'Chi tiết hồ sơ' },
+          ]}
+        />
+        <div className="dashboard-layout__body">
+          <main className="training-page">
+            {loading ? <div className="th-table-state">Đang tải thông tin hồ sơ...</div> : null}
+            {error ? (
+              <div className="th-table-state" role="alert">
+                <p>{error}</p>
+                <button type="button" className="th-detail-btn" onClick={load}>Thử lại</button>
+              </div>
+            ) : null}
+            {!loading && record ? (
+              <>
+                <div className="th-detail-header">
+                  <div className="th-detail-header__left">
+                    <h1 className="th-detail-title">{record.title}</h1>
+                    <div className="th-detail-meta">
+                      <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
+                      <span className={`th-badge ${status.cls}`}>{status.label}</span>
+                    </div>
+                  </div>
+                  <div className="th-detail-header__right">
+                    <div className="th-detail-hours-ring"><span className="th-detail-hours-value">{record.declaredHours || 0}h</span><span className="th-detail-hours-label">Giờ đào tạo</span></div>
+                    <div className="th-detail-evidence-ring"><span className="th-detail-evidence-value"><PaperClipOutlined /> {record.evidences?.length || 0}</span><span className="th-detail-evidence-label">Minh chứng</span></div>
+                  </div>
+                </div>
+
+                <section id="evidence" ref={evidenceRef} className="th-detail-section">
+                  <h3 className="th-detail-section-title"><PaperClipOutlined /> Minh chứng ({record.evidences?.length || 0})</h3>
+                  <EvidenceGallery recordId={record.id} evidences={record.evidences || []} onError={message => showToast(message, 'error')} />
+                </section>
+
+                <div className="th-detail-actions">
+                  {record.workflowStatus === 'DRAFT' ? <button type="button" className="th-detail-btn" onClick={() => navigate(`/training/records/${record.id}/edit`)}><EditOutlined /> Chỉnh sửa thông tin</button> : null}
+                  {record.workflowStatus === 'SUBMITTED' ? <button type="button" className="th-detail-btn" onClick={returnToDraft} disabled={returning}><RollbackOutlined /> {returning ? 'Đang xử lý...' : 'Trả về nháp'}</button> : null}
+                </div>
+              </>
+            ) : null}
+          </main>
+        </div>
+      </div>
+    </div>
+  )
+}

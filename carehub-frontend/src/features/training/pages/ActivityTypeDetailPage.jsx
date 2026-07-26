@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
@@ -57,7 +57,7 @@ function ActivityTypeDetailPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="training-detail-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -69,9 +69,6 @@ function ActivityTypeDetailPage() {
                   <p className="atl-subtitle">Thông tin chi tiết và lịch sử sử dụng của hình thức đào tạo</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <Link className="training-button" to="/admin/training/activity-types" style={{ textDecoration: 'none' }}>
-                    Quay lại
-                  </Link>
                   {activityType && (
                     <>
                       <Link className="training-button training-button--primary" to={`/admin/training/activity-types/${activityType.id}/edit`} style={{ textDecoration: 'none' }}>

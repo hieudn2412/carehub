@@ -23,6 +23,12 @@ const formatCompactSize = (bytes) => {
   return `${(value / 1024 / 1024).toFixed(2)} MB`
 }
 
+const todayIso = () => {
+  const now = new Date()
+  const offset = now.getTimezoneOffset() * 60000
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10)
+}
+
 function SearchableDropdown({
   options = [],
   value = '',
@@ -228,7 +234,7 @@ function TrainingHoursFormScreen() {
 
   const [form, setForm] = useState({
     name: '',
-    date: '',
+    date: todayIso(),
     hours: '',
     type: '',
     professionalFieldId: '',
@@ -519,10 +525,13 @@ function TrainingHoursFormScreen() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Giờ đào tạo', link: '/staff/training' },
-          { label: isEditMode ? 'Chỉnh sửa' : 'Thêm hồ sơ' }
-        ]} />
+        <Header
+          back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Giờ đào tạo', link: '/staff/training' },
+            { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div className="training-page">
 
@@ -532,7 +541,7 @@ function TrainingHoursFormScreen() {
               <div>
                 <div>
                   <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>
-                    {isEditMode ? 'Chỉnh sửa hồ sơ đào tạo' : 'Thêm hồ sơ đào tạo'}
+                    {isEditMode ? 'Chỉnh sửa giờ đào tạo' : 'Cập nhật giờ đào tạo'}
                   </h1>
                   <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
                     Nhập thông tin chi tiết của hoạt động đào tạo đã hoàn thành
@@ -543,7 +552,7 @@ function TrainingHoursFormScreen() {
                   {/* Name */}
                   <div style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                      Tên khoá đào tạo <span style={{ color: '#ef4444' }}>*</span>
+                      Nội dung đào tạo <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       value={form.name}
@@ -558,7 +567,7 @@ function TrainingHoursFormScreen() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 20 }}>
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
-                        Ngày bắt đầu <span style={{ color: '#ef4444' }}>*</span>
+                        Ngày đào tạo liên tục <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <div style={{ position: 'relative' }}>
                         <input
@@ -582,6 +591,10 @@ function TrainingHoursFormScreen() {
                         Số giờ đào tạo <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
+                        type="number"
+                        inputMode="decimal"
+                        min="0.5"
+                        step="0.5"
                         value={form.hours}
                         onChange={e => setForm({ ...form, hours: e.target.value })}
                         placeholder="Ví dụ: 1.5, 8, 12.5"

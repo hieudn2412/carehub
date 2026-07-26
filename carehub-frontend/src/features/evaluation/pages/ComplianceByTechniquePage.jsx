@@ -1,11 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  SearchOutlined,
   EyeOutlined,
-  WarningFilled,
-  CheckCircleFilled,
-  ExclamationCircleFilled,
   ReloadOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar'
@@ -16,9 +12,10 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
-import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function ComplianceByTechniquePage() {
@@ -33,10 +30,9 @@ function ComplianceByTechniquePage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [departments, setDepartments] = useState([])
-  const [forms, setForms] = useState([])
 
   const [departmentId, setDepartmentId] = useState('')
-  const [formId, setFormId] = useState('')
+  const [keyword, setKeyword] = useState('')
   const [fromDate, setFromDate] = useState(`${new Date().getFullYear()}-01-01`)
   const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10))
 
@@ -49,9 +45,6 @@ function ComplianceByTechniquePage() {
           const response = await adminApi.getDepartments()
           const depts = apiData(response, [])
           setDepartments(depts)
-          if (depts.length > 0) {
-            setDepartmentId(String(depts[0].id))
-          }
           return
         }
 
@@ -73,7 +66,7 @@ function ComplianceByTechniquePage() {
   }, [isAdmin, showToast])
 
   const loadData = useCallback(async () => {
-    if (!departmentId) {
+    if (!departmentId && !isAdmin) {
       showToast('Vui lòng chọn khoa/phòng', 'warning')
       return
     }
@@ -81,51 +74,48 @@ function ComplianceByTechniquePage() {
     try {
       const response = await competencyApi.getByTechnique({
         departmentId,
-        formId: formId || undefined,
+        keyword: keyword || undefined,
         fromDate: fromDate || undefined,
         toDate: toDate || undefined,
       })
       const responseData = apiData(response, null)
       setData(responseData)
-      setForms(responseData?.forms || [])
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setLoading(false)
     }
-  }, [departmentId, formId, fromDate, toDate, showToast])
+  }, [departmentId, fromDate, isAdmin, keyword, toDate, showToast])
 
   useEffect(() => {
-    if (!departmentId) return undefined
+    if (!departmentId && !isAdmin) return undefined
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
-  }, [departmentId, loadData])
+  }, [departmentId, isAdmin, loadData])
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
     { label: 'Đánh giá' },
-    { label: 'Tuân thủ kỹ thuật' },
+    { label: 'Tuân thủ quy trình, quy định' },
   ]
 
   const Layout = isAdmin ? AdminSidebar : Sidebar
   const PageHeader = isAdmin ? AdminHeader : Header
 
-  const complianceTarget = data?.complianceTarget || 80.0
-  const belowCount = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalCount = data?.items ? data.items.length : 0
 
   return (
     <div className="dashboard-layout">
       <Layout />
       <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ kỹ thuật' : undefined} />
+        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
-                  <h1>Tuân thủ kỹ thuật</h1>
-                  <p>Đánh giá tuân thủ quy trình kỹ thuật của Điều dưỡng</p>
+                  <h1>Tuân thủ quy trình, quy định</h1>
+                  <p>Tổng hợp mọi lượt kiểm tra giám sát theo nhân viên</p>
                 </div>
                 <button className="evd-btn" onClick={loadData} disabled={loading}>
                   <ReloadOutlined /> Tải lại
@@ -137,15 +127,19 @@ function ComplianceByTechniquePage() {
                 marginBottom: 16, padding: '12px 16px', background: '#f9fafb', borderRadius: 8,
               }}>
                 {isAdmin && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                    <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}
-                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 180 }}>
-                      <option value="">-- Chọn khoa --</option>
-                      {departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={departmentId}
+                      onChange={setDepartmentId}
+                      options={[
+                        { value: '', label: 'Toàn viện' },
+                        ...departments.map((department) => ({ value: department.id, label: department.name })),
+                      ]}
+                      placeholder="Toàn viện"
+                      searchPlaceholder="Tìm tên khoa/phòng..."
+                      ariaLabel="Tìm và chọn khoa/phòng"
+                    />
                   </div>
                 )}
                 {!isAdmin && departments.length > 0 && (
@@ -157,14 +151,9 @@ function ComplianceByTechniquePage() {
                   </div>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Kỹ thuật</label>
-                  <select value={formId} onChange={(e) => setFormId(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 200 }}>
-                    <option value="">-- Tất cả kỹ thuật --</option>
-                    {forms.map(f => (
-                      <option key={f.id} value={f.id}>{f.title}</option>
-                    ))}
-                  </select>
+                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Tên nhân viên</label>
+                  <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Tìm theo tên nhân viên"
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 220 }} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
@@ -183,16 +172,8 @@ function ComplianceByTechniquePage() {
                   padding: 16, marginBottom: 16, display: 'flex', gap: 24, flexWrap: 'wrap',
                 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>
-                    Mục tiêu tuân thủ: <span style={{ color: '#2563eb' }}>{complianceTarget}%</span>
+                    Nhân viên đã được đánh giá: <span style={{ color: '#2563eb' }}>{totalCount}</span>
                   </div>
-                  {totalCount > 0 && (
-                    <div style={{ fontSize: 14, color: '#6b7280' }}>
-                      {totalCount} Điều dưỡng —{' '}
-                      <span style={{ color: belowCount > 0 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                        {belowCount} dưới mục tiêu
-                      </span>
-                    </div>
-                  )}
                   {totalCount === 0 && data && (
                     <div style={{ fontSize: 14, color: '#9ca3af' }}>
                       Chưa có dữ liệu tuân thủ kỹ thuật trong khoảng thời gian đã chọn.
@@ -201,75 +182,37 @@ function ComplianceByTechniquePage() {
                 </section>
               )}
 
-              {!departmentId && isAdmin && !data && (
-                <div className="evd-card" style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
-                  <SearchOutlined style={{ fontSize: 48, marginBottom: 16, display: 'block' }} />
-                  Vui lòng chọn khoa/phòng và kỹ thuật để xem phân tích tuân thủ.
-                </div>
-              )}
-
               <div className="evd-card" style={{ overflow: 'auto' }}>
                 <table className="evd-table">
                   <thead>
                     <tr>
-                      <th>STT</th>
-                      <th>Mã NV</th>
-                      <th>Họ tên</th>
-                      {isAdmin && <th>Khoa</th>}
-                      <th>Số lần ĐG</th>
-                      <th>Điểm TB</th>
-                      <th>Tỷ lệ đạt</th>
-                      <th>Mục tiêu</th>
-                      <th>Phân loại</th>
-                      <th></th>
+                      <th>Nhân viên</th>
+                      <th>Tổng số lần được kiểm tra</th>
+                      <th>Tỷ lệ tuân thủ chung</th>
+                      <th>Chi tiết</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={isAdmin ? 10 : 9} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                           Đang tải dữ liệu...
                         </td>
                       </tr>
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
-                        <td colSpan={isAdmin ? 10 : 9} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                        <td colSpan={4} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
                           {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
                         </td>
                       </tr>
                     ) : (
                       data.items.map((item, idx) => (
-                        <tr key={idx} className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}>
-                          <td>{idx + 1}</td>
-                          <td><code style={{ fontSize: 12 }}>{item.employeeCode}</code></td>
-                          <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
-                          {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || data?.departmentName || '—'}</td>}
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 500 }}>{item.employeeName}<br /><small>{item.employeeCode} · {item.departmentName || data?.departmentName || '—'}</small></td>
                           <td>{item.evaluationCount}</td>
-                          <td>{formatNumber(item.averageScore)}</td>
                           <td>
-                            <span style={{ color: (item.passRate || 0) < complianceTarget ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
-                              {item.passRate != null ? `${item.passRate}%` : '—'}
-                            </span>
-                          </td>
-                          <td>
-                            {item.belowTarget ? (
-                              <span style={{ color: '#dc2626', fontSize: 12 }}>
-                                <ExclamationCircleFilled style={{ marginRight: 4 }} />
-                                {'<'} {complianceTarget}%
-                              </span>
-                            ) : (
-                              <span style={{ color: '#16a34a', fontSize: 12 }}>
-                                <CheckCircleFilled style={{ marginRight: 4 }} />Đạt
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            <span className="evd-badge" style={{
-                              backgroundColor: (item.colorHex || '#6b7280') + '20',
-                              color: item.colorHex || '#6b7280',
-                            }}>
-                              {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                              {item.competencyLabel || '—'}
+                            <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                              {item.passCount || 0}/{item.evaluationCount || 0} – {item.passRate != null ? `${item.passRate}%` : '0%'}
                             </span>
                           </td>
                           <td>

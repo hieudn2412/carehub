@@ -46,15 +46,9 @@ function ChangePasswordModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   // ── Kiểm tra điều kiện mật khẩu mới ────────────────────────
-  const hasMinLength = newPassword.length >= 8
-  const hasComplexity =
-    /[A-Z]/.test(newPassword) &&
-    /[a-z]/.test(newPassword) &&
-    /\d/.test(newPassword) &&
-    /[^A-Za-z0-9\s]/.test(newPassword)
-  const hasNoWhitespace = newPassword.length > 0 && !/\s/.test(newPassword)
-
-  const isStrongPassword = hasMinLength && hasComplexity && hasNoWhitespace
+  const hasMinLength = newPassword.length >= 4
+  const hasVisibleCharacter = newPassword.trim().length > 0
+  const isValidPassword = hasMinLength && hasVisibleCharacter
   const passwordsMatch = newPassword === confirmNewPassword
 
   const handleSubmit = async (e) => {
@@ -67,8 +61,8 @@ function ChangePasswordModal({ isOpen, onClose }) {
       return
     }
 
-    if (!isStrongPassword) {
-      setErrorMessage('Mật khẩu mới chưa đạt đủ điều kiện bảo mật')
+    if (!isValidPassword) {
+      setErrorMessage('Mật khẩu mới phải có ít nhất 4 ký tự và không được chỉ gồm khoảng trắng')
       return
     }
 
@@ -215,15 +209,11 @@ function ChangePasswordModal({ isOpen, onClose }) {
               <ul className="password-rules">
                 <li className={`password-rule ${getRuleClass(hasMinLength)}`}>
                   <span className="password-rule__icon">{renderRuleIcon(hasMinLength)}</span>
-                  Ít nhất 8 ký tự
+                  Ít nhất 4 ký tự
                 </li>
-                <li className={`password-rule ${getRuleClass(hasComplexity)}`}>
-                  <span className="password-rule__icon">{renderRuleIcon(hasComplexity)}</span>
-                  Bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt
-                </li>
-                <li className={`password-rule ${getRuleClass(hasNoWhitespace)}`}>
-                  <span className="password-rule__icon">{renderRuleIcon(hasNoWhitespace)}</span>
-                  Không chứa khoảng trắng
+                <li className={`password-rule ${getRuleClass(hasVisibleCharacter)}`}>
+                  <span className="password-rule__icon">{renderRuleIcon(hasVisibleCharacter)}</span>
+                  Không chỉ gồm khoảng trắng
                 </li>
               </ul>
             </div>

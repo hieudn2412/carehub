@@ -8,6 +8,7 @@ import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse;
 import vn.vietduc.carehubbackend.user.entity.User;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.time.Instant;
 import java.util.Collection;
@@ -206,12 +207,30 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             where s.formVersion.form.id = :formId
               and s.formVersion.id = :versionId
               and (:status is null or s.status = :status)
+              and (:result is null or s.result = :result)
             order by s.createdAt desc
             """)
     Page<FormSubmission> searchByFormVersionId(@Param("formId") Long formId,
                                                @Param("versionId") Long versionId,
                                                @Param("status") FormSubmissionStatus status,
+                                               @Param("result") FormSubmissionResult result,
                                                Pageable pageable);
+
+    long countByFormVersion_IdAndStatusAndResult(
+            Long versionId,
+            FormSubmissionStatus status,
+            FormSubmissionResult result
+    );
+
+    @Query("""
+            select avg(s.convertedScore) from FormSubmission s
+            where s.formVersion.id = :versionId
+              and s.status = :status
+            """)
+    BigDecimal averageConvertedScoreByVersionAndStatus(
+            @Param("versionId") Long versionId,
+            @Param("status") FormSubmissionStatus status
+    );
 
     @EntityGraph(attributePaths = {
             "formVersion", "formVersion.form", "submittedBy", "subjectContext",

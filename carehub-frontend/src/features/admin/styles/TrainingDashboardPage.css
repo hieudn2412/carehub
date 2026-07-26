@@ -86,7 +86,7 @@
 
 .training-dashboard__filters select,
 .training-dashboard__filters input,
-.training-dashboard__filters label > div {
+.training-dashboard__filters label > div:not(.searchable-select) {
   width: 100%;
   min-height: 42px;
   box-sizing: border-box;
@@ -99,10 +99,16 @@
   outline: none;
 }
 
-.training-dashboard__filters label > div {
+.training-dashboard__filters label > div:not(.searchable-select) {
   display: flex;
   align-items: center;
   background: #f8fafc;
+}
+
+.training-dashboard__filters .searchable-select > input {
+  min-height: 42px;
+  padding: 0 34px;
+  border-radius: 9px;
 }
 
 .training-dashboard__alert,

@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar'
 import AdminHeader from '../components/AdminHeader'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import {
-  ArrowLeftOutlined,
   SearchOutlined,
   LoadingOutlined,
   ExclamationCircleOutlined,
@@ -16,7 +15,6 @@ import '../styles/FormPreviewPage.css'
 function FormPreviewPage() {
   const { showToast } = useToast()
   const { id } = useParams()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const versionId = searchParams.get('versionId')
 
@@ -276,16 +274,11 @@ function FormPreviewPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: `/admin/quality/checklists/${id}/edit`, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-preview-page">
               
-              {/* Back to metadata */}
-              <div className="fpp-back-nav" onClick={() => navigate(`/admin/quality/checklists/${id}/edit`)}>
-                <ArrowLeftOutlined /> Quay lại cấu hình
-              </div>
-
               {loading ? (
                 <div className="fpp-loading">
                   <LoadingOutlined /> Đang tải giao diện xem trước...

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   EditOutlined,
   PaperClipOutlined,
-  ArrowLeftOutlined,
   SendOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
@@ -172,10 +171,13 @@ function TrainingHoursDetailScreen() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Giờ đào tạo', link: '/staff/training' },
-          { label: 'Chi tiết' }
-        ]} />
+        <Header
+          back={{ to: '/staff/training', label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Giờ đào tạo', link: '/staff/training' },
+            { label: 'Chi tiết' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div className="training-page">
 

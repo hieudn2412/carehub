@@ -57,6 +57,12 @@ class TrainingRecordStateMachineTest {
                 TrainingRecordStatus.DRAFT,
                 false
         )).isFalse();
+
+        assertThat(stateMachine.canTransition(
+                TrainingRecordStatus.SUBMITTED,
+                TrainingRecordStatus.DRAFT,
+                true
+        )).isTrue();
     }
 
     @Test

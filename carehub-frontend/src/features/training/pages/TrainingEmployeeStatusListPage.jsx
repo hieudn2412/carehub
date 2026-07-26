@@ -9,6 +9,7 @@ import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
 import { DownloadOutlined, EyeOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/TrainingEmployeeStatusListPage.css'
 
 const EXPORT_PAGE_SIZE = 100
@@ -250,21 +251,39 @@ function TrainingEmployeeStatusListPage() {
                     onChange={e => setKeyword(e.target.value)}
                   />
                 </div>
-                <select className="tes-filter-select" value={departmentId} onChange={e => {
-                  setDepartmentId(e.target.value)
-                  setPage(1)
-                }}>
-                  <option value="">Tất cả khoa/phòng</option>
-                  {departments.map(dept => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
-                </select>
+                <div className="tes-department-filter">
+                  <SearchableSelect
+                    value={departmentId}
+                    onChange={(value) => {
+                      setDepartmentId(value)
+                      setPage(1)
+                    }}
+                    options={[
+                      { value: '', label: 'Tất cả khoa/phòng' },
+                      ...departments.map((department) => ({ value: department.id, label: department.name })),
+                    ]}
+                    placeholder="Tất cả khoa/phòng"
+                    searchPlaceholder="Tìm tên khoa/phòng..."
+                    ariaLabel="Tìm và chọn khoa/phòng"
+                  />
+                </div>
                 {professionalFields.length > 0 && (
-                  <select className="tes-filter-select" value={professionalFieldId} onChange={e => {
-                    setProfessionalFieldId(e.target.value)
-                    setPage(1)
-                  }}>
-                    <option value="">Tất cả lĩnh vực</option>
-                    {professionalFields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}
-                  </select>
+                  <div className="tes-field-filter">
+                    <SearchableSelect
+                      value={professionalFieldId}
+                      onChange={(value) => {
+                        setProfessionalFieldId(value)
+                        setPage(1)
+                      }}
+                      options={[
+                        { value: '', label: 'Tất cả lĩnh vực' },
+                        ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                      ]}
+                      placeholder="Tất cả lĩnh vực"
+                      searchPlaceholder="Tìm tên lĩnh vực..."
+                      ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                    />
+                  </div>
                 )}
                 <select className="tes-filter-select" value={complianceStatus} onChange={e => {
                   setComplianceStatus(e.target.value)

@@ -29,7 +29,7 @@ public class MyExamController {
     private final ExamAttemptService attemptService;
     private final SecurityUtils securityUtils;
 
-    @GetMapping("/exam-assignments")
+    @GetMapping({"/exam-assignments", "/professional-competency"})
     public ResponseEntity<ApiResponse<List<MyExamAssignmentResponse>>> listAssignments() {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách bài kiểm tra được phân công thành công",

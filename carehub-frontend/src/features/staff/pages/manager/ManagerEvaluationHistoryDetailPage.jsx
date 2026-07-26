@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, PrinterOutlined, LoadingOutlined } from '@ant-design/icons'
+import { useParams } from 'react-router-dom'
+import { PrinterOutlined, LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { staffApi } from '../../api/staffApi.js'
@@ -22,7 +22,6 @@ function formatScore(value) {
 
 function ManagerEvaluationHistoryDetailPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
 
   const [evaluation, setEvaluation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -46,7 +45,7 @@ function ManagerEvaluationHistoryDetailPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Lịch sử đánh giá" />
+          <Header back={{ to: '/manager/quality/history', label: 'Quay lại' }} title="Lịch sử đánh giá" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
             <LoadingOutlined style={{ fontSize: 32, color: '#2563eb' }} />
             <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải chi tiết kết quả đánh giá...</p>
@@ -61,12 +60,9 @@ function ManagerEvaluationHistoryDetailPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header title="Lịch sử đánh giá" />
+          <Header back={{ to: '/manager/quality/history', label: 'Quay lại' }} title="Lịch sử đánh giá" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
             <p style={{ color: '#ef4444', fontWeight: 600 }}>{error || 'Không tìm thấy chi tiết kết quả đánh giá.'}</p>
-            <button className="training-button" onClick={() => navigate('/manager/quality/history')} style={{ marginTop: 12 }}>
-              <ArrowLeftOutlined /> Quay lại danh sách
-            </button>
           </div>
         </div>
       </div>
@@ -81,38 +77,23 @@ function ManagerEvaluationHistoryDetailPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Lịch sử đánh giá', link: '/manager/quality/history' },
-          { label: 'Chi tiết kết quả' }
-        ]} />
+        <Header
+          back={{ to: '/manager/quality/history', label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Lịch sử đánh giá', link: '/manager/quality/history' },
+            { label: 'Chi tiết kết quả' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <button 
-                onClick={() => navigate('/manager/quality/history')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#475569',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  padding: '4px 0',
-                  marginBottom: 8
-                }}
-              >
-                <ArrowLeftOutlined /> Quay lại danh sách
-              </button>
-              <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả đánh giá bảng kiểm</h1>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả đánh giá quy trình</h1>
               <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
                 {evaluation.title}
               </p>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => window.print()}
               className="training-button"
               style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
@@ -124,9 +105,9 @@ function ManagerEvaluationHistoryDetailPage() {
           <div className="mgr-card">
             {/* Header info */}
             <div className="mgr-detail-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 20 }}>
-              <div className="mgr-avatar" style={{ 
-                background: isPassed ? 'var(--mgr-green-bg)' : 'var(--mgr-red-bg)', 
-                color: isPassed ? 'var(--mgr-green)' : 'var(--mgr-red)' 
+              <div className="mgr-avatar" style={{
+                background: isPassed ? 'var(--mgr-green-bg)' : 'var(--mgr-red-bg)',
+                color: isPassed ? 'var(--mgr-green)' : 'var(--mgr-red)'
               }}>
                 {formatScore(evaluation.convertedScore)}
               </div>
@@ -148,7 +129,7 @@ function ManagerEvaluationHistoryDetailPage() {
               <div className="mgr-eval-section-title" style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>
                 Chi tiết câu trả lời kiểm tra
               </div>
-              
+
               {(evaluation.scoreBreakdown || []).map((ans) => {
                 const answeredOk = ans.weightedScore > 0
                 return (
@@ -164,7 +145,7 @@ function ManagerEvaluationHistoryDetailPage() {
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b' }}>
-                        {ans.code ? `${ans.code}. ` : ''}{ans.title} 
+                        {ans.code ? `${ans.code}. ` : ''}{ans.title}
                         {ans.critical && (
                           <span className="mgr-badge mgr-badge--red" style={{ padding: '2px 6px', fontSize: 9, marginLeft: 6 }}>
                             Trọng tâm
@@ -172,7 +153,7 @@ function ManagerEvaluationHistoryDetailPage() {
                         )}
                       </div>
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                       <span className={`mgr-badge mgr-badge--${answeredOk ? 'green' : 'red'}`} style={{ fontSize: 12, fontWeight: 700 }}>
                         {answeredOk ? 'ĐẠT' : 'KHÔNG ĐẠT'}

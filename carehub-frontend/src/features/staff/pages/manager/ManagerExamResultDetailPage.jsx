@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeftOutlined, LoadingOutlined } from '@ant-design/icons'
+import { useParams } from 'react-router-dom'
+import { LoadingOutlined } from '@ant-design/icons'
 import Sidebar from '../../components/sidebar'
 import Header from '../../components/Header'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
@@ -8,7 +8,6 @@ import '../../styles/ManagerPages.css'
 
 function ManagerExamResultDetailPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
 
   const [assignment, setAssignment] = useState(null)
   const [results, setResults] = useState([])
@@ -56,30 +55,15 @@ function ManagerExamResultDetailPage() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Kết quả thi nhân sự', link: '/manager/exam-results' },
-          { label: 'Chi tiết kết quả' }
-        ]} />
+        <Header
+          back={{ to: '/manager/exam-results', label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Kết quả thi nhân sự', link: '/manager/exam-results' },
+            { label: 'Chi tiết kết quả' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div style={{ marginBottom: 20 }}>
-            <button 
-              onClick={() => navigate('/manager/exam-results')}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#475569',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 500,
-                padding: '4px 0',
-                marginBottom: 8
-              }}
-            >
-              <ArrowLeftOutlined /> Quay lại danh sách
-            </button>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết kết quả kỳ thi</h1>
             <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
               {assignment?.name || `Kỳ thi #${id}`}

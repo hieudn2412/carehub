@@ -8,6 +8,8 @@ import vn.vietduc.carehubbackend.exception.*;
 import vn.vietduc.carehubbackend.form.dto.request.*;
 import vn.vietduc.carehubbackend.form.dto.response.*;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentStatus;
+import vn.vietduc.carehubbackend.form.assignment.repository.FormAssignmentItemRepository;
 import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
 import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.service.FormSchemaSnapshotService;
@@ -19,6 +21,8 @@ import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
+import java.time.Instant;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class FormScoringConfigurationService {
     private final FormScoringRecalculationJobService jobService;
     private final SecurityUtils securityUtils;
     private final UserRepository userRepository;
+    private final FormAssignmentItemRepository assignmentItemRepository;
 
     @Transactional(readOnly = true)
     public Page<FormScoringConfigurationResponse> search(String keyword, FormVersionStatus status,
@@ -40,11 +45,19 @@ public class FormScoringConfigurationService {
         return versions.map(version -> toResponse(version, null));
     }
 
+    @Transactional(readOnly = true)
+    public FormScoringConfigurationResponse get(Long formId, Long versionId) {
+        FormVersion version = versionRepository.findByIdAndForm_Id(versionId, formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
+        return toResponse(version, null);
+    }
+
     @Transactional
     public UpdateFormScoringConfigurationResponse update(Long formId, Long versionId,
                                                           UpdateFormScoringConfigurationRequest request) {
         FormVersion version = versionRepository.findByIdAndFormIdForUpdate(formId, versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
+        authorizeVersionUpdate(versionId);
         if (!Objects.equals(version.getLockVersion(), request.lockVersion())) {
             throw new ConflictException("Form version has been updated by another user");
         }
@@ -126,6 +139,18 @@ public class FormScoringConfigurationService {
     private boolean same(BigDecimal left, BigDecimal right) {
         if (left == null || right == null) return left == null && right == null;
         return left.compareTo(right) == 0;
+    }
+
+    private void authorizeVersionUpdate(Long versionId) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        boolean admin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (admin) return;
+        Long actorId = securityUtils.getCurrentUserId();
+        if (!assignmentItemRepository.existsActiveForAssigneeAndVersion(
+                actorId, versionId, FormAssignmentStatus.ACTIVE, Instant.now())) {
+            throw new ForbiddenException("Manager chỉ được chỉnh điểm đạt của biểu mẫu đang được giao hợp lệ");
+        }
     }
 
     private User currentUser() {

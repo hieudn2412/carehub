@@ -1118,7 +1118,7 @@
 
 .fbp-option-row {
   display: grid;
-  grid-template-columns: 28px minmax(260px, 1fr) 120px 128px 36px;
+  grid-template-columns: 28px minmax(260px, 1fr) 120px 36px;
   gap: 12px;
   align-items: end;
   padding: 9px 10px;
@@ -1198,19 +1198,6 @@
   text-align: center;
 }
 
-.fbp-option-compliant {
-  align-self: end;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 6px;
-  min-height: 48px;
-  color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 .fbp-btn-opt-del {
   align-self: end;
   display: grid;
@@ -1219,7 +1206,6 @@
   min-height: 48px;
 }
 
-.fbp-option-compliant input,
 .fbp-checkbox-label input {
   accent-color: var(--green);
 }
@@ -1347,13 +1333,6 @@
     grid-column: 3 / 4;
   }
 
-  .fbp-option-compliant {
-    grid-column: 2 / 4;
-    grid-row: 2;
-    justify-content: flex-start;
-    min-height: auto;
-  }
-
   .fbp-btn-opt-del {
     grid-column: 4;
     grid-row: 1;
@@ -1415,10 +1394,6 @@
     max-width: 88px;
   }
 
-  .fbp-option-compliant {
-    grid-column: 2 / 3;
-  }
-
   .fbp-btn-opt-del {
     grid-column: 3;
     grid-row: 1;
@@ -1433,7 +1408,7 @@
 }
 
 .fbp-top-nav {
-  width: min(100%, 920px);
+  width: 100%;
   margin: 0 auto;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
@@ -1448,8 +1423,7 @@
 }
 
 .fbp-editor-container {
-  width: min(100%, 820px);
-  margin: 0 auto;
+  width: 100%;
   gap: 14px;
 }
 
@@ -1836,7 +1810,7 @@
 }
 
 .fbp-option-row {
-  grid-template-columns: 28px minmax(0, 1fr) 92px 118px 32px;
+  grid-template-columns: 28px minmax(0, 1fr) 92px 32px;
   gap: 12px;
   padding: 4px 0;
   border: 0;
@@ -1909,15 +1883,6 @@
   text-align: center;
 }
 
-.fbp-option-compliant {
-  align-self: center;
-  min-height: 36px;
-  padding: 0 10px;
-  border: 1px solid #edf0f2;
-  border-radius: 999px;
-  background: #ffffff;
-}
-
 .fbp-btn-opt-del {
   align-self: center;
   min-height: 36px;
@@ -1974,8 +1939,7 @@
     gap: 8px;
   }
 
-  .fbp-option-score,
-  .fbp-option-compliant {
+  .fbp-option-score {
     grid-column: 2 / 3;
   }
 

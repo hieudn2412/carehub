@@ -178,7 +178,7 @@ function ScoringFormulaPage() {
             <div>
               <span className="sfp-eyebrow"><CalculatorOutlined /> QUẢN TRỊ CÔNG THỨC</span>
               <h1>Tỷ trọng và điểm sàn theo phiên bản</h1>
-              <p>Kiểm soát cách tính kết quả mà không làm thay đổi cấu trúc bảng kiểm đã công bố.</p>
+              <p>Kiểm soát cách tính kết quả mà không làm thay đổi cấu trúc quy trình đã công bố.</p>
             </div>
             <div className="sfp-count"><strong>{totalElements}</strong><span>phiên bản</span></div>
           </header>
@@ -187,9 +187,9 @@ function ScoringFormulaPage() {
             <form onSubmit={(event) => { event.preventDefault(); setPage(0); setSearch(keyword.trim()) }}>
               <SearchOutlined />
               <input
-                aria-label="Tìm bảng kiểm hoặc phiên bản"
+                aria-label="Tìm quy trình hoặc phiên bản"
                 onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Tìm theo mã hoặc tên bảng kiểm..."
+                placeholder="Tìm theo mã hoặc tên quy trình..."
                 value={keyword}
               />
               <button type="submit">Tìm kiếm</button>
@@ -215,7 +215,7 @@ function ScoringFormulaPage() {
             ) : (
               <table className="sfp-table">
                 <thead><tr>
-                  <th>Bảng kiểm</th><th>Phiên bản</th><th>Tỷ trọng</th><th>Điểm sàn</th>
+                  <th>Quy trình</th><th>Phiên bản</th><th>Tỷ trọng</th><th>Điểm sàn</th>
                   <th>Bài đã nộp</th><th>Đồng bộ kết quả</th><th aria-label="Hành động" />
                 </tr></thead>
                 <tbody>{rows.map((row) => {

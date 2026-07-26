@@ -118,7 +118,7 @@ function getSubmissionVersionId(submission) {
 function getHistoryErrorMessage(error) {
   const backendMessage = error?.response?.data?.message
   if (backendMessage) return backendMessage
-  return 'Không thể tải kho lịch sử bảng kiểm. Vui lòng thử lại.'
+  return 'Không thể tải kho lịch sử quy trình. Vui lòng thử lại.'
 }
 
 function isActiveAssignment(assignment, item) {
@@ -288,12 +288,10 @@ function AdminQualityHistoryPage() {
   const formFolders = useMemo(() => (
     forms.map((form) => {
       const formVersions = versionCards.filter((version) => String(version.form.id) === String(form.id))
-      const publishedCount = formVersions.filter((version) => version.status === 'PUBLISHED').length
 
       return {
         form,
         versionCount: formVersions.length,
-        publishedCount,
       }
     }).filter((folder) => folder.versionCount > 0)
   ), [forms, versionCards])
@@ -340,6 +338,13 @@ function AdminQualityHistoryPage() {
       <AdminSidebar />
       <div className="dashboard-layout__content">
         <AdminHeader
+          back={selectedForm ? {
+            label: 'Quay lại',
+            onClick: () => {
+              setSelectedFormId(null)
+              setSearchParams({}, { replace: true })
+            },
+          } : undefined}
           breadcrumbs={[
             { label: 'Chất lượng' },
             { label: 'Lịch sử đánh giá' },
@@ -350,9 +355,9 @@ function AdminQualityHistoryPage() {
           {!selectedForm && (
             <section className="aqh-search-hero">
               <div className="aqh-search-hero__copy">
-                <span>Kho lưu trữ bảng kiểm</span>
-                <h1>Tìm kiếm bảng kiểm</h1>
-                <p>Chỉ có thể tìm kiếm các bảng kiểm đã được công bố.</p>
+                <span>Kho lưu trữ quy trình</span>
+                <h1>Tìm kiếm quy trình</h1>
+                <p>Chỉ có thể tìm kiếm các quy trình đã được công bố.</p>
               </div>
               <label className="aqh-main-search">
                 <SearchOutlined />
@@ -379,33 +384,20 @@ function AdminQualityHistoryPage() {
           {loading ? (
             <section className="aqh-empty-state">
               <LoadingOutlined />
-              <span>Đang tải kho lịch sử bảng kiểm...</span>
+              <span>Đang tải kho lịch sử quy trình...</span>
             </section>
           ) : formFolders.length === 0 ? (
             <section className="aqh-empty-state">
               <CheckCircleOutlined />
-              <strong>Không tìm thấy bảng kiểm phù hợp</strong>
-              <span>Hãy thử từ khóa khác hoặc kiểm tra bảng kiểm đã được công bố chưa.</span>
+              <strong>Không tìm thấy quy trình phù hợp</strong>
+              <span>Hãy thử từ khóa khác hoặc kiểm tra quy trình đã được công bố chưa.</span>
             </section>
           ) : selectedForm ? (
             <>
-              <section className="aqh-version-backbar">
-                <button
-                  className="aqh-back-folder"
-                  onClick={() => {
-                    setSelectedFormId(null)
-                    setSearchParams({}, { replace: true })
-                  }}
-                  type="button"
-                >
-                  ← Quay lại trang tìm kiếm
-                </button>
-              </section>
-
               <section className="aqh-version-toolbar">
                 <div>
                   <h2>{selectedForm.title}</h2>
-                  <p>{selectedVersionCards.length} phiên bản trong bảng kiểm này</p>
+                  <p>{selectedVersionCards.length} phiên bản trong quy trình này</p>
                 </div>
                 <label>
                   <FilterOutlined />
@@ -422,7 +414,7 @@ function AdminQualityHistoryPage() {
                 </label>
               </section>
 
-              <section className="aqh-version-grid" aria-label="Danh sách phiên bản bảng kiểm">
+              <section className="aqh-version-grid" aria-label="Danh sách phiên bản quy trình">
                 {selectedVersionCards.map((version) => (
                   <button
                     className="aqh-version-card"
@@ -442,7 +434,7 @@ function AdminQualityHistoryPage() {
                     </h2>
                     <p>{version.description || version.form.description || 'Chưa có mô tả'}</p>
                     <div className="aqh-version-card__meta">
-                      <span>{version.responseCount} response</span>
+                      <span>{version.responseCount} kết quả</span>
                       <span>{version.managerCount} manager</span>
                     </div>
                   </button>
@@ -453,13 +445,13 @@ function AdminQualityHistoryPage() {
             <>
               <section className="aqh-version-toolbar">
                 <div>
-                  <strong>{formFolders.length}</strong> bảng kiểm đã tải
+                  <strong>{formFolders.length}</strong> quy trình đã tải
                   {search.trim() && <span> theo từ khóa tìm kiếm</span>}
                 </div>
               </section>
 
-              <section className="aqh-folder-grid" aria-label="Kho folder bảng kiểm">
-                {formFolders.map(({ form, versionCount, publishedCount }) => (
+              <section className="aqh-folder-grid" aria-label="Kho folder quy trình">
+                {formFolders.map(({ form, versionCount }) => (
                   <button
                     className="aqh-folder-card"
                     key={form.id}
@@ -481,10 +473,6 @@ function AdminQualityHistoryPage() {
                       <FileTextOutlined />
                       {versionCount} phiên bản
                     </span>
-                    <span className="aqh-folder-card__status">
-                      <span>✓</span>
-                      {publishedCount} phiên bản đang hoạt động
-                    </span>
                   </button>
                 ))}
               </section>
@@ -497,7 +485,7 @@ function AdminQualityHistoryPage() {
                     type="button"
                   >
                     {loadingMore && <LoadingOutlined />}
-                    {loadingMore ? 'Đang tải thêm...' : 'Xem thêm 10 bảng kiểm'}
+                    {loadingMore ? 'Đang tải thêm...' : 'Xem thêm 10 quy trình'}
                   </button>
                 </div>
               )}

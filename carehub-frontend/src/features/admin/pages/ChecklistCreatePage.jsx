@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CloseOutlined,
   CopyOutlined,
   DeleteOutlined,
   DownOutlined,
+  HistoryOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   SaveOutlined,
@@ -304,7 +304,6 @@ function ChecklistCreatePage() {
       ? `Đang khôi phục checklist #${pendingDraft.formId} chưa tạo xong bản nháp.`
       : '',
   )
-  const [noticeMessage, setNoticeMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [loadedVersion, setLoadedVersion] = useState(null)
   const [sectionKey, setSectionKey] = useState(null)
@@ -329,7 +328,6 @@ function ChecklistCreatePage() {
     try {
       setLoading(true)
       setErrorMessage('')
-      setNoticeMessage('')
       const [formResponse, versionsResponse] = await Promise.all([
         adminApi.getFormById(id),
         adminApi.getFormVersions(id, { page: 0, size: 100 }),
@@ -370,12 +368,6 @@ function ChecklistCreatePage() {
       setSimpleEditable(editor.compatible)
       setIsEditing(false)
 
-      if (!editor.compatible) {
-        setNoticeMessage(
-          'Checklist này có nhiều phần hoặc cấu hình nâng cao nên đang được hiển thị đầy đủ '
-          + 'ở chế độ chỉ đọc. Dùng Quản lý phiên bản để chỉnh sửa an toàn.',
-        )
-      }
     } catch (error) {
       setErrorMessage(
         error?.response?.data?.message
@@ -775,22 +767,15 @@ function ChecklistCreatePage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="checklist-create-page">
               <div className="ccp-topbar">
-                <button
-                  className="ccp-back-button"
-                  onClick={() => navigate('/admin/quality/checklists')}
-                  type="button"
-                >
-                  <ArrowLeftOutlined /> Quay lại danh sách
-                </button>
                 <div className="ccp-topbar-actions">
                   {isDetailMode && (
                     <button
-                      className="ccp-manage-button"
+                      className="ccp-manage-button ccp-manage-button--permissions"
                       onClick={() => navigate(`/admin/quality/checklists/${id}/assignments`)}
                       type="button"
                     >
@@ -799,11 +784,11 @@ function ChecklistCreatePage() {
                   )}
                   {isDetailMode && (
                     <button
-                      className="ccp-manage-button"
+                      className="ccp-manage-button ccp-manage-button--versions"
                       onClick={() => navigate(`/admin/quality/checklists/${id}/edit`)}
                       type="button"
                     >
-                      Quản lý phiên bản
+                      <HistoryOutlined /> Quản lý phiên bản
                     </button>
                   )}
                   {isDetailMode && simpleEditable && !isEditing && (
@@ -812,7 +797,6 @@ function ChecklistCreatePage() {
                       onClick={() => {
                         setSuccessMessage('')
                         setErrorMessage('')
-                        setNoticeMessage('')
                         setIsEditing(true)
                       }}
                       type="button"
@@ -865,12 +849,6 @@ function ChecklistCreatePage() {
               {successMessage && (
                 <div className="ccp-success" role="status">
                   {successMessage}
-                </div>
-              )}
-
-              {noticeMessage && (
-                <div className="ccp-info" role="status">
-                  {noticeMessage}
                 </div>
               )}
 

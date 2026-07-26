@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 public record MyExamAssignmentResponse(
         Long id,
@@ -26,6 +27,9 @@ public record MyExamAssignmentResponse(
         String availabilityStatus,
         String availabilityText,
         String actionLabel,
-        Boolean actionable
+        Boolean actionable,
+        BigDecimal bestScore,
+        String assessmentStatus,
+        Long detailAttemptId
 ) {
 }

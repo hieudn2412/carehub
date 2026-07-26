@@ -4,11 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
 import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSearchRequest;
-import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
-import vn.vietduc.carehubbackend.training.service.CmeScopeService;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -18,13 +16,10 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
@@ -34,9 +29,8 @@ class TrainingStatusServiceImplTest {
     private final TrainingAccessPolicy accessPolicy = mock(TrainingAccessPolicy.class);
     private final TrainingComplianceCalculator complianceCalculator = mock(TrainingComplianceCalculator.class);
     private final TrainingRecordRepository recordRepository = mock(TrainingRecordRepository.class);
-    private final TrainingRequirementRepository requirementRepository = mock(TrainingRequirementRepository.class);
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final CmeScopeService cmeScopeService = mock(CmeScopeService.class);
+    private final SystemSettingsService settingsService = mock(SystemSettingsService.class);
     private TrainingStatusServiceImpl service;
 
     @BeforeEach
@@ -45,9 +39,8 @@ class TrainingStatusServiceImplTest {
                 accessPolicy,
                 complianceCalculator,
                 recordRepository,
-                requirementRepository,
                 userRepository,
-                cmeScopeService
+                settingsService
         );
     }
 
@@ -59,35 +52,19 @@ class TrainingStatusServiceImplTest {
         User actor = employee(1L, "ADMIN", emergency);
         User first = employee(2L, "NV002", emergency);
         User second = employee(3L, "NV003", surgery);
-        TrainingRequirement requirement = TrainingRequirement.builder()
-                .id(20L)
-                .code("CME-120")
-                .name("Chuẩn CME")
-                .requiredHours(new BigDecimal("120"))
-                .warningThresholdHours(new BigDecimal("80"))
-                .cycleYears(5)
-                .effectiveFrom(asOf.minusYears(1))
-                .build();
-
         when(accessPolicy.currentActor()).thenReturn(actor);
         when(accessPolicy.currentRoleCodes()).thenReturn(Set.of(TrainingAccessPolicy.ROLE_ADMIN));
         when(userRepository.searchTrainingEmployeeCandidates(isNull(), isNull(), isNull(), isNull()))
                 .thenReturn(List.of(first, second));
-        when(requirementRepository.findActiveRequirementsAsOf(asOf)).thenReturn(List.of(requirement));
-        when(cmeScopeService.getApplicableDepartmentIds()).thenReturn(Set.of(10L, 11L));
+        when(settingsService.trainingWindowYears()).thenReturn(5);
+        when(settingsService.globalTrainingHours()).thenReturn(new BigDecimal("120"));
         when(recordRepository.findStatusWindowRecordsForEmployees(
                 eq(List.of(2L, 3L)),
                 eq(asOf.minusYears(5)),
                 eq(asOf),
                 anyList()
         )).thenReturn(List.of());
-        when(complianceCalculator.selectRequirementFromCandidates(
-                any(User.class),
-                isNull(),
-                eq(List.of(requirement)),
-                anySet()
-        )).thenReturn(Optional.of(requirement));
-        when(complianceCalculator.resolveStatus(eq(requirement), eq(BigDecimal.ZERO)))
+        when(complianceCalculator.resolveStatus(eq(new BigDecimal("120")), eq(BigDecimal.ZERO)))
                 .thenReturn(ComplianceStatus.NON_COMPLIANT);
 
         var response = service.getDashboardSummary(new EmployeeTrainingStatusSearchRequest(

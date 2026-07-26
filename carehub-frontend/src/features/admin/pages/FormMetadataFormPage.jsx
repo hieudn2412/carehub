@@ -8,7 +8,6 @@ import {
   normalizeVietnameseFormCode,
 } from '../utils/formCode.js'
 import {
-  ArrowLeftOutlined,
   SaveOutlined,
   PlusCircleOutlined,
   EditOutlined,
@@ -16,12 +15,33 @@ import {
   DeleteOutlined,
   SafetyCertificateOutlined,
   LoadingOutlined,
+  InfoCircleOutlined,
+  CloseOutlined,
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/FormMetadataFormPage.css'
 
 const DEFAULT_FORM_SUBJECT_TYPE = 'USER'
+
+function isValidPassingScore(value) {
+  const text = String(value).trim()
+  const parsed = Number(text)
+  return /^\d+(\.\d)?$/.test(text) && parsed >= 0 && parsed <= 10
+}
+
+function formatWeight(value) {
+  if (value === null || value === undefined || value === '') return '—'
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return '—'
+  return `${Number.isInteger(parsed) ? parsed : parsed.toFixed(1)}%`
+}
+
+function formatScore(value) {
+  if (value === null || value === undefined || value === '') return '—'
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed.toFixed(1) : '—'
+}
 
 function FormMetadataFormPage() {
   const { showToast } = useToast()
@@ -43,6 +63,13 @@ function FormMetadataFormPage() {
   const [versions, setVersions] = useState([])
   const [versionsLoading, setVersionsLoading] = useState(Boolean(isEditMode))
   const [errorMessage, setErrorMessage] = useState('')
+  const [scoringVersion, setScoringVersion] = useState(null)
+  const [passingScore, setPassingScore] = useState('')
+  const [scoringError, setScoringError] = useState('')
+  const [savingScore, setSavingScore] = useState(false)
+  const [loadingScoring, setLoadingScoring] = useState(false)
+  const [scoreConfigurable, setScoreConfigurable] = useState(false)
+  const [scoringReady, setScoringReady] = useState(false)
 
   // Form states
   const [code, setCode] = useState('')
@@ -110,6 +137,71 @@ function FormMetadataFormPage() {
       loadFormVersions()
     }
   }, [isEditMode, loadFormData, loadFormVersions])
+
+  useEffect(() => {
+    if (!scoringVersion) return undefined
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape' && !savingScore) setScoringVersion(null)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [savingScore, scoringVersion])
+
+  const openScoringModal = async (version) => {
+    setScoringVersion(version)
+    setPassingScore(String(version.passingScoreOverride ?? version.passingScore ?? ''))
+    setScoringError('')
+    setScoreConfigurable(false)
+    setScoringReady(false)
+    setLoadingScoring(true)
+
+    try {
+      const response = await adminApi.getFormScoringConfiguration(id, version.id)
+      const configuration = response.data?.data
+      if (!configuration) throw new Error('Phản hồi cấu hình điểm không hợp lệ.')
+      setScoringVersion((current) => current?.id === version.id
+        ? { ...current, ...configuration, id: configuration.versionId }
+        : current)
+      setPassingScore(String(configuration.passingScoreOverride ?? configuration.passingScore ?? ''))
+      setScoringReady(true)
+    } catch (error) {
+      setScoringError(getErrorMessage(error, 'Không thể tải cấu hình điểm của phiên bản.'))
+    } finally {
+      setLoadingScoring(false)
+    }
+  }
+
+  const updatePassingScore = async () => {
+    if (!scoringVersion || savingScore || loadingScoring || !scoringReady || !scoreConfigurable) return
+    if (!isValidPassingScore(passingScore)) {
+      setScoringError('Điểm sàn phải từ 0 đến 10 và có tối đa một chữ số thập phân.')
+      return
+    }
+
+    try {
+      setSavingScore(true)
+      setScoringError('')
+      const response = await adminApi.updateFormScoringConfiguration(id, scoringVersion.id, {
+        passingScore: { mode: 'CUSTOM', value: Number(passingScore) },
+        lockVersion: scoringVersion.lockVersion,
+      })
+      const result = response.data?.data
+      showToast(
+        result?.recalculationScheduled
+          ? 'Đã tiếp nhận thay đổi điểm sàn và tạo tác vụ tính lại kết quả.'
+          : 'Đã thay đổi điểm sàn thành công.',
+        'success',
+      )
+      setScoringVersion(null)
+      setVersionsLoading(true)
+      loadFormVersions()
+    } catch (error) {
+      setScoringError(getErrorMessage(error, 'Không thể thay đổi điểm sàn.'))
+    } finally {
+      setSavingScore(false)
+    }
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -262,7 +354,7 @@ function FormMetadataFormPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="form-metadata-page">
@@ -271,11 +363,6 @@ function FormMetadataFormPage() {
                   {errorMessage}
                 </div>
               )}
-              
-              {/* Back Header link */}
-              <div className="fmp-back-nav" onClick={() => navigate('/admin/quality/checklists')}>
-                <ArrowLeftOutlined /> Quay lại danh sách biểu mẫu
-              </div>
 
               {loading ? (
                 <div className="fmp-loading-card">
@@ -283,13 +370,13 @@ function FormMetadataFormPage() {
                 </div>
               ) : (
                 <div className="fmp-sections-container">
-                  
+
                   {/* Metadata Card */}
                   <div className="fmp-card">
                     <h2 className="fmp-section-title">
                       {isEditMode ? 'Thông tin cấu hình biểu mẫu' : 'Đăng ký biểu mẫu mới'}
                     </h2>
-                    
+
                     <form onSubmit={handleSubmit} className="fmp-form">
                       <div className="fmp-form-grid">
                         <div className="fmp-form-field">
@@ -322,7 +409,7 @@ function FormMetadataFormPage() {
                           <input
                             type="text"
                             className="fmp-input"
-                            placeholder="Nhập tiêu đề đầy đủ của bảng kiểm..."
+                            placeholder="Nhập tiêu đề đầy đủ của quy trình..."
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             required
@@ -379,9 +466,9 @@ function FormMetadataFormPage() {
                               <th style={{ width: '10%' }}>Phiên bản</th>
                               <th style={{ width: '15%' }}>Trạng thái</th>
                               <th style={{ width: '20%' }}>Ngày khởi tạo</th>
-                              <th style={{ width: '25%' }}>Công bố lúc</th>
+                              <th style={{ width: '21%' }}>Công bố lúc</th>
                               <th style={{ width: '15%' }}>Người công bố</th>
-                              <th style={{ width: '15%', textAlign: 'center' }}>Hành động</th>
+                              <th style={{ width: '19%', textAlign: 'center' }}>Hành động</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -445,8 +532,8 @@ function FormMetadataFormPage() {
                                           <>
                                             <button
                                               className="fmp-v-btn fmp-v-btn--edit"
-                                              onClick={() => navigate(`/admin/quality/checklists/${id}/builder/${v.id}`)}
-                                              title="Xem thiết kế và cấu hình điểm sàn"
+                                              onClick={() => openScoringModal(v)}
+                                              title="Thay đổi điểm sàn"
                                             >
                                               <EditOutlined /> Cấu hình điểm
                                             </button>
@@ -477,6 +564,139 @@ function FormMetadataFormPage() {
           </main>
         </div>
       </div>
+
+      {scoringVersion && (
+        <div
+          className="fmp-scoring-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !savingScore) setScoringVersion(null)
+          }}
+        >
+          <section
+            className="fmp-scoring-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fmp-scoring-title"
+          >
+            <header className="fmp-scoring-modal__header">
+              <div>
+                <span>Cấu hình điểm sàn</span>
+                <h2 id="fmp-scoring-title">{title} · v{scoringVersion.versionNumber}</h2>
+              </div>
+              <button
+                aria-label="Đóng cấu hình điểm sàn"
+                disabled={savingScore}
+                onClick={() => setScoringVersion(null)}
+                type="button"
+              >
+                <CloseOutlined />
+              </button>
+            </header>
+
+            <div className="fmp-scoring-notice">
+              <InfoCircleOutlined />
+              <div>
+                <strong>Phiên bản đang publish chỉ được sửa điểm sàn.</strong>
+                <p>Tỷ lệ câu trọng yếu và câu thường đã được khóa để bảo toàn cấu trúc phiên bản.</p>
+              </div>
+            </div>
+
+            <div className="fmp-scoring-weights" aria-label="Tỷ lệ nhóm câu hỏi">
+              <div>
+                <span>Câu trọng yếu</span>
+                <strong>{loadingScoring ? <LoadingOutlined spin /> : formatWeight(scoringVersion.criticalWeightPercent)}</strong>
+              </div>
+              <div>
+                <span>Câu thường</span>
+                <strong>{loadingScoring ? <LoadingOutlined spin /> : formatWeight(scoringVersion.normalWeightPercent)}</strong>
+              </div>
+            </div>
+
+            <div className="fmp-scoring-mode">
+              <div className="fmp-scoring-current">
+                <span>Điểm sàn hiện tại</span>
+                <strong>
+                  {loadingScoring
+                    ? <LoadingOutlined spin />
+                    : `${formatScore(scoringVersion.passingScore)}/10`}
+                </strong>
+              </div>
+              <div className="fmp-scoring-switch">
+                <span className={!scoreConfigurable ? 'is-active' : ''}>Cố định</span>
+                <button
+                  aria-checked={scoreConfigurable}
+                  aria-label="Bật cấu hình điểm sàn"
+                  disabled={loadingScoring || savingScore || !scoringReady}
+                  onClick={() => {
+                    setScoreConfigurable((current) => {
+                      const next = !current
+                      if (!next) {
+                        setPassingScore(String(scoringVersion.passingScoreOverride ?? scoringVersion.passingScore ?? ''))
+                      }
+                      return next
+                    })
+                    setScoringError('')
+                  }}
+                  role="switch"
+                  type="button"
+                >
+                  <i />
+                </button>
+                <span className={scoreConfigurable ? 'is-active' : ''}>Cấu hình</span>
+              </div>
+            </div>
+
+            {scoreConfigurable && (
+              <label className="fmp-scoring-field">
+                <span>Điểm sàn mới</span>
+                <div>
+                  <input
+                    autoFocus
+                    disabled={savingScore}
+                    max="10"
+                    min="0"
+                    onChange={(event) => {
+                      setPassingScore(event.target.value)
+                      setScoringError('')
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') updatePassingScore()
+                    }}
+                    step="0.1"
+                    type="number"
+                    value={passingScore}
+                  />
+                  <strong>/10</strong>
+                </div>
+                <small>Chấp nhận giá trị từ 0 đến 10, tối đa một chữ số thập phân.</small>
+              </label>
+            )}
+
+            {scoringError && <div className="fmp-scoring-error" role="alert">{scoringError}</div>}
+
+            <div className="fmp-scoring-recalculation-note">
+              Khi điểm sàn thay đổi, các kết quả đã nộp của phiên bản này sẽ được hệ thống tính lại.
+            </div>
+
+            <footer className="fmp-scoring-modal__footer">
+              <button disabled={savingScore} onClick={() => setScoringVersion(null)} type="button">
+                Hủy
+              </button>
+              <button
+                className="is-primary"
+                disabled={savingScore || loadingScoring || !scoringReady || !scoreConfigurable}
+                onClick={updatePassingScore}
+                type="button"
+              >
+                {savingScore ? <LoadingOutlined spin /> : <SaveOutlined />}
+                Thay đổi điểm sàn
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}

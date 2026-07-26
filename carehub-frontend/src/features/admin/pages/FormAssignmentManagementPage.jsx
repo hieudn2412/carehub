@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
@@ -12,6 +11,7 @@ import {
 import AdminHeader from '../components/AdminHeader'
 import AdminSidebar from '../components/AdminSidebar'
 import ConfirmModal from '../components/ConfirmModal.jsx'
+import MultiSearchSelect from '../../../shared/components/MultiSearchSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/FormAssignmentManagementPage.css'
@@ -82,12 +82,11 @@ function getManagerName(manager) {
 
 function FormAssignmentManagementPage() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const [form, setForm] = useState(null)
   const [assignments, setAssignments] = useState([])
   const [activeAssignments, setActiveAssignments] = useState([])
   const [managers, setManagers] = useState([])
-  const [selectedManagerId, setSelectedManagerId] = useState('')
+  const [selectedManagerIds, setSelectedManagerIds] = useState([])
   const [validUntil, setValidUntil] = useState('')
   const [status, setStatus] = useState('ACTIVE')
   const [totalAssignments, setTotalAssignments] = useState(0)
@@ -101,18 +100,9 @@ function FormAssignmentManagementPage() {
   const publishedVersion = form?.currentPublishedVersion
 
   const loadManagers = useCallback(async () => {
-    const rolesResponse = await adminApi.getRoles()
-    const roles = rolesResponse.data?.data || []
-    const managerRole = roles.find((role) => String(role.code).toUpperCase() === 'MANAGER')
-
-    if (!managerRole?.id) {
-      throw new Error('MANAGER_ROLE_NOT_FOUND')
-    }
-
     const managersResponse = await adminApi.getUsers({
       page: 0,
       size: 100,
-      roleId: managerRole.id,
       status: 'ACTIVE',
     })
 
@@ -150,20 +140,16 @@ function FormAssignmentManagementPage() {
       setActiveAssignments(getPageContent(activeAssignmentsResponse))
       setTotalAssignments(getPageTotalElements(assignmentsResponse))
       setManagers(managerContent)
-      setSelectedManagerId((current) => (
-        managerContent.some((manager) => String(manager.id) === current) ? current : ''
-      ))
+      setSelectedManagerIds(current => current.filter(value => managerContent.some(user => String(user.id) === value)))
     } catch (error) {
       setForm(null)
       setAssignments([])
       setActiveAssignments([])
       setTotalAssignments(0)
       setManagers([])
-      setSelectedManagerId('')
+      setSelectedManagerIds([])
       setErrorMessage(
-        error.message === 'MANAGER_ROLE_NOT_FOUND'
-          ? 'Chưa tìm thấy vai trò MANAGER trong hệ thống.'
-          : getAssignmentErrorMessage(error),
+        getAssignmentErrorMessage(error),
       )
     } finally {
       setLoading(false)
@@ -194,13 +180,8 @@ function FormAssignmentManagementPage() {
     managers.filter((manager) => !assignedCurrentVersionManagerIds.has(String(manager.id)))
   ), [assignedCurrentVersionManagerIds, managers])
 
-  const effectiveSelectedManagerId = availableManagers.some(
-    (manager) => String(manager.id) === selectedManagerId,
-  )
-    ? selectedManagerId
-    : (availableManagers[0]?.id ? String(availableManagers[0].id) : '')
-
-  const canCreateAssignment = Boolean(publishedVersion?.id && effectiveSelectedManagerId)
+  const effectiveSelectedManagerIds = selectedManagerIds.filter(value => availableManagers.some(user => String(user.id) === value))
+  const canCreateAssignment = Boolean(publishedVersion?.id && effectiveSelectedManagerIds.length > 0)
 
   const submitAssignment = async (event) => {
     event.preventDefault()
@@ -212,23 +193,22 @@ function FormAssignmentManagementPage() {
       return
     }
 
-    if (!effectiveSelectedManagerId) {
-      setErrorMessage('Vui lòng chọn manager cần phân quyền.')
+    if (effectiveSelectedManagerIds.length === 0) {
+      setErrorMessage('Vui lòng chọn ít nhất một người nhận.')
       return
     }
 
     try {
       setSubmitting(true)
       await adminApi.createFormAssignment({
-        managerId: Number(effectiveSelectedManagerId),
+        assigneeIds: effectiveSelectedManagerIds.map(Number),
         validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
         formVersionIds: [Number(publishedVersion.id)],
       })
 
-      const manager = managers.find((item) => String(item.id) === effectiveSelectedManagerId)
-      setSuccessMessage(`Đã phân quyền checklist cho ${getManagerName(manager)}.`)
+      setSuccessMessage(`Đã giao biểu mẫu cho ${effectiveSelectedManagerIds.length} người nhận.`)
       setValidUntil('')
-      setSelectedManagerId('')
+      setSelectedManagerIds([])
       setStatus('ACTIVE')
       setRefreshKey((current) => current + 1)
     } catch (error) {
@@ -266,18 +246,10 @@ function FormAssignmentManagementPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ to: `/admin/quality/checklists/${id}/detail`, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="fam-page">
-              <button
-                className="fam-back-button"
-                onClick={() => navigate(`/admin/quality/checklists/${id}/detail`)}
-                type="button"
-              >
-                <ArrowLeftOutlined /> Quay lại chi tiết checklist
-              </button>
-
               <section className="fam-hero">
                 <div>
                   <span>Phân quyền checklist</span>
@@ -314,42 +286,11 @@ function FormAssignmentManagementPage() {
                 <form className="fam-card fam-card--form" onSubmit={submitAssignment}>
                   <div className="fam-card__header">
                     <div>
-                      <h2>Thêm manager</h2>
-                      <p>Giao phiên bản đang công bố cho một manager đang hoạt động.</p>
+                      <h2>Giao người thực hiện</h2>
+                      <p>Chọn một hoặc nhiều tài khoản đang hoạt động.</p>
                     </div>
                     <UserSwitchOutlined />
                   </div>
-
-                  <label className="fam-field">
-                    <span>Manager</span>
-                    <select
-                      disabled={loading || submitting || !publishedVersion?.id}
-                      onChange={(event) => setSelectedManagerId(event.target.value)}
-                      value={effectiveSelectedManagerId}
-                    >
-                      {availableManagers.length === 0 ? (
-                        <option value="">Không còn manager khả dụng</option>
-                      ) : (
-                        availableManagers.map((manager) => (
-                          <option key={manager.id} value={manager.id}>
-                            {getManagerName(manager)} ({manager.employeeCode})
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </label>
-
-                  <label className="fam-field">
-                    <span>Hiệu lực đến</span>
-                    <input
-                      disabled={loading || submitting || !publishedVersion?.id}
-                      min={new Date().toISOString().slice(0, 16)}
-                      onChange={(event) => setValidUntil(event.target.value)}
-                      type="datetime-local"
-                      value={validUntil}
-                    />
-                    <small>Bỏ trống nếu không có ngày hết hạn.</small>
-                  </label>
 
                   {!publishedVersion?.id && (
                     <div className="fam-note">
@@ -357,14 +298,50 @@ function FormAssignmentManagementPage() {
                     </div>
                   )}
 
-                  <button
-                    className="fam-submit-button"
-                    disabled={loading || submitting || !canCreateAssignment || availableManagers.length === 0}
-                    type="submit"
-                  >
-                    {submitting ? <LoadingOutlined spin /> : <PlusCircleOutlined />}
-                    Giao checklist
-                  </button>
+                  <div className="fam-form-fields">
+                    <div className="fam-field">
+                      <span>Người nhận</span>
+                      <MultiSearchSelect
+                        disabled={loading || submitting || !publishedVersion?.id}
+                        onChange={setSelectedManagerIds}
+                        options={availableManagers.map((manager) => ({
+                          value: manager.id,
+                          label: getManagerName(manager) + (manager.employeeCode ? ' (' + manager.employeeCode + ')' : ''),
+                          description: manager.departmentName || manager.department?.name || 'Chưa có khoa/phòng',
+                        }))}
+                        placeholder="Tìm theo tên hoặc mã nhân viên..."
+                        emptyMessage="Không tìm thấy người nhận phù hợp"
+                        ariaLabel="Tìm và chọn nhiều người nhận"
+                        value={effectiveSelectedManagerIds}
+                      />
+                      <small>
+                        {effectiveSelectedManagerIds.length > 0
+                          ? 'Đã chọn ' + effectiveSelectedManagerIds.length + ' người nhận.'
+                          : 'Gõ tên hoặc mã nhân viên để tìm và chọn nhiều người.'}
+                      </small>
+                    </div>
+
+                    <label className="fam-field">
+                      <span>Hiệu lực đến</span>
+                      <input
+                        disabled={loading || submitting || !publishedVersion?.id}
+                        min={new Date().toISOString().slice(0, 16)}
+                        onChange={(event) => setValidUntil(event.target.value)}
+                        type="datetime-local"
+                        value={validUntil}
+                      />
+                      <small>Bỏ trống nếu không có ngày hết hạn.</small>
+                    </label>
+
+                    <button
+                      className="fam-submit-button"
+                      disabled={loading || submitting || !canCreateAssignment || availableManagers.length === 0}
+                      type="submit"
+                    >
+                      {submitting ? <LoadingOutlined spin /> : <PlusCircleOutlined />}
+                      Giao biểu mẫu
+                    </button>
+                  </div>
                 </form>
 
                 <section className="fam-card fam-card--list">
@@ -398,60 +375,59 @@ function FormAssignmentManagementPage() {
                       Chưa có manager nào ở trạng thái “{getStatusLabel(status)}”.
                     </div>
                   ) : (
-                    <div className="fam-table-wrap">
-                      <table className="fam-table">
-                        <thead>
-                          <tr>
-                            <th>Manager</th>
-                            <th>Phiên bản</th>
-                            <th>Người giao</th>
-                            <th>Hiệu lực</th>
-                            <th>Trạng thái</th>
-                            <th>Hành động</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {assignments.map((assignment) => {
-                            const active = assignment.effectiveStatus === 'ACTIVE' && assignment.itemStatus === 'ACTIVE'
+                    <div className="fam-assignment-list" role="table" aria-label="Danh sách manager được phân quyền">
+                      <div className="fam-assignment-list__head" role="row">
+                        <span role="columnheader">Manager</span>
+                        <span role="columnheader">Phiên bản</span>
+                        <span role="columnheader">Người giao</span>
+                        <span role="columnheader">Hiệu lực</span>
+                        <span role="columnheader">Trạng thái</span>
+                        <span role="columnheader" aria-label="Thao tác" />
+                      </div>
+                      {assignments.map((assignment) => {
+                        const active = assignment.effectiveStatus === 'ACTIVE' && assignment.itemStatus === 'ACTIVE'
+                        const managerName = getManagerName(assignment.manager)
 
-                            return (
-                              <tr key={assignment.assignmentItemId}>
-                                <td>
-                                  <strong>{getManagerName(assignment.manager)}</strong>
-                                  <span>{assignment.manager?.employeeCode || 'Chưa có mã'}</span>
-                                </td>
-                                <td>
-                                  <strong>v{assignment.versionNumber}</strong>
-                                  <span>{assignment.title || form?.title}</span>
-                                </td>
-                                <td>
-                                  <strong>{getManagerName(assignment.assignedBy)}</strong>
-                                  <span>{formatDateTime(assignment.assignedAt)}</span>
-                                </td>
-                                <td>
-                                  <span>{formatDateTime(assignment.validFrom)}</span>
-                                  <span>đến {formatDateTime(assignment.validUntil)}</span>
-                                </td>
-                                <td>
-                                  <span className={`fam-status fam-status--${assignment.effectiveStatus?.toLowerCase()}`}>
-                                    {getStatusLabel(assignment.effectiveStatus)}
-                                  </span>
-                                </td>
-                                <td>
-                                  <button
-                                    className="fam-revoke-button"
-                                    disabled={!active || submitting}
-                                    onClick={() => setConfirmRevoke(assignment)}
-                                    type="button"
-                                  >
-                                    <StopOutlined /> Thu hồi
-                                  </button>
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
+                        return (
+                          <div className="fam-assignment-row" key={assignment.assignmentItemId} role="row">
+                            <div className="fam-assignment-person" role="cell">
+                              <span className="fam-assignment-avatar" aria-hidden="true">
+                                {managerName.charAt(0).toUpperCase()}
+                              </span>
+                              <div>
+                                <strong>{managerName}</strong>
+                                <span>{assignment.manager?.employeeCode || 'Chưa có mã nhân viên'}</span>
+                              </div>
+                            </div>
+                            <div className="fam-assignment-cell" data-label="Phiên bản" role="cell">
+                              <strong>v{assignment.versionNumber}</strong>
+                            </div>
+                            <div className="fam-assignment-cell" data-label="Người giao" role="cell">
+                              <strong>{getManagerName(assignment.assignedBy)}</strong>
+                              <small>{formatDateTime(assignment.assignedAt)}</small>
+                            </div>
+                            <div className="fam-assignment-cell" data-label="Hiệu lực" role="cell">
+                              <strong>{formatDateTime(assignment.validFrom)}</strong>
+                              <small>Đến {formatDateTime(assignment.validUntil)}</small>
+                            </div>
+                            <div className="fam-assignment-cell fam-assignment-cell--status" role="cell">
+                              <span className={'fam-status fam-status--' + assignment.effectiveStatus?.toLowerCase()}>
+                                {getStatusLabel(assignment.effectiveStatus)}
+                              </span>
+                            </div>
+                            <div className="fam-assignment-cell fam-assignment-cell--action" role="cell">
+                              <button
+                                className="fam-revoke-button"
+                                disabled={!active || submitting}
+                                onClick={() => setConfirmRevoke(assignment)}
+                                type="button"
+                              >
+                                <StopOutlined /> Thu hồi
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </section>

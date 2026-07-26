@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeftOutlined,
   CheckCircleOutlined,
   EditOutlined,
   LoadingOutlined,
@@ -263,15 +262,10 @@ function ParaphraseJobReviewPage() {
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
+        <AdminHeader back={{ onClick: () => navigate(-1), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qdoc-page">
-              <button type="button" className="qdoc-back-btn" onClick={() => navigate(-1)}>
-                <ArrowLeftOutlined />
-                <span>Quay lại</span>
-              </button>
-
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên diễn đạt lại...</section>
               ) : !jobDetail ? (

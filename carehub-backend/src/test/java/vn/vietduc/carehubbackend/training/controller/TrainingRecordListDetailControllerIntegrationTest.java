@@ -77,11 +77,13 @@ class TrainingRecordListDetailControllerIntegrationTest {
     private User manager;
     private User sameDepartmentEmployee;
     private User otherDepartmentEmployee;
+    private User adminWithoutDepartment;
     private TrainingActivityType activityType;
     private TrainingRecord ownDraft;
     private TrainingRecord ownSubmittedWithEvidence;
     private TrainingRecord sameDepartmentSubmitted;
     private TrainingRecord otherDepartmentRecord;
+    private TrainingRecord noDepartmentRecord;
 
     @BeforeEach
     void setUp() {
@@ -104,6 +106,9 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .requiresEvidence(false)
                 .active(true)
                 .build());
+        adminWithoutDepartment = saveUser(
+                "P9_ADMIN_NO_DEPT", "p9-admin-no-dept@example.com", "Admin Without Department", null
+        );
 
         ownDraft = saveRecord(user, "Own Draft Course", "Internal", LocalDate.of(2026, 3, 1), TrainingRecordStatus.DRAFT);
         ownSubmittedWithEvidence = saveRecord(user, "Submitted Ultrasound", "Hospital Provider", LocalDate.of(2026, 3, 10), TrainingRecordStatus.SUBMITTED);
@@ -113,6 +118,7 @@ class TrainingRecordListDetailControllerIntegrationTest {
         sameDepartmentSubmitted = saveRecord(sameDepartmentEmployee, "Same Dept Submitted", "Hospital Provider", LocalDate.of(2026, 3, 12), TrainingRecordStatus.SUBMITTED);
         saveEvidence(sameDepartmentSubmitted, EvidenceModerationStatus.ERROR, true);
         otherDepartmentRecord = saveRecord(otherDepartmentEmployee, "Other Dept Course", "External", LocalDate.of(2026, 3, 15), TrainingRecordStatus.DRAFT);
+        noDepartmentRecord = saveRecord(adminWithoutDepartment, "No Department Course", "Internal", LocalDate.of(2026, 3, 20), TrainingRecordStatus.SUBMITTED);
     }
 
     @Test
@@ -166,6 +172,22 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].evidenceCount").value(1))
                 .andExpect(jsonPath("$.data.content[0].passedEvidenceCount").value(1))
                 .andExpect(jsonPath("$.data.sort[0]").value("startDate,asc"));
+    }
+
+    @Test
+    void adminWithoutDepartmentCanListOwnRecordsWithDateFilters() throws Exception {
+        mockMvc.perform(get("/api/v1/training/records")
+                        .queryParam("page", "0")
+                        .queryParam("size", "10")
+                        .queryParam("dateFrom", "2021-07-26")
+                        .queryParam("dateTo", "2026-07-26")
+                        .queryParam("employeeId", adminWithoutDepartment.getId().toString())
+                        .with(jwtFor(adminWithoutDepartment, "ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].id").value(noDepartmentRecord.getId()))
+                .andExpect(jsonPath("$.data.content[0].validUntil").value("2031-03-20"))
+                .andExpect(jsonPath("$.data.content[0].expired").value(false));
     }
 
     @Test

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   FileTextOutlined,
   FileImageOutlined,
@@ -7,7 +7,6 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   InfoCircleOutlined,
-  ArrowLeftOutlined,
   InboxOutlined,
   LoadingOutlined
 } from '@ant-design/icons'
@@ -22,7 +21,6 @@ import '../../styles/TrainingHours.css'
 
 function TrainingHoursEvidenceScreen() {
   const { id } = useParams()
-  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const { showToast } = useToast()
 
@@ -238,11 +236,14 @@ function TrainingHoursEvidenceScreen() {
     <div className="dashboard-layout">
       <Sidebar />
       <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Giờ đào tạo', link: '/staff/training' },
-          { label: 'Chi tiết', link: `/staff/training/${id}` },
-          { label: 'Minh chứng' }
-        ]} />
+        <Header
+          back={{ to: `/staff/training/${id}`, label: 'Quay lại' }}
+          breadcrumbs={[
+            { label: 'Giờ đào tạo', link: '/staff/training' },
+            { label: 'Chi tiết', link: `/staff/training/${id}` },
+            { label: 'Minh chứng' }
+          ]}
+        />
         <div className="dashboard-layout__body">
           <div className="training-page">
             {loading ? (
@@ -385,16 +386,6 @@ function TrainingHoursEvidenceScreen() {
                   )}
                 </div>
 
-                {/* Footer action */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24, borderTop: '1px solid #e5e7eb', paddingTop: 20 }}>
-                  <button
-                    onClick={() => navigate(`/staff/training/${id}`)}
-                    className="training-button"
-                    style={{ borderRadius: 8, padding: '8px 18px', fontWeight: 600 }}
-                  >
-                    <ArrowLeftOutlined style={{ marginRight: 6 }} /> Quay lại chi tiết hồ sơ
-                  </button>
-                </div>
               </div>
             )}
           </div>

@@ -13,6 +13,31 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
+.ted-back-link {
+  width: fit-content;
+  margin-bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.ted-back-link:hover {
+  color: #2563eb;
+  transform: translateX(-2px);
+}
+
+.ted-back-link:focus-visible {
+  border-radius: 6px;
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 4px;
+}
+
 .ted-title {
   font-size: 24px;
   font-weight: 700;
@@ -228,6 +253,74 @@
 
 .ted-table tr:hover td {
   background: #f8fafc;
+}
+
+.ted-training-date {
+  display: block;
+  white-space: nowrap;
+}
+
+.ted-expired-tag {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #c81e1e;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.ted-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ted-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ted-pagination__controls button {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #dbe4ee;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.ted-pagination__controls button:hover:not(:disabled) {
+  border-color: #86cdb9;
+  background: #f0fdf8;
+  color: #0f7a5c;
+}
+
+.ted-pagination__controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .ted-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 /* Status Badges */

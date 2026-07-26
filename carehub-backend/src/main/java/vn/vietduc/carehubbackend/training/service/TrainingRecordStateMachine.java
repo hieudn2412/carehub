@@ -20,8 +20,8 @@ public class TrainingRecordStateMachine {
 
         return switch (from) {
             case DRAFT -> to == TrainingRecordStatus.SUBMITTED || to == TrainingRecordStatus.CANCELLED;
-            case SUBMITTED -> to == TrainingRecordStatus.DRAFT
-                           || (adminActor && to == TrainingRecordStatus.CANCELLED);
+            case SUBMITTED -> adminActor
+                    && (to == TrainingRecordStatus.DRAFT || to == TrainingRecordStatus.CANCELLED);
             case CANCELLED -> false;
         };
     }
