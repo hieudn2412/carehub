@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DeleteOutlined,
@@ -6,11 +6,13 @@ import {
   ExclamationCircleOutlined,
   EyeOutlined,
   CheckSquareOutlined,
+  ClockCircleOutlined,
   ImportOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
+  StopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../components/AdminSidebar'
@@ -21,6 +23,7 @@ import {
   resolveChecklistSearchKeyword,
 } from '../utils/formCode.js'
 import ConfirmModal from '../components/ConfirmModal.jsx'
+import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/FormListPage.css'
 
@@ -34,11 +37,80 @@ const STATUS_LABELS = {
 }
 const RETIRED_STATUS = 'RETIRED'
 const RETIRED_FORMS_CACHE_KEY = 'carehub.admin.retiredForms'
+const ASSIGNMENT_PAGE_SIZE = 100
+const RECIPIENT_SEARCH_DEBOUNCE_MS = 300
 
 function normalizeReferenceList(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.content)) return data.content
   return []
+}
+
+function getAssignmentPage(response) {
+  const data = response?.data?.data || {}
+  return {
+    content: Array.isArray(data.content) ? data.content : [],
+    totalPages: Math.max(1, Number(data.totalPages) || 1),
+  }
+}
+
+async function fetchAllPages(fetcher, params = {}) {
+  const firstResponse = await fetcher({ ...params, page: 0, size: ASSIGNMENT_PAGE_SIZE })
+  const firstPage = getAssignmentPage(firstResponse)
+  if (firstPage.totalPages === 1) return firstPage.content
+
+  const remainingResponses = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) => (
+      fetcher({ ...params, page: index + 1, size: ASSIGNMENT_PAGE_SIZE })
+    )),
+  )
+
+  return [
+    ...firstPage.content,
+    ...remainingResponses.flatMap((response) => getAssignmentPage(response).content),
+  ]
+}
+
+async function fetchAllActiveFormAssignments(formId) {
+  const firstResponse = await adminApi.getFormAssignmentsByForm(formId, {
+    page: 0,
+    size: ASSIGNMENT_PAGE_SIZE,
+    status: 'ACTIVE',
+  })
+  const firstPage = getAssignmentPage(firstResponse)
+  if (firstPage.totalPages === 1) return firstPage.content
+
+  const remainingResponses = await Promise.all(
+    Array.from({ length: firstPage.totalPages - 1 }, (_, index) => (
+      adminApi.getFormAssignmentsByForm(formId, {
+        page: index + 1,
+        size: ASSIGNMENT_PAGE_SIZE,
+        status: 'ACTIVE',
+      })
+    )),
+  )
+
+  return [
+    ...firstPage.content,
+    ...remainingResponses.flatMap((response) => getAssignmentPage(response).content),
+  ]
+}
+
+function countLatestVersionAssignees(assignments, form) {
+  const versionId = form.currentPublishedVersion?.id
+  if (!versionId) return 0
+
+  const assigneeIds = assignments
+    .filter((assignment) => (
+      String(assignment.formVersionId) === String(versionId)
+      && assignment.effectiveStatus === 'ACTIVE'
+      && assignment.itemStatus === 'ACTIVE'
+    ))
+    .map((assignment) => assignment.assignee?.id || assignment.manager?.id)
+    .filter(Boolean)
+    .map(String)
+
+  return new Set(assigneeIds).size
 }
 
 function formatChecklistDate(value) {
@@ -48,6 +120,19 @@ function formatChecklistDate(value) {
   if (Number.isNaN(date.getTime())) return 'Chưa có'
 
   return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
+function formatAssignmentDateTime(value) {
+  if (!value) return 'Không giới hạn'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Không giới hạn'
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -170,7 +255,7 @@ function getAssignmentErrorMessage(error) {
   }
 
   if (statusCode === 409) {
-    return 'Manager này đang có phân quyền hiệu lực cho một trong các checklist đã chọn.'
+    return 'Người nhận này đang có phân quyền hiệu lực cho một trong các checklist đã chọn.'
   }
 
   return error?.response?.data?.message || 'Không thể phân quyền checklist. Vui lòng thử lại.'
@@ -214,12 +299,23 @@ function FormListPage() {
   const [assignmentLoading, setAssignmentLoading] = useState(false)
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false)
   const [assignmentError, setAssignmentError] = useState('')
-  const [managers, setManagers] = useState([])
+  const [assignmentMessage, setAssignmentMessage] = useState(null)
   const [assignableForms, setAssignableForms] = useState([])
-  const [selectedManagerId, setSelectedManagerId] = useState('')
+  const [recipientOptions, setRecipientOptions] = useState([])
+  const [recipientSearch, setRecipientSearch] = useState('')
+  const [recipientLoading, setRecipientLoading] = useState(false)
+  const [recipientSearchError, setRecipientSearchError] = useState(false)
+  const [selectedRecipientId, setSelectedRecipientId] = useState('')
+  const [selectedRecipient, setSelectedRecipient] = useState(null)
+  const [recipientAssignments, setRecipientAssignments] = useState([])
+  const [recipientAssignmentsLoading, setRecipientAssignmentsLoading] = useState(false)
   const [selectedFormVersionIds, setSelectedFormVersionIds] = useState([])
   const [assignmentValidFrom, setAssignmentValidFrom] = useState('')
   const [assignmentValidUntil, setAssignmentValidUntil] = useState('')
+  const [confirmAssignmentRevoke, setConfirmAssignmentRevoke] = useState(null)
+  const [permissionForm, setPermissionForm] = useState(null)
+  const recipientSearchRequestRef = useRef(0)
+  const recipientAssignmentsRequestRef = useRef(0)
 
   useEffect(() => {
     let active = true
@@ -306,11 +402,7 @@ function FormListPage() {
         const activeForms = nextForms.filter((form) => getEffectiveStatus(form) !== RETIRED_STATUS)
         const [performanceResult, ...assignmentResults] = await Promise.allSettled([
           adminApi.getDashboardFormPerformance({ page: 0, size: 100 }),
-          ...activeForms.map((form) => adminApi.getFormAssignmentsByForm(form.id, {
-            page: 0,
-            size: 1,
-            status: 'ACTIVE',
-          })),
+          ...activeForms.map((form) => fetchAllActiveFormAssignments(form.id)),
         ])
 
         if (ignoreResponse) return
@@ -333,7 +425,7 @@ function FormListPage() {
           const form = activeForms[index]
           nextStats[form.id] = {
             ...nextStats[form.id],
-            activeAssignmentCount: Number(result.value.data?.data?.totalElements || 0),
+            activeAssignmentCount: countLatestVersionAssignees(result.value, form),
           }
         })
         setFormStats(nextStats)
@@ -467,52 +559,32 @@ function FormListPage() {
   const loadAssignmentOptions = async () => {
     setAssignmentLoading(true)
     setAssignmentError('')
+    setAssignmentMessage(null)
 
     try {
-      const rolesResponse = await adminApi.getRoles()
-      const roles = rolesResponse.data?.data || []
-      const managerRole = roles.find((role) => String(role.code).toUpperCase() === 'MANAGER')
-
-      if (!managerRole?.id) {
-        throw new Error('MANAGER_ROLE_NOT_FOUND')
-      }
-
-      const [managersResponse, formsResponse] = await Promise.all([
-        adminApi.getUsers({
-          page: 0,
-          size: 100,
-          roleId: managerRole.id,
-          status: 'ACTIVE',
-        }),
-        adminApi.getForms({
-          page: 0,
-          size: 100,
+      const formContent = await fetchAllPages(
+        (params) => adminApi.getForms(params),
+        {
           status: 'PUBLISHED',
           sort: 'updatedAt,desc',
-        }),
-      ])
-
-      const managerContent = managersResponse.data?.data?.content || []
-      const formContent = formsResponse.data?.data?.content || []
+        },
+      )
       const publishedForms = formContent.filter((form) =>
         getEffectiveStatus(form) === 'PUBLISHED' && form.currentPublishedVersion?.id,
       )
 
-      setManagers(managerContent)
       setAssignableForms(publishedForms)
-      setSelectedManagerId(managerContent[0]?.id ? String(managerContent[0].id) : '')
+      setSelectedRecipientId('')
+      setSelectedRecipient(null)
+      setRecipientAssignments([])
       setSelectedFormVersionIds([])
       setAssignmentValidFrom('')
       setAssignmentValidUntil('')
     } catch (error) {
-      if (error.message === 'MANAGER_ROLE_NOT_FOUND') {
-        setAssignmentError('Chưa tìm thấy vai trò MANAGER trong hệ thống.')
-      } else {
-        setAssignmentError(getAssignmentErrorMessage(error))
-      }
-      setManagers([])
+      setAssignmentError(getAssignmentErrorMessage(error))
       setAssignableForms([])
-      setSelectedManagerId('')
+      setSelectedRecipientId('')
+      setSelectedRecipient(null)
       setSelectedFormVersionIds([])
     } finally {
       setAssignmentLoading(false)
@@ -520,18 +592,119 @@ function FormListPage() {
   }
 
   const openAssignmentModal = () => {
+    setRecipientSearch('')
+    setRecipientOptions([])
+    setRecipientSearchError(false)
     setAssignmentModalOpen(true)
     loadAssignmentOptions()
   }
 
   const closeAssignmentModal = () => {
-    if (assignmentSubmitting) {
+    if (assignmentSubmitting || confirmAssignmentRevoke) {
       return
     }
 
     setAssignmentModalOpen(false)
     setAssignmentError('')
+    setAssignmentMessage(null)
   }
+
+  useEffect(() => {
+    if (!assignmentModalOpen) return undefined
+
+    const requestId = recipientSearchRequestRef.current + 1
+    recipientSearchRequestRef.current = requestId
+    const timer = window.setTimeout(async () => {
+      setRecipientLoading(true)
+      setRecipientSearchError(false)
+      try {
+        const response = await adminApi.getUsers({
+          page: 0,
+          size: 20,
+          status: 'ACTIVE',
+          keyword: recipientSearch.trim() || undefined,
+        })
+        if (recipientSearchRequestRef.current !== requestId) return
+        setRecipientOptions(response.data?.data?.content || [])
+      } catch {
+        if (recipientSearchRequestRef.current === requestId) {
+          setRecipientOptions([])
+          setRecipientSearchError(true)
+        }
+      } finally {
+        if (recipientSearchRequestRef.current === requestId) setRecipientLoading(false)
+      }
+    }, RECIPIENT_SEARCH_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [assignmentModalOpen, recipientSearch])
+
+  const loadRecipientAssignments = async (recipientId) => {
+    if (!recipientId) {
+      setRecipientAssignments([])
+      return []
+    }
+
+    const requestId = recipientAssignmentsRequestRef.current + 1
+    recipientAssignmentsRequestRef.current = requestId
+    setRecipientAssignmentsLoading(true)
+    try {
+      const assignments = await fetchAllPages(
+        (params) => adminApi.getFormAssignments(params),
+        { managerId: Number(recipientId) },
+      )
+      if (recipientAssignmentsRequestRef.current !== requestId) return []
+      setRecipientAssignments(assignments)
+      return assignments
+    } catch {
+      if (recipientAssignmentsRequestRef.current === requestId) {
+        setRecipientAssignments([])
+        setAssignmentMessage({
+          type: 'error',
+          text: 'Không thể tải trạng thái phân quyền của người nhận. Vui lòng thử lại.',
+        })
+      }
+      return []
+    } finally {
+      if (recipientAssignmentsRequestRef.current === requestId) {
+        setRecipientAssignmentsLoading(false)
+      }
+    }
+  }
+
+  const assignedByVersionId = useMemo(() => {
+    const result = new Map()
+    recipientAssignments.forEach((assignment) => {
+      if (assignment.status !== 'ACTIVE') return
+      ;(assignment.items || []).forEach((item) => {
+        if (item.status !== 'ACTIVE' || result.has(String(item.formVersionId))) return
+        result.set(String(item.formVersionId), {
+          ...item,
+          assignmentId: assignment.id,
+          validFrom: assignment.validFrom,
+          validUntil: assignment.validUntil,
+          assignedAt: assignment.assignedAt,
+        })
+      })
+    })
+    return result
+  }, [recipientAssignments])
+
+  const displayedAssignableForms = useMemo(() => (
+    [...assignableForms].sort((left, right) => {
+      const leftAssigned = assignedByVersionId.has(String(left.currentPublishedVersion?.id))
+      const rightAssigned = assignedByVersionId.has(String(right.currentPublishedVersion?.id))
+      if (leftAssigned !== rightAssigned) return leftAssigned ? -1 : 1
+      return String(left.title || '').localeCompare(String(right.title || ''), 'vi')
+    })
+  ), [assignableForms, assignedByVersionId])
+
+  const unassignedVersionIds = useMemo(() => (
+    assignableForms
+      .map((form) => String(form.currentPublishedVersion?.id || ''))
+      .filter((versionId) => versionId && !assignedByVersionId.has(versionId))
+  ), [assignableForms, assignedByVersionId])
+  const assignedCurrentVersionCount = assignableForms.length - unassignedVersionIds.length
 
   const toggleAssignableForm = (versionId) => {
     setSelectedFormVersionIds((current) =>
@@ -542,24 +715,25 @@ function FormListPage() {
   }
 
   const toggleAllAssignableForms = () => {
-    const allVersionIds = assignableForms.map((form) => String(form.currentPublishedVersion.id))
-
     setSelectedFormVersionIds((current) =>
-      current.length === allVersionIds.length ? [] : allVersionIds,
+      unassignedVersionIds.length > 0 && current.length === unassignedVersionIds.length
+        ? []
+        : unassignedVersionIds,
     )
   }
 
   const submitAssignment = async (event) => {
     event.preventDefault()
     setAssignmentError('')
+    setAssignmentMessage(null)
 
-    if (!selectedManagerId) {
-      setAssignmentError('Vui lòng chọn manager cần phân quyền.')
+    if (!selectedRecipientId) {
+      setAssignmentMessage({ type: 'error', text: 'Vui lòng chọn người nhận phân quyền.' })
       return
     }
 
     if (selectedFormVersionIds.length === 0) {
-      setAssignmentError('Vui lòng chọn ít nhất một checklist đã công bố.')
+      setAssignmentMessage({ type: 'error', text: 'Vui lòng chọn ít nhất một checklist.' })
       return
     }
 
@@ -568,14 +742,14 @@ function FormListPage() {
       && assignmentValidUntil
       && new Date(assignmentValidFrom) >= new Date(assignmentValidUntil)
     ) {
-      setAssignmentError('Thời gian kết thúc phải sau thời gian bắt đầu.')
+      setAssignmentMessage({ type: 'error', text: 'Thời gian kết thúc phải sau thời gian bắt đầu.' })
       return
     }
 
     try {
       setAssignmentSubmitting(true)
       await adminApi.createFormAssignment({
-        managerId: Number(selectedManagerId),
+        assigneeIds: [Number(selectedRecipientId)],
         validFrom: assignmentValidFrom
           ? new Date(assignmentValidFrom).toISOString()
           : undefined,
@@ -585,13 +759,36 @@ function FormListPage() {
         formVersionIds: selectedFormVersionIds.map(Number),
       })
 
-      const manager = managers.find((item) => String(item.id) === selectedManagerId)
-      setSuccessMessage(`Đã phân quyền ${selectedFormVersionIds.length} checklist cho ${manager?.fullName || manager?.employeeCode || 'manager'}.`)
-      setShowRetiredShortcut(false)
-      setAssignmentModalOpen(false)
+      const assignedCount = selectedFormVersionIds.length
+      setSelectedFormVersionIds([])
+      await loadRecipientAssignments(selectedRecipientId)
+      setAssignmentMessage({
+        type: 'success',
+        text: `Đã giao ${assignedCount} biểu mẫu cho ${selectedRecipient?.fullName || selectedRecipient?.employeeCode || 'người nhận'}.`,
+      })
       setRefreshKey((current) => current + 1)
     } catch (error) {
-      setAssignmentError(getAssignmentErrorMessage(error))
+      setAssignmentMessage({ type: 'error', text: getAssignmentErrorMessage(error) })
+    } finally {
+      setAssignmentSubmitting(false)
+    }
+  }
+
+  const revokeRecipientAssignment = async () => {
+    if (!confirmAssignmentRevoke?.assignmentItemId) return
+    try {
+      setAssignmentSubmitting(true)
+      setAssignmentMessage(null)
+      await adminApi.revokeFormAssignmentItem(confirmAssignmentRevoke.assignmentItemId)
+      await loadRecipientAssignments(selectedRecipientId)
+      setAssignmentMessage({
+        type: 'success',
+        text: `Đã thu hồi biểu mẫu "${confirmAssignmentRevoke.title}".`,
+      })
+      setConfirmAssignmentRevoke(null)
+      setRefreshKey((current) => current + 1)
+    } catch (error) {
+      setAssignmentMessage({ type: 'error', text: getAssignmentErrorMessage(error) })
     } finally {
       setAssignmentSubmitting(false)
     }
@@ -844,7 +1041,7 @@ function FormListPage() {
                             <td>
                               <button
                                 className="flp-stat-link"
-                                onClick={() => navigate(`/admin/quality/checklists/${form.id}/assignments`)}
+                                onClick={() => setPermissionForm(form)}
                                 title={`Quản lý người được giao ${form.title}`}
                                 type="button"
                               >
@@ -871,16 +1068,6 @@ function FormListPage() {
                             </td>
                             <td>
                               <div className="flp-actions-cell">
-                                <button
-                                  className="flp-btn-action flp-btn-detail"
-                                  onClick={() =>
-                                    navigate(`/admin/quality/checklists/${form.id}/detail`)
-                                  }
-                                  title="Xem nội dung checklist"
-                                  type="button"
-                                >
-                                  <EyeOutlined /> Chi tiết
-                                </button>
                                 {form.currentPublishedVersion?.id && (
                                   <button
                                     className="flp-btn-action flp-btn-evaluate"
@@ -891,6 +1078,16 @@ function FormListPage() {
                                     <CheckSquareOutlined /> Đánh giá
                                   </button>
                                 )}
+                                <button
+                                  className="flp-btn-action flp-btn-detail"
+                                  onClick={() =>
+                                    navigate(`/admin/quality/checklists/${form.id}/detail`)
+                                  }
+                                  title="Xem nội dung checklist"
+                                  type="button"
+                                >
+                                  <EyeOutlined /> Chi tiết
+                                </button>
                                 {getEffectiveStatus(form) !== 'RETIRED' && (
                                   <button
                                     aria-label={`Ngừng hoạt động ${form.title}`}
@@ -973,6 +1170,21 @@ function FormListPage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, form: null })}
       />
+      {permissionForm && (
+        <FormVersionAssignmentModal
+          form={permissionForm}
+          onAssignmentCountChange={(formId, count) => {
+            setFormStats((current) => ({
+              ...current,
+              [formId]: {
+                ...current[formId],
+                activeAssignmentCount: count,
+              },
+            }))
+          }}
+          onClose={() => setPermissionForm(null)}
+        />
+      )}
       {assignmentModalOpen && (
         <div className="flp-assignment-backdrop" role="presentation" onMouseDown={closeAssignmentModal}>
           <form
@@ -985,8 +1197,8 @@ function FormListPage() {
             <div className="flp-assignment-modal__header">
               <div>
                 <p className="flp-assignment-modal__eyebrow">Phân quyền checklist</p>
-                <h2>Giao checklist cho manager</h2>
-                <span>Chỉ các checklist đã công bố mới được phép phân quyền.</span>
+                <h2>Giao checklist cho người nhận</h2>
+                <span>Chọn một người để giao hoặc thu hồi các phiên bản đang hoạt động.</span>
               </div>
               <button
                 aria-label="Đóng"
@@ -1001,7 +1213,7 @@ function FormListPage() {
 
             {assignmentLoading ? (
               <div className="flp-assignment-loading">
-                <LoadingOutlined spin /> Đang tải manager và checklist đã công bố...
+                <LoadingOutlined spin /> Đang tải danh sách checklist...
               </div>
             ) : (
               <>
@@ -1011,94 +1223,173 @@ function FormListPage() {
                   </div>
                 )}
 
-                <label className="flp-assignment-field">
-                  <span>Manager nhận phân quyền</span>
-                  <select
-                    disabled={assignmentSubmitting || managers.length === 0}
-                    onChange={(event) => setSelectedManagerId(event.target.value)}
-                    value={selectedManagerId}
+                {assignmentMessage && (
+                  <div
+                    className={`flp-assignment-message flp-assignment-message--${assignmentMessage.type}`}
+                    role={assignmentMessage.type === 'error' ? 'alert' : 'status'}
                   >
-                    {managers.length === 0 ? (
-                      <option value="">Chưa có manager đang hoạt động</option>
-                    ) : (
-                      managers.map((manager) => (
-                        <option key={manager.id} value={manager.id}>
-                          {manager.fullName || manager.employeeCode} ({manager.employeeCode})
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-
-                <label className="flp-assignment-field">
-                  <span>Hiệu lực từ</span>
-                  <input
-                    disabled={assignmentSubmitting}
-                    onChange={(event) => setAssignmentValidFrom(event.target.value)}
-                    type="datetime-local"
-                    value={assignmentValidFrom}
-                  />
-                  <small>Bỏ trống để phân quyền có hiệu lực ngay.</small>
-                </label>
-
-                <label className="flp-assignment-field">
-                  <span>Hiệu lực đến</span>
-                  <input
-                    disabled={assignmentSubmitting}
-                    min={new Date().toISOString().slice(0, 16)}
-                    onChange={(event) => setAssignmentValidUntil(event.target.value)}
-                    type="datetime-local"
-                    value={assignmentValidUntil}
-                  />
-                  <small>Bỏ trống nếu phân quyền không có ngày hết hạn.</small>
-                </label>
-
-                <div className="flp-assignment-list-head">
-                  <div>
-                    <strong>Checklist đã công bố</strong>
-                    <span>{selectedFormVersionIds.length}/{assignableForms.length} đã chọn</span>
+                    {assignmentMessage.type === 'error' && <ExclamationCircleOutlined />}
+                    {assignmentMessage.text}
                   </div>
-                  <button
-                    disabled={assignmentSubmitting || assignableForms.length === 0}
-                    onClick={toggleAllAssignableForms}
-                    type="button"
-                  >
-                    {assignableForms.length > 0 && selectedFormVersionIds.length === assignableForms.length
-                      ? 'Bỏ chọn tất cả'
-                      : 'Chọn tất cả'}
-                  </button>
+                )}
+
+                <div className="flp-assignment-field">
+                  <span>Người nhận phân quyền</span>
+                  <SearchableSelect
+                    ariaLabel="Tìm người nhận phân quyền"
+                    disabled={assignmentSubmitting}
+                    emptyMessage={recipientSearchError
+                      ? 'Không thể tải người nhận. Hãy nhập lại để thử lại.'
+                      : 'Không tìm thấy tài khoản đang hoạt động'}
+                    loading={recipientLoading}
+                    loadingMessage="Đang tìm người nhận..."
+                    onChange={(value) => {
+                      const recipient = recipientOptions.find((item) => String(item.id) === String(value))
+                      setSelectedRecipientId(value)
+                      setSelectedRecipient(recipient || null)
+                      setRecipientSearch('')
+                      setSelectedFormVersionIds([])
+                      setAssignmentMessage(null)
+                      loadRecipientAssignments(value)
+                    }}
+                    onSearch={setRecipientSearch}
+                    options={recipientOptions.map((recipient) => ({
+                      value: recipient.id,
+                      label: recipient.fullName || recipient.name || recipient.employeeCode,
+                      description: recipient.employeeCode,
+                      searchText: `${recipient.fullName || recipient.name || ''} ${recipient.employeeCode || ''}`,
+                    }))}
+                    placeholder="Chọn người nhận"
+                    searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
+                    selectedOption={selectedRecipient ? {
+                      value: selectedRecipient.id,
+                      label: selectedRecipient.fullName || selectedRecipient.name || selectedRecipient.employeeCode,
+                      description: selectedRecipient.employeeCode,
+                    } : undefined}
+                    value={selectedRecipientId}
+                  />
                 </div>
 
-                <div className="flp-assignment-list">
-                  {assignableForms.length === 0 ? (
-                    <div className="flp-assignment-empty">
-                      Chưa có checklist đã công bố để phân quyền.
+                <div className="flp-assignment-validity">
+                  <label className="flp-assignment-field">
+                    <span>Hiệu lực từ</span>
+                    <input
+                      disabled={assignmentSubmitting}
+                      onChange={(event) => setAssignmentValidFrom(event.target.value)}
+                      type="datetime-local"
+                      value={assignmentValidFrom}
+                    />
+                    <small>Bỏ trống để có hiệu lực ngay.</small>
+                  </label>
+
+                  <label className="flp-assignment-field">
+                    <span>Hiệu lực đến</span>
+                    <input
+                      disabled={assignmentSubmitting}
+                      min={assignmentValidFrom || undefined}
+                      onChange={(event) => setAssignmentValidUntil(event.target.value)}
+                      type="datetime-local"
+                      value={assignmentValidUntil}
+                    />
+                    <small>Bỏ trống nếu không có ngày hết hạn.</small>
+                  </label>
+                </div>
+
+                {!selectedRecipientId ? (
+                  <div className="flp-assignment-recipient-prompt">
+                    Chọn người nhận để xem các checklist đã giao và chưa giao.
+                  </div>
+                ) : (
+                  <>
+                    <div className="flp-assignment-list-head">
+                      <div>
+                        <strong>Danh sách checklist</strong>
+                        <span>
+                          {assignedCurrentVersionCount} đã giao · {selectedFormVersionIds.length}/{unassignedVersionIds.length} đang chọn
+                        </span>
+                      </div>
+                      <button
+                        disabled={assignmentSubmitting || recipientAssignmentsLoading || unassignedVersionIds.length === 0}
+                        onClick={toggleAllAssignableForms}
+                        type="button"
+                      >
+                        {unassignedVersionIds.length > 0 && selectedFormVersionIds.length === unassignedVersionIds.length
+                          ? 'Bỏ chọn tất cả'
+                          : 'Chọn tất cả'}
+                      </button>
                     </div>
-                  ) : (
-                    assignableForms.map((form) => {
-                      const versionId = String(form.currentPublishedVersion.id)
-                      const checked = selectedFormVersionIds.includes(versionId)
 
-                      return (
-                        <label className="flp-assignment-option" key={form.id}>
-                          <input
-                            checked={checked}
-                            disabled={assignmentSubmitting}
-                            onChange={() => toggleAssignableForm(versionId)}
-                            type="checkbox"
-                          />
-                          <span className="flp-assignment-option__body">
-                            <strong>{form.title}</strong>
-                            <small>
-                              {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
-                            </small>
-                          </span>
-                          <span className="flp-assignment-option__status">Đã công bố</span>
-                        </label>
-                      )
-                    })
-                  )}
-                </div>
+                    <div className="flp-assignment-list">
+                      {recipientAssignmentsLoading ? (
+                        <div className="flp-assignment-empty">
+                          <LoadingOutlined spin /> Đang tải trạng thái phân quyền...
+                        </div>
+                      ) : displayedAssignableForms.length === 0 ? (
+                        <div className="flp-assignment-empty">
+                          Chưa có checklist với phiên bản đang hoạt động.
+                        </div>
+                      ) : (
+                        displayedAssignableForms.map((form) => {
+                          const versionId = String(form.currentPublishedVersion.id)
+                          const currentAssignment = assignedByVersionId.get(versionId)
+                          const checked = selectedFormVersionIds.includes(versionId)
+
+                          if (currentAssignment) {
+                            return (
+                              <article className="flp-assignment-option flp-assignment-option--assigned" key={form.id}>
+                                <span className="flp-assignment-option__assigned-mark" aria-hidden="true">✓</span>
+                                <span className="flp-assignment-option__body">
+                                  <strong>{form.title}</strong>
+                                  <small>
+                                    {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
+                                  </small>
+                                </span>
+                                <span className="flp-assignment-option__assigned-actions">
+                                  <span className="flp-assignment-option__status">Đã giao</span>
+                                  <span className="flp-assignment-option__validity">
+                                    <ClockCircleOutlined /> {currentAssignment.validUntil
+                                      ? `Đến ${formatAssignmentDateTime(currentAssignment.validUntil)}`
+                                      : 'Không giới hạn'}
+                                  </span>
+                                  <button
+                                    disabled={assignmentSubmitting}
+                                    onClick={() => setConfirmAssignmentRevoke({
+                                      ...currentAssignment,
+                                      title: form.title,
+                                    })}
+                                    type="button"
+                                  >
+                                    <StopOutlined /> Thu hồi
+                                  </button>
+                                </span>
+                              </article>
+                            )
+                          }
+
+                          return (
+                            <label className="flp-assignment-option" key={form.id}>
+                              <input
+                                checked={checked}
+                                disabled={assignmentSubmitting}
+                                onChange={() => toggleAssignableForm(versionId)}
+                                type="checkbox"
+                              />
+                              <span className="flp-assignment-option__body">
+                                <strong>{form.title}</strong>
+                                <small>
+                                  {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
+                                </small>
+                              </span>
+                              <span className="flp-assignment-option__status flp-assignment-option__status--available">
+                                Chưa giao
+                              </span>
+                            </label>
+                          )
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <div className="flp-assignment-actions">
                   <button
@@ -1113,13 +1404,14 @@ function FormListPage() {
                     className="flp-assignment-submit"
                     disabled={
                       assignmentSubmitting ||
-                      managers.length === 0 ||
+                      !selectedRecipientId ||
+                      recipientAssignmentsLoading ||
                       selectedFormVersionIds.length === 0
                     }
                     type="submit"
                   >
                     {assignmentSubmitting ? <LoadingOutlined spin /> : <UserSwitchOutlined />}
-                    Giao checklist
+                    Giao biểu mẫu
                   </button>
                 </div>
               </>
@@ -1127,6 +1419,18 @@ function FormListPage() {
           </form>
         </div>
       )}
+      <ConfirmModal
+        danger
+        isOpen={Boolean(confirmAssignmentRevoke)}
+        message={confirmAssignmentRevoke
+          ? `Thu hồi biểu mẫu "${confirmAssignmentRevoke.title}" khỏi ${selectedRecipient?.fullName || selectedRecipient?.employeeCode || 'người nhận'}?`
+          : ''}
+        onCancel={() => {
+          if (!assignmentSubmitting) setConfirmAssignmentRevoke(null)
+        }}
+        onConfirm={revokeRecipientAssignment}
+        title="Thu hồi phân quyền"
+      />
     </div>
   )
 }

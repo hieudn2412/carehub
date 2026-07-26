@@ -47,8 +47,8 @@ function MultiSearchSelect({
       }
     }
 
-    document.addEventListener('mousedown', closeWhenClickingOutside)
-    return () => document.removeEventListener('mousedown', closeWhenClickingOutside)
+    document.addEventListener('mousedown', closeWhenClickingOutside, true)
+    return () => document.removeEventListener('mousedown', closeWhenClickingOutside, true)
   }, [])
 
   const openDropdown = () => {

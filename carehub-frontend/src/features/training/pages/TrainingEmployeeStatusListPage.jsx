@@ -13,7 +13,11 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/TrainingEmployeeStatusListPage.css'
 
 const EXPORT_PAGE_SIZE = 100
-const COMPLIANCE_STATUSES = new Set(['COMPLIANT', 'NEEDS_ATTENTION', 'NON_COMPLIANT', 'AT_RISK', 'NOT_CONFIGURED'])
+const COMPLIANCE_STATUSES = new Set(['COMPLIANT', 'NON_COMPLIANT'])
+
+function normalizeComplianceStatus(status) {
+  return status === 'COMPLIANT' ? 'COMPLIANT' : 'NON_COMPLIANT'
+}
 
 function responseData(response) {
   return response?.data?.data || {}
@@ -29,14 +33,13 @@ function normalizeEmployee(item) {
     submittedHours: Number(item.submittedHours) || 0,
     requiredHours: Number(item.requiredHours) || 0,
     progressPercentage: Number(item.progressPercentage) || 0,
-    complianceStatus: item.complianceStatus,
+    complianceStatus: normalizeComplianceStatus(item.complianceStatus),
   }
 }
 
 function getComplianceParams(complianceFilter) {
-  return complianceFilter === 'NEEDS_ATTENTION'
-    ? { compliant: false }
-    : { complianceStatus: complianceFilter || undefined }
+  if (!complianceFilter) return {}
+  return { compliant: complianceFilter === 'COMPLIANT' }
 }
 
 function csvCell(value) {
@@ -47,8 +50,6 @@ function downloadEmployeeTrainingCsv(rows) {
   const statusLabels = {
     COMPLIANT: 'Đạt',
     NON_COMPLIANT: 'Chưa đạt',
-    AT_RISK: 'Đang theo dõi',
-    NOT_CONFIGURED: 'Chưa áp dụng',
   }
   const csvRows = [
     ['Mã NV', 'Họ và tên', 'Khoa/Phòng', 'Chức danh', 'Giờ yêu cầu', 'Giờ đã nộp', 'Tiến độ', 'Trạng thái']
@@ -121,9 +122,11 @@ function TrainingEmployeeStatusListPage() {
   const [departmentId, setDepartmentId] = useState(() => searchParams.get('departmentId') || '')
   const [professionalFieldId, setProfessionalFieldId] = useState(() => searchParams.get('professionalFieldId') || '')
   const [complianceStatus, setComplianceStatus] = useState(() => {
-    if (searchParams.get('compliant') === 'false') return 'NEEDS_ATTENTION'
+    if (searchParams.get('compliant') === 'true') return 'COMPLIANT'
+    if (searchParams.get('compliant') === 'false') return 'NON_COMPLIANT'
     const requestedStatus = searchParams.get('complianceStatus') || ''
-    return COMPLIANCE_STATUSES.has(requestedStatus) ? requestedStatus : ''
+    if (COMPLIANCE_STATUSES.has(requestedStatus)) return requestedStatus
+    return requestedStatus ? 'NON_COMPLIANT' : ''
   })
 
   const [page, setPage] = useState(1)
@@ -209,8 +212,6 @@ function TrainingEmployeeStatusListPage() {
   const statusCfg = {
     COMPLIANT: { label: 'Đạt', cls: 'tes-badge--compliant', barClass: 'tes-progress--compliant' },
     NON_COMPLIANT: { label: 'Chưa đạt', cls: 'tes-badge--non-compliant', barClass: 'tes-progress--non-compliant' },
-    AT_RISK: { label: 'Đang theo dõi', cls: 'tes-badge--at-risk', barClass: 'tes-progress--at-risk' },
-    NOT_CONFIGURED: { label: 'Chưa áp dụng', cls: 'tes-badge--not-configured', barClass: '' },
   }
 
   const getVisiblePages = () => {
@@ -291,10 +292,7 @@ function TrainingEmployeeStatusListPage() {
                 }}>
                   <option value="">Tất cả trạng thái</option>
                   <option value="COMPLIANT">Đạt</option>
-                  <option value="NEEDS_ATTENTION">Chưa đạt / cần chú ý</option>
                   <option value="NON_COMPLIANT">Chưa đạt</option>
-                  <option value="AT_RISK">Đang theo dõi</option>
-                  <option value="NOT_CONFIGURED">Chưa thiết lập</option>
                 </select>
                 <div className="tes-total-label">
                   {totalElements} nhân viên
@@ -337,29 +335,23 @@ function TrainingEmployeeStatusListPage() {
                       </thead>
                       <tbody>
                         {employees.map((item, idx) => {
-                          const cfg = statusCfg[item.complianceStatus] || statusCfg.NOT_CONFIGURED
-                          const pct = item.complianceStatus === 'NOT_CONFIGURED'
-                            ? 0
-                            : progressPct(item.submittedHours, item.requiredHours)
+                          const cfg = statusCfg[item.complianceStatus] || statusCfg.NON_COMPLIANT
+                          const pct = progressPct(item.submittedHours, item.requiredHours)
                           return (
                             <tr key={item.employeeId + '-' + idx}>
                               <td className="tes-td-code">{item.employeeCode}</td>
                               <td>{item.employeeName}</td>
                               <td>{item.departmentName}</td>
                               <td className="tes-col-progress">
-                                {item.complianceStatus === 'NOT_CONFIGURED' ? (
-                                  <span className="tes-progress-none">—</span>
-                                ) : (
-                                  <div className="tes-progress-cell">
-                                    <span className="tes-progress-label">{item.submittedHours}/{item.requiredHours}h</span>
-                                    <div className="tes-progress-track">
-                                      <div
-                                        className={`tes-progress-fill ${cfg.barClass}`}
-                                        style={{ width: `${pct}%` }}
-                                      />
-                                    </div>
+                                <div className="tes-progress-cell">
+                                  <span className="tes-progress-label">{item.submittedHours}/{item.requiredHours}h</span>
+                                  <div className="tes-progress-track">
+                                    <div
+                                      className={`tes-progress-fill ${cfg.barClass}`}
+                                      style={{ width: `${pct}%` }}
+                                    />
                                   </div>
-                                )}
+                                </div>
                               </td>
                               <td>
                                 <span className={`tes-badge ${cfg.cls}`}>{cfg.label}</span>
