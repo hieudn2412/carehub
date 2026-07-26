@@ -14,4 +14,26 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: './src/test/setup.js',
+    include: ['src/**/*.test.{js,jsx}'],
+    // scripts/l1-sync-status.py reads vitest-report.json to fill the Status column
+    // of docs/l1-unit-tests/Frontend.csv.
+    reporters: ['default', 'json'],
+    outputFile: {
+      json: './vitest-report.json',
+    },
+    coverage: {
+      provider: 'v8',
+      include: [
+        'src/shared/api/**',
+        'src/features/auth/utils/**',
+        'src/features/auth/services/**',
+        'src/features/auth/hooks/**',
+        'src/features/training/utils/**',
+      ],
+    },
+  },
 })

@@ -1,0 +1,108 @@
+﻿"Frontend  |  httpClient interceptors (01–12, 23) · evidenceFile (13–22) · authNavigation (24–35) · tokenStorage (36–39) · useOtpExpiry (40–44)","","","","","","","","","","",""
+"Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: httpClient request interceptor  |  AC-01-01, TDS Part 2.2","","","","","","","","","","",""
+"L1-FE-01","BC-TRUE","an access token in session storage is sent as a Bearer header","AC-01-01; TDS Part 2.2","P1","tokenStorage.setAccessToken('access-1')
+MSW: GET /orders → 200, capturing the request headers","httpClient.get('/orders')","Request carried Authorization = 'Bearer access-1'","No","Pass","",""
+"L1-FE-02","BC-FALSE","no access token → no Authorization header is added","TDS Part 2.2","P2","sessionStorage empty
+MSW: GET /orders → 200","httpClient.get('/orders')","No Authorization header on the request","No","Pass","","BC FALSE of the token check"
+"L1-FE-03","CC-FALSE","an explicit Authorization header is not overwritten","TDS Part 2.2","P3","tokenStorage.setAccessToken('access-1')
+Request config supplies Authorization = 'Bearer explicit'","httpClient.get('/orders', { headers: { Authorization: 'Bearer explicit' } })","The explicit header wins — the interceptor does not overwrite it","No","Pass","","CC: second sub-condition FALSE"
+"  ▶  Block: httpClient response interceptor — silent refresh  |  TDS Part 2.2, AUTH_001","","","","","","","","","","",""
+"L1-FE-04","BC-TRUE","401 → refresh succeeds → original request is retried with the new token","AC-01-01; TDS Part 2.2","P1","accessToken = 'stale', refreshToken = 'refresh-1'
+MSW: GET /orders → 401 on call 1, 200 on call 2
+MSW: POST /auth/refresh-token → { accessToken: 'fresh', refreshToken: 'refresh-2' }","httpClient.get('/orders')","POST /auth/refresh-token called exactly once
+GET /orders called twice; the retry carried 'Bearer fresh'
+Response resolves with the real data — the user sees no error
+sessionStorage now holds 'fresh' / 'refresh-2'","No","Pass","","The happy path of the silent refresh"
+"L1-FE-05","BC-FALSE","401 → refresh fails → session cleared and redirected to login","NAC-01-01; TDS Part 2.2","P1","accessToken = 'stale', refreshToken = 'refresh-1'
+MSW: GET /orders → 401
+MSW: POST /auth/refresh-token → 401","httpClient.get('/orders')","Promise rejects
+accessToken and refreshToken cleared
+window.location.replace called with '/auth/login'","Yes","Pass","",""
+"L1-FE-06","CC-TRUE","401 with no refresh token → no refresh attempt, straight to login","NAC-01-01","P1","accessToken = 'stale', NO refreshToken
+MSW: GET /orders → 401","httpClient.get('/orders')","Promise rejects
+POST /auth/refresh-token never called
+window.location.replace called with '/auth/login'","Yes","Pass","","CC: the missing-refresh-token guard"
+"L1-FE-07","EP-Invalid","refresh response without accessToken → treated as a failure","NAC-01-01","P2","refreshToken = 'refresh-1'
+MSW: GET /orders → 401
+MSW: POST /auth/refresh-token → 200 with data = {} (no accessToken)","httpClient.get('/orders')","Rejects with 'Refresh token response is invalid'
+Session cleared; redirected to '/auth/login'","Yes","Pass","","A 200 with a malformed body must not be treated as success"
+"L1-FE-08","CC-TRUE","a 401 on %s never triggers a refresh","TDS Part 2.2","P1","refreshToken = 'refresh-1'
+@each over the 5 REFRESH_IGNORED_PATHS
+MSW: POST <path> → 401","httpClient.post(path, {})","Promise rejects and POST /auth/refresh-token is never called for any of the 5 auth paths — no refresh loop on the auth endpoints themselves","Yes","Pass","","it.each over /auth/login, /auth/refresh-token, /auth/logout, /auth/forgot-password, /auth/reset-password"
+"L1-FE-09","CC-TRUE","a retried request that 401s again is rejected instead of looping","TDS Part 2.2","P1","refreshToken = 'refresh-1'
+MSW: GET /orders → 401 every time
+MSW: POST /auth/refresh-token → 200 with a new token","httpClient.get('/orders')","Refresh called exactly once; /orders called exactly twice
+The _retry flag prevents an infinite refresh loop","Yes","Pass","","CC: the _retry sub-condition"
+"L1-FE-10","CC-FALSE","a non-401 error is passed through untouched","TDS Part 2.2","P1","valid tokens in storage
+MSW: GET /orders → 500","httpClient.get('/orders')","Rejects with response.status 500
+Refresh never called; accessToken unchanged","Yes","Pass","","CC: the status !== 401 sub-condition"
+"L1-FE-11","State","two concurrent 401s share a single refresh call (dedup)","TDS Part 2.2; NFR-P01","P2","refreshToken = 'refresh-1'
+MSW: GET /orders and GET /exams → 401 on first call, 200 on retry
+MSW: POST /auth/refresh-token → 200","Promise.all([httpClient.get('/orders'), httpClient.get('/exams')])","Both requests resolve with their data
+POST /auth/refresh-token called exactly ONCE — the in-flight refresh is shared","No","Pass","","Deduplication of concurrent refreshes"
+"L1-FE-12","BC-FALSE","already on /auth/login → session cleared without a redundant redirect","TDS Part 2.2","P3","window.location.pathname = '/auth/login'
+accessToken = 'stale', no refreshToken
+MSW: GET /orders → 401","httpClient.get('/orders')","Session cleared
+window.location.replace NOT called — no redundant navigation while already on the login screen","Yes","Pass","","BC FALSE of the pathname check"
+"  ▶  Block: evidenceFile.getEvidenceFileError()  |  BV-02 / BV-03, BR-04, FR-017","","","","","","","","","","",""
+"L1-FE-13","EP-Invalid","no file selected → prompt to choose a file","BR-03; FR-015","P1","file = null","getEvidenceFileError(null)","Returns 'Vui lòng chọn tệp minh chứng.'","Yes","Pass","","BR-03: evidence is mandatory"
+"L1-FE-14","BVA-Min","size = 0 → rejected as empty","BV-03","P1","file = { name: 'cert.pdf', type: 'application/pdf', size: 0 }","getEvidenceFileError(file)","Returns 'Tệp ""cert.pdf"" đang trống.'","Yes","Pass","","BVA-Min-1"
+"L1-FE-15","BVA-Max","size = 20 MB exactly → accepted (last valid byte count)","BV-03","P1","size = MAX_EVIDENCE_FILE_SIZE_BYTES (20 MB exactly)","getEvidenceFileError(file)","Returns null — the boundary is inclusive","No","Pass","","BVA-Max of the client-side limit"
+"L1-FE-16","BVA-Max+1","size = 20 MB + 1 → rejected with the 20 MB message","BV-03","P1","size = MAX_EVIDENCE_FILE_SIZE_BYTES + 1","getEvidenceFileError(file)","Returns a message matching /20 MB/","Yes","Pass","","BVA-Max+1"
+"L1-FE-17","EP-Invalid","extension does not match MIME type → rejected","BR-04; FR-017","P1","file = { name: 'certificate.pdf', type: 'image/jpeg', size: 1024 }","getEvidenceFileError(file)","Returns a message matching /không đúng định dạng/ — extension and MIME type must agree","Yes","Pass","","Blocks a renamed-extension upload"
+"L1-FE-18","EP-Valid","%s with %s → accepted","BR-04; FR-017","P1","it.each — (certificate.pdf, application/pdf), (certificate.png, image/png), (certificate.jpg, image/jpeg), (certificate.jpeg, image/jpeg)","getEvidenceFileError(file)","Returns null for all four accepted combinations","No","Pass","","it.each over the allow-list"
+"  ▶  Block: evidenceFile.formatEvidenceStorageSummary()","","","","","","","","","","",""
+"L1-FE-19","BC-TRUE","optimized and original > stored → shows the saving","AC-04-01","P3","evidence = { originalFileSizeBytes: 10000, fileSizeBytes: 4000, optimized: true, savedPercent: 60 }","formatEvidenceStorageSummary(evidence, formatSize)","Returns 'Gốc 10000 B → lưu 4000 B · giảm 60.0%'","No","Pass","",""
+"L1-FE-20","BC-FALSE","not optimized → shows the stored size only","AC-04-01","P3","evidence = { fileSizeBytes: 4000, optimized: false }","formatEvidenceStorageSummary(evidence, formatSize)","Returns 'Lưu 4000 B'","No","Pass","","BC FALSE of the optimized flag"
+"L1-FE-21","BC-FALSE","optimized but original == stored → no saving shown","AC-04-01","P3","evidence = { originalFileSizeBytes: 4000, fileSizeBytes: 4000, optimized: true, savedPercent: 0 }","formatEvidenceStorageSummary(evidence, formatSize)","Returns 'Lưu 4000 B' — no saving is claimed when nothing was saved","No","Pass","","CC: the original > stored sub-condition"
+"L1-FE-22","BVA-Max+1","size = 5 MB + 1 must be rejected per SRS BR-04 / FR-017 / BV-02 (D4)","BR-04; FR-017; BV-02","P1","file = { name: 'certificate.jpg', type: 'image/jpeg', size: 5 MB + 1 }","getEvidenceFileError(file)","EXPECTED: a non-null error (SRS caps evidence at 5 MB)
+ACTUAL: null — this module allows 20 MB, so the file is accepted client-side and then rejected by the backend","Yes","Fail","D4","DEFECT D4 — expected to fail until fixed"
+"L1-FE-23","State","window.location.replace is stubbed so redirects are observable","TDS Part 2.2","P3","The jsdom setup replaces window.location with a stub","vi.isMockFunction(window.location.replace)","Returns true — guards against the suite silently losing its redirect stub and passing L1-FE-05/06 vacuously","No","Pass","","Meta-assertion protecting the redirect tests"
+"  ▶  Block: authNavigation.hasAnyRole() / hasAnyPermission()  |  NAC-01-03","","","","","","","","","","",""
+"L1-FE-24","BC-TRUE","an empty allow-list means ""no restriction"" → always true","NAC-01-03","P2","allowedRoles = [] then undefined","hasAnyRole(roles, allowedRoles)","Returns true — an empty allow-list means the route is unrestricted","No","Pass","","Contrast with L1-FE-26"
+"L1-FE-25","EP","the ROLE_ prefix and casing are normalised on both sides","NAC-01-03","P1","Mixed ROLE_ prefixes and casing on both sides","hasAnyRole(['ROLE_ADMIN'], ['ADMIN']), (['admin'], ['ROLE_ADMIN']), (['ROLE_USER'], ADMIN_ROLES)","First two true, third false — both sides are normalised before comparison","No","Pass","",""
+"L1-FE-26","BC-FALSE","an empty allow-list denies (opposite of hasAnyRole)","NAC-01-03","P2","allowedPermissions = [] then undefined","hasAnyPermission(['QUESTION_AUTHOR'], allowedPermissions)","Returns false — the opposite default to hasAnyRole, so an unconfigured permission gate is closed","No","Pass","","Asymmetry worth pinning"
+"L1-FE-27","CC-TRUE","an ADMIN role short-circuits the permission check","NAC-01-03","P1","permissions = [], roles = ['ROLE_ADMIN'] then ['ROLE_USER']","hasAnyPermission([], EVALUATION_PERMISSIONS, roles)","ADMIN → true (bypass); USER → false","No","Pass","","CC: the admin short circuit"
+"L1-FE-28","EP","a matching evaluation permission grants access without any role","NAC-03-03","P1","permissions = ['RESULT_VIEWER'] then ['SOMETHING_ELSE']","hasAnyPermission(permissions, EVALUATION_PERMISSIONS)","Matching permission → true; unknown permission → false","No","Pass","",""
+"  ▶  Block: authNavigation.getDefaultAuthenticatedRoute()","","","","","","","","","","",""
+"L1-FE-29","EP","%j → %s","AC-01-01","P1","it.each — 5 role/permission combinations","getDefaultAuthenticatedRoute(roles, permissions)
+
+Inputs:
+  ROLE_ADMIN                 → /admin/dashboard
+  ROLE_MANAGER               → /manager/dashboard
+  ROLE_USER                  → /staff/dashboard
+  [] + QUESTION_REVIEWER     → /admin/evaluation/dashboard
+  [] + []                    → /training","Each combination lands on the expected route","No","Pass","","it.each"
+"L1-FE-30","EP","ADMIN outranks an evaluation permission and MANAGER","AC-01-01","P2","(a) roles ADMIN+MANAGER with RESULT_VIEWER
+(b) roles MANAGER with RESULT_VIEWER","getDefaultAuthenticatedRoute(roles, permissions)","(a) → /admin/dashboard (ADMIN outranks everything)
+(b) → /admin/evaluation/dashboard (evaluation permissions are checked before MANAGER)","No","Pass","","Pins the precedence order"
+"L1-FE-31","CC","/admin/** needs ADMIN; /admin/evaluation/** also accepts an evaluation permission","NAC-01-03; NAC-03-03","P1","Various role / permission / path combinations","isPathAllowedForRoles(...) and isPathAllowedForAccess(...)","/admin/accounts: ADMIN true, MANAGER false
+/staff/dashboard with USER: true
+empty path: false
+/admin/evaluation/bank: ADMIN true, QUESTION_AUTHOR true, USER false
+/admin/accounts with QUESTION_AUTHOR only: FALSE — an evaluation permission must not open non-evaluation admin screens","Yes","Pass","","CC on the two-branch disjunction; the last assertion is the privilege-escalation guard"
+"  ▶  Block: authNavigation.getPostLoginRoute()  |  AC-01-01","","","","","","","","","","",""
+"L1-FE-32","EP-Valid","an allowed requested path is honoured","AC-01-01","P1","JWT with roles = ['ROLE_ADMIN'] (base64url payload)","getPostLoginRoute(token, '/admin/accounts')","Returns '/admin/accounts' — the deep link is honoured","No","Pass","",""
+"L1-FE-33","BC-FALSE","a forbidden requested path falls back to the role default","NAC-01-03","P1","JWT with roles = ['ROLE_USER']","getPostLoginRoute(token, '/admin/accounts')","Returns '/staff/dashboard' — the forbidden deep link is replaced by the role default, not followed","Yes","Pass","",""
+"L1-FE-34","EP-Invalid","a malformed or missing token yields the unauthenticated default","NAC-01-01","P2","token = undefined, then 'not-a-jwt', then 'a.!!!not-base64!!!.c'","getPostLoginRoute(token, '/admin/accounts')","Returns '/training' in all three cases — a malformed token yields no roles and never grants admin access","Yes","Pass","","Decoding failures must fail closed"
+"L1-FE-35","EP","an evaluation-permission user is routed into the evaluation dashboard","NAC-03-03","P1","JWT with roles = [] and permissions = ['EXAM_PUBLISHER']","getPostLoginRoute(token, '/admin/evaluation/papers') then (token, '/admin/accounts')","Evaluation path honoured
+/admin/accounts redirected to /admin/evaluation/dashboard","No","Pass","",""
+"  ▶  Block: tokenStorage  |  TDS Part 2.2 session handling","","","","","","","","","","",""
+"L1-FE-36","EP-Valid","tokens round-trip through sessionStorage under the carehub.* keys","TDS Part 2.2","P1","Empty sessionStorage","setAccessToken('access-1'); setRefreshToken('refresh-1')","Getters return the stored values; hasAccessToken() = true
+Keys are exactly 'carehub.accessToken' / 'carehub.refreshToken' in sessionStorage (not localStorage)","No","Pass","",""
+"L1-FE-37","EP-Invalid","setting a falsy token (%s) removes the stored entry","TDS Part 2.2","P2","it.each — falsy token null, undefined, ''
+Tokens present beforehand","setAccessToken(falsy); setRefreshToken(falsy)","Both entries are removed (not stored as 'null'/'undefined')
+hasAccessToken() = false","No","Pass","","it.each over falsy values"
+"L1-FE-38","EP","requiresFirstLoginSetup is stored as the strings ""true""/""false""","AC-01-03","P3","—","setRequiresFirstLoginSetup(true) then (false); then write 'TRUE' directly","Stored as the strings 'true' / 'false'
+Only the exact string 'true' reads back as true — 'TRUE' reads as false","No","Pass","","Strict string comparison"
+"L1-FE-39","State","clear() removes every carehub key and the legacy localStorage token","AC-01-04; TDS Part 2.2","P1","All three carehub keys set plus a legacy localStorage 'token'","tokenStorage.clear()","All three sessionStorage keys removed
+localStorage 'token' removed — no credential survives a logout or a failed refresh","No","Pass","","AC-01-04: sessions must end cleanly"
+"  ▶  Block: useOtpExpiry  |  BV-14 OTP window 300 s; AC-01-02, BR-30","","","","","","","","","","",""
+"L1-FE-40","BVA-Max","a fresh expiry starts at the full 300 s window, formatted 05:00","BV-14; AC-01-02","P1","vi.useFakeTimers(); system time pinned to 2026-07-26T10:00:00Z
+renderHook(() => useOtpExpiry(createOtpExpiresAt()))","Read result.current on mount","formattedRemaining = '05:00'; isExpired = false","No","Pass","","Fake timers make the boundary exact"
+"L1-FE-41","BVA-Min","1 s left is not expired; 0 s left is","BV-14; BR-30","P1","renderHook(() => useOtpExpiry(Date.now() + 1000))","Read on mount, then vi.advanceTimersByTime(1000)","Before: '00:01', isExpired = false (BVA-Min)
+After: '00:00', isExpired = true","No","Pass","","The exact expiry transition"
+"L1-FE-42","BVA-Min-1","an expiry already in the past clamps to 0 rather than going negative","BV-14; BR-30","P2","renderHook(() => useOtpExpiry(Date.now() − 60000))","Read result.current on mount","formattedRemaining = '00:00'; isExpired = true — clamped at 0, never negative","Yes","Pass","","BVA below the lower bound"
+"L1-FE-43","State","resetExpiry restarts the countdown at the configured duration","AC-01-02","P2","renderHook(() => useOtpExpiry(Date.now() + 1000, 120)) advanced to expiry","act(() => result.current.resetExpiry())","isExpired = false again; formattedRemaining = '02:00' (the configured 120 s, not the 300 s default)","No","Pass","","Resend-OTP flow"
+"L1-FE-44","EP-Invalid","a non-numeric initial expiry falls back to a fresh default window","BV-14","P3","renderHook(() => useOtpExpiry('not-a-number'))","Read result.current on mount","formattedRemaining = '05:00'; isExpired = false — a non-numeric initial value falls back to a fresh default window rather than expiring immediately","No","Pass","",""

@@ -1,0 +1,118 @@
+﻿"BoundaryValues  |  BVA + EP across all numeric constraints  |  SRS 4.5 BV-01…BV-18","","","","","","","","","","",""
+"Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: TrainingDomainValidator.validateRecordForm()  |  BV-01 declaredHours 0.5–999","","","","","","","","","","",""
+"L1-BV-01","BVA","manual declaredHours is accepted only within 0.5–999","BV-01; FR-015","P1","legacyImport = false
+@ParameterizedTest @CsvSource — 5 points","validator.validateRecordForm(request, false)
+
+Inputs:
+  0.49   → invalid (BVA-Min-1)
+  0.5    → valid   (BVA-Min)
+  0.51   → valid
+  999    → valid   (BVA-Max)
+  999.01 → invalid (BVA-Max+1)","Valid inputs do not throw
+Invalid inputs throw BadRequestException","Yes","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-02","BC-FALSE","legacyImport=true bypasses the declaredHours range entirely","BV-01","P2","legacyImport = true
+@ParameterizedTest — declaredHours = 0.01 then 1000000","validator.validateRecordForm(request, true)","Does not throw — legacy rows bypass the range so historical data can be imported","No","Pass","","BC FALSE of the !legacyImport guard"
+"L1-BV-03","CC-FALSE","declaredHours null skips the range check","BV-01","P2","declaredHours = null","validator.validateRecordForm(request, false)","Does not throw — the range check is skipped","No","Pass","","CC: second sub-condition FALSE"
+"L1-BV-04","BVA-Max+1","the too-many-hours message must state the enforced limit (D3)","BV-01","P2","declaredHours = 1000 (above MAX_DIRECT_RECORD_HOURS = 999)","validator.validateRecordForm(request, false)","EXPECTED: BadRequestException whose message quotes 999
+ACTUAL: message says 'must not exceed 24' — a limit the code does not enforce","Yes","Fail","D3","DEFECT D3 — expected to fail until fixed"
+"  ▶  Block: validateRecordForm() — DC-01 date and time ordering","","","","","","","","","","",""
+"L1-BV-05","BVA","endDate must be on or after startDate","DC-01","P1","startDate = 2026-06-01
+@ParameterizedTest @CsvSource — 3 points","validator.validateRecordForm(request, false)
+
+Inputs (endDate):
+  2026-05-31 → invalid (BVA-Min-1)
+  2026-06-01 → valid   (BVA-Min, same day)
+  2026-06-02 → valid","Invalid input throws BadRequestException containing 'End date'","Yes","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-06","CC","the four-term time-ordering guard, each sub-condition driven independently","DC-01","P1","startDate = 2026-06-01, startTime/endTime vary
+@ParameterizedTest @CsvSource — 7 combinations","validator.validateRecordForm(request, false)
+
+Inputs (endDate, startTime, endTime):
+  (null, 09:00, 08:00)       → invalid
+  (2026-06-01, 09:00, 08:00) → invalid
+  (2026-06-01, 09:00, 09:00) → valid (equal times)
+  (2026-06-01, 09:00, 10:00) → valid
+  (2026-06-02, 09:00, 08:00) → valid (multi-day, not checked)
+  (2026-06-01, null, 08:00)  → valid
+  (2026-06-01, 09:00, null)  → valid","Only single-day records with both times present are checked
+Invalid input throws BadRequestException containing 'End time'","Yes","Pass","","@ParameterizedTest @CsvSource — each of the 4 conjunction terms driven independently"
+"  ▶  Block: validateEvidenceMetadata()  |  BV-02 size 1 B–5 MB, BR-04, FR-017","","","","","","","","","","",""
+"L1-BV-07","BVA","evidence size is accepted only in (0, 5 MB]","BV-02; BR-04; FR-017","P1","mimeType = image/jpeg
+@ParameterizedTest @CsvSource — 5 points","validator.validateEvidenceMetadata('image/jpeg', fileSizeBytes)
+
+Inputs:
+  -1      → invalid
+  0       → invalid (BVA-Min-1, empty file)
+  1       → valid   (BVA-Min)
+  5242880 → valid   (BVA-Max, exactly 5 MB)
+  5242881 → invalid (BVA-Max+1)","Invalid input throws BadRequestException containing '5 MB'","Yes","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-08","EP","only image/jpeg, image/png and application/pdf are accepted","BR-04; FR-017","P1","fileSizeBytes = 1 MB","validator.validateEvidenceMetadata(mimeType, 1 MB) for each partition","image/jpeg, image/png, application/pdf → accepted
+image/gif, image/webp, application/msword, text/plain → BadRequestException containing 'JPG, PNG hoặc PDF'","Yes","Pass","","EP over the MIME allow-list"
+"  ▶  Block: validateRequirementForm()  |  BR-24 forward-only periods","","","","","","","","","","",""
+"L1-BV-09","BVA","requirement effectiveTo must be on or after effectiveFrom","BR-24; FR-020","P2","effectiveFrom = 2026-06-01
+@ParameterizedTest @CsvSource — 4 points","validator.validateRequirementForm(request)
+
+Inputs (effectiveTo):
+  2026-05-31 → invalid (BVA-Min-1)
+  2026-06-01 → valid   (BVA-Min)
+  2027-06-01 → valid
+  null       → valid   (open-ended)","Invalid input throws BadRequestException containing 'effective_to'","Yes","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-10","EP-Invalid","a missing MIME type must be a 400, not an NPE (D12)","BR-04; FR-017","P1","mimeType = null (upload with no Content-Type)
+fileSizeBytes = 1 MB","validator.validateEvidenceMetadata(null, 1 MB)","EXPECTED: BadRequestException containing 'JPG, PNG hoặc PDF' (HTTP 400 / REQ_001)
+ACTUAL: NullPointerException — Set.of(...).contains(null) throws, so the API returns HTTP 500 / SYS_001","Yes","Fail","D12","DEFECT D12 — expected to fail until fixed"
+"  ▶  Block: TrainingLegacyDurationParser.parse()  |  BV-05 minute 0–59, BV-06 threshold 24","","","","","","","","","","",""
+"L1-BV-11","BVA","the minute part of NhMM is accepted only in 0–59","BV-05","P1","@ParameterizedTest @CsvSource — 5 points","parser.parse(raw)
+
+Inputs:
+  2h0  → parsed, 2.00 h (BVA-Min)
+  2h30 → parsed, 2.50 h
+  2h59 → parsed, 2.98 h (BVA-Max)
+  2h60 → rejected (BVA-Max+1)
+  2h99 → rejected","Valid: parsedUnit = HOUR, autoCommittable = true
+Rejected: parsed = false, normalizedHours = null, warning 'Minute part must be between 0 and 59'","Yes","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-12","BVA","a bare number above 24 drops confidence from 0.85 to 0.60","BV-06","P1","@ParameterizedTest @CsvSource — 4 points","parser.parse(raw)
+
+Inputs:
+  1   → confidence 0.85 (BVA-Min)
+  24  → confidence 0.85 (BVA-Max of the 'small' partition)
+  25  → confidence 0.60 (BVA-Max+1)
+  330 → confidence 0.60","parsed = true, parsedUnit = HOUR, autoCommittable = false
+Exactly one warning per input","No","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-13","BVA-Max+1","the bare-number pattern caps at 4 integer digits","BV-06","P3","Bare numeric input at the pattern's digit limit","parser.parse('9999') then parser.parse('10000')","9999 → parsed = true
+10000 → parsed = false (the regex allows at most 4 integer digits)","Yes","Pass","","BVA on the regex width"
+"L1-BV-14","EP","each duration unit maps to its own partition and conversion policy","FR-011","P2","@ParameterizedTest @CsvSource — 7 unit strings","parser.parse(raw)
+
+Inputs: '2h', '1,5 giờ', '2 hours', '2 tiết', '18 tín chỉ', '1 tháng', '2 năm'","HOUR variants: normalizedHours set, autoCommittable = true
+LESSON / CREDIT / MONTH / YEAR: normalizedHours null, autoCommittable = false (conversion unconfirmed)","No","Pass","","@ParameterizedTest @CsvSource"
+"L1-BV-15","EP","accents and casing are normalised before the unit is matched","FR-011","P2","Mixed casing and Vietnamese tone marks","parser.parse('2 GIỜ'), ('2 gio'), ('18 TÍN CHỈ'), ('2 TIẾT')","All four resolve to the correct DurationUnit — tone marks and casing are normalised away","No","Pass","","Units without 'đ' only — see L1-BV-19"
+"L1-BV-16","EP-Invalid","unparseable text returns parsed=false with confidence 0","NAC-03-01","P2","@ParameterizedTest @ValueSource — 6 unparseable strings
+('O3', 'toàn thời gian', '2 tuần', 'abc', '   ', '')","parser.parse(raw)","parsed = false; parsedUnit = null; normalizedHours = null
+confidence = 0.00; autoCommittable = false
+At least one warning message","Yes","Pass","","@ParameterizedTest @ValueSource"
+"L1-BV-17","EP-Invalid","null input is treated as missing, not as a crash","NAC-03-01","P2","raw = null","parser.parse(null)","parsed = false
+Warning contains 'Duration is missing'
+No NPE","Yes","Pass","",""
+"L1-BV-18","EP-Valid","explicit hour formats normalise to two decimal places","FR-011","P2","Explicit hour formats with '.' and ',' decimal separators","parser.parse('2h'), ('2h30'), ('1,5 giờ'), ('1.5 giờ')","normalizedHours = 2.00, 2.50, 1.50, 1.50 — always scale 2
+The unambiguous '1,5 giờ' produces no warning","No","Pass","",""
+"L1-BV-19","EP-Invalid","units containing đ must normalise too (D13)","FR-011; NAC-03-01","P2","raw = '2 tiết đào tạo' (real Vietnamese, contains 'đ' = U+0111)","parser.parse('2 tiết đào tạo')","EXPECTED: parsedUnit = LESSON
+ACTUAL: parsed = false — NFD does not decompose 'đ', so normalize() yields 'tiet đao tao' and never equals the 'tiet dao tao' constant. That branch is dead code.","Yes","Fail","D13","DEFECT D13 — expected to fail until fixed"
+"  ▶  Block: CosineUtil.cosine()  |  the similarity primitive behind BV-07…BV-09","","","","","","","","","","",""
+"L1-BV-20","EP-Valid","for L2-normalised vectors the result equals the cosine","BV-07; BV-08","P1","L2-normalised vectors only","CosineUtil.cosine([1,0], [1,0]) / ([0,1]) / ([0.6,0.8])","Returns 1.0, 0.0 and 0.6 — equals the true cosine for unit vectors","No","Pass","","Precondition every caller relies on"
+"L1-BV-21","BVA-Min","an opposing direction is clamped to 0 instead of going negative","BV-07","P2","Vectors pointing in opposite directions","CosineUtil.cosine([1,0], [-1,0]) and ([0.6,0.8], [-0.6,-0.8])","Returns 0 — negative dot products are clamped, so no threshold can be met by an inverse match","No","Pass","","BVA-Min of the output range"
+"L1-BV-22","EP-Invalid","empty vectors and length mismatches are handled without error","BV-07","P2","Empty and mismatched-length vectors","CosineUtil.cosine([], []), ([], [1.0]), ([1.0], [1.0, 999.0])","First two return 0
+Third returns 1.0 — only min(length) components are compared, no ArrayIndexOutOfBounds","No","Pass","",""
+"L1-BV-23","EP-Invalid","non-normalised input is NOT a cosine — callers must normalise","BV-07","P3","A non-normalised vector compared with itself","CosineUtil.cosine([2,0], [2,0])","Returns 4.0, not 1.0 — the method is a dot product, so callers MUST supply L2-normalised vectors
+Documents the precondition so a future change fails loudly here","No","Pass","","Guards every similarity threshold at once"
+"  ▶  Block: ExamAssignmentService.create()  |  BV-10 maxAttempts 1–10","","","","","","","","","","",""
+"L1-BV-24","BVA","create() clamps maxAttempts into 1–10 (FR-050)","BV-10; FR-050","P1","Published exam paper and one target user stubbed
+assignmentRepository.save captures the persisted entity
+@ParameterizedTest @CsvSource — 6 points","service.create(request with maxAttempts, 'admin')
+
+Inputs:
+  null → 1  (DEFAULT_MAX_ATTEMPTS)
+  0    → 1  (BVA-Min-1, clamped up)
+  1    → 1  (BVA-Min)
+  10   → 10 (BVA-Max)
+  11   → 10 (BVA-Max+1, clamped down)
+  -5   → 1","Persisted assignment.maxAttempts equals the expected clamped value
+Note: out-of-range input is clamped silently, not rejected — confirm this is intended for FR-050","No","Pass","","@ParameterizedTest @CsvSource"

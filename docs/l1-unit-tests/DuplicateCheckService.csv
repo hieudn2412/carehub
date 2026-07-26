@@ -1,0 +1,91 @@
+﻿"DuplicateCheckService  |  methods: check, similarity, precomputeVectors  |  BV-07 0.93, BV-08 0.80","","","","","","","","","","",""
+"Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: configured thresholds  |  BV-07 / BV-08 / BV-09","","","","","","","","","","",""
+"L1-DUP-01","BVA","default thresholds are strongMin 0.93, reviewMin 0.80, qualityReject 0.55","BV-07; BV-08; BV-09","P1","A fresh ValidationRulesProperties (no YAML overrides)","new ValidationRulesProperties()","duplicate.strongMin = 0.93
+duplicate.reviewMin = 0.80
+quality.rejectMin = 0.55","No","Pass","","Pins the BV register defaults"
+"  ▶  Block: semanticCheck() — BVA across strongMin / reviewMin","","","","","","","","","","",""
+"L1-DUP-02","BVA","strongDuplicate/needsReview flags across every threshold edge","BV-07; BV-08; FR-043","P1","given(embeddingService.embedCandidateStem(stem)) → [1.0, 0.0]
+given(embeddingCache.approvedStemEmbeddings()) → [snapshot(11, [similarity, 0.0])]
+given(annIndex.isReady()) → false
+CosineUtil is a dot product, so the score is exactly the first component
+@ParameterizedTest @CsvSource — 8 points","service.check(stem)
+
+Inputs: 1.00, 0.94, 0.93, 0.92, 0.81, 0.80, 0.79, 0.00","strongDuplicate = true for >= 0.93 (inclusive)
+needsReview = true for >= 0.80 (inclusive)
+checker = 'e5'; warning = null","No","Pass","","@ParameterizedTest @CsvSource — both thresholds exact, no epsilon"
+"L1-DUP-03","EP-Valid","excluded source question is skipped, next best match is reported","FR-043","P1","cache holds snapshot(10, sim 1.0) and snapshot(11, sim 0.96)
+excludedQuestionIds = {10}","service.check(stem, Set.of(10L))","matchedQuestionId = 11 (10 is skipped)
+maxSimilarity = 0.96; strongDuplicate = true
+checker = 'e5'","No","Pass","","Avoids self-matching when re-checking a stored question"
+"L1-DUP-04","EP-Valid","precomputed vector is used instead of re-embedding the stem","FR-043","P2","cache holds snapshot(11, sim 0.95)
+precomputedVector = [1.0, 0.0]","service.check(stem, precomputedVector, {}, {})","maxSimilarity = 0.95
+embeddingService.embedCandidateStem() NEVER called","No","Pass","","Batch-embedding fast path"
+"  ▶  Block: fallback paths  |  SYS_503 avoidance","","","","","","","","","","",""
+"L1-DUP-05","EP-Invalid","embedding model failure → lexical fallback with warning","FR-043; NFR-A01","P1","given(embeddingService.embedCandidateStem(any)) → throws IllegalStateException('model missing')
+given(questionRepository.findByStatus(APPROVED, page)) → [question 20 with an identical stem], then []","service.check('Cần xác định người bệnh bằng hai thông tin nhận diện')","checker = 'lexical-fallback'
+warning contains 'kiểm tra trùng ngữ nghĩa'
+matchedQuestionId = 20; maxSimilarity = 1.0; strongDuplicate = true
+No exception escapes — the model outage degrades gracefully","Yes","Pass","","Circuit-breaker style degradation"
+"L1-DUP-06","BC-TRUE","empty embedding cache → lexical fallback with the 'no embedding' warning","FR-043","P1","embedding succeeds but given(embeddingCache.approvedStemEmbeddings()) → []
+given(questionRepository.findByStatus(...)) → []","service.check(stem)","checker = 'lexical-fallback'
+warning contains 'Chưa có embedding E5'","No","Pass","","Cold-start branch"
+"L1-DUP-07","BC-FALSE","non-E5 provider goes straight to the lexical checker","FR-043","P2","embeddingProperties.provider = 'lexical'","service.check(stem)","checker = 'lexical'
+embedCandidateStem() NEVER called
+approvedStemEmbeddings() NEVER called","No","Pass","","BC FALSE of isE5Provider()"
+"  ▶  Block: ANN search path  |  LSH index short circuit","","","","","","","","","","",""
+"L1-DUP-08","BC-TRUE","ANN returns a strong match → checker e5-ann, exact scan skipped","FR-043; NFR-P02","P2","given(annIndex.isReady()) → true
+given(annIndex.searchBestMatch(...)) → SearchResult(42, sim 0.97)
+cache holds snapshot(11, sim 0.99)","service.check(stem)","checker = 'e5-ann'
+matchedQuestionId = 42; maxSimilarity = 0.97
+strongDuplicate = true — the exact scan is skipped once ANN is confident","No","Pass","","Early-stop at strongMin, not reviewMin"
+"L1-DUP-09","BC-FALSE","ANN match below strongMin → full exact scan runs, checker e5-exact","FR-043","P2","given(annIndex.isReady()) → true
+given(searchBestMatch(...)) → SearchResult(42, sim 0.85)
+cache holds snapshot(11, sim 0.98)","service.check(stem)","checker = 'e5-exact'
+matchedQuestionId = 11; maxSimilarity = 0.98
+ANN's weaker hit is superseded by the full scan","No","Pass","","ANN only scans part of the index"
+"L1-DUP-10","Guard-FALSE","ANN hit on an excluded question is discarded","FR-043","P2","given(annIndex.isReady()) → true
+given(searchBestMatch(...)) → SearchResult(42, sim 0.99)
+excludedQuestionIds = {42}
+cache holds snapshot(11, sim 0.90)","service.check(stem, Set.of(42L))","matchedQuestionId = 11; maxSimilarity = 0.90
+strongDuplicate = false — the excluded ANN hit is discarded","No","Pass","","Guard FALSE on the exclusion set"
+"L1-DUP-11","BC-FALSE","ANN returns nothing → exact scan supplies the match","FR-043","P3","given(annIndex.isReady()) → true
+given(searchBestMatch(...)) → null
+cache holds snapshot(11, sim 0.95)","service.check(stem)","checker = 'e5-exact'; matchedQuestionId = 11","No","Pass","",""
+"  ▶  Block: similarity() — Jaccard on accent-stripped tokens","","","","","","","","","","",""
+"L1-DUP-12","EP","similarity() is accent- and punctuation-insensitive Jaccard","FR-043","P2","@ParameterizedTest @CsvSource — 5 pairs","service.similarity(left, right)
+
+Inputs:
+  identical                       → 1.0
+  same words, no accents, upper   → 1.0
+  same words with punctuation     → 1.0
+  disjoint words                  → 0.0
+  empty vs non-empty              → 0.0","Each pair yields the expected Jaccard score
+Accents, casing and punctuation are normalised away","No","Pass","","See defect D13 — 'đ' is NOT normalised here either"
+"L1-DUP-13","EP-Invalid","similarity() with a null side → 0 without NPE","FR-043","P2","one side null","service.similarity(null, 'Rửa tay') and service.similarity('Rửa tay', null)","Returns 0 both ways, no NPE","No","Pass","",""
+"L1-DUP-14","EP","partial token overlap yields intersection/union","FR-043","P3","'Rửa tay' vs 'Rửa tay thường quy' → tokens {rua,tay} vs {rua,tay,thuong,quy}","service.similarity('Rửa tay', 'Rửa tay thường quy')","Returns 0.5 — intersection 2 / union 4","No","Pass","",""
+"  ▶  Block: precomputeVectors() — batch embedding guards","","","","","","","","","","",""
+"L1-DUP-15","BC-FALSE","precomputeVectors returns null for non-E5 provider, null and empty input","FR-043; NFR-P02","P2","(a) provider = 'lexical'
+(b) provider = 'e5', stems = null
+(c) provider = 'e5', stems = []","service.precomputeVectors(stems)","Returns null in all three cases — the caller falls back to per-stem embedding","No","Pass","",""
+"L1-DUP-16","EP-Invalid","batch embedding failure or size mismatch → null, caller re-embeds one by one","FR-043","P2","(a) given(embedCandidateStems([a,b])) → throws IllegalStateException
+(b) given(embedCandidateStems([c,d])) → 1 vector for 2 stems","service.precomputeVectors(stems)","Returns null in both cases — size mismatch is treated as failure","Yes","Pass","","Prevents mis-aligned vector/stem pairing"
+"L1-DUP-17","EP-Valid","precomputeVectors returns one vector per stem, in order","FR-043","P2","given(embedCandidateStems([a,b])) → [[1,0], [0,1]]","service.precomputeVectors([a, b])","Returns a 2×2 array in input order
+vectors[0] = [1.0, 0.0]; vectors[1] = [0.0, 1.0]","No","Pass","",""
+"  ▶  Block: lexicalCheck() — pagination and the candidate-batch stage","","","","","","","","","","",""
+"L1-DUP-18","BC-TRUE","a full page triggers a second fetch until a partial page arrives","FR-043","P2","provider = 'lexical'; lexicalPageSize = 2
+page 1 → 2 unrelated questions (full page)
+page 2 → 1 identical question (partial page)","service.check('Rửa tay thường quy')","matchedQuestionId = 22; maxSimilarity = 1.0
+findByStatus() called exactly twice — the loop stops on a partial page","No","Pass","","do-while pagination branch"
+"L1-DUP-19","BC-TRUE","no strong match in the bank → comparable candidates are scanned too","FR-043","P2","provider = 'lexical'
+question bank empty
+candidate repo page 1 → candidate 90 with an identical stem, then []","service.check('Rửa tay thường quy')","matchedQuestionId = 90; strongDuplicate = true","No","Pass","","In-batch duplicate detection"
+"L1-DUP-20","Guard-TRUE","excludedCandidateIds skips the candidate it names","FR-043","P2","provider = 'lexical'
+candidates 90 (identical) and 91 (partial)
+excludedCandidateIds = {90}","service.check(stem, Set.of(), Set.of(90L))","matchedQuestionId = 91
+strongDuplicate = false","No","Pass","",""
+"L1-DUP-21","BC-TRUE","a candidate-batch duplicate beats a weaker semantic match","FR-043","P2","semantic best is only 0.40 (cache snapshot 11)
+candidate 90 has an identical stem (lexical 1.0)","service.check('Rửa tay thường quy')","checker = 'lexical-candidate'
+matchedQuestionId = 90; maxSimilarity = 1.0; strongDuplicate = true","No","Pass","","The stronger of the two checkers wins"
+"L1-DUP-22","BVA-Min","a non-positive configured page size is floored at 1","BV-17","P3","@ParameterizedTest — lexicalPageSize = 0 then −10","service.check(stem) — assert the Pageable the repository receives","Requested page size is 1 — Math.max(1, …) floors it
+No IllegalArgumentException from PageRequest","No","Pass","","@ParameterizedTest @CsvSource"
