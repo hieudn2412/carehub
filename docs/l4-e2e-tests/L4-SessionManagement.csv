@@ -1,0 +1,47 @@
+﻿"L4-SessionManagement  |  Đăng nhập / Đăng xuất / Refresh im lặng / Nhiều tab / Thiết lập lần đầu","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","Actor (Role)","Entry Point (URL / Page)","Precondition (DB + Auth + Sandbox)","Test Steps (Browser Actions)","Expected UI Result","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: đăng nhập theo role  |  trang đích và khoá phiên","","","","","","","","","","","","",""
+"L4-SESS-01","Session Management","FR-001; AC-01-01; TDS 2.2","FT-01","P1","Admin + Manager + Staff (USER)","/auth/login","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Cả 3 tài khoản E2E_*","1. Với từng role: mở context mới, đăng nhập qua form
+2. Kiểm tra URL đích
+3. Đọc sessionStorage","ADMIN → /admin/dashboard; MANAGER → /manager/dashboard; USER → /staff/dashboard
+Cả 3 khoá carehub.accessToken, carehub.refreshToken, carehub.requiresFirstLoginSetup='false' đều được ghi","No","Not Run","","Một dòng cho cả 3 role (vòng lặp trong test) để Test ID vẫn khớp 1-1 với sheet"
+"  ▶  Block: đăng xuất và làm mới token im lặng","","","","","","","","","","","","",""
+"L4-SESS-02","Session Management","FR-004; AC-01-04","FT-01","P1","Staff (USER)","/staff/dashboard → /auth/login","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Phiên nhân viên vừa đăng nhập","1. Đăng nhập
+2. Bấm ""Đăng xuất"" ở sidebar
+3. Bấm Back của trình duyệt
+4. Đọc sessionStorage","Sau đăng xuất URL = /auth/login
+Back KHÔNG quay lại được trang bảo vệ (redirect dùng replace)
+accessToken đã bị xoá","Yes","Not Run","",""
+"L4-SESS-03","Session Management","FR-002; AC-01-02; TDS 2.2","FT-01","P1","Staff (USER)","/staff/training-status","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Phiên hợp lệ, refresh token còn hạn","1. Mở /staff/training-status
+2. Sửa access token trong sessionStorage thành đã hết hạn (giữ refresh token)
+3. Reload trang để phát sinh lời gọi API
+4. Kiểm tra URL và token","Người dùng vẫn ở /staff/training-status, trang render bình thường
+accessToken mới được ghi (interceptor tự refresh, không hỏi lại mật khẩu)","No","Not Run","","httpClient dedup refresh bằng biến module-level nên nhiều request 401 song song chỉ gọi refresh một lần"
+"L4-SESS-04","Session Management","FR-004; NAC-01-02","FT-01","P1","Staff (USER)","/staff/training-status → /auth/login","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Phiên hợp lệ","1. Mở /staff/training-status
+2. Làm access token hết hạn và thay refresh token bằng giá trị rác
+3. Reload để phát sinh lời gọi API
+4. Chờ điều hướng","Bị chuyển về /auth/login bằng hard navigation (window.location.replace)
+sessionStorage đã bị xoá sạch","Yes","Not Run","","Đây là nhánh clearSessionAndRedirectToLogin của httpClient — không phải điều hướng của React Router"
+"L4-SESS-05","Session Management","TDS 2.2; NFR-U03","FT-01","P3","Staff (USER) × 2 tab","/staff/dashboard và /staff/training-status trong cùng một browser context","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Một phiên nhân viên","1. Mở tab 1 đã đăng nhập
+2. Mở tab 2 trong cùng context, cùng phiên
+3. Xoá phiên ở tab 1
+4. Kiểm tra tab 2","Cả hai tab đều mở được trang bảo vệ
+Xoá sessionStorage ở tab 1 không lập tức đăng xuất tab 2 (sessionStorage tách theo tab)","No","Not Run","","Điểm cần biết khi thiết kế: đăng xuất không đồng bộ giữa các tab vì token nằm ở sessionStorage, không phải localStorage"
+"  ▶  Block: thiết lập lần đầu  |  người dùng bị giữ trong wizard","","","","","","","","","","","","",""
+"L4-SESS-06","Session Management","FR-006; AC-01-03","FT-01","P1","Staff (USER) chưa thiết lập lần đầu","/staff/dashboard → /auth/email-confirm","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Phiên có requiresFirstLoginSetup = true","1. Bơm phiên với requiresFirstLoginSetup = 'true'
+2. Mở /staff/dashboard
+3. Thử mở tiếp /staff/training-status","Cả hai lần đều bị ép về /auth/email-confirm
+Heading ""Thiết lập bảo mật tài khoản"" hiển thị
+Không thoát ra được trang khác khi chưa hoàn tất","Yes","Not Run","","Wizard 3 bước truyền dữ liệu qua location.state nên không deep-link được vào bước 2/3"

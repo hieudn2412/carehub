@@ -7,7 +7,8 @@ Tài liệu này là đầu vào cho:
 - mục **5.2 Test Analysis Notes → Root Cause Analysis / Coverage Gaps** của `Report 5.0_TestPlan`
 
 Sổ defect được mở rộng theo từng tầng test: **D1–D24** từ L1 (unit), **D25–D35** từ L2 (integration),
-**D36–D41** từ L3 (system/API).
+**D36–D41** từ L3 (system/API), **D42–D44** từ L4 (E2E). Riêng D42–D44 không phải lệch tài liệu mà là
+lỗi lập trình đang có trên nhánh (`no-undef` → trang trắng).
 
 Mỗi mục dưới đây có ít nhất một test L1 chứng minh. Các test được đánh dấu **EXPECTED FAIL** là
 cố ý: chúng assert theo SRS, nên fail chính là bằng chứng của sai lệch. Không sửa code trong phạm vi
@@ -619,6 +620,78 @@ cổng tồn tại nhưng đi đường tắt được.
 
 **Đề xuất**: đổi mặc định thành `DRAFT` (1 dòng), và chỉ cho phép đặt `status: APPROVED` khi actor có
 `QUESTION_REVIEWER`. Cần rà lại dữ liệu đã seed/tạo trước đó vì `reviewedBy` hiện không đáng tin.
+
+---
+
+## D42–D44 — Phát hiện trong đợt L4 E2E Tests
+
+Ba mục này **không phải lệch so với SRS** — chúng là **lỗi lập trình đang có trên nhánh**: identifier
+được dùng mà chưa bao giờ khai báo hoặc import. React ném `ReferenceError` ngay khi render nên người
+dùng thấy **trang trắng**. Phát hiện khi khảo sát UI để chọn selector cho L4, xác minh bằng
+`npx eslint` (`no-undef`).
+
+Vì sao ba tầng dưới không thấy: L1 không render các trang này (chỉ test util/hook), L2/L3 không chạm
+UI. Chỉ một test mở trang thật trong browser mới thấy — đó là lý do `L4-CP-05` (route sweep) tồn tại.
+
+| ID | Mức | File | Identifier thiếu | Người dùng thấy gì |
+|----|-----|------|------------------|--------------------|
+| **D42** | **Nghiêm trọng** | `carehub-frontend/src/features/staff/pages/training/TrainingHoursListScreen.jsx` | `setStatus` (:171), `getStatusLabel` (:240), `handleDirectSubmit` (:259), `submittingId` (:260), `SendOutlined` (:264), `EditOutlined` (:282) | `/staff/training` — màn hình "Giờ đào tạo liên tục" của nhân viên **trắng hoàn toàn** |
+| **D43** | **Cao** | `carehub-frontend/src/features/staff/pages/training/TrainingHoursEvidenceScreen.jsx` | `navigate` (:392), `ArrowLeftOutlined` (:396) | `/staff/training/{id}/evidence` crash ở khối nút "Quay lại chi tiết hồ sơ" |
+| **D44** | Trung bình | `carehub-frontend/src/features/training/pages/ActivityTypeListPage.jsx` | `generateCodeFromName` (:126) | Admin tạo loại hình đào tạo mà **để trống mã** → handler ném lỗi, không lưu được và không có thông báo |
+
+### D42 — Trang giờ đào tạo của nhân viên crash trắng
+
+**Code**: `TrainingHoursListScreen.jsx` chỉ import
+`SearchOutlined, PlusOutlined, PaperClipOutlined, LeftOutlined, RightOutlined, EyeOutlined, ReloadOutlined`
+(dòng 3–11) và không khai báo state `status`. Nhưng JSX dùng `value={status}` /
+`setStatus(...)` ở dòng 170–171 — tức lỗi nổ **trong lúc render**, không phải khi bấm.
+
+**Ảnh hưởng**: đây là màn hình CME chính của nhân viên, cũng là mục "Giờ đào tạo liên tục" đầu tiên
+trong sidebar (`sidebar.jsx`, nhóm "Theo dõi cá nhân"). Nhân viên không thể xem danh sách hồ sơ, không
+vào được nút "Cập nhật giờ đào tạo" → toàn bộ luồng SC-01 bị chặn từ giao diện. Đường vòng duy nhất là
+gõ trực tiếp `/staff/training/new` hoặc dùng trang dùng chung `/training/records`.
+
+**Test**: `L4-F01-01` (assert heading "Giờ đào tạo liên tục" hiển thị) và `L4-CP-05` (route sweep bắt
+`pageerror`) — cả hai sẽ FAIL cho tới khi sửa.
+
+**Đề xuất**: thêm `useState` cho `status`, import `SendOutlined`/`EditOutlined`, và khai báo
+`getStatusLabel`/`handleDirectSubmit`/`submittingId` (có thể lấy nguyên từ `TrainingRecordListPage.jsx`
+vốn đã có sẵn logic tương đương). Kèm theo: bật lint gate — `npm run lint` hiện **fail 32 error /
+7 warning** và repo **không có `.github/`** nên không có gì chặn lỗi loại này vào nhánh.
+
+### D43 — Trang minh chứng crash ở nút quay lại
+
+**Code**: `TrainingHoursEvidenceScreen.jsx` dòng 2 chỉ `import { useParams } from 'react-router-dom'`
+— không có `useNavigate` — nhưng dòng 392 gọi `navigate(...)`, và `<ArrowLeftOutlined />` ở dòng 396
+cũng không nằm trong khối import icon (dòng 3–12).
+
+**Ảnh hưởng**: nhân viên không quản lý được minh chứng qua màn hình riêng này. Nghiêm trọng hơn với hồ
+sơ **đã nộp**, vì đó là chỗ duy nhất xem lại tệp đã tải lên trong luồng staff.
+
+**Test**: `L4-F01-04`, `L4-CP-05`.
+
+**Đề xuất**: `import { useParams, useNavigate } from 'react-router-dom'` + `const navigate = useNavigate()`,
+và thêm `ArrowLeftOutlined` vào khối import icon.
+
+### D44 — Không tạo được loại hình đào tạo khi để trống mã
+
+**Code**: `ActivityTypeListPage.handleModalSubmit` (dòng 126):
+```js
+const generatedCode = modalForm.code || generateCodeFromName(modalForm.name) || `ATC_${Date.now()}`
+```
+`generateCodeFromName` **không tồn tại ở bất kỳ đâu trong `src`**. Vì `||` short-circuit, lỗi chỉ nổ khi
+`modalForm.code` rỗng — đúng trường hợp UI cho phép (ô mã là tuỳ chọn, hàm này lẽ ra sinh mã tự động).
+
+**Ảnh hưởng**: admin bỏ trống mã → `ReferenceError` trong handler async → không có request nào được gửi,
+không có toast lỗi; nhìn như hệ thống "treo". Nhập mã thủ công thì mọi thứ bình thường, nên lỗi dễ bị bỏ
+qua khi test thủ công.
+
+**Test**: `L4-CP-05` (route sweep phát hiện lỗi render/handler trên trang này). Có thể bổ sung một case
+UI riêng khi sửa.
+
+**Đề xuất**: viết `generateCodeFromName` (slug hoá tên, bỏ dấu, in hoa, thay khoảng trắng bằng `_`, cắt
+50 ký tự cho khớp `@Size(max = 50)` của `ActivityTypeFormRequest`) hoặc bỏ hẳn nhánh đó và luôn dùng
+`ATC_${Date.now()}`.
 
 ---
 

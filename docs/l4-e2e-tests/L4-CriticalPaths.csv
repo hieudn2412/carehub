@@ -1,0 +1,42 @@
+﻿"L4-CriticalPaths  |  Smoke test — chạy sau mọi lần deploy  |  5 case  |  chỉ happy path","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","Actor (Role)","Entry Point (URL / Page)","Precondition (DB + Auth + Sandbox)","Test Steps (Browser Actions)","Expected UI Result","Negative?","Status","Defect ID","Notes"
+"  ▶  Critical Paths — Smoke suite  |  chạy sau mọi lần deploy  |  chỉ happy path","","","","","","","","","","","","",""
+"L4-CP-01","Critical Path","FR-001; AC-01-01; TDS 2.2","FT-01","P1","Admin","/auth/login → /admin/dashboard","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+E2E_ADMIN_CODE / E2E_ADMIN_PASSWORD là tài khoản ADMIN đang ACTIVE","1. Mở /auth/login
+2. Nhập mã nhân viên + mật khẩu admin
+3. Bấm ""Đăng nhập""
+4. Chờ điều hướng","Trang login hiện heading ""Đăng nhập""
+Sau khi submit URL thành /admin/dashboard
+Breadcrumb ""Dashboard tổng quan"" hiển thị","No","Not Run","","Smoke: chạy sau mọi lần deploy. Token thật do backend phát, được NimbusJwtDecoder kiểm ở mọi request sau đó"
+"L4-CP-02","Critical Path","FR-001; AC-01-01","FT-01","P1","Manager","/auth/login → /manager/dashboard","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+E2E_MANAGER_* là tài khoản có role MANAGER và thuộc một khoa/phòng","1. Mở /auth/login
+2. Đăng nhập bằng tài khoản manager
+3. Chờ điều hướng","URL = /manager/dashboard
+Header hiện ""Dashboard tổng quan""","No","Not Run","","Nếu tài khoản manager còn có permission evaluation thì getPostLoginRoute đưa về /admin/evaluation/dashboard — dùng tài khoản manager thuần"
+"L4-CP-03","Critical Path","FR-001; AC-01-01","FT-01","P1","Staff (USER)","/auth/login → /staff/dashboard","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+E2E_STAFF_* là tài khoản role USER, ACTIVE, đã hoàn tất first-login","1. Mở /auth/login
+2. Đăng nhập bằng tài khoản nhân viên
+3. Chờ điều hướng","URL = /staff/dashboard
+Header hiện ""Năng lực của tôi""","No","Not Run","","requiresFirstLoginSetup phải là false, nếu không guard sẽ ép sang /auth/email-confirm (xem L4-SESS-06)"
+"L4-CP-04","Critical Path","SC-01.1; FR-015; AC-04-01","FT-04","P1","Staff (USER)","/training/records/new","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Seed qua API: 1 TrainingActivityType đang active (POST /training/activity-types bằng token admin)","1. Seed loại hình đào tạo qua API
+2. Mở /training/records/new với phiên nhân viên
+3. Chọn ""Activity type"" = loại hình vừa seed
+4. Nhập ""Title""
+5. Bấm ""Save Draft""
+6. Đọc lại GET /training/records của chính mình","Heading ""New Training Record"" hiển thị
+Sau khi lưu URL thành /training/records/{id}/edit và hiện ""Saved.""
+API: hồ sơ xuất hiện trong danh sách của chính nhân viên với workflowStatus = DRAFT","No","Not Run","D42","Dùng trang dùng chung /training/records (tiếng Anh) — không phải màn hình staff /staff/training đang crash vì D42"
+"L4-CP-05","Critical Path","NFR-U03; TDS 7.5","FT-01","P1","Admin + Manager + Staff (3 phiên)","19 route chính của 3 role","Backend :8081 đang chạy trên DB được phép ghi (KHÔNG dùng DB dùng chung)
+Frontend dev server :5173 (Vite proxy /api → :8081)
+Cả 3 tài khoản E2E_ADMIN / E2E_MANAGER / E2E_STAFF","1. Với từng role: đăng nhập rồi mở lần lượt các route chính
+   staff: /staff/dashboard, /staff/training, /staff/training-status, /staff/competency, /staff/professional-competency, /staff/exam/history, /staff/profile, /staff/notifications
+   manager: /manager/dashboard, /manager/employees, /manager/exam-results, /manager/quality/checklists, /manager/quality/history
+   admin: /admin/dashboard, /admin/accounts, /admin/quality/checklists, /admin/training/activity-types, /admin/system-settings, /admin/evaluation/question-bank
+2. Lắng nghe sự kiện pageerror của browser ở mỗi lần mở
+3. Khẳng định #root không rỗng","Không route nào ném lỗi runtime (danh sách pageerror rỗng)
+#root luôn có nội dung (render thành công)","Yes","Not Run","D42","D42/D43: hiện /staff/training ném ReferenceError khi render (6 identifier chưa khai báo) nên case này sẽ FAIL cho tới khi sửa. Đây chính là lưới rẻ nhất chặn cả họ lỗi no-undef mà L1–L3 không thấy"
