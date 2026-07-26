@@ -1,0 +1,29 @@
+﻿"L3-UserAdminAPI  |  /users, /me, /user/change-password, /users/{id}/lock, /departments  |  Input Domain Partitioning per endpoint","","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","HTTP Method + Endpoint","Auth Required","Request (Params / Body / Headers)","Expected HTTP Status","Expected Response Body","Expected Error Code","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: GET /api/v1/users  |  Input dimensions: paging, keyword filter, enum filter, auth","","","","","","","","","","","","","",""
+"L3-USR-01","Pagination","FR-011; AC-03-01","FT-01","P1","GET /api/v1/users?page=0&size=20","Bearer JWT (ADMIN)","params: page=0&size=20","200","data.content[] present
+data.pageable and data.numberOfElements present (Spring PageImpl)
+data.page ABSENT","None","No","Pass","","D37: the only paginated endpoint that serialises Spring's Page instead of PageResponse — frontend must special-case it"
+"L3-USR-02","Pagination","FR-011; FR-012","FT-01","P2","GET /api/v1/users?keyword=<employeeCode>","Bearer JWT (ADMIN)","params: keyword=<exact employee code>","200","data.content has exactly 1 item, content[0].employeeCode = the requested code","None","No","Pass","",""
+"L3-USR-03","Input-Domain-Invalid","NAC-03-01; VAL_001","FT-01","P2","GET /api/v1/users?status=NOT_A_STATUS","Bearer JWT (ADMIN)","params: status=NOT_A_STATUS","422","error_code VAL_001, details[] names status","VAL_001","Yes","Pass","","A bad enum on a @ModelAttribute filter binds to 422 VAL_001; a bad enum on a plain @RequestParam is 400 REQ_001 — two different contracts in one API"
+"  ▶  Block: POST /api/v1/users  |  Input dimensions: required fields, uniqueness, role gate","","","","","","","","","","","","","",""
+"L3-USR-04","Input-Domain-Happy","FR-003; DC-06","FT-01","P1","POST /api/v1/users","Bearer JWT (ADMIN)","body: {employeeCode, departmentId, email, roleIds:[USER], fullName}","200","DB: users row created, email stored
+one credentials email queued to the new address","None","No","Pass","",""
+"L3-USR-05","Validation","NAC-01-02; VAL_001","FT-01","P1","POST /api/v1/users","Bearer JWT (ADMIN)","body without employeeCode and roleIds","422","error_code VAL_001, details[] names employeeCode and roleIds","VAL_001","Yes","Pass","",""
+"L3-USR-06","State-Conflict","DC-06; SYS_409","FT-01","P1","POST /api/v1/users","Bearer JWT (ADMIN)","body reusing an existing employeeCode","409","error_code SYS_409, message ""Mã nhân viên đã tồn tại""","SYS_409","Yes","Pass","","The service checks uniqueness explicitly, so this is a clean 409 — unlike system_settings, where a raw unique violation surfaces as 500 (D30)"
+"L3-USR-07","Auth-Wrong-Role","NAC-03-03; NFR-SEC","FT-01","P1","POST /api/v1/users","Bearer JWT (USER)","valid create body but a non-admin token","403","error_code AUTH_002, message ""Bạn không có quyền thực hiện thao tác này.""
+user count unchanged","AUTH_002","Yes","Pass","",""
+"L3-USR-08","Auth-Missing","NAC-01-02; TDS 8.1","FT-01","P1","GET /api/v1/users","Missing JWT (negative)","no Authorization header","401","EMPTY body — the ErrorResponse envelope does not apply to authentication failures","(none — envelope not applied)","Yes","Pass","","D36, same entry point as L3-AUTH-16"
+"  ▶  Block: GET /api/v1/user/{id}, PATCH /user/change-password  |  Input dimensions: existence, own credential","","","","","","","","","","","","","",""
+"L3-USR-09","Input-Domain-Happy","FR-011","FT-01","P2","GET /api/v1/user/{id}","Bearer JWT (ADMIN)","path: an existing user id","200","data.employeeCode and data.departmentId resolved","None","No","Pass","",""
+"L3-USR-10","Input-Domain-Happy","FR-006; AC-01-04","FT-01","P1","PATCH /api/v1/user/change-password","Bearer JWT (USER)","body: {oldPassword, newPassword, confirmNewPassword}","200","login with the new password → 200 (the credential really rotated)","None","No","Pass","",""
+"L3-USR-11","Input-Domain-Invalid","NAC-01-03","FT-01","P1","PATCH /api/v1/user/change-password","Bearer JWT (USER)","body with a wrong oldPassword","400","error_code REQ_001, message ""Mật khẩu cũ không chính xác""","REQ_001","Yes","Pass","",""
+"  ▶  Block: account lifecycle  |  Input dimensions: lock state, soft delete, unknown id","","","","","","","","","","","","","",""
+"L3-USR-12","State-Conflict","FR-004; BR-10","FT-01","P1","PATCH /api/v1/users/{id}/lock, /unlock","Bearer JWT (ADMIN)","path: target user id, no body","200","after lock: DB status = LOCKED and login → 401 AUTH_001
+after unlock: login → 200","None","No","Pass","",""
+"L3-USR-13","Input-Domain-Happy","FR-013; DC-06","FT-01","P2","DELETE /api/v1/user/{id}","Bearer JWT (ADMIN)","path: target user id","200","DB: is_deleted = true (row kept)
+login with that account → 400 REQ_001","None","No","Pass","",""
+"L3-USR-14","Not-Found","NAC-03-01; SYS_404","FT-01","P2","GET /api/v1/user/99999999","Bearer JWT (ADMIN)","path: unknown id","404","error_code SYS_404","SYS_404","Yes","Pass","",""
+"  ▶  Block: reference data /departments  |  Input dimensions: create, role gate","","","","","","","","","","","","","",""
+"L3-USR-15","Input-Domain-Happy","FR-014; AC-03-01","FT-03","P2","POST /api/v1/departments","Bearer JWT (ADMIN)","body: {""departmentCode"":""L3Dnnnn"",""name"":""Khoa thử nghiệm""}","200","GET /departments then lists the new code","None","No","Pass","",""
+"L3-USR-16","Auth-Wrong-Role","NAC-03-03","FT-03","P1","GET /api/v1/departments","Bearer JWT (USER)","no params","403","error_code AUTH_002 — the whole ReferenceDataController is ADMIN-only at class level","AUTH_002","Yes","Pass","",""

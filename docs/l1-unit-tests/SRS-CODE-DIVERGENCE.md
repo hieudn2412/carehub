@@ -2,8 +2,12 @@
 
 Nguồn: `docs/Report 3.0_SRS_VietDuc-Care_v1.3.docx` đối chiếu với code tại nhánh `ManhTuan`.
 Tài liệu này là đầu vào cho:
-- cột **Defect ID** của các CSV trong `docs/l1-unit-tests/`
+- cột **Defect ID** của các CSV trong `docs/l1-unit-tests/`, `docs/l2-integration-tests/` và
+  `docs/l3-system-api-tests/`
 - mục **5.2 Test Analysis Notes → Root Cause Analysis / Coverage Gaps** của `Report 5.0_TestPlan`
+
+Sổ defect được mở rộng theo từng tầng test: **D1–D24** từ L1 (unit), **D25–D35** từ L2 (integration),
+**D36–D41** từ L3 (system/API).
 
 Mỗi mục dưới đây có ít nhất một test L1 chứng minh. Các test được đánh dấu **EXPECTED FAIL** là
 cố ý: chúng assert theo SRS, nên fail chính là bằng chứng của sai lệch. Không sửa code trong phạm vi
@@ -493,6 +497,128 @@ tay không transaction → có row; dispatch trong transaction đã commit → k
 `@Transactional(propagation = Propagation.REQUIRES_NEW)` lên method listener (hoặc chuyển sang
 `@Async` như 3 worker recalculation đã làm đúng). Sau khi fix, 3 test EXPECTED FAIL ở trên sẽ tự
 chuyển xanh — chúng assert theo hành vi đúng.
+
+---
+
+## D36–D41 — Phát hiện trong đợt L3 System/API Tests
+
+Nhóm này lộ ra khi gọi API qua **HTTP thật** (`@SpringBootTest(RANDOM_PORT)` + `RestTemplate` +
+token do `POST /auth/login` phát ra, xem `docs/l3-system-api-tests/`). Cả 20 integration test cũ đều
+dùng `MockMvc` + `SecurityMockMvcRequestPostProcessors.jwt()`, tức **bỏ qua filter chain và
+`NimbusJwtDecoder`** — nên không có tầng nào trước L3 quan sát được D36 và D38. Không mục nào là
+EXPECTED FAIL: L3 pin hành vi hiện tại, mọi test đều xanh.
+
+| ID | Mức | Nội dung | Bằng chứng |
+|----|-----|----------|------------|
+| **D36** | Trung bình | Lỗi xác thực trả **401 body rỗng**, không theo envelope `{error_code, message, correlation_id}` | `L3-AUTH-16`, `L3-USR-08`, `L3-SEC-04` (pass, pin) |
+| **D37** | Trung bình | `GET /users` trả `Page` thô của Spring thay vì `PageResponse` — endpoint phân trang duy nhất lệch shape | `L3-USR-01` (pass, pin) |
+| **D38** | **Cao (bảo mật)** | Không có rate limit / lockout: 20 lần login sai không bị chặn | `L3-SEC-07` (pass, pin) |
+| **D39** | Trung bình (bảo mật) | `forgot-password` tiết lộ email có tồn tại hay không | `L3-AUTH-12` (pass, pin) |
+| **D40** | Trung bình | Vi phạm quyền ở `/me/exam-attempts` trả **400 `REQ_001`** thay vì 403 `AUTH_002` | `L3-EXM-16` (pass, pin) |
+| **D41** | **Cao** | Câu hỏi tạo mới mặc định **APPROVED** — `QUESTION_AUTHOR` tự duyệt, cổng `QUESTION_REVIEWER` vô hiệu | `L3-EXM-03` (pass, pin) |
+
+### D36 — Lỗi xác thực không theo envelope lỗi chung
+
+**Code**: `config/SecurityConfig.java:71-93` khai `oauth2ResourceServer` nhưng **không** đăng ký
+`authenticationEntryPoint` hay `accessDeniedHandler`. Vì vậy request thiếu token / token sai chữ ký bị
+`BearerTokenAuthenticationEntryPoint` chặn ngay trong filter chain, **trước** `DispatcherServlet` —
+`GlobalExceptionHandler` không bao giờ chạy. Client nhận `401` với body **rỗng**, chỉ có header
+`WWW-Authenticate: Bearer`, **không** có `error_code`, không có `X-Correlation-ID`.
+
+Trái với CLAUDE.md và TDS 8.1: mọi lỗi phải là `ErrorResponse` với `error_code` (`AUTH_001` cho lỗi
+xác thực) và `correlation_id`. So sánh: 403 do `@PreAuthorize` **có** envelope đầy đủ (`AUTH_002`),
+vì `AccessDeniedException` phát sinh trong lúc dispatch → tới được handler.
+
+**Ảnh hưởng**: frontend `httpClient.js` chỉ nhìn status 401 để refresh nên vẫn chạy; nhưng bất cứ
+consumer nào (mobile, tích hợp ngoài, log tập trung) parse `error_code`/`correlation_id` sẽ thất bại
+đúng ở nhánh lỗi quan trọng nhất, và không có correlation id để lần vết 401 trong log.
+
+**Test**: `L3-AUTH-16` (thiếu token), `L3-USR-08` (thiếu token), `L3-SEC-04` (token bị sửa payload)
+— cả ba khẳng định body rỗng + thiếu `X-Correlation-ID`.
+
+**Đề xuất** (~10 dòng): đăng ký entry point và access-denied handler ghi `ErrorResponse` bằng cùng
+`ObjectMapper`, phát `AUTH_001`/`AUTH_002` kèm correlation id.
+
+### D37 — `GET /users` lệch shape phân trang
+
+**Code**: `user/controller/UserController.java:102-113` trả
+`ApiResponse<Page<UserSummaryResponse>>`, tức Jackson serialize thẳng `PageImpl`. Body có
+`pageable`, `numberOfElements`, `first`, `last`, `empty`, `number` — trong khi mọi endpoint phân trang
+khác trả `PageResponse` (`common/response/PageResponse.java`) với đúng
+`{content, page, size, totalElements, totalPages, sort}`.
+
+Thực tế API có **ba** kiểu phân trang: `PageResponse` (chuẩn), `Page` thô (chỉ endpoint này), và
+phân trang **dàn phẳng** vào DTO nghiệp vụ (`CompetencySummaryResponse` — `L3-ANL-10`).
+
+**Test**: `L3-USR-01` khẳng định có `pageable`/`numberOfElements` và **không** có `page`.
+
+**Đề xuất**: bọc `PageResponse.from(page)` như các controller khác (1 dòng), rồi sửa chỗ đọc ở
+frontend; hoặc ghi rõ ngoại lệ này vào TDS nếu không muốn đổi.
+
+### D38 — Không có rate limit và không có lockout khi đăng nhập sai
+
+**Code**: không tồn tại bất kỳ bộ đếm số lần sai, `lockedUntil`, backoff hay filter throttle nào
+trong `src/main` (grep `RateLimit|Bucket4j|failedLoginAttempts|lockout` → 0 kết quả).
+`AuthServiceImpl.login` chỉ so mật khẩu rồi trả lỗi. Khoá tài khoản là **thao tác tay** của admin
+qua `PATCH /users/{id}/lock`.
+
+**Ảnh hưởng**: `/auth/login` (brute-force / credential stuffing), `/auth/forgot-password` và
+`/user/first-login/send-email-otp` (spam email + dò OTP 6 chữ số, TTL 5 phút — không giới hạn số lần
+thử nghĩa là không gian 10⁶ hoàn toàn khả thi để quét). Ba endpoint này đều **public**.
+
+**Test**: `L3-SEC-07` — 20 lần login sai liên tiếp đều trả cùng `400 REQ_001`, không 429/423, không
+delay, và mật khẩu đúng dùng được ngay sau đó.
+
+**Đề xuất**: rate limit theo IP + theo `employeeCode` (Bucket4j hoặc filter tự viết) cho 3 endpoint
+public; thêm khoá tạm sau N lần sai. Nếu chấp nhận rủi ro thì ghi rõ vào TDS 7.5 kèm lý do.
+
+### D39 — `forgot-password` tiết lộ email tồn tại
+
+**Code**: `auth/service/impl/PasswordResetServiceImpl.java:35-38` — email không có trong hệ thống →
+`BadRequestException("Không tìm thấy email")` → 400 `REQ_001`. Ngược lại email hợp lệ → 200.
+
+Đáng chú ý là `login` **không** mắc lỗi này: mã nhân viên lạ và mật khẩu sai dùng **cùng một** message
+(`L3-AUTH-04`). Hai endpoint cùng module, hai triết lý khác nhau.
+
+**Test**: `L3-AUTH-12` (tiết lộ) đặt cạnh `L3-AUTH-04` (không tiết lộ).
+
+**Đề xuất**: luôn trả 200 với message trung tính ("Nếu email tồn tại, mã OTP đã được gửi"), chỉ ghi
+log phía server. Kết hợp với D38 vì cùng chạm `/auth/forgot-password`.
+
+### D40 — Vi phạm quyền báo 400 thay vì 403
+
+**Code**: `questiongeneration/service/ExamAttemptService.java:374` — `requireOwner` ném
+`BadRequestException("Bạn không có quyền truy cập lượt làm bài này")`. Mọi module khác dùng
+`ForbiddenException` → 403 `AUTH_002`.
+
+**Ảnh hưởng**: client không phân biệt được "dữ liệu gửi sai" với "không có quyền" trên nhóm
+`/me/exam-attempts/*`; SIEM/log analytics đếm sai loại sự kiện (một lỗi truy cập trái phép bị ghi
+thành lỗi cú pháp).
+
+**Test**: `L3-EXM-16`.
+
+**Đề xuất**: đổi sang `ForbiddenException` (1 dòng). Lưu ý cùng họ với lựa chọn 404 ở
+`/assigned-forms/{id}` (`L3-QLT-15`) — chỗ đó 404 là **cố ý** để không xác nhận sự tồn tại, nên hai
+chỗ này cần một quyết định thống nhất và ghi vào TDS.
+
+### D41 — Câu hỏi mới mặc định APPROVED, bỏ qua cổng reviewer
+
+**Code**: `questiongeneration/service/QuestionBankService.java:85` —
+`parseMutationStatus(request.status(), QuestionBankStatus.APPROVED)`: khi request **không** gửi
+`status`, câu hỏi được tạo thẳng ở `APPROVED`, và dòng 106 gán luôn `reviewedBy = actor` (chính tác
+giả). `POST /questions` chỉ cần permission `QUESTION_AUTHOR`.
+
+**Ảnh hưởng**: quy trình 2 người (author viết → reviewer duyệt) mà `EvaluationPermissions` dựng ra bị
+vô hiệu hoá bằng cách **không gửi trường `status`**. Câu hỏi vào ngay tập APPROVED nên đủ điều kiện
+nạp vào bộ câu hỏi và ra đề thi thật. Cổng `@evaluationSecurity.canReview` trên
+`POST /questions/{id}/approve` chỉ còn tác dụng với câu hỏi được tạo với `status: "DRAFT"` tường minh.
+
+**Test**: `L3-EXM-03` (tạo không `status` → APPROVED, pin), đặt cạnh `L3-EXM-05` (author không được
+gọi `/approve` → 403) và `L3-EXM-06` (reviewer duyệt DRAFT → APPROVED). Ba dòng cạnh nhau cho thấy
+cổng tồn tại nhưng đi đường tắt được.
+
+**Đề xuất**: đổi mặc định thành `DRAFT` (1 dòng), và chỉ cho phép đặt `status: APPROVED` khi actor có
+`QUESTION_REVIEWER`. Cần rà lại dữ liệu đã seed/tạo trước đó vì `reviewedBy` hiện không đáng tin.
 
 ---
 

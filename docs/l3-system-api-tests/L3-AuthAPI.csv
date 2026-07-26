@@ -1,0 +1,36 @@
+﻿"L3-AuthAPI  |  /auth/login, /auth/refresh-token, /auth/logout, /auth/forgot-password, /auth/reset-password, /user/first-login  |  Input Domain Partitioning per endpoint","","","","","","","","","","","","","",""
+"Test ID","Coverage Technique","SRS Reference","Feature","Priority","HTTP Method + Endpoint","Auth Required","Request (Params / Body / Headers)","Expected HTTP Status","Expected Response Body","Expected Error Code","Negative?","Status","Defect ID","Notes"
+"  ▶  Block: POST /api/v1/auth/login  |  Input dimensions: credentials, account status, body validation","","","","","","","","","","","","","",""
+"L3-AUTH-01","Input-Domain-Happy","FR-001; AC-01-01; TDS 2.2","FT-01","P1","POST /api/v1/auth/login","None (public endpoint)","body: {""employeeCode"":""L3AUTHnnnn"",""password"":""Correct123""}","200","data.accessToken matches ^[\w-]+\.[\w-]+\.[\w-]+$ (HS256 JWT)
+data.refreshToken non-blank
+data.tokenType = ""Bearer""
+data.expiresIn > 0
+data.requiresFirstLoginSetup = false","None","No","Pass","","Real Tomcat + real login: the token is signed by JwtTokenServiceImpl and later verified by NimbusJwtDecoder"
+"L3-AUTH-02","Validation","NAC-01-01; VAL_001","FT-01","P1","POST /api/v1/auth/login","None (public endpoint)","body: {""employeeCode"":"""",""password"":""""}","422","error_code VAL_001, message ""Dữ liệu không hợp lệ""
+details[] names both employeeCode and password","VAL_001","Yes","Pass","","Bean validation answers 422, not the conventional 400 — same across the whole API"
+"L3-AUTH-03","Input-Domain-Invalid","NAC-01-01; FR-001","FT-01","P1","POST /api/v1/auth/login","None (public endpoint)","body: {""employeeCode"":""<valid>"",""password"":""WrongPass999""}","400","error_code REQ_001, message ""Mã nhân viên hoặc mật khẩu không chính xác""","REQ_001","Yes","Pass","","Contract divergence: credentials failure is BadRequestException → 400 REQ_001, while the TDS 8.1 registry implies AUTH_001"
+"L3-AUTH-04","Not-Found","NAC-01-01; NFR-SEC","FT-01","P2","POST /api/v1/auth/login","None (public endpoint)","body: {""employeeCode"":""NOSUCHCODE999"",""password"":""Correct123""}","400","error_code REQ_001 with the identical message to a wrong password — the response does not reveal whether the account exists","REQ_001","Yes","Pass","","Good: no account enumeration here (contrast with L3-AUTH-12)"
+"L3-AUTH-05","State-Conflict","NAC-01-04; BR-10","FT-01","P1","POST /api/v1/auth/login","None (public endpoint)","body: {""employeeCode"":""<LOCKED user>"",""password"":""Correct123""}","401","error_code AUTH_001, message ""Tài khoản đã bị khóa""
+no tokens issued","AUTH_001","Yes","Pass","",""
+"  ▶  Block: POST /api/v1/auth/refresh-token, /auth/logout  |  Input dimensions: token validity, revocation, replay","","","","","","","","","","","","","",""
+"L3-AUTH-06","Contract","FR-001; TDS 2.2","FT-01","P1","GET /api/v1/me","Bearer JWT (real login)","Authorization: Bearer <token from /auth/login>","200","data.employeeCode = caller's code
+data.id = caller's user id","None","No","Pass","","Proves NimbusJwtDecoder HS256 verification + CustomJwtAuthenticationConverter — the part MockMvc's jwt() post-processor bypasses"
+"L3-AUTH-07","Input-Domain-Happy","FR-002; AC-01-02","FT-01","P1","POST /api/v1/auth/refresh-token","None (public endpoint)","body: {""refreshToken"":""<from login>""}","200","data.accessToken is new and authenticates GET /me → 200
+data.refreshToken unchanged (no rotation, D25)","None","No","Pass","",""
+"L3-AUTH-08","Input-Domain-Invalid","NAC-01-02","FT-01","P1","POST /api/v1/auth/refresh-token","None (public endpoint)","body: {""refreshToken"":""not-a-real-token-nn""}","401","error_code AUTH_001, message ""Refresh token không hợp lệ""","AUTH_001","Yes","Pass","",""
+"L3-AUTH-09","State-Conflict","FR-004; AC-01-04","FT-01","P1","POST /api/v1/auth/refresh-token (after /auth/logout)","None (public endpoint)","body: {""refreshToken"":""<revoked>""}","401","error_code AUTH_001, message ""Token đã bị thu hồi""
+DB: refresh_tokens.revoked = true","AUTH_001","Yes","Pass","",""
+"L3-AUTH-10","Contract","FR-004","FT-01","P3","POST /api/v1/auth/logout","None (public endpoint)","body: {""refreshToken"":""<valid>""} sent twice","200","both calls 200; the row stays revoked = true","None","No","Pass","","Logout is one of the six permitAll matchers, so no access token is needed and replay is harmless"
+"  ▶  Block: POST /api/v1/auth/forgot-password, /auth/reset-password  |  Input dimensions: email existence, OTP state, password rules","","","","","","","","","","","","","",""
+"L3-AUTH-11","Input-Domain-Happy","FR-005; UC-02","FT-01","P1","POST /api/v1/auth/forgot-password","None (public endpoint)","body: {""email"":""<existing>""}","200","DB: password_reset_otp row, 6 digits, used = false, expires in 5 min
+exactly one email queued to that address","None","No","Pass","","Email captured at the EmailProducer boundary (CapturingEmailProducerConfig) — no broker in the test profile"
+"L3-AUTH-12","Not-Found","NAC-01-03; NFR-SEC","FT-01","P2","POST /api/v1/auth/forgot-password","None (public endpoint)","body: {""email"":""nobody-nn@example.com""}","400","error_code REQ_001, message ""Không tìm thấy email""
+no email queued","REQ_001","Yes","Pass","","D39: the distinct message lets an attacker enumerate registered emails — unlike the login path, which stays uniform"
+"L3-AUTH-13","Input-Domain-Happy","FR-005; AC-01-03","FT-01","P1","POST /api/v1/auth/reset-password","None (public endpoint)","body: {""email"":""<existing>"",""otp"":""<fresh>"",""newPassword"":""NewPass123""}","200","DB: OTP row used = true
+login with the new password → 200","None","No","Pass","","Password and OTP flip in the same transaction"
+"L3-AUTH-14","State-Conflict","NAC-01-03; BR-30","FT-01","P1","POST /api/v1/auth/reset-password","None (public endpoint)","the same body replayed after a successful reset","400","error_code REQ_001, message ""Mã OTP đã được sử dụng""","REQ_001","Yes","Pass","",""
+"L3-AUTH-15","Validation","NAC-01-03; VAL_001","FT-01","P2","POST /api/v1/auth/reset-password","None (public endpoint)","body: {""email"":""<existing>"",""otp"":""123456"",""newPassword"":""abc""}","422","error_code VAL_001, details[] names newPassword (@Size min 4)","VAL_001","Yes","Pass","","Validation runs before the OTP lookup, so a wrong OTP is never reported here"
+"  ▶  Block: authentication entry point  |  Input dimension: missing token on a protected endpoint","","","","","","","","","","","","","",""
+"L3-AUTH-16","Auth-Missing","NAC-01-02; TDS 8.1","FT-01","P1","POST /api/v1/user/first-login/send-email-otp","Missing JWT (negative)","no Authorization header, body: {""email"":""<existing>""}","401","EMPTY body — no error_code, no message, no correlation_id
+WWW-Authenticate: Bearer
+no X-Correlation-ID header","(none — envelope not applied)","Yes","Pass","","D36: SecurityConfig registers no authenticationEntryPoint, so BearerTokenAuthenticationEntryPoint answers before the dispatcher. /user/first-login/** is NOT in the permitAll list"
