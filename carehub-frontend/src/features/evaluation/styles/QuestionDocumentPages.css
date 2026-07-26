@@ -1042,7 +1042,8 @@
   background: #2563eb;
 }
 
-@media (max-width: 1180px) {
+/* bp-lg */
+@media (max-width: 1280px) {
   .qdoc-metric-grid,
   .qdoc-metric-grid--wide {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1057,7 +1058,8 @@
   }
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .qdoc-title-card,
   .qdoc-upload-panel,
   .qdoc-filter-bar,

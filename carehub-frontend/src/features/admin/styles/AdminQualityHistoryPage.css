@@ -630,7 +630,7 @@
 
 .aqh-manager-modal-overlay {
   position: fixed;
-  z-index: 9000;
+  z-index: var(--z-modal);
   inset: 0;
   display: grid;
   place-items: center;

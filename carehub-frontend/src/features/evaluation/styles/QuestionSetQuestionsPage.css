@@ -8,7 +8,7 @@
 .qsq-container {
   background: #fff;
   border-radius: 16px;
-  border: 1.5px solid #007aff;
+  border: 1.5px solid var(--focus);
   padding: 32px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
@@ -162,8 +162,8 @@
 }
 
 .qsq-search-input:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .qsq-search-icon {
@@ -196,8 +196,8 @@
 }
 
 .qsq-filter-select:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .qsq-filter-actions {
@@ -421,12 +421,12 @@
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  background: #007aff;
+  background: var(--focus);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 }
 
 .qsq-btn-save:hover {

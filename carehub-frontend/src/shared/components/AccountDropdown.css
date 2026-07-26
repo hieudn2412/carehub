@@ -97,7 +97,8 @@
   background: #edf1ef;
 }
 
-@media (max-width: 640px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .account-dropdown__trigger .dashboard-header__info {
     display: none;
   }

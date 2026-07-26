@@ -418,7 +418,8 @@
   color: #dc2626;
 }
 
-@media (max-width: 960px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .pfm-layout {
     grid-template-columns: 1fr;
   }

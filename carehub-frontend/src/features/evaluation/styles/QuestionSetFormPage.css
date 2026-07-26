@@ -1076,7 +1076,8 @@
   border-color: #99f6e4;
 }
 
-@media (max-width: 1200px) {
+/* bp-lg */
+@media (max-width: 1280px) {
   .qsf-filter-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1163,7 +1164,8 @@
   }
 }
 
-@media (max-width: 520px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .qsf-header {
     flex-direction: column;
   }

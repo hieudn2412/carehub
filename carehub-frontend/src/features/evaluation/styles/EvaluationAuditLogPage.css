@@ -236,7 +236,8 @@
   text-align: center;
 }
 
-@media (max-width: 1100px) {
+/* bp-lg */
+@media (max-width: 1280px) {
   .eal-filter,
   .eal-content {
     grid-template-columns: 1fr;
@@ -251,7 +252,8 @@
   }
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .eal-header {
     align-items: flex-start;
     flex-direction: column;

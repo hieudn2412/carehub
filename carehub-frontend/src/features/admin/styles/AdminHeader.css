@@ -313,11 +313,18 @@
   margin: 0 0 4px;
 }
 
+/* notify-item là <button> (a11y) — reset style mặc định của button */
 .notify-item {
   display: flex;
   gap: 12px;
+  width: 100%;
   padding: 8px;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: inherit;
   cursor: pointer;
   transition: background 0.15s;
   position: relative;

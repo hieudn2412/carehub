@@ -64,8 +64,8 @@
 }
 
 .atl-search-input:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .atl-search-icon {
@@ -98,15 +98,15 @@
 }
 
 .atl-filter-select:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .atl-btn-add {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #007aff;
+  background: var(--focus);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -115,7 +115,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 .atl-btn-add:hover {
@@ -499,12 +499,12 @@ select.atl-input-green {
   font-size: 13.5px;
   font-weight: 600;
   color: #fff;
-  background: #007aff;
+  background: var(--focus);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 .atl-btn-save:hover {

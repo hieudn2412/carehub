@@ -139,7 +139,8 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     return (
       <div className="notify-popover__list">
         {notifications.map((item) => (
-          <div
+          <button
+            type="button"
             key={item.id}
             className={`notify-item ${item.read ? 'read' : ''}`}
             onClick={() => markAsRead(item.id)}
@@ -151,7 +152,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
               <p className="notify-item__text">{item.message}</p>
               <p className="notify-item__footer">{item.sender} - {item.createdAt}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     )
