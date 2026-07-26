@@ -5,7 +5,6 @@ import Sidebar from '../components/sidebar'
 import Header from '../components/Header'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../api/staffApi.js'
-import '../styles/ChecklistListScreen.css'
 
 function ChecklistListScreen() {
   const navigate = useNavigate()
@@ -54,11 +53,11 @@ function ChecklistListScreen() {
       <div className="dashboard-layout__content">
         <Header title="Phiếu kiểm tra" />
         <div className="dashboard-layout__body">
-          <div className="page-toolbar">
+          <div className="ch-toolbar">
             <h2 style={{ margin: 0 }}>Danh sách phiếu kiểm tra được giao</h2>
           </div>
-          <div className="table-container">
-            <table className="data-table">
+          <div className="ch-table-wrap">
+            <table className="ch-table">
               <thead>
                 <tr>
                   <th>Tên phiếu</th>
@@ -71,16 +70,16 @@ function ChecklistListScreen() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="text-center">Đang tải...</td></tr>
+                  <tr><td colSpan={6} className="ch-empty">Đang tải...</td></tr>
                 ) : assignments.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
+                  <tr><td colSpan={6} className="ch-empty">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
                 ) : (
                   assignments.map(item => (
                     <tr key={item.id}>
                       <td><strong>{item.formName || item.name || `Phiếu #${item.id}`}</strong></td>
                       <td>{item.description || '—'}</td>
                       <td>
-                        <span className={`status-badge status-badge--${item.status === 'COMPLETED' ? 'active' : 'warning'}`}>
+                        <span className={`ch-badge ch-badge--${item.status === 'COMPLETED' ? 'green' : 'amber'}`}>
                           {statusIcon(item.status)} {statusLabel(item.status)}
                         </span>
                       </td>
@@ -90,13 +89,13 @@ function ChecklistListScreen() {
                             {Number(item.version.passingScore).toFixed(1)}/10
                           </strong>
                         ) : (
-                          <span className="text-muted">—</span>
+                          <span className="ch-text-muted">—</span>
                         )}
                       </td>
                       <td>{item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '—'}</td>
                       <td>
                         <button
-                          className="btn btn--primary btn--sm"
+                          className="ch-btn ch-btn--primary ch-btn--sm"
                           onClick={() => navigate(`/staff/checklists/${item.id}`)}
                         >
                           {item.status === 'COMPLETED' ? 'Xem' : 'Làm phiếu'}

@@ -71,19 +71,19 @@ function TrainingGroupFormPage({ group, onClose }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={() => onClose(false)}>
-      <div className="modal-content modal-content--lg" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+    <div className="ch-modal-backdrop" onClick={() => onClose(false)}>
+      <div className="ch-modal ch-modal--lg" onClick={e => e.stopPropagation()}>
+        <div className="ch-modal__header">
           <h3>{isEdit ? 'Chỉnh sửa nhóm đào tạo' : 'Tạo nhóm đào tạo mới'}</h3>
-          <button className="modal-close" onClick={() => onClose(false)}>✕</button>
+          <button className="ch-btn-icon" aria-label="Đóng" onClick={() => onClose(false)}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
-            <div className="form-group">
-              <label>Tên nhóm <span className="required">*</span></label>
+          <div className="ch-modal__body">
+            <div className="ch-field">
+              <label>Tên nhóm <span className="ch-required">*</span></label>
               <input
                 type="text"
-                className="form-control"
+                className="ch-input"
                 value={form.name}
                 onChange={e => setForm({ ...form, name: e.target.value })}
                 placeholder="Ví dụ: Điều dưỡng mới tuyển"
@@ -91,20 +91,20 @@ function TrainingGroupFormPage({ group, onClose }) {
                 required
               />
             </div>
-            <div className="form-group">
+            <div className="ch-field">
               <label>Mô tả</label>
               <textarea
-                className="form-control"
+                className="ch-input"
                 value={form.description}
                 onChange={e => setForm({ ...form, description: e.target.value })}
                 placeholder="Mô tả mục đích của nhóm đào tạo"
                 rows={3}
               />
             </div>
-            <div className="form-group">
+            <div className="ch-field">
               <label>Trạng thái</label>
               <select
-                className="form-control"
+                className="ch-input"
                 value={form.active ? 'active' : 'inactive'}
                 onChange={e => setForm({ ...form, active: e.target.value === 'active' })}
               >
@@ -112,11 +112,11 @@ function TrainingGroupFormPage({ group, onClose }) {
                 <option value="inactive">Khóa</option>
               </select>
             </div>
-            <div className="form-group">
+            <div className="ch-field">
               <label>Thành viên ({form.memberIds.length} đã chọn)</label>
               <div className="member-select-list">
                 {users.length === 0 ? (
-                  <p className="text-muted">Đang tải danh sách nhân viên...</p>
+                  <p className="ch-text-muted">Đang tải danh sách nhân viên...</p>
                 ) : (
                   users.map(user => (
                     <label key={user.id} className="member-checkbox">
@@ -126,16 +126,16 @@ function TrainingGroupFormPage({ group, onClose }) {
                         onChange={() => handleMemberToggle(user.id)}
                       />
                       <span>{user.employeeCode} - {user.name}</span>
-                      {user.departmentName && <small className="text-muted"> ({user.departmentName})</small>}
+                      {user.departmentName && <small className="ch-text-muted"> ({user.departmentName})</small>}
                     </label>
                   ))
                 )}
               </div>
             </div>
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn--secondary" onClick={() => onClose(false)}>Hủy</button>
-            <button type="submit" className="btn btn--primary" disabled={isSaving}>
+          <div className="ch-modal__footer">
+            <button type="button" className="ch-btn ch-btn--secondary" onClick={() => onClose(false)}>Hủy</button>
+            <button type="submit" className="ch-btn ch-btn--primary" disabled={isSaving}>
               {isSaving ? 'Đang lưu...' : (isEdit ? 'Cập nhật' : 'Tạo mới')}
             </button>
           </div>

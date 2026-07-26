@@ -5,7 +5,6 @@ import TrainingGroupFormPage from './TrainingGroupFormPage'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
-import '../styles/TrainingGroupListPage.css'
 
 function TrainingGroupListPage() {
   const { showToast } = useToast()
@@ -76,8 +75,8 @@ function TrainingGroupListPage() {
       <div className="dashboard-layout__content">
         <AdminHeader title="Nhóm đào tạo" />
         <div className="dashboard-layout__body">
-          <div className="page-toolbar">
-            <div className="page-toolbar__search">
+          <div className="ch-toolbar">
+            <div className="ch-search">
               <SearchOutlined />
               <input
                 type="text"
@@ -86,13 +85,13 @@ function TrainingGroupListPage() {
                 onChange={(e) => { setKeyword(e.target.value); setPage(0) }}
               />
             </div>
-            <button className="btn btn--primary" onClick={handleCreate}>
+            <button className="ch-btn ch-btn--primary" onClick={handleCreate}>
               <PlusOutlined /> Tạo nhóm mới
             </button>
           </div>
 
-          <div className="table-container">
-            <table className="data-table">
+          <div className="ch-table-wrap">
+            <table className="ch-table">
               <thead>
                 <tr>
                   <th>Tên nhóm</th>
@@ -104,9 +103,9 @@ function TrainingGroupListPage() {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="text-center">Đang tải...</td></tr>
+                  <tr><td colSpan={5} className="ch-empty">Đang tải...</td></tr>
                 ) : displayRows.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center">Chưa có nhóm đào tạo nào</td></tr>
+                  <tr><td colSpan={5} className="ch-empty">Chưa có nhóm đào tạo nào</td></tr>
                 ) : (
                   displayRows.map(group => (
                     <tr key={group.id}>
@@ -114,15 +113,15 @@ function TrainingGroupListPage() {
                       <td>{group.description || '—'}</td>
                       <td>{group.memberCount}</td>
                       <td>
-                        <span className={`status-badge status-badge--${group.active ? 'active' : 'inactive'}`}>
+                        <span className={`ch-badge ch-badge--${group.active ? 'green' : 'neutral'}`}>
                           {group.active ? 'Hoạt động' : 'Đã khóa'}
                         </span>
                       </td>
                       <td>
-                        <button className="btn-icon" title="Sửa" onClick={() => handleEdit(group)}>
+                        <button className="ch-btn-icon" title="Sửa" aria-label="Sửa nhóm" onClick={() => handleEdit(group)}>
                           <EditOutlined />
                         </button>
-                        <button className="btn-icon btn-icon--danger" title="Xóa" onClick={() => handleDelete(group)}>
+                        <button className="ch-btn-icon ch-btn-icon--danger" title="Xóa" aria-label="Xóa nhóm" onClick={() => handleDelete(group)}>
                           <DeleteOutlined />
                         </button>
                       </td>
@@ -134,7 +133,7 @@ function TrainingGroupListPage() {
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination">
+            <div className="ch-pagination">
               <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Trước</button>
               <span>Trang {page + 1} / {totalPages}</span>
               <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</button>

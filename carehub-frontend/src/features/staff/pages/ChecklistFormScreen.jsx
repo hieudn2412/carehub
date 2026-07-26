@@ -260,16 +260,16 @@ function ChecklistFormScreen() {
               </div>
               {!isReadOnly && (
                 <div className="cfs-actions">
-                  <button className="btn btn--secondary" onClick={handleSave} disabled={saving || submitting}>
+                  <button className="ch-btn ch-btn--secondary" onClick={handleSave} disabled={saving || submitting}>
                     <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu nháp'}
                   </button>
-                  <button className="btn btn--primary" onClick={handleSubmit} disabled={saving || submitting}>
+                  <button className="ch-btn ch-btn--primary" onClick={handleSubmit} disabled={saving || submitting}>
                     <SendOutlined /> {submitting ? 'Đang nộp...' : 'Nộp phiếu'}
                   </button>
                 </div>
               )}
               {isReadOnly && (
-                <span className="status-badge status-badge--active">Đã nộp</span>
+                <span className="ch-badge ch-badge--green">Đã nộp</span>
               )}
             </div>
 

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
 const TODAY = new Date().toISOString().slice(0, 10)
@@ -58,7 +59,8 @@ function TrainingStatusPage() {
   }
 
   return (
-    <main className="training-page">
+    <AppShell title="Trạng thái đào tạo">
+    <div className="training-page">
       <section className="training-header">
         <div>
           <p className="training-eyebrow">Training</p>
@@ -175,7 +177,8 @@ function TrainingStatusPage() {
           </section>
         </>
       ) : null}
-    </main>
+    </div>
+    </AppShell>
   )
 }
 
