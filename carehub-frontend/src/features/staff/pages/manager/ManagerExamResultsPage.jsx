@@ -95,7 +95,7 @@ function ManagerExamResultsPage() {
               <p style={{ color: '#6b7280' }}>Không có kỳ thi nào.</p>
             </div>
           ) : (
-          <div className="mgr-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="mgr-card" style={{ padding: 0, overflowX: 'auto' }}>
             <table className="mgr-table">
               <thead>
                 <tr>

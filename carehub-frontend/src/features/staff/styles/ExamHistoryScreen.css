@@ -645,9 +645,25 @@
     min-width: 760px;
   }
 
+  /* Toolbar thi giữ sticky trên mobile để đồng hồ đếm ngược luôn hiển thị khi cuộn;
+     thu gọn: ẩn dòng hạn lượt làm (giữ trạng thái lưu), timer + nút nằm cùng hàng */
   .eh-exam-toolbar {
-    position: relative;
-    top: auto;
+    top: 0;
+    padding: 10px 14px;
+  }
+
+  .eh-exam-toolbar .eh-page-sub:not(.eh-save-indicator) {
+    display: none;
+  }
+
+  .eh-exam-toolbar__right {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .eh-exam-question {
+    scroll-margin-top: 150px;
   }
 
   .eh-timer {
@@ -681,7 +697,9 @@
   margin-bottom: 16px;
 }
 
-.eh-summary-card {
+/* Thẻ thống kê của màn Bài kiểm tra (ExamTakeListScreen) — tách tên khỏi
+   .eh-summary-card của màn Lịch sử thi vì hai layout xung đột (cột vs hàng) */
+.eh-take-summary-card {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -691,9 +709,9 @@
   background: #fff;
 }
 
-.eh-summary-card strong { font-size: 24px; color: #1f2937; }
-.eh-summary-card--success strong { color: #15803d; }
-.eh-summary-card--danger strong { color: #b91c1c; }
+.eh-take-summary-card strong { font-size: 24px; color: #1f2937; }
+.eh-take-summary-card--success strong { color: #15803d; }
+.eh-take-summary-card--danger strong { color: #b91c1c; }
 .eh-row--danger td { background: #fff1f2; }
 .eh-badge--passed { background: #dcfce7; color: #15803d; }
 .eh-badge--failed { background: #fee2e2; color: #b91c1c; }

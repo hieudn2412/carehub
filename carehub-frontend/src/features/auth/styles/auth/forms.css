@@ -60,7 +60,7 @@
 }
 
 .form-field__control.has-error {
-  border-color: #202125;
+  border-color: var(--red);
 }
 
 .form-field__icon {

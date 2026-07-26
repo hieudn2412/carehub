@@ -77,7 +77,7 @@ function ManagerExamResultDetailPage() {
               <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải dữ liệu...</p>
             </div>
           ) : (
-          <div className="mgr-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="mgr-card" style={{ padding: 0, overflowX: 'auto' }}>
             <table className="mgr-table">
               <thead>
                 <tr>

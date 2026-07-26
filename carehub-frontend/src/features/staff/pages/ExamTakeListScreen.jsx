@@ -69,10 +69,10 @@ export default function ExamTakeListScreen() {
     <div className="dashboard-layout__body"><div className="eh-page">
       <div className="eh-header"><h1 className="eh-page-title">Năng lực chuyên môn</h1><p className="eh-page-sub">Theo dõi và hoàn thành các bài kiểm tra được giao</p></div>
       <div className="eh-summary-grid">
-        <div className="eh-summary-card"><span>Tổng</span><strong>{stats.total}</strong></div>
-        <div className="eh-summary-card eh-summary-card--success"><span>Đạt</span><strong>{stats.passed}</strong></div>
-        <div className="eh-summary-card eh-summary-card--danger"><span>Chưa đạt</span><strong>{stats.failed}</strong></div>
-        <div className="eh-summary-card"><span>Chưa làm</span><strong>{stats.notTaken}</strong></div>
+        <div className="eh-take-summary-card"><span>Tổng</span><strong>{stats.total}</strong></div>
+        <div className="eh-take-summary-card eh-take-summary-card--success"><span>Đạt</span><strong>{stats.passed}</strong></div>
+        <div className="eh-take-summary-card eh-take-summary-card--danger"><span>Chưa đạt</span><strong>{stats.failed}</strong></div>
+        <div className="eh-take-summary-card"><span>Chưa làm</span><strong>{stats.notTaken}</strong></div>
       </div>
       <div className="eh-filter-bar">
         <div className="eh-search"><span className="eh-search-icon"><SearchOutlined /></span><input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={event => setSearch(event.target.value)} /></div>

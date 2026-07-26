@@ -212,7 +212,7 @@
 .fmp-versions-table-wrapper {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .fmp-v-table {

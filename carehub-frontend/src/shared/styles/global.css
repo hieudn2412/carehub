@@ -32,6 +32,15 @@
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   --text-soft: #64748b;
   --red: #c2414b;
+  /* Các biến dưới đây được var() ở nhiều feature (FormBuilder, FormImportWizard...)
+     nhưng trước đây chỉ khai báo scoped trong .form-list-page — promote lên :root */
+  --text: #1e293b;
+  --text-faint: #94a3b8;
+  --green: #14866d;
+  --green-bg: #e8f5f0;
+  --amber: #9a6700;
+  --amber-bg: #fff7df;
+  --red-bg: #fff0ef;
 }
 
 * {
