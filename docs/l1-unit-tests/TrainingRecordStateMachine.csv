@@ -13,13 +13,12 @@ adminActor = true","stateMachine.canTransition(DRAFT, SUBMITTED, true)","Returns
 "L1-TRSM-03","CC","DRAFT + cancel → allowed for both actor kinds","BR-07","P2","from = DRAFT
 to = CANCELLED
 @ParameterizedTest over adminActor = {false, true}","stateMachine.canTransition(DRAFT, CANCELLED, adminActor)","Returns true for both actor kinds","No","Pass","","@ParameterizedTest @CsvSource"
-"L1-TRSM-04","State-Valid","SUBMITTED + return-to-draft by owner → allowed","BR-07; FR-018","P1","from = SUBMITTED
+"L1-TRSM-04","Guard-FALSE","SUBMITTED + return-to-draft by owner → rejected","BR-07; NAC-04-03","P1","from = SUBMITTED
 to = DRAFT
-adminActor = false","stateMachine.canTransition(SUBMITTED, DRAFT, false)","Returns true — return-to-draft is allowed for the owner
-Ownership itself is enforced in TrainingRecordServiceImpl.returnToDraft:252","No","Pass","","Fixes stale expectation, defect D11"
-"L1-TRSM-05","State-Valid","SUBMITTED + return-to-draft by admin → allowed","BR-07","P2","from = SUBMITTED
+adminActor = FALSE  ← key input","stateMachine.canTransition(SUBMITTED, DRAFT, false)","Returns false — an owner may NOT return their own submitted record to draft","No","Pass","","Flipped by the origin/main merge (D11): SUBMITTED transitions are now admin-only"
+"L1-TRSM-05","Guard-TRUE","SUBMITTED + return-to-draft by admin → allowed","BR-07; FR-018","P1","from = SUBMITTED
 to = DRAFT
-adminActor = true","stateMachine.canTransition(SUBMITTED, DRAFT, true)","Returns true","No","Pass","","Fixes stale expectation, defect D11"
+adminActor = TRUE  ← key input","stateMachine.canTransition(SUBMITTED, DRAFT, true)","Returns true — only an admin can reopen a submitted record","No","Pass","","Guard-TRUE counterpart of L1-TRSM-04"
 "  ▶  Block: canTransition() — admin guard  |  BC TRUE/FALSE on adminActor","","","","","","","","","","",""
 "L1-TRSM-06","Guard-TRUE","SUBMITTED + cancel, adminActor=TRUE → allowed","BR-07; NAC-04-04","P1","from = SUBMITTED
 to = CANCELLED
@@ -54,3 +53,16 @@ adminActor = false","stateMachine.requireTransition(DRAFT, SUBMITTED, false)","D
 "L1-TRSM-15","BC-TRUE/BC-FALSE","only DRAFT records are editable","BR-07; FR-018","P1","@ParameterizedTest @CsvSource — DRAFT/true, SUBMITTED/false, CANCELLED/false","stateMachine.isEditable(status)","Returns true only for DRAFT","No","Pass","","@ParameterizedTest @CsvSource"
 "L1-TRSM-16","BC-FALSE","requireEditable on a SUBMITTED record throws naming the status","BR-07; NAC-04-03","P1","status = SUBMITTED","stateMachine.requireEditable(SUBMITTED)","Throws BadRequestException
 Message contains 'SUBMITTED' and 'không thể chỉnh sửa'","Yes","Pass","",""
+"  ▶  Block: canTransition() — the adminActor guard out of SUBMITTED  |  added after the origin/main merge","","","","","","","","","","",""
+"L1-TRSM-17","CC","full truth table of adminActor × target for transitions out of SUBMITTED","BR-07; NAC-04-03","P1","from = SUBMITTED
+@ParameterizedTest @CsvSource — full 2×2 of target × adminActor","stateMachine.canTransition(SUBMITTED, target, adminActor)
+
+Inputs:
+  DRAFT,     adminActor=false → false
+  DRAFT,     adminActor=true  → true
+  CANCELLED, adminActor=false → false
+  CANCELLED, adminActor=true  → true","adminActor alone decides both targets — the guard is shown to matter independently of which target is requested","No","Pass","","@ParameterizedTest @CsvSource. Pins the semantics main introduced"
+"L1-TRSM-18","Guard-FALSE","requireTransition SUBMITTED→DRAFT as non-admin throws","BR-07; NAC-04-03","P1","from = SUBMITTED
+to = DRAFT
+adminActor = false","stateMachine.requireTransition(SUBMITTED, DRAFT, false)","Throws BadRequestException
+Message contains 'SUBMITTED' and 'DRAFT'","Yes","Pass","","Exception path of L1-TRSM-04"

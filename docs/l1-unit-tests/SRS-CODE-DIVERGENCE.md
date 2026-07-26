@@ -26,6 +26,7 @@ công việc làm test — quyết định sửa hay đổi SRS thuộc về ch�
 | D11 | Trung bình | Test lạc hậu | ✅ Đã sửa test | — |
 | D12 | **Cao** | Bug (NPE → HTTP 500) | `L1-BV-10` EXPECTED FAIL | Sửa code |
 | D13 | **Cao** | Bug (dead code) | `L1-BV-19` EXPECTED FAIL | Sửa code |
+| D14 | **Cao** | Bug (link minh chứng không mở được ở dev) | `L1-FE-46`, `L1-FE-51` EXPECTED FAIL | Sửa code |
 
 ---
 
@@ -259,19 +260,59 @@ lại toàn bộ chỗ dùng NFD trong repo.
 
 ---
 
+## D14 — Bug: URL minh chứng tương đối resolve thành chuỗi rỗng ở cấu hình dev
+
+**Đến cùng lúc merge `origin/main`** (file `evidenceUrl.js` là code mới của main).
+
+**Code**: `carehub-frontend/src/features/training/utils/evidenceUrl.js`
+```js
+const API_BASE_URL = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8081/api/v1'
+...
+return new URL(value, new URL(API_BASE_URL).origin).toString()   // dòng 9
+```
+`new URL(API_BASE_URL)` **ném lỗi** khi `API_BASE_URL` là đường dẫn tương đối, và
+`carehub-frontend/.env` đang commit đặt đúng như vậy: `VITE_API_BASE_URL=/api/v1` (để dùng proxy của
+Vite dev server). Catch ngoài cùng trả `''`.
+
+**Đã kiểm chứng**:
+```
+API_BASE_URL = '/api/v1'                      → resolveEvidenceUrl('/api/v1/files/1') = ""
+API_BASE_URL = 'http://localhost:8081/api/v1' → resolveEvidenceUrl('/api/v1/files/1') = "http://localhost:8081/api/v1/files/1"
+```
+
+**Hệ quả**: ở môi trường dev (và mọi môi trường cấu hình `VITE_API_BASE_URL` tương đối), mọi URL minh
+chứng tương đối resolve thành `''` → `openEvidenceUrl` trả `false` → **click xem minh chứng không có
+phản hồi gì**, không lỗi, không log. Ảnh minh chứng cũng không hiển thị.
+
+**Vì sao chưa ai phát hiện**: test gốc `evidenceUrl.test.js` chạy bằng `node --test`. Node không có
+`import.meta.env`, nên module rơi vào fallback tuyệt đối `http://localhost:8081/api/v1` và test pass
+— pass vì lý do sai, không hề chạm cấu hình thật. Chuyển sang vitest (đọc `.env`) là lúc lỗi lộ ra.
+
+**Test**: `L1-FE-46` (resolve trả rỗng) và `L1-FE-51` (click không mở tab) — **EXPECTED FAIL**.
+`L1-FE-45`, `L1-FE-49` dùng URL tuyệt đối nên vẫn pass, khoanh vùng lỗi chỉ ở nhánh base tương đối.
+
+**Đề xuất**: lấy origin từ `window.location` khi base là tương đối —
+```js
+return new URL(value, new URL(API_BASE_URL, window.location.origin).origin).toString()
+```
+Rà thêm mọi chỗ khác dùng `new URL(API_BASE_URL)` với giả định base tuyệt đối.
+
+---
+
 ## Ghi chú về các failure có sẵn, ngoài phạm vi L1
 
-Suite backend còn failure/error **không thuộc 9 sheet L1** và không do công việc này gây ra. Ghi lại
-để `Report 5.0` mục 5.1 không tính nhầm:
+**Đã được `origin/main` sửa hết.** Trước khi merge, suite backend có 11 failure + 24 error ngoài phạm
+vi L1: ~24 error integration test fail ở `setUp` với `Table "roles"/"users"/"departments" not found
+(this database is empty)` (schema H2 thiếu trong `application-test.yaml`), cộng
+`ExamAttemptServiceTest` 3 failure, `ExamConfigServiceTest` 2 error,
+`TrainingRecordEvidenceControllerIntegrationTest` 3 failure.
 
-- **~24 error ở integration test** (`FormSubmissionControllerIntegrationTest`,
-  `UserImportControllerIntegrationTest`, `NotificationControllerIntegrationTest`,
-  `TrainingActivityTypeControllerIntegrationTest`, `EvaluationDashboardControllerIntegrationTest`,
-  `TrainingEmployeeHoursControllerIntegrationTest`, `TrainingLegacyImportControllerIntegrationTest`):
-  tất cả fail ở `setUp` với `Table "roles"/"users"/"departments" not found (this database is empty)`
-  → schema H2 không được tạo trong `application-test.yaml`. Đây là việc của **L2**, không phải L1.
-- `ExamAttemptServiceTest` — 3 failure.
-- `ExamConfigServiceTest` — 2 error (`BadRequest Điểm đạt phải trong khoảng 0-10`).
-- `TrainingRecordEvidenceControllerIntegrationTest` — 3 failure.
+Sau khi merge `origin/main` (commit merge `d08e504c`), main đã sửa `application-test.yaml` và các
+test trên. Hiện trạng suite backend:
 
-Các mục này nên được mở thành issue riêng; chúng không nằm trong 9 sheet của workbook L1.
+```
+Tests run: 577, Failures: 5, Errors: 0, Skipped: 7
+```
+
+5 failure còn lại **đúng bằng** 5 case L1 phơi bày defect D3, D5 (×2), D12, D13. Không còn failure
+nào ngoài phạm vi L1. Frontend: 68 test, 3 failure — đều là case defect (D4, D14 ×2).

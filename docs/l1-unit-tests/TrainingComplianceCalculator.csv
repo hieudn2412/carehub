@@ -1,67 +1,46 @@
 ﻿"TrainingComplianceCalculator  |  methods: resolveStatus, sumSubmittedHours, selectRequirementFromCandidates, calculate","","","","","","","","","","",""
 "Test ID","Coverage Technique","Covers (Decision/Condition)","SRS Reference","Priority","Given (Precondition / Mock Setup)","When (Input / Act)","Then (Expected Output / Assert)","Negative?","Status","Defect ID","Notes"
-"  ▶  Block: resolveStatus()  |  BVA on the requiredHours / warningThreshold bands; AC-05-02","","","","","","","","","","",""
-"L1-TCC-01","BVA","resolveStatus band edges for required=120 / warning=80","AC-05-02; FR-021; BV-01","P1","requirement.requiredHours = 120
-requirement.warningThresholdHours = 80
-@ParameterizedTest @CsvSource — 6 boundary points","calculator.resolveStatus(requirement, submittedHours)
+"  ▶  Block: resolveStatus()  |  BVA on the single hospital-wide target (SystemSettings)","","","","","","","","","","",""
+"L1-TCC-01","BVA","resolveStatus flips at exactly the global target","AC-05-02; FR-021","P1","requiredHours = 120 (from settingsService.globalTrainingHours())
+@ParameterizedTest @CsvSource — 4 boundary points","calculator.resolveStatus(requiredHours, submittedHours)
 
 Inputs:
   121    → COMPLIANT
   120    → COMPLIANT (BVA-Max, inclusive)
-  119.99 → AT_RISK
-  80     → AT_RISK (BVA-Min, inclusive)
-  79.99  → NON_COMPLIANT
-  0      → NON_COMPLIANT","Each input maps to the expected ComplianceStatus
-Both thresholds are inclusive lower bounds","No","Pass","","@ParameterizedTest @CsvSource — 6 boundary points in one method"
-"L1-TCC-02","EP-Invalid","resolveStatus with a null requirement → NOT_CONFIGURED","NAC-05-02","P1","requirement = null","calculator.resolveStatus(null, 500)","Returns NOT_CONFIGURED — never COMPLIANT","No","Pass","","NAC-05-02: no requirement must not read as compliant"
-"L1-TCC-03","BC-FALSE","warningThreshold null → AT_RISK unreachable, falls to NON_COMPLIANT","AC-05-02","P2","requirement.requiredHours = 120
-requirement.warningThresholdHours = null","calculator.resolveStatus(requirement, 119)","Returns NON_COMPLIANT — the AT_RISK branch is unreachable without a threshold","No","Pass","","BC FALSE of the warningThreshold != null check"
-"L1-TCC-04","EP-Invalid","null submittedHours is coerced to 0 → NON_COMPLIANT","FR-021","P2","requirement.requiredHours = 120, warning = 80
-submittedHours = null","calculator.resolveStatus(requirement, null)","Returns NON_COMPLIANT — null is coerced to 0, no NPE","No","Pass","",""
-"L1-TCC-05","BVA-Min","requiredHours 0 → any submitted total is COMPLIANT","BV-01","P3","requirement.requiredHours = 0","calculator.resolveStatus(requirement, 0)","Returns COMPLIANT — 0 >= 0","No","Pass","","Degenerate requirement"
+  119.99 → NON_COMPLIANT (BVA-Max-1)
+  0      → NON_COMPLIANT","The status flips exactly at the target; the comparison is >= so the target itself is compliant","No","Pass","","@ParameterizedTest @CsvSource. Sheet rebuilt after main replaced the per-requirement model"
+"L1-TCC-02","EP-Invalid","null requiredHours is coerced to 0 → COMPLIANT","FR-021","P2","requiredHours = null","calculator.resolveStatus(null, 0)","Returns COMPLIANT — null is coerced to 0, so 0 >= 0","No","Pass","",""
+"L1-TCC-03","EP-Invalid","null submittedHours is coerced to 0 → NON_COMPLIANT","FR-021","P2","submittedHours = null","calculator.resolveStatus(120, null)","Returns NON_COMPLIANT — null is coerced to 0, no NPE","No","Pass","",""
+"L1-TCC-04","EP-Invalid","both arguments null → COMPLIANT (0 >= 0)","FR-021","P3","both arguments null","calculator.resolveStatus(null, null)","Returns COMPLIANT (0 >= 0)","No","Pass","",""
+"L1-TCC-05","BVA-Min","requiredHours 0 → any submitted total is COMPLIANT","FR-021","P3","requiredHours = 0","calculator.resolveStatus(0, 0)","Returns COMPLIANT","No","Pass","","Degenerate target"
+"L1-TCC-06","EP","resolveStatus can only yield COMPLIANT or NON_COMPLIANT","AC-05-02; NAC-05-02","P1","requiredHours = 120, submitted sweeps 0 / 0.01 / 60 / 119.99 / 120 / 500","calculator.resolveStatus(120, submitted) for each value","Every result is COMPLIANT or NON_COMPLIANT
+AT_RISK and NOT_CONFIGURED are no longer reachable from this class — pinning the reduced partition so a reintroduced warning band cannot slip in untested","No","Pass","","Was AT_RISK coverage before the merge; the warning band was removed upstream"
 "  ▶  Block: sumSubmittedHours()  |  status partitioning; see defect D1 on BR-05","","","","","","","","","","",""
-"L1-TCC-06","EP","only SUBMITTED records are summed; DRAFT and CANCELLED ignored","FR-023; BR-05","P1","records = [SUBMITTED 5h, DRAFT 100h, CANCELLED 50h]","calculator.sumSubmittedHours(records)","Returns 5 — only SUBMITTED contributes","No","Pass","","D1: SRS BR-05 says APPROVED; code has no such status"
-"L1-TCC-07","BC-TRUE","sumSubmittedHours(null) → 0 without NPE","FR-023","P2","records = null","calculator.sumSubmittedHours(null)","Returns 0, no NPE","No","Pass","",""
-"L1-TCC-08","BC-TRUE","sumSubmittedHours(empty list) → 0","FR-023","P2","records = empty list","calculator.sumSubmittedHours(List.of())","Returns 0","No","Pass","",""
-"L1-TCC-09","EP-Invalid","SUBMITTED record with null declaredHours contributes 0","FR-023","P2","records = [SUBMITTED declaredHours=null, SUBMITTED 7.5h]","calculator.sumSubmittedHours(records)","Returns 7.5 — a null declaredHours contributes 0","No","Pass","",""
-"  ▶  Block: selectRequirementFromCandidates()  |  specificity score dept=4 / position=2 / field=1; BR-24","","","","","","","","","","",""
-"L1-TCC-10","EP","department-scoped requirement (score 4) beats position-scoped (score 2)","FR-020; BR-24","P1","candidate 1: department-scoped (score 4)
-candidate 2: position-scoped (score 2)
-employee is in both scopes
-given(cmeScopeService.isApplicable(...)) → true","calculator.selectRequirementFromCandidates(employee, null, [positionScoped, departmentScoped], {10})","Selects requirement id 1 (department scope wins)","No","Pass","",""
-"L1-TCC-11","EP","department + position (score 6) beats department only (score 4)","FR-020","P1","candidate 1: department only (score 4)
-candidate 2: department + position (score 6)","calculator.selectRequirementFromCandidates(employee, null, [departmentOnly, both], {10})","Selects requirement id 2 (more specific wins)","No","Pass","",""
-"L1-TCC-12","EP","equal specificity → latest effectiveFrom wins (tie-break)","FR-020; BR-24","P1","two department-scoped candidates, equal specificity
-effectiveFrom = 2025-01-01 and 2026-01-01","calculator.selectRequirementFromCandidates(employee, null, [older, newer], {10})","Selects the requirement with the later effectiveFrom (id 2)
-BR-24: changes apply forward, so the newest applicable rule wins","No","Pass","","Tie-break branch"
-"L1-TCC-13","BC-FALSE","candidate for another department does not match the employee","FR-020","P1","candidate scoped to department 99
-employee is in department 10","calculator.selectRequirementFromCandidates(employee, null, [otherDepartment], {10})","Returns Optional.empty()","No","Pass","","matchesEmployee BC FALSE"
-"L1-TCC-14","CC","a field-scoped requirement is filtered out unless the query names that field","FR-020","P2","candidate 1: professionalField = 7
-candidate 2: no professional field","selectRequirementFromCandidates(employee, professionalFieldId = null) then (…, 7L)","professionalFieldId null → field-scoped candidate is filtered out, id 2 selected
-professionalFieldId 7 → id 1 selected (scores +1)","No","Pass","","Both sides of the field sub-condition"
-"L1-TCC-15","BC-FALSE","field-scoped requirement is skipped when the query names another field","FR-020","P2","candidate: professionalField = 7
-query names professionalFieldId = 8","calculator.selectRequirementFromCandidates(employee, 8L, [withField], {10})","Returns Optional.empty()","No","Pass","",""
-"L1-TCC-16","Guard-FALSE","employee outside the CME scope → no requirement selected","NAC-05-02","P1","candidate is valid but the employee's department is outside the applicable set
-given(cmeScopeService.isApplicable(...)) → false","calculator.selectRequirementFromCandidates(employee, null, [candidate], {999})","Returns Optional.empty() — scope guard short-circuits","No","Pass","","Guard FALSE"
-"  ▶  Block: calculate()  |  end-to-end status assembly; AC-05-02, NAC-05-02","","","","","","","","","","",""
-"L1-TCC-17","Guard-FALSE","department outside CME scope → NOT_CONFIGURED with scope message","NAC-05-02","P1","given(cmeScopeService.getApplicableDepartmentIds()) → {999}
-employee.department.id = 10","calculator.calculate(employee, null, 2026-06-16)","status = NOT_CONFIGURED
-requirementId = null
-warningMessage contains 'not configured'","No","Pass","",""
-"L1-TCC-18","BC-TRUE","no active requirement → NOT_CONFIGURED, zeroed totals","NAC-05-02","P1","given(requirementRepository.findActiveCandidates(10, 20, null, any)) → []","calculator.calculate(employee, null, 2026-06-16)","status = NOT_CONFIGURED
-requirementId = null
-requiredHours = 0; progressPercentage = 0","No","Pass","",""
-"L1-TCC-19","State-Valid","window start = asOf minus cycleYears; remaining and progress derived","AC-05-02; AC-05-03; FR-021","P1","requirement: requiredHours 120, warning 80, cycleYears 5
-given(findActiveCandidates(...)) → [requirement]
-given(recordRepository.sumApprovedHoursForEmployee(...)) → 90","calculator.calculate(employee, null, 2026-06-16)","status = AT_RISK
-windowStart = 2021-06-16 (asOf − 5 years); windowEnd = 2026-06-16
-remainingHours = 30; progressPercentage = 75.00
+"L1-TCC-07","EP","only SUBMITTED records are summed; DRAFT and CANCELLED ignored","FR-023; BR-05","P1","records = [SUBMITTED 5h, DRAFT 100h, CANCELLED 50h]","calculator.sumSubmittedHours(records)","Returns 5 — only SUBMITTED contributes","No","Pass","","D1: SRS BR-05 says APPROVED; code has no such status"
+"L1-TCC-08","BC-TRUE","sumSubmittedHours(null) → 0 without NPE","FR-023","P2","records = null","calculator.sumSubmittedHours(null)","Returns 0, no NPE","No","Pass","",""
+"L1-TCC-09","BC-TRUE","sumSubmittedHours(empty list) → 0","FR-023","P2","records = empty list","calculator.sumSubmittedHours(List.of())","Returns 0","No","Pass","",""
+"L1-TCC-10","EP-Invalid","SUBMITTED record with null declaredHours contributes 0","FR-023","P2","records = [SUBMITTED declaredHours=null, SUBMITTED 7.5h]","calculator.sumSubmittedHours(records)","Returns 7.5 — a null declaredHours contributes 0","No","Pass","",""
+"  ▶  Block: calculate()  |  settings-driven window and totals; AC-05-02, AC-05-03","","","","","","","","","","",""
+"L1-TCC-11","State-Valid","window start = asOf minus the configured window; shortfall derived","AC-05-02; AC-05-03; FR-021","P1","given(settingsService.trainingWindowYears()) → 5
+given(settingsService.globalTrainingHours()) → 120
+given(recordRepository.sumApprovedHoursForEmployee(1, 2021-07-26, 2026-07-26)) → 90","calculator.calculate(employee, null, 2026-07-26)","status = NON_COMPLIANT
+windowStart = 2021-07-26 (asOf − 5 years); windowEnd = 2026-07-26; cycleYears = 5
+requiredHours = 120; submittedHours = 90; remainingHours = 30
+progressPercentage = 75.00
 warningMessage = '30 giờ còn thiếu'","No","Pass","",""
-"L1-TCC-20","BVA-Max","submitted above required → remaining floored at 0, progress capped at 100","AC-05-02","P1","requirement.requiredHours = 120
-given(sumApprovedHoursForEmployee(...)) → 200","calculator.calculate(employee, null, 2026-06-16)","status = COMPLIANT
-remainingHours floored at 0 (not negative)
-progressPercentage capped at 100
-warningMessage = 'Training requirement is met'","No","Pass","","BVA above the upper bound"
-"L1-TCC-21","BVA-Min","requiredHours 0 → progress is 100% instead of dividing by zero","BV-01","P2","requirement.requiredHours = 0
-given(sumApprovedHoursForEmployee(...)) → 0","calculator.calculate(employee, null, 2026-06-16)","progressPercentage = 100 — no divide-by-zero","No","Pass","","Division guard"
-"L1-TCC-22","EP-Invalid","asOf null → window end defaults to today","AC-05-03","P3","asOf = null","calculator.calculate(employee, null, null)","windowEnd = LocalDate.now()","No","Pass","",""
+"L1-TCC-12","BVA-Max","submitted equals the target → COMPLIANT with the met message","AC-05-02","P1","given(sumApprovedHoursForEmployee(...)) → 120 (exactly the target)","calculator.calculate(employee, null, 2026-07-26)","status = COMPLIANT
+remainingHours = 0; progressPercentage = 100.00
+warningMessage = 'Đã đạt mục tiêu giờ đào tạo'","No","Pass","","BVA on the target boundary, end to end"
+"L1-TCC-13","BVA-Max+1","over-achievement floors remaining at 0 and caps progress at 100","AC-05-02","P1","given(sumApprovedHoursForEmployee(...)) → 200","calculator.calculate(employee, null, 2026-07-26)","status = COMPLIANT
+remainingHours floored at 0 (never negative)
+progressPercentage capped at 100","No","Pass","",""
+"L1-TCC-14","BVA-Min","global target 0 → progress is 100% instead of dividing by zero","FR-021","P2","given(settingsService.globalTrainingHours()) → 0
+given(sumApprovedHoursForEmployee(...)) → 0","calculator.calculate(employee, null, 2026-07-26)","progressPercentage = 100 — no divide-by-zero
+status = COMPLIANT","No","Pass","","Division guard"
+"L1-TCC-15","EP-Invalid","a null global target is coerced to 0 → COMPLIANT, no NPE","FR-021","P2","given(settingsService.globalTrainingHours()) → null (setting missing)","calculator.calculate(employee, null, 2026-07-26)","requiredHours = 0; status = COMPLIANT; no NPE","No","Pass","","An unset system setting must not crash the status screen"
+"L1-TCC-16","EP-Invalid","a null repository total is coerced to 0 → NON_COMPLIANT","FR-023","P2","given(sumApprovedHoursForEmployee(...)) → null (no rows in the window)","calculator.calculate(employee, null, 2026-07-26)","submittedHours = 0; status = NON_COMPLIANT; remainingHours = 120","No","Pass","",""
+"L1-TCC-17","EP-Invalid","asOf null → window end defaults to today","AC-05-03","P3","asOf = null","calculator.calculate(employee, null, null)","windowEnd = LocalDate.now(); windowStart = today − 5 years","No","Pass","",""
+"L1-TCC-18","BVA","the lookback window follows trainingWindowYears exactly","FR-020; BR-24","P1","@ParameterizedTest @CsvSource — trainingWindowYears = 1 / 3 / 5 / 10","calculator.calculate(employee, null, 2026-07-26)","cycleYears echoes the setting and windowStart = asOf − that many years, for every value","No","Pass","","@ParameterizedTest @CsvSource"
+"L1-TCC-19","State","the response carries the hospital-wide label and no requirement id","AC-05-03","P2","given(sumApprovedHoursForEmployee(...)) → 0","calculator.calculate(employee, null, 2026-07-26)","requirementId = null and requirementName = 'Mục tiêu giờ đào tạo toàn viện' — there is no per-employee requirement entity any more
+employeeId / employeeCode / employeeName are echoed from the User","No","Pass","","Identity of the global target"
+"L1-TCC-20","EP","the 4-arg overload ignores the department scope and delegates","NAC-05-02","P2","given(sumApprovedHoursForEmployee(...)) → 90","calculator.calculate(employee, null, asOf) vs calculator.calculate(employee, 7L, asOf, Set.of(999L))","Both calls return an equal response — the 4-arg overload ignores professionalFieldId and the department scope and delegates to the global calculation","No","Pass","","Legacy overload kept for callers; scope arguments are now inert"

@@ -1,27 +1,37 @@
 # L1 Unit Tests — hướng dẫn điền `Report 5.2_L1-UnitTests_Template.xlsx`
 
-Bộ dữ liệu này để Claude cowork (hoặc bạn) paste vào workbook L1. **204 test case / 9 sheet**, mỗi
+Bộ dữ liệu này để Claude cowork (hoặc bạn) paste vào workbook L1. **211 test case / 9 sheet**, mỗi
 dòng CSV tương ứng 1-1 với một `@Test` / `it()` thật trong repo.
+
+> Cập nhật sau khi merge `origin/main` (commit merge `d08e504c`). Hai sheet bị ảnh hưởng semantics:
+> `TrainingComplianceCalculator` được **dựng lại** vì main thay model per-requirement bằng một mục
+> tiêu giờ toàn viện đọc từ `SystemSettingsService`; `TrainingRecordStateMachine` thêm 2 case vì main
+> siết transition khỏi SUBMITTED thành admin-only. Sheet `Frontend` thêm 7 case cho
+> `evidenceUrl.js` mới của main.
 
 ## Số liệu cho mục 5.1 của Report 5.0
 
 | Sheet trong workbook | File CSV | Case | Pass | Fail |
 |---|---|---|---|---|
-| `TrainingRecordStateMachine` | `TrainingRecordStateMachine.csv` | 16 | 16 | 0 |
-| `TrainingComplianceCalculator` | `TrainingComplianceCalculator.csv` | 22 | 22 | 0 |
+| `TrainingRecordStateMachine` | `TrainingRecordStateMachine.csv` | 18 | 18 | 0 |
+| `TrainingComplianceCalculator` | `TrainingComplianceCalculator.csv` | 20 | 20 | 0 |
 | `FormScoringPolicy` | `FormScoringPolicy.csv` | 22 | 22 | 0 |
 | `FormScoreCalculator` | `FormScoreCalculator.csv` | 14 | 14 | 0 |
 | `CompetencyClassificationService` | `CompetencyClassificationService.csv` | 14 | 12 | **2** |
 | `DuplicateCheckService` | `DuplicateCheckService.csv` | 22 | 22 | 0 |
 | `AccessPolicy-EvaluationSecurity` | `AccessPolicy-EvaluationSecurity.csv` | 26 | 26 | 0 |
 | `BoundaryValues` | `BoundaryValues.csv` | 24 | 21 | **3** |
-| `Frontend` | `Frontend.csv` | 44 | 43 | **1** |
-| **Tổng** | | **204** | **198** | **6** |
+| `Frontend` | `Frontend.csv` | 51 | 48 | **3** |
+| **Tổng** | | **211** | **203** | **8** |
 
-**6 case Fail là cố ý** — chúng assert theo SRS nên fail chính là bằng chứng của defect:
+**8 case Fail là cố ý** — chúng assert theo SRS nên fail chính là bằng chứng của defect:
 `L1-CCS-13`, `L1-CCS-14` (D5) · `L1-BV-04` (D3) · `L1-BV-10` (D12) · `L1-BV-19` (D13) ·
-`L1-FE-22` (D4). Chi tiết ở `SRS-CODE-DIVERGENCE.md`. Không sửa code trong phạm vi công việc làm
-test — 6 dòng này là đầu vào cho mục 5.2 "Root Cause Analysis" của Report 5.0.
+`L1-FE-22` (D4) · `L1-FE-46`, `L1-FE-51` (D14). Chi tiết ở `SRS-CODE-DIVERGENCE.md`. Không sửa code
+trong phạm vi công việc làm test — 8 dòng này là đầu vào cho mục 5.2 "Root Cause Analysis" của
+Report 5.0.
+
+Toàn bộ suite sau merge: backend **577 test / 5 failure / 0 error**, frontend **68 test / 3 failure**.
+Mọi failure đều nằm trong 8 case defect ở trên — không còn failure nào ngoài phạm vi L1.
 
 Branch coverage (JaCoCo, 11 class trong phạm vi L1): **80.9 % – 100 %**, đạt mốc M1 ≥ 80 %.
 Báo cáo: `carehub-backend/target/site/jacoco/index.html`.
@@ -74,7 +84,7 @@ nguyên; bật **Wrap text** cho cột F, G, H và đặt độ cao dòng tự �
 | `L1-DUP` | DuplicateCheckService | `questiongeneration.service.DuplicateCheckService` |
 | `L1-SEC` | AccessPolicy-EvaluationSecurity | `training.service.TrainingAccessPolicy` (01–14) + `questiongeneration.security.EvaluationSecurity` (15–26) |
 | `L1-BV` | BoundaryValues | `TrainingDomainValidator` · `TrainingLegacyDurationParser` · `CosineUtil` · `ExamAssignmentService` |
-| `L1-FE` | Frontend | `httpClient` · `evidenceFile` · `authNavigation` · `tokenStorage` · `useOtpExpiry` |
+| `L1-FE` | Frontend | `httpClient` (01–12, 23) · `evidenceFile` (13–22) · `authNavigation` (24–35) · `tokenStorage` (36–39) · `useOtpExpiry` (40–44) · `evidenceUrl` (45–51) |
 
 ## Sinh lại dữ liệu
 

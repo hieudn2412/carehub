@@ -106,3 +106,18 @@ After: '00:00', isExpired = true","No","Pass","","The exact expiry transition"
 "L1-FE-42","BVA-Min-1","an expiry already in the past clamps to 0 rather than going negative","BV-14; BR-30","P2","renderHook(() => useOtpExpiry(Date.now() − 60000))","Read result.current on mount","formattedRemaining = '00:00'; isExpired = true — clamped at 0, never negative","Yes","Pass","","BVA below the lower bound"
 "L1-FE-43","State","resetExpiry restarts the countdown at the configured duration","AC-01-02","P2","renderHook(() => useOtpExpiry(Date.now() + 1000, 120)) advanced to expiry","act(() => result.current.resetExpiry())","isExpired = false again; formattedRemaining = '02:00' (the configured 120 s, not the 300 s default)","No","Pass","","Resend-OTP flow"
 "L1-FE-44","EP-Invalid","a non-numeric initial expiry falls back to a fresh default window","BV-14","P3","renderHook(() => useOtpExpiry('not-a-number'))","Read result.current on mount","formattedRemaining = '05:00'; isExpired = false — a non-numeric initial value falls back to a fresh default window rather than expiring immediately","No","Pass","",""
+"  ▶  Block: evidenceUrl  |  arrived with the origin/main merge, migrated from node:test to vitest","","","","","","","","","","",""
+"L1-FE-45","EP-Valid","an absolute URL is returned unchanged","AC-04-01; FR-015","P2","value = 'https://cdn.example.com/file.png'","resolveEvidenceUrl(value)","Returned unchanged — an already-absolute evidence URL is passed through","No","Pass","",""
+"L1-FE-46","EP-Valid","a relative URL is joined onto the API origin (D14)","AC-04-01; FR-015","P1","value = '/api/v1/files/1'
+.env sets VITE_API_BASE_URL=/api/v1 (relative, for the Vite dev proxy)","resolveEvidenceUrl('/api/v1/files/1')","EXPECTED: a non-empty absolute URL
+ACTUAL: '' — new URL(API_BASE_URL) throws on a relative base, so the catch returns empty","Yes","Fail","D14","DEFECT D14 — expected to fail until fixed. The old node:test run hid it (Node has no import.meta.env)"
+"L1-FE-47","EP-Invalid","an empty or null URL yields an empty string","FR-015","P2","value = '' then null","resolveEvidenceUrl(value)","Returns '' for both","Yes","Pass","",""
+"L1-FE-48","EP-Invalid","a non-string value (%s) yields an empty string","FR-015","P3","it.each — value = undefined, 42, {}, [], true","resolveEvidenceUrl(value)","Returns '' for every non-string input — the typeof guard holds","Yes","Pass","","it.each over non-string types"
+"L1-FE-49","BC-TRUE","a resolvable URL is opened in a new tab with noopener","AC-04-01","P2","vi.stubGlobal('open', spy)
+value = 'https://cdn.example.com/file.png'","openEvidenceUrl(value)","Returns true
+window.open called with (url, '_blank', 'noopener,noreferrer') — the tab is opened without leaking window.opener","No","Pass","","Uses an absolute URL so this case is independent of D14"
+"L1-FE-50","BC-FALSE","an unresolvable URL returns false and opens nothing","FR-015","P2","vi.stubGlobal('open', spy)
+value = ''","openEvidenceUrl('')","Returns false and window.open is never called","Yes","Pass","",""
+"L1-FE-51","BC-TRUE","a relative evidence path must still open (D14)","AC-04-01; FR-015","P1","vi.stubGlobal('open', spy)
+value = '/api/v1/files/1' (the dev-proxy shape)","openEvidenceUrl('/api/v1/files/1')","EXPECTED: returns true and opens a tab
+ACTUAL: returns false — every 'open evidence' click is a silent no-op under the dev proxy config","Yes","Fail","D14","DEFECT D14 — user-visible impact of L1-FE-46"
