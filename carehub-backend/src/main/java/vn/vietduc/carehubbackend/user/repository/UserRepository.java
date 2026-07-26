@@ -17,6 +17,11 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, UserRepositoryCustom {
+    interface DepartmentEmployeeCount {
+        Long getDepartmentId();
+        long getEmployeeCount();
+    }
+
     Optional<User> findByEmailAndIsDeletedFalse(String email);
     Optional<User> findByEmployeeCodeAndIsDeletedFalse(String employeeCode);
 
@@ -34,6 +39,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     boolean existsByEmployeeCodeAndIsDeletedFalseAndIdNot(String employeeCode, Long id);
     boolean existsByEmailAndIsDeletedFalseAndIdNot(String email, Long id);
     boolean existsByDepartment_IdAndIsDeletedFalse(Long departmentId);
+    long countByDepartment_IdAndIsDeletedFalseAndStatus(Long departmentId, UserStatus status);
     boolean existsByPosition_IdAndIsDeletedFalse(Long positionId);
     boolean existsByEducationLevel_IdAndIsDeletedFalse(Long educationLevelId);
     List<User> findByEmployeeCodeIn(Collection<String> employeeCodes);
@@ -43,6 +49,16 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
 
     @EntityGraph(attributePaths = {"department", "position"})
     List<User> findByIsDeletedFalseAndStatus(UserStatus status);
+
+    @Query("""
+            SELECT u.department.id AS departmentId, COUNT(u.id) AS employeeCount
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.department IS NOT NULL
+            GROUP BY u.department.id
+            """)
+    List<DepartmentEmployeeCount> countActiveEmployeesByDepartment();
 
     @EntityGraph(attributePaths = {"department", "position"})
     @Query(value = """

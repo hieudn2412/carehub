@@ -21,6 +21,7 @@ import {
   hasAnyRole,
 } from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { staffApi } from '../api/staffApi.js'
 import logo from '../../../assets/logo.png'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
@@ -35,6 +36,47 @@ function Sidebar() {
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
+  const [assignedChecklistAccess, setAssignedChecklistAccess] = useState({
+    accessToken: null,
+    hasAssignment: false,
+  })
+  const hasAssignedChecklist = assignedChecklistAccess.accessToken === accessToken
+    && assignedChecklistAccess.hasAssignment
+
+  useEffect(() => {
+    let active = true
+
+    if (isAdmin || isManager) {
+      return () => {
+        active = false
+      }
+    }
+
+    staffApi.getAssignedForms({ page: 0, size: 1, sort: 'id,desc' })
+      .then((response) => {
+        if (!active) {
+          return
+        }
+
+        const page = response.data?.data
+        const content = Array.isArray(page?.content) ? page.content : []
+        const totalElements = Number(page?.totalElements)
+
+        setAssignedChecklistAccess({
+          accessToken,
+          hasAssignment: Number.isFinite(totalElements) ? totalElements > 0 : content.length > 0,
+        })
+      })
+      .catch(() => {
+        if (active) {
+          setAssignedChecklistAccess({ accessToken, hasAssignment: false })
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [isAdmin, isManager, accessToken])
 
   const isLinkActive = (itemPath) => {
     if (
@@ -61,6 +103,9 @@ function Sidebar() {
         { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo liên tục', path: '/staff/training' },
         { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/staff/competency' },
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
+        ...(!isManager && hasAssignedChecklist ? [
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
+        ] : []),
       ],
     },
   ]

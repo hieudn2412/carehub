@@ -20,7 +20,7 @@ function formatScore(value) {
   })
 }
 
-function ManagerEvaluationHistoryDetailPage() {
+function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/history' }) {
   const { id } = useParams()
 
   const [evaluation, setEvaluation] = useState(null)
@@ -45,7 +45,7 @@ function ManagerEvaluationHistoryDetailPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header back={{ to: '/manager/quality/history', label: 'Quay lại' }} title="Lịch sử đánh giá" />
+          <Header back={{ to: historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
             <LoadingOutlined style={{ fontSize: 32, color: '#2563eb' }} />
             <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải chi tiết kết quả đánh giá...</p>
@@ -60,7 +60,7 @@ function ManagerEvaluationHistoryDetailPage() {
       <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-layout__content">
-          <Header back={{ to: '/manager/quality/history', label: 'Quay lại' }} title="Lịch sử đánh giá" />
+          <Header back={{ to: historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá" />
           <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 100 }}>
             <p style={{ color: '#ef4444', fontWeight: 600 }}>{error || 'Không tìm thấy chi tiết kết quả đánh giá.'}</p>
           </div>
@@ -78,9 +78,9 @@ function ManagerEvaluationHistoryDetailPage() {
       <Sidebar />
       <div className="dashboard-layout__content">
         <Header
-          back={{ to: '/manager/quality/history', label: 'Quay lại' }}
+          back={{ to: historyPath, label: 'Quay lại' }}
           breadcrumbs={[
-            { label: 'Lịch sử đánh giá', link: '/manager/quality/history' },
+            { label: 'Lịch sử đánh giá', link: historyPath },
             { label: 'Chi tiết kết quả' }
           ]}
         />
