@@ -153,7 +153,7 @@ function ExamHistoryScreen() {
             </div>
 
             <div className="eh-table-card">
-              <table className="eh-table">
+              <table className="eh-table eh-table--cards">
                 <thead>
                   <tr>
                     <th>Tên bài thi</th>
@@ -174,15 +174,15 @@ function ExamHistoryScreen() {
                     <tr><td colSpan="9">Chưa có lịch sử thi.</td></tr>
                   ) : filtered.map((attempt) => (
                     <tr key={attempt.id}>
-                      <td>{attempt.examPaperName}</td>
-                      <td>{formatDateTime(attempt.submittedAt)}</td>
-                      <td>{attempt.professionalFieldName || '—'}</td>
-                      <td>
+                      <td data-label="Tên bài thi">{attempt.examPaperName}</td>
+                      <td data-label="Ngày nộp">{formatDateTime(attempt.submittedAt)}</td>
+                      <td data-label="Lĩnh vực">{attempt.professionalFieldName || '—'}</td>
+                      <td data-label="Điểm số">
                         <span className={`eh-score ${
                           attempt.passed === true ? 'eh-score--pass' : attempt.passed === false ? 'eh-score--fail' : 'eh-score--pending'
                         }`}>{attempt.score ?? '---'}{attempt.score !== null && attempt.score !== undefined ? '%' : ''}</span>
                       </td>
-                      <td>
+                      <td data-label="Phân loại">
                         {attempt.classification ? (
                           <span style={{
                             display: 'inline-block',
@@ -197,7 +197,7 @@ function ExamHistoryScreen() {
                           </span>
                         ) : <span style={{ color: '#9ca3af' }}>--</span>}
                       </td>
-                      <td>
+                      <td data-label="Trạng thái">
                         <span className={`eh-badge ${
                           attempt.status === 'EXPIRED'
                             ? 'eh-badge--pending'
@@ -207,8 +207,8 @@ function ExamHistoryScreen() {
                           {attempt.status === 'EXPIRED' ? 'Hết thời gian' : attempt.passed ? 'Đạt' : 'Không đạt'}
                         </span>
                       </td>
-                      <td>{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>
-                      <td><span className="eh-attempt">{attempt.attemptNumber}</span></td>
+                      <td data-label="Thời gian">{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>
+                      <td data-label="Lượt"><span className="eh-attempt">{attempt.attemptNumber}</span></td>
                       <td>
                         <button className="eh-btn eh-btn--view" onClick={() => viewAttempt(attempt)}>
                           <EyeOutlined /> Chi tiết

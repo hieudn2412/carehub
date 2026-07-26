@@ -90,11 +90,11 @@ export default function ExamTakeListScreen() {
         <label>Từ <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} /></label>
         <label>Đến <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} /></label>
       </div>
-      <div className="eh-table-card"><table className="eh-table"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Kết quả bài kiểm tra</th><th>Đánh giá</th><th>Chi tiết</th></tr></thead><tbody>
+      <div className="eh-table-card"><table className="eh-table eh-table--cards"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Kết quả bài kiểm tra</th><th>Đánh giá</th><th>Chi tiết</th></tr></thead><tbody>
         {loading ? <tr><td colSpan="5">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="5">Chưa có bài kiểm tra trong phạm vi đã chọn.</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
-          <td><strong>{item.name}</strong></td><td>{formatDateTime(item.dueAt)}</td><td>{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
-          <td><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
-          <td><button type="button" className="eh-btn eh-btn--retry" onClick={() => openAssignment(item)} disabled={startingId !== null || (!item.detailAttemptId && !item.actionable)} title="Chi tiết">
+          <td data-label="Tên bài kiểm tra"><strong>{item.name}</strong></td><td data-label="Thời hạn">{formatDateTime(item.dueAt)}</td><td data-label="Kết quả">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
+          <td data-label="Đánh giá"><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
+          <td><button type="button" className="eh-btn eh-btn--retry" onClick={() => openAssignment(item)} disabled={startingId !== null || (!item.detailAttemptId && !item.actionable)} title="Chi tiết" aria-label={item.detailAttemptId ? 'Xem chi tiết bài kiểm tra' : 'Bắt đầu làm bài'}>
             {startingId === item.id ? <LoadingOutlined spin /> : item.detailAttemptId ? <EyeOutlined /> : <PlayCircleOutlined />}
           </button></td>
         </tr>)}
