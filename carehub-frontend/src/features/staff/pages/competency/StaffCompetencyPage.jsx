@@ -14,6 +14,23 @@ const localToday = () => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
+const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const formatScore10 = value => {
+  const score = Number(value)
+  return SCORE_FORMATTER.format(Number.isFinite(score) ? score : 0)
+}
+
+const convertToTenPointScale = (value, totalMaxScore) => {
+  const score = Number(value)
+  const maxScore = Number(totalMaxScore)
+  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return 0
+  return score * 10 / maxScore
+}
+
 export default function StaffCompetencyPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
@@ -95,8 +112,12 @@ export default function StaffCompetencyPage() {
       {detail !== null ? <div className="sc-detail-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="sc-detail-dialog" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
         <header className="sc-detail-dialog__header"><div><span>CHI TIẾT LƯỢT ĐÁNH GIÁ</span><h3>{detail?.title || 'Tuân thủ quy trình'}</h3></div><button type="button" onClick={() => setDetail(null)} aria-label="Đóng"><CloseOutlined /></button></header>
         {detailLoading ? <div className="sc-detail-dialog__loading"><LoadingState label="Đang tải..." /></div> : <div className="sc-detail-dialog__body">
-          <div className="sc-detail-metrics"><article className="sc-personal-metric"><span className="sc-personal-metric__icon">{detail?.result === 'PASSED' ? <CheckCircleFilled /> : <WarningFilled />}</span><div><span>Kết quả</span><strong>{detail?.result === 'PASSED' ? 'Đạt' : 'Chưa đạt'}</strong></div></article><article className="sc-personal-metric"><div><span>Điểm</span><strong>{formatNumber(Number(detail?.convertedScore || 0) * 10)}/10</strong></div></article></div>
-          <div className="sc-detail-breakdown"><h4>Câu trả lời và tiêu chí</h4>{(detail?.scoreBreakdown || []).map(item => <article key={item.questionKey}><div><strong>{item.code} · {item.title}</strong></div><small>Điểm: {formatNumber(item.weightedScore)} / {formatNumber(item.maxScore)}</small></article>)}</div>
+          <div className="sc-detail-metrics"><article className="sc-personal-metric"><span className="sc-personal-metric__icon">{detail?.result === 'PASSED' ? <CheckCircleFilled /> : <WarningFilled />}</span><div><span>Kết quả</span><strong>{detail?.result === 'PASSED' ? 'Đạt' : 'Chưa đạt'}</strong></div></article><article className="sc-personal-metric"><div><span>Điểm</span><strong>{formatScore10(detail?.convertedScore)}/10</strong></div></article></div>
+          <div className="sc-detail-breakdown"><h4>Câu trả lời và tiêu chí</h4>{(detail?.scoreBreakdown || []).map(item => {
+            const score10 = convertToTenPointScale(item.weightedScore, detail?.maxScore)
+            const maxScore10 = convertToTenPointScale(item.maxScore, detail?.maxScore)
+            return <article key={item.questionKey}><div><strong>{item.code} · {item.title}</strong></div><small>Điểm (thang 10): {formatScore10(score10)} / {formatScore10(maxScore10)}</small></article>
+          })}</div>
         </div>}
       </section></div> : null}
     </AppShell>

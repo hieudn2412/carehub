@@ -126,7 +126,7 @@ function TrainingStatusPage() {
             <StatusCard label="Nhân viên" value={status.employeeName || '-'} note={status.employeeCode} />
             <StatusCard
               label="Trạng thái"
-              value={status.status === 'COMPLIANT' ? 'ĐẠT' : status.status === 'NON_COMPLIANT' ? 'KHÔNG ĐẠT' : status.status}
+              value={status.status === 'COMPLIANT' ? 'ĐẠT' : 'CHƯA ĐẠT'}
               note={status.warningMessage}
             />
             <StatusCard

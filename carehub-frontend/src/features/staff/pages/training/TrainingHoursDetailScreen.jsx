@@ -176,7 +176,7 @@ function TrainingHoursDetailScreen() {
         { label: 'Chi tiết' }
       ]}
     >
-      <div className="training-page">
+      <div className="training-page th-detail-page">
 
             {loading ? (
               <div className="th-table-state">Đang tải thông tin...</div>

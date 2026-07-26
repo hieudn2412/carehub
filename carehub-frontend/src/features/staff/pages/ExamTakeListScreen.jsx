@@ -84,8 +84,29 @@ export default function ExamTakeListScreen() {
           searchPlaceholder="Tìm tên lĩnh vực..."
           ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
         /></div>
-        <label>Từ <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} /></label>
-        <label>Đến <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} /></label>
+        <div className="eh-date-range" role="group" aria-label="Khoảng thời hạn hoàn thành">
+          <label className="eh-date-filter">
+            <span className="eh-date-filter__label">Từ ngày</span>
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={event => setFromDate(event.target.value)}
+              aria-label="Từ ngày"
+            />
+          </label>
+          <span className="eh-date-range__divider" aria-hidden="true" />
+          <label className="eh-date-filter">
+            <span className="eh-date-filter__label">Đến ngày</span>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={event => setToDate(event.target.value)}
+              aria-label="Đến ngày"
+            />
+          </label>
+        </div>
       </div>
       <div className="eh-table-card"><table className="eh-table eh-table--cards"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Kết quả bài kiểm tra</th><th>Đánh giá</th><th>Chi tiết</th></tr></thead><tbody>
         {loading ? <tr><td colSpan="5">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="5">Chưa có bài kiểm tra trong phạm vi đã chọn.</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>

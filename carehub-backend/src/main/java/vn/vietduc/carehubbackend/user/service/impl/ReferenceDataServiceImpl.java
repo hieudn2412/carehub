@@ -22,6 +22,8 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.service.ReferenceDataService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,15 +36,28 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
     @Override
     @Transactional(readOnly = true)
     public List<DepartmentResponse> getDepartments() {
+        Map<Long, Long> employeeCounts = userRepository.countActiveEmployeesByDepartment().stream()
+                .collect(Collectors.toMap(
+                        UserRepository.DepartmentEmployeeCount::getDepartmentId,
+                        UserRepository.DepartmentEmployeeCount::getEmployeeCount
+                ));
         return departmentRepository.findAll().stream()
-                .map(DepartmentResponse::from)
+                .map(department -> DepartmentResponse.from(
+                        department,
+                        employeeCounts.getOrDefault(department.getId(), 0L)
+                ))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public DepartmentResponse getDepartment(Long id) {
-        return DepartmentResponse.from(findDepartment(id));
+        Department department = findDepartment(id);
+        long employeeCount = userRepository.countByDepartment_IdAndIsDeletedFalseAndStatus(
+                id,
+                vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+        );
+        return DepartmentResponse.from(department, employeeCount);
     }
 
     @Override
@@ -57,7 +72,7 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
                 .name(request.getName().trim())
                 .build();
 
-        return DepartmentResponse.from(departmentRepository.save(department));
+        return DepartmentResponse.from(departmentRepository.save(department), 0L);
     }
 
     @Override
@@ -70,7 +85,12 @@ public class ReferenceDataServiceImpl implements ReferenceDataService {
 
         department.setDepartmentCode(request.getDepartmentCode().trim());
         department.setName(request.getName().trim());
-        return DepartmentResponse.from(departmentRepository.save(department));
+        Department savedDepartment = departmentRepository.save(department);
+        long employeeCount = userRepository.countByDepartment_IdAndIsDeletedFalseAndStatus(
+                id,
+                vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+        );
+        return DepartmentResponse.from(savedDepartment, employeeCount);
     }
 
     @Override

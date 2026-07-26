@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
-import { SearchOutlined, EyeOutlined, EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import { SearchOutlined, EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import '../styles/ActivityTypeListPage.css'
 
 const EMPTY_FORM = {
@@ -238,7 +237,7 @@ function ActivityTypeListPage() {
                           <th>Mô tả</th>
                           <th>Quy tắc tính giờ</th>
                           <th>Trạng thái</th>
-                          <th style={{ width: '100px', textAlign: 'center' }}>Hành động</th>
+                          <th style={{ width: '76px', textAlign: 'center' }}>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -258,13 +257,6 @@ function ActivityTypeListPage() {
                             </td>
                             <td>
                               <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                                <Link
-                                  className="atl-action-btn atl-action-btn--view"
-                                  to={`/admin/training/activity-types/${item.id}`}
-                                  title="Xem chi tiết"
-                                >
-                                  <EyeOutlined />
-                                </Link>
                                 <button
                                   type="button"
                                   className="atl-action-btn atl-action-btn--edit"

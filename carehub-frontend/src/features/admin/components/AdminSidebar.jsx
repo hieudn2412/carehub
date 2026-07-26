@@ -46,9 +46,7 @@ const navSections = [
   {
     label: 'DỮ LIỆU NỀN',
     items: [
-      { icon: <TeamOutlined />, label: 'Danh sách nhân viên gốc', path: '/admin/reference/employees' },
-      { icon: <BankOutlined />, label: 'Danh mục phòng ban gốc', path: '/admin/reference/departments' },
-      { icon: <DatabaseOutlined />, label: 'Nhập dữ liệu', path: '/admin/reference/import' },
+      { icon: <BankOutlined />, label: 'Danh mục phòng ban', path: '/admin/reference/departments' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
     ],
   },

@@ -52,7 +52,7 @@ function TrainingEmployeeStatusDetailPage() {
             employeeCode: statusData.employeeCode || '---',
             submittedHours: statusData.submittedHours || 0,
             requiredHours: statusData.requiredHours ?? 0,
-            complianceStatus: statusData.status || 'NOT_CONFIGURED'
+            complianceStatus: statusData.status === 'COMPLIANT' ? 'COMPLIANT' : 'NON_COMPLIANT'
           })
         }
 
@@ -122,9 +122,7 @@ function TrainingEmployeeStatusDetailPage() {
                           ? 'ted-profile-badge--compliant'
                           : ''
                       }`}>
-                        {employeeInfo.complianceStatus === 'NOT_CONFIGURED'
-                          ? 'Chưa áp dụng yêu cầu giờ đào tạo'
-                          : `${employeeInfo.submittedHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Không đạt'}`}
+                        {`${employeeInfo.submittedHours}/${employeeInfo.requiredHours}h - ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'Đạt' : 'Chưa đạt'}`}
                       </div>
                     </div>
 

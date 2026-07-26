@@ -472,18 +472,21 @@
 
 /* Action Cells */
 .flp-actions-cell {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 92px);
+  align-items: center;
+  gap: 6px;
   justify-content: center;
-  min-width: 300px;
+  min-width: 288px;
 }
 
 .flp-btn-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 8px;
   font-size: 12px;
   font-weight: 500;
   border-radius: var(--radius-sm);
@@ -500,6 +503,8 @@
 }
 
 .flp-btn-detail {
+  grid-column: 2;
+  width: 92px;
   color: var(--navy);
 }
 
@@ -510,6 +515,8 @@
 }
 
 .flp-btn-evaluate {
+  grid-column: 1;
+  width: 92px;
   border-color: #0f8065;
   background: #0f8065;
   color: #ffffff;
@@ -523,6 +530,8 @@
 }
 
 .flp-btn-delete {
+  grid-column: 3;
+  width: 92px;
   color: var(--red);
   border-color: #f3b9b7;
 }
@@ -621,7 +630,7 @@
 }
 
 .flp-assignment-modal {
-  width: min(760px, 100%);
+  width: min(920px, 100%);
   max-height: min(820px, calc(100vh - 48px));
   overflow: hidden;
   display: flex;
@@ -678,7 +687,10 @@
 
 .flp-assignment-loading,
 .flp-assignment-error,
+.flp-assignment-message,
 .flp-assignment-field,
+.flp-assignment-validity,
+.flp-assignment-recipient-prompt,
 .flp-assignment-list-head,
 .flp-assignment-list,
 .flp-assignment-actions {
@@ -708,6 +720,29 @@
   font-size: 13px;
 }
 
+.flp-assignment-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.flp-assignment-message--error {
+  border-color: #fecaca;
+  background: var(--red-bg);
+  color: #b42318;
+}
+
+.flp-assignment-message--success {
+  border-color: #b7e4d7;
+  background: #effaf6;
+  color: #0f6e56;
+}
+
 .flp-assignment-field {
   display: flex;
   flex-direction: column;
@@ -721,8 +756,8 @@
   font-weight: 700;
 }
 
-.flp-assignment-field select,
-.flp-assignment-field input {
+.flp-assignment-field > select,
+.flp-assignment-field > input {
   min-height: 42px;
   padding: 9px 12px;
   border: 1px solid var(--border);
@@ -733,8 +768,8 @@
   outline: none;
 }
 
-.flp-assignment-field select:focus,
-.flp-assignment-field input:focus {
+.flp-assignment-field > select:focus,
+.flp-assignment-field > input:focus {
   border-color: #0f6e56;
   box-shadow: 0 0 0 3px rgba(20, 134, 109, 0.12);
 }
@@ -742,6 +777,34 @@
 .flp-assignment-field small {
   color: var(--text-soft);
   font-size: 12px;
+}
+
+.flp-assignment-field .searchable-select > input {
+  min-height: 42px;
+  padding-right: 38px;
+  padding-left: 38px;
+}
+
+.flp-assignment-validity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.flp-assignment-validity .flp-assignment-field {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.flp-assignment-recipient-prompt {
+  margin-top: 22px;
+  padding: 34px 18px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fbfdfc;
+  color: var(--text-soft);
+  text-align: center;
+  font-size: 13.5px;
 }
 
 .flp-assignment-list-head {
@@ -796,6 +859,10 @@
   font-size: 13.5px;
 }
 
+.flp-assignment-empty .anticon {
+  margin-right: 7px;
+}
+
 .flp-assignment-option {
   display: grid;
   grid-template-columns: 20px 1fr auto;
@@ -812,6 +879,24 @@
 
 .flp-assignment-option:hover {
   background: #f5faf8;
+}
+
+.flp-assignment-option--assigned {
+  cursor: default;
+  background: #f8fcfa;
+}
+
+.flp-assignment-option__assigned-mark {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: #dff4ed;
+  color: #0f6e56;
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .flp-assignment-option input {
@@ -852,6 +937,47 @@
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.flp-assignment-option__status--available {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.flp-assignment-option__assigned-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.flp-assignment-option__validity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.flp-assignment-option__assigned-actions > button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #f2b8b5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #c73535;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flp-assignment-option__assigned-actions > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .flp-assignment-actions {
@@ -991,7 +1117,10 @@
   }
   .flp-assignment-loading,
   .flp-assignment-error,
+  .flp-assignment-message,
   .flp-assignment-field,
+  .flp-assignment-validity,
+  .flp-assignment-recipient-prompt,
   .flp-assignment-list-head,
   .flp-assignment-list,
   .flp-assignment-actions {
@@ -1004,6 +1133,15 @@
   .flp-assignment-option__status {
     grid-column: 2;
     width: fit-content;
+  }
+  .flp-assignment-validity {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .flp-assignment-option__assigned-actions {
+    grid-column: 2;
+    flex-wrap: wrap;
+    justify-content: flex-start;
   }
   .flp-assignment-actions {
     flex-direction: column-reverse;

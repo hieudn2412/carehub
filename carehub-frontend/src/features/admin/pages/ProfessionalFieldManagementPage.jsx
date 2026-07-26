@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { CloseOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import AdminHeader from '../components/AdminHeader.jsx'
 import AdminSidebar from '../components/AdminSidebar.jsx'
 import { adminApi } from '../api/adminApi.js'
@@ -18,6 +18,7 @@ function ProfessionalFieldManagementPage() {
   const [pendingCount, setPendingCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
+  const [formModalOpen, setFormModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -75,9 +76,17 @@ function ProfessionalFieldManagementPage() {
     return () => window.clearTimeout(timer)
   }, [loadFields, loadPendingCount])
 
-  const resetForm = () => {
+  const closeFormModal = useCallback(() => {
+    if (saving) return
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setFormModalOpen(false)
+  }, [saving])
+
+  const createField = () => {
+    setEditingId(null)
+    setForm(EMPTY_FORM)
+    setFormModalOpen(true)
   }
 
   const editField = field => {
@@ -89,7 +98,22 @@ function ProfessionalFieldManagementPage() {
       active: field.active,
       version: field.version,
     })
+    setFormModalOpen(true)
   }
+
+  useEffect(() => {
+    if (!formModalOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    const closeOnEscape = event => {
+      if (event.key === 'Escape') closeFormModal()
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [closeFormModal, formModalOpen])
 
   const submit = async event => {
     event.preventDefault()
@@ -106,7 +130,9 @@ function ProfessionalFieldManagementPage() {
         await adminApi.createProfessionalField(form)
         showToast('Đã thêm lĩnh vực chuyên môn', 'success')
       }
-      resetForm()
+      setEditingId(null)
+      setForm(EMPTY_FORM)
+      setFormModalOpen(false)
       loadFields()
       loadPendingCount()
     } catch (error) {
@@ -144,22 +170,15 @@ function ProfessionalFieldManagementPage() {
               <h1>Quản lý lĩnh vực chuyên môn</h1>
               <p>Danh mục dùng chung khi tạo bài kiểm tra, lọc kết quả và khai báo giờ đào tạo.</p>
             </div>
-            <button type="button" onClick={loadFields}><ReloadOutlined /> Tải lại</button>
+            <div className="pfm-heading-actions">
+              <button className="pfm-create-btn" type="button" onClick={createField}>
+                <PlusOutlined /> Tạo mới lĩnh vực
+              </button>
+              <button type="button" onClick={loadFields}><ReloadOutlined /> Tải lại</button>
+            </div>
           </section>
 
           <div className="pfm-layout">
-            <form className="pfm-card pfm-form" onSubmit={submit}>
-              <h2>{editingId ? 'Cập nhật lĩnh vực' : 'Thêm lĩnh vực mới'}</h2>
-              <label>Mã lĩnh vực<input value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} maxLength={50} placeholder="VD: CAP_CUU" /></label>
-              <label>Tên lĩnh vực<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} maxLength={255} placeholder="VD: Chăm sóc cấp cứu" /></label>
-              <label>Mô tả<textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={4} maxLength={2000} /></label>
-              <label className="pfm-check"><input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} /> Đang sử dụng</label>
-              <div className="pfm-actions">
-                <button className="pfm-primary" disabled={saving} type="submit"><PlusOutlined /> {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Thêm lĩnh vực'}</button>
-                {editingId && <button type="button" onClick={resetForm}>Hủy</button>}
-              </div>
-            </form>
-
             <section className="pfm-card pfm-list">
               <div className="pfm-tabs-container">
                 <div className="pfm-tabs">
@@ -232,6 +251,89 @@ function ProfessionalFieldManagementPage() {
             </section>
           </div>
         </main>
+        {formModalOpen && (
+          <div
+            className="pfm-modal-backdrop"
+            onMouseDown={closeFormModal}
+            role="presentation"
+          >
+            <form
+              aria-labelledby="professional-field-modal-title"
+              aria-modal="true"
+              className="pfm-modal"
+              onMouseDown={event => event.stopPropagation()}
+              onSubmit={submit}
+              role="dialog"
+            >
+              <header className="pfm-modal__header">
+                <div>
+                  <span>{editingId ? 'CHỈNH SỬA LĨNH VỰC' : 'LĨNH VỰC MỚI'}</span>
+                  <h2 id="professional-field-modal-title">
+                    {editingId ? 'Cập nhật lĩnh vực chuyên môn' : 'Tạo mới lĩnh vực chuyên môn'}
+                  </h2>
+                  <p>Thông tin này được dùng chung trong đào tạo và năng lực chuyên môn.</p>
+                </div>
+                <button
+                  aria-label="Đóng popup"
+                  className="pfm-modal__close"
+                  disabled={saving}
+                  onClick={closeFormModal}
+                  type="button"
+                >
+                  <CloseOutlined />
+                </button>
+              </header>
+
+              <div className="pfm-form pfm-modal__body">
+                <label>
+                  Mã lĩnh vực
+                  <input
+                    autoFocus
+                    maxLength={50}
+                    onChange={e => setForm({ ...form, code: e.target.value })}
+                    placeholder="VD: CAP_CUU"
+                    value={form.code}
+                  />
+                </label>
+                <label>
+                  Tên lĩnh vực
+                  <input
+                    maxLength={255}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="VD: Chăm sóc cấp cứu"
+                    value={form.name}
+                  />
+                </label>
+                <label>
+                  Mô tả
+                  <textarea
+                    maxLength={2000}
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    placeholder="Mô tả ngắn về phạm vi của lĩnh vực..."
+                    rows={4}
+                    value={form.description}
+                  />
+                </label>
+                <label className="pfm-check">
+                  <input
+                    checked={form.active}
+                    onChange={e => setForm({ ...form, active: e.target.checked })}
+                    type="checkbox"
+                  />
+                  Đang sử dụng
+                </label>
+              </div>
+
+              <footer className="pfm-actions pfm-modal__actions">
+                <button disabled={saving} onClick={closeFormModal} type="button">Hủy</button>
+                <button className="pfm-primary" disabled={saving} type="submit">
+                  {editingId ? <EditOutlined /> : <PlusOutlined />}
+                  {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Tạo lĩnh vực'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )

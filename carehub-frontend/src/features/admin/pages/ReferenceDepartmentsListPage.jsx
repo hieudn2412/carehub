@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi'
@@ -7,62 +7,10 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/ReferenceDepartmentsListPage.css'
 
-// Generate 248 mock reference departments to match mockup details
-const generateMockDepartments = () => {
-  const departments = []
-  const blockNames = ['Khối Lâm sàng', 'Khối Cận lâm sàng/Chức năng', 'Khối Hành chính']
-  const names = [
-    'Khoa Thần kinh', 'Khoa Tim mạch', 'Khoa Phẫu thuật tổng hợp', 
-    'Phòng Kiểm soát nhiễm khuẩn', 'Khoa Nội tổng hợp', 'Khoa Ngoại chấn thương',
-    'Khoa Nhi', 'Khoa Sản', 'Phòng Điều dưỡng', 'Phòng Tổ chức cán bộ'
-  ]
-  
-  for (let i = 0; i < 248; i++) {
-    const id = i + 1
-    let name = names[i % names.length]
-    let block = blockNames[i % blockNames.length]
-    let employeeCount = 50 + (i * 12) % 300
-    let managerCode = `VD${String(368 + (i % 10)).padStart(5, '0')}`
-    
-    // Exact mockup matches
-    if (i === 0) {
-      name = 'Khoa Thần kinh'
-      block = 'Khối Lâm sàng'
-      employeeCount = 100
-      managerCode = 'VD00368'
-    } else if (i === 1) {
-      name = 'Khoa Tim mạch'
-      block = 'Khối Lâm sàng'
-      employeeCount = 200
-      managerCode = 'VD00368'
-    } else if (i === 2) {
-      name = 'Khoa Phẫu thuật tổng hợp'
-      block = 'Khối Lâm sàng'
-      employeeCount = 100
-      managerCode = 'VD00368'
-    } else if (i === 3) {
-      name = 'Phòng Kiểm soát nhiễm khuẩn'
-      block = 'Khối Cận lâm sàng/Chức năng'
-      employeeCount = 300
-      managerCode = 'VD00368'
-    }
-    
-    departments.push({
-      id,
-      name,
-      blockName: block,
-      employeeCount,
-      managerCode
-    })
-  }
-  return departments
-}
-
 function ReferenceDepartmentsListPage() {
   const { showToast } = useToast()
   const [apiDepts, setApiDepts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [useMock, setUseMock] = useState(false)
 
   // Confirm Modal state
   const [confirmModal, setConfirmModal] = useState({
@@ -72,7 +20,6 @@ function ReferenceDepartmentsListPage() {
 
   // Filters State
   const [search, setSearch] = useState('')
-  const [blockFilter, setBlockFilter] = useState('all')
   const [page, setPage] = useState(1)
 
   // Modal & Form State
@@ -81,46 +28,32 @@ function ReferenceDepartmentsListPage() {
   const [formDeptCode, setFormDeptCode] = useState('')
   const [formDeptName, setFormDeptName] = useState('')
 
-  const mockDatabase = useMemo(() => generateMockDepartments(), [])
-
-  const loadDepartments = () => {
+  const loadDepartments = useCallback(() => {
     setLoading(true)
     adminApi.getDepartments()
       .then(res => {
         const list = res.data?.data
-        if (list && list.length > 0) {
-          // Enrich backend data with additional mockup columns
-          const enriched = list.map((dept, index) => {
-            const blockNames = ['Khối Lâm sàng', 'Khối Cận lâm sàng/Chức năng', 'Khối Hành chính']
-            return {
-              id: dept.id,
-              name: dept.name,
-              departmentCode: dept.departmentCode || `DEPT-${dept.id}`,
-              blockName: blockNames[index % blockNames.length],
-              employeeCount: 50 + (index * 25) % 250,
-              managerCode: `VD${String(368 + (index % 5)).padStart(5, '0')}`
-            }
-          })
-          setApiDepts(enriched)
-          setUseMock(false)
-        } else {
-          setUseMock(true)
-        }
+        const departments = Array.isArray(list) ? list : []
+        setApiDepts(departments.map(dept => ({
+          ...dept,
+          employeeCount: Number(dept.employeeCount) || 0,
+        })))
       })
       .catch(err => {
-        console.warn('GET /departments API failed. Falling back to mock departments.', err)
-        setUseMock(true)
+        console.error('GET /departments API failed.', err)
+        setApiDepts([])
+        showToast(err?.response?.data?.message || 'Không thể tải danh sách phòng ban.', 'error')
       })
       .finally(() => {
         setLoading(false)
       })
-  }
+  }, [showToast])
 
-  // Fetch departments from backend or fallback
+  // Fetch departments from backend
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDepartments()
-  }, [])
+  }, [loadDepartments])
 
   // Action handlers
   const handleOpenCreateModal = () => {
@@ -199,21 +132,15 @@ function ReferenceDepartmentsListPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1)
-  }, [search, blockFilter])
-
-  // Select database
-  const activeDatabase = useMemo(() => {
-    return useMock ? mockDatabase : apiDepts
-  }, [useMock, mockDatabase, apiDepts])
+  }, [search])
 
   // Apply filters
   const filteredDepartments = useMemo(() => {
-    return activeDatabase.filter(dept => {
+    return apiDepts.filter(dept => {
       const matchSearch = dept.name.toLowerCase().includes(search.toLowerCase())
-      const matchBlock = blockFilter === 'all' || dept.blockName === blockFilter
-      return matchSearch && matchBlock
+      return matchSearch
     })
-  }, [activeDatabase, search, blockFilter])
+  }, [apiDepts, search])
 
   // Pagination
   const PAGE_SIZE = 10
@@ -225,17 +152,8 @@ function ReferenceDepartmentsListPage() {
   }, [filteredDepartments, page])
 
   const breadcrumbs = [
-    { label: 'Danh sách phòng ban gốc' }
+    { label: 'Danh mục phòng ban' }
   ]
-
-  // Extract unique blocks for select dropdown
-  const blockOptions = useMemo(() => {
-    const blocks = new Set()
-    activeDatabase.forEach(d => {
-      if (d.blockName) blocks.add(d.blockName)
-    })
-    return Array.from(blocks)
-  }, [activeDatabase])
 
   // Generate pagination buttons array with ellipsis for clean design
   const getVisiblePages = () => {
@@ -265,8 +183,8 @@ function ReferenceDepartmentsListPage() {
               
               {/* Title Card */}
               <div className="rdl-title-card">
-                <h1 className="rdl-title">Danh sách khoa/phòng ban gốc</h1>
-                <p className="rdl-subtitle">Quản lý danh mục các khoa/phòng ban gốc trong hệ thống</p>
+                <h1 className="rdl-title">Danh mục phòng ban</h1>
+                <p className="rdl-subtitle">Quản lý danh mục các khoa/phòng ban trong hệ thống</p>
               </div>
 
               {/* Filter Bar */}
@@ -284,17 +202,6 @@ function ReferenceDepartmentsListPage() {
                   />
                 </div>
 
-                <select
-                  className="rdl-filter-select"
-                  value={blockFilter}
-                  onChange={(e) => setBlockFilter(e.target.value)}
-                >
-                  <option value="all">Khối</option>
-                  {blockOptions.map(block => (
-                    <option key={block} value={block}>{block}</option>
-                  ))}
-                </select>
-
                 <span className="rdl-results-count">{totalElements} kết quả</span>
                 
                 <button className="rdl-btn-primary" onClick={handleOpenCreateModal}>
@@ -308,24 +215,23 @@ function ReferenceDepartmentsListPage() {
                   <thead>
                     <tr>
                       <th style={{ width: '10%' }}>ID</th>
-                      <th style={{ width: '15%' }}>Mã Code</th>
-                      <th style={{ width: '30%' }}>Tên phòng ban</th>
-                      <th style={{ width: '20%' }}>Khối</th>
-                      <th style={{ width: '13%' }}>Nhân viên</th>
-                      <th style={{ width: '12%', textAlign: 'center' }}>Hành động</th>
+                      <th style={{ width: '18%' }}>Mã Code</th>
+                      <th style={{ width: '38%' }}>Tên phòng ban</th>
+                      <th style={{ width: '14%' }}>Nhân viên</th>
+                      <th style={{ width: '20%', textAlign: 'center' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="6">
-                          <LoadingState label="Đang tải danh sách phòng ban gốc..." />
+                        <td colSpan="5">
+                          <LoadingState label="Đang tải danh mục phòng ban..." />
                         </td>
                       </tr>
                     ) : paginatedDepartments.length === 0 ? (
                       <tr>
-                        <td colSpan="6" className="ch-empty">
-                          Không tìm thấy phòng ban gốc phù hợp.
+                        <td colSpan="5" className="ch-empty">
+                          Không tìm thấy phòng ban phù hợp.
                         </td>
                       </tr>
                     ) : (
@@ -334,7 +240,6 @@ function ReferenceDepartmentsListPage() {
                           <td><span className="rdl-dept-code">{dept.id}</span></td>
                           <td><strong>{dept.departmentCode || '-'}</strong></td>
                           <td><strong>{dept.name}</strong></td>
-                          <td>{dept.blockName}</td>
                           <td>{dept.employeeCount}</td>
                           <td>
                             <div className="rdl-actions-cell" style={{ justifyContent: 'center' }}>

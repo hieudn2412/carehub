@@ -166,6 +166,59 @@
   font-size: 14px;
 }
 
+.eh-date-range {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 39px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.eh-date-range:focus-within {
+  border-color: #2f8b70;
+  box-shadow: 0 0 0 3px rgba(47, 139, 112, 0.12);
+}
+
+.eh-date-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 37px;
+  padding: 0 10px;
+}
+
+.eh-date-filter__label {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.eh-date-filter input {
+  width: 126px;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  cursor: pointer;
+}
+
+.eh-date-range__divider {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 22px;
+  background: #e2e8f0;
+}
+
 /* Table Card */
 .eh-table-card {
   background: #fff;
@@ -651,6 +704,19 @@
     width: 100%;
   }
 
+  .eh-field-filter,
+  .eh-date-range {
+    width: 100%;
+  }
+
+  .eh-date-filter {
+    flex: 1;
+  }
+
+  .eh-date-filter input {
+    width: 100%;
+  }
+
   .eh-table {
     min-width: 760px;
   }
@@ -778,6 +844,23 @@
   .eh-table--cards td:not([data-label]) {
     justify-content: flex-start;
     text-align: left;
+  }
+
+  /* Bộ lọc ngày xếp dọc trên phone */
+  .eh-date-range {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eh-date-filter {
+    box-sizing: border-box;
+    flex: none;
+    width: 100%;
+  }
+
+  .eh-date-range__divider {
+    width: 100%;
+    height: 1px;
   }
 }
 .eh-summary-grid {

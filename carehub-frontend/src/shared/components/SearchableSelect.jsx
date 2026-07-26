@@ -14,9 +14,13 @@ function SearchableSelect({
   value,
   options = [],
   onChange,
+  onSearch,
+  selectedOption: selectedOptionProp,
   placeholder,
   searchPlaceholder = 'Nhập để tìm kiếm...',
   emptyMessage = 'Không tìm thấy kết quả phù hợp',
+  loading = false,
+  loadingMessage = 'Đang tải dữ liệu...',
   disabled = false,
   multiple = false,
   ariaLabel,
@@ -38,8 +42,11 @@ function SearchableSelect({
   const selectedValueSet = useMemo(() => new Set(normalizedValues), [normalizedValues])
 
   const selectedOption = useMemo(
-    () => (multiple ? null : options.find((option) => String(option.value) === String(value))),
-    [multiple, options, value],
+    () => (multiple
+      ? null
+      : selectedOptionProp
+        || options.find((option) => String(option.value) === String(value))),
+    [multiple, options, selectedOptionProp, value],
   )
 
   const filteredOptions = useMemo(() => {
@@ -67,12 +74,13 @@ function SearchableSelect({
       }
     }
 
-    document.addEventListener('mousedown', closeWhenClickingOutside)
-    return () => document.removeEventListener('mousedown', closeWhenClickingOutside)
+    document.addEventListener('mousedown', closeWhenClickingOutside, true)
+    return () => document.removeEventListener('mousedown', closeWhenClickingOutside, true)
   }, [])
 
   const openDropdown = () => {
     if (disabled) return
+    if (!isOpen) onSearch?.('')
     setIsOpen(true)
     if (multiple) {
       window.setTimeout(() => inputRef.current?.focus(), 0)
@@ -162,7 +170,9 @@ function SearchableSelect({
       onClick={multiple ? undefined : openDropdown}
       onFocus={openDropdown}
       onChange={(event) => {
-        setQuery(event.target.value)
+        const nextQuery = event.target.value
+        setQuery(nextQuery)
+        onSearch?.(nextQuery)
         setIsOpen(true)
         setActiveIndex(-1)
       }}
@@ -198,7 +208,9 @@ function SearchableSelect({
           role="listbox"
           aria-multiselectable={multiple || undefined}
         >
-          {filteredOptions.length === 0 ? (
+          {loading ? (
+            <div className="searchable-select__empty" role="status">{loadingMessage}</div>
+          ) : filteredOptions.length === 0 ? (
             <div className="searchable-select__empty" role="status">{emptyMessage}</div>
           ) : filteredOptions.map((option, index) => {
             const isSelected = multiple

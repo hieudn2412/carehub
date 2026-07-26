@@ -325,6 +325,21 @@ function AppRouter() {
       <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/competency" element={protectedElement(<StaffCompetencyPage />)} />
+      <Route
+        path="/staff/quality/history"
+        element={protectedElement(
+          <ManagerEvaluationHistoryPage
+            historyPath="/staff/quality/history"
+            personal
+          />,
+        )}
+      />
+      <Route
+        path="/staff/quality/history/:id"
+        element={protectedElement(
+          <ManagerEvaluationHistoryDetailPage historyPath="/staff/quality/history" />,
+        )}
+      />
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/professional-competency" element={protectedElement(<ExamTakeListScreen />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
