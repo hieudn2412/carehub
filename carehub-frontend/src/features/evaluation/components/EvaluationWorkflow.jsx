@@ -32,9 +32,11 @@ export default function EvaluationWorkflow() {
         {STEPS.map((step, index) => (
           <li key={step.key} className={`evaluation-workflow__step ${index === activeIndex ? 'is-current' : ''} ${index < activeIndex ? 'is-complete' : ''}`}>
             <NavLink to={step.path} className="evaluation-workflow__link" aria-current={index === activeIndex ? 'step' : undefined}>
-              <span className="evaluation-workflow__number">
-                {index < activeIndex ? <CheckOutlined aria-hidden="true" /> : index + 1}
-              </span>
+              {index < activeIndex ? (
+                <span className="evaluation-workflow__marker" aria-hidden="true">
+                  <CheckOutlined />
+                </span>
+              ) : null}
               <span>{step.label}</span>
             </NavLink>
           </li>
