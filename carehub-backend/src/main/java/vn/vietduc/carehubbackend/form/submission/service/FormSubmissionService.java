@@ -150,10 +150,7 @@ public class FormSubmissionService {
         if (employee == null) {
             return;
         }
-        // Admin can create a submission directly from a published version, so
-        // assignmentItem is intentionally null for that flow. The version is
-        // mandatory for every submission and is therefore the authoritative
-        // source for the form displayed in the notification.
+
         String formName = submission.getFormVersion().getForm().getTitle();
         BigDecimal displayedScore = submission.getConvertedScore() == null
                 ? submission.getTotalScore()

@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import {
   ClockCircleOutlined,
   CloseOutlined,
+  EyeOutlined,
   FileExcelOutlined,
   LoadingOutlined,
   PlusOutlined,
@@ -101,6 +102,15 @@ function formatDateTime(value) {
   return new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+
+function formatDate(value) {
+  if (!value) return 'Chưa có'
+  return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -595,16 +605,16 @@ function AdminQualityHistoryVersionPage() {
                           <div data-label="Nhân viên"><strong>{formatPersonName(item.subject, 'Chưa có tên')}</strong></div>
                           <div data-label="Khoa/phòng"><span>{item.subject?.department || 'Chưa xác định'}</span></div>
                           <div data-label="Người chấm"><span>{formatPersonName(item.submittedBy)}</span></div>
-                          <div data-label="Ngày nộp"><span>{formatDateTime(item.submittedAt || item.updatedAt)}</span></div>
+                          <div data-label="Ngày nộp"><span>{formatDate(item.submittedAt || item.updatedAt)}</span></div>
                           <div data-label="Điểm"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></div>
                           <div data-label="Kết quả"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></div>
                           <div data-label="Chi tiết">
                             <button
                               aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
-                              className="admin-quality-history__detail-button"
+                              className="admin-quality-history__detail-button admin-quality-history__detail-button--icon"
                               onClick={() => navigate(`/admin/quality/history/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
                               type="button"
-                            >Chi tiết</button>
+                            ><EyeOutlined /></button>
                           </div>
                         </article>
                       ))}
