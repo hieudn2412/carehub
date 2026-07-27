@@ -165,7 +165,7 @@ function ExamAssignmentListPage({
               </div>
 
               <div className="exp-table-card">
-                <table className="exp-table">
+                <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Tên phân công</th>
@@ -175,7 +175,7 @@ function ExamAssignmentListPage({
                       <th>Đã nộp</th>
                       <th>Hạn nộp</th>
                       <th>Trạng thái</th>
-                      <th style={{ width: 170, textAlign: 'center' }}>Hành động</th>
+                      <th style={{ width: 170 }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -193,20 +193,20 @@ function ExamAssignmentListPage({
                         <td>{formatDateTime(assignment.dueAt)}</td>
                         <td><span className={`exp-badge exp-badge--${assignment.status?.toLowerCase()}`}>{assignment.statusText || assignment.status}</span></td>
                         <td>
-                          <div className="exp-actions">
+                          <div className="admin-table-actions exp-table-actions">
                             <button
                               type="button"
-                              className={selectedAssignmentId === assignment.id ? 'is-active' : ''}
+                              className={`admin-table-action admin-table-action--icon admin-table-action--primary${selectedAssignmentId === assignment.id ? ' is-active' : ''}`}
                               onClick={() => viewResults(assignment)}
                               title="Xem điểm"
                             ><BarChartOutlined /></button>
                             {assignment.status !== 'OPEN' && assignment.status !== 'ARCHIVED' && (
-                              <button type="button" onClick={() => openAssignment(assignment)} title="Mở"><FolderOpenOutlined /></button>
+                              <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--success" onClick={() => openAssignment(assignment)} title="Mở"><FolderOpenOutlined /></button>
                             )}
                             {assignment.status === 'OPEN' && (
-                              <button type="button" onClick={() => closeAssignment(assignment)} title="Đóng"><StopOutlined /></button>
+                              <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => closeAssignment(assignment)} title="Đóng"><StopOutlined /></button>
                             )}
-                            <button type="button" onClick={() => archiveAssignment(assignment)} disabled={assignment.status === 'ARCHIVED'} title="Lưu trữ"><DeleteOutlined /></button>
+                            <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--danger" onClick={() => archiveAssignment(assignment)} disabled={assignment.status === 'ARCHIVED'} title="Lưu trữ"><DeleteOutlined /></button>
                           </div>
                         </td>
                       </tr>
@@ -237,7 +237,7 @@ function ExamAssignmentListPage({
                         </div>
 
                         <div className="exp-results-table-wrap">
-                          <table className="exp-table exp-results-table">
+                          <table className="exp-table exp-results-table admin-table-uppercase">
                             <thead>
                               <tr>
                                 <th>Nhân viên</th>

@@ -211,14 +211,14 @@ function ReferenceDepartmentsListPage() {
 
               {/* Table Card */}
               <div className="rdl-table-card">
-                <table className="rdl-table">
+                <table className="rdl-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th style={{ width: '10%' }}>ID</th>
                       <th style={{ width: '18%' }}>Mã Code</th>
                       <th style={{ width: '38%' }}>Tên phòng ban</th>
                       <th style={{ width: '14%' }}>Nhân viên</th>
-                      <th style={{ width: '20%', textAlign: 'center' }}>Hành động</th>
+                      <th style={{ width: '20%' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -242,12 +242,24 @@ function ReferenceDepartmentsListPage() {
                           <td><strong>{dept.name}</strong></td>
                           <td>{dept.employeeCount}</td>
                           <td>
-                            <div className="rdl-actions-cell" style={{ justifyContent: 'center' }}>
-                              <button className="rdl-btn-secondary" onClick={() => handleOpenEditModal(dept)}>
-                                <EditOutlined /> Sửa
+                            <div className="rdl-actions-cell admin-table-actions">
+                              <button
+                                aria-label={`Chỉnh sửa phòng ban ${dept.name}`}
+                                className="rdl-btn-secondary admin-table-action admin-table-action--icon admin-table-action--primary"
+                                onClick={() => handleOpenEditModal(dept)}
+                                title="Chỉnh sửa"
+                                type="button"
+                              >
+                                <EditOutlined />
                               </button>
-                              <button className="rdl-btn-danger" onClick={() => handleDeleteDept(dept.id)}>
-                                <DeleteOutlined /> Xoá
+                              <button
+                                aria-label={`Xóa phòng ban ${dept.name}`}
+                                className="rdl-btn-danger admin-table-action admin-table-action--icon admin-table-action--danger"
+                                onClick={() => handleDeleteDept(dept.id)}
+                                title="Xóa"
+                                type="button"
+                              >
+                                <DeleteOutlined />
                               </button>
                             </div>
                           </td>

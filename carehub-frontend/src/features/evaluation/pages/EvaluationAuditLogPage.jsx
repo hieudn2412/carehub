@@ -139,15 +139,15 @@ function EvaluationAuditLogPage() {
                   ) : logs.length === 0 ? (
                     <div className="eal-empty">Chưa có audit log phù hợp.</div>
                   ) : (
-                    <table className="eal-table">
+                    <table className="eal-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>Thời gian</th>
-                          <th>Hành động</th>
+                          <th>Thao tác</th>
                           <th>Đối tượng</th>
                           <th>Người thao tác</th>
                           <th>Mô tả</th>
-                          <th></th>
+                          <th>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -159,7 +159,13 @@ function EvaluationAuditLogPage() {
                             <td>{log.actor || 'system'}</td>
                             <td>{log.summary || '---'}</td>
                             <td>
-                              <button type="button" className="eal-icon-btn" onClick={() => setSelectedLog(log)} title="Xem chi tiết">
+                              <button
+                                aria-label={`Xem chi tiết audit ${log.id}`}
+                                className="eal-icon-btn admin-table-action admin-table-action--icon admin-table-action--primary"
+                                onClick={() => setSelectedLog(log)}
+                                title="Xem chi tiết"
+                                type="button"
+                              >
                                 <EyeOutlined />
                               </button>
                             </td>

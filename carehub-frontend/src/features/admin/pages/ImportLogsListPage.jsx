@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
-import { LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
+import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
 
 // Helper to generate 248 mock import logs for offline/fallback mode
@@ -463,16 +463,16 @@ function ImportLogsListPage() {
 
               {/* Table Card */}
               <div className="il-table-card">
-                <table className="il-table">
+                <table className="il-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Thời gian diễn ra</th>
                       <th>Loại dữ liệu nhập</th>
-                      <th style={{ textAlign: 'right' }}>Tổng</th>
-                      <th style={{ textAlign: 'right' }}>Thành công</th>
-                      <th style={{ textAlign: 'right' }}>Lỗi</th>
+                      <th>Tổng</th>
+                      <th>Thành công</th>
+                      <th>Lỗi</th>
                       <th>Trạng thái</th>
-                      <th style={{ textAlign: 'center' }}>Hành động</th>
+                      <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -497,20 +497,23 @@ function ImportLogsListPage() {
                             <td>
                               <span className="il-source-file">{log.sourceFile}</span>
                             </td>
-                            <td style={{ textAlign: 'right' }}>{log.totalRows}</td>
-                            <td style={{ textAlign: 'right' }}>{successCount}</td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td>{log.totalRows}</td>
+                            <td>{successCount}</td>
+                            <td>
                               <span className={log.failedRows > 0 ? "il-failed-count--more" : "il-failed-count--zero"}>
                                 {log.failedRows}
                               </span>
                             </td>
                             <td>{renderStatusBadge(log.status)}</td>
-                            <td style={{ textAlign: 'center' }}>
+                            <td>
                               <button
-                                className="il-action-btn"
+                                aria-label={`Xem chi tiết đợt nhập dữ liệu ${log.id}`}
+                                className="il-action-btn admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => handleOpenDetailModal(log)}
+                                title="Xem chi tiết"
+                                type="button"
                               >
-                                Chi tiết
+                                <EyeOutlined />
                               </button>
                             </td>
                           </tr>
@@ -656,7 +659,7 @@ function ImportLogsListPage() {
                     </div>
 
                     <div className="il-row-table-container">
-                      <table className="il-row-table">
+                      <table className="il-row-table admin-table-uppercase">
                         <thead>
                           <tr>
                             <th className="il-row-col--num">Dòng Excel</th>

@@ -195,33 +195,6 @@
   color: #d32f2f;
 }
 
-/* Action Buttons */
-.atl-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.12s ease;
-  background: none;
-  text-decoration: none;
-}
-
-.atl-action-btn--edit {
-  color: #0ea5e9;
-  border-color: #0ea5e9;
-  background: #f0f9ff;
-}
-
-.atl-action-btn--edit:hover {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
 /* Pagination Bar */
 .atl-pagination-bar {
   display: flex;

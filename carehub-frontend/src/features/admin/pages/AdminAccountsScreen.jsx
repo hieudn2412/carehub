@@ -697,7 +697,7 @@ function AdminAccountsScreen() {
 
               {/* Table Card */}
               <div className="am-table-card">
-                <table className="am-table">
+                <table className="am-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -730,8 +730,14 @@ function AdminAccountsScreen() {
                           <td>{renderRoles(u.roles)}</td>
                           <td>{renderStatus(u.status)}</td>
                           <td>
-                            <button className="am-btn-detail" onClick={() => setSelectedUserId(u.id)}>
-                              <EyeOutlined /> Chi tiết
+                            <button
+                              aria-label={`Xem chi tiết tài khoản ${u.employeeCode || u.username || u.id}`}
+                              className="am-btn-detail admin-table-action admin-table-action--icon admin-table-action--primary"
+                              onClick={() => setSelectedUserId(u.id)}
+                              title="Xem chi tiết"
+                              type="button"
+                            >
+                              <EyeOutlined />
                             </button>
                           </td>
                         </tr>

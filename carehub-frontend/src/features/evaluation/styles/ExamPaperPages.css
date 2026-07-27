@@ -44,6 +44,10 @@
   gap: 10px;
 }
 
+.exp-table .exp-actions {
+  justify-content: flex-start;
+}
+
 .exp-view-switch {
   display: inline-flex;
   align-self: flex-start;
@@ -189,6 +193,41 @@
   background: #f8fafc;
   color: #64748b;
   font-size: 13px;
+}
+
+/* Shared administrator table alignment for exam papers and assignments. */
+.exp-table-card {
+  overflow-x: auto;
+  border-color: #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.exp-table th {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.exp-table td {
+  padding: 14px 18px;
+  border-bottom-color: #f1f5f9;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.exp-table-actions {
+  flex-wrap: nowrap;
+}
+
+.exp-table-actions .is-active {
+  border-color: #1d4ed8;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .exp-empty {

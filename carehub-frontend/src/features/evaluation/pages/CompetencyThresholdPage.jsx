@@ -143,7 +143,7 @@ function CompetencyThresholdPage() {
         ) : (
           <section className="evd-panel">
             <div className="evd-table-scroll">
-              <table className="evd-table">
+              <table className="evd-table admin-table-uppercase">
                 <thead>
                   <tr>
                     <th>Mức năng lực</th>

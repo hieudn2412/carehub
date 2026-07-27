@@ -135,7 +135,7 @@ function EmailTemplatesListPage() {
               </div>
 
               <div className="etl-table-card">
-                <table className="etl-table">
+                <table className="etl-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Tên biểu mẫu</th>
@@ -167,16 +167,18 @@ function EmailTemplatesListPage() {
                           </span>
                         </td>
                         <td>
-                          <div className="etl-actions-cell">
+                          <div className="etl-actions-cell admin-table-actions">
                             <button
-                              className="etl-btn-action etl-btn-edit"
+                              aria-label={`Chỉnh sửa mẫu email ${template.name}`}
+                              className="etl-btn-action etl-btn-edit admin-table-action admin-table-action--icon admin-table-action--primary"
                               onClick={() => navigate(`/admin/notifications/email-templates/${template.id}`)}
                               title="Chỉnh sửa"
                             >
                               <EditOutlined />
                             </button>
                             <button
-                              className="etl-btn-action etl-btn-delete"
+                              aria-label={`Xóa mẫu email ${template.name}`}
+                              className="etl-btn-action etl-btn-delete admin-table-action admin-table-action--icon admin-table-action--danger"
                               onClick={() => setConfirmModal({ isOpen: true, id: template.id })}
                               title={template.deletable ? 'Xoá' : 'Biểu mẫu hệ thống không thể xoá'}
                               disabled={!template.deletable}

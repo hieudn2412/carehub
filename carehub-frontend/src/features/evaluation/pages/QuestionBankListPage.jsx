@@ -469,12 +469,12 @@ function QuestionBankListPage() {
               </div>
 
               <div className="qbl-table-card">
-                <table className="qbl-table">
+                <table className="qbl-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Nội dung câu hỏi</th>
-                      <th style={{ width: '220px' }}>Danh mục</th>
-                      <th style={{ width: '190px', textAlign: 'center' }}>Thao tác</th>
+                      <th style={{ width: '160px' }}>Danh mục</th>
+                      <th style={{ width: '220px' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -503,10 +503,10 @@ function QuestionBankListPage() {
                           </td>
                           <td className="qbl-category-cell">{item.category}</td>
                           <td>
-                            <div className="qbl-actions">
+                            <div className="qbl-actions admin-table-actions">
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--edit"
+                                className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => navigate(`/admin/evaluation/question-bank/${item.id}/edit`)}
                                 aria-label="Chỉnh sửa câu hỏi"
                                 title="Chỉnh sửa"
@@ -515,7 +515,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--paraphrase"
+                                className="admin-table-action admin-table-action--icon"
                                 onClick={() => openParaphraseModal(item)}
                                 disabled={!item.backend || jobQuestionId === item.id}
                                 aria-label="Tạo câu hỏi diễn đạt lại"
@@ -525,7 +525,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--view"
+                                className="admin-table-action admin-table-action--icon admin-table-action--success"
                                 onClick={() => openDetailModal(item)}
                                 aria-label="Xem chi tiết câu hỏi"
                                 title="Xem chi tiết"
@@ -534,7 +534,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--delete"
+                                className="admin-table-action admin-table-action--icon admin-table-action--danger"
                                 onClick={() => handleDelete(item)}
                                 aria-label="Xóa câu hỏi"
                                 title="Xóa câu hỏi"

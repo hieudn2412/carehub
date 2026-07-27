@@ -1061,31 +1061,33 @@ function FormListPage() {
                               </span>
                             </td>
                             <td>
-                              <div className="flp-actions-cell">
+                              <div className="flp-actions-cell admin-table-actions">
                                 {form.currentPublishedVersion?.id && (
                                   <button
-                                    className="flp-btn-action flp-btn-evaluate"
+                                    aria-label={`Thực hiện đánh giá ${form.title}`}
+                                    className="flp-btn-action flp-btn-evaluate admin-table-action admin-table-action--icon admin-table-action--success"
                                     onClick={() => navigate(`/admin/quality/checklists/${form.id}/evaluate/${form.currentPublishedVersion.id}`)}
                                     title="Thực hiện đánh giá trực tiếp"
                                     type="button"
                                   >
-                                    <CheckSquareOutlined /> Đánh giá
+                                    <CheckSquareOutlined />
                                   </button>
                                 )}
                                 <button
-                                  className="flp-btn-action flp-btn-detail"
+                                  aria-label={`Xem chi tiết ${form.title}`}
+                                  className="flp-btn-action flp-btn-detail admin-table-action admin-table-action--icon admin-table-action--primary"
                                   onClick={() =>
                                     navigate(`/admin/quality/checklists/${form.id}/detail`)
                                   }
                                   title="Xem nội dung checklist"
                                   type="button"
                                 >
-                                  <EyeOutlined /> Chi tiết
+                                  <EyeOutlined />
                                 </button>
                                 {getEffectiveStatus(form) !== 'RETIRED' && (
                                   <button
                                     aria-label={`Ngừng hoạt động ${form.title}`}
-                                    className="flp-btn-action flp-btn-delete"
+                                    className="flp-btn-action flp-btn-delete admin-table-action admin-table-action--icon admin-table-action--danger"
                                     disabled={deletingFormId === form.id}
                                     onClick={() => handleRetire(form)}
                                     title="Ngừng hoạt động"
@@ -1094,9 +1096,7 @@ function FormListPage() {
                                     {deletingFormId === form.id ? (
                                       <LoadingOutlined spin />
                                     ) : (
-                                      <>
-                                        <DeleteOutlined /> Ngừng
-                                      </>
+                                      <DeleteOutlined />
                                     )}
                                   </button>
                                 )}
