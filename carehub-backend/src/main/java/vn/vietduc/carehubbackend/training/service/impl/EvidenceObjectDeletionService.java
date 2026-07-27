@@ -5,8 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.service.EvidenceStorageService;
@@ -23,6 +26,7 @@ public class EvidenceObjectDeletionService {
 
     private final TrainingEvidenceFileRepository evidenceFileRepository;
     private final EvidenceStorageService storageService;
+    private final PlatformTransactionManager transactionManager;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void deleteAfterCommit(TrainingEvidenceDeletedEvent event) {
@@ -41,7 +45,10 @@ public class EvidenceObjectDeletionService {
     private void deleteAndMark(Long evidenceId, String objectKey) {
         try {
             storageService.delete(objectKey);
-            evidenceFileRepository.markStorageDeleted(evidenceId, LocalDateTime.now());
+            TransactionTemplate template = new TransactionTemplate(transactionManager);
+            template.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            template.executeWithoutResult(status ->
+                    evidenceFileRepository.markStorageDeleted(evidenceId, LocalDateTime.now()));
         } catch (RuntimeException ex) {
             log.warn("Could not delete evidence object {}; it will be retried", objectKey, ex);
         }

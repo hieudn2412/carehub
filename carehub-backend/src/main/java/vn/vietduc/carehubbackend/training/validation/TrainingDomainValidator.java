@@ -35,7 +35,9 @@ public class TrainingDomainValidator {
                 throw new BadRequestException("Declared hours must be at least 0.5 for manual records");
             }
             if (request.declaredHours().compareTo(MAX_DIRECT_RECORD_HOURS) > 0) {
-                throw new BadRequestException("Declared hours must not exceed 24 for manual records");
+                throw new BadRequestException(
+                        "Declared hours must not exceed " + MAX_DIRECT_RECORD_HOURS.toPlainString()
+                                + " for manual records");
             }
         }
     }
@@ -50,7 +52,7 @@ public class TrainingDomainValidator {
         if (fileSizeBytes <= 0 || fileSizeBytes > MAX_EVIDENCE_BYTES) {
             throw new BadRequestException("Evidence file size must be greater than 0 and not exceed 5 MB");
         }
-        if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
+        if (mimeType == null || mimeType.isBlank() || !ALLOWED_MIME_TYPES.contains(mimeType)) {
             throw new BadRequestException("Loại file minh chứng phải là JPG, PNG hoặc PDF");
         }
     }

@@ -45,6 +45,7 @@ public class CompetencyClassificationService {
         // Self-healing check: if thresholds are configured on 100-point scale, divide by 10 for 10-point scale evaluation
         boolean isHundredScale = thresholds.stream().anyMatch(t -> t.getMaxScore() != null && t.getMaxScore().compareTo(BigDecimal.valueOf(10)) > 0);
 
+        CompetencyLevel matchedLevel = null;
         for (CompetencyThresholdConfig threshold : thresholds) {
             BigDecimal min = threshold.getMinScore();
             BigDecimal max = threshold.getMaxScore();
@@ -53,8 +54,14 @@ public class CompetencyClassificationService {
                 if (max != null) max = max.divide(BigDecimal.valueOf(10), 4, RoundingMode.HALF_UP);
             }
             if (min != null && max != null && score.compareTo(min) >= 0 && score.compareTo(max) <= 0) {
-                return threshold.getCompetencyLevel();
+                // Adjacent bands intentionally share their boundary. Because thresholds are
+                // ordered ascending, retaining the last match assigns the boundary to the
+                // higher band and keeps persisted defaults aligned with classifyWithDefaults.
+                matchedLevel = threshold.getCompetencyLevel();
             }
+        }
+        if (matchedLevel != null) {
+            return matchedLevel;
         }
         // Fallback: find the closest threshold
         return thresholds.stream()
@@ -122,7 +129,7 @@ public class CompetencyClassificationService {
                 CompetencyThresholdConfig.builder()
                         .competencyLevel(CompetencyLevel.NOT_COMPETENT)
                         .minScore(BigDecimal.ZERO)
-                        .maxScore(DEFAULT_NOT_COMPETENT_MAX.subtract(BigDecimal.valueOf(0.01)))
+                        .maxScore(DEFAULT_NOT_COMPETENT_MAX)
                         .label("Chưa đạt năng lực")
                         .colorHex("#EF4444")
                         .sortOrder(1)
@@ -130,7 +137,7 @@ public class CompetencyClassificationService {
                 CompetencyThresholdConfig.builder()
                         .competencyLevel(CompetencyLevel.BEGINNER)
                         .minScore(DEFAULT_NOT_COMPETENT_MAX)
-                        .maxScore(DEFAULT_BEGINNER_MAX.subtract(BigDecimal.valueOf(0.01)))
+                        .maxScore(DEFAULT_BEGINNER_MAX)
                         .label("Sơ cấp")
                         .colorHex("#F59E0B")
                         .sortOrder(2)
@@ -138,7 +145,7 @@ public class CompetencyClassificationService {
                 CompetencyThresholdConfig.builder()
                         .competencyLevel(CompetencyLevel.BASIC)
                         .minScore(DEFAULT_BEGINNER_MAX)
-                        .maxScore(DEFAULT_BASIC_MAX.subtract(BigDecimal.valueOf(0.01)))
+                        .maxScore(DEFAULT_BASIC_MAX)
                         .label("Cơ bản")
                         .colorHex("#3B82F6")
                         .sortOrder(3)
@@ -146,7 +153,7 @@ public class CompetencyClassificationService {
                 CompetencyThresholdConfig.builder()
                         .competencyLevel(CompetencyLevel.PROFICIENT)
                         .minScore(DEFAULT_BASIC_MAX)
-                        .maxScore(DEFAULT_PROFICIENT_MAX.subtract(BigDecimal.valueOf(0.01)))
+                        .maxScore(DEFAULT_PROFICIENT_MAX)
                         .label("Thành thạo")
                         .colorHex("#10B981")
                         .sortOrder(4)
