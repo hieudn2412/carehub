@@ -1771,13 +1771,6 @@
   font-size: 13px;
 }
 
-.aqh-results-table__row > div:first-child,
-.aqh-results-table__row > div:nth-child(3) {
-  align-items: flex-start;
-  flex-direction: column;
-  gap: 3px;
-}
-
 .aqh-results-table__row strong,
 .aqh-results-table__row span,
 .aqh-results-table__row small {
@@ -1794,12 +1787,6 @@
 
 .aqh-results-table__row small {
   color: #8a96a8;
-}
-
-.admin-quality-history__detail-button--icon {
-  width: 40px;
-  min-width: 40px;
-  padding: 0;
 }
 
 .aqh-results-empty {

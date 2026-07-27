@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ApartmentOutlined,
   ClockCircleOutlined,
   CloseOutlined,
-  EyeOutlined,
   FileExcelOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   StopOutlined,
-  TeamOutlined,
   UserSwitchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -43,6 +40,11 @@ function getPageContent(response) {
 function getPageTotalPages(response) {
   const totalPages = Number(response?.data?.data?.totalPages)
   return Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1
+}
+
+function formatPersonName(person, fallback = 'Chưa xác định') {
+  const name = person?.fullName || fallback
+  return person?.employeeCode ? `${name} (${person.employeeCode})` : name
 }
 
 function getPageData(response, fallbackSize = 10) {
@@ -590,19 +592,19 @@ function AdminQualityHistoryVersionPage() {
                       </div>
                       {submissionData.content.map((item) => (
                         <article className="aqh-results-table__row" key={item.id} role="row">
-                          <div data-label="Nhân viên"><strong>{item.subject?.fullName || 'Chưa có tên'}</strong><small>{item.subject?.employeeCode || 'Chưa có mã'}</small></div>
-                          <div data-label="Khoa/phòng"><ApartmentOutlined /><span>{item.subject?.department || 'Chưa xác định'}</span></div>
-                          <div data-label="Người chấm"><TeamOutlined /><span>{item.submittedBy?.fullName || 'Chưa xác định'}</span><small>{item.submittedBy?.employeeCode || ''}</small></div>
-                          <div data-label="Ngày nộp"><ClockCircleOutlined /><span>{formatDateTime(item.submittedAt || item.updatedAt)}</span></div>
+                          <div data-label="Nhân viên"><strong>{formatPersonName(item.subject, 'Chưa có tên')}</strong></div>
+                          <div data-label="Khoa/phòng"><span>{item.subject?.department || 'Chưa xác định'}</span></div>
+                          <div data-label="Người chấm"><span>{formatPersonName(item.submittedBy)}</span></div>
+                          <div data-label="Ngày nộp"><span>{formatDateTime(item.submittedAt || item.updatedAt)}</span></div>
                           <div data-label="Điểm"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></div>
                           <div data-label="Kết quả"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></div>
                           <div data-label="Chi tiết">
                             <button
                               aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
-                              className="admin-quality-history__detail-button admin-quality-history__detail-button--icon"
+                              className="admin-quality-history__detail-button"
                               onClick={() => navigate(`/admin/quality/history/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
                               type="button"
-                            ><EyeOutlined /></button>
+                            >Chi tiết</button>
                           </div>
                         </article>
                       ))}
