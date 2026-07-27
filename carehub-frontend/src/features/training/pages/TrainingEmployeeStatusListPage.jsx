@@ -314,7 +314,7 @@ function TrainingEmployeeStatusListPage() {
                   </div>
                 ) : (
                   <>
-                    <table className="tes-table">
+                    <table className="tes-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>Mã NV</th>
@@ -322,7 +322,7 @@ function TrainingEmployeeStatusListPage() {
                           <th>Khoa/Phòng</th>
                           <th className="tes-col-progress">Tiến độ</th>
                           <th>Trạng thái</th>
-                          <th className="tes-col-action"></th>
+                          <th className="tes-col-action">Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -349,8 +349,13 @@ function TrainingEmployeeStatusListPage() {
                                 <span className={`tes-badge ${cfg.cls}`}>{cfg.label}</span>
                               </td>
                               <td className="tes-col-action">
-                                <Link to={`/training/employees/${item.employeeId}`} className="tes-btn-detail">
-                                  <EyeOutlined /> Chi tiết
+                                <Link
+                                  aria-label={`Xem chi tiết giờ đào tạo của ${item.employeeName}`}
+                                  className="tes-btn-detail admin-table-action admin-table-action--icon admin-table-action--primary"
+                                  title="Xem chi tiết"
+                                  to={`/training/employees/${item.employeeId}`}
+                                >
+                                  <EyeOutlined />
                                 </Link>
                               </td>
                             </tr>

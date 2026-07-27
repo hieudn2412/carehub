@@ -96,7 +96,7 @@ function EvaluationImportHistoryPage() {
               </div>
 
               <div className="exp-table-card">
-                <table className="exp-table">
+                <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Mã</th>
@@ -108,7 +108,7 @@ function EvaluationImportHistoryPage() {
                       <th>Bỏ qua</th>
                       <th>Người import</th>
                       <th>Thời gian</th>
-                      <th style={{ width: 90, textAlign: 'center' }}>Chi tiết</th>
+                      <th style={{ width: 90 }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -162,7 +162,7 @@ function EvaluationImportHistoryPage() {
                     </button>
                   </div>
                   <div className="exp-table-card">
-                    <table className="exp-table">
+                    <table className="exp-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>Dòng</th>

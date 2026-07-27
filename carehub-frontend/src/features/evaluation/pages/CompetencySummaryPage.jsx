@@ -560,7 +560,7 @@ function CompetencySummaryPage() {
                   </section>
 
                   <div className="evd-card evd-x-table-card">
-                    <table className="evd-table">
+                    <table className="evd-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>STT</th>
@@ -657,7 +657,7 @@ function CompetencySummaryPage() {
                   </section>
 
                   <div className="evd-card evd-x-table-card">
-                    <table className="evd-table">
+                    <table className="evd-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th style={{ width: 50 }}>STT</th>
@@ -668,7 +668,7 @@ function CompetencySummaryPage() {
                           <th>Điểm TB</th>
                           <th>Tỷ lệ đạt</th>
                           <th>Phân loại</th>
-                          <th style={{ width: 60 }}></th>
+                          <th style={{ width: 72 }}>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -713,7 +713,13 @@ function CompetencySummaryPage() {
                                 </span>
                               </td>
                               <td>
-                                <button className="evd-btn-text" onClick={e => { e.stopPropagation(); navigate(`${detailPathField}/${item.employeeId}`) }}>
+                                <button
+                                  className="evd-action-icon"
+                                  type="button"
+                                  title="Xem chi tiết"
+                                  aria-label={`Xem chi tiết năng lực của ${item.employeeName || item.employeeCode}`}
+                                  onClick={e => { e.stopPropagation(); navigate(`${detailPathField}/${item.employeeId}`) }}
+                                >
                                   <EyeOutlined />
                                 </button>
                               </td>
@@ -767,7 +773,7 @@ function CompetencySummaryPage() {
                   </section>
 
                   <div className="evd-card evd-x-table-card">
-                    <table className="evd-table">
+                    <table className="evd-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>STT</th>
@@ -779,7 +785,7 @@ function CompetencySummaryPage() {
                           <th>Tỷ lệ đạt</th>
                           <th>Mục tiêu</th>
                           <th>Phân loại</th>
-                          <th></th>
+                          <th style={{ width: 72 }}>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -834,7 +840,10 @@ function CompetencySummaryPage() {
                               </td>
                               <td>
                                 <button
-                                  className="evd-btn-text"
+                                  className="evd-action-icon"
+                                  type="button"
+                                  title="Xem chi tiết"
+                                  aria-label={`Xem chi tiết tuân thủ của ${item.employeeName || item.employeeCode}`}
                                   onClick={() => {
                                     const params = new URLSearchParams()
                                     params.set('from', fromDate)
@@ -845,9 +854,8 @@ function CompetencySummaryPage() {
                                         : `/manager/compliance-by-technique/${item.employeeId}?${params.toString()}`
                                     )
                                   }}
-                                  style={{ padding: '4px 10px', fontSize: 13 }}
                                 >
-                                  <EyeOutlined style={{ marginRight: 4 }} />Xem
+                                  <EyeOutlined />
                                 </button>
                               </td>
                             </tr>

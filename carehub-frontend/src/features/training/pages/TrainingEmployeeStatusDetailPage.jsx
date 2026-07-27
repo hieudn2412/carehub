@@ -151,21 +151,20 @@ function TrainingEmployeeStatusDetailPage() {
                     <div style={{ marginTop: 24 }}>
                       <h3 className="ted-section-title">LỊCH SỬ KHAI BÁO GIỜ ĐÀO TẠO</h3>
                       <div className="ted-table-wrap">
-                        <table className="ted-table">
+                        <table className="ted-table admin-table-uppercase">
                           <thead>
                             <tr>
                               <th>Khóa học / Hội thảo</th>
                               <th>Số giờ</th>
                               <th>Ngày bắt đầu</th>
                               <th>Trạng thái</th>
-                              <th>Xem</th>
-                              <th>Minh chứng</th>
+                              <th>Hành động</th>
                             </tr>
                           </thead>
                           <tbody>
                             {recordsList.length === 0 ? (
                               <tr>
-                                <td colSpan={6} className="ch-empty">
+                                <td colSpan={5} className="ch-empty">
                                   Không có lịch sử khai báo nào.
                                 </td>
                               </tr>
@@ -204,28 +203,36 @@ function TrainingEmployeeStatusDetailPage() {
                                     </span>
                                   </td>
                                   <td>
-                                    <Link
-                                      to={`/training/records/${item.id}`}
-                                      className="ted-evidence-link ted-evidence-link--blue"
-                                      title="Xem chi tiết hồ sơ"
-                                    >
-                                      <EyeOutlined />
-                                    </Link>
-                                  </td>
-                                  <td>
-                                    {item.evidenceUrl ? (
-                                      <Link 
-                                        to={item.evidenceUrl} 
-                                        className="ted-evidence-link ted-evidence-link--green"
-                                        title="Xem minh chứng"
+                                    <div className="admin-table-actions">
+                                      <Link
+                                        aria-label={`Xem chi tiết hồ sơ ${item.title}`}
+                                        className="ted-evidence-link ted-evidence-link--blue admin-table-action admin-table-action--icon admin-table-action--primary"
+                                        title="Xem chi tiết hồ sơ"
+                                        to={`/training/records/${item.id}`}
                                       >
-                                        <FileTextOutlined />
+                                        <EyeOutlined />
                                       </Link>
-                                    ) : (
-                                      <span style={{ color: '#cbd5e1' }} title="Không có minh chứng">
-                                        <FileTextOutlined />
-                                      </span>
-                                    )}
+                                      {item.evidenceUrl ? (
+                                        <Link
+                                          aria-label={`Xem minh chứng của ${item.title}`}
+                                          className="ted-evidence-link ted-evidence-link--green admin-table-action admin-table-action--icon admin-table-action--success"
+                                          title="Xem minh chứng"
+                                          to={item.evidenceUrl}
+                                        >
+                                          <FileTextOutlined />
+                                        </Link>
+                                      ) : (
+                                        <span
+                                          aria-label="Không có minh chứng"
+                                          className="admin-table-action admin-table-action--icon"
+                                          role="img"
+                                          style={{ color: '#cbd5e1', cursor: 'not-allowed', opacity: 0.6 }}
+                                          title="Không có minh chứng"
+                                        >
+                                          <FileTextOutlined />
+                                        </span>
+                                      )}
+                                    </div>
                                   </td>
                                 </tr>
                               ))

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CloseOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import {
+  CheckCircleOutlined,
+  CloseOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  StopOutlined,
+} from '@ant-design/icons'
 import AdminHeader from '../components/AdminHeader.jsx'
 import AdminSidebar from '../components/AdminSidebar.jsx'
 import { adminApi } from '../api/adminApi.js'
@@ -213,8 +220,8 @@ function ProfessionalFieldManagementPage() {
                 </div>
               </div>
               <div className="pfm-table-container">
-                <table>
-                  <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+                <table className="admin-table-uppercase">
+                  <thead><tr><th>Mã</th><th>Tên lĩnh vực</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
                   <tbody>
                     {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
                       <tr key={field.id}>
@@ -230,16 +237,24 @@ function ProfessionalFieldManagementPage() {
                           )}
                         </td>
                         <td>
-                          <div className="pfm-row-actions">
-                            <button type="button" className="pfm-btn-edit" onClick={() => editField(field)}>
-                              <EditOutlined /> Sửa
+                          <div className="pfm-row-actions admin-table-actions">
+                            <button
+                              aria-label={`Chỉnh sửa lĩnh vực ${field.name}`}
+                              className="pfm-btn-edit admin-table-action admin-table-action--icon admin-table-action--primary"
+                              onClick={() => editField(field)}
+                              title="Chỉnh sửa"
+                              type="button"
+                            >
+                              <EditOutlined />
                             </button>
                             <button
+                              aria-label={`${field.active ? 'Ngừng sử dụng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'} lĩnh vực ${field.name}`}
                               type="button"
-                              className={field.active ? 'pfm-btn-deactivate' : 'pfm-btn-activate'}
+                              className={`${field.active ? 'pfm-btn-deactivate admin-table-action--danger' : 'pfm-btn-activate admin-table-action--success'} admin-table-action admin-table-action--icon`}
                               onClick={() => toggleStatus(field)}
+                              title={field.active ? 'Ngừng sử dụng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
                             >
-                              {field.active ? 'Ngừng dùng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
+                              {field.active ? <StopOutlined /> : <CheckCircleOutlined />}
                             </button>
                           </div>
                         </td>

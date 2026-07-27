@@ -260,7 +260,7 @@ function QuestionDocumentListPage() {
               </section>
 
               <section className="qdoc-table-card">
-                <table className="qdoc-table">
+                <table className="qdoc-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -326,11 +326,11 @@ function QuestionDocumentListPage() {
                           </td>
                           <td>{formatDateTime(document.createdAt)}</td>
                           <td>
-                            <div className="qdoc-table-actions">
+                            <div className="qdoc-table-actions admin-table-actions">
                               {document.latestQuestionJob && document.latestQuestionJob.candidateCount > 0 && (
                                 <button
                                   type="button"
-                                  className="qdoc-icon-btn"
+                                  className="admin-table-action admin-table-action--icon"
                                   title="Xem câu hỏi"
                                   aria-label={`Duyệt câu hỏi từ ${document.filename}`}
                                   onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
@@ -340,7 +340,7 @@ function QuestionDocumentListPage() {
                               )}
                               <button
                                 type="button"
-                                className="qdoc-icon-btn qdoc-icon-btn--primary"
+                                className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                 title="Tạo câu hỏi"
                                 aria-label={`Tạo phiên câu hỏi từ ${document.filename}`}
                                 disabled={!canCreateJob(document)}

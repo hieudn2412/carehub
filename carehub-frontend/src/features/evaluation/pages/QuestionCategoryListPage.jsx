@@ -199,14 +199,14 @@ function QuestionCategoryListPage() {
 
         {/* Table Card */}
         <div className="qcl-table-card">
-          <table className="qcl-table">
+          <table className="qcl-table admin-table-uppercase">
             <thead>
               <tr>
                 <th>Tên danh mục</th>
                 <th>Mô tả</th>
                 <th>Số câu hỏi</th>
                 <th>Trạng thái</th>
-                <th style={{ width: '120px', textAlign: 'center' }}>Hành động</th>
+                <th style={{ width: '120px' }}>Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -234,10 +234,10 @@ function QuestionCategoryListPage() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <div className="admin-table-actions">
                         <button
                           type="button"
-                          className="qcl-action-btn qcl-action-btn--edit"
+                          className="admin-table-action admin-table-action--icon admin-table-action--primary"
                           onClick={() => handleOpenEditModal(item)}
                           title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa danh mục ${item.name}`}
@@ -246,7 +246,7 @@ function QuestionCategoryListPage() {
                         </button>
                         <button
                           type="button"
-                          className="qcl-action-btn qcl-action-btn--delete"
+                          className="admin-table-action admin-table-action--icon admin-table-action--danger"
                           onClick={() => handleDeleteCategory(item)}
                           title="Lưu trữ"
                           aria-label={`Lưu trữ danh mục ${item.name}`}

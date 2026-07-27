@@ -230,48 +230,6 @@
   gap: 8px;
 }
 
-.qsl-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.12s ease;
-  background: none;
-  text-decoration: none;
-}
-
-.qsl-action-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.qsl-action-btn--activate {
-  color: #166534;
-  background: #f0fdf4;
-  border-color: #86efac;
-}
-
-.qsl-action-btn--activate:hover:not(:disabled) {
-  background: #dcfce7;
-  border-color: #22c55e;
-}
-
-.qsl-action-btn--pause {
-  color: #9a3412;
-  background: #fff7ed;
-  border-color: #fdba74;
-}
-
-.qsl-action-btn--pause:hover:not(:disabled) {
-  background: #ffedd5;
-  border-color: #f97316;
-}
-
 .qsl-action-btn--export {
   border-color: #99f6e4;
   background: #f0fdfa;
@@ -287,15 +245,25 @@
 
 .qsl-export-radial {
   position: relative;
-  z-index: 2;
+  z-index: 1;
 }
 
 .qsl-export-radial--open {
-  z-index: 40;
+  z-index: 1200;
+}
+
+.qsl-export-radial-portal {
+  position: fixed;
+  z-index: 10000;
+  width: 0;
+  height: 0;
+  isolation: isolate;
+  pointer-events: none;
 }
 
 .qsl-export-radial__menu {
   position: absolute;
+  z-index: 10001;
   top: 50%;
   left: 50%;
   width: 0;
@@ -332,8 +300,8 @@
   transform: translate(-50%, -50%) scale(0.55);
   transform-origin: center;
   transition:
-    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 120ms ease,
+    transform 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease,
     border-color 120ms ease,
     background 120ms ease;
 }
@@ -370,47 +338,25 @@
 .qsl-export-radial__item--csv {
   --radial-x: -60px;
   --radial-y: -86px;
-  transition-delay: 20ms;
+  transition-delay: 60ms;
 }
 
 .qsl-export-radial__item--docx {
   --radial-x: 0px;
   --radial-y: -112px;
-  transition-delay: 40ms;
+  transition-delay: 120ms;
 }
 
 .qsl-export-radial__item--pdf {
   --radial-x: 60px;
   --radial-y: -86px;
-  transition-delay: 60ms;
+  transition-delay: 180ms;
 }
 
 .qsl-export-radial__item--print {
   --radial-x: 96px;
   --radial-y: -30px;
-  transition-delay: 80ms;
-}
-
-.qsl-action-btn--edit {
-  color: #2563eb;
-  border-color: #2563eb;
-  background: #f0f6ff;
-}
-
-.qsl-action-btn--edit:hover {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.qsl-action-btn--delete {
-  color: #ef4444;
-  border-color: #ef4444;
-  background: #fff5f5;
-}
-
-.qsl-action-btn--delete:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  transition-delay: 240ms;
 }
 
 /* Pagination Bar */
@@ -478,6 +424,58 @@
 }
 .qsl-page-btn--dots:hover {
   background: transparent;
+}
+
+/* Keep this list aligned with the shared administrator table language. */
+.qsl-table-card {
+  position: relative;
+  overflow: visible;
+  border-color: #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.qsl-table th {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.qsl-table td {
+  padding: 14px 18px;
+  border-bottom-color: #f1f5f9;
+}
+
+.qsl-table th:first-child,
+.qsl-table td:first-child,
+.qsl-table th:last-child,
+.qsl-table td:last-child {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.qsl-actions {
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+}
+
+.qsl-action-pause {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.qsl-action-pause:hover:not(:disabled) {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.qsl-pagination-bar {
+  border-top-color: #e2e8f0;
 }
 
 /* Modal Backdrop & Dialog */

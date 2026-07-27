@@ -1,0 +1,464 @@
+/*
+ * Unified table language for administrator list pages.
+ * The account list is the visual source of truth.
+ */
+:is(
+  .am-table-card,
+  .aqh-results-table-wrap,
+  .etl-table-card,
+  .flp-table-card,
+  .il-table-card,
+  .il-row-table-container,
+  .log-table-card,
+  .ted-table-wrap,
+  .pfm-table-container,
+  .rdl-table-card,
+  .rel-table-card,
+  .sfp-table-wrap,
+  .crl-table-card,
+  .eal-table-panel,
+  .exp-table-card,
+  .qbl-table-card,
+  .qcl-table-card,
+  .qdoc-table-card,
+  .qscl-table-card,
+  .qsl-table-card,
+  .qsq-table-card,
+  .tcf-table-card,
+  .evd-x-table-card,
+  .exam-dashboard__table-wrap
+) {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+:is(
+  .am-table,
+  .aqh-results-table,
+  .etl-table,
+  .flp-table,
+  .il-table,
+  .il-row-table,
+  .log-table,
+  .ted-table,
+  .pfm-table-container > table,
+  .rdl-table,
+  .rel-table,
+  .sfp-table,
+  .crl-table,
+  .eal-table,
+  .exp-table,
+  .qbl-table,
+  .qcl-table,
+  .qdoc-table,
+  .qscl-table,
+  .qsl-table,
+  .qsq-table,
+  .tcf-table,
+  .evd-table,
+  .exam-dashboard__table
+) {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: #fff;
+}
+
+:is(
+  .am-table,
+  .aqh-results-table,
+  .etl-table,
+  .flp-table,
+  .il-table,
+  .il-row-table,
+  .log-table,
+  .ted-table,
+  .pfm-table-container > table,
+  .rdl-table,
+  .rel-table,
+  .sfp-table,
+  .crl-table,
+  .eal-table,
+  .exp-table,
+  .qbl-table,
+  .qcl-table,
+  .qdoc-table,
+  .qscl-table,
+  .qsl-table,
+  .qsq-table,
+  .tcf-table,
+  .evd-table,
+  .exam-dashboard__table
+) thead th {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+:is(
+  .am-table,
+  .aqh-results-table,
+  .etl-table,
+  .flp-table,
+  .il-table,
+  .il-row-table,
+  .log-table,
+  .ted-table,
+  .pfm-table-container > table,
+  .rdl-table,
+  .rel-table,
+  .sfp-table,
+  .crl-table,
+  .eal-table,
+  .exp-table,
+  .qbl-table,
+  .qcl-table,
+  .qdoc-table,
+  .qscl-table,
+  .qsl-table,
+  .qsq-table,
+  .tcf-table,
+  .evd-table,
+  .exam-dashboard__table
+) tbody td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  color: #334155;
+  font-size: 13.5px;
+  line-height: 1.45;
+  vertical-align: middle;
+}
+
+:is(
+  .am-table,
+  .aqh-results-table,
+  .etl-table,
+  .flp-table,
+  .il-table,
+  .il-row-table,
+  .log-table,
+  .ted-table,
+  .pfm-table-container > table,
+  .rdl-table,
+  .rel-table,
+  .sfp-table,
+  .crl-table,
+  .eal-table,
+  .exp-table,
+  .qbl-table,
+  .qcl-table,
+  .qdoc-table,
+  .qscl-table,
+  .qsl-table,
+  .qsq-table,
+  .tcf-table,
+  .evd-table,
+  .exam-dashboard__table
+) tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+:is(
+  .am-table,
+  .etl-table,
+  .flp-table,
+  .il-table,
+  .log-table,
+  .pfm-table-container > table,
+  .rdl-table,
+  .rel-table,
+  .sfp-table,
+  .crl-table,
+  .eal-table,
+  .exp-table,
+  .qbl-table,
+  .qcl-table,
+  .qdoc-table,
+  .qscl-table,
+  .qsl-table,
+  .qsq-table,
+  .tcf-table,
+  .evd-table,
+  .exam-dashboard__table
+) tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.admin-table-uppercase thead th {
+  text-transform: uppercase;
+}
+
+/*
+ * Shared action controls. The document-question table is the visual source:
+ * compact 34px controls, 8px radius, subtle border and explicit color states.
+ */
+.admin-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.flp-actions-cell.admin-table-actions {
+  min-width: 0;
+}
+
+.admin-table-action {
+  box-sizing: border-box;
+  display: inline-flex;
+  width: auto;
+  min-width: 34px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.admin-table-action--icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.admin-table-action:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.admin-table-action--primary {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.admin-table-action--primary:hover:not(:disabled) {
+  border-color: #1d4ed8;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.admin-table-action--success {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.admin-table-action--success:hover:not(:disabled) {
+  border-color: #4ade80;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.admin-table-action--danger {
+  border-color: #fca5a5;
+  background: #fff;
+  color: #dc2626;
+}
+
+.admin-table-action--danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-table-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+:is(
+  .am-pagination,
+  .etl-pagination,
+  .flp-pagination,
+  .il-pagination,
+  .log-pagination,
+  .ted-pagination,
+  .rdl-pagination,
+  .rel-pagination,
+  .qbl-pagination-bar,
+  .qcl-pagination-bar,
+  .qdoc-pagination-bar,
+  .qscl-pagination-bar,
+  .qsl-pagination-bar,
+  .qsq-pagination-bar,
+  .evd-x-pagination
+) {
+  display: flex;
+  min-height: 61px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 14px 18px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+}
+
+:is(
+  .am-page-nums,
+  .etl-page-nums,
+  .flp-pagination-buttons,
+  .il-page-nums,
+  .log-page-nums,
+  .ted-pagination__controls,
+  .rdl-page-nums,
+  .rel-page-nums,
+  .qbl-pagination-buttons,
+  .qcl-pagination-buttons,
+  .qdoc-pagination-buttons,
+  .qscl-pagination-buttons,
+  .qsl-pagination-buttons,
+  .qsq-pagination-buttons,
+  .evd-x-pagination__pages
+) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:is(
+  .am-pn,
+  .etl-pn,
+  .flp-pg-btn,
+  .il-pn,
+  .log-pn,
+  .ted-pagination__controls button,
+  .rdl-pn,
+  .rel-pn,
+  .qbl-page-btn,
+  .qcl-page-btn,
+  .qdoc-pagination-buttons button,
+  .qscl-page-btn,
+  .qsl-page-btn,
+  .qsq-page-btn,
+  .evd-x-page-btn
+) {
+  display: inline-flex;
+  width: auto;
+  min-width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+:is(
+  .am-pn,
+  .etl-pn,
+  .flp-pg-btn,
+  .il-pn,
+  .log-pn,
+  .ted-pagination__controls button,
+  .rdl-pn,
+  .rel-pn,
+  .qbl-page-btn,
+  .qcl-page-btn,
+  .qdoc-pagination-buttons button,
+  .qscl-page-btn,
+  .qsl-page-btn,
+  .qsq-page-btn,
+  .evd-x-page-btn
+):hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+}
+
+:is(
+  .am-pn--active,
+  .etl-pn--active,
+  .flp-pg-btn.active,
+  .il-pn--active,
+  .log-pn--active,
+  .rdl-pn--active,
+  .rel-pn--active,
+  .qbl-page-btn--active,
+  .qcl-page-btn--active,
+  .qscl-page-btn--active,
+  .qsl-page-btn--active,
+  .qsq-page-btn--active,
+  .evd-x-page-btn.is-active,
+  .qdoc-pagination-buttons [aria-current='page']
+) {
+  border-color: #1aaa84;
+  background: #1aaa84;
+  color: #fff;
+}
+
+:is(
+  .am-pn,
+  .etl-pn,
+  .flp-pg-btn,
+  .il-pn,
+  .log-pn,
+  .ted-pagination__controls button,
+  .rdl-pn,
+  .rel-pn,
+  .qbl-page-btn,
+  .qcl-page-btn,
+  .qdoc-pagination-buttons button,
+  .qscl-page-btn,
+  .qsl-page-btn,
+  .qsq-page-btn,
+  .evd-x-page-btn
+):disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+@media (max-width: 760px) {
+  :is(
+    .am-pagination,
+    .etl-pagination,
+    .flp-pagination,
+    .il-pagination,
+    .log-pagination,
+    .ted-pagination,
+    .rdl-pagination,
+    .rel-pagination,
+    .qbl-pagination-bar,
+    .qcl-pagination-bar,
+    .qdoc-pagination-bar,
+    .qscl-pagination-bar,
+    .qsl-pagination-bar,
+    .qsq-pagination-bar,
+    .evd-x-pagination
+  ) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -169,13 +169,13 @@ function ComplianceByTechniquePage() {
               )}
 
               <div className="evd-card evd-x-table-card">
-                <table className="evd-table">
+                <table className="evd-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Nhân viên</th>
                       <th>Tổng số lần được kiểm tra</th>
                       <th>Tỷ lệ tuân thủ chung</th>
-                      <th>Chi tiết</th>
+                      <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -203,7 +203,8 @@ function ComplianceByTechniquePage() {
                           </td>
                           <td>
                             <button
-                              className="evd-btn-text"
+                              aria-label={`Xem chi tiết tuân thủ của ${item.employeeName}`}
+                              className="evd-btn-text admin-table-action admin-table-action--icon admin-table-action--primary"
                               onClick={() => {
                                 const params = new URLSearchParams()
                                 params.set('from', fromDate)
@@ -214,9 +215,10 @@ function ComplianceByTechniquePage() {
                                     : `/manager/compliance-by-technique/${item.employeeId}?${params.toString()}`
                                 )
                               }}
-                              style={{ padding: '4px 10px', fontSize: 13 }}
+                              title="Xem chi tiết"
+                              type="button"
                             >
-                              <EyeOutlined style={{ marginRight: 4 }} />Xem
+                              <EyeOutlined />
                             </button>
                           </td>
                         </tr>

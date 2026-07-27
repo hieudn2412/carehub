@@ -213,10 +213,10 @@ function ScoringFormulaPage() {
             ) : rows.length === 0 ? (
               <div className="sfp-state"><CalculatorOutlined /><strong>Không có phiên bản phù hợp</strong></div>
             ) : (
-              <table className="sfp-table">
+              <table className="sfp-table admin-table-uppercase">
                 <thead><tr>
                   <th>Quy trình</th><th>Phiên bản</th><th>Tỷ trọng</th><th>Điểm sàn</th>
-                  <th>Bài đã nộp</th><th>Đồng bộ kết quả</th><th aria-label="Hành động" />
+                  <th>Bài đã nộp</th><th>Đồng bộ kết quả</th><th>Hành động</th>
                 </tr></thead>
                 <tbody>{rows.map((row) => {
                   const jobStatus = row.latestJob?.status
@@ -224,11 +224,31 @@ function ScoringFormulaPage() {
                     <tr key={row.versionId}>
                       <td><strong>{row.formTitle}</strong><span>{row.formCode}</span></td>
                       <td><b>v{row.versionNumber}</b><span className={`sfp-status is-${row.versionStatus?.toLowerCase()}`}>{statusLabel(row.versionStatus)}</span></td>
-                      <td><div className="sfp-ratio"><b>{row.criticalWeightPercent}%</b><i style={{ '--critical-share': `${row.criticalWeightPercent}%` }} /><span>{row.normalWeightPercent}%</span></div><small>Trọng yếu / Thường</small></td>
+                      <td>
+                        <div className="sfp-ratio">
+                          <b>{row.criticalWeightPercent}%</b>
+                          <i aria-hidden="true" style={{ '--critical-share': `${row.criticalWeightPercent}%` }} />
+                          <span>{row.normalWeightPercent}%</span>
+                        </div>
+                        <small>Trọng yếu / Thường</small>
+                      </td>
                       <td><strong>{displayScore(row.passingScore)}/10</strong><span>{row.passingScoreMode === 'CUSTOM' ? 'Tùy chỉnh' : 'Công thức mặc định'}</span></td>
                       <td><strong>{row.submittedCount}</strong><span>kết quả</span></td>
                       <td><span className={`sfp-job is-${(jobStatus || 'none').toLowerCase()}`}>{ACTIVE_JOB_STATUSES.has(jobStatus) && <LoadingOutlined />}{jobStatus === 'COMPLETED' && <CheckCircleOutlined />}{jobStatus === 'FAILED' && <WarningOutlined />}{jobLabel(jobStatus)}</span>{jobStatus === 'FAILED' && <button className="sfp-retry" onClick={() => retryJob(row.latestJob.id)} type="button">Thử lại</button>}</td>
-                      <td><button className="sfp-edit" disabled={ACTIVE_JOB_STATUSES.has(jobStatus)} onClick={() => openEditor(row)} title="Chỉnh công thức" type="button"><EditOutlined /></button></td>
+                      <td>
+                        <div className="admin-table-actions">
+                          <button
+                            aria-label={`Chỉnh công thức ${row.formTitle} phiên bản ${row.versionNumber}`}
+                            className="admin-table-action admin-table-action--icon admin-table-action--primary"
+                            disabled={ACTIVE_JOB_STATUSES.has(jobStatus)}
+                            onClick={() => openEditor(row)}
+                            title="Chỉnh công thức"
+                            type="button"
+                          >
+                            <EditOutlined />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}</tbody>

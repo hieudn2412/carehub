@@ -195,44 +195,6 @@
   color: #d32f2f;
 }
 
-/* Action Buttons */
-.qcl-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  font-size: 15px;
-  transition: all 0.12s ease;
-  background: none;
-  text-decoration: none;
-}
-
-.qcl-action-btn--edit {
-  color: #2563eb;
-  border-color: #2563eb;
-  background: #f0f6ff;
-}
-
-.qcl-action-btn--edit:hover {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.qcl-action-btn--delete {
-  color: #ef4444;
-  border-color: #ef4444;
-  background: #fff5f5;
-}
-
-.qcl-action-btn--delete:hover {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
 /* Pagination Bar */
 .qcl-pagination-bar {
   display: flex;
@@ -273,6 +235,39 @@
 .qcl-page-btn:hover {
   background: #f8fafc;
   border-color: #94a3b8;
+}
+
+/* Keep this list aligned with the shared administrator table language. */
+.qcl-table-card {
+  border-color: #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.qcl-table th {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.qcl-table td {
+  padding: 14px 18px;
+  border-bottom-color: #f1f5f9;
+}
+
+.qcl-table th:first-child,
+.qcl-table td:first-child,
+.qcl-table th:last-child,
+.qcl-table td:last-child {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.qcl-pagination-bar {
+  border-top-color: #e2e8f0;
 }
 
 .qcl-page-btn--active {

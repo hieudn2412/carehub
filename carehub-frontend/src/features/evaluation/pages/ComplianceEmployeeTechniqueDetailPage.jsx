@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   WarningFilled,
@@ -145,7 +145,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
               )}
 
               <div className="evd-card evd-x-table-card" style={{ marginTop: 16 }}>
-                <table className="evd-table">
+                <table className="evd-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th style={{ width: 40 }}></th>
@@ -172,9 +172,8 @@ function ComplianceEmployeeTechniqueDetailPage() {
                       </tr>
                     ) : (
                       data.items.map((item, idx) => (
-                        <>
+                        <Fragment key={item.formId || item.formName || idx}>
                           <tr
-                            key={idx}
                             className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}
                             style={{ cursor: (item.attempts && item.attempts.length > 0) ? 'pointer' : 'default' }}
                             onClick={() => (item.attempts && item.attempts.length > 0) && toggleExpand(idx)}
@@ -227,24 +226,24 @@ function ComplianceEmployeeTechniqueDetailPage() {
                                   <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
                                     Lịch sử giám sát — {item.formName}
                                   </div>
-                                  <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                                  <table className="evd-detail-table admin-table-uppercase">
                                     <thead>
                                       <tr>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Ngày ĐG</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Người ĐG</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'left', color: '#6b7280', fontWeight: 600 }}>Quy trình</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Điểm</th>
-                                        <th style={{ padding: '6px 8px', borderBottom: '1px solid #e5e7eb', textAlign: 'center', color: '#6b7280', fontWeight: 600 }}>Kết quả</th>
+                                        <th>Ngày ĐG</th>
+                                        <th>Người ĐG</th>
+                                        <th>Quy trình</th>
+                                        <th>Điểm</th>
+                                        <th>Kết quả</th>
                                       </tr>
                                     </thead>
                                     <tbody>
                                       {item.attempts.map((att, aIdx) => (
                                         <tr key={aIdx}>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{formatDate(att.evaluatedAt)}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6' }}>{att.evaluatedBy || '—'}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', color: '#6b7280', fontSize: 12 }}>{att.formName || '—'}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 600 }}>{att.score != null ? String(att.score) : '—'}</td>
-                                          <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
+                                          <td>{formatDate(att.evaluatedAt)}</td>
+                                          <td>{att.evaluatedBy || '—'}</td>
+                                          <td className="evd-detail-table__muted">{att.formName || '—'}</td>
+                                          <td className="evd-detail-table__score">{att.score != null ? String(att.score) : '—'}</td>
+                                          <td>
                                             <span style={{
                                               color: att.passed ? '#16a34a' : '#dc2626',
                                               fontWeight: 600,
@@ -261,7 +260,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </Fragment>
                       ))
                     )}
                   </tbody>

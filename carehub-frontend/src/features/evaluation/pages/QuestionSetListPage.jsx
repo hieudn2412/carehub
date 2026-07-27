@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   CheckCircleOutlined,
@@ -45,6 +46,8 @@ function QuestionSetListPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [actionId, setActionId] = useState(null)
   const [exportMenuId, setExportMenuId] = useState(null)
+  const [exportMenuPosition, setExportMenuPosition] = useState(null)
+  const [isExportMenuVisible, setIsExportMenuVisible] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [page, setPage] = useState(0)
   const [pendingConfirmation, setPendingConfirmation] = useState(null)
@@ -72,17 +75,25 @@ function QuestionSetListPage() {
   useEffect(() => {
     if (exportMenuId === null) return undefined
 
-    const closeMenu = () => setExportMenuId(null)
+    const closeMenu = () => {
+      setIsExportMenuVisible(false)
+      setExportMenuId(null)
+      setExportMenuPosition(null)
+    }
     const closeMenuOnEscape = (event) => {
       if (event.key === 'Escape') closeMenu()
     }
 
     document.addEventListener('click', closeMenu)
     document.addEventListener('keydown', closeMenuOnEscape)
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
 
     return () => {
       document.removeEventListener('click', closeMenu)
       document.removeEventListener('keydown', closeMenuOnEscape)
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
     }
   }, [exportMenuId])
 
@@ -90,6 +101,33 @@ function QuestionSetListPage() {
   const totalElements = sets.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = sets.slice(page * pageSize, (page + 1) * pageSize)
+  const activeExportSet = sets.find((item) => item.id === exportMenuId)
+
+  function toggleExportMenu(event, itemId) {
+    event.stopPropagation()
+
+    if (exportMenuId === itemId) {
+      setIsExportMenuVisible(false)
+      setExportMenuId(null)
+      setExportMenuPosition(null)
+      return
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    const horizontalPadding = 122
+    setExportMenuPosition({
+      left: Math.min(
+        Math.max(rect.left + rect.width / 2, horizontalPadding),
+        window.innerWidth - horizontalPadding,
+      ),
+      top: rect.top + rect.height / 2,
+    })
+    setIsExportMenuVisible(false)
+    setExportMenuId(itemId)
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => setIsExportMenuVisible(true))
+    })
+  }
 
   async function archiveSet(item) {
     setPendingConfirmation({
@@ -203,14 +241,14 @@ function QuestionSetListPage() {
         </div>
 
         <div className="qsl-table-card">
-          <table className="qsl-table">
+          <table className="qsl-table admin-table-uppercase">
             <thead>
               <tr>
                 <th>Tên bộ câu hỏi</th>
                 <th>Số câu hỏi</th>
                 <th>Độ khó</th>
                 <th>Trạng thái</th>
-                <th style={{ width: '270px', textAlign: 'center' }}>Hành động</th>
+                <th style={{ width: '270px' }}>Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -242,10 +280,10 @@ function QuestionSetListPage() {
                       </span>
                     </td>
                     <td>
-                      <div className="qsl-actions">
+                      <div className="qsl-actions admin-table-actions">
                         <button
                           type="button"
-                          className={`qsl-action-btn ${item.status === 'ACTIVE' ? 'qsl-action-btn--pause' : 'qsl-action-btn--activate'}`}
+                          className={`admin-table-action admin-table-action--icon ${item.status === 'ACTIVE' ? 'qsl-action-pause' : 'admin-table-action--success'}`}
                           onClick={() => toggleSetStatus(item)}
                           title={item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'}
                           aria-label={`${item.status === 'ACTIVE' ? 'Tạm ngưng' : 'Kích hoạt'} bộ ${item.name}`}
@@ -257,7 +295,7 @@ function QuestionSetListPage() {
                         </button>
                         <button
                           type="button"
-                          className="qsl-action-btn qsl-action-btn--edit"
+                          className="admin-table-action admin-table-action--icon admin-table-action--primary"
                           onClick={() => navigate(`/admin/evaluation/question-sets/${item.id}/edit`)}
                           title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa bộ ${item.name}`}
@@ -266,7 +304,7 @@ function QuestionSetListPage() {
                         </button>
                         <button
                           type="button"
-                          className="qsl-action-btn"
+                          className="admin-table-action admin-table-action--icon"
                           onClick={() => duplicateSet(item)}
                           title="Nhân bản"
                           aria-label={`Nhân bản bộ ${item.name}`}
@@ -280,8 +318,8 @@ function QuestionSetListPage() {
                         >
                           <button
                             type="button"
-                            className="qsl-action-btn qsl-action-btn--export"
-                            onClick={() => setExportMenuId((currentId) => currentId === item.id ? null : item.id)}
+                            className="admin-table-action admin-table-action--icon qsl-action-btn--export"
+                            onClick={(event) => toggleExportMenu(event, item.id)}
                             title="Chọn định dạng xuất"
                             aria-label="Chọn định dạng xuất"
                             aria-haspopup="menu"
@@ -291,32 +329,10 @@ function QuestionSetListPage() {
                             {actionId === item.id ? <LoadingOutlined /> : <ExportOutlined />}
                           </button>
 
-                          <div className="qsl-export-radial__menu" role="menu" aria-label={`Xuất ${item.name}`}>
-                            {EXPORT_ACTIONS.map((exportAction) => (
-                              <button
-                                key={exportAction.key}
-                                type="button"
-                                className={`qsl-export-radial__item qsl-export-radial__item--${exportAction.key}`}
-                                onClick={() => {
-                                  setExportMenuId(null)
-                                  if (exportAction.key === 'print') {
-                                    printSet(item)
-                                  } else {
-                                    exportSet(item, exportAction.key)
-                                  }
-                                }}
-                                role="menuitem"
-                                tabIndex={exportMenuId === item.id ? 0 : -1}
-                              >
-                                <span aria-hidden="true">{exportAction.icon}</span>
-                                <span>{exportAction.label}</span>
-                              </button>
-                            ))}
-                          </div>
                         </div>
                         <button
                           type="button"
-                          className="qsl-action-btn qsl-action-btn--delete"
+                          className="admin-table-action admin-table-action--icon admin-table-action--danger"
                           onClick={() => archiveSet(item)}
                           title="Xóa"
                           aria-label={`Lưu trữ bộ ${item.name}`}
@@ -354,6 +370,38 @@ function QuestionSetListPage() {
           </div>
         </div>
       </div>
+      {exportMenuPosition && activeExportSet && createPortal(
+        <div
+          className={`qsl-export-radial-portal${isExportMenuVisible ? ' qsl-export-radial--open' : ''}`}
+          style={exportMenuPosition}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="qsl-export-radial__menu" role="menu" aria-label={`Xuất ${activeExportSet.name}`}>
+            {EXPORT_ACTIONS.map((exportAction) => (
+              <button
+                key={exportAction.key}
+                type="button"
+                className={`qsl-export-radial__item qsl-export-radial__item--${exportAction.key}`}
+                onClick={() => {
+                  setIsExportMenuVisible(false)
+                  setExportMenuId(null)
+                  setExportMenuPosition(null)
+                  if (exportAction.key === 'print') {
+                    printSet(activeExportSet)
+                  } else {
+                    exportSet(activeExportSet, exportAction.key)
+                  }
+                }}
+                role="menuitem"
+              >
+                <span aria-hidden="true">{exportAction.icon}</span>
+                <span>{exportAction.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
       <ConfirmModal
         isOpen={Boolean(pendingConfirmation)}
         title={pendingConfirmation?.title || ''}

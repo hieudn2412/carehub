@@ -44,25 +44,20 @@
 .sfp-toolbar form button:focus-visible { outline: 2px solid #3a9f8d; outline-offset: -3px; }
 .sfp-toolbar > label { display: grid; gap: 5px; color: #667085; font-size: 11px; font-weight: 700; line-height: 1; }
 .sfp-toolbar select { min-width: 170px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; background: #fff; color: #172033; padding: 0 10px; font: inherit; }
-.sfp-refresh,.sfp-edit { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; background: #fff; color: #536174; cursor: pointer; }
+.sfp-refresh { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid #d5dee8; border-radius: 6px; background: #fff; color: #536174; cursor: pointer; }
 .sfp-refresh { flex: 0 0 40px; align-self: flex-end; }
-.sfp-refresh:hover,.sfp-edit:hover { border-color: #3a9f8d; color: #087f6c; }
-.sfp-edit:disabled { cursor: not-allowed; opacity: .45; }
+.sfp-refresh:hover { border-color: #3a9f8d; color: #087f6c; }
 
 .sfp-alert { display: flex; align-items: center; gap: 9px; margin-top: 14px; border: 1px solid #fecaca; border-radius: 6px; background: #fff1f2; color: #b42318; padding: 11px 14px; }
-.sfp-table-wrap { margin-top: 16px; border: 1px solid #dfe6ee; border-radius: 8px; overflow-x: auto; background: #fff; box-shadow: 0 8px 24px rgba(16,24,40,.04); }
-.sfp-table { width: 100%; min-width: 1050px; border-collapse: collapse; table-layout: fixed; }
-.sfp-table th { height: 44px; border-bottom: 1px solid #dfe6ee; background: #f8fafc; color: #667085; padding: 0 14px; text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; }
-.sfp-table td { height: 76px; border-bottom: 1px solid #edf1f5; padding: 10px 14px; vertical-align: middle; }
-.sfp-table tr:last-child td { border-bottom: 0; }
-.sfp-table tbody tr:hover { background: #fbfdfc; }
-.sfp-table th:nth-child(1) { width: 23%; }.sfp-table th:nth-child(2) { width: 13%; }.sfp-table th:nth-child(3) { width: 17%; }.sfp-table th:nth-child(4) { width: 14%; }.sfp-table th:nth-child(5) { width: 10%; }.sfp-table th:nth-child(6) { width: 18%; }.sfp-table th:nth-child(7) { width: 5%; }
+.sfp-table-wrap { margin-top: 16px; }
+.sfp-table { min-width: 960px; table-layout: fixed; }
+.sfp-table th:nth-child(1) { width: 22%; }.sfp-table th:nth-child(2) { width: 12%; }.sfp-table th:nth-child(3) { width: 16%; }.sfp-table th:nth-child(4) { width: 14%; }.sfp-table th:nth-child(5) { width: 10%; }.sfp-table th:nth-child(6) { width: 18%; }.sfp-table th:nth-child(7) { width: 8%; }
 .sfp-table td > strong,.sfp-table td > b { display: block; color: #172033; font-size: 14px; }
 .sfp-table td > span:not(.sfp-status):not(.sfp-job),.sfp-table td > small { display: block; margin-top: 4px; color: #7b8798; font-size: 12px; font-style: normal; }
 .sfp-status { display: inline-flex; margin-top: 5px; border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: 750; }
 .sfp-status.is-draft { background: #fff6dc; color: #9a6700; }.sfp-status.is-published { background: #e8f7f2; color: #087f6c; }.sfp-status.is-retired { background: #eef1f5; color: #667085; }
-.sfp-ratio { display: grid; grid-template-columns: auto 42px auto; align-items: center; gap: 7px; }
-.sfp-ratio b { color: #b54708; }.sfp-ratio span { color: #087f6c; font-weight: 750; }.sfp-ratio i { height: 4px; border-radius: 2px; background: linear-gradient(90deg,#e98b3b 0 var(--critical-share),#3a9f8d var(--critical-share)); }
+.sfp-ratio { display: inline-flex; width: max-content; align-items: center; gap: 7px; }
+.sfp-ratio b { color: #b54708; }.sfp-ratio span { color: #087f6c; font-weight: 750; }.sfp-ratio i { display: block; width: 38px; height: 4px; flex: 0 0 38px; border-radius: 999px; background: linear-gradient(90deg,#e98b3b 0 var(--critical-share),#3a9f8d var(--critical-share)); }
 .sfp-job { display: inline-flex; align-items: center; gap: 6px; border-radius: 4px; padding: 4px 7px; background: #f1f4f7; color: #667085; font-size: 11px; font-weight: 750; }
 .sfp-job.is-pending,.sfp-job.is-running { background: #eef5ff; color: #175cd3; }.sfp-job.is-completed { background: #e8f7f2; color: #087f6c; }.sfp-job.is-failed { background: #fff1f2; color: #b42318; }
 .sfp-retry { margin-top: 5px; border: 0; background: transparent; color: #b42318; cursor: pointer; padding: 0; font-size: 11px; font-weight: 750; }

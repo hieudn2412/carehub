@@ -197,14 +197,15 @@ function TrainingHoursListScreen() {
                 </div>
               ) : (
                 <>
-                  <table className="th-table">
+                  <table className="th-table admin-table-uppercase">
                     <thead>
                       <tr>
                         <th>Ngày đào tạo liên tục</th>
                         <th>Nội dung đào tạo</th>
                         <th className="th-col-num">Số giờ đào tạo</th>
+                        <th className="th-col-submitted">Ngày nộp</th>
                         <th className="th-col-center">Minh chứng</th>
-                        <th className="th-col-actions">Thao tác</th>
+                        <th className="th-col-actions">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -223,7 +224,7 @@ function TrainingHoursListScreen() {
                             {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
                           </td>
                           <td className="th-col-num" data-label="Số giờ"><strong>{r.declaredHours}h</strong></td>
-                          <td data-label="Ngày nộp">
+                          <td className="th-col-submitted" data-label="Ngày nộp">
                             {r.workflowStatus === 'SUBMITTED' ? (
                               <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
                                 {formatDate(r.submittedAt)}
@@ -246,11 +247,11 @@ function TrainingHoursListScreen() {
                               <span className="th-evidence-none">-</span>
                             )}
                           </td>
-                          <td className="th-col-actions" data-label="Thao tác">
-                            <div className="th-actions" onClick={e => e.stopPropagation()}>
+                          <td className="th-col-actions" data-label="Hành động">
+                            <div className="th-actions admin-table-actions" onClick={e => e.stopPropagation()}>
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
-                                  className="th-action-btn th-action-btn--submit"
+                                  className="th-action-btn th-action-btn--submit admin-table-action admin-table-action--icon admin-table-action--success"
                                   onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
                                   disabled={submittingId === r.id}
                                   title="Nộp hồ sơ"
@@ -260,7 +261,7 @@ function TrainingHoursListScreen() {
                                 </button>
                               )}
                               <button
-                                className="th-action-btn th-action-btn--view"
+                                className="th-action-btn th-action-btn--view admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => navigate(`/staff/training/${r.id}`)}
                                 title="Xem chi tiết"
                                 aria-label={`Xem chi tiết ${r.title}`}
@@ -269,7 +270,7 @@ function TrainingHoursListScreen() {
                               </button>
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
-                                  className="th-action-btn th-action-btn--edit"
+                                  className="th-action-btn th-action-btn--edit admin-table-action admin-table-action--icon"
                                   onClick={() => navigate(`/staff/training/${r.id}/edit`)}
                                   title="Chỉnh sửa"
                                   aria-label={`Chỉnh sửa ${r.title}`}
@@ -278,7 +279,7 @@ function TrainingHoursListScreen() {
                                 </button>
                               )}
                               <button
-                                className="th-action-btn th-action-btn--evidence"
+                                className="th-action-btn th-action-btn--evidence admin-table-action admin-table-action--icon"
                                 onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
                                 title="Minh chứng"
                                 aria-label={`Quản lý minh chứng ${r.title}`}
