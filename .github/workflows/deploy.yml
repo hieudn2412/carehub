@@ -59,7 +59,7 @@ jobs:
 
       - name: Run frontend tests
         working-directory: carehub-frontend
-        run: npm run test:evidence
+        run: npm test
 
       - name: Build frontend
         working-directory: carehub-frontend

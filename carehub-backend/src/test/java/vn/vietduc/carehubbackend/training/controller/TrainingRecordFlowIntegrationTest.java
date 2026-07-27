@@ -162,13 +162,6 @@ class TrainingRecordFlowIntegrationTest {
     @DisplayName("L2-TRN-17 | Event Published: evidence delete must remove the stored object AND stamp storage_deleted_at after commit (D34)")
     @Test
     void evidenceDeleteCleansStorageAfterCommit() throws Exception {
-        // EXPECTED TO FAIL until D34 is resolved. EvidenceObjectDeletionService.deleteAfterCommit
-        // (AFTER_COMMIT, no transaction of its own) deletes the storage object, then
-        // markStorageDeleted — a @Modifying JPQL update — throws
-        // "InvalidDataAccessApiUsageException: No active transaction for update or delete query",
-        // which deleteAndMark catches and logs. The stamp is only ever written by the 10-minute
-        // retry sweep, which re-issues the (idempotent) storage delete first. Same root cause
-        // family as D33: an AFTER_COMMIT listener doing writes without REQUIRES_NEW.
         TrainingRecord record = seedDraft();
         byte[] content = "evidence-bytes".getBytes(StandardCharsets.UTF_8);
         EvidenceStorageService.StoredEvidenceObject stored = storageService.store(

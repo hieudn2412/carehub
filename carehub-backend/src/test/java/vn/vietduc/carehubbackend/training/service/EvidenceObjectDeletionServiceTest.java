@@ -2,6 +2,9 @@ package vn.vietduc.carehubbackend.training.service;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import vn.vietduc.carehubbackend.exception.ServiceUnavailableException;
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.service.event.TrainingEvidenceDeletedEvent;
@@ -15,6 +18,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class EvidenceObjectDeletionServiceTest {
     private TrainingEvidenceFileRepository repository;
@@ -25,7 +29,10 @@ class EvidenceObjectDeletionServiceTest {
     void setUp() {
         repository = mock(TrainingEvidenceFileRepository.class);
         storageService = mock(EvidenceStorageService.class);
-        service = new EvidenceObjectDeletionService(repository, storageService);
+        PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        when(transactionManager.getTransaction(any(TransactionDefinition.class)))
+                .thenReturn(mock(TransactionStatus.class));
+        service = new EvidenceObjectDeletionService(repository, storageService, transactionManager);
     }
 
     @Test
