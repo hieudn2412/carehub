@@ -5,9 +5,7 @@ import {
   getEvidenceFileError,
 } from './evidenceFile.js'
 
-// Backend enforces 5 MB (TrainingDomainValidator.MAX_EVIDENCE_BYTES) and SRS BR-04 / FR-017
-// also say 5 MB, but this module allows 20 MB. See D4 in SRS-CODE-DIVERGENCE.md — the
-// L1-BV-05 case below asserts the SRS limit and is expected to FAIL until D4 is resolved.
+// Backend and frontend both enforce the 5 MB limit from SRS BR-04 / FR-017.
 const FIVE_MB = 5 * 1024 * 1024
 
 function evidence(name, type, size) {
@@ -24,16 +22,16 @@ describe('getEvidenceFileError', () => {
       .toBe('Tệp "cert.pdf" đang trống.')
   })
 
-  it('L1-FE-15 | BVA-Max: size = 20 MB exactly → accepted (last valid byte count)', () => {
+  it('L1-FE-15 | BVA-Max: size = 5 MB exactly → accepted (last valid byte count)', () => {
     expect(getEvidenceFileError(
       evidence('certificate.jpg', 'image/jpeg', MAX_EVIDENCE_FILE_SIZE_BYTES),
     )).toBeNull()
   })
 
-  it('L1-FE-16 | BVA-Max+1: size = 20 MB + 1 → rejected with the 20 MB message', () => {
+  it('L1-FE-16 | BVA-Max+1: size = 5 MB + 1 → rejected with the 5 MB message', () => {
     expect(getEvidenceFileError(
       evidence('certificate.jpg', 'image/jpeg', MAX_EVIDENCE_FILE_SIZE_BYTES + 1),
-    )).toMatch(/20 MB/)
+    )).toMatch(/5 MB/)
   })
 
   it('L1-FE-17 | EP-Invalid: extension does not match MIME type → rejected', () => {
@@ -51,8 +49,6 @@ describe('getEvidenceFileError', () => {
   })
 
   it('L1-FE-22 | BVA-Max+1: size = 5 MB + 1 must be rejected per SRS BR-04 / FR-017 / BV-02 (D4)', () => {
-    // EXPECTED TO FAIL until D4 is resolved: this module caps at 20 MB, so a 5 MB + 1 file is
-    // accepted here and then rejected by the backend (TrainingDomainValidator, 5 MB).
     const error = getEvidenceFileError(evidence('certificate.jpg', 'image/jpeg', FIVE_MB + 1))
 
     expect(

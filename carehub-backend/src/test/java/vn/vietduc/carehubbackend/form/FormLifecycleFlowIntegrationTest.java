@@ -214,11 +214,6 @@ class FormLifecycleFlowIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         long updatedLock = ((Number) JsonPath.read(updateResponse, "$.data.lockVersion")).longValue();
 
-        // EXPECTED TO FAIL until D28 is resolved: publishPersonalComplianceIssue dereferences
-        // submission.getAssignmentItem().getForm().getTitle() without a null check, and a direct
-        // evaluation has assignmentItem = NULL. The FAILED_SCORE result triggers the publish inside
-        // the @Transactional submit, so the NPE rolls back the whole submission and the admin gets
-        // a 500 instead of a stored FAILED result.
         mockMvc.perform(post("/api/v1/form-submissions/{id}/submission", submissionId)
                         .with(jwtFor(admin, "ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)

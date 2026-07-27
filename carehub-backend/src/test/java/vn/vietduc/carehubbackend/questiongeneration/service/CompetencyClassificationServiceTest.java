@@ -23,11 +23,8 @@ import static org.mockito.Mockito.when;
  * <ul>
  *   <li><b>D6</b> — BR-01 / FR-052 describe Good/Average/Weak tiers over 0–100; the implementation
  *       uses five {@link CompetencyLevel} tiers over 0–10. The tests assert the implementation.</li>
- *   <li><b>D5</b> — DC-05 requires contiguous, non-overlapping bands, but
- *       {@code defaultThresholds()} builds each band as {@code max = nextMin - 0.01} while
- *       {@code classify()} matches on {@code min <= score <= max}. Scores landing in the resulting
- *       gaps match no band and fall through to the highest band. {@code L1-CCS-13} pins that
- *       defect and is EXPECTED TO FAIL until D5 is resolved.</li>
+ *   <li><b>D5</b> — DC-05 requires contiguous bands. Seeded neighbors share a boundary and
+ *       {@code classify()} assigns that shared point to the later, higher band.</li>
  * </ul>
  */
 class CompetencyClassificationServiceTest {
@@ -192,8 +189,6 @@ class CompetencyClassificationServiceTest {
     @Test
     @DisplayName("L1-CCS-13 | BVA + DC-05: seeded bands must leave no gap between one band's max and the next min")
     void seededBandsMustBeContiguous() {
-        // EXPECTED TO FAIL until D5 is resolved. Each band ends at nextMin - 0.01, so scores in
-        // (max, nextMin) — e.g. 3.995 — match no band and classify() falls back to the highest band.
         List<CompetencyThresholdConfig> defaults = CompetencyClassificationService.defaultThresholds();
 
         for (int i = 0; i < defaults.size() - 1; i++) {
@@ -211,14 +206,27 @@ class CompetencyClassificationServiceTest {
     @Test
     @DisplayName("L1-CCS-14 | BVA + DC-05: a score inside a seeded band gap must not classify as ADVANCED")
     void scoreInsideSeededBandGapMustNotBecomeAdvanced() {
-        // EXPECTED TO FAIL until D5 is resolved: 3.995 sits between NOT_COMPETENT.max (3.99)
-        // and BEGINNER.min (4.0), matches no band, and the fallback returns the highest band.
         when(thresholdRepository.findByCategoryIsNullOrderBySortOrderAsc())
                 .thenReturn(CompetencyClassificationService.defaultThresholds());
 
         assertThat(service.classifyOverall(new BigDecimal("3.995")))
                 .as("a near-zero score must never be classified as the top tier")
                 .isEqualTo(CompetencyLevel.NOT_COMPETENT);
+    }
+
+    @ParameterizedTest(name = "persisted default score={0} → {1}")
+    @CsvSource({
+            "4.0, BEGINNER",
+            "6.0, BASIC",
+            "7.5, PROFICIENT",
+            "9.0, ADVANCED"
+    })
+    @DisplayName("L1-CCS-15 | BVA: shared seeded boundaries belong to the higher band")
+    void persistedDefaultBoundariesMatchFallbackDefaults(BigDecimal score, CompetencyLevel expected) {
+        when(thresholdRepository.findByCategoryIsNullOrderBySortOrderAsc())
+                .thenReturn(CompetencyClassificationService.defaultThresholds());
+
+        assertThat(service.classifyOverall(score)).isEqualTo(expected);
     }
 
     // ── fixtures ──────────────────────────────────────────────────────────────
