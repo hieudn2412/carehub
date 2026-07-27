@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.form.submission.controller;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
@@ -12,6 +13,8 @@ import vn.vietduc.carehubbackend.form.submission.dto.FormSubmissionSummaryRespon
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionStatus;
 import vn.vietduc.carehubbackend.form.submission.service.FormSubmissionService;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("${app.api-prefix}/forms")
@@ -35,22 +38,36 @@ public class FormResponseController {
             @PathVariable Long formId,
             @PathVariable Long versionId,
             @RequestParam(required = false) FormSubmissionStatus status,
-            @RequestParam(required = false) FormSubmissionResult result,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(defaultValue = "false") boolean includeAnswers,
             @PageableDefault(size = 20) Pageable pageable) {
         return ApiResponse.success("Get form version responses successfully",
                 PageResponse.from(service.searchByFormVersion(
-                        formId, versionId, status, result, includeAnswers, pageable)));
+                        formId, versionId, status, keyword, submittedByUserId, departmentId,
+                        result, dateFrom, dateTo, includeAnswers, pageable)));
     }
 
     @GetMapping("/{formId}/versions/{versionId}/responses/summary")
     public ApiResponse<FormSubmissionSummaryResponse> summarizeByFormVersion(
             @PathVariable Long formId,
-            @PathVariable Long versionId
+            @PathVariable Long versionId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         return ApiResponse.success(
                 "Get form version response summary successfully",
-                service.summarizeByFormVersion(formId, versionId)
+                service.summarizeByFormVersion(
+                        formId, versionId, keyword, submittedByUserId, departmentId,
+                        result, dateFrom, dateTo)
         );
     }
 }

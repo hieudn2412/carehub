@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import vn.vietduc.carehubbackend.form.submission.service.FormSubmissionService;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("${app.api-prefix}/form-submissions")
@@ -72,10 +74,17 @@ public class FormSubmissionController {
     public ResponseEntity<byte[]> exportVersion(
             @RequestParam Long formId,
             @RequestParam Long versionId,
-            @RequestParam(required = false) FormSubmissionResult result
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         FormSubmissionExcelExportService.ExportFile file =
-                excelExportService.exportVersion(formId, versionId, result);
+                excelExportService.exportVersion(
+                        formId, versionId, keyword, submittedByUserId, departmentId,
+                        result, dateFrom, dateTo);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(file.contentType()))
                 .cacheControl(CacheControl.noStore())

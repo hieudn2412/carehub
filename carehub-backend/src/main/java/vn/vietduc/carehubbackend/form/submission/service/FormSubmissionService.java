@@ -205,38 +205,79 @@ public class FormSubmissionService {
 
     @Transactional(readOnly = true)
     public Page<FormSubmissionResponse> searchByFormVersion(Long formId, Long versionId, FormSubmissionStatus status,
-                                                            FormSubmissionResult result, boolean includeAnswers,
-                                                            Pageable pageable) {
+                                                            String keyword, Long submittedByUserId, Long departmentId,
+                                                            String result, LocalDate dateFrom, LocalDate dateTo,
+                                                            boolean includeAnswers, Pageable pageable) {
         formRepository.findByIdAndDeletedFalse(formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
-        return submissionRepository.searchByFormVersionId(formId, versionId, status, result, normalize(pageable))
+
+        FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
+                keyword, submittedByUserId, departmentId, result, dateFrom, dateTo);
+        if (status != FormSubmissionStatus.SUBMITTED) {
+            FormSubmissionResult exactResult = criteria.filterResults() && criteria.results().size() == 1
+                    ? criteria.results().get(0)
+                    : null;
+            return submissionRepository.searchByFormVersionId(
+                            formId, versionId, status, exactResult, normalize(pageable))
+                    .map(submission -> toResponse(submission, includeAnswers));
+        }
+
+        return submissionRepository.searchHistoryByFormVersion(
+                        formId,
+                        versionId,
+                        criteria.keyword(),
+                        criteria.submittedByUserId(),
+                        criteria.departmentId(),
+                        criteria.filterResults(),
+                        criteria.results(),
+                        criteria.fromInclusive(),
+                        criteria.toExclusive(),
+                        normalize(pageable)
+                )
                 .map(submission -> toResponse(submission, includeAnswers));
     }
 
     @Transactional(readOnly = true)
-    public FormSubmissionSummaryResponse summarizeByFormVersion(Long formId, Long versionId) {
+    public FormSubmissionSummaryResponse summarizeByFormVersion(
+            Long formId,
+            Long versionId,
+            String keyword,
+            Long submittedByUserId,
+            Long departmentId,
+            String result,
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
         formRepository.findByIdAndDeletedFalse(formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
 
-        long total = submissionRepository.countByFormVersion_IdAndStatus(
-                versionId, FormSubmissionStatus.SUBMITTED);
-        long passed = submissionRepository.countByFormVersion_IdAndStatusAndResult(
-                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.PASSED);
-        long failedScore = submissionRepository.countByFormVersion_IdAndStatusAndResult(
-                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.FAILED_SCORE);
-        long failedCritical = submissionRepository.countByFormVersion_IdAndStatusAndResult(
-                versionId, FormSubmissionStatus.SUBMITTED, FormSubmissionResult.FAILED_CRITICAL);
+        FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
+                keyword, submittedByUserId, departmentId, result, dateFrom, dateTo);
+        var summary = submissionRepository.summarizeHistoryByFormVersion(
+                formId,
+                versionId,
+                criteria.keyword(),
+                criteria.submittedByUserId(),
+                criteria.departmentId(),
+                criteria.filterResults(),
+                criteria.results(),
+                criteria.fromInclusive(),
+                criteria.toExclusive(),
+                FormSubmissionResult.PASSED,
+                List.of(FormSubmissionResult.FAILED_SCORE, FormSubmissionResult.FAILED_CRITICAL)
+        );
 
         return new FormSubmissionSummaryResponse(
-                total,
-                passed,
-                failedScore + failedCritical,
-                submissionRepository.averageConvertedScoreByVersionAndStatus(
-                        versionId, FormSubmissionStatus.SUBMITTED)
+                summary == null || summary.getTotal() == null ? 0 : summary.getTotal(),
+                summary == null || summary.getPassed() == null ? 0 : summary.getPassed(),
+                summary == null || summary.getFailed() == null ? 0 : summary.getFailed(),
+                summary == null || summary.getAverageConvertedScore() == null
+                        ? null
+                        : BigDecimal.valueOf(summary.getAverageConvertedScore()).setScale(4, RoundingMode.HALF_UP)
         );
     }
 

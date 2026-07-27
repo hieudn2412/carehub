@@ -32,7 +32,6 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-          cache-dependency-path: carehub-backend/pom.xml
 
       - name: Run backend tests
         working-directory: carehub-backend
@@ -80,11 +79,32 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
           install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/carehub_deploy_key"
+          printf '%s' "$VPS_SSH_KEY" | base64 --decode > "$HOME/.ssh/carehub_deploy_key"
           chmod 600 "$HOME/.ssh/carehub_deploy_key"
+          ssh-keygen -y -f "$HOME/.ssh/carehub_deploy_key" > /dev/null
+          echo "Deployment key fingerprint:"
+          ssh-keygen -y -f "$HOME/.ssh/carehub_deploy_key" \
+            | ssh-keygen -lf - -E sha256
           ssh-keyscan -H "$VPS_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null
           chmod 600 "$HOME/.ssh/known_hosts"
+
+      - name: Verify SSH authentication
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          test -n "$VPS_USER"
+          ssh \
+            -v \
+            -i "$HOME/.ssh/carehub_deploy_key" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 \
+            "$VPS_USER@$VPS_HOST" \
+            "echo 'SSH authentication successful.'"
 
       - name: Deploy exact commit and health check
         env:
