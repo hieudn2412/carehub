@@ -73,8 +73,6 @@ class TrainingDomainValidatorTest {
     @Test
     @DisplayName("L1-BV-04 | Negative: the too-many-hours message must state the enforced limit (D3)")
     void tooManyHoursMessageMustStateTheEnforcedLimit() {
-        // EXPECTED TO FAIL until D3 is resolved: MAX_DIRECT_RECORD_HOURS is 999 but the message
-        // says "must not exceed 24", so the user is told a limit the code does not enforce.
         TrainingRecordFormRequest request = record(START, null, null, null, new BigDecimal("1000"));
 
         assertThatThrownBy(() -> validator.validateRecordForm(request, false))
@@ -174,9 +172,6 @@ class TrainingDomainValidatorTest {
     @Test
     @DisplayName("L1-BV-10 | EP-Invalid + Negative: a missing MIME type must be a 400, not an NPE (D12)")
     void missingMimeTypeMustBeRejectedAsBadRequest() {
-        // EXPECTED TO FAIL until D12 is resolved: ALLOWED_MIME_TYPES is built with Set.of(...), whose
-        // contains(null) throws NullPointerException. An upload with no Content-Type therefore
-        // surfaces as SYS_001 / HTTP 500 instead of the Vietnamese 400 message.
         assertThatThrownBy(() -> validator.validateEvidenceMetadata(null, ONE_MB))
                 .as("D12: a null MIME type must produce a BadRequestException, not an NPE")
                 .isInstanceOf(BadRequestException.class)

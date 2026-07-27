@@ -149,7 +149,7 @@ public class TrainingLegacyDurationParser {
     }
 
     private String normalize(String value) {
-        String noAccent = Normalizer.normalize(value, Normalizer.Form.NFD)
+        String noAccent = Normalizer.normalize(value.replace('Đ', 'D').replace('đ', 'd'), Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "");
         return noAccent.toLowerCase(Locale.ROOT)
                 .replaceAll("\\s+", " ")

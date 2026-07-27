@@ -7,13 +7,8 @@ import { openEvidenceUrl, resolveEvidenceUrl } from './evidenceUrl.js'
  * Migrated from node:test to vitest so the whole frontend suite runs under one runner
  * (`npm test`); the three original assertions are kept as L1-FE-45…47.
  *
- * That migration exposed defect D14. `evidenceUrl.js` builds its base with
- * `new URL(API_BASE_URL).origin`, which throws when VITE_API_BASE_URL is a relative path — and the
- * TRACKED `.env.example` plus README.md both prescribe exactly that (`VITE_API_BASE_URL=/api/v1`,
- * for the Vite dev proxy). Every relative evidence URL therefore resolves to '' for any developer
- * who follows the documented setup. The old node:test run hid it because Node has no
- * `import.meta.env`, so the module silently fell back to the hardcoded absolute
- * `http://localhost:8081/api/v1`.
+ * D14 regression coverage: VITE_API_BASE_URL may be a relative path, as prescribed by
+ * `.env.example` and README.md (`VITE_API_BASE_URL=/api/v1` for the Vite dev proxy).
  *
  * The D14 cases below stub the env and re-import the module rather than relying on the local
  * (git-ignored) `.env`, so they fail identically on any machine and in CI.
@@ -39,13 +34,9 @@ describe('resolveEvidenceUrl', () => {
   })
 
   it('L1-FE-46 | EP-Valid: with a relative API base, a relative URL must still resolve (D14)', async () => {
-    // EXPECTED TO FAIL until D14 is resolved: new URL('/api/v1') throws, so the catch returns ''.
     const { resolveEvidenceUrl: resolve } = await loadWithBase('/api/v1')
 
-    expect(
-      resolve('/api/v1/files/1'),
-      'a relative evidence path must resolve against an origin, not collapse to an empty string',
-    ).not.toBe('')
+    expect(resolve('/api/v1/files/1')).toBe('http://localhost/api/v1/files/1')
   })
 
   it('L1-FE-52 | EP-Valid: with an absolute API base, a relative URL joins onto its origin', async () => {
@@ -89,8 +80,6 @@ describe('openEvidenceUrl', () => {
   })
 
   it('L1-FE-51 | BC-TRUE: with a relative API base a relative path must still open (D14)', async () => {
-    // EXPECTED TO FAIL until D14 is resolved. This is the user-visible impact: under the documented
-    // dev-proxy config every "open evidence" click is a silent no-op.
     const open = vi.fn()
     vi.stubGlobal('open', open)
     const { openEvidenceUrl: openUrl } = await loadWithBase('/api/v1')
@@ -99,5 +88,10 @@ describe('openEvidenceUrl', () => {
       openUrl('/api/v1/files/1'),
       'clicking an evidence link served through the dev proxy must open a tab',
     ).toBe(true)
+    expect(open).toHaveBeenCalledWith(
+      'http://localhost/api/v1/files/1',
+      '_blank',
+      'noopener,noreferrer',
+    )
   })
 })

@@ -1,4 +1,4 @@
-export const MAX_EVIDENCE_FILE_SIZE_BYTES = 20 * 1024 * 1024
+export const MAX_EVIDENCE_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg'])
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'png', 'jpg', 'jpeg'])
@@ -7,7 +7,7 @@ export function getEvidenceFileError(file) {
   if (!file) return 'Vui lòng chọn tệp minh chứng.'
   if (file.size <= 0) return `Tệp "${file.name}" đang trống.`
   if (file.size > MAX_EVIDENCE_FILE_SIZE_BYTES) {
-    return `Tệp "${file.name}" vượt quá giới hạn 20 MB.`
+    return `Tệp "${file.name}" vượt quá giới hạn 5 MB.`
   }
 
   const extension = file.name.includes('.') ? file.name.split('.').pop().toLowerCase() : ''

@@ -106,10 +106,6 @@ class TrainingLegacyDurationParserTest {
     @Test
     @DisplayName("L1-BV-19 | EP-Invalid: units containing đ must normalise too (D13)")
     void unitsContainingDStrokeMustNormalise() {
-        // EXPECTED TO FAIL until D13 is resolved. normalize() strips combining marks via NFD, but
-        // U+0111 (đ) is a distinct letter that NFD does not decompose, so the text stays "tiet đao
-        // tao" and never equals the "tiet dao tao" constant in isLesson(). Same for "gio tin chi"
-        // and "tin chi dao tao" in isCredit(). Those branches are unreachable for real input.
         assertThat(parser.parse("2 tiết đào tạo").parsedUnit())
                 .as("D13: \"tiết đào tạo\" must be recognised as the LESSON unit")
                 .isEqualTo(DurationUnit.LESSON);
