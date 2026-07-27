@@ -102,14 +102,14 @@ class NotificationServiceTest {
     void createInAppNotificationUsesInfoTypeByDefaultAndPersistsUnreadNotification() {
         when(notificationRepository.existsByDedupKey("dedup-2")).thenReturn(false);
         when(userRepository.findById(4L)).thenReturn(Optional.of(user));
-        when(notificationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(notificationRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = service.createInAppNotification(4L, null, "Title", "Body", "/deep", "dedup-2");
 
         assertEquals("INFO", response.type());
         assertFalse(response.read());
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
-        verify(notificationRepository).save(captor.capture());
+        verify(notificationRepository).saveAndFlush(captor.capture());
         assertSame(user, captor.getValue().getUser());
         assertEquals("dedup-2", captor.getValue().getDedupKey());
     }

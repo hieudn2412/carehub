@@ -124,7 +124,7 @@ export default function AdminDashboard() {
             failed: Number(examAttempts?.failedAttempts) || 0,
             rate: (Number(examAttempts?.passRate) || 0) * 100,
             available: true,
-            note: `${Number(examOverview.assignmentCount) || 0} bài kiểm tra · ${Number(examOverview.notStartedCount) || 0} lượt chưa bắt đầu · Điểm trung bình ${Number(examAttempts?.averageScore || 0).toFixed(1).replace('.', ',')}.`,
+            note: `${Number(examOverview.assignmentCount) || 0} bài kiểm tra · ${Number(examOverview.notStartedCount) || 0} lượt chưa bắt đầu · Điểm trung bình ${Number(examAttempts?.averageScore || 0).toFixed(1).replace('.', ',')}/10.`,
           }
         : emptyDomain('Không thể tải dữ liệu điểm bài kiểm tra từ máy chủ.'),
       quality: quality

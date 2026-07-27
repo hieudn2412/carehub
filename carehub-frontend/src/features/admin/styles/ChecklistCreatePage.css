@@ -894,7 +894,8 @@
   font-size: 12px;
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .ccp-form-shell {
     max-width: none;
   }
@@ -914,7 +915,8 @@
   }
 }
 
-@media (max-width: 600px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .checklist-create-page {
     gap: 12px;
   }

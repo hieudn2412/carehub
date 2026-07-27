@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LoadingOutlined } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -110,12 +109,7 @@ function NotificationSettingsPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Cấu hình thông báo' }]} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={[{ label: 'Cấu hình thông báo' }]}>
             <div className="ns-page">
               <div className="ns-title-card">
                 <h1 className="ns-title">Cấu hình thông báo</h1>
@@ -124,9 +118,7 @@ function NotificationSettingsPage() {
 
               <div className="ns-card">
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                    <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải cấu hình thông báo...
-                  </div>
+                  <LoadingState label="Đang tải cấu hình thông báo..." />
                 ) : SECTIONS.map((section) => (
                   <div className="ns-section" key={section.title}>
                     <h3 className="ns-section-title">{section.title}</h3>
@@ -204,9 +196,6 @@ function NotificationSettingsPage() {
                 )}
               </div>
             </div>
-          </main>
-        </div>
-      </div>
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="Khôi phục thiết lập"
@@ -217,7 +206,7 @@ function NotificationSettingsPage() {
         }}
         onCancel={() => setIsConfirmOpen(false)}
       />
-    </div>
+    </AppShell>
   )
 }
 

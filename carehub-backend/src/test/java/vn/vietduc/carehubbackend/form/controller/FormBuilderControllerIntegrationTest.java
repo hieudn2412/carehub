@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.form.controller;
 
 import com.jayway.jsonpath.JsonPath;
 import jakarta.persistence.EntityManager;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +57,7 @@ class FormBuilderControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-QLT-01 | Happy Path + Optimistic Lock: create → edit with lockVersion → publish (schemaHash) → clone v2; stale lockVersion → 409")
     @Test
     void fullBuilderLifecycleCreatesPublishesAndClonesVersion() throws Exception {
         MvcResult createFormResult = mockMvc.perform(post("/api/v1/forms")
@@ -122,6 +124,7 @@ class FormBuilderControllerIntegrationTest {
                 .andExpect(status().isConflict());
     }
 
+    @DisplayName("L2-QLT-02 | Query Correctness: form list filtering; builder endpoints are ADMIN-only")
     @Test
     void listSupportsFilteringAndBuilderRequiresAdmin() throws Exception {
         mockMvc.perform(post("/api/v1/forms")
@@ -146,6 +149,7 @@ class FormBuilderControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-QLT-03 | Constraint Violation: invalid payload → 422 VAL_001; duplicate form code → 409 SYS_409")
     @Test
     void invalidAndDuplicateFormsReturnConsistentErrors() throws Exception {
         mockMvc.perform(post("/api/v1/forms")
@@ -169,6 +173,7 @@ class FormBuilderControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("SYS_409")));
     }
 
+    @DisplayName("L2-QLT-04 | Query Correctness: form-previews list + full draft structure; USER → 403")
     @Test
     void previewApiReturnsFormListAndCompleteDraftStructure() throws Exception {
         MvcResult createFormResult = mockMvc.perform(post("/api/v1/forms")
@@ -221,6 +226,7 @@ class FormBuilderControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-QLT-05 | Optimistic Lock: scoring PATCH with lockVersion, stale replay → 409; publish v2 retires v1; passing-score on RETIRED → 202 with recalculationScheduled")
     @Test
     void scoringConfigurationSupportsLockingAdminAccessAndRetiredPassingScore() throws Exception {
         MvcResult formResult = mockMvc.perform(post("/api/v1/forms")

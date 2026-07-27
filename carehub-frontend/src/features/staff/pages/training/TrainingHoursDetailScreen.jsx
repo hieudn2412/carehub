@@ -9,10 +9,10 @@ import {
   RollbackOutlined,
   FolderOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
 import '../../styles/TrainingHours.css'
 
 const PREVIEWABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
@@ -30,6 +30,7 @@ function TrainingHoursDetailScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [returningToDraft, setReturningToDraft] = useState(false)
   const [evidencePreviews, setEvidencePreviews] = useState({})
+  const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -142,7 +143,7 @@ function TrainingHoursDetailScreen() {
   }
 
   const handleReturnToDraft = async () => {
-    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
+    setReturnConfirmOpen(false)
     setReturningToDraft(true)
     try {
       await trainingApi.returnToDraft(id)
@@ -168,18 +169,14 @@ function TrainingHoursDetailScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: '/staff/training', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo', link: '/staff/training' },
-            { label: 'Chi tiết' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div className="training-page th-detail-page">
+    <AppShell
+      back={{ to: '/staff/training', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo', link: '/staff/training' },
+        { label: 'Chi tiết' }
+      ]}
+    >
+      <div className="training-page th-detail-page">
 
             {loading ? (
               <div className="th-table-state">Đang tải thông tin...</div>
@@ -212,41 +209,21 @@ function TrainingHoursDetailScreen() {
                   </div>
                 </div>
 
-                {/* Info Grid */}
-                <div className="th-detail-grid">
-                  <div className="th-detail-block">
-                    <label className="th-detail-label">Tên khoá đào tạo</label>
-                    <div className="th-detail-text">{record.title}</div>
-                  </div>
-                  <div className="th-detail-block">
-                    <label className="th-detail-label">Số giờ đào tạo</label>
-                    <div className="th-detail-text th-detail-text--em">{record.declaredHours} giờ</div>
-                  </div>
-                  <div className="th-detail-block">
-                    <label className="th-detail-label">Ngày bắt đầu</label>
-                    <div className="th-detail-text">{formatDate(record.startDate)}</div>
-                  </div>
-                  <div className="th-detail-block">
-                    <label className="th-detail-label">Hình thức đào tạo</label>
-                    <div className="th-detail-text">{record.activityTypeName || '-'}</div>
-                  </div>
-                  <div className="th-detail-block">
-                    <label className="th-detail-label">Lĩnh vực chuyên môn</label>
-                    <div className="th-detail-text">{record.professionalFieldName || '-'}</div>
-                  </div>
-                  <div className="th-detail-block th-detail-block--full">
-                    <label className="th-detail-label">Ghi chú</label>
-                    <div className="th-detail-text">{record.description || 'Không có ghi chú'}</div>
-                  </div>
-                </div>
-
-                {/* Evidence Preview */}
+                {/* Evidence is the primary verification object, so it appears first. */}
                 {record.evidences && (record.workflowStatus === 'DRAFT' ? record.evidences.length > 0 : record.evidences.filter(canPreviewEvidence).length > 0) && (
-                  <div className="th-detail-section">
-                    <h3 className="th-detail-section-title">
-                      <PaperClipOutlined /> Minh chứng ({record.workflowStatus === 'DRAFT' ? record.evidences.length : record.evidences.filter(canPreviewEvidence).length})
-                    </h3>
-                    <div className="th-evidence-grid">
+                  <section className="th-detail-section th-detail-section--evidence-first" aria-labelledby="training-evidence-heading">
+                    <div className="th-detail-section-heading">
+                      <div>
+                        <span className="th-detail-section-eyebrow">Minh chứng xác thực</span>
+                        <h2 className="th-detail-section-title" id="training-evidence-heading">
+                          <PaperClipOutlined /> Hình ảnh minh chứng
+                        </h2>
+                      </div>
+                      <span className="th-detail-section-count">
+                        {record.workflowStatus === 'DRAFT' ? record.evidences.length : record.evidences.filter(canPreviewEvidence).length} tệp
+                      </span>
+                    </div>
+                    <div className="th-evidence-grid th-evidence-grid--featured">
                       {(record.workflowStatus === 'DRAFT' ? record.evidences : record.evidences.filter(canPreviewEvidence)).map(ev => {
                         const isPreviewable = canPreviewEvidence(ev)
                         const preview = evidencePreviews[ev.id]
@@ -263,7 +240,7 @@ function TrainingHoursDetailScreen() {
                                     className="th-evidence-preview__image"
                                     src={preview.url}
                                     alt={`Minh chứng ${ev.originalFilename}`}
-                                    loading="lazy"
+                                    loading="eager"
                                     onError={() => handlePreviewImageError(ev.id)}
                                   />
                                 ) : preview?.status === 'error' ? (
@@ -279,7 +256,7 @@ function TrainingHoursDetailScreen() {
                                   </div>
                                 ) : (
                                   <div className="th-evidence-preview__state" role="status">
-                                    Đang tải ảnh từ R2...
+                                    Đang tải hình ảnh minh chứng...
                                   </div>
                                 )}
                               </div>
@@ -315,8 +292,36 @@ function TrainingHoursDetailScreen() {
                         )
                       })}
                     </div>
-                  </div>
+                  </section>
                 )}
+
+                {/* Info Grid */}
+                <div className="th-detail-grid">
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Tên khoá đào tạo</label>
+                    <div className="th-detail-text">{record.title}</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Số giờ đào tạo</label>
+                    <div className="th-detail-text th-detail-text--em">{record.declaredHours} giờ</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Ngày bắt đầu</label>
+                    <div className="th-detail-text">{formatDate(record.startDate)}</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Hình thức đào tạo</label>
+                    <div className="th-detail-text">{record.activityTypeName || '-'}</div>
+                  </div>
+                  <div className="th-detail-block">
+                    <label className="th-detail-label">Lĩnh vực chuyên môn</label>
+                    <div className="th-detail-text">{record.professionalFieldName || '-'}</div>
+                  </div>
+                  <div className="th-detail-block th-detail-block--full">
+                    <label className="th-detail-label">Ghi chú</label>
+                    <div className="th-detail-text">{record.description || 'Không có ghi chú'}</div>
+                  </div>
+                </div>
 
                 {/* Actions */}
                 <div className="th-detail-actions">
@@ -336,7 +341,7 @@ function TrainingHoursDetailScreen() {
                   {record.workflowStatus === 'SUBMITTED' && (
                     <button
                       className="th-detail-btn"
-                      onClick={handleReturnToDraft}
+                      onClick={() => setReturnConfirmOpen(true)}
                       disabled={returningToDraft}
                     >
                       <RollbackOutlined /> {returningToDraft ? 'Đang xử lý...' : 'Trả về nháp'}
@@ -345,10 +350,16 @@ function TrainingHoursDetailScreen() {
                 </div>
               </>
             )}
-          </div>
-        </div>
       </div>
-    </div>
+      <ConfirmModal
+        isOpen={returnConfirmOpen}
+        title="Trả hồ sơ về nháp"
+        message="Hồ sơ sẽ được mở lại để chỉnh sửa và cần nộp lại sau khi hoàn tất thay đổi."
+        confirmText="Trả về nháp"
+        onConfirm={handleReturnToDraft}
+        onCancel={() => setReturnConfirmOpen(false)}
+      />
+    </AppShell>
   )
 }
 

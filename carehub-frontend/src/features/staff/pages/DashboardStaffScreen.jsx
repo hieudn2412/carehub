@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../components/sidebar.jsx'
-import Header from '../components/Header.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import OverviewDashboard from '../../dashboard/components/OverviewDashboard.jsx'
 import { staffApi } from '../api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
@@ -86,7 +85,7 @@ export default function DashboardStaffScreen() {
         failed: failedExams,
         rate: Number(examSummary.examPassRate) || 0,
         available: true,
-        note: `Điểm trung bình hiện tại ${averageScore.toFixed(1).replace('.', ',')}.`,
+        note: `Điểm trung bình hiện tại ${averageScore.toFixed(1).replace('.', ',')}/10.`,
         path: '/staff/exam/history',
       }
     : unavailable('Bạn chưa có kết quả bài kiểm tra nào.'), [averageScore, completedExams, examSummary.examPassRate, failedExams, passedExams])
@@ -108,23 +107,17 @@ export default function DashboardStaffScreen() {
   }, [training, exams, quality])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Năng lực của tôi" />
-        <div className="dashboard-layout__body">
-          <OverviewDashboard
-            role="staff"
-            profile={profile}
-            loading={loadingPersonal || examLoading}
-            error={error || examError || ''}
-            filters={{}}
-            onNavigate={navigate}
-            summary={summary}
-            domains={domains}
-          />
-        </div>
-      </div>
-    </div>
+    <AppShell title="Năng lực của tôi">
+      <OverviewDashboard
+        role="staff"
+        profile={profile}
+        loading={loadingPersonal || examLoading}
+        error={error || examError || ''}
+        filters={{}}
+        onNavigate={navigate}
+        summary={summary}
+        domains={domains}
+      />
+    </AppShell>
   )
 }

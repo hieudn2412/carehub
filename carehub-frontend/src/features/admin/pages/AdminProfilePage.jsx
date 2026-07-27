@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ChangePasswordModal from '../../staff/components/ChangePasswordModal'
 import ProfileDetails from '../../staff/components/ProfileDetails'
 import { staffApi } from '../../staff/api/staffApi'
@@ -23,23 +22,17 @@ function AdminProfilePage() {
   }, [])
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Hồ sơ cá nhân' }]} />
-        <div className="dashboard-layout__body">
-          <ProfileDetails
-            profile={profile}
-            loading={loading}
-            errorMessage={errorMessage}
-            fallbackRole="Quản trị viên"
-            fallbackInitials="AD"
-            onChangePassword={() => setIsModalOpen(true)}
-          />
-          <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-        </div>
-      </div>
-    </div>
+    <AppShell breadcrumbs={[{ label: 'Hồ sơ cá nhân' }]}>
+      <ProfileDetails
+        profile={profile}
+        loading={loading}
+        errorMessage={errorMessage}
+        fallbackRole="Quản trị viên"
+        fallbackInitials="AD"
+        onChangePassword={() => setIsModalOpen(true)}
+      />
+      <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </AppShell>
   )
 }
 

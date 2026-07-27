@@ -25,12 +25,24 @@ npm run dev
 http://localhost:5173
 ```
 
+Để mở ứng dụng trên điện thoại, kết nối điện thoại và máy tính vào cùng một mạng Wi-Fi,
+sau đó truy cập bằng địa chỉ IP LAN của máy tính:
+
+```text
+http://<IP-máy-tính>:5173
+```
+
+Vite đã được cấu hình lắng nghe kết nối LAN và chuyển tiếp các request `/api` tới backend
+đang chạy tại `http://localhost:8081`. Vì vậy máy tính vẫn dùng `localhost`, còn điện thoại
+dùng IP LAN nhưng cả hai đều sử dụng cùng backend. Nếu điện thoại không kết nối được, hãy
+cho phép TCP port `5173` qua Windows Firewall.
+
 ## Biến môi trường
 
 Tạo file `.env` từ `.env.example`:
 
 ```env
-VITE_API_BASE_URL=http://localhost:8081/api/v1
+VITE_API_BASE_URL=/api/v1
 ```
 
 Không commit `.env` vì file này có thể chứa cấu hình local hoặc secret.

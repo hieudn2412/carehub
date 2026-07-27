@@ -20,11 +20,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -70,59 +73,90 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
     }
 
     @Override
-    public List<double[]> embedPassageBatch(List<String> texts, Consumer<Integer> progressCallback) {
+    public double[] embedSymmetric(String text) {
+        return embed(E5TextPreprocessor.symmetric(text));
+    }
+
+    @Override
+    public List<double[]> embedSymmetricBatch(List<String> texts, Consumer<Integer> progressCallback) {
+        return embedBatch(texts, E5TextPreprocessor::symmetric, progressCallback);
+    }
+
+    private List<double[]> embedBatch(
+            List<String> texts,
+            UnaryOperator<String> prepare,
+            Consumer<Integer> progressCallback
+    ) {
         if (texts == null || texts.isEmpty()) {
             return List.of();
         }
 
         RuntimeHandle handle = ensureRuntime();
-        int batchSize = Math.max(1, Math.min(properties.getBatchSize(), texts.size()));
-        List<double[]> results = new ArrayList<>(texts.size());
+        int total = texts.size();
 
-        for (int offset = 0; offset < texts.size(); offset += batchSize) {
-            int end = Math.min(offset + batchSize, texts.size());
-            List<String> batch = texts.subList(offset, end);
+        // Tokenize một lần duy nhất cho toàn bộ danh sách.
+        long[][] allInputIds = new long[total][];
+        long[][] allAttentionMasks = new long[total][];
+        for (int i = 0; i < total; i++) {
+            Encoding encoding = handle.tokenizer().encode(prepare.apply(texts.get(i)));
+            long[] inputIds = truncate(encoding.getIds());
+            long[] attentionMask = truncate(encoding.getAttentionMask());
+            if (attentionMask.length != inputIds.length) {
+                attentionMask = filled(inputIds.length, 1);
+            }
+            allInputIds[i] = inputIds;
+            allAttentionMasks[i] = attentionMask;
+        }
 
-            // Tokenize tất cả texts trong batch
-            List<long[]> batchInputIds = new ArrayList<>(batch.size());
-            List<long[]> batchAttentionMasks = new ArrayList<>(batch.size());
+        // Gom các câu có độ dài gần nhau vào cùng một lô: mỗi lô được pad về câu dài nhất
+        // trong lô, nên trộn câu ngắn với câu dài làm phí rất nhiều phép tính trên padding.
+        Integer[] order = new Integer[total];
+        for (int i = 0; i < total; i++) {
+            order[i] = i;
+        }
+        Arrays.sort(order, Comparator.comparingInt(index -> allInputIds[index].length));
+
+        double[][] results = new double[total][];
+        int batchSize = Math.max(1, Math.min(properties.getBatchSize(), total));
+
+        for (int offset = 0; offset < total; offset += batchSize) {
+            int end = Math.min(offset + batchSize, total);
+            int size = end - offset;
+
             int maxSeqLen = 0;
-
-            for (String text : batch) {
-                String prepared = E5TextPreprocessor.passage(text);
-                Encoding encoding = handle.tokenizer().encode(prepared);
-                long[] inputIds = truncate(encoding.getIds());
-                long[] attentionMask = truncate(encoding.getAttentionMask());
-                if (attentionMask.length != inputIds.length) {
-                    attentionMask = filled(inputIds.length, 1);
-                }
-                maxSeqLen = Math.max(maxSeqLen, inputIds.length);
-                batchInputIds.add(inputIds);
-                batchAttentionMasks.add(attentionMask);
+            for (int i = offset; i < end; i++) {
+                maxSeqLen = Math.max(maxSeqLen, allInputIds[order[i]].length);
             }
 
-            // Pad tất cả sequences về cùng length
-            long[][] paddedInputIds = new long[batch.size()][maxSeqLen];
-            long[][] paddedAttentionMask = new long[batch.size()][maxSeqLen];
-            for (int i = 0; i < batch.size(); i++) {
-                System.arraycopy(batchInputIds.get(i), 0, paddedInputIds[i], 0, batchInputIds.get(i).length);
-                System.arraycopy(batchAttentionMasks.get(i), 0, paddedAttentionMask[i], 0, batchAttentionMasks.get(i).length);
+            long[][] paddedInputIds = new long[size][maxSeqLen];
+            long[][] paddedAttentionMask = new long[size][maxSeqLen];
+            for (int i = 0; i < size; i++) {
+                int source = order[offset + i];
+                System.arraycopy(allInputIds[source], 0, paddedInputIds[i], 0, allInputIds[source].length);
+                System.arraycopy(allAttentionMasks[source], 0, paddedAttentionMask[i], 0, allAttentionMasks[source].length);
             }
 
-            // Batch ONNX inference
+            // Mean-pool phải dùng mask ĐÃ PAD (dài đúng maxSeqLen). Truyền mask chưa pad thì
+            // meanPool không nhận ra các vị trí padding và tính chúng vào trung bình,
+            // khiến vector sinh theo lô lệch có hệ thống so với vector sinh từng câu.
+            List<long[]> batchAttentionMasks = Arrays.asList(paddedAttentionMask);
+
             Map<String, OnnxTensor> tensors = new LinkedHashMap<>();
             try {
                 addTensorIfExpected(handle, tensors, "input_ids", paddedInputIds);
                 addTensorIfExpected(handle, tensors, "attention_mask", paddedAttentionMask);
 
                 // token_type_ids padding với 0
-                long[][] paddedTypeIds = new long[batch.size()][maxSeqLen];
+                long[][] paddedTypeIds = new long[size][maxSeqLen];
                 addTensorIfExpected(handle, tensors, "token_type_ids", paddedTypeIds);
 
                 try (OrtSession.Result result = handle.session().run(tensors)) {
                     Object value = result.get(0).getValue();
                     List<double[]> batchResults = toBatchVectors(value, batchAttentionMasks);
-                    results.addAll(batchResults);
+                    // Trả kết quả về đúng vị trí trong danh sách gốc.
+                    for (int i = 0; i < batchResults.size(); i++) {
+                        results[order[offset + i]] = batchResults.get(i);
+                    }
                 }
             } catch (Exception ex) {
                 throw new EmbeddingModelException("Không tạo được batch embedding E5", ex);
@@ -134,7 +168,7 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
                 progressCallback.accept(end);
             }
         }
-        return results;
+        return Arrays.asList(results);
     }
 
     private double[] embed(String preparedText) {
@@ -336,7 +370,10 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
         double[] pooled = new double[tokenEmbeddings[0].length];
         double count = 0;
         for (int token = 0; token < tokenEmbeddings.length; token++) {
-            if (token < attentionMask.length && attentionMask[token] == 0) {
+            // Vị trí nằm ngoài mask cũng là padding — phải bỏ qua. Nếu viết
+            // "token < attentionMask.length && ..." thì các vị trí padding lọt qua và bị
+            // tính vào trung bình, làm hỏng vector một cách âm thầm.
+            if (token >= attentionMask.length || attentionMask[token] == 0) {
                 continue;
             }
             count++;
@@ -351,7 +388,10 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
         double[] pooled = new double[tokenEmbeddings[0].length];
         double count = 0;
         for (int token = 0; token < tokenEmbeddings.length; token++) {
-            if (token < attentionMask.length && attentionMask[token] == 0) {
+            // Vị trí nằm ngoài mask cũng là padding — phải bỏ qua. Nếu viết
+            // "token < attentionMask.length && ..." thì các vị trí padding lọt qua và bị
+            // tính vào trung bình, làm hỏng vector một cách âm thầm.
+            if (token >= attentionMask.length || attentionMask[token] == 0) {
                 continue;
             }
             count++;

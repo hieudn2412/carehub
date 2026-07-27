@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
 const EMPTY_FORM = {
@@ -149,7 +150,8 @@ function TrainingRecordFormPage() {
   }
 
   return (
-    <main className="training-page">
+    <AppShell title={isEdit ? 'Cập nhật hồ sơ đào tạo' : 'Thêm hồ sơ đào tạo'}>
+    <div className="training-page">
       <section className="training-header">
         <div>
           <p className="training-eyebrow">Training</p>
@@ -338,7 +340,8 @@ function TrainingRecordFormPage() {
           </form>
         )}
       </section>
-    </main>
+    </div>
+    </AppShell>
   )
 }
 

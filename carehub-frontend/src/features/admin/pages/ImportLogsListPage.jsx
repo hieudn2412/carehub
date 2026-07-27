@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import { LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
@@ -389,12 +388,7 @@ function ImportLogsListPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="il-page">
               
               {/* Title & Subtitle Card */}
@@ -484,13 +478,13 @@ function ImportLogsListPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                          <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải lịch sử nhập dữ liệu...
+                        <td colSpan="7" className="ch-empty">
+                          <span className="ch-spinner" aria-hidden="true" /> Đang tải lịch sử nhập dữ liệu...
                         </td>
                       </tr>
                     ) : logs.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="7" className="ch-empty">
                           Không tìm thấy nhật ký nhập dữ liệu phù hợp.
                         </td>
                       </tr>
@@ -573,9 +567,6 @@ function ImportLogsListPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
 
       {/* Details Modal */}
       {isDetailModalOpen && (
@@ -668,16 +659,16 @@ function ImportLogsListPage() {
                       <table className="il-row-table">
                         <thead>
                           <tr>
-                            <th style={{ width: '80px' }}>Dòng Excel</th>
-                            <th style={{ width: '150px' }}>Mã nhân viên</th>
-                            <th style={{ width: '130px' }}>Kết quả</th>
+                            <th className="il-row-col--num">Dòng Excel</th>
+                            <th className="il-row-col--code">Mã nhân viên</th>
+                            <th className="il-row-col--status">Kết quả</th>
                             <th>Thông báo chi tiết</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredRowResults.length === 0 ? (
                             <tr>
-                              <td colSpan="4" style={{ textAlign: 'center', padding: '24px 0', color: '#64748b' }}>
+                              <td colSpan="4" className="ch-empty">
                                 Không tìm thấy kết quả dòng phù hợp với bộ lọc.
                               </td>
                             </tr>
@@ -713,7 +704,7 @@ function ImportLogsListPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

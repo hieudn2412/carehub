@@ -9,8 +9,7 @@ import {
   SearchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader'
-import AdminSidebar from '../components/AdminSidebar'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -184,18 +183,15 @@ function AdminQualityHistoryPage() {
   }
 
   return (
-    <div className="dashboard-layout admin-quality-history-page">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={requestedFormId ? { label: 'Quay lại', onClick: clearSelectedForm } : undefined}
-          breadcrumbs={[
-            { label: 'Chất lượng' },
-            { label: 'Lịch sử đánh giá' },
-          ]}
-        />
-
-        <main className="admin-quality-history admin-quality-history--archive">
+    <AppShell
+      className="admin-quality-history-page"
+      back={requestedFormId ? { label: 'Quay lại', onClick: clearSelectedForm } : undefined}
+      breadcrumbs={[
+        { label: 'Chất lượng' },
+        { label: 'Lịch sử đánh giá' },
+      ]}
+    >
+        <div className="admin-quality-history admin-quality-history--archive">
           {!requestedFormId && (
             <section className="aqh-search-hero">
               <div className="aqh-search-hero__copy">
@@ -343,9 +339,8 @@ function AdminQualityHistoryPage() {
               )}
             </>
           )}
-        </main>
-      </div>
-    </div>
+        </div>
+    </AppShell>
   )
 }
 

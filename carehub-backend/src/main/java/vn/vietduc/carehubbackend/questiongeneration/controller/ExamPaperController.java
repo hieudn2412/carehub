@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.GenerateExamPaperRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamPaperResponse;
+import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationSecurity;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamPaperService;
 
@@ -31,6 +32,7 @@ import java.util.Map;
 public class ExamPaperController {
     private final ExamPaperService examPaperService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationSecurity evaluationSecurity;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamPaperResponse>>> list(
@@ -44,10 +46,30 @@ public class ExamPaperController {
     }
 
     @GetMapping("/{paperId}")
-    public ResponseEntity<ApiResponse<ExamPaperResponse>> get(@PathVariable Long paperId) {
+    public ResponseEntity<ApiResponse<ExamPaperResponse>> get(
+            @PathVariable Long paperId,
+            Authentication authentication
+    ) {
+        // Chỉ người có quyền phát hành đề (hoặc ADMIN) mới được xem đáp án đúng và giải thích
+        boolean includeAnswerKey = evaluationSecurity.canPublishExam(authentication);
+        ExamPaperResponse response = examPaperService.get(paperId, includeAnswerKey);
+        if (includeAnswerKey) {
+            auditLogService.record(
+                    "EXAM_PAPER_VIEW_ANSWER_KEY",
+                    "EXAM_PAPER",
+                    paperId,
+                    actor(authentication),
+                    "Xem đề kèm đáp án #" + paperId,
+                    Map.of(
+                            "code", String.valueOf(response.code()),
+                            "status", String.valueOf(response.status()),
+                            "totalQuestions", String.valueOf(response.totalQuestions())
+                    )
+            );
+        }
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy chi tiết bộ đề kiểm tra thành công",
-                examPaperService.get(paperId)
+                response
         ));
     }
 

@@ -13,6 +13,7 @@
 .exam-flow .exp-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .exam-flow .searchable-select > input { height: 38px; padding: 0 34px; border: 1.5px solid #cbd5e1; border-radius: 8px; }
 .exam-flow__wide { grid-column: 1 / -1; }
+.exam-flow__field-hint { color: #64748b; font-size: 12px; font-weight: 500; }
 .exam-flow__set-field { display: flex; flex-direction: column; gap: 10px; }
 .exam-flow__set-summary {
   display: flex;
@@ -35,7 +36,8 @@
 .exam-flow__submit-card div { display: flex; flex-direction: column; gap: 4px; }
 .exam-flow__submit-card strong { color: #0f172a; font-size: 15px; }
 .exam-flow__submit-card span { color: #64748b; font-size: 13px; }
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .exam-flow__steps, .exam-flow__target-columns, .exam-flow .exp-form-grid { grid-template-columns: 1fr; }
   .exam-flow__wide { grid-column: auto; }
   .exam-flow__submit-card { align-items: stretch; flex-direction: column; }
@@ -61,7 +63,7 @@
   font-size: 14px; font-weight: 700; color: #0f172a;
 }
 .ecfg-btn-new {
-  padding: 6px 14px; font-size: 12px; font-weight: 600; color: #007aff;
+  padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--focus);
   background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; cursor: pointer;
 }
 .ecfg-btn-new:hover { background: #dbeafe; }
@@ -74,7 +76,7 @@
   transition: background 0.1s;
 }
 .ecfg-sidebar-item:hover { background: #f8fafc; }
-.ecfg-sidebar-item--active { background: #eff6ff; border-left: 3px solid #007aff; }
+.ecfg-sidebar-item--active { background: #eff6ff; border-left: 3px solid var(--focus); }
 .ecfg-sidebar-item-name { font-size: 13.5px; font-weight: 600; color: #1e293b; }
 .ecfg-sidebar-item-meta { font-size: 12px; color: #94a3b8; }
 .ecfg-sidebar-badge {
@@ -148,7 +150,7 @@
 
 .ecfg-btn-add-rule {
   display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px;
-  font-size: 13px; font-weight: 600; color: #007aff; background: none;
+  font-size: 13px; font-weight: 600; color: var(--focus); background: none;
   border: 1px dashed #93c5fd; border-radius: 8px; cursor: pointer; width: fit-content;
 }
 .ecfg-btn-add-rule:hover { background: #eff6ff; }
@@ -159,8 +161,8 @@
 .ecfg-btn-primary {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 10px 24px; font-size: 14px; font-weight: 600; color: #fff;
-  background: #007aff; border: none; border-radius: 8px; cursor: pointer;
-  transition: background 0.15s ease; box-shadow: 0 2px 8px rgba(0,122,255,0.25);
+  background: var(--focus); border: none; border-radius: 8px; cursor: pointer;
+  transition: background 0.15s ease; box-shadow: 0 2px 8px rgba(37,99,235,0.25);
 }
 .ecfg-btn-primary:hover { background: #0062cc; }
 .ecfg-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -175,7 +177,7 @@
 
 /* Generate Card */
 .ecfg-generate-card {
-  background: #fff; border-radius: 16px; border: 1.5px solid #007aff;
+  background: #fff; border-radius: 16px; border: 1.5px solid var(--focus);
   padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);
   display: flex; flex-direction: column; gap: 16px;
 }
@@ -263,7 +265,8 @@
 .exam-flow__set-question ol { margin: 0; padding-left: 28px; color: #334155; font-size: 13px; line-height: 1.7; }
 .exam-flow__set-modal .ecfg-modal-actions { padding: 16px 22px; background: #fff; }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .ecfg-layout { grid-template-columns: 1fr; }
   .exam-flow__set-summary { align-items: stretch; flex-direction: column; }
 }

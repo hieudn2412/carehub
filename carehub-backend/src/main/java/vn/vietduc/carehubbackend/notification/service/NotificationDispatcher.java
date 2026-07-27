@@ -3,6 +3,8 @@ package vn.vietduc.carehubbackend.notification.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
@@ -22,6 +24,14 @@ public class NotificationDispatcher {
     private final EmailProducer emailProducer;
     private final UserRepository userRepository;
 
+    /**
+     * BẮT BUỘC mở transaction MỚI (REQUIRES_NEW). Thông báo thường được phát từ
+     * NotificationEventListener chạy ở pha AFTER_COMMIT: lúc đó transaction gốc đã commit
+     * nhưng synchronization của nó vẫn còn gắn với thread, nên {@code @Transactional} mặc định
+     * (REQUIRED) sẽ "join" đúng transaction đã chết đó và mọi thao tác ghi ném
+     * "No active transaction" — bị listener catch nuốt, khiến thông báo không bao giờ xuất hiện.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void dispatch(NotificationDispatchEvent event) {
         if (event == null || event.eventType() == null || event.userId() == null) {
             return;

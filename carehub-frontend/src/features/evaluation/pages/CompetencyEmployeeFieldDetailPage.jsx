@@ -5,10 +5,7 @@ import {
   CheckCircleFilled,
   ReloadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
@@ -55,9 +52,6 @@ function CompetencyEmployeeFieldDetailPage() {
     { label: data?.employeeName || 'Chi tiết' },
   ]
 
-  const Layout = isAdmin ? AdminSidebar : Sidebar
-  const PageHeader = isAdmin ? AdminHeader : Header
-
   const overallAvg = data?.items?.length
     ? Math.round(data.items.reduce((s, i) => s + (i.averageScore || 0), 0) / data.items.length)
     : null
@@ -72,16 +66,11 @@ function CompetencyEmployeeFieldDetailPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Layout />
-      <div className="dashboard-layout__content">
-        <PageHeader
-          back={{ to: backPath, label: 'Quay lại' }}
-          breadcrumbs={isAdmin ? breadcrumbs : undefined}
-          title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined}
-        />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell
+      back={{ to: backPath, label: 'Quay lại' }}
+      breadcrumbs={isAdmin ? breadcrumbs : undefined}
+      title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined}
+    >
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
@@ -101,7 +90,7 @@ function CompetencyEmployeeFieldDetailPage() {
                 </section>
               )}
 
-              <div className="evd-card" style={{ overflow: 'auto' }}>
+              <div className="evd-card evd-x-table-card">
                 <table className="evd-table">
                   <thead>
                     <tr>
@@ -116,13 +105,13 @@ function CompetencyEmployeeFieldDetailPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={6} className="ch-empty">
                           Đang tải dữ liệu...
                         </td>
                       </tr>
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                        <td colSpan={6} className="ch-empty">
                           Chưa có dữ liệu kiểm tra cho nhân viên này.
                         </td>
                       </tr>
@@ -229,10 +218,7 @@ function CompetencyEmployeeFieldDetailPage() {
                 </table>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
-import AdminSidebar from '../components/AdminSidebar';
-import AdminHeader from '../components/AdminHeader';
+import AppShell from '../../../shared/components/AppShell.jsx';
 import { adminApi } from '../api/adminApi.js';
 import "../styles/ImportModal.css";
 
@@ -115,12 +114,7 @@ export default function ImportModal() {
   const failedRows = importResult?.rowResults?.filter(r => r.status === "FAILED") || [];
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="im-container">
               <div className="im-card">
                 {/* ── Title ── */}
@@ -261,9 +255,6 @@ export default function ImportModal() {
                 </section>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   );
 }

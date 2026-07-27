@@ -8,6 +8,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionEmbedding;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,6 +43,41 @@ public interface QuestionEmbeddingRepository extends JpaRepository<QuestionEmbed
             Pageable pageable
     );
 
+    /**
+     * Chỉ lấy đúng 3 cột cần cho dedup và đọc vector từ cột nhị phân thay vì cột JSON.
+     * Bản {@code findPage...} ở trên nạp cả entity (gồm normalized_text và vector_json dạng text)
+     * rồi phải Jackson-parse từng vector — tốn hơn nhiều lần cho cùng một kết quả.
+     */
+    @Query("""
+        SELECT e.question.id AS questionId, e.question.stem AS stem, e.vector AS vector
+        FROM QuestionEmbedding e
+        WHERE e.textType = :textType
+          AND e.embeddingModel = :embeddingModel
+          AND e.question.status = :status
+          AND e.vector IS NOT NULL
+        ORDER BY e.id DESC
+    """)
+    List<EmbeddingVectorProjection> findVectorPageByTextTypeAndEmbeddingModelAndQuestionStatus(
+            @Param("textType") String textType,
+            @Param("embeddingModel") String embeddingModel,
+            @Param("status") QuestionBankStatus status,
+            Pageable pageable
+    );
+
+    /** Nạp sẵn khoá tra cứu của cả một lô để khỏi phải gọi findFirst... trong vòng lặp. */
+    @Query("""
+        SELECT CONCAT(CAST(e.question.id AS string), ':', e.inputTextHash)
+        FROM QuestionEmbedding e
+        WHERE e.textType = :textType
+          AND e.embeddingModel = :embeddingModel
+          AND e.question.id IN :questionIds
+    """)
+    List<String> findExistingKeys(
+            @Param("textType") String textType,
+            @Param("embeddingModel") String embeddingModel,
+            @Param("questionIds") Collection<Long> questionIds
+    );
+
     long countByTextTypeAndEmbeddingModelAndQuestion_Status(
             String textType,
             String embeddingModel,
@@ -49,4 +85,14 @@ public interface QuestionEmbeddingRepository extends JpaRepository<QuestionEmbed
     );
 
     void deleteByQuestionAndTextType(QuestionBankQuestion question, String textType);
+
+    long deleteByTextType(String textType);
+
+    interface EmbeddingVectorProjection {
+        Long getQuestionId();
+
+        String getStem();
+
+        byte[] getVector();
+    }
 }

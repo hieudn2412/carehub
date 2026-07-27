@@ -476,7 +476,8 @@ select.qf-input-red {
   background: #b91c1c;
 }
 
-@media (max-width: 640px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .qf-container {
     padding: 20px 16px;
   }

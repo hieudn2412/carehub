@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.user.controller;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -102,6 +103,7 @@ class UserControllerIntegrationTest {
         userRoleRepository.save(UserRole.builder().user(employee).role(userRole).build());
     }
 
+    @DisplayName("L2-REF-01 | Happy Path + Constraint Violation: create user persists user_roles; duplicate employeeCode → 409 SYS_409")
     @Test
     void createUserAssignsRoleAndRejectsDuplicateEmployeeCode() throws Exception {
         String body = """
@@ -134,6 +136,7 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.error_code", is("SYS_409")));
     }
 
+    @DisplayName("L2-REF-02 | Query Correctness: /users is ADMIN-only; /me resolves the JWT subject and joins departmentName")
     @Test
     void userListRequiresAdminAndMeUsesJwtSubject() throws Exception {
         mockMvc.perform(get("/api/v1/users")
@@ -147,6 +150,7 @@ class UserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.departmentName", is("Cardiology")));
     }
 
+    @DisplayName("L2-REF-03 | Happy Path: ACTIVE → LOCKED → ACTIVE, password reset, then soft delete → 404 on re-read")
     @Test
     void adminCanLockUnlockResetAndSoftDeleteUser() throws Exception {
         mockMvc.perform(patch("/api/v1/users/{id}/lock", employee.getId())
@@ -174,6 +178,7 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @DisplayName("L2-REF-04 | Negative: wrong old password → 400 REQ_001; success re-encodes with bcrypt")
     @Test
     void changePasswordValidatesOldPasswordAndConfirmation() throws Exception {
         mockMvc.perform(patch("/api/v1/user/change-password")

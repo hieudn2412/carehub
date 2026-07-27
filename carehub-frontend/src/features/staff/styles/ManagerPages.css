@@ -1,15 +1,18 @@
 /* ── Manager Pages Style System ── */
 
+/* Biến --mgr-* giữ tên (nhiều rule dùng); giá trị trùng token global thì trỏ
+   sang global.css, giá trị khác biệt rõ (bảng màu slate/emerald riêng của khu
+   manager) giữ nguyên để không đổi diện mạo. */
 :root {
   --mgr-navy: #1e293b;
   --mgr-navy-light: #475569;
   --mgr-bg: #f8fafc;
-  --mgr-card: #ffffff;
-  --mgr-border: #e2e8f0;
-  --mgr-border-light: #f1f5f9;
+  --mgr-card: var(--surface);
+  --mgr-border: var(--border);
+  --mgr-border-light: var(--border-light);
   --mgr-text: #0f172a;
   --mgr-text-soft: #475569;
-  --mgr-text-faint: #94a3b8;
+  --mgr-text-faint: var(--text-faint);
   --mgr-green: #10b981;
   --mgr-green-bg: #ecfdf5;
   --mgr-red: #ef4444;
@@ -20,8 +23,8 @@
   --mgr-blue-bg: #eff6ff;
   --mgr-purple: #8b5cf6;
   --mgr-purple-bg: #f5f3ff;
-  --mgr-radius: 12px;
-  --mgr-radius-sm: 8px;
+  --mgr-radius: var(--radius-lg);
+  --mgr-radius-sm: var(--radius);
   --mgr-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
 }
 
@@ -32,13 +35,15 @@
   margin-bottom: 24px;
 }
 
+/* bp-md */
 @media (max-width: 1024px) {
   .mgr-dashboard-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 640px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .mgr-dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -96,7 +101,8 @@
   margin-bottom: 24px;
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .mgr-section-row {
     grid-template-columns: 1fr;
   }
@@ -181,6 +187,83 @@
 
 .mgr-table tr:hover td {
   background: #f8fafc;
+}
+
+/* Thẻ bọc cuộn ngang cho bảng manager (đặt trong .mgr-card) */
+.mgr-table-wrap {
+  overflow-x: auto;
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .mgr-table {
+    min-width: 760px;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  /* Bảng gắn class .mgr-table--cards chuyển card-mode (data-label trên từng td) */
+  .mgr-table--cards {
+    display: block;
+    min-width: 0;
+  }
+
+  .mgr-table--cards thead {
+    display: none;
+  }
+
+  .mgr-table--cards tbody {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .mgr-table--cards tr {
+    display: block;
+    padding: 6px 14px;
+    border: 1px solid var(--mgr-border);
+    border-radius: var(--mgr-radius);
+    background: #fff;
+  }
+
+  .mgr-table--cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--mgr-border-light);
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .mgr-table--cards tr td:last-child {
+    border-bottom: none;
+  }
+
+  .mgr-table--cards td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--mgr-text-soft);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .mgr-table--cards td:not([data-label])::before {
+    content: none;
+  }
+
+  .mgr-table--cards td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  /* Touch target phone: nút hành động trong ô không nhãn (cột Thao tác) */
+  .mgr-table--cards td:not([data-label]) button {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 .mgr-pagination {
@@ -397,7 +480,8 @@
   gap: 16px;
 }
 
-@media (max-width: 640px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .mgr-kv-grid {
     grid-template-columns: 1fr;
   }
@@ -559,7 +643,8 @@
   border-top: 1px solid var(--mgr-border-light);
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .mgr-checklist-grid {
     grid-template-columns: 1fr;
   }
@@ -586,4 +671,110 @@
 .f-textarea:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* ── Màn Thực hiện đánh giá checklist (ManagerChecklistEvaluationPage) ──
+   Class thay cho inline style chặn responsive. */
+.mgr-eval-lookup-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.mgr-eval-lookup-input {
+  cursor: text;
+  width: 100%;
+  max-width: 320px;
+}
+
+/* Selector 2 lớp để thắng .training-button (specificity ngang nhau,
+   thứ tự nạp CSS giữa các file không bảo đảm) */
+.mgr-eval-lookup-row .mgr-eval-lookup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+
+.mgr-eval-suggest {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px solid #34d399;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.12);
+  cursor: pointer;
+  text-align: left;
+}
+
+.mgr-eval-suggest__info {
+  display: grid;
+  gap: 3px;
+}
+
+.mgr-eval-select {
+  min-width: 280px;
+}
+
+.mgr-eval-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--mgr-border-light);
+  padding-top: 20px;
+}
+
+.mgr-eval-actions .mgr-eval-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  border-radius: 8px;
+  font-size: 13.5px;
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .mgr-eval-select {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .mgr-eval-lookup-input {
+    max-width: 100%;
+  }
+
+  /* Touch target phone: nút hành động chính cao tối thiểu 44px */
+  .mgr-eval-lookup-row .mgr-eval-lookup-btn {
+    min-height: 44px;
+    height: auto;
+  }
+
+  .mgr-eval-suggest {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mgr-eval-actions {
+    flex-wrap: wrap;
+  }
+
+  .mgr-eval-actions .mgr-eval-action-btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    height: auto;
+  }
 }

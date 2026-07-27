@@ -171,7 +171,24 @@
   white-space: nowrap;
 }
 
-@media (max-width: 640px) {
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .ss-card {
+    padding: 24px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .ss-card {
+    padding: 20px;
+  }
+
+  .ss-box {
+    padding: 20px;
+  }
+
   .ss-row,
   .ss-hours-input {
     align-items: stretch;

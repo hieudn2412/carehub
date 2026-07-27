@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import {
   SearchOutlined,
   EyeOutlined,
@@ -68,12 +67,7 @@ function SystemLogsListScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="log-page">
               
               {/* Header Title Card */}
@@ -126,7 +120,7 @@ function SystemLogsListScreen() {
                   <tbody>
                     {paginatedLogs.length === 0 ? (
                       <tr>
-                        <td colSpan="4" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="4" className="ch-empty">
                           Không tìm thấy nhật ký hoạt động phù hợp.
                         </td>
                       </tr>
@@ -192,10 +186,7 @@ function SystemLogsListScreen() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

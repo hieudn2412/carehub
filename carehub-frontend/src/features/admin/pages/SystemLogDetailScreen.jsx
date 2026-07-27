@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { MOCK_LOGS } from '../api/mockLogs'
 import '../styles/SystemLogs.css'
 
@@ -28,14 +27,8 @@ function SystemLogDetailScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/system-logs', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            
-            <div className="log-page">
+    <AppShell back={{ to: '/admin/system-logs', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+      <div className="log-page">
               
               {/* Log Detail Card */}
               <div className="log-detail-card">
@@ -95,13 +88,9 @@ function SystemLogDetailScreen() {
                 )}
 
               </div>
-              
-            </div>
 
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

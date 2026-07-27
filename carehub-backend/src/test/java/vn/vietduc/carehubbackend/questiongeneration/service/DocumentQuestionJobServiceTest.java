@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
 import vn.vietduc.carehubbackend.questiongeneration.config.DocumentProcessingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
@@ -58,7 +60,8 @@ class DocumentQuestionJobServiceTest {
                 new AiGenerationProperties(),
                 new DocumentProcessingProperties(),
                 new ObjectMapper(),
-                eventPublisher
+                eventPublisher,
+                new SimpleAsyncTaskExecutor()
         );
         QuestionDocument document = QuestionDocument.builder()
                 .id(10L)
@@ -102,6 +105,25 @@ class DocumentQuestionJobServiceTest {
         assertThat(response.status()).isEqualTo(JobStatus.CANCELLED.name());
         assertThat(job.getStatus()).isEqualTo(JobStatus.CANCELLED);
         assertThat(job.getErrorMessage()).contains("hủy");
+    }
+
+    /**
+     * Một ứng viên bị validation từ chối KHÔNG được phép khoá chunk vĩnh viễn.
+     *
+     * <p>Danh sách trạng thái "đã có kết quả dùng được" vừa dùng cho cổng bỏ qua cấp chunk (dựa
+     * trên ứng viên chỉ số 0) vừa dùng cho cổng bỏ qua từng ứng viên. Có REJECTED trong đó thì
+     * một chunk từng ra câu hỏi tệ sẽ không bao giờ sinh lại được — retry hay đổi cấu hình đều
+     * vô ích.</p>
+     */
+    @Test
+    void rejectedCandidatesMustNotCountAsAlreadyGenerated() {
+        assertThat(DocumentQuestionJobService.idempotentStatuses())
+                .doesNotContain(CandidateStatus.REJECTED)
+                .containsExactlyInAnyOrder(
+                        CandidateStatus.VALIDATED,
+                        CandidateStatus.NEED_REVIEW,
+                        CandidateStatus.APPROVED,
+                        CandidateStatus.SAVED);
     }
 
     @Test

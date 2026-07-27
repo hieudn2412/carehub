@@ -96,13 +96,13 @@
 }
 
 .exp-actions button.is-active {
-  border-color: #007aff;
+  border-color: var(--focus);
   background: #e8f2ff;
   color: #0069d9;
 }
 
 .exp-btn-primary {
-  background: #007aff;
+  background: var(--focus);
   color: #fff;
 }
 
@@ -382,7 +382,7 @@
 .exp-expand-btn:hover { background: #f1f5f9; }
 
 .exp-detail-panel {
-  border-top: 2px solid #007aff;
+  border-top: 2px solid var(--focus);
   padding: 20px 24px;
   display: flex; flex-direction: column; gap: 16px;
 }
@@ -404,7 +404,8 @@
 .exp-results-table td:first-child { white-space: normal; min-width: 150px; }
 .exp-result-pending { color: #94a3b8; font-weight: 600; }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .exp-title-card,
   .exp-filter-bar {
     flex-direction: column;

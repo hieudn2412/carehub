@@ -276,13 +276,15 @@
   min-width: 160px;
 }
 
-@media (max-width: 1200px) {
+/* bp-lg */
+@media (max-width: 1280px) {
   .evd-metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 800px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .evd-title-card,
   .evd-section-head {
     flex-direction: column;
@@ -309,6 +311,7 @@
 .evd-bar-label { color: var(--bar-color, #0f766e); font-weight: 700; }
 .evd-bar-fill { width: var(--bar-width); height: 8px; border-radius: 999px; background: var(--bar-color, #0f766e); transition: width .3s ease; }
 
+/* bp-xs */
 @media (max-width: 560px) {
   .evd-title-actions { width: 100%; }
   .evd-title-actions .evd-btn { flex: 1; justify-content: center; }
@@ -363,5 +366,158 @@
 .exam-dashboard__table td:nth-child(2) strong { font-weight: 600; }
 .exam-dashboard__table td:nth-child(2) span, .exam-dashboard__muted { color: #8a97a7; font-size: 11px; }
 .exam-dashboard__empty-row { height: 110px; color: #8a97a7 !important; text-align: center !important; }
-@media (max-width: 1180px) { .exam-dashboard__filters, .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 760px) { .exam-dashboard { padding: 14px; } .exam-dashboard__hero { align-items: flex-start; flex-direction: column; } .exam-dashboard__hero h1 { font-size: 23px; } .exam-dashboard__assignment-count { width: 100%; } .exam-dashboard__filters, .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
+/* bp-lg */
+@media (max-width: 1280px) { .exam-dashboard__filters, .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* bp-sm */
+@media (max-width: 768px) { .exam-dashboard { padding: 14px; } .exam-dashboard__hero { align-items: flex-start; flex-direction: column; } .exam-dashboard__hero h1 { font-size: 23px; } .exam-dashboard__assignment-count { width: 100%; } .exam-dashboard__filters, .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   .evd-x-* — lớp thay cho inline style chặn responsive của cụm
+   competency/compliance (append-only, không sửa khối phía trên)
+   ============================================================ */
+
+/* Trang exam-dashboard nay nằm trong AppShell (app-shell__body đã có padding) */
+.app-shell__body .exam-dashboard { min-height: 0; padding: 0; background: transparent; }
+
+/* Segmented control chọn loại báo cáo */
+.evd-x-segmented {
+  display: inline-flex;
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.evd-x-segmented__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.evd-x-segmented__btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.evd-x-segmented__btn.is-active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+/* Thanh lọc tự chế (khoa/phòng, ngày, lĩnh vực...) */
+.evd-x-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.evd-x-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.evd-x-filter-field--wide { min-width: 220px; }
+
+.evd-x-input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.evd-x-input--wide { min-width: 220px; }
+
+/* Hàng lọc inline (CompetencyByFieldPage) */
+.evd-x-inline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.evd-x-select {
+  width: 260px;
+  max-width: 100%;
+}
+
+/* Khối bảng: cuộn ngang trong wrapper thay vì bóp cột */
+.evd-x-table-card { overflow-x: auto; }
+
+/* Pagination tự chế (nhảy số trang) */
+.evd-x-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.evd-x-pagination__info {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.evd-x-pagination__pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.evd-x-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.evd-x-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.evd-x-page-btn.is-active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .evd-x-table-card .evd-table { min-width: 720px; }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .evd-x-filter-field,
+  .evd-x-filter-field--wide { width: 100%; min-width: 0; }
+
+  .evd-x-input--wide { width: 100%; min-width: 0; }
+
+  .evd-x-select { width: 100%; }
+}

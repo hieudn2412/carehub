@@ -6,17 +6,32 @@ import java.util.function.Consumer;
 public interface EmbeddingModelService {
     String modelName();
 
-    /** Single embedding cho real-time dedup check */
+    /**
+     * Nhúng theo vai "query" của cặp query/passage — dùng cho truy hồi bất đối xứng
+     * (câu hỏi ngắn đi tìm đoạn văn dài).
+     */
     double[] embedQuery(String text);
 
-    /** Single embedding cho backfill từng câu */
+    /**
+     * Nhúng theo vai "passage" của cặp query/passage — dùng cho truy hồi bất đối xứng.
+     */
     double[] embedPassage(String text);
 
-    /** Batch embedding cho backfill/cache warmup */
-    default List<double[]> embedPassageBatch(List<String> texts) {
-        return embedPassageBatch(texts, null);
+    /**
+     * Nhúng cho bài toán ĐỐI XỨNG: so hai đoạn văn cùng loại với nhau
+     * (ví dụ so trùng hai câu hỏi, so câu gốc với bản diễn đạt lại).
+     *
+     * <p>Với họ model E5, cả hai vế của phép so đối xứng phải dùng cùng một tiền tố.
+     * Trộn {@code query:} với {@code passage:} sẽ kéo điểm cosine xuống một cách hệ thống
+     * vì hai tiền tố đưa vector về hai vùng khác nhau của không gian nhúng.</p>
+     */
+    double[] embedSymmetric(String text);
+
+    /** Batch cho {@link #embedSymmetric(String)}. */
+    default List<double[]> embedSymmetricBatch(List<String> texts) {
+        return embedSymmetricBatch(texts, null);
     }
 
-    /** Batch embedding với progress callback */
-    List<double[]> embedPassageBatch(List<String> texts, Consumer<Integer> progressCallback);
+    /** Batch cho {@link #embedSymmetric(String)} kèm progress callback. */
+    List<double[]> embedSymmetricBatch(List<String> texts, Consumer<Integer> progressCallback);
 }

@@ -232,8 +232,8 @@ function ExamAssignmentListPage({
                           <div><span>Tổng nhân viên</span><strong>{results.targetCount || 0}</strong></div>
                           <div><span>Chưa làm</span><strong>{results.notStartedCount || 0}</strong></div>
                           <div><span>Đã hoàn thành</span><strong>{(results.submittedCount || 0) + (results.gradedCount || 0)}</strong></div>
-                          <div><span>Điểm trung bình</span><strong>{results.averageScore ?? '—'}</strong></div>
-                          <div><span>Điểm cao nhất</span><strong>{results.bestScore ?? '—'}</strong></div>
+                          <div><span>Điểm TB (theo điểm cao nhất)</span><strong>{results.averageScore ?? '—'}</strong></div>
+                          <div><span>Điểm cao nhất toàn đợt</span><strong>{results.bestScore ?? '—'}</strong></div>
                         </div>
 
                         <div className="exp-results-table-wrap">
@@ -243,10 +243,10 @@ function ExamAssignmentListPage({
                                 <th>Nhân viên</th>
                                 <th>Khoa/phòng</th>
                                 <th>Số lượt</th>
-                                <th>Điểm mới nhất</th>
                                 <th>Điểm cao nhất</th>
-                                <th>Kết quả</th>
-                                <th>Trạng thái</th>
+                                <th>Điểm lượt mới nhất</th>
+                                <th>Kết quả (điểm cao nhất)</th>
+                                <th>Trạng thái lượt mới nhất</th>
                                 <th>Thời gian nộp</th>
                               </tr>
                             </thead>
@@ -258,12 +258,12 @@ function ExamAssignmentListPage({
                                   <td><strong>{row.employeeCode}</strong><br /><span>{row.userName}</span></td>
                                   <td>{row.departmentName || '—'}</td>
                                   <td>{row.attemptCount || 0}</td>
-                                  <td><strong>{row.latestScore ?? '—'}</strong></td>
-                                  <td>{row.bestScore ?? '—'}</td>
+                                  <td><strong>{row.bestScore ?? '—'}</strong></td>
+                                  <td>{row.latestScore ?? '—'}</td>
                                   <td>
-                                    {row.latestPassed === null || row.latestPassed === undefined
+                                    {row.bestPassed === null || row.bestPassed === undefined
                                       ? <span className="exp-result-pending">Chưa có điểm</span>
-                                      : <span className={row.latestPassed ? 'exp-result-correct' : 'exp-result-wrong'}>{row.latestPassed ? 'Đạt' : 'Không đạt'}</span>}
+                                      : <span className={row.bestPassed ? 'exp-result-correct' : 'exp-result-wrong'}>{row.bestPassed ? 'Đạt' : 'Không đạt'}</span>}
                                   </td>
                                   <td>{row.latestStatusText || 'Chưa làm'}</td>
                                   <td>{formatDateTime(row.latestSubmittedAt)}</td>

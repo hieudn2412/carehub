@@ -1,8 +1,8 @@
 import { useCallback, useState, useMemo, useEffect } from 'react'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi'
-import { SearchOutlined, LeftOutlined, RightOutlined, LoadingOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
+import { SearchOutlined, LeftOutlined, RightOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import '../styles/ReferenceDepartmentsListPage.css'
@@ -178,12 +178,7 @@ function ReferenceDepartmentsListPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="rdl-page">
               
               {/* Title Card */}
@@ -229,13 +224,13 @@ function ReferenceDepartmentsListPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                          <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải danh mục phòng ban...
+                        <td colSpan="5">
+                          <LoadingState label="Đang tải danh mục phòng ban..." />
                         </td>
                       </tr>
                     ) : paginatedDepartments.length === 0 ? (
                       <tr>
-                        <td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="5" className="ch-empty">
                           Không tìm thấy phòng ban phù hợp.
                         </td>
                       </tr>
@@ -309,9 +304,6 @@ function ReferenceDepartmentsListPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
 
       {/* Create / Edit Modal */}
       {isModalOpen && (
@@ -376,7 +368,7 @@ function ReferenceDepartmentsListPage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, id: null })}
       />
-    </div>
+    </AppShell>
   )
 }
 

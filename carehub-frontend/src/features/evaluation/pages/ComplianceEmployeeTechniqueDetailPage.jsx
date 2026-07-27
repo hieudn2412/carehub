@@ -7,10 +7,7 @@ import {
   ExclamationCircleFilled,
   CloseCircleFilled,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
@@ -58,9 +55,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
     { label: data?.employeeName || 'Chi tiết' },
   ]
 
-  const Layout = isAdmin ? AdminSidebar : Sidebar
-  const PageHeader = isAdmin ? AdminHeader : Header
-
   const complianceTarget = data?.complianceTarget || 80.0
   const belowTargetItems = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalItems = data?.items ? data.items.length : 0
@@ -90,16 +84,11 @@ function ComplianceEmployeeTechniqueDetailPage() {
   const hasData = data && data.items && data.items.length > 0
 
   return (
-    <div className="dashboard-layout">
-      <Layout />
-      <div className="dashboard-layout__content">
-        <PageHeader
-          back={{ onClick: handleBack, label: 'Quay lại' }}
-          breadcrumbs={isAdmin ? breadcrumbs : undefined}
-          title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined}
-        />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell
+      back={{ onClick: handleBack, label: 'Quay lại' }}
+      breadcrumbs={isAdmin ? breadcrumbs : undefined}
+      title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined}
+    >
             <div className="evd-page">
 
               {!loading && data && (
@@ -155,7 +144,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                 </section>
               )}
 
-              <div className="evd-card" style={{ overflow: 'auto', marginTop: 16 }}>
+              <div className="evd-card evd-x-table-card" style={{ marginTop: 16 }}>
                 <table className="evd-table">
                   <thead>
                     <tr>
@@ -171,13 +160,13 @@ function ComplianceEmployeeTechniqueDetailPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={7} className="ch-empty">
                           Đang tải dữ liệu...
                         </td>
                       </tr>
                     ) : !hasData ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                        <td colSpan={7} className="ch-empty">
                           Chưa có dữ liệu giám sát kỹ năng thực hành
                         </td>
                       </tr>
@@ -279,10 +268,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                 </table>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -2,9 +2,18 @@ package vn.vietduc.carehubbackend.questiongeneration.generation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
+import vn.vietduc.carehubbackend.questiongeneration.generation.DeepSeekDocumentQuestionGenerator.DeepSeekErrorType;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
+
+import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -139,5 +148,96 @@ class DeepSeekDocumentQuestionGeneratorTest {
 
         assertThat(result.questions()).hasSize(1);
         assertThat(result.questions().get(0).stem()).startsWith("Dấu hiệu nào");
+    }
+
+    /**
+     * Prompt cho phép model trả "0-8 knowledge point". Khi nó thật sự trả mảng rỗng kèm câu hỏi
+     * hợp lệ, những câu đó PHẢI được giữ — chúng đã được sinh và đã tính tiền token.
+     * {@code Stream.noneMatch} trên danh sách rỗng trả true nên nếu không chặn sẽ vứt sạch.
+     */
+    @Test
+    void keepsQuestionsWhenTheModelReturnsNoKnowledgePointsAtAll() {
+        GeneratedChunkResult result = generator.parseSingleCallResult("""
+                {
+                  "knowledgePoints": [],
+                  "questions": [
+                    {
+                      "stem": "Dấu hiệu nào gợi ý người bệnh đang bị sốc phản vệ?",
+                      "optionA": "Mạch nhanh, huyết áp tụt, khó thở.",
+                      "optionB": "Ăn ngon miệng hơn.",
+                      "optionC": "Ngủ sâu hơn bình thường.",
+                      "optionD": "Da khô và ấm.",
+                      "correctAnswer": "A",
+                      "explanation": "Bám nguồn.",
+                      "difficulty": "medium",
+                      "topic": "Phản vệ",
+                      "sourceExcerpt": "mạch nhanh, huyết áp tụt",
+                      "knowledgePointId": null
+                    },
+                    {
+                      "stem": "Thuốc đầu tay trong xử trí phản vệ là gì?",
+                      "optionA": "Adrenalin.",
+                      "optionB": "Paracetamol.",
+                      "optionC": "Vitamin C.",
+                      "optionD": "Kháng sinh.",
+                      "correctAnswer": "A",
+                      "explanation": "Bám nguồn.",
+                      "difficulty": "easy",
+                      "topic": "Phản vệ",
+                      "sourceExcerpt": "adrenalin theo phác đồ",
+                      "knowledgePointId": null
+                    }
+                  ]
+                }
+                """, LlmUsage.empty());
+
+        assertThat(result.knowledgePoints()).isEmpty();
+        assertThat(result.questions()).hasSize(2);
+    }
+
+    @Test
+    void recordsTheModelActuallyUsedSoFallbackCallsArePricedCorrectly() {
+        GeneratedChunkResult result = generator.parseSingleCallResult(
+                "{\"knowledgePoints\":[],\"questions\":[]}",
+                LlmUsage.empty(),
+                "deepseek-v4-pro"
+        );
+
+        assertThat(result.model()).isEqualTo("deepseek-v4-pro");
+        assertThat(result.model()).isNotEqualTo(properties.getModel());
+    }
+
+    @Test
+    void classifiesHttpStatusCodesFromTheThrownRestClientException() {
+        assertThat(generator.classifyError(unauthorized(HttpStatus.UNAUTHORIZED)))
+                .isEqualTo(DeepSeekErrorType.AUTHENTICATION);
+        assertThat(generator.classifyError(unauthorized(HttpStatus.FORBIDDEN)))
+                .isEqualTo(DeepSeekErrorType.AUTHENTICATION);
+        assertThat(generator.classifyError(unauthorized(HttpStatus.TOO_MANY_REQUESTS)))
+                .isEqualTo(DeepSeekErrorType.RATE_LIMIT);
+        assertThat(generator.classifyError(
+                HttpServerErrorException.create(
+                        HttpStatus.BAD_GATEWAY, "Bad Gateway", HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8)))
+                .isEqualTo(DeepSeekErrorType.SERVER_ERROR);
+    }
+
+    @Test
+    void classifiesSocketTimeoutWrappedByRestClientAsTimeout() {
+        ResourceAccessException wrapped = new ResourceAccessException(
+                "I/O error", new SocketTimeoutException("Read timed out"));
+
+        assertThat(generator.classifyError(wrapped)).isEqualTo(DeepSeekErrorType.TIMEOUT);
+    }
+
+    @Test
+    void classifiesJsonParseFailureAsParseError() {
+        assertThat(generator.classifyError(
+                new IllegalStateException("DeepSeek trả về câu hỏi JSON không hợp lệ")))
+                .isEqualTo(DeepSeekErrorType.PARSE_ERROR);
+    }
+
+    private static HttpClientErrorException unauthorized(HttpStatus status) {
+        return HttpClientErrorException.create(
+                status, status.getReasonPhrase(), HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8);
     }
 }

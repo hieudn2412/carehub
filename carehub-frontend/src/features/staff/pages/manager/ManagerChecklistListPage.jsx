@@ -8,8 +8,7 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import '../../styles/ManagerPages.css'
 
@@ -150,118 +149,112 @@ function ManagerChecklistListPage() {
   }, [checklists, search])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Quy trình chất lượng" />
-        <div className="dashboard-layout__body">
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quy trình giám sát</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              Danh sách các quy trình đã được Admin giao để thực hiện đánh giá.
+    <AppShell title="Quy trình chất lượng">
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quy trình giám sát</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+          Danh sách các quy trình đã được Admin giao để thực hiện đánh giá.
+        </p>
+      </div>
+
+      <div className="mgr-toolbar">
+        <div className="mgr-search-box">
+          <input
+            type="text"
+            placeholder="Tìm quy trình..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <SearchOutlined />
+        </div>
+        <button
+          className="training-button"
+          onClick={loadAssignedForms}
+          style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          type="button"
+        >
+          <ReloadOutlined /> Tải lại
+        </button>
+      </div>
+
+      {errorMessage && (
+        <div className="mgr-feedback mgr-feedback--error" role="alert">
+          <span>{errorMessage}</span>
+          <button onClick={loadAssignedForms} type="button">
+            <ReloadOutlined /> Thử lại
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', color: '#64748b' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <LoadingOutlined spin /> Đang tải quy trình được giao...
+          </span>
+        </div>
+      ) : filteredChecklists.length === 0 ? (
+        <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+          <div>
+            <FileTextOutlined style={{ fontSize: 32, color: '#94a3b8', marginBottom: 10 }} />
+            <h3 style={{ margin: 0, color: '#0f172a', fontSize: 16 }}>Chưa có quy trình được giao</h3>
+            <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 13 }}>
+              Quy trình sẽ xuất hiện ở đây sau khi Admin giao đánh giá.
             </p>
           </div>
-
-          <div className="mgr-toolbar">
-            <div className="mgr-search-box">
-              <input
-                type="text"
-                placeholder="Tìm quy trình..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <SearchOutlined />
-            </div>
-            <button
-              className="training-button"
-              onClick={loadAssignedForms}
-              style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-              type="button"
-            >
-              <ReloadOutlined /> Tải lại
-            </button>
-          </div>
-
-          {errorMessage && (
-            <div className="mgr-feedback mgr-feedback--error" role="alert">
-              <span>{errorMessage}</span>
-              <button onClick={loadAssignedForms} type="button">
-                <ReloadOutlined /> Thử lại
-              </button>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', color: '#64748b' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <LoadingOutlined spin /> Đang tải quy trình được giao...
-              </span>
-            </div>
-          ) : filteredChecklists.length === 0 ? (
-            <div className="mgr-card" style={{ minHeight: 180, display: 'grid', placeItems: 'center', textAlign: 'center' }}>
+        </div>
+      ) : (
+        <div className="mgr-dashboard-grid mgr-checklist-grid">
+          {filteredChecklists.map((checklist) => (
+            <div key={checklist.assignmentItemId} className="mgr-card mgr-checklist-card">
               <div>
-                <FileTextOutlined style={{ fontSize: 32, color: '#94a3b8', marginBottom: 10 }} />
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: 16 }}>Chưa có quy trình được giao</h3>
-                <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: 13 }}>
-                  Quy trình sẽ xuất hiện ở đây sau khi Admin giao đánh giá.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="mgr-dashboard-grid mgr-checklist-grid">
-              {filteredChecklists.map((checklist) => (
-                <div key={checklist.assignmentItemId} className="mgr-card mgr-checklist-card">
-                  <div>
-                    <div className="mgr-checklist-card__top">
-                      <div className="mgr-checklist-card__badges">
-                        <span className="mgr-badge mgr-badge--blue" style={{ fontSize: 11 }}>
-                          {checklist.formCode}
-                        </span>
-                        {getVersionNumber(checklist) && (
-                          <span className="mgr-badge mgr-badge--purple" style={{ fontSize: 11 }}>
-                            v{getVersionNumber(checklist)}
-                          </span>
-                        )}
-                        {checklist.version?.passingScore !== undefined && checklist.version?.passingScore !== null && (
-                          <span className="mgr-badge" style={{ fontSize: 11, background: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0' }}>
-                            Sàn: {Number(checklist.version.passingScore).toFixed(1)}/10
-                          </span>
-                        )}
-                      </div>
-                      <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
-                    </div>
-
-                    <h3 className="mgr-checklist-card__title">{checklist.title}</h3>
-
-                    <div className="mgr-checklist-card__meta">
-                      <div>
-                        <CalendarOutlined />
-                        <span><strong>Bắt đầu:</strong> {formatDateTime(checklist.validFrom)}</span>
-                      </div>
-                      <div>
-                        <CalendarOutlined />
-                        <span><strong>Hết hạn:</strong> {formatDateTime(checklist.validUntil)}</span>
-                      </div>
-                    </div>
+                <div className="mgr-checklist-card__top">
+                  <div className="mgr-checklist-card__badges">
+                    <span className="mgr-badge mgr-badge--blue" style={{ fontSize: 11 }}>
+                      {checklist.formCode}
+                    </span>
+                    {getVersionNumber(checklist) && (
+                      <span className="mgr-badge mgr-badge--purple" style={{ fontSize: 11 }}>
+                        v{getVersionNumber(checklist)}
+                      </span>
+                    )}
+                    {checklist.version?.passingScore !== undefined && checklist.version?.passingScore !== null && (
+                      <span className="mgr-badge" style={{ fontSize: 11, background: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0' }}>
+                        Sàn: {Number(checklist.version.passingScore).toFixed(1)}/10
+                      </span>
+                    )}
                   </div>
+                  <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
+                </div>
 
-                  <div className="mgr-checklist-card__footer">
-                    <button
-                      onClick={() => navigate(`${evaluationBasePath}/${checklist.assignmentItemId}/evaluate`)}
-                      className="training-button training-button--primary"
-                      style={{ height: 36, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-                      type="button"
-                    >
-                      <PlayCircleOutlined /> Thực hiện đánh giá
-                    </button>
+                <h3 className="mgr-checklist-card__title">{checklist.title}</h3>
+
+                <div className="mgr-checklist-card__meta">
+                  <div>
+                    <CalendarOutlined />
+                    <span><strong>Bắt đầu:</strong> {formatDateTime(checklist.validFrom)}</span>
+                  </div>
+                  <div>
+                    <CalendarOutlined />
+                    <span><strong>Hết hạn:</strong> {formatDateTime(checklist.validUntil)}</span>
                   </div>
                 </div>
-              ))}
+              </div>
+
+              <div className="mgr-checklist-card__footer">
+                <button
+                  onClick={() => navigate(`${evaluationBasePath}/${checklist.assignmentItemId}/evaluate`)}
+                  className="training-button training-button--primary"
+                  style={{ height: 36, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+                  type="button"
+                >
+                  <PlayCircleOutlined /> Thực hiện đánh giá
+                </button>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      </div>
-    </div>
+      )}
+    </AppShell>
   )
 }
 

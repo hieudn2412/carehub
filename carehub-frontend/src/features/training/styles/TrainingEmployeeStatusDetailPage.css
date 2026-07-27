@@ -220,7 +220,7 @@
 .ted-table-wrap {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
@@ -316,7 +316,8 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 640px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .ted-pagination {
     align-items: flex-start;
     flex-direction: column;
@@ -381,4 +382,33 @@
 
 .ted-evidence-link--red {
   color: #ef4444;
+}
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .ted-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .ted-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ted-profile-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ted-detail-card {
+    padding: 16px;
+  }
+
+  .ted-table {
+    min-width: 640px;
+  }
 }

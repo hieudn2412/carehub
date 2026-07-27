@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   CheckCircleOutlined,
@@ -784,12 +783,7 @@ function FormBuilderPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ onClick: handleBack, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ onClick: handleBack, label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="form-builder-page">
               {errorMessage && (
                 <div className="fbp-error" role="alert">
@@ -1379,9 +1373,6 @@ function FormBuilderPage() {
               )}
 
             </div>
-          </main>
-        </div>
-      </div>
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
@@ -1393,7 +1384,7 @@ function FormBuilderPage() {
         }}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
-    </div>
+    </AppShell>
   )
 }
 

@@ -19,10 +19,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import Sidebar from '../../staff/components/sidebar.jsx'
-import Header from '../../staff/components/Header.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { evaluationDashboardApi } from '../api/evaluationDashboardApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -213,19 +210,14 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
 
-  const LayoutSidebar = isManager ? Sidebar : AdminSidebar
-  const LayoutHeader = isManager ? Header : AdminHeader
   const pageTitle = 'Dashboard lý thuyết'
 
   return (
-    <div className="dashboard-layout exam-dashboard-page">
-      <LayoutSidebar />
-      <div className="dashboard-layout__content">
-        <LayoutHeader
-          breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
-          title={isManager ? pageTitle : undefined}
-        />
-        <main className="exam-dashboard">
+    <AppShell
+      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: pageTitle }]}
+      title={isManager ? pageTitle : undefined}
+    >
+        <div className="exam-dashboard">
           <section className="exam-dashboard__hero">
             <div>
               <span>ĐIỂM LÝ THUYẾT</span>
@@ -335,7 +327,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                 <Metric icon={<CheckCircleOutlined />} label="Đạt" value={passed} detail="Lượt đạt" tone="success" />
                 <Metric icon={<CloseCircleOutlined />} label="Không đạt" value={failed} detail="Lượt không đạt" tone="danger" />
                 <Metric icon={<TrophyOutlined />} label="Tỷ lệ đạt" value={formatPercent(summary?.passRate)} raw detail="Trên số lượt đã chấm" />
-                <Metric icon={<BarChartOutlined />} label="Điểm trung bình" value={formatNumber(summary?.averageScore, 2)} raw detail="Điểm bài kiểm tra" />
+                <Metric icon={<BarChartOutlined />} label="Điểm trung bình" value={`${formatNumber(summary?.averageScore, 2)}/10`} raw detail="Điểm bài kiểm tra (thang 10)" />
               </section>
 
               <section className="exam-dashboard__analytics">
@@ -363,8 +355,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                           <td><strong>{paper.paperName || '—'}</strong><span>Phiên bản {paper.version || '—'} · {formatNumber(paper.gradedAttempts)} lượt</span></td>
                           <td>{(paper.professionalFieldNames || []).join(', ') || '—'}</td>
                           <td>{formatNumber(paper.totalQuestions)}</td>
-                          <td>{paper.passingScore === null || paper.passingScore === undefined ? '—' : `${formatNumber(paper.passingScore)}%`}</td>
-                          <td><strong>{formatNumber(paper.averageScore, 2)}</strong></td>
+                          <td>{paper.passingScore === null || paper.passingScore === undefined ? '—' : `${formatNumber(paper.passingScore)}/10`}</td>
+                          <td><strong>{formatNumber(paper.averageScore, 2)}</strong>/10</td>
                         </tr>
                       ))}
                     </tbody>
@@ -373,9 +365,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
               </section>
             </>
           )}
-        </main>
-      </div>
-    </div>
+        </div>
+    </AppShell>
   )
 }
 
@@ -402,9 +393,9 @@ function DashboardBarChart({ data }) {
       <BarChart data={data} margin={{ top: 18, right: 12, left: 0, bottom: 58 }}>
         <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e4eaf0" />
         <XAxis dataKey="name" angle={-24} textAnchor="end" interval={0} tick={{ fontSize: 10, fill: '#64748b' }} />
-        <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#64748b' }} />
+        <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#64748b' }} />
         <Tooltip formatter={(value, name, item) => [
-          name === 'score' ? `${formatNumber(value, 2)} điểm` : value,
+          name === 'score' ? `${formatNumber(value, 2)}/10` : value,
           name === 'score' ? `Điểm trung bình · ${item?.payload?.attempts || 0} lượt` : name,
         ]} />
         <Bar dataKey="score" name="score" fill="#168f78" radius={[6, 6, 0, 0]} maxBarSize={44} />

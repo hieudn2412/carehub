@@ -26,11 +26,16 @@ import logo from '../../../assets/logo.png'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
 
+/* TODO(ui-refactor): component này đang là "facade" sidebar duy nhất của app
+   (AppShell dùng nó; khi user là admin nó render AdminSidebar). Bước hợp nhất
+   vật lý AdminSidebar + Sidebar thành một AppSidebar nhận config menu theo
+   role vẫn còn nợ — làm khi có điều kiện test đủ 3 role trên trình duyệt. */
 function Sidebar() {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
   const navRef = useRef(null)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -147,11 +152,35 @@ function Sidebar() {
 
   // Restore scroll position
   useEffect(() => {
+    if (isAdmin) return
     const savedScroll = sessionStorage.getItem('staff-sidebar-scroll')
     if (savedScroll && navRef.current) {
       navRef.current.scrollTop = parseInt(savedScroll, 10)
     }
-  }, [])
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (isAdmin) return undefined
+
+    const handleMenuToggle = () => setIsMobileOpen((current) => !current)
+    window.addEventListener('staff-sidebar-toggle', handleMenuToggle)
+    return () => window.removeEventListener('staff-sidebar-toggle', handleMenuToggle)
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (isAdmin || !isMobileOpen) return undefined
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsMobileOpen(false)
+    }
+    document.body.classList.add('staff-sidebar-open')
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.body.classList.remove('staff-sidebar-open')
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [isAdmin, isMobileOpen])
 
   if (isAdmin) {
     return <AdminSidebar />
@@ -173,71 +202,85 @@ function Sidebar() {
   }
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar__logo">
-        <img className="sidebar__logo-icon" src={logo} alt="VietDuc Care Logo" />
-        <div>
-          <p className="sidebar__logo-name">VietDuc Care</p>
-          <span className="sidebar__logo-sub">
-            {isAdmin ? 'Quản trị viên' : isManager ? 'Trưởng khoa / Phòng' : 'Nhân viên y tế'}
-          </span>
+    <>
+      {isMobileOpen && (
+        <button
+          type="button"
+          className="sidebar__backdrop"
+          aria-label="Đóng menu điều hướng"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+      <aside
+        className={`sidebar ${isMobileOpen ? 'sidebar--mobile-open' : ''}`}
+        aria-label="Điều hướng chính"
+      >
+        <div className="sidebar__logo">
+          <img className="sidebar__logo-icon" src={logo} alt="VietDuc Care Logo" />
+          <div>
+            <p className="sidebar__logo-name">VietDuc Care</p>
+            <span className="sidebar__logo-sub">
+              {isManager ? 'Trưởng khoa / Phòng' : 'Nhân viên y tế'}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <nav ref={navRef} onScroll={handleScroll} className="sidebar__nav">
-        {navSections.map((section) => {
-          const isExpanded = expandedSectionLabel === section.label
-          const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
+        <nav ref={navRef} onScroll={handleScroll} className="sidebar__nav">
+          {navSections.map((section) => {
+            const isExpanded = expandedSectionLabel === section.label
+            const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
 
-          return (
-            <div
-              key={section.label}
-              className={`sidebar__section ${
-                containsActiveItem ? 'sidebar__section--active' : ''
-              }`}
-            >
-              <button
-                type="button"
-                className="sidebar__section-trigger"
-                aria-expanded={isExpanded}
-                onClick={() => handleSectionToggle(section.label)}
-              >
-                <span>{section.label}</span>
-                <DownOutlined className="sidebar__section-chevron" />
-              </button>
-
+            return (
               <div
-                className={`sidebar__section-items ${
-                  isExpanded ? 'sidebar__section-items--open' : ''
+                key={section.label}
+                className={`sidebar__section ${
+                  containsActiveItem ? 'sidebar__section--active' : ''
                 }`}
               >
-                <div className="sidebar__section-items-inner">
-                  {section.items.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={() =>
-                        `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
-                      }
-                    >
-                      <span className="sidebar__item-icon">{item.icon}</span>
-                      <span>{item.label}</span>
-                    </NavLink>
-                  ))}
+                <button
+                  type="button"
+                  className="sidebar__section-trigger"
+                  aria-expanded={isExpanded}
+                  onClick={() => handleSectionToggle(section.label)}
+                >
+                  <span>{section.label}</span>
+                  <DownOutlined className="sidebar__section-chevron" />
+                </button>
+
+                <div
+                  className={`sidebar__section-items ${
+                    isExpanded ? 'sidebar__section-items--open' : ''
+                  }`}
+                >
+                  <div className="sidebar__section-items-inner">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={() =>
+                          `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
+                        }
+                        onClick={() => setIsMobileOpen(false)}
+                      >
+                        <span className="sidebar__item-icon">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </nav>
+            )
+          })}
+        </nav>
 
-      <div className="sidebar__footer">
-        <button className="sidebar__logout" onClick={handleLogout}>
-          <LogoutOutlined />
-          <span>Đăng xuất</span>
-        </button>
-      </div>
-    </aside>
+        <div className="sidebar__footer">
+          <button className="sidebar__logout" onClick={handleLogout}>
+            <LogoutOutlined />
+            <span>Đăng xuất</span>
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }
 

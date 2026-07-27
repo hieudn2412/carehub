@@ -231,7 +231,8 @@ public class ExamAssignmentService {
             Row header = sheet.createRow(rowIndex++);
             List<String> headers = List.of(
                     "Mã NV", "Họ tên", "Khoa/phòng", "Số lượt", "Trạng thái mới nhất",
-                    "Điểm mới nhất", "Đúng", "Tổng câu", "Đạt", "Điểm tốt nhất",
+                    "Điểm mới nhất", "Đúng", "Tổng câu", "Kết quả (lượt mới nhất)",
+                    "Điểm cao nhất", "Kết quả (điểm cao nhất)",
                     "Bắt đầu mới nhất", "Nộp mới nhất", "Thời gian làm"
             );
             for (int index = 0; index < headers.size(); index++) {
@@ -251,9 +252,10 @@ public class ExamAssignmentService {
                 xlsxRow.createCell(7).setCellValue(row.latestTotalQuestions() == null ? "" : String.valueOf(row.latestTotalQuestions()));
                 xlsxRow.createCell(8).setCellValue(row.latestPassed() == null ? "" : (Boolean.TRUE.equals(row.latestPassed()) ? "Đạt" : "Không đạt"));
                 xlsxRow.createCell(9).setCellValue(row.bestScore() == null ? "" : row.bestScore().toPlainString());
-                xlsxRow.createCell(10).setCellValue(row.latestStartedAt() == null ? "" : row.latestStartedAt().toString());
-                xlsxRow.createCell(11).setCellValue(row.latestSubmittedAt() == null ? "" : row.latestSubmittedAt().toString());
-                xlsxRow.createCell(12).setCellValue(row.latestTimeSpentSeconds() == null ? "" : String.valueOf(row.latestTimeSpentSeconds()));
+                xlsxRow.createCell(10).setCellValue(row.bestPassed() == null ? "" : (Boolean.TRUE.equals(row.bestPassed()) ? "Đạt" : "Không đạt"));
+                xlsxRow.createCell(11).setCellValue(row.latestStartedAt() == null ? "" : row.latestStartedAt().toString());
+                xlsxRow.createCell(12).setCellValue(row.latestSubmittedAt() == null ? "" : row.latestSubmittedAt().toString());
+                xlsxRow.createCell(13).setCellValue(row.latestTimeSpentSeconds() == null ? "" : String.valueOf(row.latestTimeSpentSeconds()));
             }
             for (int index = 0; index < headers.size(); index++) {
                 sheet.autoSizeColumn(index);
@@ -638,7 +640,8 @@ public class ExamAssignmentService {
                 availabilityText,
                 actionLabel,
                 actionable,
-                bestAttempt == null ? null : bestAttempt.getScore().divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP),
+                // Điểm đã ở thang 0-10 (ExamAttemptService.gradeAttempt) — trả nguyên, không chia lại.
+                bestAttempt == null ? null : bestAttempt.getScore(),
                 assessmentStatus,
                 bestAttempt == null ? (currentAttempt == null ? null : currentAttempt.getId()) : bestAttempt.getId()
         );
@@ -659,10 +662,18 @@ public class ExamAssignmentService {
         ExamAttempt latest = attempts.stream()
                 .max(Comparator.comparing(ExamAttempt::getStartedAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .orElse(null);
-        ExamAttempt best = attempts.stream()
-                .filter(attempt -> attempt.getScore() != null)
+        // Chỉ số CHÍNH thống nhất với màn hình nhân viên (toMyExamResponse): điểm tốt nhất
+        // trên các lượt đã chấm (có cả score và passed) — điểm này dùng để xét đạt/không đạt.
+        List<ExamAttempt> scoredAttempts = attempts.stream()
+                .filter(attempt -> attempt.getScore() != null && attempt.getPassed() != null)
+                .toList();
+        ExamAttempt best = scoredAttempts.stream()
                 .max(Comparator.comparing(ExamAttempt::getScore))
                 .orElse(null);
+        // Giống assessmentStatus của nhân viên: đạt nếu có bất kỳ lượt đã chấm nào đạt.
+        Boolean bestPassed = scoredAttempts.isEmpty()
+                ? null
+                : scoredAttempts.stream().anyMatch(attempt -> Boolean.TRUE.equals(attempt.getPassed()));
         return new ExamAssignmentResultRowResponse(
                 user.getId(),
                 user.getEmployeeCode(),
@@ -678,7 +689,7 @@ public class ExamAssignmentService {
                 latest == null ? null : latest.getTotalQuestions(),
                 latest == null ? null : latest.getPassed(),
                 best == null ? null : best.getScore(),
-                best == null ? null : best.getPassed(),
+                bestPassed,
                 latest == null ? null : latest.getStartedAt(),
                 latest == null ? null : latest.getSubmittedAt(),
                 latest == null ? null : latest.getTimeSpentSeconds()

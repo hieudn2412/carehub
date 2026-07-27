@@ -12,10 +12,7 @@ import {
   SearchOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader.jsx'
-import AdminSidebar from '../components/AdminSidebar.jsx'
-import Header from '../../staff/components/Header.jsx'
-import Sidebar from '../../staff/components/sidebar.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../evaluation/utils/documentQuestionUi.js'
@@ -121,8 +118,6 @@ async function fetchAllFormPerformance(params) {
 
 function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
-  const LayoutSidebar = isManager ? Sidebar : AdminSidebar
-  const LayoutHeader = isManager ? Header : AdminHeader
   const [departments, setDepartments] = useState([])
   const [departmentId, setDepartmentId] = useState('')
   const [fromDate, setFromDate] = useState(yearStart)
@@ -343,18 +338,14 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }
 
   return (
-    <div className="dashboard-layout checklist-quality-page">
-      <LayoutSidebar />
-      <div className="dashboard-layout__content">
-        <LayoutHeader
-          breadcrumbs={isManager ? undefined : [
-            { label: 'Dashboard & Báo cáo' },
-            { label: 'Dashboard thực hành' },
-          ]}
-          title={isManager ? 'Dashboard thực hành' : undefined}
-        />
-
-        <main className="checklist-quality-dashboard">
+    <AppShell
+      breadcrumbs={isManager ? undefined : [
+        { label: 'Dashboard & Báo cáo' },
+        { label: 'Dashboard thực hành' },
+      ]}
+      title={isManager ? 'Dashboard thực hành' : undefined}
+    >
+      <div className="checklist-quality-dashboard">
           <section className="checklist-quality-hero">
             <div>
               <span className="checklist-quality-hero__eyebrow">ĐIỂM THỰC HÀNH</span>
@@ -551,9 +542,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               </div>
             </section>
           )}
-        </main>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -8,8 +8,7 @@ import {
   DownOutlined,
   CloseOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
@@ -522,28 +521,24 @@ function TrainingHoursFormScreen() {
   })
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo', link: '/staff/training' },
-            { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell
+      back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo', link: '/staff/training' },
+        { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
+      ]}
+    >
+      <div className="training-page">
 
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Đang tải thông tin biểu mẫu...</div>
             ) : (
               <div>
-                <div>
-                  <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>
-                    {isEditMode ? 'Chỉnh sửa giờ đào tạo' : 'Cập nhật giờ đào tạo'}
+                <div className="th-page-heading">
+                  <h1 className="th-page-title">
+                    {isEditMode ? 'Chỉnh sửa hồ sơ đào tạo' : 'Thêm hồ sơ đào tạo'}
                   </h1>
-                  <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+                  <p className="th-page-subtitle">
                     Nhập thông tin chi tiết của hoạt động đào tạo đã hoàn thành
                   </p>
                 </div>
@@ -564,7 +559,7 @@ function TrainingHoursFormScreen() {
                   </div>
 
                   {/* Date + Hours */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 20 }}>
+                  <div className="th-form-grid">
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                         Ngày đào tạo liên tục <span style={{ color: '#ef4444' }}>*</span>
@@ -613,7 +608,7 @@ function TrainingHoursFormScreen() {
                   </div>
 
                   {/* Type + ProfessionalField */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 20 }}>
+                  <div className="th-form-grid">
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                         Hình thức đào tạo <span style={{ color: '#ef4444' }}>*</span>
@@ -780,11 +775,9 @@ function TrainingHoursFormScreen() {
                     </button>
                   </div>
                 </div>
-                <div style={{ height: '150px' }} />
+                <div className="th-form-bottom-space" aria-hidden="true" />
               </div>
             )}
-          </div>
-        </div>
       </div>
 
       {/* Modal đề xuất lĩnh vực mới */}
@@ -882,7 +875,7 @@ function TrainingHoursFormScreen() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

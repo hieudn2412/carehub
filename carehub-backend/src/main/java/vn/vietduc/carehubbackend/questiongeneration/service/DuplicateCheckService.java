@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DuplicateCheckService {
     private static final Collection<CandidateStatus> COMPARABLE_CANDIDATE_STATUSES = List.of(
@@ -54,9 +56,41 @@ public class DuplicateCheckService {
     }
 
     public DuplicateCheckResult check(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
+        return check(stem, null, excludedQuestionIds, excludedCandidateIds);
+    }
+
+    /**
+     * Nhúng sẵn cả một lô stem trong một lần chạy model, để nơi gọi khỏi phải nhúng từng câu.
+     *
+     * @return mảng vector theo đúng thứ tự đầu vào, hoặc {@code null} nếu không dùng embedding
+     *         (provider không phải E5) hoặc model lỗi — nơi gọi cứ truyền {@code null} vào
+     *         {@link #check(String, double[], Set, Set)} và luồng cũ vẫn chạy bình thường.
+     */
+    public double[][] precomputeVectors(List<String> stems) {
+        if (!embeddingProperties.isE5Provider() || stems == null || stems.isEmpty()) {
+            return null;
+        }
+        try {
+            List<double[]> vectors = questionEmbeddingService.embedCandidateStems(stems);
+            return vectors.size() == stems.size() ? vectors.toArray(double[][]::new) : null;
+        } catch (RuntimeException ex) {
+            log.warn("Không nhúng được lô {} stem, quay lại nhúng từng câu: {}", stems.size(), ex.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * @param precomputedVector vector đã nhúng sẵn cho {@code stem}, hoặc {@code null} để tự nhúng.
+     */
+    public DuplicateCheckResult check(
+            String stem,
+            double[] precomputedVector,
+            Set<Long> excludedQuestionIds,
+            Set<Long> excludedCandidateIds
+    ) {
         if (embeddingProperties.isE5Provider()) {
             try {
-                return semanticCheck(stem, excludedQuestionIds, excludedCandidateIds);
+                return semanticCheck(stem, precomputedVector, excludedQuestionIds, excludedCandidateIds);
             } catch (RuntimeException ex) {
                 DuplicateCheckResult fallback = lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
                 return new DuplicateCheckResult(
@@ -73,8 +107,15 @@ public class DuplicateCheckService {
         return lexicalCheck(stem, excludedQuestionIds, excludedCandidateIds);
     }
 
-    private DuplicateCheckResult semanticCheck(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
-        double[] candidateVector = questionEmbeddingService.embedCandidateStem(stem);
+    private DuplicateCheckResult semanticCheck(
+            String stem,
+            double[] precomputedVector,
+            Set<Long> excludedQuestionIds,
+            Set<Long> excludedCandidateIds
+    ) {
+        double[] candidateVector = precomputedVector != null
+                ? precomputedVector
+                : questionEmbeddingService.embedCandidateStem(stem);
         double best = 0;
         Long matchedId = null;
         String matchedStem = null;
@@ -94,11 +135,15 @@ public class DuplicateCheckService {
             );
         }
 
+        double strongMin = properties.getDuplicate().getStrongMin();
+
         // Thử ANN search trước nếu index sẵn sàng
         if (annIndex.isReady()) {
+            // Ngưỡng dừng sớm phải là strongMin: dừng ở reviewMin sẽ trả về match ĐẦU TIÊN
+            // vượt 0.80 thay vì match tốt nhất, khiến câu trùng mạnh bị hạ thành NEED_REVIEW.
             AnnEmbeddingIndex.SearchResult annBest = annIndex.searchBestMatch(
                     candidateVector,
-                    properties.getDuplicate().getReviewMin(),
+                    strongMin,
                     embeddingProperties.getAnnSearchK()
             );
             if (annBest != null && !excludedQuestionIds.contains(annBest.questionId())) {
@@ -108,41 +153,23 @@ public class DuplicateCheckService {
                 checker = "e5-ann";
             }
 
-            // Chỉ fallback exact khi ANN không tìm thấy gì hoặc best dưới reviewMin
-            // (nếu ANN đã tìm thấy match ≥ reviewMin thì đủ để đánh dấu needsReview, không cần exact)
-            if (annBest == null || best < properties.getDuplicate().getReviewMin()) {
-                for (QuestionEmbeddingSnapshot embedding : embeddings) {
-                    if (excludedQuestionIds.contains(embedding.questionId())) {
-                        continue;
-                    }
-                    double score = CosineUtil.cosine(candidateVector, embedding.vector());
-                    if (score > best) {
-                        best = score;
-                        matchedId = embedding.questionId();
-                        matchedStem = embedding.stem();
-                    }
-                    if (best >= properties.getDuplicate().getStrongMin()) {
-                        checker = "e5-exact";
-                        break;
-                    }
+            // ANN chỉ quét một phần index (bucket LSH + hàng xóm, tối đa annSearchK ứng viên),
+            // nên khi chưa chắc chắn trùng mạnh vẫn phải quét đầy đủ để không bỏ sót.
+            if (best < strongMin) {
+                checker = "e5-exact";
+                ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best, strongMin);
+                if (scan.similarity() > best) {
+                    best = scan.similarity();
+                    matchedId = scan.questionId();
+                    matchedStem = scan.stem();
                 }
             }
         } else {
-            // Exact search (ANN chưa sẵn sàng)
-            for (QuestionEmbeddingSnapshot embedding : embeddings) {
-                if (excludedQuestionIds.contains(embedding.questionId())) {
-                    continue;
-                }
-                double score = CosineUtil.cosine(candidateVector, embedding.vector());
-                if (score > best) {
-                    best = score;
-                    matchedId = embedding.questionId();
-                    matchedStem = embedding.stem();
-                }
-                if (best >= properties.getDuplicate().getStrongMin()) {
-                    break;
-                }
-            }
+            // Exact search (ANN chưa sẵn sàng) — giữ nhãn "e5" để phân biệt với đường có ANN.
+            ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best, strongMin);
+            best = scan.similarity();
+            matchedId = scan.questionId();
+            matchedStem = scan.stem();
         }
 
         // Chỉ lexical candidate check nếu chưa strong duplicate
@@ -161,6 +188,37 @@ public class DuplicateCheckService {
                 null,
                 checker
         );
+    }
+
+    /** Quét cosine đầy đủ trên tập embedding, dừng sớm khi đã chắc chắn là trùng mạnh. */
+    private ExactScan exactScan(
+            double[] candidateVector,
+            List<QuestionEmbeddingSnapshot> embeddings,
+            Set<Long> excludedQuestionIds,
+            double startingBest,
+            double strongMin
+    ) {
+        double best = startingBest;
+        Long matchedId = null;
+        String matchedStem = null;
+        for (QuestionEmbeddingSnapshot embedding : embeddings) {
+            if (excludedQuestionIds.contains(embedding.questionId())) {
+                continue;
+            }
+            double score = CosineUtil.cosine(candidateVector, embedding.vector());
+            if (score > best) {
+                best = score;
+                matchedId = embedding.questionId();
+                matchedStem = embedding.stem();
+            }
+            if (best >= strongMin) {
+                break;
+            }
+        }
+        return new ExactScan(best, matchedId, matchedStem);
+    }
+
+    private record ExactScan(double similarity, Long questionId, String stem) {
     }
 
     private DuplicateCheckResult lexicalCheck(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {

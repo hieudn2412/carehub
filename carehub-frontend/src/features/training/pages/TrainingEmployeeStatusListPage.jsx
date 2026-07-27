@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
@@ -228,12 +225,7 @@ function TrainingEmployeeStatusListPage() {
   const breadcrumbs = [{ label: 'Quản lý chất lượng' }, { label: 'Giờ đào tạo nhân viên' }]
 
   return (
-    <div className="dashboard-layout">
-      {isAdmin ? <AdminSidebar /> : <Sidebar />}
-      <div className="dashboard-layout__content">
-        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header breadcrumbs={breadcrumbs} />}
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="tes-page">
 
               <div className="tes-title-card">
@@ -402,10 +394,7 @@ function TrainingEmployeeStatusListPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

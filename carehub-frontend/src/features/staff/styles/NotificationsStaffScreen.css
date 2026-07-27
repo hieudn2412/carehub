@@ -75,6 +75,10 @@
   gap: 12px;
 }
 
+.notify-search-box {
+  min-width: 240px;
+}
+
 .notify-mark-all-btn {
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
@@ -351,5 +355,87 @@
 @keyframes notifyScaleUp {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .notify-filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notify-tabs .notify-tab-btn {
+    flex: 1;
+  }
+
+  .notify-actions-row {
+    flex-wrap: wrap;
+  }
+
+  .notify-search-box {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .notify-card {
+    padding: 16px;
+  }
+
+  .notify-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notify-search-box {
+    width: 100%;
+  }
+
+  .notify-tab-btn {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  .notify-mark-all-btn {
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .notify-item-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .notify-icon-box {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .notify-action-circle-btn {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .notify-modal-container {
+    width: auto;
+    margin: 12px;
+    padding: 20px 16px;
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+  }
+
+  .notify-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notify-modal-footer .training-button {
+    min-height: 44px;
+    justify-content: center;
+  }
 }
 

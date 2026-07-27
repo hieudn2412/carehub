@@ -11,8 +11,7 @@ import {
   SaveOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ChecklistReadOnlyVersion from '../components/ChecklistReadOnlyVersion.jsx'
 import { adminApi } from '../api/adminApi'
 import { createChecklistCode } from '../utils/formCode.js'
@@ -764,12 +763,7 @@ function ChecklistCreatePage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="checklist-create-page">
               <div className="ccp-topbar">
                 <div className="ccp-topbar-actions">
@@ -1027,9 +1021,6 @@ function ChecklistCreatePage() {
               </>
               )}
             </div>
-          </main>
-        </div>
-      </div>
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title="Hủy bản nháp checklist"
@@ -1041,7 +1032,7 @@ function ChecklistCreatePage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false })}
       />
-    </div>
+    </AppShell>
   )
 }
 

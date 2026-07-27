@@ -4,6 +4,9 @@ import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
+import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { formatEvidenceStorageSummary, getEvidenceFileError } from '../utils/evidenceFile.js'
 import { 
   UploadOutlined, 
@@ -221,7 +224,8 @@ function TrainingRecordEvidencePage() {
   }
 
   return (
-    <main className="training-page">
+    <AppShell title="Minh chứng khóa học">
+    <div className="training-page">
       <section className="training-header">
         <div>
           <p className="training-eyebrow">Đào tạo liên tục</p>
@@ -240,9 +244,7 @@ function TrainingRecordEvidencePage() {
       <section className="training-detail-grid">
         <article className="training-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           {isLoading ? (
-            <div className="training-skeleton" style={{ border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải thông tin...
-            </div>
+            <LoadingState label="Đang tải thông tin..." />
           ) : (
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>
@@ -360,13 +362,9 @@ function TrainingRecordEvidencePage() {
           </h2>
           
           {isLoading ? (
-            <div className="training-skeleton" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LoadingOutlined style={{ fontSize: 20, marginRight: 8 }} /> Đang tải danh sách...
-            </div>
+            <LoadingState label="Đang tải danh sách..." />
           ) : evidences.length === 0 ? (
-            <div className="training-empty" style={{ textAlign: 'center', padding: '40px 20px' }}>
-              Chưa có tệp minh chứng nào được tải lên cho hồ sơ này.
-            </div>
+            <EmptyState>Chưa có tệp minh chứng nào được tải lên cho hồ sơ này.</EmptyState>
           ) : (
             <div className="evidence-cards-grid">
               {evidences.map((item) => (
@@ -433,7 +431,8 @@ function TrainingRecordEvidencePage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, evidenceId: null })}
       />
-    </main>
+    </div>
+    </AppShell>
   )
 }
 

@@ -6,8 +6,9 @@ import {
   SaveOutlined,
   LoadingOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
+import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../../evaluation/api/documentQuestionApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
@@ -109,153 +110,130 @@ function StaffQuestionReviewPage() {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar />
-        <div className="dashboard-layout__content">
-          <Header back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Xem câu hỏi" />
-          <div className="dashboard-layout__body" style={{ textAlign: 'center', padding: 40 }}>
-            <LoadingOutlined style={{ fontSize: 24 }} />
-          </div>
-        </div>
-      </div>
+      <AppShell back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Xem câu hỏi">
+        <LoadingState />
+      </AppShell>
     )
   }
 
   if (!job) return null
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Câu hỏi đã tạo" />
-        <div className="dashboard-layout__body">
-          <div className="qdoc-page">
-            {/* Header */}
-            <div className="qdoc-title-card" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <h1 className="qdoc-title" style={{ fontSize: 18 }}>Xem câu hỏi đã tạo</h1>
-                <p className="qdoc-subtitle">
-                  {statusLabel(job.status)} · {job.candidateCount || 0} câu hỏi · {formatDateTime(job.createdAt)}
-                </p>
-              </div>
-              {job.status === 'GENERATED' || job.status === 'PARTIALLY_COMPLETED' ? (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="qdoc-primary-btn" onClick={() => handleBatchAction('approve')}>
-                    <CheckCircleOutlined /> Duyệt tất cả
-                  </button>
-                  <button className="qdoc-secondary-btn" onClick={() => handleBatchAction('reject')}>
-                    <CloseCircleOutlined /> Từ chối tất cả
-                  </button>
-                  <button className="qdoc-secondary-btn" onClick={() => handleBatchAction('save')}>
-                    <SaveOutlined /> Lưu vào ngân hàng
-                  </button>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Question list */}
-            <div className="qdoc-table-card">
-              {candidates.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: 32, color: '#999' }}>
-                  {job.status === 'GENERATING' ? 'Đang tạo câu hỏi...' : 'Chưa có câu hỏi nào.'}
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {candidates.map(c => (
-                    <div key={c.id} style={{
-                      border: '1px solid #f0f0f0', borderRadius: 10, padding: 16,
-                      background: c.status === 'APPROVED' ? '#f6ffed' : c.status === 'REJECTED' ? '#fff2f0' : '#fff',
-                    }}>
-                      <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14, lineHeight: 1.5 }}>
-                        {c.stem}
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-                        {['A', 'B', 'C', 'D'].map(opt => {
-                          const key = 'option' + opt
-                          const val = c[key]
-                          if (!val) return null
-                          return (
-                            <span key={opt} style={{
-                              padding: '4px 12px', borderRadius: 6, fontSize: 12,
-                              background: c.correctAnswer === opt ? '#1677ff' : '#f5f5f5',
-                              color: c.correctAnswer === opt ? '#fff' : '#333',
-                              fontWeight: c.correctAnswer === opt ? 600 : 400,
-                            }}>
-                              {opt}. {val}
-                            </span>
-                          )
-                        })}
-                      </div>
-                      {c.explanation && (
-                        <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                          <strong>Giải thích:</strong> {c.explanation}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                        <div style={{ fontSize: 11, color: '#999' }}>
-                          {c.status === 'SAVED' ? (
-                            <span style={{ color: '#1677ff' }}>✓ Đã lưu vào ngân hàng</span>
-                          ) : c.status === 'APPROVED' ? (
-                            <span style={{ color: '#52c41a' }}>✓ Đã duyệt</span>
-                          ) : c.status === 'REJECTED' ? (
-                            <span style={{ color: '#ff4d4f' }}>✗ Đã từ chối</span>
-                          ) : (
-                            <span>Chờ duyệt</span>
-                          )}
-                          {c.topic && <span> · {c.topic}</span>}
-                          {c.difficulty && <span> · {c.difficulty}</span>}
-                        </div>
-                        {c.status !== 'SAVED' && c.status !== 'REJECTED' ? (
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            {c.status !== 'APPROVED' && (
-                              <button
-                                type="button"
-                                disabled={processingId === c.id}
-                                onClick={() => handleApprove(c.id)}
-                                style={{
-                                  padding: '4px 12px', borderRadius: 6, border: '1px solid #52c41a',
-                                  background: '#f6ffed', color: '#52c41a', cursor: 'pointer', fontSize: 12,
-                                }}
-                              >
-                                {processingId === c.id ? <LoadingOutlined /> : <CheckCircleOutlined />} Duyệt
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              disabled={processingId === c.id}
-                              onClick={() => handleReject(c.id)}
-                              style={{
-                                padding: '4px 12px', borderRadius: 6, border: '1px solid #ff4d4f',
-                                background: '#fff2f0', color: '#ff4d4f', cursor: 'pointer', fontSize: 12,
-                              }}
-                            >
-                              <CloseCircleOutlined /> Từ chối
-                            </button>
-                            {c.status === 'APPROVED' && (
-                              <button
-                                type="button"
-                                disabled={processingId === c.id}
-                                onClick={() => handleSave(c.id)}
-                                style={{
-                                  padding: '4px 12px', borderRadius: 6, border: 'none',
-                                  background: '#1677ff', color: '#fff', cursor: 'pointer', fontSize: 12,
-                                }}
-                              >
-                                <SaveOutlined /> Lưu
-                              </button>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+    <AppShell back={{ to: '/staff/generate-questions', label: 'Quay lại' }} title="Câu hỏi đã tạo">
+      <div className="qdoc-page">
+        {/* Header */}
+        <div className="qdoc-title-card">
+          <div className="sqr-title-main">
+            <h1 className="qdoc-title" style={{ fontSize: 18 }}>Xem câu hỏi đã tạo</h1>
+            <p className="qdoc-subtitle">
+              {statusLabel(job.status)} · {job.candidateCount || 0} câu hỏi · {formatDateTime(job.createdAt)}
+            </p>
           </div>
+          {job.status === 'GENERATED' || job.status === 'PARTIALLY_COMPLETED' ? (
+            <div className="sqr-batch-actions">
+              <button className="qdoc-primary-btn" onClick={() => handleBatchAction('approve')}>
+                <CheckCircleOutlined /> Duyệt tất cả
+              </button>
+              <button className="qdoc-secondary-btn" onClick={() => handleBatchAction('reject')}>
+                <CloseCircleOutlined /> Từ chối tất cả
+              </button>
+              <button className="qdoc-secondary-btn" onClick={() => handleBatchAction('save')}>
+                <SaveOutlined /> Lưu vào ngân hàng
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Question list */}
+        <div className="qdoc-table-card">
+          {candidates.length === 0 ? (
+            <EmptyState>
+              {job.status === 'GENERATING' ? 'Đang tạo câu hỏi...' : 'Chưa có câu hỏi nào.'}
+            </EmptyState>
+          ) : (
+            <div className="sqr-list">
+              {candidates.map(c => (
+                <div
+                  key={c.id}
+                  className={
+                    'sqr-card'
+                    + (c.status === 'APPROVED' ? ' sqr-card--approved' : c.status === 'REJECTED' ? ' sqr-card--rejected' : '')
+                  }
+                >
+                  <div className="sqr-stem">
+                    {c.stem}
+                  </div>
+                  <div className="sqr-options">
+                    {['A', 'B', 'C', 'D'].map(opt => {
+                      const key = 'option' + opt
+                      const val = c[key]
+                      if (!val) return null
+                      return (
+                        <span key={opt} className={'sqr-opt' + (c.correctAnswer === opt ? ' sqr-opt--correct' : '')}>
+                          {opt}. {val}
+                        </span>
+                      )
+                    })}
+                  </div>
+                  {c.explanation && (
+                    <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                      <strong>Giải thích:</strong> {c.explanation}
+                    </div>
+                  )}
+                  <div className="sqr-card-foot">
+                    <div style={{ fontSize: 11, color: '#999' }}>
+                      {c.status === 'SAVED' ? (
+                        <span style={{ color: '#1677ff' }}>✓ Đã lưu vào ngân hàng</span>
+                      ) : c.status === 'APPROVED' ? (
+                        <span style={{ color: '#52c41a' }}>✓ Đã duyệt</span>
+                      ) : c.status === 'REJECTED' ? (
+                        <span style={{ color: '#ff4d4f' }}>✗ Đã từ chối</span>
+                      ) : (
+                        <span>Chờ duyệt</span>
+                      )}
+                      {c.topic && <span> · {c.topic}</span>}
+                      {c.difficulty && <span> · {c.difficulty}</span>}
+                    </div>
+                    {c.status !== 'SAVED' && c.status !== 'REJECTED' ? (
+                      <div className="sqr-card-actions">
+                        {c.status !== 'APPROVED' && (
+                          <button
+                            type="button"
+                            disabled={processingId === c.id}
+                            onClick={() => handleApprove(c.id)}
+                            className="sqr-btn sqr-btn--approve"
+                          >
+                            {processingId === c.id ? <LoadingOutlined /> : <CheckCircleOutlined />} Duyệt
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={processingId === c.id}
+                          onClick={() => handleReject(c.id)}
+                          className="sqr-btn sqr-btn--reject"
+                        >
+                          <CloseCircleOutlined /> Từ chối
+                        </button>
+                        {c.status === 'APPROVED' && (
+                          <button
+                            type="button"
+                            disabled={processingId === c.id}
+                            onClick={() => handleSave(c.id)}
+                            className="sqr-btn sqr-btn--save"
+                          >
+                            <SaveOutlined /> Lưu
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

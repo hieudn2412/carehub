@@ -20,10 +20,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import AdminSidebar from '../components/AdminSidebar.jsx'
-import AdminHeader from '../components/AdminHeader.jsx'
-import Sidebar from '../../staff/components/sidebar.jsx'
-import Header from '../../staff/components/Header.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
@@ -372,16 +369,11 @@ function DashboardContent({ role }) {
 export default function TrainingDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
   return (
-    <div className="dashboard-layout training-dashboard-page">
-      {isManager ? <Sidebar /> : <AdminSidebar />}
-      <div className="dashboard-layout__content">
-        {isManager
-          ? <Header title="Dashboard giờ đào tạo" />
-          : <AdminHeader breadcrumbs={[{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard giờ đào tạo' }]} />}
-        <div className={isManager ? 'dashboard-layout__body' : 'dashboard-root'}>
-          {isManager ? <DashboardContent role={role} /> : <main className="dashboard-body"><DashboardContent role={role} /></main>}
-        </div>
-      </div>
-    </div>
+    <AppShell
+      title={isManager ? 'Dashboard giờ đào tạo' : undefined}
+      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard giờ đào tạo' }]}
+    >
+      <DashboardContent role={role} />
+    </AppShell>
   )
 }

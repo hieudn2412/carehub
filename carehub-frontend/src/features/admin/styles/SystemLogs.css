@@ -109,7 +109,7 @@
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .log-table {
@@ -358,4 +358,55 @@
   background: #f1f5f9;
   color: #0f172a;
   border-color: #94a3b8;
+}
+
+/* ── Responsive ── */
+/* bp-md */
+@media (max-width: 1024px) {
+  .log-detail-grid {
+    column-gap: 24px;
+  }
+
+  .log-detail-card {
+    padding: 24px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .log-title-card {
+    padding: 20px;
+  }
+
+  .log-search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .log-filter-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .log-results-count {
+    margin-left: 0;
+  }
+
+  /* Bảng cuộn ngang trong .log-table-card (overflow-x: auto) */
+  .log-table {
+    min-width: 640px;
+  }
+
+  .log-pagination {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .log-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .log-detail-card {
+    padding: 20px;
+  }
 }

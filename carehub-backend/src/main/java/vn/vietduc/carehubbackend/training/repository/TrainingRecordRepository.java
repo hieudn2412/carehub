@@ -17,6 +17,9 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, Long> {
+    /** Dùng để chống tạo trùng bản ghi CME tự động (mỗi lượt thi đạt chỉ ghi nhận một lần). */
+    boolean existsBySourceReference(String sourceReference);
+
     Page<TrainingRecord> findByEmployee_Id(Long employeeId, Pageable pageable);
 
     Page<TrainingRecord> findByEmployee_Department_Id(Long departmentId, Pageable pageable);

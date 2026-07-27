@@ -3,10 +3,9 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
-  LoadingOutlined,
 } from '@ant-design/icons'
-import Header from '../components/Header.jsx'
-import Sidebar from '../components/sidebar.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import '../styles/TrainingStatusScreen.css'
 
@@ -44,64 +43,58 @@ export default function TrainingStatusScreen() {
   const formattedRequiredHours = requiredHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })
 
   return (
-    <div className="dashboard-layout training-status-page">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Tiến độ giờ đào tạo" />
-        <div className="dashboard-layout__body">
-          <main className="ts-page">
-            <header className="ts-heading">
-              <div>
-                <span>ĐÀO TẠO CỦA TÔI</span>
-                <h1>Tiến độ hoàn thành chuẩn đào tạo</h1>
-                <p>Dashboard chỉ hiển thị số liệu tổng quan. Hồ sơ chi tiết được quản lý tại màn Giờ đào tạo.</p>
-              </div>
-              {configured && (
-                <strong className={`ts-status ts-status--${tone}`}>
-                  {completed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
-                  {completed ? 'Đã hoàn thành' : 'Chưa đủ giờ'}
-                </strong>
-              )}
-            </header>
+    <AppShell title="Tiến độ giờ đào tạo">
+      <div className="ts-page">
+        <header className="ts-heading">
+          <div>
+            <span>ĐÀO TẠO CỦA TÔI</span>
+            <h1>Tiến độ hoàn thành chuẩn đào tạo</h1>
+            <p>Dashboard chỉ hiển thị số liệu tổng quan. Hồ sơ chi tiết được quản lý tại màn Giờ đào tạo.</p>
+          </div>
+          {configured && (
+            <strong className={`ts-status ts-status--${tone}`}>
+              {completed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+              {completed ? 'Đã hoàn thành' : 'Chưa đủ giờ'}
+            </strong>
+          )}
+        </header>
 
-            {loading ? (
-              <div className="ts-loading"><LoadingOutlined spin /> Đang tải tiến độ đào tạo...</div>
-            ) : error ? (
-              <div className="ts-error"><ExclamationCircleOutlined /> {error}</div>
-            ) : !configured ? (
-              <div className="ts-not-configured" role="status">
-                <strong>Chưa có chuẩn giờ đào tạo áp dụng cho bạn.</strong>
-                <span>Vui lòng liên hệ quản trị viên để kiểm tra cấu hình yêu cầu đào tạo.</span>
-              </div>
-            ) : (
-              <>
-                <section className="ts-stat-cards">
-                  <article className={`ts-stat-card ts-stat-card--${tone}`}>
-                    <span className="ts-stat-card__icon"><ClockCircleOutlined /></span>
-                    <div><p>Đã hoàn thành</p><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>Thời lượng đã được hệ thống ghi nhận</small></div>
-                  </article>
-                  <article className="ts-stat-card ts-stat-card--neutral">
-                    <span className="ts-stat-card__icon"><CheckCircleOutlined /></span>
-                    <div><p>Mục tiêu</p><strong>{formattedRequiredHours} giờ</strong><small>Chuẩn đào tạo đang áp dụng</small></div>
-                  </article>
-                  <article className={`ts-stat-card ts-stat-card--${tone}`}>
-                    <span className="ts-stat-card__icon"><ExclamationCircleOutlined /></span>
-                    <div><p>Còn thiếu</p><strong>{missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>{completed ? 'Bạn đã hoàn thành mục tiêu' : 'Cần tiếp tục bổ sung giờ đào tạo'}</small></div>
-                  </article>
-                </section>
+        {loading ? (
+          <LoadingState label="Đang tải tiến độ đào tạo..." />
+        ) : error ? (
+          <div className="ts-error"><ExclamationCircleOutlined /> {error}</div>
+        ) : !configured ? (
+          <div className="ts-not-configured" role="status">
+            <strong>Chưa có chuẩn giờ đào tạo áp dụng cho bạn.</strong>
+            <span>Vui lòng liên hệ quản trị viên để kiểm tra cấu hình yêu cầu đào tạo.</span>
+          </div>
+        ) : (
+          <>
+            <section className="ts-stat-cards">
+              <article className={`ts-stat-card ts-stat-card--${tone}`}>
+                <span className="ts-stat-card__icon"><ClockCircleOutlined /></span>
+                <div><p>Đã hoàn thành</p><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>Thời lượng đã được hệ thống ghi nhận</small></div>
+              </article>
+              <article className="ts-stat-card ts-stat-card--neutral">
+                <span className="ts-stat-card__icon"><CheckCircleOutlined /></span>
+                <div><p>Mục tiêu</p><strong>{formattedRequiredHours} giờ</strong><small>Chuẩn đào tạo đang áp dụng</small></div>
+              </article>
+              <article className={`ts-stat-card ts-stat-card--${tone}`}>
+                <span className="ts-stat-card__icon"><ExclamationCircleOutlined /></span>
+                <div><p>Còn thiếu</p><strong>{missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ</strong><small>{completed ? 'Bạn đã hoàn thành mục tiêu' : 'Cần tiếp tục bổ sung giờ đào tạo'}</small></div>
+              </article>
+            </section>
 
-                <section className={`ts-progress-card ts-progress-card--${tone}`}>
-                  <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{formattedRequiredHours} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
-                  <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
-                    <span style={{ width: `${progress}%` }} />
-                  </div>
-                  <p>{completed ? `Đã đạt yêu cầu ${formattedRequiredHours} giờ đào tạo.` : `Chưa đủ yêu cầu. Bạn còn thiếu ${missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ.`}</p>
-                </section>
-              </>
-            )}
-          </main>
-        </div>
+            <section className={`ts-progress-card ts-progress-card--${tone}`}>
+              <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{formattedRequiredHours} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
+              <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
+                <span style={{ width: `${progress}%` }} />
+              </div>
+              <p>{completed ? `Đã đạt yêu cầu ${formattedRequiredHours} giờ đào tạo.` : `Chưa đủ yêu cầu. Bạn còn thiếu ${missingHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} giờ.`}</p>
+            </section>
+          </>
+        )}
       </div>
-    </div>
+    </AppShell>
   )
 }

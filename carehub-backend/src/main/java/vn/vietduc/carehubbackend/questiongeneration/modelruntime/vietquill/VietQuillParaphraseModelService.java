@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.modelruntime.vietquill;
 
 import ai.djl.huggingface.tokenizers.Encoding;
 import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer;
+import ai.onnxruntime.OnnxJavaType;
 import ai.onnxruntime.OnnxTensor;
 import ai.onnxruntime.OnnxValue;
 import ai.onnxruntime.OrtEnvironment;
@@ -21,6 +22,7 @@ import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphraseModel
 import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphrasedMcq;
 
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -248,7 +250,16 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     ) {
         EncoderState state = encodePrompt(handle, prompt);
         int candidatePoolSize = Math.max(requestedCount * 2, requestedCount + 3);
+        // Beam width thực tế được kéo lên cho đủ ứng viên để VietQuillCandidateSelector chọn lọc,
+        // nên có thể lớn hơn hẳn ai.paraphrase.num-beams. Log ra để số liệu vận hành khớp thực tế.
         int desiredBeamWidth = Math.max(properties.getNumBeams(), candidatePoolSize);
+        if (properties.isKvCacheEnabled() && !handle.kvCacheSupported()) {
+            log.warn("Đã bật ai.paraphrase.kv-cache-enabled nhưng decoder ONNX không có past_key_values"
+                    + " — sẽ decode theo đường không cache. Cần export decoder_model_merged.onnx để dùng KV-cache.");
+        }
+        log.debug("VietQuill decode: numBeams(config)={} beamWidth(effective)={} requestedCount={} kvCache={}",
+                properties.getNumBeams(), desiredBeamWidth, requestedCount,
+                properties.isKvCacheEnabled() && handle.kvCacheSupported());
         List<String> decoded;
         try {
             List<String> stableCandidates = properties.isKvCacheEnabled() && handle.kvCacheSupported()
@@ -446,14 +457,7 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors, "encoder_attention_mask", attentionMask);
             addLongTensorIfExpected(handle.environment(), handle.decoder(), tensors, "attention_mask", attentionMask);
             try (OrtSession.Result result = handle.decoder().run(tensors)) {
-                Object value = result.get(0).getValue();
-                if (value instanceof float[][][] logits) {
-                    return lastTokenLogits(logits[0]);
-                }
-                if (value instanceof double[][][] logits) {
-                    return lastTokenLogits(logits[0]);
-                }
-                throw new ParaphraseModelException("Output decoder VietQuill không hỗ trợ: " + value.getClass().getName());
+                return extractLogitsFromResult(result);
             }
         } finally {
             OnnxValue.close(tensors.values());
@@ -727,7 +731,16 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         return logits[logits.length - 1];
     }
 
-    private List<TopToken> topTokens(double[] logits, int count) {
+    /**
+     * Top-k token theo log-probability.
+     *
+     * <p>Chạy trên mảng nguyên thuỷ thay vì dựng một record cho từng token trong từ vựng:
+     * hàm này được gọi cho mỗi beam ở mỗi bước decode, với từ vựng cỡ vài chục nghìn thì
+     * cách cũ sinh ra hàng triệu object chỉ để chọn ra vài phần tử.</p>
+     */
+    /* package */ List<TopToken> topTokens(double[] logits, int count) {
+        int k = Math.max(1, Math.min(count, logits.length));
+
         double max = Double.NEGATIVE_INFINITY;
         for (double logit : logits) {
             if (logit > max) {
@@ -740,23 +753,72 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         }
         double logSumExp = max + Math.log(sum);
 
-        // PriorityQueue min-heap để giữ top-k tokens
-        java.util.PriorityQueue<TopToken> heap = new java.util.PriorityQueue<>(
-                (a, b) -> Double.compare(a.logProbability(), b.logProbability()));
+        // Min-heap thủ công trên hai mảng song song: topIds[0]/topScores[0] luôn là phần tử nhỏ nhất.
+        int[] topIds = new int[k];
+        double[] topScores = new double[k];
+        int size = 0;
 
         for (int i = 0; i < logits.length; i++) {
-            TopToken token = new TopToken(i, logits[i] - logSumExp);
-            if (heap.size() < count) {
-                heap.offer(token);
-            } else if (token.logProbability() > heap.peek().logProbability()) {
-                heap.poll();
-                heap.offer(token);
+            double score = logits[i];
+            if (size < k) {
+                topIds[size] = i;
+                topScores[size] = score;
+                size++;
+                siftUp(topIds, topScores, size - 1);
+            } else if (score > topScores[0]) {
+                topIds[0] = i;
+                topScores[0] = score;
+                siftDown(topIds, topScores, size);
             }
         }
 
-        List<TopToken> result = new ArrayList<>(heap);
+        List<TopToken> result = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            result.add(new TopToken(topIds[i], topScores[i] - logSumExp));
+        }
         result.sort((a, b) -> Double.compare(b.logProbability(), a.logProbability()));
         return result;
+    }
+
+    private static void siftUp(int[] ids, double[] scores, int start) {
+        int child = start;
+        while (child > 0) {
+            int parent = (child - 1) / 2;
+            if (scores[parent] <= scores[child]) {
+                break;
+            }
+            swap(ids, scores, parent, child);
+            child = parent;
+        }
+    }
+
+    private static void siftDown(int[] ids, double[] scores, int size) {
+        int parent = 0;
+        while (true) {
+            int left = 2 * parent + 1;
+            if (left >= size) {
+                break;
+            }
+            int smallest = left;
+            int right = left + 1;
+            if (right < size && scores[right] < scores[left]) {
+                smallest = right;
+            }
+            if (scores[parent] <= scores[smallest]) {
+                break;
+            }
+            swap(ids, scores, parent, smallest);
+            parent = smallest;
+        }
+    }
+
+    private static void swap(int[] ids, double[] scores, int left, int right) {
+        int tempId = ids[left];
+        ids[left] = ids[right];
+        ids[right] = tempId;
+        double tempScore = scores[left];
+        scores[left] = scores[right];
+        scores[right] = tempScore;
     }
 
     private String decodeTokens(Seq2SeqHandle handle, List<Long> tokenIds) {
@@ -962,8 +1024,32 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         }
     }
 
+    /**
+     * Lấy logits của token cuối cùng.
+     *
+     * <p>Tensor logits có shape {@code [1, seqLen, vocab]} với vocab cỡ vài chục nghìn.
+     * Gọi {@code getValue()} sẽ dựng nguyên mảng Java lồng nhau cho toàn bộ tensor rồi ta
+     * chỉ dùng đúng hàng cuối — ở bước decode thứ 100 là hàng chục MB rác cho mỗi bước.
+     * Đọc thẳng từ {@link java.nio.FloatBuffer} chỉ lấy đúng {@code vocab} phần tử cần dùng.</p>
+     */
     private double[] extractLogitsFromResult(OrtSession.Result result) throws OrtException {
-        Object value = result.get(0).getValue();
+        OnnxValue raw = result.get(0);
+        if (raw instanceof OnnxTensor tensor) {
+            long[] shape = tensor.getInfo().getShape();
+            if (shape.length == 3 && tensor.getInfo().type == OnnxJavaType.FLOAT) {
+                int sequenceLength = (int) shape[1];
+                int vocabSize = (int) shape[2];
+                FloatBuffer buffer = tensor.getFloatBuffer();
+                int offset = (sequenceLength - 1) * vocabSize;
+                double[] logits = new double[vocabSize];
+                for (int i = 0; i < vocabSize; i++) {
+                    logits[i] = buffer.get(offset + i);
+                }
+                return logits;
+            }
+        }
+        // Fallback cho model export ra kiểu khác (double, hoặc shape không như dự kiến).
+        Object value = raw.getValue();
         if (value instanceof float[][][] logits) {
             return lastTokenLogits(logits[0]);
         }
@@ -1079,6 +1165,6 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
     private record EncoderState(float[][][] hiddenStates, long[] attentionMask) {
     }
 
-    private record TopToken(long id, double logProbability) {
+    /* package */ record TopToken(long id, double logProbability) {
     }
 }

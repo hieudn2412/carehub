@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.controller;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -199,6 +200,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
         saveChangeHistory(submittedRecord1);
     }
 
+    @DisplayName("L2-CMP-01 | Query Correctness: employee status list aggregates hours, scopes managers to their department, filters and sorts")
     @Test
     void employeeStatusListAggregatesScopesFiltersAndRequirementPriority() throws Exception {
         // Manager scoped to own department - should not see other department employees
@@ -259,6 +261,7 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-CMP-02 | Query Correctness: ledger sorted by startDate with runningSubmittedHours flat across DRAFT/CANCELLED/expired rows")
     @Test
     void employeeDetailRecordsMatchStatusWindowAndScope() throws Exception {
         // Employee detail status

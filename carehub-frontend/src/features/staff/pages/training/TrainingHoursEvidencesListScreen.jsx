@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  PaperClipOutlined, 
   EyeOutlined, 
   UploadOutlined, 
-  ClockCircleOutlined, 
   LoadingOutlined,
   FileDoneOutlined,
   FileExclamationOutlined,
   SearchOutlined
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import '../../styles/TrainingHours.css'
 
@@ -24,7 +21,6 @@ function TrainingHoursEvidencesListScreen() {
   const [statusFilter, setStatusFilter] = useState('all')
 
   useEffect(() => {
-    setLoading(true)
     trainingApi.listRecords({ size: 1000, keyword: '%' })
       .then((res) => {
         setRecords(res.data?.data?.content || [])
@@ -64,22 +60,18 @@ function TrainingHoursEvidencesListScreen() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header breadcrumbs={[{ label: 'Minh chứng của tôi' }]} />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+    <AppShell breadcrumbs={[{ label: 'Minh chứng của tôi' }]}>
+      <div className="training-page">
+            <div className="th-page-heading">
               <div>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quản lý minh chứng</h1>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Tải lên và theo dõi các tệp chứng chỉ, tài liệu giờ đào tạo</p>
+                <h1 className="th-page-title">Quản lý minh chứng</h1>
+                <p className="th-page-subtitle">Tải lên và theo dõi các tệp chứng chỉ, tài liệu giờ đào tạo</p>
               </div>
             </div>
 
             {/* Filters Row */}
-            <div className="training-filters-row" style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-              <div className="training-search-container" style={{ flex: 1, position: 'relative' }}>
+            <div className="training-filters-row th-evidence-list-filters">
+              <div className="training-search-container">
                 <span className="training-search-icon" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}>
                   <SearchOutlined style={{ color: '#9ca3af' }} />
                 </span>
@@ -88,14 +80,15 @@ function TrainingHoursEvidencesListScreen() {
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Tìm kiếm theo tên hồ sơ đào tạo..."
                   className="training-search-input"
-                  style={{ paddingLeft: 38, border: '1px solid #d1d5db', borderRadius: 8, height: 40, width: '100%' }}
+                  aria-label="Tìm hồ sơ đào tạo"
                 />
               </div>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ width: 220, border: '1px solid #d1d5db', borderRadius: 8, height: 40, padding: '0 12px' }}
+                className="th-filter-select"
+                aria-label="Lọc trạng thái minh chứng"
               >
                 <option value="all">Tất cả hồ sơ</option>
                 <option value="has_evidence">Đã có minh chứng</option>
@@ -112,9 +105,9 @@ function TrainingHoursEvidencesListScreen() {
                 Không tìm thấy hồ sơ đào tạo nào phù hợp.
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+              <div className="th-evidence-record-grid">
                 {filteredRecords.map((r) => (
-                  <div key={r.id} className="detail-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 180, margin: 0 }}>
+                  <article key={r.id} className="detail-card th-evidence-record-card">
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                         <span className={`training-badge ${getStatusClass(r.workflowStatus)}`} style={{ margin: 0 }}>
@@ -124,9 +117,9 @@ function TrainingHoursEvidencesListScreen() {
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#2563eb' }}>{r.declaredHours} giờ</span>
                       </div>
                       
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#111827', margin: '4px 0 8px', lineHeight: 1.4 }}>
+                      <h2 className="th-evidence-record-title">
                         {r.title}
-                      </h3>
+                      </h2>
                       
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#6b7280', marginBottom: 12 }}>
                         {r.evidenceCount > 0 ? (
@@ -143,31 +136,28 @@ function TrainingHoursEvidencesListScreen() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: 10, borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
+                    <div className="th-evidence-record-actions">
                       <button
                         onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
                         className="training-button training-button--primary"
-                        style={{ flex: 1, height: 36, fontSize: 13, borderRadius: 6, justifyContent: 'center' }}
                       >
                         <UploadOutlined style={{ marginRight: 4 }} /> Tải lên / Quản lý
                       </button>
                       <button
                         onClick={() => navigate(`/staff/training/${r.id}`)}
                         className="training-button"
-                        style={{ height: 36, fontSize: 13, borderRadius: 6, width: 44, padding: 0, justifyContent: 'center' }}
                         title="Xem chi tiết hồ sơ"
+                        aria-label={`Xem chi tiết ${r.title}`}
                       >
                         <EyeOutlined />
                       </button>
                     </div>
-                  </div>
+                  </article>
                 ))}
               </div>
             )}
-          </div>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

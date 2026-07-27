@@ -150,7 +150,7 @@
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .am-table {
@@ -342,6 +342,7 @@
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
+  padding: 20px;
 }
 
 .am-modal {
@@ -809,4 +810,77 @@
   display: inline-block;
   user-select: all;
   margin-top: 4px;
+}
+
+/* Nút nhỏ trong khối hành động của modal chi tiết (thay inline style) */
+.am-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Modal form tạo/sửa tài khoản rộng hơn modal mặc định */
+.am-modal--wide {
+  max-width: 640px;
+}
+
+/* Thông báo lỗi trong modal chi tiết */
+.am-modal-error {
+  color: #dc2626;
+}
+
+/* bp-lg */
+@media (max-width: 1280px) {
+  .am-filter-bar {
+    gap: 12px;
+  }
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .am-table {
+    min-width: 720px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .am-search {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .am-filter-department {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  .am-filter-department .am-department-combobox__menu {
+    min-width: 0;
+  }
+
+  .am-filter-select {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .am-results-count {
+    margin-left: 0;
+  }
+
+  .am-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .am-form-group--full {
+    grid-column: auto;
+  }
+
+  .am-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .am-pagination {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }

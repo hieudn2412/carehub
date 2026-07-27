@@ -7,7 +7,7 @@ import {
   StopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
-import MultiSearchSelect from '../../../shared/components/MultiSearchSelect.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import ConfirmModal from './ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -274,7 +274,8 @@ function FormVersionAssignmentModal({ form, onClose, onAssignmentCountChange }) 
               <form className="aqh-manager-assign" onSubmit={submitAssignment}>
                 <div className="aqh-manager-assign__field aqh-manager-assign__field--people">
                   <label htmlFor="form-version-assignee-search">Người nhận mới</label>
-                  <MultiSearchSelect
+                  <SearchableSelect
+                    multiple
                     ariaLabel="Tìm và chọn người nhận mới"
                     disabled={loading || submitting}
                     emptyMessage="Không còn người nhận phù hợp"

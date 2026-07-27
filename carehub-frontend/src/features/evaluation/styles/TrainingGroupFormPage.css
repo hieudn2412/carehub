@@ -1,7 +1,3 @@
-.modal-content--lg {
-  max-width: 720px;
-  width: 95%;
-}
 .member-select-list {
   max-height: 300px;
   overflow-y: auto;
@@ -24,13 +20,4 @@
 }
 .member-checkbox small {
   font-size: 0.85em;
-}
-.required {
-  color: #ff4d4f;
-}
-.text-muted {
-  color: #8c8c8c;
-}
-.text-center {
-  text-align: center;
 }

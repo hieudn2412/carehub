@@ -279,7 +279,8 @@
   .training-dashboard__charts { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .training-dashboard { padding: 14px; }
   .training-dashboard__hero { align-items: flex-start; flex-direction: column; }
   .training-dashboard__hero h1 { font-size: 24px; }

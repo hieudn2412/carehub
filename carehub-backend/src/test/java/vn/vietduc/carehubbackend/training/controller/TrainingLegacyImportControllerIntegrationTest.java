@@ -6,6 +6,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,6 +136,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-TRN-13 | Happy Path + Idempotency: legacy Excel preview (VALID/WARNING/INVALID rows), first apply imports only VALID, re-apply with confirmations is additive not duplicative")
     @Test
     void previewAndApplyLegacyExcelImport() throws Exception {
         MockMultipartFile file = excelFile();
@@ -202,6 +204,7 @@ class TrainingLegacyImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.rows.length()", is(4)));
     }
 
+    @DisplayName("L2-TRN-14 | Query Correctness: duration parse endpoint resolves '1,5 giờ' to 1.5 HOUR")
     @Test
     void parsesDurationThroughApi() throws Exception {
         mockMvc.perform(get("/api/v1/training/imports/legacy/duration/parse")

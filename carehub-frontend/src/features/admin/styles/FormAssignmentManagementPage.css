@@ -414,7 +414,8 @@
   background: #fff5f5;
 }
 
-@media (max-width: 1080px) {
+/* bp-lg */
+@media (max-width: 1280px) {
   .fam-hero {
     align-items: flex-start;
     flex-direction: column;
@@ -437,7 +438,8 @@
   }
 }
 
-@media (max-width: 900px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .fam-form-fields {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -447,7 +449,8 @@
   }
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .fam-card__header {
     align-items: stretch;
     flex-direction: column;

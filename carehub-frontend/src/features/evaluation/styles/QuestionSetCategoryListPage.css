@@ -63,8 +63,8 @@
 }
 
 .qscl-search-input:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .qscl-search-icon {
@@ -97,15 +97,15 @@
 }
 
 .qscl-filter-select:focus {
-  border-color: #007aff;
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.15);
+  border-color: var(--focus);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .qscl-btn-add {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #007aff;
+  background: var(--focus);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -114,7 +114,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 .qscl-btn-add:hover {
@@ -126,7 +126,7 @@
   border-radius: 16px;
   border: 1px solid #cbd5e1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .qscl-table {
@@ -324,6 +324,7 @@
   background: #fff;
   border-radius: 16px;
   width: 640px;
+  max-width: calc(100vw - 32px);
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -490,12 +491,12 @@ select.qscl-input-green {
   font-size: 13.5px;
   font-weight: 600;
   color: #fff;
-  background: #007aff;
+  background: var(--focus);
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 .qscl-btn-save:hover {
@@ -516,4 +517,63 @@ select.qscl-input-green {
 
 .qscl-btn-cancel:hover {
   background: #7c7c80;
+}
+
+/* Cột hành động — thay width inline trên <th> */
+.qscl-th-actions {
+  width: 120px;
+  text-align: center;
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .qscl-title-card,
+  .qscl-filter-bar {
+    padding: 16px;
+  }
+
+  .qscl-table {
+    min-width: 640px;
+  }
+
+  .qscl-table th,
+  .qscl-table td {
+    padding: 12px;
+  }
+
+  .qscl-table th:first-child,
+  .qscl-table td:first-child {
+    padding-left: 16px;
+  }
+
+  .qscl-table th:last-child,
+  .qscl-table td:last-child {
+    padding-right: 16px;
+  }
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .qscl-filter-bar {
+    flex-wrap: wrap;
+    row-gap: 12px;
+  }
+
+  .qscl-filter-left {
+    flex-wrap: wrap;
+    max-width: none;
+  }
+
+  .qscl-search {
+    min-width: 200px;
+  }
+
+  .qscl-modal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .qscl-pagination-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }

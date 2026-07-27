@@ -2,7 +2,10 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateExamAssignmentRequest;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
@@ -253,6 +256,70 @@ class ExamAssignmentServiceTest {
         assertThat(response.get(0).actionLabel()).isEqualTo("Tiếp tục");
         assertThat(response.get(0).usedAttempts()).isEqualTo(1);
         assertThat(response.get(0).remainingAttempts()).isEqualTo(1);
+    }
+
+    // ── Block: create() — maxAttempts clamp (sheet BoundaryValues, BV-10, FR-050) ──
+
+    @ParameterizedTest(name = "requested maxAttempts={0} → persisted={1}")
+    @CsvSource({
+            "null, 1",  // omitted → DEFAULT_MAX_ATTEMPTS
+            "0,    1",  // BVA-Min-1: clamped up to the floor
+            "1,    1",  // BVA-Min
+            "10,   10", // BVA-Max
+            "11,   10", // BVA-Max+1: clamped down to the ceiling
+            "-5,   1"
+    })
+    @DisplayName("L1-BV-24 | BVA: create() clamps maxAttempts into 1–10 (FR-050)")
+    void createClampsMaxAttemptsIntoRange(String requested, int expected) {
+        ExamPaper paper = ExamPaper.builder()
+                .id(10L)
+                .code("EP-10")
+                .name("Đề kiểm tra an toàn")
+                .status(ExamPaperStatus.PUBLISHED)
+                .totalQuestions(10)
+                .timeLimitMinutes(30)
+                .passingScore(70)
+                .version(1)
+                .randomSeed(1L)
+                .build();
+        User employee = user(40L, "NV001", "Nguyễn Văn A", null);
+        ProfessionalField professionalField = ProfessionalField.builder()
+                .id(60L).code("NOI").name("Nội khoa").active(true).build();
+        List<ExamAssignment> savedAssignments = new ArrayList<>();
+
+        when(examPaperRepository.findById(paper.getId())).thenReturn(Optional.of(paper));
+        when(professionalFieldRepository.findById(professionalField.getId()))
+                .thenReturn(Optional.of(professionalField));
+        when(userRepository.findAllById(any())).thenReturn(List.of(employee));
+        when(assignmentRepository.save(any(ExamAssignment.class))).thenAnswer(invocation -> {
+            ExamAssignment assignment = invocation.getArgument(0);
+            assignment.setId(20L);
+            savedAssignments.add(assignment);
+            return assignment;
+        });
+        when(targetRepository.save(any(ExamAssignmentTarget.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(any())).thenReturn(List.of());
+        when(targetRepository.countByAssignment(any())).thenReturn(1L);
+        when(attemptRepository.findByAssignmentOrderByStartedAtDesc(any())).thenReturn(List.of());
+
+        service.create(new CreateExamAssignmentRequest(
+                "Đợt kiểm tra tháng 7",
+                null,
+                paper.getId(),
+                professionalField.getId(),
+                List.of(employee.getId()),
+                null,
+                null,
+                null,
+                false,
+                null,
+                "null".equals(requested) ? null : Integer.valueOf(requested),
+                "SCORE_AND_ANSWERS",
+                "OPEN"
+        ), "admin");
+
+        assertThat(savedAssignments).isNotEmpty();
+        assertThat(savedAssignments.get(0).getMaxAttempts()).isEqualTo(expected);
     }
 
     private ExamAssignmentTarget target(ExamAssignment assignment, User user) {

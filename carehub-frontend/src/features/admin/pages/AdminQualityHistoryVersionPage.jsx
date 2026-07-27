@@ -15,10 +15,8 @@ import {
   UserSwitchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader'
-import AdminSidebar from '../components/AdminSidebar'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import MultiSearchSelect from '../../../shared/components/MultiSearchSelect.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
@@ -481,19 +479,16 @@ function AdminQualityHistoryVersionPage() {
   const returnTo = `${location.pathname}${location.search}`
 
   return (
-    <div className="dashboard-layout admin-quality-history-page">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ to: `/admin/quality/history?formId=${encodeURIComponent(formId)}`, label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Chất lượng' },
-            { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
-            { label: `Phiên bản v${version?.versionNumber || ''}` },
-          ]}
-        />
-
-        <main className="admin-quality-history admin-quality-history--version">
+    <AppShell
+      className="admin-quality-history-page"
+      back={{ to: `/admin/quality/history?formId=${encodeURIComponent(formId)}`, label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Chất lượng' },
+        { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
+        { label: `Phiên bản v${version?.versionNumber || ''}` },
+      ]}
+    >
+        <div className="admin-quality-history admin-quality-history--version">
           {metadataLoading ? (
             <section className="aqh-empty-state"><LoadingOutlined spin /><span>Đang tải thông tin phiên bản...</span></section>
           ) : metadataError ? (
@@ -631,8 +626,7 @@ function AdminQualityHistoryVersionPage() {
               </section>
             </>
           )}
-        </main>
-      </div>
+        </div>
 
       {managerModalOpen && (
         <div className="aqh-manager-modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !confirmRevoke) setManagerModalOpen(false) }} role="presentation">
@@ -646,7 +640,8 @@ function AdminQualityHistoryVersionPage() {
                 <form className="aqh-manager-assign" onSubmit={submitAssignment}>
                   <div className="aqh-manager-assign__field aqh-manager-assign__field--people">
                     <label htmlFor="aqh-manager-search">Người nhận mới</label>
-                    <MultiSearchSelect
+                    <SearchableSelect
+                      multiple
                       ariaLabel="Tìm và chọn người nhận mới"
                       disabled={managerBusy || !managerUsersLoaded}
                       emptyMessage="Không còn người nhận phù hợp"
@@ -688,8 +683,15 @@ function AdminQualityHistoryVersionPage() {
         </div>
       )}
 
-      <ConfirmModal danger isOpen={Boolean(confirmRevoke)} message={confirmRevoke ? `Thu hồi quyền thực hiện quy trình của ${getManagerName(confirmRevoke.manager)}?` : ''} onCancel={() => setConfirmRevoke(null)} onConfirm={revokeAssignment} title="Thu hồi phân quyền" />
-    </div>
+      <ConfirmModal
+        danger
+        isOpen={Boolean(confirmRevoke)}
+        message={confirmRevoke ? `Thu hồi quyền thực hiện quy trình của ${getManagerName(confirmRevoke.manager)}?` : ''}
+        onCancel={() => setConfirmRevoke(null)}
+        onConfirm={revokeAssignment}
+        title="Thu hồi phân quyền"
+      />
+    </AppShell>
   )
 }
 

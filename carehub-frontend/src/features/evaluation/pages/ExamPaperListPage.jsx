@@ -251,7 +251,7 @@ function ExamPaperListPage({
                     <div className="exp-info-strip">
                       <span>{expandedPaper._detail.totalQuestions} câu</span>
                       <span>{expandedPaper._detail.timeLimitMinutes} phút</span>
-                      <span>Đạt {expandedPaper._detail.passingScore}%</span>
+                      <span>Đạt {expandedPaper._detail.passingScore}/10</span>
                       <span>{expandedPaper._detail.examConfigName}</span>
                       <span>{expandedPaper._detail.questionSetName}</span>
                     </div>
@@ -270,7 +270,7 @@ function ExamPaperListPage({
                             <li>{question.optionC}</li>
                             <li>{question.optionD}</li>
                           </ol>
-                          {showAnswers && (
+                          {showAnswers && question.correctAnswer && (
                             <div className="exp-answer-box">
                               <strong>Đáp án đúng: {question.correctAnswer}</strong>
                               {question.explanation && <span>{question.explanation}</span>}

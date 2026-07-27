@@ -62,8 +62,10 @@ export function useDashboard() {
         const attempts = attemptsRes.data?.data?.content || attemptsRes.data?.data || []
         const attemptList = Array.isArray(attempts) ? attempts : []
         const gradedAttempts = attemptList.filter(a => a.status === 'GRADED' || a.status === 'SUBMITTED')
+        // Điểm ở thang 0-10 nên phải giữ 1 chữ số thập phân, làm tròn về số nguyên
+        // sẽ lệch tới 0,5 điểm so với màn Lịch sử thi.
         const avgScore = gradedAttempts.length > 0
-          ? Math.round(gradedAttempts.reduce((sum, a) => sum + (a.score || 0), 0) / gradedAttempts.length)
+          ? Math.round((gradedAttempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0) / gradedAttempts.length) * 10) / 10
           : 0
         const totalExamsDone = gradedAttempts.length
         const passedExams = gradedAttempts.filter(a => a.passed === true).length

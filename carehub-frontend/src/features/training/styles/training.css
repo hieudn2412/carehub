@@ -5,6 +5,13 @@
   padding: 32px;
 }
 
+/* Khi trang nằm trong AppShell, khung ngoài đã có nền + padding + scroll riêng */
+.app-shell__body .training-page {
+  min-height: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .training-header {
   align-items: center;
   display: flex;
@@ -473,7 +480,8 @@
   padding: 10px 12px;
 }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .training-page {
     padding: 20px;
   }

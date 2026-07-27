@@ -1,0 +1,59 @@
+/* ============================================================
+   Layout shell chuẩn của toàn app.
+   - .app-shell*      : tên chuẩn mới, dùng bởi AppShell.jsx
+   - .dashboard-*     : alias cho ~96 trang cũ tự lắp Sidebar+Header
+     (trước đây định nghĩa TRÙNG và KHÁC NHAU ở AdminSidebar.css
+     và StaffDashBoardScreen.css — đã gỡ, đây là nguồn duy nhất)
+   Trang migrate sang AppShell tới đâu thì alias thu hẹp tới đó.
+   ============================================================ */
+
+.app-shell,
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--bg);
+}
+
+.app-shell__content,
+.dashboard-layout__content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Tầng trung gian của các trang admin cũ (dashboard-root > dashboard-body) */
+.dashboard-root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.app-shell__body,
+.dashboard-body,
+.dashboard-layout__body {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px 28px 32px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* bp-md */
+@media (max-width: 1024px) {
+  .app-shell__body,
+  .dashboard-body,
+  .dashboard-layout__body {
+    padding: 18px 14px 28px;
+  }
+}

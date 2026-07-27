@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.form.submission;
 
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +89,7 @@ class FormSubmissionControllerIntegrationTest {
         userRoleRepository.save(UserRole.builder().user(manager).role(managerRole).build());
     }
 
+    @DisplayName("L2-SCR-01 | Happy Path: DRAFT → answers → SUBMITTED with lockVersion; scoringStatus CALCULATED, result PASSED; admin reads responses")
     @Test
     void managerCreatesAnswersAndSubmitsAssignedFormThenAdminReadsResponses() throws Exception {
         Fixture fixture = publishedAssignedForm();
@@ -174,6 +176,7 @@ class FormSubmissionControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].answers.length()", is(1)));
     }
 
+    @DisplayName("L2-SCR-02 | Constraint Violation: second draft for the same assignment+subject → 409; missing required answer → 422; foreign assignment → 404")
     @Test
     void duplicateDraftAndMissingRequiredAnswerReturnDomainErrors() throws Exception {
         Fixture fixture = publishedAssignedForm();
@@ -212,6 +215,7 @@ class FormSubmissionControllerIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @DisplayName("L2-SCR-03 | Happy Path: admin direct evaluation from a published version stores assignment_item_id = NULL")
     @Test
     void adminCreatesDirectSubmissionFromPublishedVersionWithoutAssignment() throws Exception {
         Fixture fixture = publishedAssignedForm();

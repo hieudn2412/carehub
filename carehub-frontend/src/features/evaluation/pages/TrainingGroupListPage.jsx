@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import TrainingGroupFormPage from './TrainingGroupFormPage'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
-import '../styles/TrainingGroupListPage.css'
 
 function TrainingGroupListPage() {
   const { showToast } = useToast()
@@ -17,6 +16,7 @@ function TrainingGroupListPage() {
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingGroup, setEditingGroup] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const loadGroups = useCallback(async () => {
     setIsLoading(true)
@@ -53,8 +53,10 @@ function TrainingGroupListPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (group) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa nhóm "${group.name}"?`)) return
+  const confirmDelete = async () => {
+    const group = deleteTarget
+    setDeleteTarget(null)
+    if (!group) return
     try {
       await trainingGroupApi.delete(group.id)
       showToast('Đã xóa nhóm đào tạo', 'success')
@@ -71,77 +73,71 @@ function TrainingGroupListPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader title="Nhóm đào tạo" />
-        <div className="dashboard-layout__body">
-          <div className="page-toolbar">
-            <div className="page-toolbar__search">
-              <SearchOutlined />
-              <input
-                type="text"
-                placeholder="Tìm kiếm nhóm đào tạo..."
-                value={keyword}
-                onChange={(e) => { setKeyword(e.target.value); setPage(0) }}
-              />
-            </div>
-            <button className="btn btn--primary" onClick={handleCreate}>
-              <PlusOutlined /> Tạo nhóm mới
-            </button>
-          </div>
-
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Tên nhóm</th>
-                  <th>Mô tả</th>
-                  <th>Số thành viên</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr><td colSpan={5} className="text-center">Đang tải...</td></tr>
-                ) : displayRows.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center">Chưa có nhóm đào tạo nào</td></tr>
-                ) : (
-                  displayRows.map(group => (
-                    <tr key={group.id}>
-                      <td><strong>{group.name}</strong></td>
-                      <td>{group.description || '—'}</td>
-                      <td>{group.memberCount}</td>
-                      <td>
-                        <span className={`status-badge status-badge--${group.active ? 'active' : 'inactive'}`}>
-                          {group.active ? 'Hoạt động' : 'Đã khóa'}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="btn-icon" title="Sửa" onClick={() => handleEdit(group)}>
-                          <EditOutlined />
-                        </button>
-                        <button className="btn-icon btn-icon--danger" title="Xóa" onClick={() => handleDelete(group)}>
-                          <DeleteOutlined />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Trước</button>
-              <span>Trang {page + 1} / {totalPages}</span>
-              <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</button>
-            </div>
-          )}
+    <AppShell title="Nhóm đào tạo">
+      <div className="ch-toolbar">
+        <div className="ch-search">
+          <SearchOutlined />
+          <input
+            type="text"
+            placeholder="Tìm kiếm nhóm đào tạo..."
+            value={keyword}
+            onChange={(e) => { setKeyword(e.target.value); setPage(0) }}
+          />
         </div>
+        <button className="ch-btn ch-btn--primary" onClick={handleCreate}>
+          <PlusOutlined /> Tạo nhóm mới
+        </button>
       </div>
+
+      <div className="ch-table-wrap">
+        <table className="ch-table">
+          <thead>
+            <tr>
+              <th>Tên nhóm</th>
+              <th>Mô tả</th>
+              <th>Số thành viên</th>
+              <th>Trạng thái</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              <tr><td colSpan={5} className="ch-empty">Đang tải...</td></tr>
+            ) : displayRows.length === 0 ? (
+              <tr><td colSpan={5} className="ch-empty">Chưa có nhóm đào tạo nào</td></tr>
+            ) : (
+              displayRows.map(group => (
+                <tr key={group.id}>
+                  <td><strong>{group.name}</strong></td>
+                  <td>{group.description || '—'}</td>
+                  <td>{group.memberCount}</td>
+                  <td>
+                    <span className={`ch-badge ch-badge--${group.active ? 'green' : 'neutral'}`}>
+                      {group.active ? 'Hoạt động' : 'Đã khóa'}
+                    </span>
+                  </td>
+                  <td>
+                    <button className="ch-btn-icon" title="Sửa" aria-label="Sửa nhóm" onClick={() => handleEdit(group)}>
+                      <EditOutlined />
+                    </button>
+                    <button className="ch-btn-icon ch-btn-icon--danger" title="Xóa" aria-label="Xóa nhóm" onClick={() => setDeleteTarget(group)}>
+                      <DeleteOutlined />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="ch-pagination">
+          <button disabled={page === 0} onClick={() => setPage(p => p - 1)}>Trước</button>
+          <span>Trang {page + 1} / {totalPages}</span>
+          <button disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</button>
+        </div>
+      )}
 
       {isModalOpen && (
         <TrainingGroupFormPage
@@ -149,7 +145,18 @@ function TrainingGroupListPage() {
           onClose={handleModalClose}
         />
       )}
-    </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Xóa nhóm đào tạo"
+          message={`Bạn có chắc muốn xóa nhóm "${deleteTarget.name}"?`}
+          confirmLabel="Xóa"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+    </AppShell>
   )
 }
 

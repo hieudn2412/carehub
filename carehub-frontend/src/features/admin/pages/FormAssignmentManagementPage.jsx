@@ -8,10 +8,9 @@ import {
   StopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader'
-import AdminSidebar from '../components/AdminSidebar'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
-import MultiSearchSelect from '../../../shared/components/MultiSearchSelect.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/FormAssignmentManagementPage.css'
@@ -243,12 +242,7 @@ function FormAssignmentManagementPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: `/admin/quality/checklists/${id}/detail`, label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: `/admin/quality/checklists/${id}/detail`, label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="fam-page">
               <section className="fam-hero">
                 <div>
@@ -301,7 +295,8 @@ function FormAssignmentManagementPage() {
                   <div className="fam-form-fields">
                     <div className="fam-field">
                       <span>Người nhận</span>
-                      <MultiSearchSelect
+                      <SearchableSelect
+                        multiple
                         disabled={loading || submitting || !publishedVersion?.id}
                         onChange={setSelectedManagerIds}
                         options={availableManagers.map((manager) => ({
@@ -433,9 +428,6 @@ function FormAssignmentManagementPage() {
                 </section>
               </section>
             </div>
-          </main>
-        </div>
-      </div>
 
       <ConfirmModal
         danger
@@ -449,7 +441,7 @@ function FormAssignmentManagementPage() {
         onConfirm={revokeAssignment}
         title="Thu hồi phân quyền"
       />
-    </div>
+    </AppShell>
   )
 }
 

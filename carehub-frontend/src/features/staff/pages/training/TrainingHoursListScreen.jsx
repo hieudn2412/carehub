@@ -9,8 +9,7 @@ import {
   EyeOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
@@ -99,15 +98,11 @@ function TrainingHoursListScreen() {
   const progressPct = requiredHours > 0 ? Math.min(Math.round((totalSubmittedHours / requiredHours) * 100), 100) : 0
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header breadcrumbs={[
-          { label: 'Tổng quan', link: dashboardPath },
-          { label: 'Giờ đào tạo liên tục' }
-        ]} />
-        <div className="dashboard-layout__body">
-          <div className="training-page">
+    <AppShell breadcrumbs={[
+      { label: 'Tổng quan', link: dashboardPath },
+      { label: 'Giờ đào tạo liên tục' }
+    ]}>
+      <div className="training-page">
 
             {/* Compliance Summary Banner */}
             <div className={`th-compliance-banner ${
@@ -163,8 +158,20 @@ function TrainingHoursListScreen() {
                   onChange={e => { setSearch(e.target.value); setPage(0) }}
                   placeholder="Tìm theo nội dung đào tạo..."
                   className="th-search-input"
+                  aria-label="Tìm theo tên khóa đào tạo"
                 />
               </div>
+              <select
+                value={status}
+                onChange={e => { setStatus(e.target.value); setPage(0) }}
+                className="th-filter-select"
+                aria-label="Lọc theo trạng thái hồ sơ"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="SUBMITTED">Đã nộp</option>
+                <option value="DRAFT">Nháp</option>
+                <option value="CANCELLED">Đã hủy</option>
+              </select>
               <button className="th-btn-primary" onClick={() => navigate('/staff/training/new')}>
                 <PlusOutlined /> Cập nhật giờ đào tạo
               </button>
@@ -203,7 +210,7 @@ function TrainingHoursListScreen() {
                     <tbody>
                       {records.map(r => (
                         <tr key={r.id} onClick={() => navigate(`/staff/training/${r.id}`)} className="th-clickable-row">
-                          <td>
+                          <td data-label="Ngày bắt đầu">
                             <span className="th-training-date">{formatDate(r.startDate)}</span>
                             {r.expired && (
                               <span className="th-expired-tag" title={`Hết hạn từ ${formatDate(r.validUntil)}`}>
@@ -211,12 +218,26 @@ function TrainingHoursListScreen() {
                               </span>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Khóa đào tạo">
                             <span className="th-record-title">{r.title}</span>
                             {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
                           </td>
-                          <td className="th-col-num"><strong>{r.declaredHours}h</strong></td>
-                          <td className="th-col-center">
+                          <td className="th-col-num" data-label="Số giờ"><strong>{r.declaredHours}h</strong></td>
+                          <td data-label="Ngày nộp">
+                            {r.workflowStatus === 'SUBMITTED' ? (
+                              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
+                                {formatDate(r.submittedAt)}
+                              </span>
+                            ) : (
+                              <span className={`th-badge th-badge--${
+                                r.workflowStatus === 'CANCELLED' ? 'danger' : 'warning'
+                              }`}>
+                                {getStatusLabel(r.workflowStatus)}
+                              </span>
+                            )}
+                          </td>
+                          <td className="th-col-center" data-label="Minh chứng">
+
                             {r.evidenceCount > 0 ? (
                               <span className="th-evidence-count">
                                 <PaperClipOutlined /> {r.evidenceCount}
@@ -225,14 +246,44 @@ function TrainingHoursListScreen() {
                               <span className="th-evidence-none">-</span>
                             )}
                           </td>
-                          <td className="th-col-actions">
+                          <td className="th-col-actions" data-label="Thao tác">
                             <div className="th-actions" onClick={e => e.stopPropagation()}>
+                              {r.workflowStatus === 'DRAFT' && (
+                                <button
+                                  className="th-action-btn th-action-btn--submit"
+                                  onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
+                                  disabled={submittingId === r.id}
+                                  title="Nộp hồ sơ"
+                                  aria-label={`Nộp hồ sơ ${r.title}`}
+                                >
+                                  <SendOutlined />
+                                </button>
+                              )}
                               <button
                                 className="th-action-btn th-action-btn--view"
                                 onClick={() => navigate(`/staff/training/${r.id}`)}
                                 title="Xem chi tiết"
+                                aria-label={`Xem chi tiết ${r.title}`}
                               >
                                 <EyeOutlined />
+                              </button>
+                              {r.workflowStatus === 'DRAFT' && (
+                                <button
+                                  className="th-action-btn th-action-btn--edit"
+                                  onClick={() => navigate(`/staff/training/${r.id}/edit`)}
+                                  title="Chỉnh sửa"
+                                  aria-label={`Chỉnh sửa ${r.title}`}
+                                >
+                                  <EditOutlined />
+                                </button>
+                              )}
+                              <button
+                                className="th-action-btn th-action-btn--evidence"
+                                onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
+                                title="Minh chứng"
+                                aria-label={`Quản lý minh chứng ${r.title}`}
+                              >
+                                <PaperClipOutlined />
                               </button>
                             </div>
                           </td>
@@ -246,7 +297,7 @@ function TrainingHoursListScreen() {
                       Hiển thị {records.length} / {totalElements} kết quả
                     </span>
                     <div className="th-pagination-pages">
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+                      <button className="th-page-btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Trang trước">
                         <LeftOutlined />
                       </button>
                       {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
@@ -256,12 +307,14 @@ function TrainingHoursListScreen() {
                             key={pageNum}
                             className={`th-page-btn ${page === pageNum ? 'th-page-btn--active' : ''}`}
                             onClick={() => setPage(pageNum)}
+                            aria-label={`Trang ${pageNum + 1}`}
+                            aria-current={page === pageNum ? 'page' : undefined}
                           >
                             {pageNum + 1}
                           </button>
                         )
                       })}
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}>
+                      <button className="th-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Trang sau">
                         <RightOutlined />
                       </button>
                     </div>
@@ -269,10 +322,8 @@ function TrainingHoursListScreen() {
                 </>
               )}
             </div>
-          </div>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -55,7 +55,10 @@ ai:
     api-key: ${GENERATION_API_KEY:${DEEPSEEK_API_KEY:}}
     model: ${GENERATION_MODEL:deepseek-v4-flash}
     fallback-model: ${GENERATION_FALLBACK_MODEL:deepseek-v4-pro}
-    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v2}
+    # Nằm trong khoá idempotency — PHẢI tăng mỗi khi nội dung prompt đổi, nếu không các chunk
+    # đã xử lý sẽ không bao giờ được sinh lại bằng prompt mới.
+    # v3: định nghĩa rõ generationEligible + yêu cầu sourceExcerpt trích nguyên văn.
+    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v3}
     pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
     connect-timeout-seconds: ${GENERATION_CONNECT_TIMEOUT_SECONDS:10}
@@ -136,9 +139,15 @@ document:
     min-useful-text-length: ${DOCUMENT_CHUNK_MIN_USEFUL_TEXT_LENGTH:80}
 
 validation:
+  # Ngưỡng cosine cho chống trùng ngữ nghĩa (embedding E5, thang 0-1).
+  # Hiệu chỉnh trên 270 câu hỏi seed thật (36.315 cặp): p50=0,832  p99=0,889  max=0,973.
+  # Thang điểm của E5 bị nén trong dải hẹp nên ngưỡng cũ 0,80 nằm DƯỚI trung vị và gắn cờ
+  # "có khả năng trùng" cho 94,7% số cặp — hàng đợi duyệt ngập cảnh báo giả.
+  # Đây là số từ dữ liệu seed. Đo lại trên ngân hàng thật bằng:
+  #   RUN_E5_CALIBRATION=true ./mvnw.cmd test -Dtest=E5SimilarityCalibrationTest
   duplicate:
-    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.93}
-    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.80}
+    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.95}   # >= : loại thẳng (~0,01% số cặp)
+    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.88}   # >= : gắn cờ xem lại (~2,4% số cặp)
   quality:
     reject-min: ${VALIDATION_QUALITY_REJECT_MIN:0.55}
 

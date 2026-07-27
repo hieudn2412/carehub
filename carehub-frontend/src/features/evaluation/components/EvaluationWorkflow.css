@@ -79,7 +79,8 @@
 
 .evaluation-workflow__step.is-complete .evaluation-workflow__link { color: #0f766e; }
 
-@media (max-width: 760px) {
+/* bp-sm */
+@media (max-width: 768px) {
   .evaluation-workflow { align-items: flex-start; flex-direction: column; gap: 5px; width: 100%; }
   .evaluation-workflow__steps { width: 100%; max-width: 100%; overflow-x: auto; padding: 0 0 4px; scrollbar-width: thin; }
   .evaluation-workflow__link { padding-inline: 8px; }

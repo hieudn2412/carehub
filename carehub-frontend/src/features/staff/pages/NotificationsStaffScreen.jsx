@@ -11,26 +11,18 @@ import {
   InfoCircleOutlined,
   LinkOutlined,
   CloseOutlined,
-  LoadingOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../components/sidebar'
-import Header from '../components/Header'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
+import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
-import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import '../styles/NotificationsStaffScreen.css'
 
 function NotificationsStaffScreen() {
   const { showToast } = useToast()
-  
-  const accessToken = tokenStorage.getAccessToken()
-  const roles = getRolesFromAccessToken(accessToken)
-  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
-  
+
   const breadcrumbs = [
     { label: 'Hệ thống' },
     { label: 'Thông báo của tôi' }
@@ -222,12 +214,8 @@ function NotificationsStaffScreen() {
   const hasUnread = notifications.some(n => !n.read)
 
   return (
-    <div className="dashboard-layout">
-      {isAdmin ? <AdminSidebar /> : <Sidebar />}
-      <div className="dashboard-layout__content">
-        {isAdmin ? <AdminHeader breadcrumbs={breadcrumbs} /> : <Header title="Thông báo" />}
-        <div className="dashboard-layout__body">
-          <div className="notify-page-container">
+    <AppShell title="Thông báo" breadcrumbs={breadcrumbs}>
+      <div className="notify-page-container">
             <div className="notify-card">
               <div className="notify-card__title-area">
                 <div>
@@ -260,7 +248,7 @@ function NotificationsStaffScreen() {
                 </div>
 
                 <div className="notify-actions-row">
-                  <div className="training-search-container" style={{ minWidth: '240px' }}>
+                  <div className="training-search-container notify-search-box">
                     <input
                       type="text"
                       className="training-search-input"
@@ -283,17 +271,13 @@ function NotificationsStaffScreen() {
 
               {/* Danh sách thông báo */}
               {loading ? (
-                <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>
-                  Đang tải danh sách thông báo...
-                </div>
+                <LoadingState label="Đang tải danh sách thông báo..." />
               ) : error ? (
                 <div style={{ padding: '40px 0', textAlign: 'center', color: '#ef4444' }}>
                   {error}
                 </div>
               ) : notifications.length === 0 ? (
-                <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>
-                  Không có thông báo nào được tìm thấy.
-                </div>
+                <EmptyState>Không có thông báo nào được tìm thấy.</EmptyState>
               ) : (
                 <div className="notify-list">
                   {notifications.map((n) => (
@@ -380,8 +364,6 @@ function NotificationsStaffScreen() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
       </div>
 
       {/* Detail Modal Overlay */}
@@ -393,9 +375,7 @@ function NotificationsStaffScreen() {
             </button>
             
             {detailLoading ? (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: '#6b7280' }}>
-                <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải chi tiết thông báo...
-              </div>
+              <LoadingState label="Đang tải chi tiết thông báo..." />
             ) : (
               <>
                 <div className="notify-modal-header">
@@ -438,7 +418,7 @@ function NotificationsStaffScreen() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

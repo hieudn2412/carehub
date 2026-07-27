@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi.js'
 import '../styles/ReferenceEmployeeDetailPage.css'
 
@@ -54,12 +54,7 @@ function ReferenceEmployeeDetailPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="red-page">
               
               {/* Title Card */}
@@ -72,11 +67,11 @@ function ReferenceEmployeeDetailPage() {
 
               {/* Detail Card Content */}
               {loading ? (
-                <div className="red-card" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                  Đang tải thông tin chi tiết nhân viên...
+                <div className="red-card">
+                  <LoadingState label="Đang tải thông tin chi tiết nhân viên..." />
                 </div>
               ) : error ? (
-                <div className="red-card" style={{ textAlign: 'center', padding: '40px 0', color: '#dc2626' }}>
+                <div className="red-card red-card--error">
                   {error}
                 </div>
               ) : employee ? (
@@ -135,10 +130,7 @@ function ReferenceEmployeeDetailPage() {
               ) : null}
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

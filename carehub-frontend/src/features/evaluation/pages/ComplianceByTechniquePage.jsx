@@ -4,10 +4,7 @@ import {
   EyeOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
@@ -99,18 +96,10 @@ function ComplianceByTechniquePage() {
     { label: 'Tuân thủ quy trình, quy định' },
   ]
 
-  const Layout = isAdmin ? AdminSidebar : Sidebar
-  const PageHeader = isAdmin ? AdminHeader : Header
-
   const totalCount = data?.items ? data.items.length : 0
 
   return (
-    <div className="dashboard-layout">
-      <Layout />
-      <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined}>
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
@@ -122,12 +111,9 @@ function ComplianceByTechniquePage() {
                 </button>
               </section>
 
-              <section className="evd-filter-bar" style={{
-                display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap',
-                marginBottom: 16, padding: '12px 16px', background: '#f9fafb', borderRadius: 8,
-              }}>
+              <section className="evd-filter-bar evd-x-filter-bar">
                 {isAdmin && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 220 }}>
+                  <div className="evd-x-filter-field evd-x-filter-field--wide">
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
                     <SearchableSelect
                       value={departmentId}
@@ -143,27 +129,27 @@ function ComplianceByTechniquePage() {
                   </div>
                 )}
                 {!isAdmin && departments.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div className="evd-x-filter-field">
                     <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
                     <span style={{ padding: '7px 0', color: '#374151', fontSize: 13, fontWeight: 600 }}>
                       {departments[0].name}
                     </span>
                   </div>
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="evd-x-filter-field">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Tên nhân viên</label>
                   <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Tìm theo tên nhân viên"
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, minWidth: 220 }} />
+                    className="evd-x-input evd-x-input--wide" />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="evd-x-filter-field">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
                   <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+                    className="evd-x-input" />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className="evd-x-filter-field">
                   <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Đến ngày</label>
                   <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }} />
+                    className="evd-x-input" />
                 </div>
               </section>
 
@@ -182,7 +168,7 @@ function ComplianceByTechniquePage() {
                 </section>
               )}
 
-              <div className="evd-card" style={{ overflow: 'auto' }}>
+              <div className="evd-card evd-x-table-card">
                 <table className="evd-table">
                   <thead>
                     <tr>
@@ -195,13 +181,13 @@ function ComplianceByTechniquePage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={4} className="ch-empty">
                           Đang tải dữ liệu...
                         </td>
                       </tr>
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
-                        <td colSpan={4} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                        <td colSpan={4} className="ch-empty">
                           {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
                         </td>
                       </tr>
@@ -240,10 +226,7 @@ function ComplianceByTechniquePage() {
                 </table>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

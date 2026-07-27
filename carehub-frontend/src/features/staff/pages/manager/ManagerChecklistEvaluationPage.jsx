@@ -5,8 +5,8 @@ import {
   SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
-import Sidebar from '../../components/sidebar'
-import Header from '../../components/Header'
+import AppShell from '../../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { adminApi } from '../../../admin/api/adminApi.js'
@@ -360,9 +360,8 @@ function ManagerChecklistEvaluationPage() {
       case 'DROPDOWN':
         return (
           <select
-            className="mgr-select"
+            className="mgr-select mgr-eval-select"
             onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            style={{ minWidth: 280 }}
             value={value}
           >
             <option value="">Chọn một đáp án</option>
@@ -430,238 +429,205 @@ function ManagerChecklistEvaluationPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header
-          back={{ to: listPath, label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Tuân thủ quy trình, quy định', link: listPath },
-            { label: 'Thực hiện đánh giá' },
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Thực hiện đánh giá quy trình</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-              {assignedForm?.title || 'Đang tải checklist được phân quyền...'}
-            </p>
+    <AppShell
+      back={{ to: listPath, label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Tuân thủ quy trình, quy định', link: listPath },
+        { label: 'Thực hiện đánh giá' },
+      ]}
+    >
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Thực hiện đánh giá quy trình</h1>
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
+          {assignedForm?.title || 'Đang tải checklist được phân quyền...'}
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="mgr-card">
+          <LoadingState label="Đang tải checklist..." />
+        </div>
+      ) : errorMessage ? (
+        <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>
+          {errorMessage}
+        </div>
+      ) : (
+        <div className="mgr-card">
+          <div style={{ marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 20 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
+              Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <div className="mgr-eval-lookup-row">
+              <input
+                className="mgr-select mgr-eval-lookup-input"
+                disabled={subjectLoading}
+                onChange={(event) => {
+                  setEmployeeCode(event.target.value)
+                  setSubjectSuggestion(null)
+                  setSubjectDetails(null)
+                  setSubmission(null)
+                  setSubjectError('')
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    handleSubjectLookup()
+                  }
+                }}
+                placeholder="Nhập mã nhân viên, ví dụ: NV001"
+                type="text"
+                value={employeeCode}
+              />
+              <button
+                className="training-button training-button--primary mgr-eval-lookup-btn"
+                disabled={subjectLoading || !employeeCode.trim()}
+                onClick={() => handleSubjectLookup()}
+                type="button"
+              >
+                {subjectLoading ? <LoadingOutlined spin /> : null}
+                Tìm nhân viên
+              </button>
+              {subjectLoading && (
+                <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  Đang tra cứu...
+                </span>
+              )}
+            </div>
+            {subjectError && (
+              <p style={{ color: '#ef4444', margin: '8px 0 0', fontSize: 13 }}>{subjectError}</p>
+            )}
+            {subjectSuggestion && (
+              <button
+                onClick={() => handleConfirmSubject(subjectSuggestion)}
+                className="mgr-eval-suggest"
+                type="button"
+              >
+                <span className="mgr-eval-suggest__info">
+                  <span style={{ color: '#00866b', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' }}>
+                    Kết quả tìm thấy
+                  </span>
+                  <strong style={{ color: '#0f172a', fontSize: 14 }}>
+                    {subjectSuggestion.fullName || 'Chưa có tên'} ({subjectSuggestion.employeeCode})
+                  </strong>
+                  <span style={{ color: '#64748b', fontSize: 13 }}>
+                    {subjectSuggestion.department || 'Chưa có khoa/phòng'}
+                  </span>
+                </span>
+                <span style={{
+                  background: '#00866b',
+                  borderRadius: 999,
+                  boxShadow: '0 8px 18px rgba(0, 134, 107, 0.18)',
+                  color: '#ffffff',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  padding: '8px 12px',
+                }}>
+                  Chọn nhân viên này
+                </span>
+              </button>
+            )}
+            {subjectDetails && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ color: '#00866b', fontSize: 12, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>
+                  Đã chọn nhân viên
+                </div>
+                <div className="mgr-kv-grid">
+                  <div className="mgr-kv-item">
+                    <span className="mgr-kv-label">Họ tên</span>
+                    <span className="mgr-kv-val">{subjectDetails.fullName}</span>
+                  </div>
+                  <div className="mgr-kv-item">
+                    <span className="mgr-kv-label">Mã nhân viên</span>
+                    <span className="mgr-kv-val">{subjectDetails.employeeCode}</span>
+                  </div>
+                  <div className="mgr-kv-item">
+                    <span className="mgr-kv-label">Khoa phòng</span>
+                    <span className="mgr-kv-val">{subjectDetails.department || 'Chưa có'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="mgr-card" style={{ minHeight: 220, display: 'grid', placeItems: 'center', color: '#64748b' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <LoadingOutlined spin /> Đang tải checklist...
-              </span>
-            </div>
-          ) : errorMessage ? (
-            <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>
-              {errorMessage}
-            </div>
-          ) : (
-            <div className="mgr-card">
-              <div style={{ marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 20 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
-                  Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
-                  <input
-                    className="mgr-select"
-                    disabled={subjectLoading}
-                    onChange={(event) => {
-                      setEmployeeCode(event.target.value)
-                      setSubjectSuggestion(null)
-                      setSubjectDetails(null)
-                      setSubmission(null)
-                      setSubjectError('')
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') {
-                        event.preventDefault()
-                        handleSubjectLookup()
-                      }
-                    }}
-                    placeholder="Nhập mã nhân viên, ví dụ: NV001"
-                    style={{ cursor: 'text', maxWidth: 320, width: '100%' }}
-                    type="text"
-                    value={employeeCode}
-                  />
-                  <button
-                    className="training-button training-button--primary"
-                    disabled={subjectLoading || !employeeCode.trim()}
-                    onClick={() => handleSubjectLookup()}
-                    style={{
-                      borderRadius: 8,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      height: 38,
-                      fontSize: 13.5,
-                    }}
-                    type="button"
-                  >
-                    {subjectLoading ? <LoadingOutlined spin /> : null}
-                    Tìm nhân viên
-                  </button>
-                  {subjectLoading && (
-                    <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      Đang tra cứu...
-                    </span>
-                  )}
-                </div>
-                {subjectError && (
-                  <p style={{ color: '#ef4444', margin: '8px 0 0', fontSize: 13 }}>{subjectError}</p>
+          <div className="mgr-eval-section">
+            <div className="mgr-eval-section-title">Tiêu chí kiểm tra đánh giá</div>
+
+            {sections.map((section) => (
+              <div key={section.sectionKey || section.id} style={{ marginBottom: 18 }}>
+                {section.title && (
+                  <h2 style={{ fontSize: 16, margin: '0 0 6px', color: '#0f172a' }}>{section.title}</h2>
                 )}
-                {subjectSuggestion && (
-                  <button
-                    onClick={() => handleConfirmSubject(subjectSuggestion)}
-                    style={{
-                      alignItems: 'center',
-                      background: '#f0fdf4',
-                      border: '1px solid #34d399',
-                      borderRadius: 10,
-                      boxShadow: '0 10px 24px rgba(16, 185, 129, 0.12)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      marginTop: 12,
-                      padding: '12px 14px',
-                      textAlign: 'left',
-                      width: '100%',
-                    }}
-                    type="button"
-                  >
-                    <span style={{ display: 'grid', gap: 3 }}>
-                      <span style={{ color: '#00866b', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' }}>
-                        Kết quả tìm thấy
-                      </span>
-                      <strong style={{ color: '#0f172a', fontSize: 14 }}>
-                        {subjectSuggestion.fullName || 'Chưa có tên'} ({subjectSuggestion.employeeCode})
-                      </strong>
-                      <span style={{ color: '#64748b', fontSize: 13 }}>
-                        {subjectSuggestion.department || 'Chưa có khoa/phòng'}
-                      </span>
-                    </span>
-                    <span style={{
-                      background: '#00866b',
-                      borderRadius: 999,
-                      boxShadow: '0 8px 18px rgba(0, 134, 107, 0.18)',
-                      color: '#ffffff',
-                      fontSize: 12,
-                      fontWeight: 800,
-                      padding: '8px 12px',
-                    }}>
-                      Chọn nhân viên này
-                    </span>
-                  </button>
+                {section.description && (
+                  <p style={{ fontSize: 13, margin: '0 0 12px', color: '#64748b' }}>{section.description}</p>
                 )}
-                {subjectDetails && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ color: '#00866b', fontSize: 12, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>
-                      Đã chọn nhân viên
+
+                {sortByDisplayOrder(section.items || []).map((item) => {
+                  if (item.itemType !== 'QUESTION' || !item.question) {
+                    return item.description ? (
+                      <div key={item.itemKey || item.id} className="mgr-eval-question">
+                        {item.title && <strong>{item.title}</strong>}
+                        <p style={{ margin: item.title ? '6px 0 0' : 0 }}>{item.description}</p>
+                      </div>
+                    ) : null
+                  }
+
+                  const question = item.question
+
+                  return (
+                    <div key={question.questionKey} className="mgr-eval-question">
+                      <div className="mgr-eval-question-text">
+                        {question.title}
+                        {question.critical && (
+                          <span className="mgr-badge mgr-badge--red" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
+                            ★ Trọng yếu
+                          </span>
+                        )}
+                        {!question.excludeFromScore && (
+                          <span className="mgr-badge mgr-badge--blue" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
+                            {getQuestionWeightPercent(question).toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                      {question.helpText && (
+                        <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>{question.helpText}</p>
+                      )}
+                      {renderQuestionField(question)}
                     </div>
-                    <div className="mgr-kv-grid">
-                      <div className="mgr-kv-item">
-                        <span className="mgr-kv-label">Họ tên</span>
-                        <span className="mgr-kv-val">{subjectDetails.fullName}</span>
-                      </div>
-                      <div className="mgr-kv-item">
-                        <span className="mgr-kv-label">Mã nhân viên</span>
-                        <span className="mgr-kv-val">{subjectDetails.employeeCode}</span>
-                      </div>
-                      <div className="mgr-kv-item">
-                        <span className="mgr-kv-label">Khoa phòng</span>
-                        <span className="mgr-kv-val">{subjectDetails.department || 'Chưa có'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  )
+                })}
               </div>
+            ))}
+          </div>
 
-              <div className="mgr-eval-section">
-                <div className="mgr-eval-section-title">Tiêu chí kiểm tra đánh giá</div>
-
-                {sections.map((section) => (
-                  <div key={section.sectionKey || section.id} style={{ marginBottom: 18 }}>
-                    {section.title && (
-                      <h2 style={{ fontSize: 16, margin: '0 0 6px', color: '#0f172a' }}>{section.title}</h2>
-                    )}
-                    {section.description && (
-                      <p style={{ fontSize: 13, margin: '0 0 12px', color: '#64748b' }}>{section.description}</p>
-                    )}
-
-                    {sortByDisplayOrder(section.items || []).map((item) => {
-                      if (item.itemType !== 'QUESTION' || !item.question) {
-                        return item.description ? (
-                          <div key={item.itemKey || item.id} className="mgr-eval-question">
-                            {item.title && <strong>{item.title}</strong>}
-                            <p style={{ margin: item.title ? '6px 0 0' : 0 }}>{item.description}</p>
-                          </div>
-                        ) : null
-                      }
-
-                      const question = item.question
-
-                      return (
-                        <div key={question.questionKey} className="mgr-eval-question">
-                          <div className="mgr-eval-question-text">
-                            {question.title}
-                            {question.critical && (
-                              <span className="mgr-badge mgr-badge--red" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
-                                ★ Trọng yếu
-                              </span>
-                            )}
-                            {!question.excludeFromScore && (
-                              <span className="mgr-badge mgr-badge--blue" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
-                                {getQuestionWeightPercent(question).toFixed(2)}%
-                              </span>
-                            )}
-                          </div>
-                          {question.helpText && (
-                            <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>{question.helpText}</p>
-                          )}
-                          {renderQuestionField(question)}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
-                <button
-                  onClick={() => navigate(listPath)}
-                  className="training-button"
-                  style={{ height: 38, borderRadius: 8, fontSize: 13.5 }}
-                  disabled={submitting}
-                  type="button"
-                >
-                  Hủy bỏ
-                </button>
-                <button
-                  onClick={() => handleSubmit(true)}
-                  className="training-button"
-                  style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
-                  disabled={submitting}
-                  type="button"
-                >
-                  <SaveOutlined /> Lưu bản nháp
-                </button>
-                <button
-                  onClick={() => handleSubmit(false)}
-                  className="training-button training-button--primary"
-                  style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13.5 }}
-                  disabled={submitting}
-                  type="button"
-                >
-                  {submitting ? <LoadingOutlined spin /> : <SendOutlined />} Nộp kết quả
-                </button>
-              </div>
-            </div>
-          )}
+          <div className="mgr-eval-actions">
+            <button
+              onClick={() => navigate(listPath)}
+              className="training-button mgr-eval-action-btn"
+              disabled={submitting}
+              type="button"
+            >
+              Hủy bỏ
+            </button>
+            <button
+              onClick={() => handleSubmit(true)}
+              className="training-button mgr-eval-action-btn"
+              disabled={submitting}
+              type="button"
+            >
+              <SaveOutlined /> Lưu bản nháp
+            </button>
+            <button
+              onClick={() => handleSubmit(false)}
+              className="training-button training-button--primary mgr-eval-action-btn"
+              disabled={submitting}
+              type="button"
+            >
+              {submitting ? <LoadingOutlined spin /> : <SendOutlined />} Nộp kết quả
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
+    </AppShell>
   )
 }
 

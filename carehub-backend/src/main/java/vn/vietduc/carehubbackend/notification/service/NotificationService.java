@@ -117,7 +117,10 @@ public class NotificationService {
                 .dedupKey(dedupKey)
                 .read(false)
                 .build();
-        return NotificationResponse.from(notificationRepository.save(notification));
+        // saveAndFlush: thông báo thường được ghi từ listener chạy ở pha AFTER_COMMIT, nơi
+        // EntityManager của transaction cũ vẫn còn gắn với thread. save() thường sẽ hoãn INSERT
+        // và bản ghi không bao giờ xuống DB (triệu chứng: id trả về null).
+        return NotificationResponse.from(notificationRepository.saveAndFlush(notification));
     }
 
     private void applyReadStatus(Notification notification, boolean read) {

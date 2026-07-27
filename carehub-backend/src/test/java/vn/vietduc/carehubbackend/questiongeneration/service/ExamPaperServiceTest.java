@@ -22,6 +22,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
@@ -61,6 +62,7 @@ class ExamPaperServiceTest {
         private final QuestionSetVersionItemRepository questionSetVersionItemRepository = mock(
                         QuestionSetVersionItemRepository.class);
         private final QuestionBankQuestionRepository questionRepository = mock(QuestionBankQuestionRepository.class);
+        private final ExamAssignmentRepository examAssignmentRepository = mock(ExamAssignmentRepository.class);
         private final AtomicLong ids = new AtomicLong(200);
         private final List<ExamPaperQuestion> savedQuestions = new ArrayList<>();
         private final List<ExamPaperQuestionSnapshot> savedSnapshots = new ArrayList<>();
@@ -80,7 +82,8 @@ class ExamPaperServiceTest {
                                 questionSetItemRepository,
                                 questionSetVersionRepository,
                                 questionSetVersionItemRepository,
-                                questionRepository);
+                                questionRepository,
+                                examAssignmentRepository);
                 category = QuestionCategory.builder()
                                 .id(10L)
                                 .name("An toàn người bệnh")

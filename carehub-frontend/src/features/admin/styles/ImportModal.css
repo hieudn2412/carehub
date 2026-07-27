@@ -231,7 +231,7 @@
 .im-table-wrapper {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
@@ -270,12 +270,17 @@
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
+/* bp-sm */
 @media (max-width: 768px) {
+  .im-card { padding: 24px 20px; }
+  .im-type-row { grid-template-columns: 1fr; }
   .im-stats-row { grid-template-columns: 1fr 1fr; }
+  /* Bảng lỗi cuộn ngang trong .im-table-wrapper (overflow-x: auto) */
+  .im-table { min-width: 520px; }
 }
 
-@media (max-width: 520px) {
-  .im-type-row { grid-template-columns: 1fr; }
+/* bp-xs */
+@media (max-width: 560px) {
   .im-stats-row { grid-template-columns: 1fr; }
   .im-actions { flex-direction: column; align-items: stretch; }
   .im-btn-outline, .im-btn-solid { width: 100%; }

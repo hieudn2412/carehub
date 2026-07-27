@@ -1,5 +1,6 @@
 package vn.vietduc.carehubbackend.training.controller;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,6 +121,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .build());
     }
 
+    @DisplayName("L2-TRN-01 | Happy Path: user creates a DRAFT for self; a client-supplied employeeId is overridden by the JWT subject")
     @Test
     void userCreatesDraftForSelfAndClientEmployeeIdIsIgnored() throws Exception {
         mockMvc.perform(post("/api/v1/training/records")
@@ -132,6 +134,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.duplicateWarning", is(false)));
     }
 
+    @DisplayName("L2-TRN-02 | Negative: manager creating for an employee of another department → 403")
     @Test
     void managerCannotCreateForEmployeeInOtherDepartment() throws Exception {
         mockMvc.perform(post("/api/v1/training/records")
@@ -141,6 +144,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-TRN-03 | Happy Path: evidence upload (moderation PASSED, checksum, presigned URLs) then DRAFT → SUBMITTED with the current version")
     @Test
     void uploadEvidenceAndSubmitValidRecord() throws Exception {
         Long recordId = createDraft(evidenceRequiredType, user, "Submit course", "2");
@@ -179,6 +183,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.submittedAt").exists());
     }
 
+    @DisplayName("L2-TRN-04 | Query Correctness: record options and detail readable by an authenticated user")
     @Test
     void recordOptionsAndDetailAreAvailableToAuthenticatedUser() throws Exception {
         Long recordId = createDraft(evidenceOptionalType, user, "Readable course", "2");
@@ -196,6 +201,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.workflowStatus", is("DRAFT")));
     }
 
+    @DisplayName("L2-TRN-05 | Negative: endDate before startDate → 400; 0 hours → 422; 0.5 and 24 accepted (24.01 also accepted — boundary gap, see Notes)")
     @Test
     void validatesDateAndHourBoundaries() throws Exception {
         mockMvc.perform(post("/api/v1/training/records")
@@ -229,6 +235,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    @DisplayName("L2-TRN-06 | Query Correctness: normalized title match flags duplicateWarning with candidate count")
     @Test
     void duplicateCandidateReturnsWarning() throws Exception {
         createDraft(evidenceOptionalType, user, "Duplicate Course", "2");
@@ -242,6 +249,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.duplicateCandidateCount", is(1)));
     }
 
+    @DisplayName("L2-TRN-07 | Optimistic Lock: CANCELLED edit → 400; SUBMITTED at editCount=2 → 400; DRAFT with version 99 → 409")
     @Test
     void editLimitAndOptimisticLockingAreEnforced() throws Exception {
         TrainingRecord cancelled = recordRepository.save(TrainingRecord.builder()
@@ -309,6 +317,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("updated by another user")));
     }
 
+    @DisplayName("L2-TRN-08 | Negative: SUBMITTED record rejects edits (400) and evidence upload (409 'not editable')")
     @Test
     void submittedRecordCannotBeEditedOrReceiveEvidence() throws Exception {
         TrainingRecord submitted = recordRepository.save(TrainingRecord.builder()
@@ -339,6 +348,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(jsonPath("$.message", containsString("not editable")));
     }
 
+    @DisplayName("L2-TRN-09 | Negative: outsider gets 403 on detail, evidence list, download-url and preview-url")
     @Test
     void unauthorizedUserCannotAccessRecordEvidenceOrDownloadUrl() throws Exception {
         Long recordId = createDraft(evidenceOptionalType, user, "Private course", "2");
@@ -362,6 +372,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @DisplayName("L2-TRN-10 | Constraint Violation: 6 MB JPEG optimized under 5 MB; extension/MIME mismatch → 422; identical checksum again → 409; soft delete kills the download URL")
     @Test
     void evidenceBoundaryMismatchDuplicateAndSoftDelete() throws Exception {
         Long recordId = createDraft(evidenceOptionalType, user, "Evidence checks", "2");
@@ -393,6 +404,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @DisplayName("L2-TRN-11 | Rollback: moderation FAILED (422) and ERROR (409) both leave zero active evidence metadata rows")
     @Test
     void moderationFailedOrErrorDoesNotPersistEvidenceMetadata() throws Exception {
         Long failedRecordId = createDraft(evidenceOptionalType, user, "Moderation failed", "2");
@@ -410,6 +422,7 @@ class TrainingRecordEvidenceControllerIntegrationTest {
         assertNoActiveEvidence(errorRecordId);
     }
 
+    @DisplayName("L2-TRN-12 | Negative: inactive activity type on create → 422 with details")
     @Test
     void activeTypeRequiredForCreate() throws Exception {
         evidenceOptionalType.setActive(false);

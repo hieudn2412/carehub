@@ -112,7 +112,7 @@ function ExamPaperDetailPage() {
                   <div className="exp-info-strip">
                     <span>{paper.totalQuestions} câu</span>
                     <span>{paper.timeLimitMinutes} phút</span>
-                    <span>Đạt {paper.passingScore}%</span>
+                    <span>Đạt {paper.passingScore}/10</span>
                     <span>{paper.examConfigName}</span>
                     <span>{paper.questionSetName}</span>
                   </div>
@@ -131,7 +131,7 @@ function ExamPaperDetailPage() {
                           <li>{question.optionC}</li>
                           <li>{question.optionD}</li>
                         </ol>
-                        {showAnswers && (
+                        {showAnswers && question.correctAnswer && (
                           <div className="exp-answer-box">
                             <strong>Đáp án đúng: {question.correctAnswer}</strong>
                             {question.explanation && <span>{question.explanation}</span>}

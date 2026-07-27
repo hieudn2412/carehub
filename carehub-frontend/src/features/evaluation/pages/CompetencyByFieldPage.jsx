@@ -7,10 +7,7 @@ import {
   CheckCircleFilled,
   ReloadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
@@ -131,16 +128,8 @@ function CompetencyByFieldPage() {
       )
     : []
 
-  const Layout = isAdmin ? AdminSidebar : Sidebar
-  const PageHeader = isAdmin ? AdminHeader : Header
-
   return (
-    <div className="dashboard-layout">
-      <Layout />
-      <div className="dashboard-layout__content">
-        <PageHeader breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Năng lực theo lĩnh vực' : undefined} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Năng lực theo lĩnh vực' : undefined}>
             <div className="evd-page">
               <section className="evd-title-card">
                 <div>
@@ -153,9 +142,9 @@ function CompetencyByFieldPage() {
               </section>
 
               <section className="evd-panel" style={{ padding: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div className="evd-x-inline-filters">
                   <label style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Khoa:</label>
-                  <div style={{ width: 260, maxWidth: '100%' }}>
+                  <div className="evd-x-select">
                     <SearchableSelect
                       value={selectedDeptId}
                       onChange={setSelectedDeptId}
@@ -168,7 +157,7 @@ function CompetencyByFieldPage() {
                   </div>
 
                   <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginLeft: 8 }}>Lĩnh vực:</label>
-                  <div style={{ width: 260, maxWidth: '100%' }}>
+                  <div className="evd-x-select">
                     <SearchableSelect
                       value={selectedCategory}
                       onChange={setSelectedCategory}
@@ -217,7 +206,7 @@ function CompetencyByFieldPage() {
                 </div>
               </section>
 
-              <div className="evd-card" style={{ overflow: 'auto' }}>
+              <div className="evd-card evd-x-table-card">
                 <table className="evd-table">
                   <thead>
                     <tr>
@@ -234,13 +223,13 @@ function CompetencyByFieldPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <td colSpan={8} className="ch-empty">
                           Đang tải dữ liệu...
                         </td>
                       </tr>
                     ) : filteredItems.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                        <td colSpan={8} className="ch-empty">
                           Chưa có dữ liệu đánh giá cho lĩnh vực này.
                         </td>
                       </tr>
@@ -283,10 +272,7 @@ function CompetencyByFieldPage() {
                 </table>
               </div>
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

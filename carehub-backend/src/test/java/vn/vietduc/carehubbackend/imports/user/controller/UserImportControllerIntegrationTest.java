@@ -4,6 +4,7 @@ import com.jayway.jsonpath.JsonPath;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,7 @@ class UserImportControllerIntegrationTest {
         userRole = roleRepository.save(Role.builder().code("USER").name("User").build());
     }
 
+    @DisplayName("L2-REF-05 | Happy Path: Excel import creates department/position/education, INACTIVE first-login user, role link and a COMPLETED import log")
     @Test
     void importExcelCreatesReferenceDataUsersRolesAndImportLog() throws Exception {
         MockMultipartFile file = workbook("users.xlsx", row("IMP001", "An", "Nguyen", "Nam", "1/2/1990",
@@ -121,6 +123,7 @@ class UserImportControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content.length()", is(1)));
     }
 
+    @DisplayName("L2-REF-06 | Constraint Violation: duplicate employeeCode inside the file → one row FAILED, batch COMPLETED_WITH_ERRORS (one bad row does not kill the batch)")
     @Test
     void duplicateEmployeeCodeInFileCreatesPartialImportLog() throws Exception {
         MockMultipartFile file = workbook(
@@ -141,6 +144,7 @@ class UserImportControllerIntegrationTest {
         assertEquals("COMPLETED_WITH_ERRORS", importLogRepository.findAll().get(0).getStatus());
     }
 
+    @DisplayName("L2-REF-07 | Negative: USER role → 403; non-.xlsx extension → 400 REQ_001")
     @Test
     void importRequiresAdminAndExcelExtension() throws Exception {
         mockMvc.perform(multipart("/api/v1/users/import")

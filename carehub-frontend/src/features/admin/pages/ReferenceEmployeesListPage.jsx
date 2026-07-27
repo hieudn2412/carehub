@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { adminApi } from '../api/adminApi.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
@@ -249,12 +249,7 @@ function ReferenceEmployeesListPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell breadcrumbs={breadcrumbs}>
             <div className="rel-page">
               
               {/* Title Card */}
@@ -369,7 +364,7 @@ function ReferenceEmployeesListPage() {
               {/* Table Card */}
               <div className="rel-table-card">
                 {error && (
-                  <div className="rel-error-msg" style={{ padding: '20px', color: '#dc2626', textAlign: 'center' }}>
+                  <div className="rel-error-msg">
                     {error}
                   </div>
                 )}
@@ -391,13 +386,13 @@ function ReferenceEmployeesListPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan="9" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                          Đang tải danh sách nhân viên từ backend...
+                        <td colSpan="9">
+                          <LoadingState label="Đang tải danh sách nhân viên từ backend..." />
                         </td>
                       </tr>
                     ) : paginatedEmployees.length === 0 ? (
                       <tr>
-                        <td colSpan="9" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+                        <td colSpan="9" className="ch-empty">
                           Không tìm thấy nhân viên gốc phù hợp.
                         </td>
                       </tr>
@@ -469,10 +464,7 @@ function ReferenceEmployeesListPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

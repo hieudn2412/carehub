@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { SaveOutlined, SendOutlined } from '@ant-design/icons'
-import Sidebar from '../components/sidebar'
-import Header from '../components/Header'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { staffApi } from '../api/staffApi.js'
 import '../styles/ChecklistFormScreen.css'
 
@@ -28,6 +28,7 @@ function ChecklistFormScreen() {
   const [submission, setSubmission] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [confirmSubmitCount, setConfirmSubmitCount] = useState(null)
 
   const loadAssignedForm = useCallback(() => {
     setLoading(true)
@@ -126,15 +127,19 @@ function ChecklistFormScreen() {
     }
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     const unansweredCount = sections.flatMap(s => sortByDisplayOrder(s.items || []))
       .filter(item => item.itemType === 'QUESTION' && item.question)
       .filter(item => !hasAnswerValue(answers[item.question.questionKey])).length
 
     if (unansweredCount > 0) {
-      if (!window.confirm(`Còn ${unansweredCount} câu chưa trả lời. Bạn có chắc muốn nộp?`)) return
+      setConfirmSubmitCount(unansweredCount)
+      return
     }
+    doSubmit()
+  }
 
+  const doSubmit = async () => {
     setSubmitting(true)
     try {
       const draft = await ensureDraft()
@@ -220,96 +225,93 @@ function ChecklistFormScreen() {
 
   if (loading) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar />
-        <div className="dashboard-layout__content">
-          <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra" />
-          <div className="dashboard-layout__body"><div className="cfs-loading">Đang tải phiếu kiểm tra...</div></div>
-        </div>
-      </div>
+      <AppShell back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra">
+        <div className="cfs-loading">Đang tải phiếu kiểm tra...</div>
+      </AppShell>
     )
   }
 
   if (errorMessage) {
     return (
-      <div className="dashboard-layout">
-        <Sidebar />
-        <div className="dashboard-layout__content">
-          <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra" />
-          <div className="dashboard-layout__body">
-            <div className="cfs-error">
-              <p>{errorMessage}</p>
-            </div>
-          </div>
+      <AppShell back={{ to: '/staff/checklists', label: 'Quay lại' }} title="Phiếu kiểm tra">
+        <div className="cfs-error">
+          <p>{errorMessage}</p>
         </div>
-      </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header back={{ to: '/staff/checklists', label: 'Quay lại' }} title={assignedForm?.formName || 'Phiếu kiểm tra'} />
-        <div className="dashboard-layout__body">
-          <div className="cfs-container">
-            <div className="cfs-header">
-              <div>
-                <h2>{assignedForm?.formName || `Phiếu #${id}`}</h2>
-                {assignedForm?.description && <p className="cfs-subtitle">{assignedForm.description}</p>}
-              </div>
-              {!isReadOnly && (
-                <div className="cfs-actions">
-                  <button className="btn btn--secondary" onClick={handleSave} disabled={saving || submitting}>
-                    <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu nháp'}
-                  </button>
-                  <button className="btn btn--primary" onClick={handleSubmit} disabled={saving || submitting}>
-                    <SendOutlined /> {submitting ? 'Đang nộp...' : 'Nộp phiếu'}
-                  </button>
-                </div>
-              )}
-              {isReadOnly && (
-                <span className="status-badge status-badge--active">Đã nộp</span>
-              )}
-            </div>
-
-            {sections.map(section => (
-              <div key={section.id} className="cfs-section">
-                <h3 className="cfs-section-title">{section.title || `Phần ${section.displayOrder || ''}`}</h3>
-                {section.description && <p className="cfs-section-desc">{section.description}</p>}
-                {sortByDisplayOrder(section.items || [])
-                  .filter(item => item.itemType === 'QUESTION' && item.question)
-                  .map((item, idx) => {
-                    const q = item.question
-                    const answered = hasAnswerValue(answers[q.questionKey])
-                    return (
-                      <div key={q.questionKey} className={`cfs-question ${answered ? 'cfs-question--answered' : ''}`}>
-                        <div className="cfs-question-header">
-                          <span className="cfs-question-num">{idx + 1}.</span>
-                          <span className="cfs-question-stem">{q.stem || q.questionText}</span>
-                          {q.required && <span className="cfs-required">*</span>}
-                          {answered && <span className="cfs-answered-badge">✓</span>}
-                        </div>
-                        {isReadOnly ? (
-                          <div className="cfs-readonly-answer">
-                            {Array.isArray(answers[q.questionKey])
-                              ? answers[q.questionKey].join(', ')
-                              : String(answers[q.questionKey] || 'Chưa trả lời')}
-                          </div>
-                        ) : renderQuestion(q)}
-                      </div>
-                    )
-                  })}
-              </div>
-            ))}
-
-            {sections.length === 0 && (
-              <div className="cfs-empty">Phiếu kiểm tra này chưa có câu hỏi nào.</div>
-            )}
+    <AppShell back={{ to: '/staff/checklists', label: 'Quay lại' }} title={assignedForm?.formName || 'Phiếu kiểm tra'}>
+      <div className="cfs-container">
+        <div className="cfs-header">
+          <div>
+            <h2>{assignedForm?.formName || `Phiếu #${id}`}</h2>
+            {assignedForm?.description && <p className="cfs-subtitle">{assignedForm.description}</p>}
           </div>
+          {!isReadOnly && (
+            <div className="cfs-actions">
+              <button className="ch-btn ch-btn--secondary" onClick={handleSave} disabled={saving || submitting}>
+                <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu nháp'}
+              </button>
+              <button className="ch-btn ch-btn--primary" onClick={handleSubmit} disabled={saving || submitting}>
+                <SendOutlined /> {submitting ? 'Đang nộp...' : 'Nộp phiếu'}
+              </button>
+            </div>
+          )}
+          {isReadOnly && (
+            <span className="ch-badge ch-badge--green">Đã nộp</span>
+          )}
         </div>
+
+        {sections.map(section => (
+          <div key={section.id} className="cfs-section">
+            <h3 className="cfs-section-title">{section.title || `Phần ${section.displayOrder || ''}`}</h3>
+            {section.description && <p className="cfs-section-desc">{section.description}</p>}
+            {sortByDisplayOrder(section.items || [])
+              .filter(item => item.itemType === 'QUESTION' && item.question)
+              .map((item, idx) => {
+                const q = item.question
+                const answered = hasAnswerValue(answers[q.questionKey])
+                return (
+                  <div key={q.questionKey} className={`cfs-question ${answered ? 'cfs-question--answered' : ''}`}>
+                    <div className="cfs-question-header">
+                      <span className="cfs-question-num">{idx + 1}.</span>
+                      <span className="cfs-question-stem">{q.stem || q.questionText}</span>
+                      {q.required && <span className="cfs-required">*</span>}
+                      {answered && <span className="cfs-answered-badge">✓</span>}
+                    </div>
+                    {isReadOnly ? (
+                      <div className="cfs-readonly-answer">
+                        {Array.isArray(answers[q.questionKey])
+                          ? answers[q.questionKey].join(', ')
+                          : String(answers[q.questionKey] || 'Chưa trả lời')}
+                      </div>
+                    ) : renderQuestion(q)}
+                  </div>
+                )
+              })}
+          </div>
+        ))}
+
+        {sections.length === 0 && (
+          <div className="cfs-empty">Phiếu kiểm tra này chưa có câu hỏi nào.</div>
+        )}
       </div>
-    </div>
+
+      {confirmSubmitCount !== null && (
+        <ConfirmDialog
+          title="Nộp phiếu kiểm tra"
+          message={`Còn ${confirmSubmitCount} câu chưa trả lời. Bạn có chắc muốn nộp?`}
+          confirmLabel="Nộp phiếu"
+          onConfirm={() => {
+            setConfirmSubmitCount(null)
+            doSubmit()
+          }}
+          onCancel={() => setConfirmSubmitCount(null)}
+        />
+      )}
+    </AppShell>
   )
 }
 

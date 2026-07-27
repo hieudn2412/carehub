@@ -6,6 +6,7 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   FormOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../hooks/useNotifications'
 import { staffApi } from '../api/staffApi'
@@ -73,6 +74,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
+  const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
 
   useEffect(() => {
     staffApi.getProfile()
@@ -137,7 +139,8 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     return (
       <div className="notify-popover__list">
         {notifications.map((item) => (
-          <div
+          <button
+            type="button"
             key={item.id}
             className={`notify-item ${item.read ? 'read' : ''}`}
             onClick={() => markAsRead(item.id)}
@@ -149,7 +152,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
               <p className="notify-item__text">{item.message}</p>
               <p className="notify-item__footer">{item.sender} - {item.createdAt}</p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     )
@@ -158,6 +161,14 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
   return (
     <header className="dashboard-header">
       <div className="dashboard-header__main">
+        <button
+          type="button"
+          className="dashboard-header__menu-button"
+          aria-label="Mở menu điều hướng"
+          onClick={() => window.dispatchEvent(new CustomEvent(isAdmin ? 'admin-sidebar-toggle' : 'staff-sidebar-toggle'))}
+        >
+          <MenuOutlined />
+        </button>
         <div className="dashboard-header__navigation">
           {back ? <HeaderBackNavigation {...back} /> : null}
           {breadcrumbs && breadcrumbs.length > 0 ? (
@@ -203,14 +214,17 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
           {pendingExamCount > 0 && <span className="dashboard-header__exam-badge">{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
         </Link>
         <div className="dashboard-header__notify-container">
-          <div
+          <button
+            type="button"
             ref={notifyRef}
             className="dashboard-header__notify"
             onClick={() => setShowNotifications(prev => !prev)}
+            aria-label="Mở thông báo"
+            aria-expanded={showNotifications}
           >
             <BellOutlined />
             {unreadCount > 0 && <span className="dashboard-header__notify-dot"></span>}
-          </div>
+          </button>
 
           {showNotifications && (
             <div className="notify-popover" ref={popoverRef}>

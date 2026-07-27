@@ -4,6 +4,21 @@
 @import '@fontsource/be-vietnam-pro/600.css';
 @import '@fontsource/be-vietnam-pro/700.css';
 
+/* ============================================================
+   THANG BREAKPOINT CHUẨN (nguồn sự thật duy nhất)
+   CSS thuần không dùng được var() trong @media — mọi media query
+   mới/được sửa PHẢI dùng đúng 4 mốc dưới đây, và đặt comment tên
+   mốc (vd "bp-md") ngay trên dòng @media để grep được:
+
+     bp-lg = max-width 1280px — laptop nhỏ
+     bp-md = max-width 1024px — tablet ngang, sidebar thành drawer
+     bp-sm = max-width  768px — tablet dọc, form 1 cột, bảng scroll ngang
+     bp-xs = max-width  560px — phone, bảng card-mode, touch target 44px
+
+   Mốc phụ 380px chỉ dùng làm ngoại lệ, comment "bp-xxs exception".
+   Audit: grep -rn "@media (max-width" src | grep -v "1280\|1024\|768\|560\|380"
+   ============================================================ */
+
 :root {
   color: #16324f;
   font-family:
@@ -15,7 +30,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Theme variables */
+  /* Theme variables (bộ cũ — giữ làm alias, giá trị không đổi) */
   --navy: #16324f;
   --navy-light: #24506f;
   --clinical-teal: #0f766e;
@@ -32,6 +47,60 @@
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   --text-soft: #64748b;
   --red: #c2414b;
+
+  /* ── Màu chính (chốt từ hiện trạng, không đổi diện mạo) ── */
+  --primary: #0f766e;          /* = --clinical-teal, màu nút primary chuẩn */
+  --primary-strong: #075e57;   /* hover/active */
+  --primary-bright: #1aaa84;   /* teal sáng khu staff/manager — giữ song song */
+  --primary-soft: #e6f2f0;     /* nền teal nhạt */
+  --focus: #2563eb;            /* vòng focus-visible, đã dùng sẵn bên dưới */
+
+  /* ── Nền & chữ ── */
+  --bg: #f3f7f6;               /* nền app thống nhất (= --clinical-mist) */
+  --surface: #ffffff;
+  --text: #1e293b;             /* trước đây được var() ~94 lần mà chưa khai báo */
+  --text-heading: #16324f;     /* = --navy */
+  --text-faint: #94a3b8;
+
+  /* ── Semantic (promote từ .form-list-page, giữ nguyên giá trị) ── */
+  --green: #14866d;
+  --green-bg: #e8f5f0;
+  --amber: #9a6700;
+  --amber-bg: #fff7df;
+  --red-bg: #fff0ef;
+
+  /* ── Thang spacing ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+
+  /* ── Thang chữ ── */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-md: 15px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+
+  /* ── Bo góc & bóng ── */
+  --radius-lg: 12px;
+  --radius-full: 999px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* ── Thang z-index ── */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-sidebar: 300;
+  --z-backdrop: 900;
+  --z-modal: 1000;
+  --z-toast: 1100;
 }
 
 * {

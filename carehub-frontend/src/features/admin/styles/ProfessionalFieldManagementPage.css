@@ -208,6 +208,7 @@
 .pfm-table-container {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   min-height: 0;
 }
 
@@ -529,7 +530,8 @@
   min-width: 118px;
 }
 
-@media (max-width: 960px) {
+/* bp-md */
+@media (max-width: 1024px) {
   .pfm-page {
     padding: 22px 20px;
   }
@@ -550,7 +552,8 @@
   }
 }
 
-@media (max-width: 640px) {
+/* bp-xs */
+@media (max-width: 560px) {
   .pfm-modal-backdrop {
     align-items: stretch;
     padding: 12px;

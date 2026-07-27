@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   getChecklistDisplayCode,
@@ -351,12 +350,7 @@ function FormMetadataFormPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/quality/checklists', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="form-metadata-page">
               {errorMessage && (
                 <div className="fmp-error" role="alert">
@@ -561,9 +555,6 @@ function FormMetadataFormPage() {
               )}
 
             </div>
-          </main>
-        </div>
-      </div>
 
       {scoringVersion && (
         <div
@@ -708,7 +699,7 @@ function FormMetadataFormPage() {
         }}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
-    </div>
+    </AppShell>
   )
 }
 

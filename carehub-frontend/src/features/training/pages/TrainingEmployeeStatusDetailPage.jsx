@@ -1,28 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
-import Sidebar from '../../staff/components/sidebar'
-import Header from '../../staff/components/Header'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
-import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
-import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import {
   ClockCircleOutlined,
   FileTextOutlined,
   EyeOutlined,
   LeftOutlined,
-  LoadingOutlined,
   RightOutlined,
 } from '@ant-design/icons'
 import '../styles/TrainingEmployeeStatusDetailPage.css'
 
 function TrainingEmployeeStatusDetailPage() {
   const { employeeId } = useParams()
-  const accessToken = tokenStorage.getAccessToken()
-  const roles = getRolesFromAccessToken(accessToken)
-  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -97,14 +88,7 @@ function TrainingEmployeeStatusDetailPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      {isAdmin ? <AdminSidebar /> : <Sidebar />}
-      <div className="dashboard-layout__content">
-        {isAdmin
-          ? <AdminHeader back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-          : <Header back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />}
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="ted-page">
               
               {/* Title Card */}
@@ -118,9 +102,7 @@ function TrainingEmployeeStatusDetailPage() {
               {/* Detail Card Container */}
               <div className="ted-detail-card">
                 {loading ? (
-                  <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
-                    <LoadingOutlined style={{ fontSize: 24, marginRight: 8 }} /> Đang tải dữ liệu...
-                  </div>
+                  <LoadingState label="Đang tải dữ liệu..." />
                 ) : error ? (
                   <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>
                     {error}
@@ -183,7 +165,7 @@ function TrainingEmployeeStatusDetailPage() {
                           <tbody>
                             {recordsList.length === 0 ? (
                               <tr>
-                                <td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>
+                                <td colSpan={6} className="ch-empty">
                                   Không có lịch sử khai báo nào.
                                 </td>
                               </tr>
@@ -281,10 +263,7 @@ function TrainingEmployeeStatusDetailPage() {
               </div>
 
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

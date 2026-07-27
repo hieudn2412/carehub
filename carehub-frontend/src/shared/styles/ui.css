@@ -1,0 +1,548 @@
+/* ============================================================
+   CareHub UI primitives (.ch-*) — lớp base dùng chung toàn dự án.
+   Nạp SAU global.css và TRƯỚC CSS của từng trang (xem App.jsx),
+   nên trang có thể override bằng selector cùng specificity.
+   Thang breakpoint: xem comment đầu shared/styles/global.css.
+   ============================================================ */
+
+/* ── Nút ─────────────────────────────────────────────────── */
+.ch-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ch-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ch-btn--primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.ch-btn--primary:hover:not(:disabled) {
+  background: var(--primary-strong);
+}
+
+.ch-btn--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.ch-btn--secondary:hover:not(:disabled) {
+  background: var(--border-light);
+}
+
+.ch-btn--ghost {
+  background: transparent;
+  color: var(--text-soft);
+}
+
+.ch-btn--ghost:hover:not(:disabled) {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.ch-btn--danger {
+  background: var(--red);
+  color: #fff;
+}
+
+.ch-btn--danger:hover:not(:disabled) {
+  background: #a83440;
+}
+
+.ch-btn--sm {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: var(--fs-xs);
+}
+
+/* Nút chỉ có icon — luôn kèm aria-label trong JSX */
+.ch-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ch-btn-icon:hover {
+  background: var(--border-light);
+  color: var(--text);
+}
+
+.ch-btn-icon--danger:hover {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+/* ── Badge / trạng thái ──────────────────────────────────── */
+.ch-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.ch-badge--green {
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.ch-badge--amber {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+
+.ch-badge--red {
+  background: var(--red-bg);
+  color: var(--red);
+}
+
+.ch-badge--neutral {
+  background: var(--border-light);
+  color: var(--text-soft);
+}
+
+/* ── Card ────────────────────────────────────────────────── */
+.ch-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+}
+
+/* ── Bảng ────────────────────────────────────────────────── */
+/* Wrapper chuẩn: bảng rộng cuộn ngang bên trong, KHÔNG cắt cụt */
+.ch-table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.ch-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-soft);
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.ch-table td {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-light);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.ch-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.ch-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Card-mode cho bảng hẹp cột trên phone: thêm class --cards vào <table>
+   và data-label="Tên cột" vào từng <td> (mẫu TrainingHours.css) */
+/* bp-xs */
+@media (max-width: 560px) {
+  .ch-table--cards thead {
+    display: none;
+  }
+
+  .ch-table--cards,
+  .ch-table--cards tbody {
+    display: block;
+  }
+
+  .ch-table--cards tbody {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .ch-table--cards tr {
+    display: block;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .ch-table--cards td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 6px 0;
+    border: 0;
+    text-align: right;
+  }
+
+  .ch-table--cards td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-soft);
+    text-align: left;
+    flex-shrink: 0;
+  }
+
+  .ch-table--cards td:not([data-label])::before {
+    content: none;
+  }
+
+  .ch-table--cards td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* ── Toolbar / thanh tìm kiếm đầu trang ─────────────────── */
+.ch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ch-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 260px;
+  max-width: 360px;
+  min-height: 40px;
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-soft);
+}
+
+.ch-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.ch-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .ch-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ch-search {
+    max-width: none;
+  }
+
+  .ch-toolbar .ch-btn {
+    min-height: 44px;
+  }
+}
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.ch-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .ch-filter-bar > * {
+    flex: 1 1 45%;
+    min-width: 0;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .ch-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── Header trang (title + actions) ─────────────────────── */
+.ch-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .ch-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ch-page-header .ch-btn {
+    width: 100%;
+  }
+}
+
+/* ── Form ────────────────────────────────────────────────── */
+.ch-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ch-form-grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .ch-form-grid,
+  .ch-form-grid--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ch-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ch-field > label {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ch-field .ch-required {
+  color: var(--red);
+}
+
+.ch-input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+
+textarea.ch-input {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.ch-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  outline: none;
+}
+
+/* ── Modal (lớp CSS baseline — component Modal.jsx dùng ở Phase 4) ── */
+.ch-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.ch-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 40px);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.ch-modal--lg {
+  max-width: 720px;
+}
+
+.ch-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.ch-modal__header h3 {
+  margin: 0;
+  font-size: var(--fs-lg);
+  color: var(--text-heading);
+}
+
+.ch-modal__body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.ch-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-light);
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .ch-modal-backdrop {
+    padding: 12px;
+  }
+
+  .ch-modal__footer .ch-btn {
+    flex: 1;
+  }
+}
+
+/* ── Pagination (lớp CSS — component Pagination.jsx ở Phase 4) ── */
+.ch-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+}
+
+.ch-pagination button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.ch-pagination button:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.ch-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Trạng thái loading / rỗng ───────────────────────────── */
+.ch-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-soft);
+  font-size: var(--fs-sm);
+}
+
+.ch-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: ch-spin 0.8s linear infinite;
+  vertical-align: -3px;
+}
+
+@keyframes ch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Tiện ích ────────────────────────────────────────────── */
+.ch-text-center {
+  text-align: center;
+}
+
+.ch-text-muted {
+  color: var(--text-soft);
+}
+
+/* ── Giảm chuyển động ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .ch-btn,
+  .ch-btn-icon,
+  .ch-search,
+  .ch-input {
+    transition: none;
+  }
+
+  .ch-spinner {
+    animation-duration: 1.6s;
+  }
+}

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { LoadingOutlined } from '@ant-design/icons'
-import AdminSidebar from '../components/AdminSidebar'
-import AdminHeader from '../components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EmailTemplateFormPage.css'
@@ -211,12 +210,7 @@ function EmailTemplateFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/notifications/email-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
+    <AppShell back={{ to: '/admin/notifications/email-templates', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="etf-page">
               <div className="etf-title-card">
                 <h1 className="etf-title">{isEditMode ? 'Chỉnh sửa biểu mẫu' : 'Tạo mới biểu mẫu'}</h1>
@@ -224,8 +218,8 @@ function EmailTemplateFormPage() {
               </div>
 
               {loading ? (
-                <div className="etf-card" style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-                  <LoadingOutlined style={{ marginRight: 8 }} /> Đang tải dữ liệu biểu mẫu...
+                <div className="etf-card">
+                  <LoadingState label="Đang tải dữ liệu biểu mẫu..." />
                 </div>
               ) : (
                 <form className="etf-card" onSubmit={handleSubmit}>
@@ -305,10 +299,7 @@ function EmailTemplateFormPage() {
                 </form>
               )}
             </div>
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

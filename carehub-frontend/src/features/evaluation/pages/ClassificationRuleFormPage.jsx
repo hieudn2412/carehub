@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import AdminSidebar from '../../admin/components/AdminSidebar'
-import AdminHeader from '../../admin/components/AdminHeader'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { WarningOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { classificationRuleApi } from '../api/classificationRuleApi.js'
@@ -142,195 +141,187 @@ function ClassificationRuleFormPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/classification-rules', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="crf-page">
-              <div className="crf-container">
-                {/* Header */}
-                <div className="crf-header">
-                  <h2 className="crf-title">
-                    {isEditMode ? 'Cập nhật quy tắc phân loại' : 'Thêm quy tắc phân loại'}
-                  </h2>
-                  <p className="crf-subtitle">
-                    Gán danh mục câu hỏi tự động theo từ khóa, nguồn tài liệu và mức ưu tiên
-                  </p>
-                </div>
+    <AppShell back={{ to: '/admin/evaluation/classification-rules', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
+      <div className="crf-page">
+        <div className="crf-container">
+          {/* Header */}
+          <div className="crf-header">
+            <h2 className="crf-title">
+              {isEditMode ? 'Cập nhật quy tắc phân loại' : 'Thêm quy tắc phân loại'}
+            </h2>
+            <p className="crf-subtitle">
+              Gán danh mục câu hỏi tự động theo từ khóa, nguồn tài liệu và mức ưu tiên
+            </p>
+          </div>
 
-                <form onSubmit={handleSave} className="crf-form">
-                  {/* Row 1 */}
-                  <div className="crf-form-row">
-                    <div className="crf-form-group">
-                      <label>
-                        Tên quy tắc <span className="crf-required-star">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="crf-input-red"
-                        required
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Ví dụ: Nhận diện người bệnh"
-                        disabled={isLoading || isSaving}
-                      />
-                    </div>
-                    <div className="crf-form-group">
-                      <label>
-                        Danh mục câu hỏi <span className="crf-required-star">*</span>
-                      </label>
-                      <select
-                        className="crf-input-red"
-                        required
-                        value={categoryId}
-                        onChange={(e) => setCategoryId(e.target.value)}
-                        disabled={isLoading || isSaving}
-                      >
-                        <option value="">Chọn danh mục</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Row 2 */}
-                  <div className="crf-form-row">
-                    <div className="crf-form-group">
-                      <label>
-                        Từ khóa phân loại <span className="crf-required-star">*</span>
-                      </label>
-                      <textarea
-                        className="crf-input-red"
-                        required
-                        rows={4}
-                        value={keywords}
-                        onChange={(e) => setKeywords(e.target.value)}
-                        placeholder="Mỗi dòng hoặc dấu phẩy là một từ khóa. Ví dụ: nhận diện, vòng tay, mã người bệnh"
-                        disabled={isLoading || isSaving}
-                      />
-                    </div>
-                    <div className="crf-form-group">
-                      <label>Nguồn tài liệu</label>
-                      <textarea
-                        className="crf-input-red"
-                        rows={4}
-                        value={sourcePattern}
-                        onChange={(e) => setSourcePattern(e.target.value)}
-                        placeholder="Ví dụ: an toàn người bệnh, quy trình nhận diện"
-                        disabled={isLoading || isSaving}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row 3 */}
-                  <div className="crf-form-row">
-                    <div className="crf-form-group">
-                      <label>Ưu tiên</label>
-                      <input
-                        type="number"
-                        className="crf-input-red"
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                        placeholder="Số lớn hơn được ưu tiên trước"
-                        disabled={isLoading || isSaving}
-                      />
-                    </div>
-                    <div className="crf-form-group">
-                      <label>Trạng thái</label>
-                      <select
-                        className="crf-input-red"
-                        value={enabled.toString()}
-                        onChange={(e) => setEnabled(e.target.value === 'true')}
-                        disabled={isLoading || isSaving}
-                      >
-                        <option value="true">Hoạt động</option>
-                        <option value="false">Tạm ngưng</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="crf-section-divider">
-                    <span className="crf-divider-title">KIỂM TRA NHANH</span>
-                  </div>
-
-                  <div className="crf-form-row">
-                    <div className="crf-form-group">
-                      <label>Nội dung câu hỏi thử</label>
-                      <textarea
-                        className="crf-input-red"
-                        rows={3}
-                        value={testText}
-                        onChange={(e) => setTestText(e.target.value)}
-                        placeholder="Dán nội dung câu hỏi hoặc trích đoạn nguồn..."
-                      />
-                    </div>
-                    <div className="crf-form-group">
-                      <label>Nguồn tài liệu thử</label>
-                      <input
-                        type="text"
-                        className="crf-input-red"
-                        value={testSource}
-                        onChange={(e) => setTestSource(e.target.value)}
-                        placeholder="Tên tài liệu hoặc section"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="crf-form-actions" style={{ justifyContent: 'flex-start' }}>
-                    <button type="button" className="crf-btn-cancel" onClick={handleTestRule} disabled={isTesting}>
-                      {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra'}
-                    </button>
-                  </div>
-
-                  {testResult && (
-                    <div className="crf-preview-card">
-                      <span className="crf-preview-desc">
-                        Kết quả: {testResult.categoryName || 'Chưa phân loại'}
-                      </span>
-                      <span className="crf-result-badge">
-                        {testResult.ruleName || 'Không khớp'}
-                      </span>
-                      <span className="crf-preview-desc">
-                        Độ tin cậy: {Math.round(Number(testResult.confidence || 0) * 100)}% · {testResult.reason}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Warning Box */}
-                  <div className="crf-warning-card">
-                    <span className="crf-warning-icon">
-                      <WarningOutlined />
-                    </span>
-                    <span className="crf-warning-text">
-                      Quy tắc hoạt động sẽ được dùng để gợi ý danh mục cho câu hỏi mới và candidate được lưu vào ngân hàng.
-                    </span>
-                  </div>
-
-                  {/* Actions Footer */}
-                  <div className="crf-form-actions">
-                    <button type="submit" className="crf-btn-save" disabled={isLoading || isSaving}>
-                      {isSaving ? 'Đang lưu...' : 'Lưu quy tắc'}
-                    </button>
-                    <button
-                      type="button"
-                      className="crf-btn-cancel"
-                      onClick={() => navigate('/admin/evaluation/classification-rules')}
-                    >
-                      Hủy
-                    </button>
-                  </div>
-                </form>
+          <form onSubmit={handleSave} className="crf-form">
+            {/* Row 1 */}
+            <div className="crf-form-row">
+              <div className="crf-form-group">
+                <label>
+                  Tên quy tắc <span className="crf-required-star">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="crf-input-red"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ví dụ: Nhận diện người bệnh"
+                  disabled={isLoading || isSaving}
+                />
+              </div>
+              <div className="crf-form-group">
+                <label>
+                  Danh mục câu hỏi <span className="crf-required-star">*</span>
+                </label>
+                <select
+                  className="crf-input-red"
+                  required
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  disabled={isLoading || isSaving}
+                >
+                  <option value="">Chọn danh mục</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-          </main>
+
+            {/* Row 2 */}
+            <div className="crf-form-row">
+              <div className="crf-form-group">
+                <label>
+                  Từ khóa phân loại <span className="crf-required-star">*</span>
+                </label>
+                <textarea
+                  className="crf-input-red"
+                  required
+                  rows={4}
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  placeholder="Mỗi dòng hoặc dấu phẩy là một từ khóa. Ví dụ: nhận diện, vòng tay, mã người bệnh"
+                  disabled={isLoading || isSaving}
+                />
+              </div>
+              <div className="crf-form-group">
+                <label>Nguồn tài liệu</label>
+                <textarea
+                  className="crf-input-red"
+                  rows={4}
+                  value={sourcePattern}
+                  onChange={(e) => setSourcePattern(e.target.value)}
+                  placeholder="Ví dụ: an toàn người bệnh, quy trình nhận diện"
+                  disabled={isLoading || isSaving}
+                />
+              </div>
+            </div>
+
+            {/* Row 3 */}
+            <div className="crf-form-row">
+              <div className="crf-form-group">
+                <label>Ưu tiên</label>
+                <input
+                  type="number"
+                  className="crf-input-red"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  placeholder="Số lớn hơn được ưu tiên trước"
+                  disabled={isLoading || isSaving}
+                />
+              </div>
+              <div className="crf-form-group">
+                <label>Trạng thái</label>
+                <select
+                  className="crf-input-red"
+                  value={enabled.toString()}
+                  onChange={(e) => setEnabled(e.target.value === 'true')}
+                  disabled={isLoading || isSaving}
+                >
+                  <option value="true">Hoạt động</option>
+                  <option value="false">Tạm ngưng</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="crf-section-divider">
+              <span className="crf-divider-title">KIỂM TRA NHANH</span>
+            </div>
+
+            <div className="crf-form-row">
+              <div className="crf-form-group">
+                <label>Nội dung câu hỏi thử</label>
+                <textarea
+                  className="crf-input-red"
+                  rows={3}
+                  value={testText}
+                  onChange={(e) => setTestText(e.target.value)}
+                  placeholder="Dán nội dung câu hỏi hoặc trích đoạn nguồn..."
+                />
+              </div>
+              <div className="crf-form-group">
+                <label>Nguồn tài liệu thử</label>
+                <input
+                  type="text"
+                  className="crf-input-red"
+                  value={testSource}
+                  onChange={(e) => setTestSource(e.target.value)}
+                  placeholder="Tên tài liệu hoặc section"
+                />
+              </div>
+            </div>
+
+            <div className="crf-form-actions" style={{ justifyContent: 'flex-start' }}>
+              <button type="button" className="crf-btn-cancel" onClick={handleTestRule} disabled={isTesting}>
+                {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra'}
+              </button>
+            </div>
+
+            {testResult && (
+              <div className="crf-preview-card">
+                <span className="crf-preview-desc">
+                  Kết quả: {testResult.categoryName || 'Chưa phân loại'}
+                </span>
+                <span className="crf-result-badge">
+                  {testResult.ruleName || 'Không khớp'}
+                </span>
+                <span className="crf-preview-desc">
+                  Độ tin cậy: {Math.round(Number(testResult.confidence || 0) * 100)}% · {testResult.reason}
+                </span>
+              </div>
+            )}
+
+            {/* Warning Box */}
+            <div className="crf-warning-card">
+              <span className="crf-warning-icon">
+                <WarningOutlined />
+              </span>
+              <span className="crf-warning-text">
+                Quy tắc hoạt động sẽ được dùng để gợi ý danh mục cho câu hỏi mới và candidate được lưu vào ngân hàng.
+              </span>
+            </div>
+
+            {/* Actions Footer */}
+            <div className="crf-form-actions">
+              <button type="submit" className="crf-btn-save" disabled={isLoading || isSaving}>
+                {isSaving ? 'Đang lưu...' : 'Lưu quy tắc'}
+              </button>
+              <button
+                type="button"
+                className="crf-btn-cancel"
+                onClick={() => navigate('/admin/evaluation/classification-rules')}
+              >
+                Hủy
+              </button>
+            </div>
+  </form>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 
