@@ -213,8 +213,9 @@
 }
 
 .tes-col-action {
-  width: 1%;
-  text-align: right;
+  width: 112px;
+  min-width: 112px;
+  text-align: left;
   white-space: nowrap;
 }
 

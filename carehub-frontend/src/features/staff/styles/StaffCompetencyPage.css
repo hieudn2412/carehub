@@ -238,36 +238,94 @@
 
 .sc-table-wrapper {
   overflow-x: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
 .sc-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
-  font-size: 14px;
+  table-layout: fixed;
+  background: #fff;
+}
+
+.sc-table__process-col {
+  width: auto;
+}
+
+.sc-table__attempt-col {
+  width: 190px;
+}
+
+.sc-table__rate-col {
+  width: 160px;
+}
+
+.sc-table__action-col {
+  width: 220px;
 }
 
 .sc-table th {
   text-align: left;
-  padding: 12px 16px;
-  background: #f9fafb;
-  color: #6b7280;
+  padding: 14px 18px;
+  background: #f8fafc;
+  color: #475569;
   font-weight: 600;
   font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #e5e7eb;
+  line-height: 1.4;
+  letter-spacing: 0;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .sc-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f3f4f6;
-  color: #374151;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
+  color: #334155;
+  font-size: 13.5px;
+  line-height: 1.45;
+  vertical-align: middle;
 }
 
-.sc-table tbody tr:hover {
-  background: #f9fafb;
+.sc-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.sc-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.sc-table__process-name {
+  display: block;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sc-table__metric,
+.sc-table__rate {
+  font-variant-numeric: tabular-nums;
+}
+
+.sc-table__rate {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.sc-table__rate.is-low {
+  color: #dc2626;
+}
+
+.sc-compliance-attempts {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .sc-row--danger {
@@ -289,20 +347,10 @@
 }
 
 .sc-view-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid #bfdbfe;
-  border-radius: 6px;
-  background: #eff6ff;
-  color: #2563eb;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+  flex: 0 0 auto;
 }
 
-.sc-view-btn:hover { background: #dbeafe; }
+.sc-view-btn:hover { background: #eff6ff; }
 
 .sc-detail-backdrop {
   position: fixed;

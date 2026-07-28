@@ -100,10 +100,19 @@ export default function StaffCompetencyPage() {
         </section>
         <div className="sc-content">
           {loading ? <LoadingState /> : !(data?.items?.length) ? <EmptyState>Chưa có lượt đánh giá trong khoảng thời gian này.</EmptyState> : (
-            <div className="sc-table-wrapper"><table className="sc-table"><thead><tr><th>Quy trình</th><th>Số lượt đạt/tổng lượt</th><th>Tỷ lệ tuân thủ</th><th>Chi tiết</th></tr></thead><tbody>
+            <div className="sc-table-wrapper"><table className="sc-table admin-table-uppercase">
+              <colgroup>
+                <col className="sc-table__process-col" />
+                <col className="sc-table__attempt-col" />
+                <col className="sc-table__rate-col" />
+                <col className="sc-table__action-col" />
+              </colgroup>
+              <thead><tr><th>Quy trình</th><th>Số lượt đạt/tổng lượt</th><th>Tỷ lệ tuân thủ</th><th>Hành động</th></tr></thead><tbody>
               {data.items.map(item => <tr key={item.formId}>
-                <td><strong>{item.formName}</strong></td><td>{item.passCount || 0}/{item.evaluationCount || 0}</td><td><strong>{formatNumber(item.passRate || 0)}%</strong></td>
-                <td><div className="sc-compliance-attempts">{(item.attempts || []).map(attempt => <button key={attempt.submissionId} type="button" className="sc-view-btn" title={new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN')} onClick={() => openDetail(attempt.submissionId)}><EyeOutlined /></button>)}</div></td>
+                <td><strong className="sc-table__process-name">{item.formName}</strong></td>
+                <td><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
+                <td><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
+                <td><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).map(attempt => <button key={attempt.submissionId} type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem lượt đánh giá ngày ${new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN')}`} aria-label={`Xem lượt đánh giá ngày ${new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN')}`} onClick={() => openDetail(attempt.submissionId)}><EyeOutlined /></button>)}</div></td>
               </tr>)}
             </tbody></table></div>
           )}

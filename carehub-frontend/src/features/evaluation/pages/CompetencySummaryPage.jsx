@@ -657,18 +657,29 @@ function CompetencySummaryPage() {
                   </section>
 
                   <div className="evd-card evd-x-table-card">
-                    <table className="evd-table admin-table-uppercase">
+                    <table className="evd-table evd-competency-table evd-competency-table--field admin-table-uppercase">
+                      <colgroup>
+                        <col className="evd-col-index" />
+                        <col className="evd-col-code" />
+                        <col className="evd-col-name" />
+                        {isAdmin && <col className="evd-col-department" />}
+                        <col className="evd-col-attempts" />
+                        <col className="evd-col-score" />
+                        <col className="evd-col-rate" />
+                        <col className="evd-col-level" />
+                        <col className="evd-col-actions" />
+                      </colgroup>
                       <thead>
                         <tr>
-                          <th style={{ width: 50 }}>STT</th>
+                          <th>STT</th>
                           <th>Mã NV</th>
                           <th>Họ tên</th>
-                          {isAdmin && <th>Khoa</th>}
-                          <th>Số lần thi</th>
-                          <th>Điểm TB</th>
+                          {isAdmin && <th>Khoa/phòng</th>}
+                          <th>Số lượt</th>
+                          <th>Điểm trung bình</th>
                           <th>Tỷ lệ đạt</th>
                           <th>Phân loại</th>
-                          <th style={{ width: 72 }}>Hành động</th>
+                          <th>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -686,20 +697,15 @@ function CompetencySummaryPage() {
                           </tr>
                         ) : (
                           filteredItems.map((item, idx) => (
-                            <tr
-                              key={item.employeeId}
-                              className={!item.isPassed ? 'evd-row--danger' : ''}
-                              style={{ cursor: 'pointer' }}
-                              onClick={() => navigate(`${detailPathField}/${item.employeeId}`)}
-                            >
+                            <tr key={item.employeeId} className={!item.isPassed ? 'evd-row--danger' : ''}>
                               <td>{page * PAGE_SIZE + idx + 1}</td>
-                              <td>{item.employeeCode}</td>
-                              <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
-                              {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
-                              <td>{item.attemptCount}</td>
-                              <td>{formatNumber(item.averageScore)}</td>
+                              <td><span className="evd-table-code">{item.employeeCode || '—'}</span></td>
+                              <td><strong className="evd-table-person">{item.employeeName || '—'}</strong></td>
+                              {isAdmin && <td><span className="evd-table-department" title={item.departmentName || ''}>{item.departmentName || '—'}</span></td>}
+                              <td><span className="evd-table-metric">{item.attemptCount ?? 0}</span></td>
+                              <td><strong className="evd-table-score">{formatNumber(item.averageScore)}</strong></td>
                               <td>
-                                <span style={{ color: (item.passRate || 0) < 50 ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                                <span className={(item.passRate || 0) < 50 ? 'evd-table-rate is-low' : 'evd-table-rate'}>
                                   {item.passRate != null ? `${item.passRate}%` : '—'}
                                 </span>
                               </td>
@@ -713,15 +719,17 @@ function CompetencySummaryPage() {
                                 </span>
                               </td>
                               <td>
-                                <button
-                                  className="evd-action-icon"
-                                  type="button"
-                                  title="Xem chi tiết"
-                                  aria-label={`Xem chi tiết năng lực của ${item.employeeName || item.employeeCode}`}
-                                  onClick={e => { e.stopPropagation(); navigate(`${detailPathField}/${item.employeeId}`) }}
-                                >
-                                  <EyeOutlined />
-                                </button>
+                                <div className="admin-table-actions">
+                                  <button
+                                    className="admin-table-action admin-table-action--icon admin-table-action--primary"
+                                    type="button"
+                                    title="Xem chi tiết"
+                                    aria-label={`Xem chi tiết năng lực của ${item.employeeName || item.employeeCode}`}
+                                    onClick={() => navigate(`${detailPathField}/${item.employeeId}`)}
+                                  >
+                                    <EyeOutlined />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -773,19 +781,31 @@ function CompetencySummaryPage() {
                   </section>
 
                   <div className="evd-card evd-x-table-card">
-                    <table className="evd-table admin-table-uppercase">
+                    <table className="evd-table evd-competency-table evd-competency-table--technique admin-table-uppercase">
+                      <colgroup>
+                        <col className="evd-col-index" />
+                        <col className="evd-col-code" />
+                        <col className="evd-col-name" />
+                        {isAdmin && <col className="evd-col-department" />}
+                        <col className="evd-col-attempts" />
+                        <col className="evd-col-score" />
+                        <col className="evd-col-rate" />
+                        <col className="evd-col-target" />
+                        <col className="evd-col-level" />
+                        <col className="evd-col-actions" />
+                      </colgroup>
                       <thead>
                         <tr>
                           <th>STT</th>
                           <th>Mã NV</th>
                           <th>Họ tên</th>
-                          {isAdmin && <th>Khoa</th>}
-                          <th>Số lần ĐG</th>
-                          <th>Điểm TB</th>
+                          {isAdmin && <th>Khoa/phòng</th>}
+                          <th>Số lượt</th>
+                          <th>Điểm trung bình</th>
                           <th>Tỷ lệ đạt</th>
                           <th>Mục tiêu</th>
                           <th>Phân loại</th>
-                          <th style={{ width: 72 }}>Hành động</th>
+                          <th>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -805,26 +825,26 @@ function CompetencySummaryPage() {
                           </tr>
                         ) : (
                           filteredItems.map((item, idx) => (
-                            <tr key={idx} className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}>
+                            <tr key={item.employeeId || item.employeeCode || idx} className={item.belowTarget ? 'evd-row--danger' : (!item.isPassed ? 'evd-row--warning' : '')}>
                               <td>{page * PAGE_SIZE + idx + 1}</td>
-                              <td><code style={{ fontSize: 12 }}>{item.employeeCode}</code></td>
-                              <td style={{ fontWeight: 500 }}>{item.employeeName}</td>
-                              {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || data?.departmentName || '—'}</td>}
-                              <td>{item.evaluationCount}</td>
-                              <td>{formatNumber(item.averageScore)}</td>
+                              <td><span className="evd-table-code">{item.employeeCode || '—'}</span></td>
+                              <td><strong className="evd-table-person">{item.employeeName || '—'}</strong></td>
+                              {isAdmin && <td><span className="evd-table-department" title={item.departmentName || data?.departmentName || ''}>{item.departmentName || data?.departmentName || '—'}</span></td>}
+                              <td><span className="evd-table-metric">{item.evaluationCount ?? 0}</span></td>
+                              <td><strong className="evd-table-score">{formatNumber(item.averageScore)}</strong></td>
                               <td>
-                                <span style={{ color: (item.passRate || 0) < complianceTarget ? '#dc2626' : '#16a34a', fontWeight: 600 }}>
+                                <span className={(item.passRate || 0) < complianceTarget ? 'evd-table-rate is-low' : 'evd-table-rate'}>
                                   {item.passRate != null ? `${item.passRate}%` : '—'}
                                 </span>
                               </td>
                               <td>
                                 {item.belowTarget ? (
-                                  <span style={{ color: '#dc2626', fontSize: 12 }}>
+                                  <span className="evd-table-target is-low">
                                     <ExclamationCircleFilled style={{ marginRight: 4 }} />
                                     {'<'} {complianceTarget}%
                                   </span>
                                 ) : (
-                                  <span style={{ color: '#16a34a', fontSize: 12 }}>
+                                  <span className="evd-table-target">
                                     <CheckCircleFilled style={{ marginRight: 4 }} />Đạt
                                   </span>
                                 )}
@@ -839,24 +859,26 @@ function CompetencySummaryPage() {
                                 </span>
                               </td>
                               <td>
-                                <button
-                                  className="evd-action-icon"
-                                  type="button"
-                                  title="Xem chi tiết"
-                                  aria-label={`Xem chi tiết tuân thủ của ${item.employeeName || item.employeeCode}`}
-                                  onClick={() => {
-                                    const params = new URLSearchParams()
-                                    params.set('from', fromDate)
-                                    params.set('to', toDate)
-                                    navigate(
-                                      isAdmin
-                                        ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`
-                                        : `/manager/compliance-by-technique/${item.employeeId}?${params.toString()}`
-                                    )
-                                  }}
-                                >
-                                  <EyeOutlined />
-                                </button>
+                                <div className="admin-table-actions">
+                                  <button
+                                    className="admin-table-action admin-table-action--icon admin-table-action--primary"
+                                    type="button"
+                                    title="Xem chi tiết"
+                                    aria-label={`Xem chi tiết tuân thủ của ${item.employeeName || item.employeeCode}`}
+                                    onClick={() => {
+                                      const params = new URLSearchParams()
+                                      params.set('from', fromDate)
+                                      params.set('to', toDate)
+                                      navigate(
+                                        isAdmin
+                                          ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`
+                                          : `/manager/compliance-by-technique/${item.employeeId}?${params.toString()}`
+                                      )
+                                    }}
+                                  >
+                                    <EyeOutlined />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))

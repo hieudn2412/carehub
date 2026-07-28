@@ -260,14 +260,70 @@
   background: #fff;
   color: #16324f;
 }
-.evd-threshold-input { width: 96px; padding: 7px 10px; font-size: 13px; }
-.evd-threshold-input--label { width: 132px; }
+.evd-threshold-table {
+  min-width: 900px;
+  table-layout: fixed;
+}
+
+.evd-threshold-panel {
+  overflow: hidden;
+  padding: 0;
+}
+
+.evd-threshold-table__level-col {
+  width: 220px;
+}
+
+.evd-threshold-table__label-col {
+  width: 280px;
+}
+
+.evd-threshold-table__score-col {
+  width: 180px;
+}
+
+.evd-threshold-table__color-col {
+  width: 140px;
+}
+
+.evd-threshold-table th,
+.evd-threshold-table td {
+  padding-right: 18px;
+  padding-left: 18px;
+}
+
+.evd-threshold-input {
+  box-sizing: border-box;
+  width: 120px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.evd-threshold-input--label {
+  width: min(100%, 220px);
+}
 .evd-color-input { width: 44px; padding: 3px; cursor: pointer; }
 .evd-threshold-input:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgb(15 118 110 / 13%); }
 .evd-threshold-row--invalid td { background: #fff8f7; }
 .evd-threshold-row--invalid .evd-threshold-input { border-color: #c2414b; }
-.evd-threshold-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.evd-threshold-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 18px;
+  border-top: 1px solid #e2e8f0;
+}
 .evd-threshold-legend__item { padding: 6px 12px; font-size: 12px; }
+.evd-threshold-panel .evd-validation-summary,
+.evd-threshold-panel .evd-unsaved-notice {
+  margin-right: 18px;
+  margin-left: 18px;
+}
+
+.evd-threshold-panel .evd-validation-summary:last-child,
+.evd-threshold-panel .evd-unsaved-notice:last-child {
+  margin-bottom: 18px;
+}
 .evd-validation-summary,
 .evd-unsaved-notice {
   display: flex;
@@ -485,25 +541,136 @@
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
 }
 
-.evd-action-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #2563eb;
-  cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+.evd-competency-table {
+  table-layout: fixed;
 }
 
-.evd-action-icon:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
+.evd-competency-table--field {
+  min-width: 920px;
+}
+
+.evd-competency-table--technique {
+  min-width: 1080px;
+}
+
+.evd-competency-table th,
+.evd-competency-table td {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+.evd-competency-table .evd-col-index {
+  width: 56px;
+}
+
+.evd-competency-table .evd-col-code {
+  width: 100px;
+}
+
+.evd-competency-table .evd-col-name {
+  width: 170px;
+}
+
+.evd-competency-table .evd-col-department {
+  width: 170px;
+}
+
+.evd-competency-table .evd-col-attempts {
+  width: 82px;
+}
+
+.evd-competency-table .evd-col-score {
+  width: 124px;
+}
+
+.evd-competency-table .evd-col-rate {
+  width: 100px;
+}
+
+.evd-competency-table .evd-col-target {
+  width: 100px;
+}
+
+.evd-competency-table .evd-col-level {
+  width: 168px;
+}
+
+.evd-competency-table .evd-col-actions {
+  width: 104px;
+}
+
+.evd-table-code {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #334155;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evd-table-person {
+  display: block;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evd-table-department {
+  display: block;
+  overflow: hidden;
+  color: #64748b;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evd-table-metric,
+.evd-table-score,
+.evd-table-rate {
+  font-variant-numeric: tabular-nums;
+}
+
+.evd-table-score {
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.evd-table-rate {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.evd-table-rate.is-low {
+  color: #dc2626;
+}
+
+.evd-table-target {
+  display: inline-flex;
+  align-items: center;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.evd-table-target.is-low {
+  color: #dc2626;
+}
+
+.evd-competency-table .admin-table-actions {
+  flex-wrap: nowrap;
+}
+
+.evd-competency-table .evd-badge {
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .evd-detail-table {
