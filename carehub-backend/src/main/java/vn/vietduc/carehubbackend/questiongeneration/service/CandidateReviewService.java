@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDocumentQu
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchCandidateActionErrorResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchDocumentQuestionCandidateActionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionDuplicateMatchResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
@@ -23,6 +24,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionC
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.CandidateValidationResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateMatchResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
 
 import java.util.ArrayList;
@@ -45,6 +47,54 @@ public class CandidateReviewService {
     @Transactional(readOnly = true)
     public DocumentQuestionCandidateResponse get(Long candidateId) {
         return mapper.toCandidateResponse(findCandidate(candidateId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionDuplicateMatchResponse> potentialDuplicates(Long candidateId) {
+        DocumentQuestionCandidate candidate = findCandidate(candidateId);
+        return duplicateCheckService.findPotentialMatches(
+                        candidate.getStem(),
+                        Set.of(),
+                        Set.of(candidate.getId()),
+                        20
+                ).stream()
+                .map(this::toDuplicateMatchResponse)
+                .toList();
+    }
+
+    private QuestionDuplicateMatchResponse toDuplicateMatchResponse(DuplicateMatchResult match) {
+        if (match.sourceType() == DuplicateMatchResult.SourceType.QUESTION_BANK) {
+            QuestionBankQuestion question = questionRepository.findById(match.sourceId()).orElse(null);
+            return new QuestionDuplicateMatchResponse(
+                    match.sourceType().name(),
+                    match.sourceId(),
+                    match.stem(),
+                    question == null ? null : question.getOptionA(),
+                    question == null ? null : question.getOptionB(),
+                    question == null ? null : question.getOptionC(),
+                    question == null ? null : question.getOptionD(),
+                    question == null ? null : question.getCorrectAnswer(),
+                    question == null ? null : question.getSourceDocument(),
+                    question == null || question.getStatus() == null ? null : question.getStatus().name(),
+                    match.similarity(),
+                    match.strongDuplicate()
+            );
+        }
+        DocumentQuestionCandidate candidate = candidateRepository.findById(match.sourceId()).orElse(null);
+        return new QuestionDuplicateMatchResponse(
+                match.sourceType().name(),
+                match.sourceId(),
+                match.stem(),
+                candidate == null ? null : candidate.getOptionA(),
+                candidate == null ? null : candidate.getOptionB(),
+                candidate == null ? null : candidate.getOptionC(),
+                candidate == null ? null : candidate.getOptionD(),
+                candidate == null ? null : candidate.getCorrectAnswer(),
+                candidate == null || candidate.getDocument() == null ? null : candidate.getDocument().getFilename(),
+                candidate == null || candidate.getStatus() == null ? null : candidate.getStatus().name(),
+                match.similarity(),
+                match.strongDuplicate()
+        );
     }
 
     @Transactional

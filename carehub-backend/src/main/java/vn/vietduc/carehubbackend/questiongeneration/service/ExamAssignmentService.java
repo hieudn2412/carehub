@@ -303,6 +303,10 @@ public class ExamAssignmentService {
         if (request.professionalFieldId() == null) {
             throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn");
         }
+        if (request.availableFrom() != null && request.dueAt() != null
+                && !request.availableFrom().isBefore(request.dueAt())) {
+            throw new BadRequestException("Thời gian bắt đầu phải sớm hơn hạn nộp");
+        }
         ProfessionalField professionalField = professionalFieldRepository.findById(request.professionalFieldId())
                 .filter(ProfessionalField::isActive)
                 .orElseThrow(() -> new BadRequestException("Lĩnh vực chuyên môn không hợp lệ hoặc đã ngừng sử dụng"));
@@ -422,8 +426,11 @@ public class ExamAssignmentService {
                 .examPaper(examPaper)
                 .professionalField(professionalField)
                 .status(status)
+                .availableFrom(request.availableFrom())
                 .dueAt(request.dueAt())
                 .maxAttempts(clamp(request.maxAttempts() == null ? DEFAULT_MAX_ATTEMPTS : request.maxAttempts(), 1, 10))
+                .shuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions())
+                .shuffleOptions(request.shuffleOptions() == null || request.shuffleOptions())
                 .resultVisibility(parseResultVisibility(request.resultVisibility()))
                 .createdBy(actor)
                 .openedAt(status == ExamAssignmentStatus.OPEN ? now : null)
@@ -536,8 +543,11 @@ public class ExamAssignmentService {
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
                 QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
+                assignment.getAvailableFrom(),
                 assignment.getDueAt(),
                 assignment.getMaxAttempts(),
+                Boolean.TRUE.equals(assignment.getShuffleQuestions()),
+                Boolean.TRUE.equals(assignment.getShuffleOptions()),
                 resultVisibility.name(),
                 QuestionGenerationLabels.examResultVisibility(resultVisibility),
                 Math.toIntExact(targetRepository.countByAssignment(assignment)),
@@ -568,7 +578,10 @@ public class ExamAssignmentService {
         ExamAttempt bestAttempt = scoredAttempts.stream()
                 .max(Comparator.comparing(ExamAttempt::getScore))
                 .orElse(null);
-        String assessmentStatus = scoredAttempts.isEmpty() ? "NOT_TAKEN"
+        boolean resultsHidden = resultVisibility(assignment) != ExamResultVisibility.SCORE_ONLY
+                && !isAssignmentEnded(assignment, now);
+        String assessmentStatus = resultsHidden && !scoredAttempts.isEmpty() ? "PENDING"
+                : scoredAttempts.isEmpty() ? "NOT_TAKEN"
                 : scoredAttempts.stream().anyMatch(attempt -> Boolean.TRUE.equals(attempt.getPassed())) ? "PASSED" : "FAILED";
         int usedAttempts = attempts.size();
         int maxAttempts = assignment.getMaxAttempts() == null
@@ -576,8 +589,10 @@ public class ExamAssignmentService {
                 : assignment.getMaxAttempts();
         int remainingAttempts = Math.max(0, maxAttempts - usedAttempts);
         boolean due = assignment.getDueAt() != null && now.isAfter(assignment.getDueAt());
+        boolean upcoming = assignment.getAvailableFrom() != null && now.isBefore(assignment.getAvailableFrom());
         boolean canStartNew = assignment.getStatus() == ExamAssignmentStatus.OPEN
                 && !due
+                && !upcoming
                 && remainingAttempts > 0;
 
         String availabilityStatus;
@@ -598,6 +613,11 @@ public class ExamAssignmentService {
             availabilityStatus = "OVERDUE";
             availabilityText = "Đã quá hạn";
             actionLabel = "Đã quá hạn";
+            actionable = false;
+        } else if (assignment.getStatus() == ExamAssignmentStatus.OPEN && upcoming) {
+            availabilityStatus = "UPCOMING";
+            availabilityText = "Chưa đến giờ làm";
+            actionLabel = "Chưa đến giờ";
             actionable = false;
         } else if (remainingAttempts == 0) {
             availabilityStatus = "COMPLETED";
@@ -622,6 +642,7 @@ public class ExamAssignmentService {
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
                 QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
+                assignment.getAvailableFrom(),
                 assignment.getDueAt(),
                 assignment.getOpenedAt(),
                 assignment.getCreatedAt(),
@@ -641,9 +662,11 @@ public class ExamAssignmentService {
                 actionLabel,
                 actionable,
                 // Điểm đã ở thang 0-10 (ExamAttemptService.gradeAttempt) — trả nguyên, không chia lại.
-                bestAttempt == null ? null : bestAttempt.getScore(),
+                resultsHidden || bestAttempt == null ? null : bestAttempt.getScore(),
                 assessmentStatus,
-                bestAttempt == null ? (currentAttempt == null ? null : currentAttempt.getId()) : bestAttempt.getId()
+                resultsHidden
+                        ? null
+                        : bestAttempt == null ? (currentAttempt == null ? null : currentAttempt.getId()) : bestAttempt.getId()
         );
     }
 
@@ -732,6 +755,17 @@ public class ExamAssignmentService {
 
     ExamResultVisibility resultVisibility(ExamAssignment assignment) {
         return assignment.getResultVisibility() == null ? DEFAULT_RESULT_VISIBILITY : assignment.getResultVisibility();
+    }
+
+    boolean isAssignmentEnded(ExamAssignment assignment, LocalDateTime now) {
+        if (assignment == null) {
+            return true;
+        }
+        if (assignment.getStatus() == ExamAssignmentStatus.CLOSED
+                || assignment.getStatus() == ExamAssignmentStatus.ARCHIVED) {
+            return true;
+        }
+        return assignment.getDueAt() != null && !now.isBefore(assignment.getDueAt());
     }
 
     private ExamResultVisibility parseResultVisibility(String visibility) {

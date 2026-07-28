@@ -320,7 +320,6 @@ function TestConfigPage() {
                 <div className="tcf-selected-set">
                   <strong>{selectedQuestionSet.name}</strong>
                   <span>{selectedQuestionSet.questionCount || 0} câu hỏi</span>
-                  <span>{selectedQuestionSet.difficulty || 'Chưa phân loại'}</span>
                   <span>{selectedQuestionSet.statusText || 'Hoạt động'}</span>
                 </div>
               )}

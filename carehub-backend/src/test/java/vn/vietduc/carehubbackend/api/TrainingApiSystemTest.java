@@ -176,17 +176,19 @@ class TrainingApiSystemTest extends AbstractApiSystemTest {
                 .isEqualTo("Hồ sơ đào tạo ở trạng thái SUBMITTED không thể chỉnh sửa");
     }
 
-    @DisplayName("L3-TRN-10 | State-Conflict: the owner cannot return their own SUBMITTED record to draft → 400 REQ_001 (admin-only transition, D15)")
+    @DisplayName("L3-TRN-10 | Input-Domain-Happy: the owner can return their own SUBMITTED record to draft → DRAFT")
     @Test
-    void ownerCannotReturnTheirOwnRecordToDraft() {
+    void ownerCanReturnTheirOwnRecordToDraft() {
         long recordId = createRecord(ownerToken, "Trả nháp " + nextSeq());
         assertOk(post(API + "/training/records/" + recordId + "/submit", ownerToken, "{}"));
 
         ResponseEntity<String> response =
                 post(API + "/training/records/" + recordId + "/return-to-draft", ownerToken, "{}");
 
-        assertError(response, HttpStatus.BAD_REQUEST, "REQ_001");
-        assertThat(json(response).get("message").asText()).contains("SUBMITTED -> DRAFT");
+        assertOk(response);
+        JsonNode body = data(response);
+        assertThat(body.get("workflowStatus").asText()).isEqualTo("DRAFT");
+        assertThat(body.get("submittedAt").isNull()).isTrue();
     }
 
     @DisplayName("L3-TRN-11 | Input-Domain-Happy: an ADMIN can return a submitted record to draft → DRAFT with submittedAt cleared")

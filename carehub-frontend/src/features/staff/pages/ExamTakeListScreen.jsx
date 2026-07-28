@@ -68,7 +68,12 @@ export default function ExamTakeListScreen() {
     finally { setStartingId(null) }
   }
 
-  const assessmentLabel = value => value === 'PASSED' ? 'Đạt' : value === 'FAILED' ? 'Chưa đạt' : 'Chưa làm'
+  const assessmentLabel = value => {
+    if (value === 'PASSED') return 'Đạt'
+    if (value === 'FAILED') return 'Chưa đạt'
+    if (value === 'PENDING') return 'Chờ công bố'
+    return 'Chưa làm'
+  }
   const canStart = item => Boolean(item.currentAttemptId || item.actionable)
   // detailAttemptId là lượt điểm cao nhất; khi chưa có lượt nào được chấm nó trùng
   // currentAttemptId → bỏ qua để không render hai nút cùng đích.

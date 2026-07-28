@@ -79,6 +79,11 @@ export function candidateLabelText(candidate) {
   return candidate?.labelText || CANDIDATE_LABELS[candidate?.label] || ''
 }
 
+export function shouldShowCandidateLabelBadge(candidate) {
+  return Boolean(candidate?.label)
+    && candidateLabelText(candidate) !== candidateStatusText(candidate)
+}
+
 export function difficultyText(value) {
   return DIFFICULTY_LABELS[value] || value || 'Chưa phân loại'
 }

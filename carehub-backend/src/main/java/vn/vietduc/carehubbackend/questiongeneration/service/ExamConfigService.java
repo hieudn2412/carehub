@@ -15,6 +15,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItem;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
@@ -70,6 +71,8 @@ public class ExamConfigService {
         ExamConfigStatus status = parseStatus(request.status(), ExamConfigStatus.DRAFT);
         QuestionSet questionSet = resolveQuestionSet(request.questionSetId());
         validateBase(request, questionSet);
+        ExamQuestionSelectionMode selectionMode = parseSelectionMode(request.questionSelectionMode());
+        ExamDifficultyAllocator.Percentages percentages = resolvePercentages(request, selectionMode);
 
         ExamConfig config = ExamConfig.builder()
                 .name(name)
@@ -81,6 +84,10 @@ public class ExamConfigService {
                 .maxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"))
                 .shuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions())
                 .shuffleOptions(request.shuffleOptions() == null || request.shuffleOptions())
+                .questionSelectionMode(selectionMode)
+                .easyPercentage(percentages == null ? null : percentages.easy())
+                .mediumPercentage(percentages == null ? null : percentages.medium())
+                .hardPercentage(percentages == null ? null : percentages.hard())
                 .status(status)
                 .createdBy(actor)
                 .reviewedBy(status == ExamConfigStatus.ACTIVE ? actor : null)
@@ -100,6 +107,8 @@ public class ExamConfigService {
         String name = required(request == null ? null : request.name(), "Tên cấu hình không được để trống");
         QuestionSet questionSet = resolveQuestionSet(request.questionSetId());
         validateBase(request, questionSet);
+        ExamQuestionSelectionMode selectionMode = parseSelectionMode(request.questionSelectionMode());
+        ExamDifficultyAllocator.Percentages percentages = resolvePercentages(request, selectionMode);
 
         config.setName(name);
         config.setDescription(trimToNull(request.description()));
@@ -110,6 +119,10 @@ public class ExamConfigService {
         config.setMaxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"));
         config.setShuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions());
         config.setShuffleOptions(request.shuffleOptions() == null || request.shuffleOptions());
+        config.setQuestionSelectionMode(selectionMode);
+        config.setEasyPercentage(percentages == null ? null : percentages.easy());
+        config.setMediumPercentage(percentages == null ? null : percentages.medium());
+        config.setHardPercentage(percentages == null ? null : percentages.hard());
         config.setStatus(parseStatus(request.status(), config.getStatus()));
         if (config.getStatus() == ExamConfigStatus.ACTIVE) {
             config.setReviewedBy(actor);
@@ -205,7 +218,10 @@ public class ExamConfigService {
                 ))
                 .toList();
         Preview preview = buildPreview(config.getQuestionSet(), config.getTotalQuestions(), drafts);
-        if (!preview.valid()) {
+        if (config.getQuestionSelectionMode() == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED) {
+            validateDifficultyAvailability(config, preview.warnings());
+        }
+        if (!preview.warnings().isEmpty()) {
             throw new BadRequestException("Không thể kích hoạt cấu hình: " + String.join("; ", preview.warnings()));
         }
     }
@@ -257,23 +273,34 @@ public class ExamConfigService {
             warnings.add("Tổng phân bổ " + distributedQuestions + " câu chưa khớp tổng số câu " + totalQuestions);
         }
 
-        Map<String, Long> availableByCategory = questionSet == null
-                ? Map.of()
-                : questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet).stream()
-                .map(QuestionSetItem::getQuestion)
-                .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(question -> normalize(question.getTopic()), Collectors.counting()));
+        List<vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion> availableQuestions =
+                questionSet == null
+                        ? List.of()
+                        : questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet).stream()
+                        .map(QuestionSetItem::getQuestion)
+                        .filter(Objects::nonNull)
+                        .toList();
 
         List<ExamConfigDistributionResponse> responses = new ArrayList<>();
         for (DistributionDraft draft : effectiveDrafts) {
             String categoryName = draft.category() == null ? "Tất cả danh mục" : draft.category().getName();
             Integer available = null;
             boolean shortage = false;
-            if (questionSet != null && draft.category() != null) {
-                available = Math.toIntExact(availableByCategory.getOrDefault(normalize(categoryName), 0L));
+            if (questionSet != null) {
+                available = Math.toIntExact(availableQuestions.stream()
+                        .filter(question -> draft.category() == null
+                                || normalize(question.getTopic()).equals(normalize(categoryName)))
+                        .filter(question -> draft.difficulty() == null
+                                || ExamDifficultyAllocator.normalizeDifficulty(question.getDifficulty())
+                                .equals(ExamDifficultyAllocator.normalizeDifficulty(draft.difficulty())))
+                        .count());
                 shortage = available < draft.questionCount();
                 if (shortage) {
-                    warnings.add("Danh mục " + categoryName + " cần " + draft.questionCount() + " câu nhưng bộ câu hỏi chỉ có " + available + " câu");
+                    String difficultyText = draft.difficulty() == null
+                            ? ""
+                            : " mức " + difficultyLabel(draft.difficulty());
+                    warnings.add(categoryName + difficultyText + " cần " + draft.questionCount()
+                            + " câu nhưng bộ câu hỏi chỉ có " + available + " câu");
                 }
             }
             responses.add(new ExamConfigDistributionResponse(
@@ -321,6 +348,10 @@ public class ExamConfigService {
             ));
         }
         QuestionSet questionSet = config.getQuestionSet();
+        ExamDifficultyAllocator.Percentages percentages = percentages(config);
+        ExamDifficultyAllocator.Counts counts = percentages == null
+                ? null
+                : ExamDifficultyAllocator.allocate(config.getTotalQuestions(), percentages);
         return new ExamConfigResponse(
                 config.getId(),
                 config.getName(),
@@ -334,6 +365,11 @@ public class ExamConfigService {
                 config.getMaxRetakes(),
                 config.getShuffleQuestions(),
                 config.getShuffleOptions(),
+                selectionMode(config).name(),
+                percentages == null ? null : new ExamConfigResponse.DifficultyPercentages(
+                        percentages.easy(), percentages.medium(), percentages.hard()),
+                counts == null ? null : new ExamConfigResponse.DifficultyQuestionCounts(
+                        counts.easy(), counts.medium(), counts.hard()),
                 config.getStatus().name(),
                 QuestionGenerationLabels.examConfigStatus(config.getStatus()),
                 distributionResponses,
@@ -387,6 +423,86 @@ public class ExamConfigService {
             return null;
         }
         return parseStatus(value, null);
+    }
+
+    private ExamQuestionSelectionMode parseSelectionMode(String value) {
+        if (value == null || value.isBlank()) {
+            return ExamQuestionSelectionMode.FIXED_PAPER;
+        }
+        try {
+            return ExamQuestionSelectionMode.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Chế độ chọn câu hỏi không hợp lệ");
+        }
+    }
+
+    private ExamQuestionSelectionMode selectionMode(ExamConfig config) {
+        return config.getQuestionSelectionMode() == null
+                ? ExamQuestionSelectionMode.FIXED_PAPER
+                : config.getQuestionSelectionMode();
+    }
+
+    private ExamDifficultyAllocator.Percentages resolvePercentages(
+            UpsertExamConfigRequest request,
+            ExamQuestionSelectionMode selectionMode
+    ) {
+        if (selectionMode != ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED) {
+            return null;
+        }
+        UpsertExamConfigRequest.DifficultyPercentages values = request.difficultyPercentages();
+        return ExamDifficultyAllocator.percentages(
+                values == null ? null : values.easy(),
+                values == null ? null : values.medium(),
+                values == null ? null : values.hard()
+        );
+    }
+
+    private ExamDifficultyAllocator.Percentages percentages(ExamConfig config) {
+        if (selectionMode(config) != ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED) {
+            return null;
+        }
+        return ExamDifficultyAllocator.percentages(
+                config.getEasyPercentage(),
+                config.getMediumPercentage(),
+                config.getHardPercentage()
+        );
+    }
+
+    private void validateDifficultyAvailability(ExamConfig config, List<String> existingWarnings) {
+        ExamDifficultyAllocator.Percentages percentages = percentages(config);
+        ExamDifficultyAllocator.Counts counts = ExamDifficultyAllocator.allocate(config.getTotalQuestions(), percentages);
+        Map<String, Long> available = questionSetItemRepository
+                .findByQuestionSetOrderByPositionAsc(config.getQuestionSet()).stream()
+                .map(QuestionSetItem::getQuestion)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(
+                        question -> ExamDifficultyAllocator.normalizeDifficulty(question.getDifficulty()),
+                        Collectors.counting()
+                ));
+        List<String> shortages = new ArrayList<>();
+        addDifficultyShortage(shortages, "Dễ", counts.easy(), available.getOrDefault("EASY", 0L));
+        addDifficultyShortage(shortages, "Trung bình", counts.medium(), available.getOrDefault("MEDIUM", 0L));
+        addDifficultyShortage(shortages, "Khó", counts.hard(), available.getOrDefault("HARD", 0L));
+        if (!shortages.isEmpty()) {
+            existingWarnings.addAll(shortages);
+        }
+    }
+
+    private void addDifficultyShortage(List<String> warnings, String label, int required, long available) {
+        if (available < required) {
+            String warning = "Mức " + label + " cần " + required + " câu nhưng hiện có " + available + " câu";
+            if (!warnings.contains(warning)) {
+                warnings.add(warning);
+            }
+        }
+    }
+
+    private String difficultyLabel(String difficulty) {
+        return switch (ExamDifficultyAllocator.normalizeDifficulty(difficulty)) {
+            case "EASY" -> "Dễ";
+            case "HARD" -> "Khó";
+            default -> "Trung bình";
+        };
     }
 
     private String required(String value, String message) {

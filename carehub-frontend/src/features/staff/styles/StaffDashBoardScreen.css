@@ -161,6 +161,12 @@
   background: #f0f7f4;
 }
 
+.sidebar__section-trigger--link {
+  justify-content: flex-start;
+  gap: 8px;
+  text-decoration: none;
+}
+
 .sidebar__section-chevron {
   flex-shrink: 0;
   font-size: 10px;

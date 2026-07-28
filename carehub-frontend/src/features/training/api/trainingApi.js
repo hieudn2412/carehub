@@ -93,6 +93,13 @@ export const trainingApi = {
     })
   },
 
+  deleteRecord(id, version) {
+    return httpClient.delete(`/training/records/${id}`, {
+      headers: authHeaders(),
+      params: version == null ? undefined : { version },
+    })
+  },
+
   submitRecord(id, payload) {
     return httpClient.post(`/training/records/${id}/submit`, payload, {
       headers: authHeaders(),

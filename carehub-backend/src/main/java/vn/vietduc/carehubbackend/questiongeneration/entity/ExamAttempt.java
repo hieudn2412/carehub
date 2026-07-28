@@ -79,4 +79,7 @@ public class ExamAttempt extends BaseEntity {
 
     @Column(name = "time_spent_seconds")
     private Integer timeSpentSeconds;
+
+    @Column(name = "presentation_seed")
+    private Long presentationSeed;
 }

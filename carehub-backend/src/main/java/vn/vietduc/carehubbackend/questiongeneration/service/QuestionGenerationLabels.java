@@ -183,8 +183,9 @@ public final class QuestionGenerationLabels {
             return "";
         }
         return switch (visibility) {
-            case SCORE_ONLY -> "Chỉ hiển thị điểm";
-            case SCORE_AND_ANSWERS -> "Hiển thị điểm, đáp án và giải thích";
+            case SCORE_ONLY -> "Xem điểm ngay sau khi nộp";
+            case SCORE_AND_ANSWERS -> "Xem điểm và đáp án sau khi đợt thi kết thúc";
+            case HIDDEN_UNTIL_END -> "Ẩn kết quả đến khi đợt thi kết thúc";
         };
     }
 

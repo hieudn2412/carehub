@@ -249,6 +249,7 @@ function TrainingHoursFormScreen() {
 
   // Evidence states
   const fileInputRef = useRef(null)
+  const previewUrlsRef = useRef(new Set())
   const [selectedFiles, setSelectedFiles] = useState([])
   const [existingEvidences, setExistingEvidences] = useState([])
   const [evidencesToDelete, setEvidencesToDelete] = useState([])
@@ -259,6 +260,11 @@ function TrainingHoursFormScreen() {
   const [customModalOpen, setCustomModalOpen] = useState(false)
   const [tempCustomName, setTempCustomName] = useState('')
   const [tempCustomNameError, setTempCustomNameError] = useState('')
+
+  useEffect(() => () => {
+    previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
+    previewUrlsRef.current.clear()
+  }, [])
 
   const handleOpenCustomModal = () => {
     setTempCustomName(form.professionalFieldId === 'OTHER' ? form.customProfessionalField : '')
@@ -428,8 +434,8 @@ function TrainingHoursFormScreen() {
 
     let failedUploads = 0
     if (selectedFiles.length > 0) {
-      for (const file of selectedFiles) {
-        try { await trainingApi.uploadEvidence(recordId, file) } catch { failedUploads++ }
+      for (const selectedFile of selectedFiles) {
+        try { await trainingApi.uploadEvidence(recordId, selectedFile.file) } catch { failedUploads++ }
       }
     }
 
@@ -493,13 +499,25 @@ function TrainingHoursFormScreen() {
         setFileError(validationError)
         continue
       }
-      valid.push(file)
+      let previewUrl = ''
+      if (file.type?.startsWith('image/') && typeof URL.createObjectURL === 'function') {
+        previewUrl = URL.createObjectURL(file)
+        previewUrlsRef.current.add(previewUrl)
+      }
+      valid.push({ file, previewUrl })
     }
     setSelectedFiles(prev => [...prev, ...valid])
   }
 
   const removeSelectedFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+    setSelectedFiles(prev => {
+      const removed = prev[index]
+      if (removed?.previewUrl) {
+        URL.revokeObjectURL(removed.previewUrl)
+        previewUrlsRef.current.delete(removed.previewUrl)
+      }
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   const removeExistingEvidence = (ev) => {
@@ -703,25 +721,37 @@ function TrainingHoursFormScreen() {
                         <p style={{ fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
                           File sẽ tải lên ({selectedFiles.length}):
                         </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {selectedFiles.map((file, i) => (
-                            <div key={i} className="evidence-chip evidence-chip--new">
-                              <PaperClipOutlined style={{ fontSize: 12 }} />
-                              <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {file.name}
-                              </span>
-                              <span style={{ color: '#6b7280', fontSize: 11 }}>
-                                ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                              </span>
+                        <div className="evidence-selection-grid">
+                          {selectedFiles.map(({ file, previewUrl }, i) => (
+                            <article key={`${file.name}-${file.lastModified}-${i}`} className="evidence-selection-card">
+                              {previewUrl ? (
+                                <img
+                                  className="evidence-selection-card__image"
+                                  src={previewUrl}
+                                  alt={`Ảnh minh chứng ${file.name}`}
+                                />
+                              ) : (
+                                <div className="evidence-selection-card__file">
+                                  <PaperClipOutlined />
+                                  <span>PDF</span>
+                                </div>
+                              )}
+                              <div className="evidence-selection-card__info">
+                                <span className="evidence-selection-card__name" title={file.name}>
+                                  {file.name}
+                                </span>
+                                <span>{formatCompactSize(file.size)}</span>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => removeSelectedFile(i)}
-                                className="evidence-chip__remove"
-                                title="Xoá"
+                                className="evidence-selection-card__remove"
+                                aria-label={`Xóa tệp ${file.name}`}
+                                title="Xóa tệp"
                               >
-                                ✕
+                                <CloseOutlined />
                               </button>
-                            </div>
+                            </article>
                           ))}
                         </div>
                       </div>

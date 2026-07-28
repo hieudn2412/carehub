@@ -19,6 +19,10 @@ function clsColor(level) {
   return COMPETENCY_COLORS[level] || ['#6b7280', '#f3f4f6']
 }
 
+function examDisplayName(attempt) {
+  return attempt?.assignmentName || attempt?.examPaperName || 'Bài kiểm tra'
+}
+
 function ExamHistoryScreen() {
   const { showToast } = useToast()
   const [attempts, setAttempts] = useState([])
@@ -156,7 +160,6 @@ function ExamHistoryScreen() {
                 <th>Lĩnh vực chuyên môn</th>
                 <th>Điểm số</th>
                 <th>Phân loại</th>
-                <th>Trạng thái</th>
                 <th>Thời gian</th>
                 <th>Lượt</th>
                 <th>Hành động</th>
@@ -164,18 +167,18 @@ function ExamHistoryScreen() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="9">Đang tải lịch sử thi...</td></tr>
+                <tr><td colSpan="8">Đang tải lịch sử thi...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan="9">Chưa có lịch sử thi.</td></tr>
+                <tr><td colSpan="8">Chưa có lịch sử thi.</td></tr>
               ) : filtered.map((attempt) => (
                 <tr key={attempt.id}>
-                  <td data-label="Tên bài thi">{attempt.examPaperName}</td>
+                  <td data-label="Tên bài thi">{examDisplayName(attempt)}</td>
                   <td data-label="Ngày nộp">{formatDateTime(attempt.submittedAt)}</td>
                   <td data-label="Lĩnh vực">{attempt.professionalFieldName || '—'}</td>
                   <td data-label="Điểm số">
                     <span className={`eh-score ${
                       attempt.passed === true ? 'eh-score--pass' : attempt.passed === false ? 'eh-score--fail' : 'eh-score--pending'
-                    }`}>{attempt.score == null ? '---' : `${formatNumber(attempt.score)}/10`}</span>
+                    }`}>{attempt.score == null && attempt.status === 'GRADED' ? 'Chờ công bố' : attempt.score == null ? '---' : `${formatNumber(attempt.score)}/10`}</span>
                   </td>
                   <td data-label="Phân loại">
                     {attempt.classification ? (
@@ -191,16 +194,6 @@ function ExamHistoryScreen() {
                         {attempt.classificationText || attempt.classification}
                       </span>
                     ) : <span style={{ color: '#9ca3af' }}>--</span>}
-                  </td>
-                  <td data-label="Trạng thái">
-                    <span className={`eh-badge ${
-                      attempt.status === 'EXPIRED'
-                        ? 'eh-badge--pending'
-                        : attempt.passed ? 'eh-badge--pass' : 'eh-badge--fail'
-                    }`}>
-                      <span className="eh-badge__dot" />
-                      {attempt.status === 'EXPIRED' ? 'Hết thời gian' : attempt.passed ? 'Đạt' : 'Không đạt'}
-                    </span>
                   </td>
                   <td data-label="Thời gian">{Math.round((attempt.timeSpentSeconds || 0) / 60)} phút</td>
                   <td data-label="Lượt"><span className="eh-attempt">{attempt.attemptNumber}</span></td>
@@ -218,13 +211,13 @@ function ExamHistoryScreen() {
         {selectedAttempt && (
           <div className="eh-table-card eh-detail-card">
             <div className="eh-detail-header">
-              <strong>{selectedAttempt.examPaperName}</strong>
-              <span>{selectedAttempt.score == null ? '---' : `${formatNumber(selectedAttempt.score)}/10`}</span>
+              <strong>{examDisplayName(selectedAttempt)}</strong>
+              <span>{selectedAttempt.score == null && selectedAttempt.status === 'GRADED' ? 'Chờ công bố' : selectedAttempt.score == null ? '---' : `${formatNumber(selectedAttempt.score)}/10`}</span>
             </div>
             {(selectedAttempt.answers || []).length === 0 && (
               <div className="eh-answer-line">
                 Chưa hiển thị đáp án đúng và giải thích. Nếu bài kiểm tra cho phép xem đáp án,
-                phần này sẽ hiện sau khi bạn dùng hết lượt làm hoặc khi bài kiểm tra đóng.
+                phần này sẽ hiện sau khi đợt thi kết thúc.
               </div>
             )}
             {(selectedAttempt.questions || []).map((question) => {

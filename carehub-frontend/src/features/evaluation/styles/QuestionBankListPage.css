@@ -61,12 +61,7 @@
   width: min(680px, 100%);
 }
 
-.qbl-filter-disclosure {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.qbl-filter-disclosure > summary {
+.qbl-filter-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,12 +79,8 @@
   white-space: nowrap;
 }
 
-.qbl-filter-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.qbl-filter-disclosure[open] > summary,
-.qbl-filter-disclosure > summary:hover {
+.qbl-filter-trigger.is-open,
+.qbl-filter-trigger:hover {
   border-color: #99f6e4;
   background: #f0fdfa;
   color: #0f766e;
@@ -110,24 +101,32 @@
 }
 
 .qbl-filter-panel {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 8px);
-  right: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
-  gap: 10px;
-  width: 430px;
+  grid-template-columns: repeat(2, minmax(180px, 260px)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 12px;
+  width: 100%;
   padding: 14px;
   border: 1px solid #dbe3ee;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.qbl-filter-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+.qbl-filter-panel label > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .qbl-filter-panel .qbl-btn-clear {
-  grid-column: 1 / -1;
-  justify-self: end;
+  justify-self: start;
 }
 
 .qbl-search-input {
@@ -167,7 +166,7 @@
   outline: none;
   color: #334155;
   min-width: 150px;
-  min-height: 38px;
+  min-height: 44px;
   cursor: pointer;
   background: #fff;
   transition: all 0.15s ease;
@@ -179,7 +178,7 @@
 }
 
 .qbl-btn-clear {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 4px;
   border: 0;
   background: transparent;
@@ -639,44 +638,6 @@
   margin-top: 16px;
 }
 
-.qbl-model-status-card {
-  min-height: 108px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.qbl-model-status-card strong {
-  color: #0f172a;
-  font-size: 13.5px;
-}
-
-.qbl-model-status-card span {
-  color: #475569;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.qbl-model-status-card small {
-  color: #64748b;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-.qbl-model-status-card--ready {
-  border-color: #86efac;
-  background: #f0fdf7;
-}
-
-.qbl-model-status-card--warning {
-  border-color: #fde68a;
-  background: #fffbeb;
-}
-
 .qbl-model-warning {
   margin-top: 10px;
   padding: 10px 12px;
@@ -789,17 +750,13 @@
     flex-direction: column;
   }
 
-  .qbl-filter-disclosure > summary {
+  .qbl-filter-trigger {
     width: 100%;
   }
 
   .qbl-filter-panel {
-    position: static;
     grid-template-columns: 1fr;
     width: 100%;
-    margin-top: 8px;
-    box-sizing: border-box;
-    box-shadow: none;
   }
 
   .qbl-filter-select,

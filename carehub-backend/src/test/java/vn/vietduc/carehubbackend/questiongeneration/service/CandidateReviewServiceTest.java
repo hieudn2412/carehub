@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchDocumentQuestionCandidateActionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionClassificationTestResponse;
@@ -18,10 +19,13 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentChunkTy
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateMatchResult;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -53,7 +57,7 @@ class CandidateReviewServiceTest {
                 validationService,
                 duplicateCheckService,
                 embeddingService,
-                new DocumentQuestionMapper(),
+                new DocumentQuestionMapper(new ValidationRulesProperties()),
                 new ObjectMapper(),
                 classificationRuleService
         );
@@ -169,6 +173,67 @@ class CandidateReviewServiceTest {
         assertThat(candidate.getStatus()).isEqualTo(CandidateStatus.REJECTED);
         assertThat(candidate.getLabel()).isEqualTo(CandidateLabel.REJECTED);
         assertThat(candidate.getReviewerNotes()).isEqualTo("Không phù hợp");
+    }
+
+    @Test
+    void potentialDuplicatesReturnsDetailedBankAndCandidateMatches() {
+        DocumentQuestionCandidate current = approvedCandidate();
+        DocumentQuestionCandidate other = approvedCandidate();
+        other.setId(41L);
+        QuestionBankQuestion bankQuestion = QuestionBankQuestion.builder()
+                .id(22L)
+                .stem("Câu trong ngân hàng")
+                .optionA("A1")
+                .optionB("B1")
+                .optionC("C1")
+                .optionD("D1")
+                .correctAnswer("B")
+                .language("vi")
+                .sourceDocument("quy-trinh.pdf")
+                .status(QuestionBankStatus.APPROVED)
+                .build();
+        when(candidateRepository.findById(current.getId())).thenReturn(Optional.of(current));
+        when(candidateRepository.findById(other.getId())).thenReturn(Optional.of(other));
+        when(questionRepository.findById(bankQuestion.getId())).thenReturn(Optional.of(bankQuestion));
+        when(duplicateCheckService.findPotentialMatches(
+                eq(current.getStem()), eq(Set.of()), eq(Set.of(current.getId())), eq(20)))
+                .thenReturn(List.of(
+                        new DuplicateMatchResult(
+                                DuplicateMatchResult.SourceType.QUESTION_BANK,
+                                bankQuestion.getId(),
+                                bankQuestion.getStem(),
+                                0.97,
+                                true
+                        ),
+                        new DuplicateMatchResult(
+                                DuplicateMatchResult.SourceType.DOCUMENT_CANDIDATE,
+                                other.getId(),
+                                other.getStem(),
+                                0.90,
+                                false
+                        )
+                ));
+
+        var matches = service.potentialDuplicates(current.getId());
+
+        assertThat(matches).hasSize(2);
+        assertThat(matches.get(0).sourceType()).isEqualTo("QUESTION_BANK");
+        assertThat(matches.get(0).sourceDocument()).isEqualTo("quy-trinh.pdf");
+        assertThat(matches.get(0).strongDuplicate()).isTrue();
+        assertThat(matches.get(1).sourceType()).isEqualTo("DOCUMENT_CANDIDATE");
+        assertThat(matches.get(1).sourceDocument()).isEqualTo("huong-dan.pdf");
+    }
+
+    @Test
+    void candidateResponseUsesConfiguredDuplicateThresholds() {
+        DocumentQuestionCandidate candidate = approvedCandidate();
+        candidate.setDuplicateMaxSimilarity(0.90);
+        when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
+
+        var response = service.get(candidate.getId());
+
+        assertThat(response.duplicateNeedsReview()).isTrue();
+        assertThat(response.strongDuplicate()).isFalse();
     }
 
     private DocumentQuestionCandidate approvedCandidate() {

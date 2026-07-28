@@ -281,7 +281,6 @@ public class QuestionSetService {
         Set<Long> excluded = new HashSet<>(request.excludeQuestionIds() == null ? List.of() : request.excludeQuestionIds());
         String normalizedCategory = normalize(request.category());
         String normalizedTopic = normalize(request.topic());
-        boolean avoidSameSource = Boolean.TRUE.equals(request.avoidSameSourceDocument());
         long seed = request.randomSeed() == null ? 1L : request.randomSeed();
         List<QuestionBankQuestion> approved = questionRepository.findTop500ByStatusOrderByIdAsc(QuestionBankStatus.APPROVED).stream()
                 .filter(question -> !excluded.contains(question.getId()))
@@ -293,7 +292,6 @@ public class QuestionSetService {
         List<QuestionSetPreviewResponse.Shortage> shortage = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
         Set<Long> selectedIds = new HashSet<>();
-        Set<String> usedSources = new HashSet<>();
 
         if (useSimpleMode) {
             // Simple mode: just pick questionCount questions from the category
@@ -302,13 +300,10 @@ public class QuestionSetService {
             candidates.sort(Comparator.comparing((QuestionBankQuestion question) ->
                     question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1));
             java.util.Collections.shuffle(candidates, new Random(seed));
-            List<QuestionBankQuestion> picked = pickCandidates(candidates, requested, avoidSameSource, usedSources);
+            List<QuestionBankQuestion> picked = pickCandidates(candidates, requested);
             picked.forEach(question -> {
                 selected.add(question);
                 selectedIds.add(question.getId());
-                if (question.getSourceDocument() != null && !question.getSourceDocument().isBlank()) {
-                    usedSources.add(question.getSourceDocument());
-                }
             });
             if (picked.size() < requested) {
                 warnings.add("Chỉ tìm thấy " + picked.size() + "/" + requested + " câu hỏi phù hợp trong danh mục");
@@ -331,13 +326,10 @@ public class QuestionSetService {
                                         question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1))
                                 .collect(Collectors.toCollection(ArrayList::new));
                         java.util.Collections.shuffle(candidates, new Random(seed + difficulty.hashCode()));
-                        List<QuestionBankQuestion> picked = pickCandidates(candidates, requested, avoidSameSource, usedSources);
+                        List<QuestionBankQuestion> picked = pickCandidates(candidates, requested);
                         picked.forEach(question -> {
                             selected.add(question);
                             selectedIds.add(question.getId());
-                            if (question.getSourceDocument() != null && !question.getSourceDocument().isBlank()) {
-                                usedSources.add(question.getSourceDocument());
-                            }
                         });
                         if (picked.size() < requested) {
                             shortage.add(new QuestionSetPreviewResponse.Shortage(difficulty, requested, candidates.size()));
@@ -381,35 +373,9 @@ public class QuestionSetService {
 
     private List<QuestionBankQuestion> pickCandidates(
             List<QuestionBankQuestion> candidates,
-            int requested,
-            boolean avoidSameSource,
-            Set<String> usedSources
+            int requested
     ) {
-        List<QuestionBankQuestion> picked = new ArrayList<>();
-        for (QuestionBankQuestion candidate : candidates) {
-            if (picked.size() >= requested) {
-                break;
-            }
-            String source = candidate.getSourceDocument();
-            if (avoidSameSource && source != null && !source.isBlank() && usedSources.contains(source)) {
-                continue;
-            }
-            picked.add(candidate);
-            if (source != null && !source.isBlank()) {
-                usedSources.add(source);
-            }
-        }
-        if (picked.size() < requested) {
-            for (QuestionBankQuestion candidate : candidates) {
-                if (picked.size() >= requested) {
-                    break;
-                }
-                if (picked.stream().noneMatch(existing -> Objects.equals(existing.getId(), candidate.getId()))) {
-                    picked.add(candidate);
-                }
-            }
-        }
-        return picked;
+        return candidates.stream().limit(requested).toList();
     }
 
     private List<ExportQuestionSetItem> exportRows(QuestionSet questionSet) {

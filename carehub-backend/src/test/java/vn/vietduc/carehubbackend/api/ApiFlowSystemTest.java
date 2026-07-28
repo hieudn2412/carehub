@@ -189,7 +189,8 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         // Step 8-9: open assignment targeting the employee.
         long assignmentId = id(post(API + "/exam-assignments", adminToken, """
                 {"name":"Phân công luồng %d","examPaperId":%d,"professionalFieldId":%d,"userIds":[%d],
-                 "maxAttempts":2,"resultVisibility":"SCORE_AND_ANSWERS","status":"DRAFT"}
+                 "maxAttempts":2,"shuffleQuestions":false,"shuffleOptions":false,
+                 "resultVisibility":"SCORE_ONLY","status":"DRAFT"}
                 """.formatted(nextSeq(), paperId, field.getId(), employee.getId())));
         assertOk(post(API + "/exam-assignments/" + assignmentId + "/open", adminToken, "{}"));
 
