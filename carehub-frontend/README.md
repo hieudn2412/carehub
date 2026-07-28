@@ -22,7 +22,7 @@ Tài liệu này là điểm bắt đầu cho thành viên mới và AI agent tr
 
 - Node.js 20 trở lên
 - npm
-- Backend CareHub chạy tại `http://localhost:8080` khi phát triển local
+- Backend CareHub chạy tại `http://localhost:8081` khi phát triển local
 
 Kiểm tra phiên bản:
 
@@ -49,9 +49,9 @@ http://<IP-máy-tính>:5173
 ```
 
 Trong môi trường local, request `/api` được Vite proxy tới backend ở cổng
-`8080`. Nếu thiết bị khác mở được frontend nhưng không gọi được API, kiểm tra:
+`8081`. Nếu thiết bị khác mở được frontend nhưng không gọi được API, kiểm tra:
 
-1. Backend đang chạy ở cổng `8080`.
+1. Backend đang chạy ở cổng `8081`.
 2. Máy tính và thiết bị ở cùng mạng.
 3. Windows Firewall cho phép cổng `5173`.
 
@@ -60,7 +60,7 @@ Trong môi trường local, request `/api` được Vite proxy tới backend ở
 Tạo `.env` từ `.env.example`:
 
 ```env
-VITE_API_BASE_URL=/api/v1
+VITE_API_BASE_URL=http://localhost:8081/api/v1
 ```
 
 Quy ước:
@@ -276,9 +276,9 @@ Deploy nội dung thư mục `dist/` lên static hosting. Hosting phải:
 ### Frontend báo không kết nối được máy chủ
 
 - Mở Network trong DevTools và kiểm tra Request URL.
-- Kiểm tra backend `http://localhost:8080`.
+- Kiểm tra backend `http://localhost:8081`.
 - Kiểm tra `.env`, sau đó khởi động lại Vite.
-- Local nên dùng `VITE_API_BASE_URL=/api/v1`, không dùng cùng cổng với frontend.
+- Local dùng `VITE_API_BASE_URL=http://localhost:8081/api/v1`.
 
 ### Route refresh trả về 404 sau deploy
 
