@@ -10,7 +10,7 @@ import { HEADER_TITLES, LOGIN } from './fixtures/strings.js'
  * Smoke suite: happy paths only, meant to run after every deploy and finish in minutes. If any of
  * these fail the build is dead on arrival and the regression sheets are not worth running.
  *
- * Preconditions: backend on :8080 against a database that is safe to write to, plus the E2E_*
+ * Preconditions: backend on :8081 against a database that is safe to write to, plus the E2E_*
  * accounts described in fixtures/accounts.js.
  */
 test.describe('L4-CriticalPaths', () => {

@@ -40,9 +40,9 @@ describe('resolveEvidenceUrl', () => {
   })
 
   it('L1-FE-52 | EP-Valid: with an absolute API base, a relative URL joins onto its origin', async () => {
-    const { resolveEvidenceUrl: resolve } = await loadWithBase('http://localhost:8080/api/v1')
+    const { resolveEvidenceUrl: resolve } = await loadWithBase('http://localhost:8081/api/v1')
 
-    expect(resolve('/api/v1/files/1')).toBe('http://localhost:8080/api/v1/files/1')
+    expect(resolve('/api/v1/files/1')).toBe('http://localhost:8081/api/v1/files/1')
   })
 
   it('L1-FE-47 | EP-Invalid: an empty or null URL yields an empty string', () => {
