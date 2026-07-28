@@ -20,6 +20,20 @@
   gap: 5px;
 }
 
+/*
+ * StaffDashBoardScreen.css vẫn còn selector legacy cùng tên và đặt
+ * align-items: center cho header nhân viên. Scope riêng giúp header Admin
+ * luôn dóng back navigation/breadcrumb về mép trái, không phụ thuộc thứ tự CSS.
+ */
+.dashboard-header--admin .dashboard-header__main {
+  align-items: stretch;
+}
+
+.dashboard-header--admin .dashboard-header__navigation {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .dashboard-header__navigation {
   display: flex;
   min-width: 0;

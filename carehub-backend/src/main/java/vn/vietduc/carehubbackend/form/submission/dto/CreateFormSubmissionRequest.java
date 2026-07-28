@@ -19,6 +19,14 @@ public record CreateFormSubmissionRequest(
     }
     public record SubjectRequest(
             @NotNull FormSubjectType type,
-            @NotBlank @Size(max = 100) String employeeCode
-    ) {}
+            @Positive Long userId,
+            @Size(max = 100) String employeeCode
+    ) {
+        @AssertTrue(message = "Cần cung cấp đúng một trong subject.userId hoặc subject.employeeCode")
+        public boolean hasExactlyOneUserReference() {
+            boolean hasUserId = userId != null;
+            boolean hasEmployeeCode = employeeCode != null && !employeeCode.isBlank();
+            return hasUserId != hasEmployeeCode;
+        }
+    }
 }

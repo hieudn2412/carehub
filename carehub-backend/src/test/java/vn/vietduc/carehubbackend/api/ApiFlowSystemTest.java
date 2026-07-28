@@ -135,8 +135,8 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
 
         // Step 5-7: draft submission → answer → submit.
         ResponseEntity<String> draft = post(API + "/form-submissions", employeeToken, """
-                {"assignmentItemId":%d,"subject":{"type":"USER","employeeCode":"%s"}}
-                """.formatted(assignmentItemId, employee.getEmployeeCode()));
+                {"assignmentItemId":%d,"subject":{"type":"USER","userId":%d}}
+                """.formatted(assignmentItemId, employee.getId()));
         long submissionId = id(draft);
         long lockVersion = data(put(API + "/form-submissions/" + submissionId, employeeToken, """
                 {"lockVersion":%d,"answers":[{"questionKey":"%s","optionKey":"%s"}]}

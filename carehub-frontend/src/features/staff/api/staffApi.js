@@ -39,6 +39,13 @@ export const staffApi = {
     })
   },
 
+  searchFormSubjects(params) {
+    return httpClient.get('/form-subjects/users/search', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   createFormSubmission(data) {
     return httpClient.post('/form-submissions', data, {
       headers: authHeaders(),
@@ -67,6 +74,13 @@ export const staffApi = {
   getFormSubmission(id) {
     return httpClient.get(`/form-submissions/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  getFormSubmissionDraft(params) {
+    return httpClient.get('/form-submissions/draft', {
+      headers: authHeaders(),
+      params,
     })
   },
 

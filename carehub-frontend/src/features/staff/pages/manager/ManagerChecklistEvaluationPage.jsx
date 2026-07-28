@@ -1,117 +1,171 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
+  CheckCircleOutlined,
+  CloseOutlined,
+  ExclamationCircleOutlined,
+  LeftOutlined,
   LoadingOutlined,
-  SaveOutlined,
-  SendOutlined,
+  MenuOutlined,
+  RightOutlined,
+  SyncOutlined,
+  UserSwitchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
+import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
+import ConfirmModal from '../../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { adminApi } from '../../../admin/api/adminApi.js'
 import '../../styles/ManagerPages.css'
+import '../../styles/ChecklistEvaluationPage.css'
+
+const AUTO_SAVE_DELAY = 800
 
 function sortByDisplayOrder(items = []) {
   return [...items].sort((left, right) => (left.displayOrder || 0) - (right.displayOrder || 0))
 }
 
 function hasAnswerValue(value) {
-  if (Array.isArray(value)) {
-    return value.length > 0
-  }
-
+  if (Array.isArray(value)) return value.length > 0
   return value !== undefined && value !== null && String(value).trim() !== ''
-}
-
-function normalizeWeightPercent(value) {
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return 60
-  return Math.min(100, Math.max(0, parsed))
 }
 
 function getChecklistDetailError(error) {
   const statusCode = error?.response?.status
+  if (!error?.response) return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend và thử lại.'
+  if (statusCode === 403) return 'Bạn không có quyền truy cập quy trình này hoặc phân quyền đã hết hiệu lực.'
+  if (statusCode === 404) return 'Không tìm thấy quy trình được phân quyền.'
+  return error?.response?.data?.message || 'Không thể tải quy trình được phân quyền.'
+}
 
-  if (!error?.response) {
-    return 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend và thử lại.'
+function getPageContent(response) {
+  const data = response?.data?.data
+  if (Array.isArray(data)) return data
+  return Array.isArray(data?.content) ? data.content : []
+}
+
+function answerMapFromSubmission(submission) {
+  return (submission?.answers || []).reduce((result, answer) => {
+    const value = answer?.value || {}
+    if (answer?.optionKey || value.optionKey) {
+      result[answer.questionKey] = String(answer.optionKey || value.optionKey)
+    } else if (Array.isArray(value.optionKeys)) {
+      result[answer.questionKey] = value.optionKeys.map(String)
+    } else if (value.numberValue !== undefined && value.numberValue !== null) {
+      result[answer.questionKey] = String(value.numberValue)
+    } else if (value.dateValue) {
+      result[answer.questionKey] = value.dateValue
+    } else if (value.timeValue) {
+      result[answer.questionKey] = value.timeValue
+    } else if (value.textValue !== undefined && value.textValue !== null) {
+      result[answer.questionKey] = String(value.textValue)
+    }
+    return result
+  }, {})
+}
+
+function toAnswerRequest(question, answerMap) {
+  const value = answerMap[question.questionKey]
+  if (!hasAnswerValue(value)) return null
+
+  switch (question.fieldType) {
+    case 'SINGLE_CHOICE':
+    case 'DROPDOWN':
+      return { questionKey: question.questionKey, optionKey: value }
+    case 'MULTIPLE_CHOICE':
+      return { questionKey: question.questionKey, optionKeys: value }
+    case 'NUMBER':
+    case 'LINEAR_SCALE':
+      return { questionKey: question.questionKey, numberValue: Number(value) }
+    case 'DATE':
+      return { questionKey: question.questionKey, dateValue: value }
+    case 'TIME':
+      return { questionKey: question.questionKey, timeValue: value }
+    default:
+      return { questionKey: question.questionKey, textValue: String(value) }
   }
+}
 
-  if (statusCode === 403) {
-    return 'Bạn không có quyền truy cập checklist này hoặc checklist đã hết hiệu lực.'
-  }
-
-  if (statusCode === 404) {
-    return 'Không tìm thấy checklist được phân quyền.'
-  }
-
-  return error?.response?.data?.message || 'Không thể tải checklist được phân quyền.'
+function serializeAnswers(value) {
+  return JSON.stringify(
+    Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))),
+  )
 }
 
 function ManagerChecklistEvaluationPage() {
   const { id, versionId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
+  const { showToast } = useToast()
   const isDirectAdminEvaluation = Boolean(versionId)
   const listPath = isDirectAdminEvaluation
     ? '/admin/quality/checklists'
     : location.pathname.startsWith('/staff/')
       ? '/staff/checklists'
       : '/manager/quality/checklists'
-  const navigate = useNavigate()
-  const { showToast } = useToast()
 
   const [assignedForm, setAssignedForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
-  const [employeeCode, setEmployeeCode] = useState('')
-  const [subjectSuggestion, setSubjectSuggestion] = useState(null)
+  const [step, setStep] = useState('subject')
+  const [subjectQuery, setSubjectQuery] = useState('')
+  const [subjectOptions, setSubjectOptions] = useState([])
+  const [subjectSearchLoading, setSubjectSearchLoading] = useState(false)
+  const [subjectSearchError, setSubjectSearchError] = useState('')
+  const [selectedSubjectUserId, setSelectedSubjectUserId] = useState('')
   const [subjectDetails, setSubjectDetails] = useState(null)
-  const [subjectLoading, setSubjectLoading] = useState(false)
   const [subjectError, setSubjectError] = useState('')
+  const [draftPreview, setDraftPreview] = useState(null)
+  const [draftPreviewLoading, setDraftPreviewLoading] = useState(false)
+  const [starting, setStarting] = useState(false)
   const [answers, setAnswers] = useState({})
-  const [submission, setSubmission] = useState(null)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [missingQuestionKeys, setMissingQuestionKeys] = useState(new Set())
+  const [saveStatus, setSaveStatus] = useState('idle')
+  const [saveError, setSaveError] = useState('')
+  const [revision, setRevision] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+
+  const subjectSearchSequence = useRef(0)
+  const draftPreviewSequence = useRef(0)
+  const answersRef = useRef({})
+  const submissionRef = useRef(null)
+  const revisionRef = useRef(0)
+  const savedRevisionRef = useRef(0)
+  const lastSavedAnswersRef = useRef('{}')
+  const saveTimerRef = useRef(null)
+  const saveQueueRef = useRef(Promise.resolve())
 
   const loadAssignedForm = useCallback(() => {
     setLoading(true)
     setErrorMessage('')
-
     const request = isDirectAdminEvaluation
       ? adminApi.getFormVersionById(id, versionId)
       : staffApi.getAssignedForm(id)
+
     request
       .then((response) => {
         const responseData = response.data?.data
         const data = isDirectAdminEvaluation
           ? { formId: Number(id), formCode: responseData?.formCode, title: responseData?.title, version: responseData }
           : responseData
-        if (!data?.version) {
-          throw new Error('INVALID_ASSIGNED_FORM_RESPONSE')
-        }
-
+        if (!data?.version) throw new Error('INVALID_ASSIGNED_FORM_RESPONSE')
         setAssignedForm(data)
-        setAnswers({})
-        setSubmission(null)
-        setSubjectSuggestion(null)
-        setSubjectDetails(null)
       })
       .catch((error) => {
         setAssignedForm(null)
         setErrorMessage(getChecklistDetailError(error))
       })
-      .finally(() => {
-        setLoading(false)
-      })
+      .finally(() => setLoading(false))
   }, [id, isDirectAdminEvaluation, versionId])
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      loadAssignedForm()
-    }, 0)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
+    const timer = window.setTimeout(loadAssignedForm, 0)
+    return () => window.clearTimeout(timer)
   }, [loadAssignedForm])
 
   const sections = useMemo(
@@ -119,512 +173,408 @@ function ManagerChecklistEvaluationPage() {
     [assignedForm],
   )
 
-  const questions = useMemo(() => {
-    return sections.flatMap((section) =>
-      sortByDisplayOrder(section.items || [])
-        .filter((item) => item.itemType === 'QUESTION' && item.question)
-        .map((item) => item.question),
-    )
-  }, [sections])
+  const questionEntries = useMemo(() => sections.flatMap((section) =>
+    sortByDisplayOrder(section.items || [])
+      .filter((item) => item.itemType === 'QUESTION' && item.question && !item.question.readOnly)
+      .map((item) => ({ question: item.question, sectionTitle: section.title || 'Nội dung đánh giá' })),
+  ), [sections])
 
-  const scoringSummary = useMemo(() => {
-    const scored = questions.filter((question) => !question.excludeFromScore)
-    const criticalCount = scored.filter((question) => question.critical).length
-    return {
-      criticalCount,
-      normalCount: scored.length - criticalCount,
-      scoredCount: scored.length,
-    }
-  }, [questions])
+  const questions = useMemo(() => questionEntries.map((entry) => entry.question), [questionEntries])
+  const currentEntry = questionEntries[currentQuestionIndex] || null
+  const answeredCount = useMemo(
+    () => questions.filter((question) => hasAnswerValue(answers[question.questionKey])).length,
+    [answers, questions],
+  )
+  const completionPercent = questions.length === 0 ? 0 : Math.round((answeredCount / questions.length) * 100)
 
-  const getQuestionWeightPercent = (question) => {
-    if (question.excludeFromScore || scoringSummary.scoredCount === 0) return 0
-    if (scoringSummary.criticalCount === 0 || scoringSummary.normalCount === 0) {
-      return 100 / scoringSummary.scoredCount
-    }
+  const draftParams = useCallback((subjectUserId) => ({
+    ...(isDirectAdminEvaluation
+      ? { formVersionId: Number(versionId) }
+      : { assignmentItemId: Number(id) }),
+    subjectUserId: Number(subjectUserId),
+  }), [id, isDirectAdminEvaluation, versionId])
 
-    const criticalShare = normalizeWeightPercent(
-      assignedForm?.version?.settings?.scoring?.criticalWeightPercent,
-    )
-    return question.critical
-      ? criticalShare / scoringSummary.criticalCount
-      : (100 - criticalShare) / scoringSummary.normalCount
-  }
+  useEffect(() => {
+    const sequence = ++subjectSearchSequence.current
+    const timer = window.setTimeout(() => {
+      setSubjectSearchLoading(true)
+      setSubjectSearchError('')
+      staffApi.searchFormSubjects({
+        assignmentItemId: isDirectAdminEvaluation ? undefined : Number(id),
+        keyword: subjectQuery.trim() || undefined,
+        page: 0,
+        size: 20,
+      })
+        .then((response) => {
+          if (sequence !== subjectSearchSequence.current) return
+          setSubjectOptions(getPageContent(response).map((subject) => ({
+            value: subject.userId,
+            label: `${subject.fullName || 'Chưa có tên'} (${subject.employeeCode})`,
+            description: [subject.department, subject.position].filter(Boolean).join(' · ') || 'Chưa có thông tin đơn vị',
+            searchText: `${subject.employeeCode} ${subject.department || ''} ${subject.position || ''}`,
+            subject,
+          })))
+        })
+        .catch(() => {
+          if (sequence !== subjectSearchSequence.current) return
+          setSubjectOptions([])
+          setSubjectSearchError('Không thể tải danh sách nhân viên. Vui lòng nhập lại để thử lại.')
+        })
+        .finally(() => {
+          if (sequence === subjectSearchSequence.current) setSubjectSearchLoading(false)
+        })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [id, isDirectAdminEvaluation, subjectQuery])
 
-  const updateAnswer = (questionKey, value) => {
-    setAnswers((current) => ({
-      ...current,
-      [questionKey]: value,
-    }))
-  }
+  const selectedSubjectOption = useMemo(() => subjectDetails ? {
+    value: subjectDetails.userId,
+    label: `${subjectDetails.fullName || 'Chưa có tên'} (${subjectDetails.employeeCode})`,
+    description: [subjectDetails.department, subjectDetails.position].filter(Boolean).join(' · '),
+  } : null, [subjectDetails])
 
-  const handleSubjectLookup = (codeToLookup) => {
-    const normalizedEmployeeCode = (codeToLookup || employeeCode).trim()
-
-    if (!normalizedEmployeeCode) {
-      setSubjectError('Vui lòng nhập mã nhân viên được giám sát.')
-      return
-    }
-
-    setSubjectLoading(true)
+  const previewDraft = useCallback((subject) => {
+    const sequence = ++draftPreviewSequence.current
+    setDraftPreviewLoading(true)
     setSubjectError('')
-    setSubjectSuggestion(null)
-    setSubjectDetails(null)
-
-    staffApi.findAssignedFormSubject({
-      assignmentItemId: isDirectAdminEvaluation ? undefined : id,
-      employeeCode: normalizedEmployeeCode,
-    })
+    staffApi.getFormSubmissionDraft(draftParams(subject.userId))
       .then((response) => {
-        const data = response.data?.data
-        if (!data?.employeeCode) {
-          throw new Error('SUBJECT_NOT_FOUND')
-        }
-
-        setEmployeeCode(data.employeeCode || normalizedEmployeeCode)
-        setSubjectSuggestion(data)
-        setSubmission(null)
+        if (sequence === draftPreviewSequence.current) setDraftPreview(response.status === 204 ? null : response.data?.data || null)
       })
       .catch((error) => {
-        setSubjectError(
-          error?.response?.data?.message || 'Không tìm thấy nhân viên hoặc bạn không có quyền đánh giá nhân viên này.',
-        )
+        if (sequence !== draftPreviewSequence.current) return
+        setDraftPreview(null)
+        setSubjectError(error?.response?.data?.message || 'Không thể kiểm tra bản nháp hiện tại.')
       })
       .finally(() => {
-        setSubjectLoading(false)
+        if (sequence === draftPreviewSequence.current) setDraftPreviewLoading(false)
       })
+  }, [draftParams])
+
+  const selectSubject = (subjectUserId) => {
+    const option = subjectOptions.find((item) => String(item.value) === String(subjectUserId))
+    setSelectedSubjectUserId(subjectUserId)
+    setSubjectDetails(option?.subject || null)
+    setDraftPreview(null)
+    setSubjectError(option ? '' : 'Không tìm thấy thông tin nhân viên đã chọn.')
+    if (option?.subject) previewDraft(option.subject)
   }
 
-  const handleConfirmSubject = (subject) => {
-    setSubjectDetails(subject)
-    setSubjectSuggestion(null)
-    setEmployeeCode(subject.employeeCode || employeeCode)
-    setSubmission(null)
-    setSubjectError('')
+  const enterEvaluation = () => {
+    if (!subjectDetails || draftPreviewLoading) return
+    setStarting(true)
+    const restoredAnswers = answerMapFromSubmission(draftPreview)
+    answersRef.current = restoredAnswers
+    submissionRef.current = draftPreview
+    revisionRef.current = 0
+    savedRevisionRef.current = 0
+    lastSavedAnswersRef.current = serializeAnswers(restoredAnswers)
+    saveQueueRef.current = Promise.resolve()
+    setAnswers(restoredAnswers)
+    setRevision(0)
+    setSaveStatus(draftPreview ? 'saved' : 'idle')
+    setSaveError('')
+    setMissingQuestionKeys(new Set())
+    const firstUnanswered = questions.findIndex((question) => !hasAnswerValue(restoredAnswers[question.questionKey]))
+    setCurrentQuestionIndex(firstUnanswered >= 0 ? firstUnanswered : 0)
+    setStep('evaluation')
+    setStarting(false)
   }
 
-  const toAnswerRequest = (question) => {
-    const value = answers[question.questionKey]
+  const createDraft = useCallback(async () => {
+    try {
+      const response = await staffApi.createFormSubmission({
+        ...(isDirectAdminEvaluation
+          ? { formVersionId: Number(versionId) }
+          : { assignmentItemId: Number(id) }),
+        subject: { type: 'USER', userId: Number(subjectDetails.userId) },
+      })
+      return response.data?.data
+    } catch (error) {
+      if (error?.response?.status !== 409) throw error
+      const response = await staffApi.getFormSubmissionDraft(draftParams(subjectDetails.userId))
+      if (response.status === 204 || !response.data?.data) throw error
+      const recoveredDraft = response.data.data
+      if (serializeAnswers(answerMapFromSubmission(recoveredDraft)) !== lastSavedAnswersRef.current) {
+        const conflict = new Error('DRAFT_CONFLICT')
+        conflict.code = 'DRAFT_CONFLICT'
+        throw conflict
+      }
+      return recoveredDraft
+    }
+  }, [draftParams, id, isDirectAdminEvaluation, subjectDetails, versionId])
 
-    if (!hasAnswerValue(value)) {
-      return null
+  const persistSnapshot = useCallback(async (snapshot) => {
+    let currentSubmission = submissionRef.current
+    if (!currentSubmission?.id) {
+      currentSubmission = await createDraft()
+      submissionRef.current = currentSubmission
+      const serverAnswers = answerMapFromSubmission(currentSubmission)
+      if (Object.keys(serverAnswers).length > 0 && lastSavedAnswersRef.current === '{}') {
+        lastSavedAnswersRef.current = serializeAnswers(serverAnswers)
+      }
     }
 
-    switch (question.fieldType) {
-      case 'SINGLE_CHOICE':
-      case 'DROPDOWN':
-        return {
-          questionKey: question.questionKey,
-          optionKey: value,
-        }
-      case 'MULTIPLE_CHOICE':
-        return {
-          questionKey: question.questionKey,
-          optionKeys: value,
-        }
-      case 'NUMBER':
-      case 'LINEAR_SCALE':
-        return {
-          questionKey: question.questionKey,
-          numberValue: Number(value),
-        }
-      case 'DATE':
-        return {
-          questionKey: question.questionKey,
-          dateValue: value,
-        }
-      case 'TIME':
-        return {
-          questionKey: question.questionKey,
-          timeValue: value,
-        }
-      default:
-        return {
-          questionKey: question.questionKey,
-          textValue: String(value),
-        }
-    }
-  }
-
-  const ensureSubmissionDraft = async () => {
-    if (submission?.id) {
-      return submission
-    }
-
-    const response = await staffApi.createFormSubmission({
-      ...(isDirectAdminEvaluation
-        ? { formVersionId: Number(versionId) }
-        : { assignmentItemId: Number(id) }),
-      subject: {
-        type: 'USER',
-        employeeCode: subjectDetails.employeeCode,
-      },
+    const save = (draft) => staffApi.updateFormSubmission(draft.id, {
+      lockVersion: draft.lockVersion,
+      answers: questions.map((question) => toAnswerRequest(question, snapshot)).filter(Boolean),
     })
 
-    const draft = response.data?.data
-    setSubmission(draft)
-    return draft
+    try {
+      const response = await save(currentSubmission)
+      return response.data?.data
+    } catch (error) {
+      if (error?.response?.status !== 409) throw error
+      const draftResponse = await staffApi.getFormSubmissionDraft(draftParams(subjectDetails.userId))
+      const latestDraft = draftResponse.status === 204 ? null : draftResponse.data?.data
+      if (!latestDraft) throw error
+      const latestAnswers = answerMapFromSubmission(latestDraft)
+      if (serializeAnswers(latestAnswers) !== lastSavedAnswersRef.current) {
+        const conflict = new Error('DRAFT_CONFLICT')
+        conflict.code = 'DRAFT_CONFLICT'
+        throw conflict
+      }
+      const retryResponse = await save(latestDraft)
+      return retryResponse.data?.data
+    }
+  }, [createDraft, draftParams, questions, subjectDetails])
+
+  const queueSave = useCallback((snapshot, targetRevision, force = false) => {
+    const task = async () => {
+      if (!force && targetRevision <= savedRevisionRef.current) return submissionRef.current
+      setSaveStatus('saving')
+      setSaveError('')
+      try {
+        const updatedSubmission = await persistSnapshot(snapshot)
+        submissionRef.current = updatedSubmission
+        savedRevisionRef.current = Math.max(savedRevisionRef.current, targetRevision)
+        lastSavedAnswersRef.current = serializeAnswers(answerMapFromSubmission(updatedSubmission))
+        setSaveStatus(revisionRef.current <= targetRevision ? 'saved' : 'dirty')
+        return updatedSubmission
+      } catch (error) {
+        const message = error?.code === 'DRAFT_CONFLICT'
+          ? 'Bản nháp đã được thay đổi ở nơi khác. Vui lòng tải lại trang trước khi tiếp tục.'
+          : error?.response?.data?.message || 'Không thể tự động lưu bản nháp.'
+        setSaveStatus('error')
+        setSaveError(message)
+        throw error
+      }
+    }
+    const queued = saveQueueRef.current.catch(() => undefined).then(task)
+    saveQueueRef.current = queued
+    return queued
+  }, [persistSnapshot])
+
+  useEffect(() => {
+    if (step !== 'evaluation' || revision <= savedRevisionRef.current) return undefined
+    window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      queueSave({ ...answersRef.current }, revisionRef.current).catch(() => undefined)
+    }, AUTO_SAVE_DELAY)
+    return () => window.clearTimeout(saveTimerRef.current)
+  }, [queueSave, revision, step])
+
+  const handleAnswerChange = useCallback((questionKey, value) => {
+    setAnswers((currentAnswers) => {
+      const nextAnswers = { ...currentAnswers, [questionKey]: value }
+      answersRef.current = nextAnswers
+      return nextAnswers
+    })
+    const nextRevision = revisionRef.current + 1
+    revisionRef.current = nextRevision
+    setRevision(nextRevision)
+    setSaveStatus('dirty')
+    setSaveError('')
+    setMissingQuestionKeys((current) => {
+      if (!current.has(questionKey) || !hasAnswerValue(value)) return current
+      const next = new Set(current)
+      next.delete(questionKey)
+      return next
+    })
+  }, [])
+
+  const flushSave = useCallback((force = false) => {
+    window.clearTimeout(saveTimerRef.current)
+    return queueSave({ ...answersRef.current }, revisionRef.current, force)
+  }, [queueSave])
+
+  useEffect(() => {
+    const warnBeforeUnload = (event) => {
+      if (step !== 'evaluation' || (revisionRef.current <= savedRevisionRef.current && saveStatus !== 'saving' && saveStatus !== 'error')) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [saveStatus, step])
+
+  const requestSubmit = () => {
+    const missing = questions.filter((question) => question.required && !hasAnswerValue(answersRef.current[question.questionKey]))
+    if (missing.length > 0) {
+      const keys = new Set(missing.map((question) => question.questionKey))
+      setMissingQuestionKeys(keys)
+      const firstMissingIndex = questions.findIndex((question) => keys.has(question.questionKey))
+      setCurrentQuestionIndex(Math.max(0, firstMissingIndex))
+      setMobileDrawerOpen(false)
+      showToast(`Vui lòng hoàn thành ${missing.length} câu hỏi bắt buộc.`, 'warning')
+      return
+    }
+    setSubmitConfirmOpen(true)
   }
 
-  const handleSubmit = async (isDraft = false) => {
-    if (!subjectDetails?.employeeCode) {
-      showToast('Vui lòng tra cứu và xác nhận nhân viên cần giám sát trước.', 'warning')
-      return
-    }
-
-    const missingRequired = questions.filter((question) =>
-      !hasAnswerValue(answers[question.questionKey]),
-    )
-
-    if (!isDraft && missingRequired.length > 0) {
-      showToast(`Vui lòng hoàn thành ${missingRequired.length} câu hỏi bắt buộc.`, 'warning')
-      return
-    }
-
+  const confirmSubmit = async () => {
+    setSubmitConfirmOpen(false)
     try {
       setSubmitting(true)
-      const draft = await ensureSubmissionDraft()
-      const answerPayload = questions.map(toAnswerRequest).filter(Boolean)
-      const updateResponse = await staffApi.updateFormSubmission(draft.id, {
-        lockVersion: draft.lockVersion,
-        answers: answerPayload,
-      })
-      const updatedSubmission = updateResponse.data?.data
-      setSubmission(updatedSubmission)
-
-      if (isDraft) {
-        showToast('Đã lưu bản nháp đánh giá.', 'success')
-        return
-      }
-
-      await staffApi.submitFormSubmission(updatedSubmission.id, {
-        lockVersion: updatedSubmission.lockVersion,
-      })
-      showToast('Đã nộp kết quả đánh giá checklist.', 'success')
+      const updatedSubmission = await flushSave(true)
+      await staffApi.submitFormSubmission(updatedSubmission.id, { lockVersion: updatedSubmission.lockVersion })
+      savedRevisionRef.current = revisionRef.current
+      showToast('Đã nộp kết quả đánh giá quy trình.', 'success')
       navigate(listPath)
     } catch (error) {
-      const statusCode = error?.response?.status
-      const fallback = statusCode === 409
-        ? 'Checklist này đang có bản nháp mở hoặc dữ liệu vừa được cập nhật. Vui lòng tải lại và thử lại.'
-        : 'Không thể lưu kết quả đánh giá. Vui lòng thử lại.'
-      showToast(statusCode === 409 ? fallback : error?.response?.data?.message || fallback, 'error')
+      if (error?.code !== 'DRAFT_CONFLICT') {
+        showToast(error?.response?.data?.message || 'Không thể nộp kết quả đánh giá. Vui lòng thử lại.', 'error')
+      }
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const changeSubject = async () => {
+    try {
+      if (saveStatus === 'saving' || saveStatus === 'error' || revisionRef.current > savedRevisionRef.current) {
+        await flushSave(true)
+      }
+      setStep('subject')
+      setMobileDrawerOpen(false)
+    } catch {
+      showToast('Chưa thể lưu bản nháp. Vui lòng thử lại trước khi đổi nhân viên.', 'error')
     }
   }
 
   const renderQuestionField = (question) => {
     const value = answers[question.questionKey] ?? ''
     const options = sortByDisplayOrder(question.options || [])
-
     switch (question.fieldType) {
       case 'SINGLE_CHOICE':
-        return (
-          <div className="mgr-eval-options">
-            {options.map((option) => (
-              <label key={option.optionKey} className="mgr-eval-option">
-                <input
-                  checked={value === option.optionKey}
-                  name={question.questionKey}
-                  onChange={() => updateAnswer(question.questionKey, option.optionKey)}
-                  type="radio"
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </div>
-        )
+        return <div className="check-eval-options">{options.map((option) => (
+          <label className={`check-eval-option${value === option.optionKey ? ' is-selected' : ''}`} key={option.optionKey}>
+            <input checked={value === option.optionKey} name={question.questionKey} onChange={() => handleAnswerChange(question.questionKey, option.optionKey)} type="radio" />
+            <span>{option.label}</span>
+          </label>
+        ))}</div>
       case 'MULTIPLE_CHOICE': {
-        const selectedOptions = Array.isArray(value) ? value : []
-
-        return (
-          <div className="mgr-eval-options">
-            {options.map((option) => (
-              <label key={option.optionKey} className="mgr-eval-option">
-                <input
-                  checked={selectedOptions.includes(option.optionKey)}
-                  onChange={() => {
-                    const nextValue = selectedOptions.includes(option.optionKey)
-                      ? selectedOptions.filter((item) => item !== option.optionKey)
-                      : [...selectedOptions, option.optionKey]
-                    updateAnswer(question.questionKey, nextValue)
-                  }}
-                  type="checkbox"
-                />
-                <span>{option.label}</span>
-              </label>
-            ))}
-          </div>
-        )
+        const selected = Array.isArray(value) ? value : []
+        return <div className="check-eval-options">{options.map((option) => (
+          <label className={`check-eval-option${selected.includes(option.optionKey) ? ' is-selected' : ''}`} key={option.optionKey}>
+            <input checked={selected.includes(option.optionKey)} onChange={() => handleAnswerChange(question.questionKey, selected.includes(option.optionKey) ? selected.filter((key) => key !== option.optionKey) : [...selected, option.optionKey])} type="checkbox" />
+            <span>{option.label}</span>
+          </label>
+        ))}</div>
       }
       case 'DROPDOWN':
-        return (
-          <select
-            className="mgr-select mgr-eval-select"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            value={value}
-          >
-            <option value="">Chọn một đáp án</option>
-            {options.map((option) => (
-              <option key={option.optionKey} value={option.optionKey}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        )
+        return <select className="check-eval-input" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} value={value}><option value="">Chọn một đáp án</option>{options.map((option) => <option key={option.optionKey} value={option.optionKey}>{option.label}</option>)}</select>
       case 'LONG_TEXT':
-        return (
-          <textarea
-            className="mgr-textarea"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            placeholder="Nhập câu trả lời..."
-            style={{ minHeight: 84 }}
-            value={value}
-          />
-        )
+        return <textarea className="check-eval-input check-eval-textarea" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} placeholder="Nhập câu trả lời..." value={value} />
       case 'NUMBER':
       case 'LINEAR_SCALE':
-        return (
-          <input
-            className="mgr-select"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            placeholder="Nhập số"
-            style={{ cursor: 'text', maxWidth: 180 }}
-            type="number"
-            value={value}
-          />
-        )
+        return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} placeholder="Nhập số" type="number" value={value} />
       case 'DATE':
-        return (
-          <input
-            className="mgr-select"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            style={{ cursor: 'text', maxWidth: 220 }}
-            type="date"
-            value={value}
-          />
-        )
+        return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} type="date" value={value} />
       case 'TIME':
-        return (
-          <input
-            className="mgr-select"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            style={{ cursor: 'text', maxWidth: 180 }}
-            type="time"
-            value={value}
-          />
-        )
+        return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} type="time" value={value} />
       default:
-        return (
-          <input
-            className="mgr-select"
-            onChange={(event) => updateAnswer(question.questionKey, event.target.value)}
-            placeholder="Nhập câu trả lời"
-            style={{ cursor: 'text', width: '100%' }}
-            type="text"
-            value={value}
-          />
-        )
+        return <input className="check-eval-input" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} placeholder="Nhập câu trả lời" type="text" value={value} />
     }
   }
 
-  return (
-    <AppShell
-      back={{ to: listPath, label: 'Quay lại' }}
-      breadcrumbs={[
-        { label: 'Tuân thủ quy trình, quy định', link: listPath },
-        { label: 'Thực hiện đánh giá' },
-      ]}
-    >
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Thực hiện đánh giá quy trình</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          {assignedForm?.title || 'Đang tải checklist được phân quyền...'}
-        </p>
+  const questionNavigator = (compact = false) => (
+    <div className={`check-eval-navigator${compact ? ' check-eval-navigator--compact' : ''}`}>
+      <div className="check-eval-panel-title"><span>Danh sách câu</span><strong>{answeredCount}/{questions.length}</strong></div>
+      <div className="check-eval-question-grid">{questions.map((question, index) => {
+        const answered = hasAnswerValue(answers[question.questionKey])
+        const missing = missingQuestionKeys.has(question.questionKey)
+        return <button
+          aria-current={index === currentQuestionIndex ? 'step' : undefined}
+          aria-label={`Đi đến câu ${index + 1}${answered ? ', đã trả lời' : ', chưa trả lời'}`}
+          className={`check-eval-question-number${answered ? ' is-answered' : ''}${missing ? ' is-missing' : ''}${index === currentQuestionIndex ? ' is-current' : ''}`}
+          key={question.questionKey}
+          onClick={() => { setCurrentQuestionIndex(index); setMobileDrawerOpen(false) }}
+          type="button"
+        >{index + 1}</button>
+      })}</div>
+      <div className="check-eval-legend"><span><i className="is-answered" />Đã trả lời</span><span><i />Chưa trả lời</span><span><i className="is-current" />Đang chọn</span>{missingQuestionKeys.size > 0 && <span><i className="is-missing" />Bắt buộc</span>}</div>
+    </div>
+  )
+
+  const progressAndSubject = (
+    <div className="check-eval-summary-content">
+      <div className="check-eval-panel-title"><span>Tiến độ</span><strong>{completionPercent}%</strong></div>
+      <div className="check-eval-progress"><span style={{ width: `${completionPercent}%` }} /></div>
+      <dl className="check-eval-progress-stats"><div><dt>Tổng số câu</dt><dd>{questions.length}</dd></div><div><dt>Đã trả lời</dt><dd>{answeredCount}</dd></div><div><dt>Chưa trả lời</dt><dd>{questions.length - answeredCount}</dd></div></dl>
+      <div className="check-eval-subject-summary">
+        <span>Nhân viên được đánh giá</span>
+        <strong>{subjectDetails?.fullName || 'Chưa có tên'} ({subjectDetails?.employeeCode})</strong>
+        <small>{subjectDetails?.department || 'Chưa có khoa/phòng'}</small>
+        {subjectDetails?.position && <small>{subjectDetails.position}</small>}
+        <button onClick={changeSubject} type="button"><UserSwitchOutlined /> Đổi nhân viên</button>
       </div>
+      <button className="check-eval-submit" disabled={submitting || saveStatus === 'saving' || saveStatus === 'error'} onClick={requestSubmit} type="button">{submitting ? <LoadingOutlined spin /> : <CheckCircleOutlined />} Nộp kết quả</button>
+    </div>
+  )
 
-      {loading ? (
-        <div className="mgr-card">
-          <LoadingState label="Đang tải checklist..." />
-        </div>
-      ) : errorMessage ? (
-        <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>
-          {errorMessage}
-        </div>
+  const renderSaveStatus = () => {
+    if (saveStatus === 'saving') return <span className="check-eval-save-status is-saving"><SyncOutlined spin /> Đang lưu...</span>
+    if (saveStatus === 'error') return <span className="check-eval-save-status is-error"><ExclamationCircleOutlined /> {saveError}<button onClick={() => flushSave(true).catch(() => undefined)} type="button">Thử lại</button></span>
+    if (saveStatus === 'saved') return <span className="check-eval-save-status is-saved"><CheckCircleOutlined /> Đã lưu</span>
+    if (saveStatus === 'dirty') return <span className="check-eval-save-status">Chờ tự động lưu...</span>
+    return <span className="check-eval-save-status">Bản nháp sẽ được tự động lưu</span>
+  }
+
+  return (
+    <AppShell className={step === 'evaluation' ? 'check-eval-shell check-eval-shell--active' : 'check-eval-shell'} back={{ to: listPath, label: 'Quay lại' }} breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định', link: listPath }, { label: 'Thực hiện đánh giá' }]}>
+      {loading ? <div className="mgr-card"><LoadingState label="Đang tải quy trình..." /></div> : errorMessage ? <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>{errorMessage}</div> : step === 'subject' ? (
+        <section className="check-eval-subject-step">
+          <header><span>BƯỚC 1/2</span><h1>Chọn nhân viên được đánh giá</h1><p>{assignedForm?.title} · Phiên bản v{assignedForm?.version?.versionNumber}</p></header>
+          <div className="check-eval-subject-card">
+            <label htmlFor="check-eval-subject-search">Người được đánh giá <b>*</b></label>
+            <SearchableSelect
+              ariaLabel="Tìm nhân viên theo tên hoặc mã"
+              emptyMessage={subjectSearchError || 'Không tìm thấy nhân viên phù hợp'}
+              id="check-eval-subject-search"
+              loading={subjectSearchLoading}
+              onChange={selectSubject}
+              onSearch={setSubjectQuery}
+              options={subjectOptions}
+              placeholder="Chọn nhân viên"
+              searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
+              selectedOption={selectedSubjectOption}
+              value={selectedSubjectUserId}
+            />
+            {subjectSearchError && <p className="check-eval-subject-error" role="alert">{subjectSearchError}</p>}
+            {subjectDetails && <div className="check-eval-selected-subject"><div><span>Họ và tên</span><strong>{subjectDetails.fullName}</strong></div><div><span>Mã nhân viên</span><strong>{subjectDetails.employeeCode}</strong></div><div><span>Khoa/phòng</span><strong>{subjectDetails.department || 'Chưa xác định'}</strong></div><div><span>Chức danh</span><strong>{subjectDetails.position || 'Chưa xác định'}</strong></div></div>}
+            {subjectError && <p className="check-eval-subject-error" role="alert">{subjectError}</p>}
+            <div className="check-eval-subject-actions"><button onClick={() => navigate(listPath)} type="button">Hủy bỏ</button><button className="is-primary" disabled={!subjectDetails || draftPreviewLoading || starting || Boolean(subjectError)} onClick={enterEvaluation} type="button">{draftPreviewLoading || starting ? <LoadingOutlined spin /> : null}{draftPreview ? 'Tiếp tục đánh giá' : 'Bắt đầu đánh giá'}<RightOutlined /></button></div>
+          </div>
+        </section>
       ) : (
-        <div className="mgr-card">
-          <div style={{ marginBottom: 24, borderBottom: '1px solid #f1f5f9', paddingBottom: 20 }}>
-            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 8 }}>
-              Nhân viên được giám sát <span style={{ color: '#ef4444' }}>*</span>
-            </label>
-            <div className="mgr-eval-lookup-row">
-              <input
-                className="mgr-select mgr-eval-lookup-input"
-                disabled={subjectLoading}
-                onChange={(event) => {
-                  setEmployeeCode(event.target.value)
-                  setSubjectSuggestion(null)
-                  setSubjectDetails(null)
-                  setSubmission(null)
-                  setSubjectError('')
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    handleSubjectLookup()
-                  }
-                }}
-                placeholder="Nhập mã nhân viên, ví dụ: NV001"
-                type="text"
-                value={employeeCode}
-              />
-              <button
-                className="training-button training-button--primary mgr-eval-lookup-btn"
-                disabled={subjectLoading || !employeeCode.trim()}
-                onClick={() => handleSubjectLookup()}
-                type="button"
-              >
-                {subjectLoading ? <LoadingOutlined spin /> : null}
-                Tìm nhân viên
-              </button>
-              {subjectLoading && (
-                <span style={{ fontSize: 13, color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  Đang tra cứu...
-                </span>
-              )}
+        <div className="check-eval-page">
+          <header className="check-eval-header"><div><span>BƯỚC 2/2 · THỰC HIỆN ĐÁNH GIÁ</span><h1>{assignedForm?.title}</h1><p>{assignedForm?.formCode || assignedForm?.version?.formCode || 'QUY TRÌNH'} · Phiên bản v{assignedForm?.version?.versionNumber}</p></div><div><strong>{answeredCount}/{questions.length}</strong><span>câu đã trả lời</span></div></header>
+          {questions.length === 0 ? <div className="mgr-card" role="alert">Phiên bản này chưa có câu hỏi có thể thực hiện.</div> : <>
+            <div className="check-eval-workspace">
+              <aside className="check-eval-nav-panel">{questionNavigator()}</aside>
+              <main className="check-eval-question-panel">
+                <div className="check-eval-question-meta"><span>{currentEntry?.sectionTitle}</span><strong>Câu {currentQuestionIndex + 1}/{questions.length}</strong></div>
+                <div className="check-eval-question-heading"><h2>{currentEntry?.question?.title}</h2>{currentEntry?.question?.critical && <span>Trọng yếu</span>}</div>
+                {currentEntry?.question?.helpText && <p className="check-eval-help">{currentEntry.question.helpText}</p>}
+                <div className="check-eval-answer-area">{currentEntry && renderQuestionField(currentEntry.question)}</div>
+              </main>
+              <aside className="check-eval-summary-panel">{progressAndSubject}</aside>
             </div>
-            {subjectError && (
-              <p style={{ color: '#ef4444', margin: '8px 0 0', fontSize: 13 }}>{subjectError}</p>
-            )}
-            {subjectSuggestion && (
-              <button
-                onClick={() => handleConfirmSubject(subjectSuggestion)}
-                className="mgr-eval-suggest"
-                type="button"
-              >
-                <span className="mgr-eval-suggest__info">
-                  <span style={{ color: '#00866b', fontSize: 12, fontWeight: 800, textTransform: 'uppercase' }}>
-                    Kết quả tìm thấy
-                  </span>
-                  <strong style={{ color: '#0f172a', fontSize: 14 }}>
-                    {subjectSuggestion.fullName || 'Chưa có tên'} ({subjectSuggestion.employeeCode})
-                  </strong>
-                  <span style={{ color: '#64748b', fontSize: 13 }}>
-                    {subjectSuggestion.department || 'Chưa có khoa/phòng'}
-                  </span>
-                </span>
-                <span style={{
-                  background: '#00866b',
-                  borderRadius: 999,
-                  boxShadow: '0 8px 18px rgba(0, 134, 107, 0.18)',
-                  color: '#ffffff',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  padding: '8px 12px',
-                }}>
-                  Chọn nhân viên này
-                </span>
-              </button>
-            )}
-            {subjectDetails && (
-              <div style={{ marginTop: 14 }}>
-                <div style={{ color: '#00866b', fontSize: 12, fontWeight: 800, marginBottom: 8, textTransform: 'uppercase' }}>
-                  Đã chọn nhân viên
-                </div>
-                <div className="mgr-kv-grid">
-                  <div className="mgr-kv-item">
-                    <span className="mgr-kv-label">Họ tên</span>
-                    <span className="mgr-kv-val">{subjectDetails.fullName}</span>
-                  </div>
-                  <div className="mgr-kv-item">
-                    <span className="mgr-kv-label">Mã nhân viên</span>
-                    <span className="mgr-kv-val">{subjectDetails.employeeCode}</span>
-                  </div>
-                  <div className="mgr-kv-item">
-                    <span className="mgr-kv-label">Khoa phòng</span>
-                    <span className="mgr-kv-val">{subjectDetails.department || 'Chưa có'}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mgr-eval-section">
-            <div className="mgr-eval-section-title">Tiêu chí kiểm tra đánh giá</div>
-
-            {sections.map((section) => (
-              <div key={section.sectionKey || section.id} style={{ marginBottom: 18 }}>
-                {section.title && (
-                  <h2 style={{ fontSize: 16, margin: '0 0 6px', color: '#0f172a' }}>{section.title}</h2>
-                )}
-                {section.description && (
-                  <p style={{ fontSize: 13, margin: '0 0 12px', color: '#64748b' }}>{section.description}</p>
-                )}
-
-                {sortByDisplayOrder(section.items || []).map((item) => {
-                  if (item.itemType !== 'QUESTION' || !item.question) {
-                    return item.description ? (
-                      <div key={item.itemKey || item.id} className="mgr-eval-question">
-                        {item.title && <strong>{item.title}</strong>}
-                        <p style={{ margin: item.title ? '6px 0 0' : 0 }}>{item.description}</p>
-                      </div>
-                    ) : null
-                  }
-
-                  const question = item.question
-
-                  return (
-                    <div key={question.questionKey} className="mgr-eval-question">
-                      <div className="mgr-eval-question-text">
-                        {question.title}
-                        {question.critical && (
-                          <span className="mgr-badge mgr-badge--red" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
-                            ★ Trọng yếu
-                          </span>
-                        )}
-                        {!question.excludeFromScore && (
-                          <span className="mgr-badge mgr-badge--blue" style={{ marginLeft: 8, padding: '2px 6px', fontSize: 10 }}>
-                            {getQuestionWeightPercent(question).toFixed(2)}%
-                          </span>
-                        )}
-                      </div>
-                      {question.helpText && (
-                        <p style={{ color: '#64748b', fontSize: 13, margin: '0 0 10px' }}>{question.helpText}</p>
-                      )}
-                      {renderQuestionField(question)}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-
-          <div className="mgr-eval-actions">
-            <button
-              onClick={() => navigate(listPath)}
-              className="training-button mgr-eval-action-btn"
-              disabled={submitting}
-              type="button"
-            >
-              Hủy bỏ
-            </button>
-            <button
-              onClick={() => handleSubmit(true)}
-              className="training-button mgr-eval-action-btn"
-              disabled={submitting}
-              type="button"
-            >
-              <SaveOutlined /> Lưu bản nháp
-            </button>
-            <button
-              onClick={() => handleSubmit(false)}
-              className="training-button training-button--primary mgr-eval-action-btn"
-              disabled={submitting}
-              type="button"
-            >
-              {submitting ? <LoadingOutlined spin /> : <SendOutlined />} Nộp kết quả
-            </button>
-          </div>
+            <footer className="check-eval-footer"><button className="check-eval-mobile-list" onClick={() => setMobileDrawerOpen(true)} type="button"><MenuOutlined /> Danh sách câu</button><button disabled={currentQuestionIndex === 0} onClick={() => setCurrentQuestionIndex((index) => Math.max(0, index - 1))} type="button"><LeftOutlined /> Câu trước</button><div>{renderSaveStatus()}</div><button className="is-primary" disabled={currentQuestionIndex >= questions.length - 1} onClick={() => setCurrentQuestionIndex((index) => Math.min(questions.length - 1, index + 1))} type="button">Câu tiếp theo <RightOutlined /></button></footer>
+          </>}
+          {mobileDrawerOpen && <div className="check-eval-drawer-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setMobileDrawerOpen(false) }} role="presentation"><aside aria-label="Danh sách câu hỏi và tiến độ" aria-modal="true" className="check-eval-drawer" role="dialog"><header><h2>Tổng quan đánh giá</h2><button aria-label="Đóng danh sách câu" onClick={() => setMobileDrawerOpen(false)} type="button"><CloseOutlined /></button></header>{progressAndSubject}{questionNavigator(true)}</aside></div>}
+          <ConfirmModal cancelText="Xem lại" confirmText="Nộp kết quả" isOpen={submitConfirmOpen} message={`Nhân viên: ${subjectDetails?.fullName} (${subjectDetails?.employeeCode})\nQuy trình: ${assignedForm?.title}\nĐã trả lời: ${answeredCount}/${questions.length} câu\n\nSau khi nộp, kết quả sẽ không thể chỉnh sửa.`} onCancel={() => setSubmitConfirmOpen(false)} onConfirm={confirmSubmit} title="Xác nhận nộp kết quả" />
         </div>
       )}
     </AppShell>

@@ -263,6 +263,23 @@
   gap: 12px;
 }
 
+/*
+ * Header Manager/User dùng chung selector legacy với AdminHeader.css.
+ * Modifier riêng giữ back navigation và breadcrumb dóng trái ổn định,
+ * bất kể thứ tự bundle tải hai stylesheet.
+ */
+.dashboard-header--staff .dashboard-header__main {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.dashboard-header--staff .dashboard-header__navigation {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .dashboard-header__menu-button {
   display: none;
   width: 40px;
