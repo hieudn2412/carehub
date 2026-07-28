@@ -163,12 +163,77 @@
 
 /* bp-sm */
 @media (max-width: 768px) {
-  .ts-heading { align-items: flex-start; flex-direction: column; }
-  .ts-progress-card header { align-items: flex-start; flex-direction: column; }
+  .ts-page {
+    gap: 12px;
+    padding: 0;
+  }
+
+  .ts-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .ts-heading h1 {
+    font-size: 22px;
+    line-height: 1.35;
+  }
+
+  .ts-heading p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .ts-status {
+    min-height: 36px;
+  }
+
+  .ts-stat-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .ts-stat-card {
+    min-height: 108px;
+    padding: 14px;
+  }
+
+  .ts-stat-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .ts-progress-card {
+    padding: 18px;
+  }
+
+  .ts-progress-card header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ts-progress-track {
+    height: 14px;
+    margin-top: 16px;
+  }
 }
 
 /* bp-xs */
 @media (max-width: 560px) {
-  .ts-page { padding: 14px; }
-  .ts-heading h1 { font-size: 24px; }
+  .ts-stat-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .ts-stat-card:last-child {
+    grid-column: auto;
+  }
+
+  .ts-stat-card strong {
+    font-size: 22px;
+  }
+
+  .ts-progress-card header b {
+    font-size: 24px;
+  }
 }

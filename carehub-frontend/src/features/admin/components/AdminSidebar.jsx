@@ -23,6 +23,8 @@ import {
   UserOutlined,
   AppstoreOutlined,
   DownOutlined,
+  LeftOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -185,6 +187,15 @@ const navGroups = [
   },
 ]
 
+function normalizeSearchText(value) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLocaleLowerCase('vi')
+}
+
 function AdminSidebar() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -227,6 +238,9 @@ function AdminSidebar() {
       : null,
   )
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isMobileClosing, setIsMobileClosing] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [pendingRoute, setPendingRoute] = useState(null)
 
   const selectedGroup = visibleGroups.find((group) => group.id === selectedGroupId)
     || visibleGroups[0]
@@ -240,15 +254,30 @@ function AdminSidebar() {
   }, [])
 
   useEffect(() => {
-    const handleMenuToggle = () => setIsMobileOpen(true)
+    const handleMenuToggle = () => {
+      if (isMobileClosing) return
+
+      if (isMobileOpen) {
+        setIsMobileClosing(true)
+        setIsMobileOpen(false)
+        return
+      }
+
+      setPendingRoute(null)
+      setIsMobileOpen(true)
+    }
     window.addEventListener('admin-sidebar-toggle', handleMenuToggle)
     return () => window.removeEventListener('admin-sidebar-toggle', handleMenuToggle)
-  }, [])
+  }, [isMobileClosing, isMobileOpen])
 
   useEffect(() => {
-    if (!isMobileOpen) return undefined
+    if (!isMobileOpen && !isMobileClosing) return undefined
+
     const handleEscape = (event) => {
-      if (event.key === 'Escape') setIsMobileOpen(false)
+      if (event.key !== 'Escape' || isMobileClosing) return
+      setPendingRoute(null)
+      setIsMobileClosing(true)
+      setIsMobileOpen(false)
     }
     document.addEventListener('keydown', handleEscape)
     document.body.classList.add('admin-sidebar-open')
@@ -256,7 +285,7 @@ function AdminSidebar() {
       document.removeEventListener('keydown', handleEscape)
       document.body.classList.remove('admin-sidebar-open')
     }
-  }, [isMobileOpen])
+  }, [isMobileClosing, isMobileOpen])
 
   const handleScroll = (e) => {
     sessionStorage.setItem('admin-sidebar-scroll', String(e.target.scrollTop))
@@ -285,6 +314,41 @@ function AdminSidebar() {
     ))
   }
 
+  const closeAdminMobileMenu = (route = null) => {
+    if (!isMobileOpen || isMobileClosing) return
+    setPendingRoute(route)
+    setIsMobileClosing(true)
+    setIsMobileOpen(false)
+  }
+
+  const handleSidebarTransitionEnd = (event) => {
+    if (
+      event.target !== event.currentTarget ||
+      event.propertyName !== 'transform' ||
+      isMobileOpen ||
+      !isMobileClosing
+    ) {
+      return
+    }
+
+    const route = pendingRoute
+    setSearchKeyword('')
+    setPendingRoute(null)
+    setIsMobileClosing(false)
+
+    if (route && route !== currentPath) {
+      navigate(route)
+    }
+  }
+
+  const normalizedSearchKeyword = normalizeSearchText(searchKeyword.trim())
+  const isSearching = normalizedSearchKeyword.length > 0
+  const filteredMobileItems = (selectedGroup?.sections || [])
+    .flatMap((section) => section.items)
+    .filter((item) => (
+      normalizeSearchText(item.label).includes(normalizedSearchKeyword)
+    ))
+
   return (
     <>
       {isMobileOpen && (
@@ -292,10 +356,133 @@ function AdminSidebar() {
           type="button"
           className="admin-sidebar__backdrop"
           aria-label="Đóng menu điều hướng"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={() => closeAdminMobileMenu()}
         />
       )}
-      <aside className={`admin-sidebar ${isMobileOpen ? 'admin-sidebar--mobile-open' : ''}`}>
+      <aside
+        className={`admin-sidebar ${isMobileOpen ? 'admin-sidebar--mobile-open' : ''}`}
+        aria-label="Điều hướng quản trị"
+        onTransitionEnd={handleSidebarTransitionEnd}
+      >
+      <div className="admin-mobile-menu" aria-hidden={!isMobileOpen}>
+        <div className="admin-mobile-menu__topbar">
+          <button
+            type="button"
+            className="admin-mobile-menu__back"
+            aria-label="Quay lại nội dung trang"
+            tabIndex={isMobileOpen ? 0 : -1}
+            onClick={() => closeAdminMobileMenu()}
+          >
+            <LeftOutlined />
+          </button>
+          <div className="admin-mobile-menu__brand">
+            <img src={logo} alt="" aria-hidden="true" />
+            <span>VietDuc Care</span>
+          </div>
+        </div>
+
+        <label className="admin-mobile-menu__search">
+          <SearchOutlined aria-hidden="true" />
+          <input
+            type="search"
+            value={searchKeyword}
+            placeholder="Tìm chức năng..."
+            aria-label="Tìm chức năng quản trị"
+            tabIndex={isMobileOpen ? 0 : -1}
+            onChange={(event) => setSearchKeyword(event.target.value)}
+          />
+        </label>
+
+        <div className="admin-mobile-menu__group-switch" role="tablist" aria-label="Phân loại sidebar">
+          {visibleGroups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedGroup?.id === group.id}
+              tabIndex={isMobileOpen ? 0 : -1}
+              className={`admin-mobile-menu__group-button${
+                selectedGroup?.id === group.id ? ' admin-mobile-menu__group-button--active' : ''
+              }`}
+              onClick={() => {
+                handleGroupSelect(group)
+                setSearchKeyword('')
+              }}
+            >
+              {group.icon}
+              <span>{group.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <nav className="admin-mobile-menu__content" aria-label="Chức năng quản trị">
+          {!isSearching && selectedGroup?.sections.map((section) => (
+            <section key={section.label} className="admin-mobile-menu__section">
+              <h2>{section.label}</h2>
+              <div className="admin-mobile-menu__grid">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    tabIndex={isMobileOpen ? 0 : -1}
+                    className={`admin-mobile-menu__item${
+                      isLinkActive(item.path) ? ' admin-mobile-menu__item--active' : ''
+                    }`}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      closeAdminMobileMenu(item.path)
+                    }}
+                  >
+                    <span className="admin-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          {isSearching && filteredMobileItems.length > 0 && (
+            <section className="admin-mobile-menu__section" aria-label="Kết quả tìm kiếm">
+              <div className="admin-mobile-menu__grid">
+                {filteredMobileItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    tabIndex={isMobileOpen ? 0 : -1}
+                    className={`admin-mobile-menu__item${
+                      isLinkActive(item.path) ? ' admin-mobile-menu__item--active' : ''
+                    }`}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      closeAdminMobileMenu(item.path)
+                    }}
+                  >
+                    <span className="admin-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {isSearching && filteredMobileItems.length === 0 && (
+            <div className="admin-mobile-menu__empty" role="status">
+              Không tìm thấy chức năng phù hợp
+            </div>
+          )}
+        </nav>
+
+        <button
+          type="button"
+          className="admin-mobile-menu__logout"
+          tabIndex={isMobileOpen ? 0 : -1}
+          onClick={handleLogout}
+        >
+          <LogoutOutlined />
+          Đăng xuất
+        </button>
+      </div>
+
       <div className="admin-sidebar__logo">
         <img className="admin-sidebar__logo-icon" src={logo} alt="Logo VietDuc Care" />
         <div>
