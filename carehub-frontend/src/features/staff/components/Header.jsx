@@ -172,7 +172,7 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
   }
 
   return (
-    <header className="dashboard-header">
+    <header className="dashboard-header dashboard-header--staff">
       <div className="dashboard-header__main">
         <button
           type="button"

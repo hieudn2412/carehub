@@ -18,7 +18,10 @@ function AppShell({ title, breadcrumbs, back, className, children }) {
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
 
   return (
-    <div className={`app-shell${className ? ` ${className}` : ''}`}>
+    <div
+      className={`app-shell${className ? ` ${className}` : ''}`}
+      style={{ '--app-sidebar-width': isAdmin ? '222px' : '240px' }}
+    >
       <Sidebar />
       <div className="app-shell__content">
         {isAdmin ? (

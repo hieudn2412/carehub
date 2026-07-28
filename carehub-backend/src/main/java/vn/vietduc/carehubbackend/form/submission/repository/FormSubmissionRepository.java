@@ -254,6 +254,23 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
     boolean existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
             Long assignmentItemId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
 
+    boolean existsByFormVersion_IdAndAssignmentItemIsNullAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
+            Long formVersionId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
+
+    @EntityGraph(attributePaths = {
+            "assignmentItem", "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "subjectContext.subjectUser", "answers", "answers.question", "answers.selectedOption"
+    })
+    Optional<FormSubmission> findFirstByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatusOrderByCreatedAtDesc(
+            Long assignmentItemId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
+
+    @EntityGraph(attributePaths = {
+            "formVersion", "formVersion.form", "submittedBy", "subjectContext",
+            "subjectContext.subjectUser", "answers", "answers.question", "answers.selectedOption"
+    })
+    Optional<FormSubmission> findFirstByFormVersion_IdAndAssignmentItemIsNullAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatusOrderByCreatedAtDesc(
+            Long formVersionId, Long submittedById, Long subjectUserId, FormSubmissionStatus status);
+
     @Query("""
             select s from FormSubmission s
             left join s.subjectContext context

@@ -73,11 +73,13 @@ public class FormSubmissionService {
                 || request.subject().type() != FormSubjectType.USER) {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
-        User subject = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(request.subject().employeeCode().trim())
-                .filter(user -> user.getStatus() == UserStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng đối tượng biểu mẫu"));
-        if (item != null && submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
-                item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)) {
+        User subject = resolveSubjectUser(request.subject().userId(), request.subject().employeeCode());
+        boolean draftExists = item != null
+                ? submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
+                        item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)
+                : submissionRepository.existsByFormVersion_IdAndAssignmentItemIsNullAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
+                        selectedVersion.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT);
+        if (draftExists) {
             throw new ConflictException("An open draft already exists for this employee and assigned form");
         }
 
@@ -293,6 +295,37 @@ public class FormSubmissionService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<FormSubmissionResponse> findDraft(Long assignmentItemId, Long formVersionId,
+                                                       Long subjectUserId, String employeeCode) {
+        if ((assignmentItemId == null) == (formVersionId == null)) {
+            throw ValidationException.field("assignmentItemId",
+                    "Provide exactly one of assignmentItemId or formVersionId");
+        }
+        long actorId = securityUtils.getCurrentUserId();
+        User subject = resolveSubjectUser(subjectUserId, employeeCode);
+
+        Optional<FormSubmission> draft;
+        if (assignmentItemId != null) {
+            assignmentAccessService.requireActiveOwnedItem(assignmentItemId, actorId);
+            draft = submissionRepository
+                    .findFirstByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatusOrderByCreatedAtDesc(
+                            assignmentItemId, actorId, subject.getId(), FormSubmissionStatus.DRAFT);
+        } else {
+            if (!isAdmin()) {
+                throw new ForbiddenException("Chỉ Admin được đánh giá trực tiếp không qua phân công");
+            }
+            versionRepository.findById(formVersionId)
+                    .filter(version -> version.getStatus() == FormVersionStatus.PUBLISHED
+                            && !version.getForm().isDeleted())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên bản biểu mẫu đã công bố"));
+            draft = submissionRepository
+                    .findFirstByFormVersion_IdAndAssignmentItemIsNullAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatusOrderByCreatedAtDesc(
+                            formVersionId, actorId, subject.getId(), FormSubmissionStatus.DRAFT);
+        }
+        return draft.map(value -> toResponse(value, true));
+    }
+
+    @Transactional(readOnly = true)
     public FormSubmissionResponse getForSubjectUser(Long id, Long userId) {
         User user = activeUser(userId);
         FormSubmission submission = submissionRepository.findById(id)
@@ -450,6 +483,22 @@ public class FormSubmissionService {
     private User activeUser(Long id) {
         return userRepository.findById(id).filter(u -> !u.isDeleted() && u.getStatus() == UserStatus.ACTIVE)
                 .orElseThrow(() -> new UnauthorizedException("Authenticated user no longer exists"));
+    }
+
+    private User resolveSubjectUser(Long userId, String employeeCode) {
+        boolean hasUserId = userId != null;
+        boolean hasEmployeeCode = employeeCode != null && !employeeCode.isBlank();
+        if (hasUserId == hasEmployeeCode) {
+            throw ValidationException.field("subjectUserId",
+                    "Cần cung cấp đúng một trong subjectUserId hoặc employeeCode");
+        }
+
+        Optional<User> candidate = hasUserId
+                ? userRepository.findById(userId)
+                : userRepository.findByEmployeeCodeAndIsDeletedFalse(employeeCode.trim());
+        return candidate
+                .filter(user -> !user.isDeleted() && user.getStatus() == UserStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng đối tượng biểu mẫu"));
     }
 
     private boolean isAdmin() {

@@ -4,6 +4,8 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,7 +38,7 @@ class FormSubjectServiceTest {
     void managerCanLookupActiveEmployeeAcrossDepartmentsWithAssignment() {
         Position position = Position.builder().name("Điều dưỡng").build();
         Department department = Department.builder().name("Khoa Hồi sức").build();
-        User target = User.builder().employeeCode("NV01").name("Nguyễn Văn A")
+        User target = User.builder().id(101L).employeeCode("NV01").name("Nguyễn Văn A")
                 .position(position).department(department).status(UserStatus.ACTIVE).build();
         FormAssignmentItem item = FormAssignmentItem.builder()
                 .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
@@ -48,6 +50,7 @@ class FormSubjectServiceTest {
 
         var response = service.findByEmployeeCode(10L, "nv01");
 
+        assertEquals(101L, response.userId());
         assertEquals("NV01", response.employeeCode());
         assertEquals("Điều dưỡng", response.position());
         assertEquals("Khoa Hồi sức", response.department());
@@ -72,6 +75,38 @@ class FormSubjectServiceTest {
                 .thenReturn(Optional.of(target));
 
         assertThrows(ResourceNotFoundException.class, () -> service.findByEmployeeCode(null, "NV03"));
+    }
+
+    @Test
+    void adminCanSearchActiveEmployeesWithoutAssignment() {
+        authenticate("ROLE_ADMIN");
+        User target = User.builder().id(104L).employeeCode("NV04").name("Nguyễn Văn B")
+                .status(UserStatus.ACTIVE).build();
+        var pageable = PageRequest.of(0, 20);
+        when(userRepository.searchActiveFormSubjects("%nv04%", pageable))
+                .thenReturn(new PageImpl<>(List.of(target), pageable, 1));
+
+        var result = service.search(null, " NV04 ", pageable);
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals(104L, result.getContent().get(0).userId());
+        assertEquals("NV04", result.getContent().get(0).employeeCode());
+        verifyNoInteractions(assignmentAccessService, securityUtils);
+    }
+
+    @Test
+    void assignedUserCanSearchAfterAssignmentAccessIsValidated() {
+        authenticate("ROLE_USER");
+        var pageable = PageRequest.of(0, 20);
+        FormAssignmentItem item = FormAssignmentItem.builder()
+                .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(8L);
+        when(assignmentAccessService.requireActiveOwnedItem(12L, 8L)).thenReturn(item);
+        when(userRepository.searchActiveFormSubjects(null, pageable))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+
+        assertTrue(service.search(12L, " ", pageable).isEmpty());
+        verify(assignmentAccessService).requireActiveOwnedItem(12L, 8L);
     }
 
     private void authenticate(String role) {

@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.form.subject.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,18 +24,43 @@ public class FormSubjectService {
 
     @Transactional(readOnly = true)
     public FormSubjectUserResponse findByEmployeeCode(Long assignmentItemId, String employeeCode) {
-        if (!isAdmin()) {
-            if (assignmentItemId == null) throw notFound();
-            var item = assignmentAccessService.requireActiveOwnedItem(assignmentItemId, securityUtils.getCurrentUserId());
-            if (item.getForm().getSubjectType() != FormSubjectType.USER) throw notFound();
-        }
+        requireSearchAccess(assignmentItemId);
         User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
                 .filter(user -> user.getStatus() == vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE)
                 .orElseThrow(this::notFound);
         return FormSubjectUserResponse.builder()
+                .userId(target.getId())
                 .employeeCode(target.getEmployeeCode()).fullName(target.getName())
                 .position(target.getPosition() == null ? null : target.getPosition().getName())
                 .department(target.getDepartment() == null ? null : target.getDepartment().getName()).build();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FormSubjectUserResponse> search(Long assignmentItemId, String keyword, Pageable pageable) {
+        requireSearchAccess(assignmentItemId);
+        String normalizedKeyword = keyword == null || keyword.isBlank()
+                ? null
+                : "%" + keyword.trim().toLowerCase() + "%";
+        return userRepository.searchActiveFormSubjects(normalizedKeyword, pageable)
+                .map(this::toResponse);
+    }
+
+    private void requireSearchAccess(Long assignmentItemId) {
+        if (isAdmin()) return;
+        if (assignmentItemId == null) throw notFound();
+        var item = assignmentAccessService.requireActiveOwnedItem(
+                assignmentItemId, securityUtils.getCurrentUserId());
+        if (item.getForm().getSubjectType() != FormSubjectType.USER) throw notFound();
+    }
+
+    private FormSubjectUserResponse toResponse(User target) {
+        return FormSubjectUserResponse.builder()
+                .userId(target.getId())
+                .employeeCode(target.getEmployeeCode())
+                .fullName(target.getName())
+                .position(target.getPosition() == null ? null : target.getPosition().getName())
+                .department(target.getDepartment() == null ? null : target.getDepartment().getName())
+                .build();
     }
 
     private boolean isAdmin() {

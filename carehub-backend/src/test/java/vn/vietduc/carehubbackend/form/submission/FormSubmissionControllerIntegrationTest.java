@@ -24,6 +24,7 @@ import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.blankOrNullString;
@@ -102,10 +103,10 @@ class FormSubmissionControllerIntegrationTest {
                                   "assignmentItemId": %d,
                                   "subject": {
                                     "type": "USER",
-                                    "employeeCode": "FORM_SUB_SUBJECT"
+                                    "userId": %d
                                   }
                                 }
-                                """.formatted(fixture.assignmentItemId())))
+                                """.formatted(fixture.assignmentItemId(), subject.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.data.status", is("DRAFT")))
@@ -115,6 +116,14 @@ class FormSubmissionControllerIntegrationTest {
                 .getContentAsString();
         Number submissionId = JsonPath.read(createResponse, "$.data.id");
         Number lockVersion = JsonPath.read(createResponse, "$.data.lockVersion");
+
+        mockMvc.perform(get("/api/v1/form-submissions/draft")
+                        .with(managerJwt())
+                        .param("assignmentItemId", fixture.assignmentItemId().toString())
+                        .param("subjectUserId", subject.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(submissionId.intValue())))
+                .andExpect(jsonPath("$.data.status", is("DRAFT")));
 
         String updateResponse = mockMvc.perform(put("/api/v1/form-submissions/{id}", submissionId.longValue())
                         .with(managerJwt())
@@ -220,6 +229,35 @@ class FormSubmissionControllerIntegrationTest {
     void adminCreatesDirectSubmissionFromPublishedVersionWithoutAssignment() throws Exception {
         Fixture fixture = publishedAssignedForm();
 
+        String createResponse = mockMvc.perform(post("/api/v1/form-submissions")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formVersionId": %d,
+                                  "subject": {
+                                    "type": "USER",
+                                    "userId": %d
+                                  }
+                                }
+                                """.formatted(fixture.versionId(), subject.getId())))
+                .andExpect(status().isCreated())
+                .andExpect(header().exists("Location"))
+                .andExpect(jsonPath("$.data.status", is("DRAFT")))
+                .andExpect(jsonPath("$.data.assignmentItemId").doesNotExist())
+                .andExpect(jsonPath("$.data.subject.employeeCode", is("FORM_SUB_SUBJECT")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Number submissionId = JsonPath.read(createResponse, "$.data.id");
+
+        mockMvc.perform(get("/api/v1/form-submissions/draft")
+                        .with(adminJwt())
+                        .param("formVersionId", fixture.versionId().toString())
+                        .param("subjectUserId", subject.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(submissionId.intValue())));
+
         mockMvc.perform(post("/api/v1/form-submissions")
                         .with(adminJwt())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -228,15 +266,78 @@ class FormSubmissionControllerIntegrationTest {
                                   "formVersionId": %d,
                                   "subject": {
                                     "type": "USER",
-                                    "employeeCode": "FORM_SUB_SUBJECT"
+                                    "userId": %d
                                   }
                                 }
-                                """.formatted(fixture.versionId())))
+                                """.formatted(fixture.versionId(), subject.getId())))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void subjectSearchRequiresAssignmentForNonAdminAndReturnsActiveUsers() throws Exception {
+        Fixture fixture = publishedAssignedForm();
+
+        mockMvc.perform(get("/api/v1/form-subjects/users/search")
+                        .with(managerJwt())
+                        .param("assignmentItemId", fixture.assignmentItemId().toString())
+                        .param("keyword", "SUBJECT")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)))
+                .andExpect(jsonPath("$.data.content[0].userId", is(subject.getId().intValue())))
+                .andExpect(jsonPath("$.data.content[0].employeeCode", is(subject.getEmployeeCode())));
+
+        mockMvc.perform(get("/api/v1/form-subjects/users/search")
+                        .with(managerJwt())
+                        .param("keyword", "SUBJECT"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/v1/form-subjects/users/search")
+                        .with(adminJwt())
+                        .param("keyword", "SUBJECT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)));
+    }
+
+    @Test
+    void userIdKeepsCaseInsensitiveDuplicateEmployeeCodesUnambiguous() throws Exception {
+        Fixture fixture = publishedAssignedForm();
+        User duplicateCodeSubject = userRepository.save(User.builder()
+                .employeeCode("form_sub_subject")
+                .email("form-subject-case-duplicate@example.com")
+                .name("Case Duplicate Subject")
+                .password("encoded")
+                .status(UserStatus.ACTIVE)
+                .build());
+
+        String searchResponse = mockMvc.perform(get("/api/v1/form-subjects/users/search")
+                        .with(adminJwt())
+                        .param("keyword", "form_sub_subject")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(2)))
+                .andReturn().getResponse().getContentAsString();
+        List<Integer> userIds = JsonPath.read(searchResponse, "$.data.content[*].userId");
+        assertTrue(userIds.contains(subject.getId().intValue()));
+        assertTrue(userIds.contains(duplicateCodeSubject.getId().intValue()));
+
+        mockMvc.perform(get("/api/v1/form-submissions/draft")
+                        .with(adminJwt())
+                        .param("formVersionId", fixture.versionId().toString())
+                        .param("subjectUserId", duplicateCodeSubject.getId().toString()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/form-submissions")
+                        .with(adminJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "formVersionId": %d,
+                                  "subject": {"type": "USER", "userId": %d}
+                                }
+                                """.formatted(fixture.versionId(), duplicateCodeSubject.getId())))
                 .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"))
-                .andExpect(jsonPath("$.data.status", is("DRAFT")))
-                .andExpect(jsonPath("$.data.assignmentItemId").doesNotExist())
-                .andExpect(jsonPath("$.data.subject.employeeCode", is("FORM_SUB_SUBJECT")));
+                .andExpect(jsonPath("$.data.subject.employeeCode", is("form_sub_subject")));
     }
 
     private Fixture publishedAssignedForm() throws Exception {
@@ -291,10 +392,10 @@ class FormSubmissionControllerIntegrationTest {
                   "assignmentItemId": %d,
                   "subject": {
                     "type": "USER",
-                    "employeeCode": "FORM_SUB_SUBJECT"
+                    "userId": %d
                   }
                 }
-                """.formatted(assignmentItemId);
+                """.formatted(assignmentItemId, subject.getId());
     }
 
     private String versionJson() {

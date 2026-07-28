@@ -173,7 +173,7 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
   }
 
   return (
-    <header className="dashboard-header">
+    <header className="dashboard-header dashboard-header--admin">
       <button
         type="button"
         className="dashboard-header__menu-button"
