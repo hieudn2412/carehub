@@ -16,15 +16,32 @@
   min-width: 0;
   flex: 1;
   flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   gap: 5px;
 }
 
+/*
+ * StaffDashBoardScreen.css vẫn còn selector legacy cùng tên và đặt
+ * align-items: center cho header nhân viên. Scope riêng giúp header Admin
+ * luôn dóng back navigation/breadcrumb về mép trái, không phụ thuộc thứ tự CSS.
+ */
+.dashboard-header--admin .dashboard-header__main {
+  align-items: stretch;
+}
+
+.dashboard-header--admin .dashboard-header__navigation {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .dashboard-header__navigation {
   display: flex;
+  width: 100%;
   min-width: 0;
   min-height: 40px;
   align-items: center;
+  justify-content: flex-start;
   gap: 14px;
 }
 
@@ -81,7 +98,8 @@
 .dashboard-header__breadcrumbs {
   display: flex;
   align-items: center;
-  align-self: center;
+  justify-content: flex-start;
+  margin-right: auto;
   flex-wrap: nowrap;
   gap: 8px;
   min-height: 36px;
@@ -226,23 +244,27 @@
   top: 100%;
   right: 0;
   margin-top: 12px;
-  width: 380px;
+  width: min(420px, calc(100vw - 24px));
   background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+  border: 1px solid #e2e8f0;
   z-index: 100;
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
 .notify-popover__header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .notify-popover__title-area {
@@ -252,24 +274,33 @@
 }
 
 .notify-popover__title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-size: 17px;
+  font-weight: 650;
+  color: #0f172a;
   margin: 0;
 }
 
 .notify-popover__mark-read {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #0f766e;
   font-size: 12px;
-  color: #555;
-  text-decoration: underline;
-  background: none;
-  border: none;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .notify-popover__mark-read:hover {
-  color: #1aaa84;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.notify-popover__mark-read:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .notify-popover__subtitle {
@@ -284,12 +315,9 @@
 }
 
 .notify-popover__body {
-  max-height: 360px;
+  max-height: 420px;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-right: 4px;
+  padding: 6px 0;
 }
 
 .notify-popover__body::-webkit-scrollbar {
@@ -316,11 +344,11 @@
 /* notify-item là <button> (a11y) — reset style mặc định của button */
 .notify-item {
   display: flex;
-  gap: 12px;
+  gap: 11px;
   width: 100%;
-  padding: 8px;
+  padding: 12px 18px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 0;
   background: transparent;
   font: inherit;
   text-align: left;
@@ -332,18 +360,17 @@
 }
 
 .notify-item:hover {
-  background: #f9f9f9;
+  background: #f8fafc;
 }
 
 .notify-item--unread::before {
   content: '';
   position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 12px;
+  top: 16px;
   width: 6px;
   height: 6px;
-  background: #c0392b;
+  background: #0f9f7f;
   border-radius: 50%;
 }
 
@@ -377,12 +404,19 @@
   border: 1px solid #ccece2;
 }
 
+.notify-item__icon-wrapper--info {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
 .notify-item__content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  padding-right: 12px;
+  min-width: 0;
+  padding-right: 10px;
 }
 
 .notify-item__title {
@@ -393,10 +427,11 @@
 }
 
 .notify-item__desc {
-  font-size: 12px;
-  color: #555;
+  font-size: 13px;
+  color: #334155;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .notify-item__desc span.highlight-red {
@@ -405,9 +440,9 @@
 }
 
 .notify-item__footer {
-  font-size: 11px;
-  color: #aaa;
-  margin: 4px 0 0;
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin: 3px 0 0;
 }
 
 /* bp-md */

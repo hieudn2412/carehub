@@ -19,10 +19,13 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankSta
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateMatchResult;
 
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -57,6 +60,141 @@ public class DuplicateCheckService {
 
     public DuplicateCheckResult check(String stem, Set<Long> excludedQuestionIds, Set<Long> excludedCandidateIds) {
         return check(stem, null, excludedQuestionIds, excludedCandidateIds);
+    }
+
+    public List<DuplicateMatchResult> findPotentialMatches(
+            String stem,
+            Set<Long> excludedQuestionIds,
+            Set<Long> excludedCandidateIds,
+            int limit
+    ) {
+        if (stem == null || stem.isBlank() || limit <= 0) {
+            return List.of();
+        }
+        List<DuplicateMatchResult> matches = new ArrayList<>();
+        if (embeddingProperties.isE5Provider()) {
+            try {
+                double[] candidateVector = questionEmbeddingService.embedCandidateStem(stem);
+                List<QuestionEmbeddingSnapshot> embeddings = embeddingCache.approvedStemEmbeddings();
+                if (embeddings.isEmpty()) {
+                    collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+                } else {
+                    collectSemanticQuestionMatches(candidateVector, embeddings, excludedQuestionIds, matches);
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Không lấy được danh sách câu trùng ngữ nghĩa, dùng kiểm tra từ khóa: {}", ex.getMessage());
+                collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+            }
+        } else {
+            collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+        }
+        collectLexicalCandidateMatches(stem, excludedCandidateIds, matches);
+        return matches.stream()
+                .sorted(Comparator.comparingDouble(DuplicateMatchResult::similarity).reversed()
+                        .thenComparing(match -> match.sourceType().name())
+                        .thenComparing(DuplicateMatchResult::sourceId))
+                .limit(limit)
+                .toList();
+    }
+
+    private void collectSemanticQuestionMatches(
+            double[] candidateVector,
+            List<QuestionEmbeddingSnapshot> embeddings,
+            Set<Long> excludedQuestionIds,
+            List<DuplicateMatchResult> matches
+    ) {
+        double reviewMin = properties.getDuplicate().getReviewMin();
+        double strongMin = properties.getDuplicate().getStrongMin();
+        for (QuestionEmbeddingSnapshot embedding : embeddings) {
+            if (excludedQuestionIds.contains(embedding.questionId())) {
+                continue;
+            }
+            double score = CosineUtil.cosine(candidateVector, embedding.vector());
+            if (score >= reviewMin) {
+                matches.add(new DuplicateMatchResult(
+                        DuplicateMatchResult.SourceType.QUESTION_BANK,
+                        embedding.questionId(),
+                        embedding.stem(),
+                        score,
+                        score >= strongMin
+                ));
+            }
+        }
+    }
+
+    private void collectLexicalQuestionMatches(
+            String stem,
+            Set<Long> excludedQuestionIds,
+            List<DuplicateMatchResult> matches
+    ) {
+        int page = 0;
+        int pageSize = Math.max(1, embeddingProperties.getLexicalPageSize());
+        List<QuestionBankQuestion> questionPage;
+        do {
+            questionPage = questionRepository.findByStatus(
+                    QuestionBankStatus.APPROVED,
+                    PageRequest.of(page++, pageSize)
+            );
+            for (QuestionBankQuestion question : questionPage) {
+                if (excludedQuestionIds.contains(question.getId())) {
+                    continue;
+                }
+                addMatchIfPotential(
+                        matches,
+                        DuplicateMatchResult.SourceType.QUESTION_BANK,
+                        question.getId(),
+                        question.getStem(),
+                        similarity(stem, question.getStem())
+                );
+            }
+        } while (!questionPage.isEmpty() && questionPage.size() == pageSize);
+    }
+
+    private void collectLexicalCandidateMatches(
+            String stem,
+            Set<Long> excludedCandidateIds,
+            List<DuplicateMatchResult> matches
+    ) {
+        int page = 0;
+        int pageSize = Math.max(1, embeddingProperties.getLexicalPageSize());
+        List<DocumentQuestionCandidate> candidatePage;
+        do {
+            candidatePage = candidateRepository.findByStatusIn(
+                    COMPARABLE_CANDIDATE_STATUSES,
+                    PageRequest.of(page++, pageSize)
+            );
+            for (DocumentQuestionCandidate candidate : candidatePage) {
+                if (excludedCandidateIds.contains(candidate.getId())) {
+                    continue;
+                }
+                addMatchIfPotential(
+                        matches,
+                        DuplicateMatchResult.SourceType.DOCUMENT_CANDIDATE,
+                        candidate.getId(),
+                        candidate.getStem(),
+                        similarity(stem, candidate.getStem())
+                );
+            }
+        } while (!candidatePage.isEmpty() && candidatePage.size() == pageSize);
+    }
+
+    private void addMatchIfPotential(
+            List<DuplicateMatchResult> matches,
+            DuplicateMatchResult.SourceType sourceType,
+            Long sourceId,
+            String stem,
+            double similarity
+    ) {
+        if (similarity < properties.getDuplicate().getReviewMin()) {
+            return;
+        }
+        matches.add(new DuplicateMatchResult(
+                sourceType,
+                sourceId,
+                stem,
+                similarity,
+                similarity >= properties.getDuplicate().getStrongMin()
+        ));
     }
 
     /**

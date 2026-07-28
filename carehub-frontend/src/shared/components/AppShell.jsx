@@ -13,13 +13,22 @@ import { AUTH_ROLE, hasAnyRole } from '../../features/auth/utils/authNavigation.
  *   ...nội dung trang...
  * </AppShell>
  */
-function AppShell({ title, breadcrumbs, back, className, children }) {
+function AppShell({ title, breadcrumbs, back, className, hideSidebar = false, children }) {
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
+  const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
+  const roleClassName = isAdmin
+    ? 'app-shell--admin'
+    : isManager
+      ? 'app-shell--manager'
+      : 'app-shell--staff'
 
   return (
-    <div className={`app-shell${className ? ` ${className}` : ''}`}>
-      <Sidebar />
+    <div
+      className={`app-shell ${roleClassName}${className ? ` ${className}` : ''}`}
+      style={{ '--app-sidebar-width': isAdmin ? '222px' : '240px' }}
+    >
+      {!hideSidebar && <Sidebar />}
       <div className="app-shell__content">
         {isAdmin ? (
           <AdminHeader title={title} breadcrumbs={breadcrumbs} back={back} />

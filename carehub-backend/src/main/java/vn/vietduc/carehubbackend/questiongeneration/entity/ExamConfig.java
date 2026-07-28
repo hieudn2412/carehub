@@ -15,6 +15,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSelectionStrategy;
 
 @Entity
@@ -61,6 +62,19 @@ public class ExamConfig extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "selection_strategy", length = 24)
     private QuestionSelectionStrategy selectionStrategy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "question_selection_mode", length = 32)
+    private ExamQuestionSelectionMode questionSelectionMode;
+
+    @Column(name = "easy_percentage")
+    private Integer easyPercentage;
+
+    @Column(name = "medium_percentage")
+    private Integer mediumPercentage;
+
+    @Column(name = "hard_percentage")
+    private Integer hardPercentage;
 
     @Column(name = "created_by", length = 100)
     private String createdBy;

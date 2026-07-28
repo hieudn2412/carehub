@@ -179,7 +179,7 @@ function ExamPaperListPage({
               </div>
 
               <div className="exp-table-card">
-                <table className="exp-table">
+                <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th style={{ width: '40px' }}></th>
@@ -189,7 +189,7 @@ function ExamPaperListPage({
                       <th>Số câu</th>
                       <th>Trạng thái</th>
                       <th>Ngày tạo</th>
-                      <th style={{ width: 180, textAlign: 'center' }}>Hành động</th>
+                      <th style={{ width: 180 }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -200,7 +200,7 @@ function ExamPaperListPage({
                     ) : filteredPapers.map((paper) => (
                       <tr key={paper.id}>
                         <td style={{ textAlign: 'center' }}>
-                          <button type="button" className="exp-expand-btn" onClick={() => handleExpand(paper.id)}>
+                          <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => handleExpand(paper.id)} title="Xem chi tiết">
                             {expandedId === paper.id ? <CloseOutlined /> : <EyeOutlined />}
                           </button>
                         </td>
@@ -211,11 +211,11 @@ function ExamPaperListPage({
                         <td><span className={`exp-badge exp-badge--${paper.status?.toLowerCase()}`}>{paper.statusText || paper.status}</span></td>
                         <td>{formatDateTime(paper.createdAt)}</td>
                         <td>
-                          <div className="exp-actions">
-                            <button type="button" onClick={() => exportPaper(paper, false)} title="Tải đề DOCX"><DownloadOutlined /></button>
-                            <button type="button" onClick={() => exportPaper(paper, true)} title="Tải đáp án DOCX"><FileTextOutlined /></button>
-                            {paper.status === 'DRAFT' && <button type="button" onClick={() => publishPaper(paper)} disabled={actionId === paper.id} title="Phát hành"><SendOutlined /></button>}
-                            <button type="button" onClick={() => archivePaper(paper)} disabled={paper.status === 'ARCHIVED' || actionId === paper.id} title="Lưu trữ"><DeleteOutlined /></button>
+                          <div className="admin-table-actions exp-table-actions">
+                            <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, false)} title="Tải đề DOCX"><DownloadOutlined /></button>
+                            <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, true)} title="Tải đáp án DOCX"><FileTextOutlined /></button>
+                            {paper.status === 'DRAFT' && <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--success" onClick={() => publishPaper(paper)} disabled={actionId === paper.id} title="Phát hành"><SendOutlined /></button>}
+                            <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--danger" onClick={() => archivePaper(paper)} disabled={paper.status === 'ARCHIVED' || actionId === paper.id} title="Lưu trữ"><DeleteOutlined /></button>
                           </div>
                         </td>
                       </tr>

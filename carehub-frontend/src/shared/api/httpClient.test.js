@@ -53,6 +53,27 @@ describe('httpClient request interceptor', () => {
 
     expect(seenAuthorization).toBe('Bearer explicit')
   })
+
+  it('does not send a stale access token to the public login endpoint', async () => {
+    tokenStorage.setAccessToken('expired-access-token')
+    let seenAuthorization = 'unset'
+    server.use(http.post(`${API_BASE_URL}/auth/login`, ({ request }) => {
+      seenAuthorization = request.headers.get('Authorization')
+      return HttpResponse.json({
+        data: {
+          accessToken: 'fresh-access-token',
+          refreshToken: 'fresh-refresh-token',
+        },
+      })
+    }))
+
+    await httpClient.post('/auth/login', {
+      employeeCode: 'ADMIN',
+      password: 'secret',
+    })
+
+    expect(seenAuthorization).toBeNull()
+  })
 })
 
 describe('httpClient response interceptor — silent refresh', () => {
@@ -279,5 +300,5 @@ it('L1-FE-23 | State: window.location.replace is stubbed so redirects are observ
 // so a config change cannot silently move the whole harness.
 it('L1-FE-54 | State: the client baseURL matches the configured API base', () => {
   expect(httpClient.defaults.baseURL).toBe(API_BASE_URL)
-  expect(API_BASE_URL).toBe(import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1')
+  expect(API_BASE_URL).toBe(import.meta.env.VITE_API_BASE_URL || '/api/v1')
 })

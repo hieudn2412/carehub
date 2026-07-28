@@ -50,6 +50,28 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     @EntityGraph(attributePaths = {"department", "position"})
     List<User> findByIsDeletedFalseAndStatus(UserStatus status);
 
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            ORDER BY u.name ASC, u.employeeCode ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            """)
+    Page<User> searchActiveFormSubjects(@Param("keyword") String keyword, Pageable pageable);
+
     @Query("""
             SELECT u.department.id AS departmentId, COUNT(u.id) AS employeeCount
             FROM User u

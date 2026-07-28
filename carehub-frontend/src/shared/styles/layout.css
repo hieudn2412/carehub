@@ -57,3 +57,18 @@
     padding: 18px 14px 28px;
   }
 }
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .app-shell--staff .app-shell__body {
+    padding: 14px 12px calc(28px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* bp-xs */
+@media (max-width: 560px) {
+  .app-shell--staff .app-shell__body {
+    padding-inline: 10px;
+  }
+}

@@ -58,15 +58,15 @@ export default function ImportModal() {
     // Index 1: employeeCode, Index 3: firstName, Index 4: lastName, Index 5: gender, Index 6: birthday
     // Index 7: departmentName, Index 8: departmentCode, Index 10: positionName, Index 18: educationCode, Index 19: educationLevelName
     const headers = [
-      "", "Ma nhan vien", "", "Ho dem", "Ten", "Gioi tinh", "Ngay sinh (d/M/yyyy)", 
+      "", "Ma nhan vien", "", "Ho dem", "Ten", "Gioi tinh", "Ngay sinh (d/M/yyyy)",
       "Ten phong ban", "Ma phong ban", "", "Ten chuc danh", "", "", "", "", "", "", "", "Ma trinh do", "Ten trinh do hoc van"
     ].join(",");
-    
+
     const row = [
-      "", "VD00001", "", "Nguyen Van", "An", "Nam", "01/01/1990", 
+      "", "VD00001", "", "Nguyen Van", "An", "Nam", "01/01/1990",
       "Phong Ke Hoach", "KHTH", "", "Bac si chinh", "", "", "", "", "", "", "", "DH", "Dai hoc"
     ].join(",");
-    
+
     const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(`${headers}\n${row}\n`);
     const link = document.createElement("a");
     link.setAttribute("href", csvContent);
@@ -81,7 +81,7 @@ export default function ImportModal() {
       setErrorMsg("Vui lòng chọn tệp tin Excel (.xlsx) trước khi bấm import.");
       return;
     }
-    
+
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -164,15 +164,15 @@ export default function ImportModal() {
 
                   {/* Actions row */}
                   <div className="im-actions">
-                    <button 
-                      className="im-btn-outline" 
+                    <button
+                      className="im-btn-outline"
                       onClick={handleDownloadTemplate}
                       disabled={loading}
                     >
                       <IconDownload /> Tải template xuống
                     </button>
-                    <button 
-                      className="im-btn-solid" 
+                    <button
+                      className="im-btn-solid"
                       onClick={handleImport}
                       disabled={loading || !file}
                     >

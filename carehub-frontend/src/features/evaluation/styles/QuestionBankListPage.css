@@ -61,12 +61,7 @@
   width: min(680px, 100%);
 }
 
-.qbl-filter-disclosure {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.qbl-filter-disclosure > summary {
+.qbl-filter-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,12 +79,8 @@
   white-space: nowrap;
 }
 
-.qbl-filter-disclosure > summary::-webkit-details-marker {
-  display: none;
-}
-
-.qbl-filter-disclosure[open] > summary,
-.qbl-filter-disclosure > summary:hover {
+.qbl-filter-trigger.is-open,
+.qbl-filter-trigger:hover {
   border-color: #99f6e4;
   background: #f0fdfa;
   color: #0f766e;
@@ -110,24 +101,32 @@
 }
 
 .qbl-filter-panel {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 8px);
-  right: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
-  gap: 10px;
-  width: 430px;
+  grid-template-columns: repeat(2, minmax(180px, 260px)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 12px;
+  width: 100%;
   padding: 14px;
   border: 1px solid #dbe3ee;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+  background: #f8fafc;
+  box-sizing: border-box;
+}
+
+.qbl-filter-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+.qbl-filter-panel label > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .qbl-filter-panel .qbl-btn-clear {
-  grid-column: 1 / -1;
-  justify-self: end;
+  justify-self: start;
 }
 
 .qbl-search-input {
@@ -167,7 +166,7 @@
   outline: none;
   color: #334155;
   min-width: 150px;
-  min-height: 38px;
+  min-height: 44px;
   cursor: pointer;
   background: #fff;
   transition: all 0.15s ease;
@@ -179,7 +178,7 @@
 }
 
 .qbl-btn-clear {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 4px;
   border: 0;
   background: transparent;
@@ -263,51 +262,8 @@
   font-size: 13.5px;
 }
 
-/* Table Card */
-.qbl-table-card {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #dbe3ee;
-  overflow: visible;
-}
-
 .qbl-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.qbl-table th {
-  padding: 13px 16px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #64748b;
-  border-bottom: 1.5px solid #cbd5e1;
-  background: #f8fafc;
-}
-
-.qbl-table td {
-  padding: 15px 16px;
-  font-size: 13.5px;
-  color: #334155;
-  border-bottom: 1px solid #e2e8f0;
-  vertical-align: middle;
-}
-
-.qbl-table th:first-child,
-.qbl-table td:first-child {
-  padding-left: 24px;
-}
-
-.qbl-table th:last-child,
-.qbl-table td:last-child {
-  padding-right: 24px;
-}
-
-.qbl-table tr:hover td {
-  background: #f8fafc;
+  min-width: 760px;
 }
 
 .qbl-question-link {
@@ -421,105 +377,13 @@
   font-weight: 700;
 }
 
-/* Action Buttons */
 .qbl-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
   position: relative;
-}
-
-.qbl-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1.5px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: #0f172a;
-  font-size: 15px;
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.qbl-action-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-}
-
-.qbl-action-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.qbl-action-btn--edit {
-  color: #2563eb;
-  border-color: #2563eb;
-  background: #f0f6ff;
-}
-
-.qbl-action-btn--edit:hover:not(:disabled) {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.qbl-action-btn--paraphrase {
-  color: #7c3aed;
-  border-color: #a78bfa;
-  background: #f5f3ff;
-}
-
-.qbl-action-btn--paraphrase:hover:not(:disabled) {
-  background: #ede9fe;
-  border-color: #7c3aed;
-  color: #5b21b6;
-}
-
-.qbl-action-btn--view {
-  color: #0f766e;
-  border-color: #5eead4;
-  background: #f0fdfa;
-}
-
-.qbl-action-btn--view:hover:not(:disabled) {
-  border-color: #14b8a6;
-  background: #ccfbf1;
-  color: #115e59;
-}
-
-.qbl-action-btn--delete {
-  color: #ef4444;
-  border-color: #ef4444;
-  background: #fff5f5;
-}
-
-.qbl-action-btn--delete:hover:not(:disabled) {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-
-/* Pagination Footer */
-.qbl-pagination-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  border-top: 1px solid #cbd5e1;
-  background: #fff;
+  flex-wrap: nowrap;
 }
 
 .qbl-pagination-info {
-  font-size: 13.5px;
   color: #64748b;
-}
-
-.qbl-pagination-buttons {
-  display: flex;
-  gap: 6px;
-  align-items: center;
 }
 
 .qbl-page-ellipsis {
@@ -529,43 +393,6 @@
   width: 26px;
   color: #94a3b8;
   font-size: 13px;
-}
-
-.qbl-page-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.qbl-page-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-}
-
-.qbl-page-btn--active {
-  background: #2563eb;
-  color: #fff;
-  border-color: #2563eb;
-}
-
-.qbl-page-btn--active:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-.qbl-page-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .qbl-modal-backdrop {
@@ -811,44 +638,6 @@
   margin-top: 16px;
 }
 
-.qbl-model-status-card {
-  min-height: 108px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.qbl-model-status-card strong {
-  color: #0f172a;
-  font-size: 13.5px;
-}
-
-.qbl-model-status-card span {
-  color: #475569;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.qbl-model-status-card small {
-  color: #64748b;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-.qbl-model-status-card--ready {
-  border-color: #86efac;
-  background: #f0fdf7;
-}
-
-.qbl-model-status-card--warning {
-  border-color: #fde68a;
-  background: #fffbeb;
-}
-
 .qbl-model-warning {
   margin-top: 10px;
   padding: 10px 12px;
@@ -961,17 +750,13 @@
     flex-direction: column;
   }
 
-  .qbl-filter-disclosure > summary {
+  .qbl-filter-trigger {
     width: 100%;
   }
 
   .qbl-filter-panel {
-    position: static;
     grid-template-columns: 1fr;
     width: 100%;
-    margin-top: 8px;
-    box-sizing: border-box;
-    box-shadow: none;
   }
 
   .qbl-filter-select,

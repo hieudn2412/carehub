@@ -16,6 +16,9 @@ public record ExamConfigResponse(
         Integer maxRetakes,
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
+        String questionSelectionMode,
+        DifficultyPercentages difficultyPercentages,
+        DifficultyQuestionCounts difficultyQuestionCounts,
         String status,
         String statusText,
         List<ExamConfigDistributionResponse> distributions,
@@ -23,4 +26,9 @@ public record ExamConfigResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+    public record DifficultyPercentages(Integer easy, Integer medium, Integer hard) {
+    }
+
+    public record DifficultyQuestionCounts(Integer easy, Integer medium, Integer hard) {
+    }
 }

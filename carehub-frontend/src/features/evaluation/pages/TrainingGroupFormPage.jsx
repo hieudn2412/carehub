@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
 import { httpClient } from '../../../shared/api/httpClient.js'

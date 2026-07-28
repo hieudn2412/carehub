@@ -97,7 +97,7 @@ function TestConfigPage() {
 
   useEffect(() => {
     // Hydrate exam configuration data on mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 
@@ -320,7 +320,6 @@ function TestConfigPage() {
                 <div className="tcf-selected-set">
                   <strong>{selectedQuestionSet.name}</strong>
                   <span>{selectedQuestionSet.questionCount || 0} câu hỏi</span>
-                  <span>{selectedQuestionSet.difficulty || 'Chưa phân loại'}</span>
                   <span>{selectedQuestionSet.statusText || 'Hoạt động'}</span>
                 </div>
               )}

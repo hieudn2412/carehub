@@ -38,7 +38,7 @@ function AdminAccountsScreen() {
   const [departmentLoading, setDepartmentLoading] = useState(true)
   const [departmentLoadError, setDepartmentLoadError] = useState('')
   const [roles, setRoles] = useState([])
-  
+
   const [loading, setLoading] = useState(true)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(1)
@@ -88,7 +88,7 @@ function AdminAccountsScreen() {
     message: '',
     onConfirm: null
   })
-  
+
   // Reference lists
   const [positions, setPositions] = useState([])
   const [educationLevels, setEducationLevels] = useState([])
@@ -207,7 +207,7 @@ function AdminAccountsScreen() {
 
   // Load user data on filter changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch, deptFilter, roleFilter, statusFilter])
@@ -215,7 +215,7 @@ function AdminAccountsScreen() {
   // Load detail data when select user changes
   useEffect(() => {
     if (!selectedUserId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setSelectedUserDetail(null)
       setNewGeneratedPassword(null)
       return
@@ -398,16 +398,13 @@ function AdminAccountsScreen() {
   }
 
   const handleLockUser = (userId) => {
-    console.log('handleLockUser called with userId:', userId)
     setConfirmModal({
       isOpen: true,
       title: 'Khóa tài khoản',
       message: 'Bạn có chắc chắn muốn khoá tài khoản này? Người dùng sẽ không thể đăng nhập.',
       onConfirm: () => {
-        console.log('User confirmed lock action. Calling backend API...')
         adminApi.lockUser(userId)
-          .then((res) => {
-            console.log('Backend lock success response:', res.data)
+          .then(() => {
             showToast('Đã khoá tài khoản thành công.', 'success')
             setSelectedUserId(null)
             loadUsers()
@@ -609,7 +606,7 @@ function AdminAccountsScreen() {
   return (
     <AppShell title="Quản lý tài khoản">
             <div className="am-page">
-              
+
               {/* Title Header Card */}
               <div className="am-title-card">
                 <h1 className="am-title">Danh sách tài khoản</h1>
@@ -655,9 +652,9 @@ function AdminAccountsScreen() {
                 </div>
 
                 {/* Role dropdown */}
-                <select 
-                  className="am-filter-select" 
-                  value={roleFilter} 
+                <select
+                  className="am-filter-select"
+                  value={roleFilter}
                   onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
                 >
                   <option value="all">Tất cả vai trò</option>
@@ -668,9 +665,9 @@ function AdminAccountsScreen() {
                 </select>
 
                 {/* Status dropdown */}
-                <select 
-                  className="am-filter-select" 
-                  value={statusFilter} 
+                <select
+                  className="am-filter-select"
+                  value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
                 >
                   <option value="all">Tất cả trạng thái</option>
@@ -681,11 +678,11 @@ function AdminAccountsScreen() {
 
                 {/* Results Count & Export */}
                 <span className="am-results-count">{totalElements} kết quả</span>
-                
+
                 <button className="am-btn-primary" onClick={handleOpenCreateModal}>
                   <PlusOutlined /> Thêm tài khoản
                 </button>
-                
+
                 <button className="am-btn-secondary" onClick={() => { setIsImportModalOpen(true); setImportFile(null); setImportResult(null); }}>
                   <UploadOutlined /> Import Excel
                 </button>
@@ -697,7 +694,7 @@ function AdminAccountsScreen() {
 
               {/* Table Card */}
               <div className="am-table-card">
-                <table className="am-table">
+                <table className="am-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -730,8 +727,14 @@ function AdminAccountsScreen() {
                           <td>{renderRoles(u.roles)}</td>
                           <td>{renderStatus(u.status)}</td>
                           <td>
-                            <button className="am-btn-detail" onClick={() => setSelectedUserId(u.id)}>
-                              <EyeOutlined /> Chi tiết
+                            <button
+                              aria-label={`Xem chi tiết tài khoản ${u.employeeCode || u.username || u.id}`}
+                              className="am-btn-detail admin-table-action admin-table-action--icon admin-table-action--primary"
+                              onClick={() => setSelectedUserId(u.id)}
+                              title="Xem chi tiết"
+                              type="button"
+                            >
+                              <EyeOutlined />
                             </button>
                           </td>
                         </tr>
@@ -747,9 +750,9 @@ function AdminAccountsScreen() {
                       Hiển thị {users.length} trong tổng số {totalElements} kết quả
                     </span>
                     <div className="am-page-nums">
-                      <button 
-                        className="am-pn" 
-                        onClick={() => setPage(p => Math.max(1, p - 1))} 
+                      <button
+                        className="am-pn"
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
                         disabled={page === 1}
                       >
                         <LeftOutlined />
@@ -770,9 +773,9 @@ function AdminAccountsScreen() {
                         )
                       })}
 
-                      <button 
-                        className="am-pn" 
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))} 
+                      <button
+                        className="am-pn"
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                         disabled={page >= totalPages || totalPages === 0}
                       >
                         <RightOutlined />
@@ -793,7 +796,7 @@ function AdminAccountsScreen() {
                 <CloseOutlined />
               </button>
             </div>
-            
+
             <div className="am-modal-body">
               {modalLoading ? (
                 <LoadingState label="Đang tải thông tin nhân viên..." />
@@ -921,11 +924,11 @@ function AdminAccountsScreen() {
                 <CloseOutlined />
               </button>
             </div>
-            
+
             <form onSubmit={handleFormSubmit}>
               <div className="am-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 <div className="am-form-grid">
-                  
+
                   <div className="am-form-group">
                     <label className="am-form-label">Mã nhân viên *</label>
                     <input
@@ -1097,7 +1100,7 @@ function AdminAccountsScreen() {
 
                 </div>
               </div>
-              
+
               <div className="am-modal-footer" style={{ gap: 10 }}>
                 <button
                   type="button"
@@ -1129,7 +1132,7 @@ function AdminAccountsScreen() {
                 <CloseOutlined />
               </button>
             </div>
-            
+
             <form onSubmit={handleImportUsers}>
               <div className="am-modal-body">
                 <p style={{ fontSize: '13.5px', color: '#475569', margin: 0 }}>
@@ -1175,7 +1178,7 @@ function AdminAccountsScreen() {
                   </div>
                 )}
               </div>
-              
+
               <div className="am-modal-footer" style={{ gap: 10 }}>
                 <button
                   type="button"
@@ -1213,24 +1216,24 @@ function AdminAccountsScreen() {
                 {confirmModal.message}
               </p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                <button 
+                <button
                   type="button"
-                  className="am-modal-btn" 
+                  className="am-modal-btn"
                   style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}
                   onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                 >
                   Hủy
                 </button>
-                <button 
+                <button
                   type="button"
-                  className="am-btn-primary" 
-                  style={{ 
+                  className="am-btn-primary"
+                  style={{
                     borderRadius: '8px',
                     padding: '8px 16px',
                     fontSize: '13.5px',
-                    background: confirmModal.title.includes('Xóa') ? '#dc2626' : '#2563eb', 
-                    color: '#fff', 
-                    borderColor: 'transparent' 
+                    background: confirmModal.title.includes('Xóa') ? '#dc2626' : '#2563eb',
+                    color: '#fff',
+                    borderColor: 'transparent'
                   }}
                   onClick={() => {
                     confirmModal.onConfirm()

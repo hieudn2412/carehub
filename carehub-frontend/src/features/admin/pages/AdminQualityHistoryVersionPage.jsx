@@ -11,7 +11,6 @@ import {
   ReloadOutlined,
   SearchOutlined,
   StopOutlined,
-  TeamOutlined,
   UserSwitchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -584,28 +583,63 @@ function AdminQualityHistoryVersionPage() {
                   <div className="aqh-results-empty"><CheckCircleIcon /><strong>Chưa có kết quả phù hợp</strong><span>Hãy thay đổi bộ lọc hoặc khoảng thời gian.</span></div>
                 ) : (
                   <>
-                    <div className="aqh-results-table" role="table" aria-label="Kết quả đánh giá">
-                      <div className="aqh-results-table__head" role="row">
-                        <span>Nhân viên</span><span>Khoa/phòng</span><span>Người chấm</span><span>Ngày nộp</span><span>Điểm</span><span>Kết quả</span><span>Chi tiết</span>
-                      </div>
-                      {submissionData.content.map((item) => (
-                        <article className="aqh-results-table__row" key={item.id} role="row">
-                          <div data-label="Nhân viên"><strong>{item.subject?.fullName || 'Chưa có tên'}</strong><small>{item.subject?.employeeCode || 'Chưa có mã'}</small></div>
-                          <div data-label="Khoa/phòng"><ApartmentOutlined /><span>{item.subject?.department || 'Chưa xác định'}</span></div>
-                          <div data-label="Người chấm"><TeamOutlined /><span>{item.submittedBy?.fullName || 'Chưa xác định'}</span><small>{item.submittedBy?.employeeCode || ''}</small></div>
-                          <div data-label="Ngày nộp"><ClockCircleOutlined /><span>{formatDateTime(item.submittedAt || item.updatedAt)}</span></div>
-                          <div data-label="Điểm"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></div>
-                          <div data-label="Kết quả"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></div>
-                          <div data-label="Chi tiết">
-                            <button
-                              aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
-                              className="admin-quality-history__detail-button admin-quality-history__detail-button--icon"
-                              onClick={() => navigate(`/admin/quality/history/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
-                              type="button"
-                            ><EyeOutlined /></button>
-                          </div>
-                        </article>
-                      ))}
+                    <div className="aqh-results-table-wrap">
+                      <table className="aqh-results-table admin-table-uppercase">
+                        <thead>
+                          <tr>
+                            <th>Nhân viên</th>
+                            <th>Khoa/phòng</th>
+                            <th>Người chấm</th>
+                            <th>Ngày nộp</th>
+                            <th>Điểm</th>
+                            <th>Kết quả</th>
+                            <th>Hành động</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {submissionData.content.map((item) => (
+                            <tr key={item.id}>
+                              <td>
+                                <div className="aqh-results-table__person">
+                                  <strong>{item.subject?.fullName || 'Chưa có tên'}</strong>
+                                  <small>{item.subject?.employeeCode || 'Chưa có mã'}</small>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="aqh-results-table__inline">
+                                  <ApartmentOutlined />
+                                  <span>{item.subject?.department || 'Chưa xác định'}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="aqh-results-table__person">
+                                  <span>{item.submittedBy?.fullName || 'Chưa xác định'}</span>
+                                  <small>{item.submittedBy?.employeeCode || ''}</small>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="aqh-results-table__inline">
+                                  <ClockCircleOutlined />
+                                  <span>{formatDateTime(item.submittedAt || item.updatedAt)}</span>
+                                </div>
+                              </td>
+                              <td><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
+                              <td><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
+                              <td>
+                                <div className="admin-table-actions">
+                                  <button
+                                    aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
+                                    className="admin-table-action admin-table-action--icon admin-table-action--primary"
+                                    onClick={() => navigate(`/admin/quality/history/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
+                                    title="Xem chi tiết"
+                                    type="button"
+                                  ><EyeOutlined /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
 
                     <footer className="aqh-pagination">

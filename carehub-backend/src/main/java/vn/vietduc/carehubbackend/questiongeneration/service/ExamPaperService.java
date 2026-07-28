@@ -36,6 +36,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersionIte
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
@@ -138,9 +139,20 @@ public class ExamPaperService {
         List<ExamPaperResponse> responses = new ArrayList<>();
         for (int variant = 1; variant <= variantCount; variant++) {
             long seed = baseSeed + variant - 1;
-            List<PaperSourceQuestion> selected = selectItems(config, sourceItems, seed);
+            boolean perAttemptBalanced = selectionMode(config) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED;
+            if (perAttemptBalanced) {
+                validateBalancedPool(config, sourceItems);
+            }
+            List<PaperSourceQuestion> selected = perAttemptBalanced
+                    ? sourceItems
+                    : selectItems(config, sourceItems, seed);
             ExamPaper paper = createPaper(config, request.namePrefix(), variant, seed, actor);
-            persistQuestions(paper, selected, Boolean.TRUE.equals(config.getShuffleOptions()), seed);
+            persistQuestions(
+                    paper,
+                    selected,
+                    !perAttemptBalanced && Boolean.TRUE.equals(config.getShuffleOptions()),
+                    seed
+            );
             responses.add(toResponse(paper, true));
         }
         return responses;
@@ -152,7 +164,11 @@ public class ExamPaperService {
         if (paper.getStatus() == ExamPaperStatus.ARCHIVED) {
             throw new BadRequestException("Không thể phát hành đề đã lưu trữ");
         }
-        if (paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).size() != paper.getTotalQuestions()) {
+        int storedQuestions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).size();
+        boolean enoughQuestions = selectionMode(paper) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
+                ? storedQuestions >= paper.getTotalQuestions()
+                : storedQuestions == paper.getTotalQuestions();
+        if (!enoughQuestions) {
             throw new BadRequestException("Đề kiểm tra chưa đủ số câu");
         }
         paper.setStatus(ExamPaperStatus.PUBLISHED);
@@ -400,6 +416,12 @@ public class ExamPaperService {
             List<PaperSourceQuestion> candidates = categoryKey.isBlank()
                     ? sourceItems
                     : byCategory.getOrDefault(categoryKey, List.of());
+            if (distribution.getDifficulty() != null && !distribution.getDifficulty().isBlank()) {
+                String difficulty = ExamDifficultyAllocator.normalizeDifficulty(distribution.getDifficulty());
+                candidates = candidates.stream()
+                        .filter(item -> ExamDifficultyAllocator.normalizeDifficulty(item.difficulty()).equals(difficulty))
+                        .toList();
+            }
             List<PaperSourceQuestion> picked = pick(candidates, distribution.getQuestionCount(), usedQuestionIds, random);
             if (picked.size() < distribution.getQuestionCount()) {
                 String categoryName = distribution.getCategory() == null ? "Tất cả danh mục" : distribution.getCategory().getName();
@@ -447,6 +469,10 @@ public class ExamPaperService {
                 .totalQuestions(config.getTotalQuestions())
                 .timeLimitMinutes(config.getTimeLimitMinutes())
                 .passingScore(config.getPassingScore())
+                .questionSelectionMode(selectionMode(config))
+                .easyPercentage(config.getEasyPercentage())
+                .mediumPercentage(config.getMediumPercentage())
+                .hardPercentage(config.getHardPercentage())
                 .createdBy(actor)
                 .build();
         return examPaperRepository.save(paper);
@@ -613,8 +639,9 @@ public class ExamPaperService {
     }
 
     private ExamPaperResponse toResponse(ExamPaper paper, boolean includeQuestions, boolean includeAnswerKey) {
+        List<ExamPaperQuestion> storedQuestions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper);
         List<ExamPaperQuestionResponse> questions = includeQuestions
-                ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).stream()
+                ? storedQuestions.stream()
                 .map(paperQuestion -> toQuestionResponse(paperQuestion, includeAnswerKey))
                 .toList()
                 : List.of();
@@ -631,13 +658,61 @@ public class ExamPaperService {
                 paper.getStatus().name(),
                 QuestionGenerationLabels.examPaperStatus(paper.getStatus()),
                 paper.getTotalQuestions(),
+                storedQuestions.size(),
                 paper.getTimeLimitMinutes(),
                 paper.getPassingScore(),
+                selectionMode(paper).name(),
+                selectionMode(paper) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
+                        ? new ExamPaperResponse.DifficultyPercentages(
+                        paper.getEasyPercentage(),
+                        paper.getMediumPercentage(),
+                        paper.getHardPercentage()
+                )
+                        : null,
                 questions,
                 paper.getPublishedAt(),
                 paper.getCreatedAt(),
                 paper.getUpdatedAt()
         );
+    }
+
+    private ExamQuestionSelectionMode selectionMode(ExamConfig config) {
+        return config.getQuestionSelectionMode() == null
+                ? ExamQuestionSelectionMode.FIXED_PAPER
+                : config.getQuestionSelectionMode();
+    }
+
+    private ExamQuestionSelectionMode selectionMode(ExamPaper paper) {
+        return paper.getQuestionSelectionMode() == null
+                ? ExamQuestionSelectionMode.FIXED_PAPER
+                : paper.getQuestionSelectionMode();
+    }
+
+    private void validateBalancedPool(ExamConfig config, List<PaperSourceQuestion> sourceItems) {
+        ExamDifficultyAllocator.Percentages percentages = ExamDifficultyAllocator.percentages(
+                config.getEasyPercentage(),
+                config.getMediumPercentage(),
+                config.getHardPercentage()
+        );
+        ExamDifficultyAllocator.Counts required = ExamDifficultyAllocator.allocate(config.getTotalQuestions(), percentages);
+        Map<String, Long> available = sourceItems.stream()
+                .collect(Collectors.groupingBy(
+                        item -> ExamDifficultyAllocator.normalizeDifficulty(item.difficulty()),
+                        Collectors.counting()
+                ));
+        List<String> shortages = new ArrayList<>();
+        addPoolShortage(shortages, "Dễ", required.easy(), available.getOrDefault("EASY", 0L));
+        addPoolShortage(shortages, "Trung bình", required.medium(), available.getOrDefault("MEDIUM", 0L));
+        addPoolShortage(shortages, "Khó", required.hard(), available.getOrDefault("HARD", 0L));
+        if (!shortages.isEmpty()) {
+            throw new BadRequestException("Không thể sinh đề: " + String.join("; ", shortages));
+        }
+    }
+
+    private void addPoolShortage(List<String> shortages, String label, int required, long available) {
+        if (available < required) {
+            shortages.add("mức " + label + " cần " + required + " câu nhưng hiện có " + available);
+        }
     }
 
     private ExamPaperQuestionResponse toQuestionResponse(ExamPaperQuestion paperQuestion, boolean includeAnswerKey) {

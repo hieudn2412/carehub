@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -18,6 +18,17 @@ const EMPTY_FORM = {
   sortOrder: 0,
   active: true,
   version: null,
+}
+
+function generateCodeFromName(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 }
 
 function ActivityTypeListPage() {
@@ -45,7 +56,7 @@ function ActivityTypeListPage() {
   const [modalForm, setModalForm] = useState(EMPTY_FORM)
   const [isSaving, setIsSaving] = useState(false)
 
-  const fetchActivityTypes = async () => {
+  const fetchActivityTypes = useCallback(async () => {
     setIsLoading(true)
     setErrorMessage('')
 
@@ -63,11 +74,11 @@ function ActivityTypeListPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [debouncedKeyword, page, status])
 
   useEffect(() => {
     fetchActivityTypes()
-  }, [page, status, debouncedKeyword])
+  }, [fetchActivityTypes])
 
   const handleStatusChange = (e) => {
     setPage(0)
@@ -230,14 +241,14 @@ function ActivityTypeListPage() {
                   </EmptyState>
                 ) : (
                   <>
-                    <table className="atl-table">
+                      <table className="atl-table admin-table-uppercase">
                       <thead>
                         <tr>
                           <th>Tên hình thức</th>
                           <th>Mô tả</th>
                           <th>Quy tắc tính giờ</th>
                           <th>Trạng thái</th>
-                          <th style={{ width: '76px', textAlign: 'center' }}>Hành động</th>
+                          <th style={{ width: '96px' }}>Hành động</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -256,12 +267,13 @@ function ActivityTypeListPage() {
                               </span>
                             </td>
                             <td>
-                              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                              <div className="admin-table-actions">
                                 <button
                                   type="button"
-                                  className="atl-action-btn atl-action-btn--edit"
+                                  className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                   onClick={() => handleOpenEditModal(item)}
                                   title="Chỉnh sửa"
+                                  aria-label={`Chỉnh sửa loại hoạt động ${item.name}`}
                                 >
                                   <EditOutlined />
                                 </button>
@@ -285,7 +297,7 @@ function ActivityTypeListPage() {
                         >
                           &lt;
                         </button>
-                        
+
                         {/* Pagination Numbers */}
                         {Array.from({ length: Math.min(totalPages, 5) }).map((_, idx) => (
                           <button
@@ -296,7 +308,7 @@ function ActivityTypeListPage() {
                             {idx + 1}
                           </button>
                         ))}
-                        
+
                         {totalPages > 5 && (
                           <>
                             <span className="atl-page-btn atl-page-btn--dots">...</span>

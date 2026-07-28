@@ -42,12 +42,12 @@ function CompetencyDepartmentPage() {
   }, [showToast])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadDepartments()
   }, [loadDepartments])
   useEffect(() => {
     if (selectedDeptId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       loadDepartmentData(selectedDeptId)
     }
   }, [selectedDeptId, loadDepartmentData])

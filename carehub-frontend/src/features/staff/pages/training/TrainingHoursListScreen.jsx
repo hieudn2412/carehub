@@ -8,16 +8,23 @@ import {
   RightOutlined,
   EyeOutlined,
   ReloadOutlined,
+  SendOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
 import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
+import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursListScreen() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
@@ -28,6 +35,10 @@ function TrainingHoursListScreen() {
   const [loading, setLoading] = useState(false)
   const [listError, setListError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [status, setStatus] = useState('')
+  const [submittingId, setSubmittingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
@@ -67,6 +78,7 @@ function TrainingHoursListScreen() {
         page,
         size,
         titleKeyword: search || undefined,
+        workflowStatus: status || undefined,
         ...(myEmployeeId != null && { employeeId: myEmployeeId }),
       }
       trainingApi.listRecords(params)
@@ -84,7 +96,41 @@ function TrainingHoursListScreen() {
         .finally(() => setLoading(false))
     }, 300)
     return () => clearTimeout(timer)
-  }, [page, search, myEmployeeId, reloadKey])
+  }, [page, search, status, myEmployeeId, reloadKey])
+
+  const getStatusLabel = (workflowStatus) => ({
+    DRAFT: 'Bản nháp',
+    SUBMITTED: 'Đã nộp',
+    CANCELLED: 'Đã hủy',
+  }[workflowStatus] || workflowStatus || '-')
+
+  const handleDirectSubmit = async (recordId, version) => {
+    setSubmittingId(recordId)
+    setListError('')
+    try {
+      await trainingApi.submitRecord(recordId, { version })
+      setReloadKey((value) => value + 1)
+    } catch {
+      setListError('Không thể nộp hồ sơ đào tạo. Vui lòng kiểm tra minh chứng và thử lại.')
+    } finally {
+      setSubmittingId(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeletingId(deleteTarget.id)
+    try {
+      await trainingApi.deleteRecord(deleteTarget.id, deleteTarget.version)
+      showToast("Đã xóa hồ sơ đào tạo.", "success")
+      setDeleteTarget(null)
+      setReloadKey(value => value + 1)
+    } catch (error) {
+      showToast(getApiErrorMessage(error, "Không thể xóa hồ sơ đào tạo."), "error")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -197,14 +243,15 @@ function TrainingHoursListScreen() {
                 </div>
               ) : (
                 <>
-                  <table className="th-table">
+                  <table className="th-table admin-table-uppercase">
                     <thead>
                       <tr>
                         <th>Ngày đào tạo liên tục</th>
                         <th>Nội dung đào tạo</th>
                         <th className="th-col-num">Số giờ đào tạo</th>
+                        <th className="th-col-submitted">Ngày nộp</th>
                         <th className="th-col-center">Minh chứng</th>
-                        <th className="th-col-actions">Thao tác</th>
+                        <th className="th-col-actions">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -223,7 +270,7 @@ function TrainingHoursListScreen() {
                             {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
                           </td>
                           <td className="th-col-num" data-label="Số giờ"><strong>{r.declaredHours}h</strong></td>
-                          <td data-label="Ngày nộp">
+                          <td className="th-col-submitted" data-label="Ngày nộp">
                             {r.workflowStatus === 'SUBMITTED' ? (
                               <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
                                 {formatDate(r.submittedAt)}
@@ -246,12 +293,12 @@ function TrainingHoursListScreen() {
                               <span className="th-evidence-none">-</span>
                             )}
                           </td>
-                          <td className="th-col-actions" data-label="Thao tác">
-                            <div className="th-actions" onClick={e => e.stopPropagation()}>
+                          <td className="th-col-actions" data-label="Hành động">
+                            <div className="th-actions admin-table-actions" onClick={e => e.stopPropagation()}>
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
-                                  className="th-action-btn th-action-btn--submit"
-                                  onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
+                                  className="th-action-btn th-action-btn--submit admin-table-action admin-table-action--icon admin-table-action--success"
+                                  onClick={() => handleDirectSubmit(r.id, r.version)}
                                   disabled={submittingId === r.id}
                                   title="Nộp hồ sơ"
                                   aria-label={`Nộp hồ sơ ${r.title}`}
@@ -260,7 +307,7 @@ function TrainingHoursListScreen() {
                                 </button>
                               )}
                               <button
-                                className="th-action-btn th-action-btn--view"
+                                className="th-action-btn th-action-btn--view admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => navigate(`/staff/training/${r.id}`)}
                                 title="Xem chi tiết"
                                 aria-label={`Xem chi tiết ${r.title}`}
@@ -268,17 +315,28 @@ function TrainingHoursListScreen() {
                                 <EyeOutlined />
                               </button>
                               {r.workflowStatus === 'DRAFT' && (
-                                <button
-                                  className="th-action-btn th-action-btn--edit"
-                                  onClick={() => navigate(`/staff/training/${r.id}/edit`)}
-                                  title="Chỉnh sửa"
-                                  aria-label={`Chỉnh sửa ${r.title}`}
-                                >
-                                  <EditOutlined />
-                                </button>
+                                <>
+                                  <button
+                                    className="th-action-btn th-action-btn--edit admin-table-action admin-table-action--icon"
+                                    onClick={() => navigate(`/staff/training/${r.id}/edit`)}
+                                    title="Chỉnh sửa"
+                                    aria-label={`Chỉnh sửa ${r.title}`}
+                                  >
+                                    <EditOutlined />
+                                  </button>
+                                  <button
+                                    className="th-action-btn admin-table-action admin-table-action--icon admin-table-action--danger"
+                                    onClick={() => setDeleteTarget(r)}
+                                    disabled={deletingId === r.id}
+                                    title="Xóa hồ sơ"
+                                    aria-label={`Xóa hồ sơ ${r.title}`}
+                                  >
+                                    <DeleteOutlined />
+                                  </button>
+                                </>
                               )}
                               <button
-                                className="th-action-btn th-action-btn--evidence"
+                                className="th-action-btn th-action-btn--evidence admin-table-action admin-table-action--icon"
                                 onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
                                 title="Minh chứng"
                                 aria-label={`Quản lý minh chứng ${r.title}`}
@@ -323,6 +381,15 @@ function TrainingHoursListScreen() {
               )}
             </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Xóa hồ sơ đào tạo"
+        message={`Bạn có chắc chắn muốn xóa hồ sơ “${deleteTarget?.title || ''}” không? Hồ sơ sẽ được lưu trạng thái đã hủy để bảo đảm lịch sử thay đổi.`}
+        confirmText="Xóa hồ sơ"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AppShell>
   )
 }

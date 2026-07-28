@@ -238,7 +238,7 @@ export const adminApi = {
       headers: authHeaders(),
     })
   },
-  
+
   // Forms Management
   getForms(params) {
     return httpClient.get('/forms', {

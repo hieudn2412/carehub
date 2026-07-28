@@ -133,23 +133,15 @@ class TrainingRecordFlowIntegrationTest {
         assertThat(logs.get(0).getChangeType()).isEqualTo(TrainingRecordChangeType.SUBMITTED);
     }
 
-    @DisplayName("L2-TRN-16 | Negative: return-to-draft is admin-only after the merge — the owner is refused, the admin succeeds (D15)")
+    @DisplayName("L2-TRN-16 | Owner can return a submitted training record to draft")
     @Test
-    void returnToDraftIsAdminOnly() throws Exception {
+    void ownerCanReturnSubmittedRecordToDraft() throws Exception {
         TrainingRecord record = seedSubmitted();
 
-        // Pins D15: the owner passes the service's ownership check but the state machine now
-        // requires adminActor for SUBMITTED→DRAFT, so the owner branch is dead code and the user
-        // receives a 400 state-machine error instead of a 403.
         mockMvc.perform(post("/api/v1/training/records/{id}/return-to-draft", record.getId())
                         .with(jwtFor(owner, "USER")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message",
-                        containsString("Không thể chuyển trạng thái hồ sơ đào tạo")));
-
-        mockMvc.perform(post("/api/v1/training/records/{id}/return-to-draft", record.getId())
-                        .with(jwtFor(admin, "ADMIN")))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.workflowStatus", containsString("DRAFT")));
 
         TrainingRecord reloaded = recordRepository.findById(record.getId()).orElseThrow();
         assertThat(reloaded.getWorkflowStatus()).isEqualTo(TrainingRecordStatus.DRAFT);
@@ -157,6 +149,24 @@ class TrainingRecordFlowIntegrationTest {
         assertThat(changeLogRepository.findByTrainingRecord_IdOrderByChangedAtDesc(record.getId()))
                 .anySatisfy(log -> assertThat(log.getChangeType())
                         .isEqualTo(TrainingRecordChangeType.RETURNED_TO_DRAFT));
+    }
+
+    @DisplayName("L2-TRN-18 | Owner can delete a draft while preserving an auditable cancelled record")
+    @Test
+    void ownerCanDeleteDraftRecord() throws Exception {
+        TrainingRecord record = seedDraft();
+
+        mockMvc.perform(delete("/api/v1/training/records/{id}", record.getId())
+                        .param("version", String.valueOf(record.getVersion()))
+                        .with(jwtFor(owner, "USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.workflowStatus", containsString("CANCELLED")));
+
+        TrainingRecord reloaded = recordRepository.findById(record.getId()).orElseThrow();
+        assertThat(reloaded.getWorkflowStatus()).isEqualTo(TrainingRecordStatus.CANCELLED);
+        assertThat(changeLogRepository.findByTrainingRecord_IdOrderByChangedAtDesc(record.getId()))
+                .anySatisfy(log -> assertThat(log.getChangeType())
+                        .isEqualTo(TrainingRecordChangeType.CANCELLED));
     }
 
     @DisplayName("L2-TRN-17 | Event Published: evidence delete must remove the stored object AND stamp storage_deleted_at after commit (D34)")

@@ -6,6 +6,7 @@ import '../shared/styles/ui.css'
 import '../shared/styles/layout.css'
 import AppProviders from './providers.jsx'
 import AppRouter from './router.jsx'
+import '../shared/styles/admin-tables.css'
 import '../features/auth/styles/auth.css'
 import '../features/evaluation/styles/EvaluationResponsive.css'
 

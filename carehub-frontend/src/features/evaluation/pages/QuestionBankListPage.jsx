@@ -103,6 +103,7 @@ function QuestionBankListPage() {
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [questionToArchive, setQuestionToArchive] = useState(null)
 
@@ -126,7 +127,7 @@ function QuestionBankListPage() {
 
   useEffect(() => {
     // Initial API hydration is intentionally triggered once when the screen mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadQuestions()
   }, [loadQuestions])
 
@@ -418,43 +419,16 @@ function QuestionBankListPage() {
                       />
                     </div>
 
-                    <details className="qbl-filter-disclosure">
-                      <summary>
+                    <button
+                      type="button"
+                      className={`qbl-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-expanded={isFilterOpen}
+                      aria-controls="question-bank-filter-panel"
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
                         <FilterOutlined /> Bộ lọc
                         {activeFilterCount > 0 && <span className="qbl-filter-count">{activeFilterCount}</span>}
-                      </summary>
-                      <div className="qbl-filter-panel">
-                        <select
-                          className="qbl-filter-select"
-                          value={categoryFilter}
-                          onChange={(event) => {
-                            setCategoryFilter(event.target.value)
-                            setPage(0)
-                          }}
-                        >
-                          <option value="">Tất cả danh mục</option>
-                          {categories.map((category) => (
-                            <option key={category} value={category}>{category}</option>
-                          ))}
-                        </select>
-                        <select
-                          className="qbl-filter-select"
-                          value={difficultyFilter}
-                          onChange={(event) => {
-                            setDifficultyFilter(event.target.value)
-                            setPage(0)
-                          }}
-                        >
-                          <option value="">Tất cả độ khó</option>
-                          {DIFFICULTIES.map((difficulty) => (
-                            <option key={difficulty} value={difficulty}>{difficulty}</option>
-                          ))}
-                        </select>
-                        {hasActiveFilters && (
-                          <button type="button" className="qbl-btn-clear" onClick={resetFilters}>Xóa bộ lọc</button>
-                        )}
-                      </div>
-                    </details>
+                    </button>
                   </div>
 
                   <div className="qbl-toolbar-actions">
@@ -466,15 +440,54 @@ function QuestionBankListPage() {
                     </button>
                   </div>
                 </div>
+                {isFilterOpen && (
+                  <div className="qbl-filter-panel" id="question-bank-filter-panel">
+                    <label>
+                      <span>Danh mục</span>
+                      <select
+                        className="qbl-filter-select"
+                        value={categoryFilter}
+                        onChange={(event) => {
+                          setCategoryFilter(event.target.value)
+                          setPage(0)
+                        }}
+                      >
+                        <option value="">Tất cả danh mục</option>
+                        {categories.map((category) => (
+                          <option key={category} value={category}>{category}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Độ khó</span>
+                      <select
+                        className="qbl-filter-select"
+                        value={difficultyFilter}
+                        onChange={(event) => {
+                          setDifficultyFilter(event.target.value)
+                          setPage(0)
+                        }}
+                      >
+                        <option value="">Tất cả độ khó</option>
+                        {DIFFICULTIES.map((difficulty) => (
+                          <option key={difficulty} value={difficulty}>{difficulty}</option>
+                        ))}
+                      </select>
+                    </label>
+                    {hasActiveFilters && (
+                      <button type="button" className="qbl-btn-clear" onClick={resetFilters}>Xóa bộ lọc</button>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="qbl-table-card">
-                <table className="qbl-table">
+                <table className="qbl-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Nội dung câu hỏi</th>
-                      <th style={{ width: '220px' }}>Danh mục</th>
-                      <th style={{ width: '190px', textAlign: 'center' }}>Thao tác</th>
+                      <th style={{ width: '160px' }}>Danh mục</th>
+                      <th style={{ width: '220px' }}>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -503,10 +516,10 @@ function QuestionBankListPage() {
                           </td>
                           <td className="qbl-category-cell">{item.category}</td>
                           <td>
-                            <div className="qbl-actions">
+                            <div className="qbl-actions admin-table-actions">
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--edit"
+                                className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => navigate(`/admin/evaluation/question-bank/${item.id}/edit`)}
                                 aria-label="Chỉnh sửa câu hỏi"
                                 title="Chỉnh sửa"
@@ -515,7 +528,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--paraphrase"
+                                className="admin-table-action admin-table-action--icon"
                                 onClick={() => openParaphraseModal(item)}
                                 disabled={!item.backend || jobQuestionId === item.id}
                                 aria-label="Tạo câu hỏi diễn đạt lại"
@@ -525,7 +538,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--view"
+                                className="admin-table-action admin-table-action--icon admin-table-action--success"
                                 onClick={() => openDetailModal(item)}
                                 aria-label="Xem chi tiết câu hỏi"
                                 title="Xem chi tiết"
@@ -534,7 +547,7 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="qbl-action-btn qbl-action-btn--delete"
+                                className="admin-table-action admin-table-action--icon admin-table-action--danger"
                                 onClick={() => handleDelete(item)}
                                 aria-label="Xóa câu hỏi"
                                 title="Xóa câu hỏi"
@@ -583,11 +596,6 @@ function QuestionBankListPage() {
             <h2 id="create-paraphrase-title">Tạo phiên diễn đạt lại</h2>
             <p className="qbl-modal-subtitle">{paraphraseTarget.content}</p>
 
-            <ModelStatusCard
-              title="Model diễn đạt lại"
-              status={modelStatus?.paraphrase}
-              isLoading={isModelStatusLoading}
-            />
             {modelStatus?.paraphrase?.provider === 'mock' && (
               <div className="qbl-model-warning">
                 Hệ thống đang dùng dữ liệu mô phỏng. Kết quả chỉ phù hợp để kiểm thử giao diện.
@@ -847,33 +855,6 @@ function DetailMeta({ label, value }) {
     <div className="qbl-detail-meta">
       <span>{label}</span>
       <strong>{value || '---'}</strong>
-    </div>
-  )
-}
-
-function ModelStatusCard({ title, status, isLoading }) {
-  if (isLoading) {
-    return (
-      <div className="qbl-model-status-card">
-        <strong>{title}</strong>
-        <span>Đang kiểm tra...</span>
-      </div>
-    )
-  }
-  if (!status) {
-    return (
-      <div className="qbl-model-status-card qbl-model-status-card--warning">
-        <strong>{title}</strong>
-        <span>Chưa đọc được trạng thái</span>
-      </div>
-    )
-  }
-  return (
-    <div className={`qbl-model-status-card ${status.filesPresent ? 'qbl-model-status-card--ready' : 'qbl-model-status-card--warning'}`}>
-      <strong>{title}</strong>
-      <span>{status.statusText}</span>
-      <small>{status.provider} · {status.model}</small>
-      <small>{status.modelPath}</small>
     </div>
   )
 }

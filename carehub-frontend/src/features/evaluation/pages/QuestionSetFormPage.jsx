@@ -36,7 +36,6 @@ function QuestionSetFormPage() {
 
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [difficulty, setDifficulty] = useState('medium')
   const [status, setStatus] = useState('ACTIVE')
   const [persistedStatus, setPersistedStatus] = useState(null)
   const [description, setDescription] = useState('')
@@ -61,8 +60,8 @@ function QuestionSetFormPage() {
   const [qType, setQType] = useState('')
   const [qPage, setQPage] = useState(0)
 
-  const [avoidSameSource, setAvoidSameSource] = useState(true)
   const [previewCategory, setPreviewCategory] = useState('')
+  const [previewDifficulty, setPreviewDifficulty] = useState('')
   const [previewQuestionCount, setPreviewQuestionCount] = useState(10)
   const [previewResult, setPreviewResult] = useState(null)
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -81,7 +80,6 @@ function QuestionSetFormPage() {
         const detail = apiData(detailResponse)
         setCode(detail.code || '')
         setName(detail.name || '')
-        setDifficulty(detail.difficulty || 'medium')
         const loadedStatus = detail.status === 'ARCHIVED' ? 'INACTIVE' : detail.status || 'DRAFT'
         setStatus(loadedStatus)
         setPersistedStatus(loadedStatus)
@@ -103,7 +101,7 @@ function QuestionSetFormPage() {
 
   useEffect(() => {
     // Hydrate form and question-bank data when the edited set changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 
@@ -300,7 +298,7 @@ function QuestionSetFormPage() {
         code: code.trim() || null,
         name: name.trim(),
         category: null,
-        difficulty,
+        difficulty: null,
         status,
         description: description.trim() || null,
         questionIds: selectedIds,
@@ -361,9 +359,10 @@ function QuestionSetFormPage() {
     try {
       const response = await questionSetApi.previewQuestionSet({
         category: previewCategory,
-        questionCount: Number(previewQuestionCount) || 10,
+        ...(previewDifficulty
+          ? { difficultyDistribution: { [previewDifficulty]: Number(previewQuestionCount) || 10 } }
+          : { questionCount: Number(previewQuestionCount) || 10 }),
         excludeQuestionIds: selectedIds,
-        avoidSameSourceDocument: avoidSameSource,
         randomSeed: Date.now(),
       })
       setPreviewResult(apiData(response))
@@ -600,10 +599,12 @@ function QuestionSetFormPage() {
                     />
                   </div>
                   <div className="qsf-form-group">
-                    <label>Tránh cùng nguồn</label>
-                    <select className="qsf-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')} disabled={isActiveLocked}>
-                      <option value="true">Có</option>
-                      <option value="false">Không</option>
+                    <label>Mức độ câu hỏi</label>
+                    <select className="qsf-input-red" value={previewDifficulty} onChange={(event) => setPreviewDifficulty(event.target.value)} disabled={isActiveLocked}>
+                      <option value="">Tất cả mức độ</option>
+                      <option value="hard">Khó</option>
+                      <option value="medium">Trung bình</option>
+                      <option value="easy">Dễ</option>
                     </select>
                   </div>
                 </div>

@@ -101,7 +101,7 @@
 
 .eal-content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
   gap: 14px;
   align-items: start;
 }
@@ -113,16 +113,18 @@
 .eal-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
-.eal-table th,
-.eal-table td {
+.eal-page .eal-table th,
+.eal-page .eal-table td {
   border-bottom: 1px solid #e2e8f0;
-  padding: 12px;
+  padding: 11px 10px;
   text-align: left;
   vertical-align: top;
   color: #334155;
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .eal-table th {
@@ -132,6 +134,13 @@
   font-weight: 800;
   text-transform: uppercase;
 }
+
+.eal-table th:nth-child(1) { width: 10%; }
+.eal-table th:nth-child(2) { width: 20%; }
+.eal-table th:nth-child(3) { width: 16%; }
+.eal-table th:nth-child(4) { width: 13%; }
+.eal-table th:nth-child(5) { width: 26%; }
+.eal-table th:nth-child(6) { width: 15%; }
 
 .eal-table tr:last-child td {
   border-bottom: 0;
@@ -154,7 +163,7 @@
 }
 
 .eal-detail {
-  padding: 16px;
+  padding: 14px;
   position: sticky;
   top: 16px;
 }
@@ -169,7 +178,8 @@
 .eal-detail-head h2 {
   margin: 0;
   color: #0f172a;
-  font-size: 18px;
+  font-size: 17px;
+  line-height: 1.3;
 }
 
 .eal-detail-head p {
@@ -180,8 +190,8 @@
 
 .eal-detail-list {
   display: grid;
-  gap: 10px;
-  margin: 16px 0;
+  gap: 8px;
+  margin: 14px 0;
 }
 
 .eal-detail-list div {

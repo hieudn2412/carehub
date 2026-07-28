@@ -330,20 +330,25 @@
 }
 
 .th-col-num {
-  text-align: right;
+  text-align: left;
   width: 140px;
   min-width: 140px;
 }
 
 .th-col-center {
-  text-align: center;
+  text-align: left;
   width: 120px;
   min-width: 120px;
 }
 
+.th-col-submitted {
+  width: 130px;
+  min-width: 130px;
+}
+
 .th-col-actions {
   width: 140px;
-  text-align: right;
+  text-align: left;
 }
 
 .th-record-title {
@@ -426,7 +431,7 @@
 .th-actions {
   display: flex;
   gap: 6px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .th-action-btn {
@@ -660,6 +665,89 @@
 
 .evidence-chip__remove:hover {
   color: #ef4444;
+}
+
+.evidence-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.evidence-selection-card {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  border: 1px solid #dbe7e3;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.evidence-selection-card__image,
+.evidence-selection-card__file {
+  width: 100%;
+  height: 132px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f3f7f5;
+}
+
+.evidence-selection-card__image {
+  display: block;
+  object-fit: contain;
+}
+
+.evidence-selection-card__file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.evidence-selection-card__file .anticon {
+  color: #dc2626;
+  font-size: 28px;
+}
+
+.evidence-selection-card__info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 36px 9px 10px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.evidence-selection-card__name {
+  overflow: hidden;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-selection-card__remove {
+  position: absolute;
+  right: 7px;
+  bottom: 11px;
+  display: inline-grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 7px;
+  background: #fef2f2;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.evidence-selection-card__remove:hover {
+  border-color: #f87171;
+  background: #fee2e2;
 }
 
 /* ── Evidence styles for evidence screen ── */
@@ -1109,6 +1197,22 @@
   background: #15803d;
 }
 .th-detail-btn--primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.th-detail-btn--danger {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #b91c1c;
+}
+
+.th-detail-btn--danger:hover {
+  border-color: #f87171;
+  background: #fef2f2;
+}
+
+.th-detail-btn--danger:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }

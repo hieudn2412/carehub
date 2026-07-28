@@ -27,12 +27,17 @@ import {
   formatNumber,
   jobStatusText,
   normalizeText,
+  shouldShowCandidateLabelBadge,
   statusTone,
 } from '../utils/documentQuestionUi.js'
+import {
+  formatSimilarity,
+  hasPotentialDuplicate,
+  hasStrongDuplicate,
+} from '../utils/duplicateQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
 const LIVE_JOB_STATUSES = new Set(['CREATED', 'GENERATING'])
-const STRONG_DUPLICATE_THRESHOLD = 0.93
 
 function DocumentQuestionJobReviewPage() {
   const { jobId } = useParams()
@@ -53,6 +58,7 @@ function DocumentQuestionJobReviewPage() {
   const [isBatching, setIsBatching] = useState(false)
   const [categories, setCategories] = useState([])
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false)
+  const [duplicateReview, setDuplicateReview] = useState(null)
 
   const loadJob = useCallback(async (options = {}) => {
     const silent = options?.silent === true
@@ -74,7 +80,7 @@ function DocumentQuestionJobReviewPage() {
   }, [jobId, showToast])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadJob()
   }, [loadJob])
 
@@ -119,7 +125,7 @@ function DocumentQuestionJobReviewPage() {
     .filter((candidate) => !['REJECTED', 'SAVED'].includes(candidate.status))
     .map((candidate) => candidate.id)
   const selectedSavableIds = selectedCandidates
-    .filter((candidate) => candidate.status === 'APPROVED' && Number(candidate.duplicateMaxSimilarity || 0) < STRONG_DUPLICATE_THRESHOLD)
+    .filter((candidate) => candidate.status === 'APPROVED' && !hasStrongDuplicate(candidate))
     .map((candidate) => candidate.id)
   const canRetryNoNewQuestions = jobDetail?.status === 'PARTIALLY_COMPLETED'
     && Number(jobDetail?.candidateCount || 0) === 0
@@ -281,6 +287,31 @@ function DocumentQuestionJobReviewPage() {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setCandidateActionId(null)
+    }
+  }
+
+  async function openPotentialDuplicates(candidate) {
+    setDuplicateReview({
+      candidate,
+      matches: [],
+      isLoading: true,
+      error: '',
+    })
+    try {
+      const response = await documentQuestionApi.getPotentialDuplicates(candidate.id)
+      setDuplicateReview({
+        candidate,
+        matches: apiData(response, []),
+        isLoading: false,
+        error: '',
+      })
+    } catch (error) {
+      setDuplicateReview({
+        candidate,
+        matches: [],
+        isLoading: false,
+        error: apiErrorMessage(error),
+      })
     }
   }
 
@@ -494,6 +525,7 @@ function DocumentQuestionJobReviewPage() {
                             onApprove={() => approveCandidate(candidate)}
                             onReject={() => rejectCandidate(candidate)}
                             onSave={() => saveAsQuestion(candidate)}
+                            onViewDuplicates={() => openPotentialDuplicates(candidate)}
                             onOpenSavedQuestion={() => navigate(`/admin/evaluation/question-bank/${candidate.savedQuestionId}/edit`)}
                           />
                         ))
@@ -563,6 +595,56 @@ function DocumentQuestionJobReviewPage() {
           </div>
         </div>
       )}
+      {duplicateReview && (
+        <div className="qdoc-modal-backdrop qdoc-modal-backdrop--front" onClick={() => setDuplicateReview(null)}>
+          <div
+            className="qdoc-modal qdoc-modal--wide qdoc-duplicate-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="duplicate-review-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="qdoc-modal-heading-row">
+              <div>
+                <h2 id="duplicate-review-title">Các câu có khả năng trùng</h2>
+                <p className="qdoc-modal-subtitle">
+                  Đối chiếu với câu đề xuất: “{duplicateReview.candidate.stem}”
+                </p>
+              </div>
+              <button
+                type="button"
+                className="qdoc-secondary-btn"
+                onClick={() => setDuplicateReview(null)}
+                aria-label="Đóng danh sách câu có khả năng trùng"
+              >
+                Đóng
+              </button>
+            </div>
+
+            {duplicateReview.isLoading ? (
+              <div className="qdoc-duplicate-state">
+                <LoadingOutlined />
+                <span>Đang tìm các câu tương đồng...</span>
+              </div>
+            ) : duplicateReview.error ? (
+              <div className="qdoc-duplicate-state qdoc-duplicate-state--error">
+                <WarningOutlined />
+                <span>{duplicateReview.error}</span>
+              </div>
+            ) : duplicateReview.matches.length === 0 ? (
+              <div className="qdoc-duplicate-state">
+                Không còn câu nào đạt ngưỡng nghi vấn trùng ở thời điểm hiện tại.
+              </div>
+            ) : (
+              <div className="qdoc-duplicate-list">
+                {duplicateReview.matches.map((match) => (
+                  <DuplicateMatchCard key={`${match.sourceType}-${match.sourceId}`} match={match} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       <ConfirmModal
         isOpen={isCancelConfirmOpen}
         title="Hủy phiên tạo câu hỏi?"
@@ -591,13 +673,18 @@ function CandidateCard({
   onApprove,
   onReject,
   onSave,
+  onViewDuplicates,
   onOpenSavedQuestion,
 }) {
   const canEdit = candidate.status !== 'SAVED'
   const canApprove = !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status)
   const canReject = !['REJECTED', 'SAVED'].includes(candidate.status)
-  const hasStrongDuplicate = Number(candidate.duplicateMaxSimilarity || 0) >= STRONG_DUPLICATE_THRESHOLD
-  const canSave = candidate.status === 'APPROVED' && !hasStrongDuplicate
+  const isStrongDuplicate = hasStrongDuplicate(candidate)
+  const isPotentialDuplicate = hasPotentialDuplicate(candidate)
+  const canSave = candidate.status === 'APPROVED' && !isStrongDuplicate
+  const statusText = candidateStatusText(candidate)
+  const labelText = candidateLabelText(candidate)
+  const showLabelBadge = shouldShowCandidateLabelBadge(candidate)
 
   return (
     <article className={`qdoc-candidate-card ${isSelected ? 'qdoc-candidate-card--active' : ''}`} onClick={onSelect}>
@@ -606,9 +693,9 @@ function CandidateCard({
           <label className="qdoc-card-check" onClick={(event) => event.stopPropagation()}>
             <input type="checkbox" checked={isChecked} onChange={onToggleSelection} />
           </label>
-          <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{candidateStatusText(candidate)}</span>
-          {candidate.label && (
-            <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{candidateLabelText(candidate)}</span>
+          <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{statusText}</span>
+          {showLabelBadge && (
+            <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{labelText}</span>
           )}
           <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>
         </div>
@@ -638,6 +725,19 @@ function CandidateCard({
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
           <p>{candidate.explanation}</p>
+        </div>
+      )}
+
+      {isPotentialDuplicate && (
+        <div className={`qdoc-duplicate-alert ${isStrongDuplicate ? 'qdoc-duplicate-alert--strong' : ''}`}>
+          <div>
+            <strong>{isStrongDuplicate ? 'Phát hiện câu trùng mạnh' : 'Có câu nghi vấn trùng'}</strong>
+            <p>Mức tương đồng cao nhất: {formatSimilarity(candidate.duplicateMaxSimilarity)}</p>
+          </div>
+          <button type="button" className="qdoc-secondary-btn" onClick={stopAnd(onViewDuplicates)}>
+            <EyeOutlined />
+            <span>Xem câu có khả năng trùng</span>
+          </button>
         </div>
       )}
 
@@ -681,6 +781,46 @@ function CandidateCard({
       callback()
     }
   }
+}
+
+function DuplicateMatchCard({ match }) {
+  const options = [
+    ['A', match.optionA],
+    ['B', match.optionB],
+    ['C', match.optionC],
+    ['D', match.optionD],
+  ].filter(([, text]) => text)
+
+  return (
+    <article className="qdoc-duplicate-card">
+      <header>
+        <div>
+          <span className={`qdoc-badge ${match.strongDuplicate ? 'qdoc-badge--danger' : 'qdoc-badge--warning'}`}>
+            {match.strongDuplicate ? 'Trùng mạnh' : 'Nghi vấn trùng'}
+          </span>
+          <span className="qdoc-mini-badge">
+            {match.sourceType === 'QUESTION_BANK' ? `Ngân hàng #${match.sourceId}` : `Câu đề xuất #${match.sourceId}`}
+          </span>
+        </div>
+        <strong>{formatSimilarity(match.similarity)}</strong>
+      </header>
+      <h3>{match.stem}</h3>
+      {options.length > 0 && (
+        <div className="qdoc-duplicate-options">
+          {options.map(([key, text]) => (
+            <p key={key} className={match.correctAnswer === key ? 'correct' : ''}>
+              <span>{key}</span>
+              {text}
+            </p>
+          ))}
+        </div>
+      )}
+      <footer>
+        <span>{match.sourceDocument || 'Không rõ nguồn'}</span>
+        {match.status && <span>Trạng thái: {match.status}</span>}
+      </footer>
+    </article>
+  )
 }
 
 function TextAreaField({ label, value, onChange }) {

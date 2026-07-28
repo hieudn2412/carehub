@@ -102,4 +102,15 @@ public class FormSubmissionController {
     public ApiResponse<FormSubmissionResponse> get(@PathVariable Long id) {
         return ApiResponse.success("Get form submission successfully", service.get(id));
     }
+
+    @GetMapping("/draft")
+    public ResponseEntity<ApiResponse<FormSubmissionResponse>> findDraft(
+            @RequestParam(required = false) Long assignmentItemId,
+            @RequestParam(required = false) Long formVersionId,
+            @RequestParam(required = false) @jakarta.validation.constraints.Positive Long subjectUserId,
+            @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 100) String employeeCode) {
+        return service.findDraft(assignmentItemId, formVersionId, subjectUserId, employeeCode)
+                .map(draft -> ResponseEntity.ok(ApiResponse.success("Get form submission draft successfully", draft)))
+                .orElseGet(() -> ResponseEntity.noContent().build());
+    }
 }

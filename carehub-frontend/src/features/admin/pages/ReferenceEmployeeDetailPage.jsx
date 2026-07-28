@@ -56,7 +56,7 @@ function ReferenceEmployeeDetailPage() {
   return (
     <AppShell back={{ to: '/admin/reference/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="red-page">
-              
+
               {/* Title Card */}
               <div className="red-title-card">
                 <div className="red-title-info">

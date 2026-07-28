@@ -16,7 +16,7 @@ function ClassificationRuleListPage() {
   const [keyword, setKeyword] = useState('')
   const [enabledFilter, setEnabledFilter] = useState('')
   const [pendingDisable, setPendingDisable] = useState(null)
-  
+
   const loadRules = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -31,7 +31,7 @@ function ClassificationRuleListPage() {
 
   useEffect(() => {
     // Hydrate classification rules when the screen mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadRules()
   }, [loadRules])
 
@@ -110,8 +110,8 @@ function ClassificationRuleListPage() {
               <option value="false">Tạm ngưng</option>
             </select>
           </div>
-          <button 
-            className="crl-btn-add" 
+          <button
+            className="crl-btn-add"
             onClick={() => navigate('/admin/evaluation/classification-rules/new')}
           >
             <PlusCircleOutlined /> Thêm quy tắc
@@ -120,7 +120,16 @@ function ClassificationRuleListPage() {
 
         {/* Table Card */}
         <div className="crl-table-card">
-          <table className="crl-table">
+          <table className="crl-table admin-table-uppercase">
+            <colgroup>
+              <col className="crl-col-name" />
+              <col className="crl-col-category" />
+              <col className="crl-col-keywords" />
+              <col className="crl-col-source" />
+              <col className="crl-col-priority" />
+              <col className="crl-col-status" />
+              <col className="crl-col-actions" />
+            </colgroup>
             <thead>
               <tr>
                 <th>Tên quy tắc</th>
@@ -149,34 +158,36 @@ function ClassificationRuleListPage() {
                 filteredRules.map((item) => (
                   <tr key={item.id}>
                     <td>
-                      <span className="crl-badge crl-badge--blue">
+                      <strong className="crl-rule-name">
                         {item.name}
-                      </span>
+                      </strong>
                     </td>
-                    <td style={{ fontWeight: 600, color: '#334155' }}>{item.categoryName}</td>
-                    <td style={{ color: '#475569' }}>{firstKeywords(item.keywords)}</td>
-                    <td style={{ color: '#475569' }}>{item.sourcePattern || '-'}</td>
-                    <td style={{ fontWeight: 600, color: '#334155' }}>{item.priority || 0}</td>
+                    <td><span className="crl-category-name">{item.categoryName}</span></td>
+                    <td><span className="crl-cell-muted">{firstKeywords(item.keywords)}</span></td>
+                    <td><span className="crl-cell-muted crl-cell-ellipsis">{item.sourcePattern || '-'}</span></td>
+                    <td><span className="crl-priority">{item.priority || 0}</span></td>
                     <td>
                       <span className={`crl-status-badge ${item.enabled ? 'crl-status-badge--active' : 'crl-status-badge--inactive'}`}>
                         {item.statusText || (item.enabled ? 'Hoạt động' : 'Tạm ngưng')}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <div className="admin-table-actions">
                         <button
                           type="button"
-                          className="crl-action-btn crl-action-btn--edit"
+                          className="crl-action-btn crl-action-btn--edit admin-table-action admin-table-action--icon admin-table-action--primary"
                           onClick={() => navigate(`/admin/evaluation/classification-rules/${item.id}/edit`)}
                           title="Chỉnh sửa"
+                          aria-label={`Chỉnh sửa quy tắc ${item.name}`}
                         >
                           <EditOutlined />
                         </button>
                         <button
                           type="button"
-                          className="crl-action-btn crl-action-btn--delete"
+                          className="crl-action-btn crl-action-btn--delete admin-table-action admin-table-action--icon admin-table-action--danger"
                           onClick={() => handleDelete(item)}
                           title="Tạm ngưng"
+                          aria-label={`Tạm ngưng quy tắc ${item.name}`}
                           disabled={!item.enabled}
                         >
                           <DeleteOutlined />

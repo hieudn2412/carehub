@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankSta
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateMatchResult;
 
 import java.util.Collection;
 import java.util.List;
@@ -444,6 +445,48 @@ class DuplicateCheckServiceTest {
                 });
 
         assertThat(service.check("Rửa tay thường quy").maxSimilarity()).isZero();
+    }
+
+    @Test
+    @DisplayName("L1-DUP-23 | Potential matches: returns every review-level match, ordered strongest first")
+    void potentialMatchesReturnAllReviewLevelMatchesInOrder() {
+        when(embeddingService.embedCandidateStem(STEM)).thenReturn(CANDIDATE_VECTOR);
+        when(embeddingCache.approvedStemEmbeddings()).thenReturn(List.of(
+                new QuestionEmbeddingSnapshot(10L, "Câu nghi vấn", new double[]{0.90, 0.0}),
+                new QuestionEmbeddingSnapshot(11L, "Câu dưới ngưỡng", new double[]{0.87, 0.0}),
+                new QuestionEmbeddingSnapshot(12L, "Câu trùng mạnh", new double[]{0.97, 0.0})
+        ));
+
+        List<DuplicateMatchResult> matches = service.findPotentialMatches(STEM, Set.of(), Set.of(), 20);
+
+        assertThat(matches).extracting(DuplicateMatchResult::sourceId).containsExactly(12L, 10L);
+        assertThat(matches).extracting(DuplicateMatchResult::strongDuplicate).containsExactly(true, false);
+    }
+
+    @Test
+    @DisplayName("L1-DUP-24 | Potential matches: excludes current candidate and includes other comparable candidates")
+    void potentialMatchesExcludeCurrentCandidate() {
+        embeddingProperties.setProvider("lexical");
+        when(questionRepository.findByStatus(
+                org.mockito.ArgumentMatchers.eq(QuestionBankStatus.APPROVED), any(Pageable.class)))
+                .thenReturn(List.of());
+        when(candidateRepository.findByStatusIn(
+                org.mockito.ArgumentMatchers.<Collection<CandidateStatus>>any(), any(Pageable.class)))
+                .thenReturn(List.of(
+                        candidate(90L, "Rửa tay thường quy"),
+                        candidate(91L, "Rửa tay thường quy")))
+                .thenReturn(List.of());
+
+        List<DuplicateMatchResult> matches = service.findPotentialMatches(
+                "Rửa tay thường quy",
+                Set.of(),
+                Set.of(90L),
+                20
+        );
+
+        assertThat(matches).extracting(DuplicateMatchResult::sourceId).containsExactly(91L);
+        assertThat(matches.get(0).sourceType())
+                .isEqualTo(DuplicateMatchResult.SourceType.DOCUMENT_CANDIDATE);
     }
 
     private vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate candidate(

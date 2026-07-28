@@ -56,8 +56,8 @@ function ManagerExamResultsPage() {
       {/* Search toolbar */}
       <div className="mgr-toolbar">
         <div className="mgr-search-box">
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Tìm theo tên kỳ thi..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -119,7 +119,7 @@ function ManagerExamResultsPage() {
                   {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
                 </td>
                 <td style={{ textAlign: 'center' }}>
-                  <button 
+                  <button
                     onClick={() => navigate(`/manager/exam-results/detail/${item.id}`)}
                     style={{
                       border: '1px solid #e2e8f0',

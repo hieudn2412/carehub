@@ -24,6 +24,8 @@ public record DocumentQuestionCandidateResponse(
         String status,
         String statusText,
         Double duplicateMaxSimilarity,
+        boolean duplicateNeedsReview,
+        boolean strongDuplicate,
         Long duplicateQuestionId,
         String duplicateQuestionStemSnapshot,
         String reviewerNotes,

@@ -1,0 +1,107 @@
+.staff-checklist-toolbar h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .staff-checklist-toolbar {
+    padding: 14px 2px;
+  }
+
+  .staff-checklist-toolbar h2 {
+    font-size: 18px;
+    line-height: 1.35;
+  }
+
+  .staff-checklist-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .staff-checklist-table,
+  .staff-checklist-table tbody {
+    display: block;
+  }
+
+  .staff-checklist-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .staff-checklist-table tr {
+    display: flex;
+    overflow: hidden;
+    flex-direction: column;
+    margin-bottom: 12px;
+    border: 1px solid #dce7e4;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 5px 16px rgba(24, 65, 55, 0.05);
+  }
+
+  .staff-checklist-table td {
+    display: grid;
+    grid-template-columns: 94px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    width: auto;
+    min-height: 44px;
+    padding: 10px 13px;
+    border-bottom: 1px solid #edf2f0;
+    text-align: left;
+  }
+
+  .staff-checklist-table td::before {
+    content: attr(data-label);
+    color: #687975;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .staff-checklist-table td:first-child {
+    order: -1;
+    display: block;
+    padding: 15px 13px;
+    background: #f2f8f6;
+    color: #152a24;
+    font-size: 15px;
+  }
+
+  .staff-checklist-table td:first-child::before {
+    display: none;
+  }
+
+  .staff-checklist-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .staff-checklist-table td:last-child .ch-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .staff-checklist-table__empty {
+    display: block !important;
+  }
+
+  .staff-checklist-table__empty td {
+    display: block;
+    padding: 34px 18px;
+    border: 0;
+    text-align: center;
+  }
+
+  .staff-checklist-table__empty td::before {
+    display: none;
+  }
+}

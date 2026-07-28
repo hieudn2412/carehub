@@ -7,105 +7,9 @@ import { adminApi } from '../api/adminApi.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/ReferenceEmployeesListPage.css'
 
-// Generate 248 mock reference employees to match mockup details (kept as fallback helper)
-const generateMockEmployees = () => {
-  const employees = []
-  const names = [
-    'Vũ Thị Thanh', 'Phạm Quốc Bảo', 'Lê Hoàng Long', 'Nguyễn Thị Mai', 
-    'Trần Văn Hùng', 'Hoàng Kim Chi', 'Đặng Minh Triết', 'Đỗ Thùy Linh'
-  ]
-  
-  const depts = [
-    'Phòng Tài chính kế toán', 'Phòng Kiểm toán nội bộ', 'Phòng Vật tư - Thiết bị Y tế', 
-    'Văn phòng Bệnh viện', 'Ban Giám đốc', 'Khoa Thần kinh', 'Khoa Tim mạch',
-    'Khoa Phẫu thuật tổng hợp', 'Phòng Kiểm soát nhiễm khuẩn'
-  ]
-  
-  const cbTypes = ['HD204', 'BC', 'HD68']
-  const genders = ['Nam', 'Nữ']
-  
-  const degrees = ['Cao đẳng', 'Dược sĩ', 'PGS.TS Y', 'Tiến sĩ Y', 'Cử nhân', 'Thạc sĩ']
-  const positions = ['Cán sự', 'Chuyên viên', 'Nhân viên kỹ thuật', 'Kỹ sư (hạng III)', 'Giám đốc', 'Điều dưỡng']
-  const titles = ['Bác sĩ chính (hạng II)', 'Chuyên viên chính', 'Điều dưỡng hạng III', 'Kế toán viên trung cấp', 'Bác sĩ cao cấp (hạng I)']
-  
-  for (let i = 0; i < 248; i++) {
-    const id = i + 1
-    let code = `VD${String(id).padStart(5, '0')}`
-    let name = names[i % names.length]
-    let dept = depts[i % depts.length]
-    let cbType = cbTypes[i % cbTypes.length]
-    let gender = genders[i % genders.length]
-    let degree = degrees[i % degrees.length]
-    let pos = positions[i % positions.length]
-    let title = titles[i % titles.length]
-    let birthday = '10/7/1966'
-    let blockCode = 'K. HC'
-
-    // First 4 rows matched with mockup exactly
-    if (i === 0) {
-      code = 'VD00368'
-      name = 'Vũ Thị Thanh'
-      dept = 'Phòng Tài chính kế toán'
-      cbType = 'HD204'
-      gender = 'Nam'
-      degree = 'Cao đẳng'
-      pos = 'Cán sự'
-      title = 'Bác sĩ chính (hạng II)'
-    } else if (i === 1) {
-      code = 'VD00368'
-      name = 'Vũ Thị Thanh'
-      dept = 'Phòng Kiểm toán nội bộ'
-      cbType = 'BC'
-      gender = 'Nữ'
-      degree = 'Dược sĩ'
-      pos = 'Chuyên viên'
-      title = 'Chuyên viên chính'
-    } else if (i === 2) {
-      code = 'VD00368'
-      name = 'Vũ Thị Thanh'
-      dept = 'Phòng Vật tư - Thiết bị Y tế'
-      cbType = 'HD68'
-      gender = 'Nam'
-      degree = 'PGS.TS Y'
-      pos = 'Nhân viên kỹ thuật'
-      title = 'Điều dưỡng hạng III'
-    } else if (i === 3) {
-      code = 'VD00368'
-      name = 'Vũ Thị Thanh'
-      dept = 'Văn phòng Bệnh viện'
-      cbType = 'HD68'
-      gender = 'Nam'
-      degree = 'Tiến sĩ Y'
-      pos = 'Kỹ sư (hạng III)'
-      title = 'Kế toán viên trung cấp'
-    } else {
-      const year = 1970 + (i % 25)
-      const month = 1 + (i % 12)
-      const day = 1 + (i % 28)
-      birthday = `${day}/${month}/${year}`
-      blockCode = i % 2 === 0 ? 'K. HC' : 'K. LS'
-    }
-
-    employees.push({
-      id,
-      employeeCode: code,
-      fullName: name,
-      departmentName: dept,
-      cbType,
-      gender,
-      degree,
-      positionName: pos,
-      titleName: title,
-      birthday,
-      blockCode
-    })
-  }
-  return employees
-}
-
 function ReferenceEmployeesListPage() {
   const navigate = useNavigate()
-  
+
   const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -130,7 +34,7 @@ function ReferenceEmployeesListPage() {
         const response = await adminApi.getUsers({ size: 10000 })
         if (active && response.data?.success) {
           const content = response.data.data.content || []
-          
+
           // Map to match frontend format
           const mapped = content.map(emp => {
             const roleNames = emp.roles?.map(r => r.name).join(', ') || 'USER'
@@ -163,10 +67,10 @@ function ReferenceEmployeesListPage() {
     return () => { active = false }
   }, [])
 
-  // Reset page when filters change
-  useEffect(() => {
+  const updateFilter = (setter) => (value) => {
+    setter(value)
     setPage(1)
-  }, [search, positionFilter, degreeFilter, deptFilter, titleFilter, genderFilter, cbTypeFilter])
+  }
 
   // Extract unique values for filter selects
   const filterOptions = useMemo(() => {
@@ -199,10 +103,10 @@ function ReferenceEmployeesListPage() {
   // Apply filters
   const filteredEmployees = useMemo(() => {
     return employees.filter(emp => {
-      const matchSearch = 
+      const matchSearch =
         emp.fullName.toLowerCase().includes(search.toLowerCase()) ||
         emp.employeeCode.toLowerCase().includes(search.toLowerCase())
-      
+
       const matchPosition = positionFilter === 'all' || emp.positionName === positionFilter
       const matchDegree = degreeFilter === 'all' || emp.degree === degreeFilter
       const matchDept = deptFilter === 'all' || emp.departmentName === deptFilter
@@ -251,7 +155,7 @@ function ReferenceEmployeesListPage() {
   return (
     <AppShell breadcrumbs={breadcrumbs}>
             <div className="rel-page">
-              
+
               {/* Title Card */}
               <div className="rel-title-card">
                 <h1 className="rel-title">Danh sách nhân viên gốc</h1>
@@ -271,7 +175,7 @@ function ReferenceEmployeesListPage() {
                       className="rel-search-input"
                       placeholder="Tìm theo tên/ID"
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => updateFilter(setSearch)(e.target.value)}
                       disabled={loading}
                     />
                   </div>
@@ -279,7 +183,7 @@ function ReferenceEmployeesListPage() {
                   <select
                     className="rel-filter-select"
                     value={positionFilter}
-                    onChange={(e) => setPositionFilter(e.target.value)}
+                    onChange={(e) => updateFilter(setPositionFilter)(e.target.value)}
                     disabled={loading}
                   >
                     <option value="all">Vị trí</option>
@@ -291,7 +195,7 @@ function ReferenceEmployeesListPage() {
                   <select
                     className="rel-filter-select"
                     value={degreeFilter}
-                    onChange={(e) => setDegreeFilter(e.target.value)}
+                    onChange={(e) => updateFilter(setDegreeFilter)(e.target.value)}
                     disabled={loading}
                   >
                     <option value="all">Trình độ</option>
@@ -308,7 +212,7 @@ function ReferenceEmployeesListPage() {
                   <div className="rel-department-filter">
                     <SearchableSelect
                       value={deptFilter}
-                      onChange={setDeptFilter}
+                      onChange={updateFilter(setDeptFilter)}
                       disabled={loading}
                       options={[
                         { value: 'all', label: 'Tất cả đơn vị' },
@@ -326,7 +230,7 @@ function ReferenceEmployeesListPage() {
                   <select
                     className="rel-filter-select"
                     value={titleFilter}
-                    onChange={(e) => setTitleFilter(e.target.value)}
+                    onChange={(e) => updateFilter(setTitleFilter)(e.target.value)}
                     disabled={loading}
                   >
                     <option value="all">Chức danh</option>
@@ -338,7 +242,7 @@ function ReferenceEmployeesListPage() {
                   <select
                     className="rel-filter-select"
                     value={genderFilter}
-                    onChange={(e) => setGenderFilter(e.target.value)}
+                    onChange={(e) => updateFilter(setGenderFilter)(e.target.value)}
                     disabled={loading}
                   >
                     <option value="all">Giới tính</option>
@@ -350,7 +254,7 @@ function ReferenceEmployeesListPage() {
                   <select
                     className="rel-filter-select"
                     value={cbTypeFilter}
-                    onChange={(e) => setCbTypeFilter(e.target.value)}
+                    onChange={(e) => updateFilter(setCbTypeFilter)(e.target.value)}
                     disabled={loading}
                   >
                     <option value="all">Loại CB</option>
@@ -368,7 +272,7 @@ function ReferenceEmployeesListPage() {
                     {error}
                   </div>
                 )}
-                
+
                 <table className="rel-table">
                   <thead>
                     <tr>
@@ -469,4 +373,3 @@ function ReferenceEmployeesListPage() {
 }
 
 export default ReferenceEmployeesListPage
-export { generateMockEmployees }

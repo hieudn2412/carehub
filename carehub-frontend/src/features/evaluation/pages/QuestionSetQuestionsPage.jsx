@@ -43,7 +43,6 @@ function QuestionSetQuestionsPage() {
   const [qPage, setQPage] = useState(0)
 
   const [previewCounts, setPreviewCounts] = useState({ easy: 0, medium: 0, hard: 0 })
-  const [avoidSameSource, setAvoidSameSource] = useState(true)
   const [previewResult, setPreviewResult] = useState(null)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [showQuickCreate, setShowQuickCreate] = useState(false)
@@ -69,7 +68,7 @@ function QuestionSetQuestionsPage() {
 
   useEffect(() => {
     // Hydrate the selected set and approved question bank when the route changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 
@@ -180,7 +179,6 @@ function QuestionSetQuestionsPage() {
           Object.entries(previewCounts).map(([key, value]) => [key, Number(value) || 0])
         ),
         excludeQuestionIds: selectedIds,
-        avoidSameSourceDocument: avoidSameSource,
         randomSeed: null,
       })
       setPreviewResult(apiData(response))
@@ -432,13 +430,6 @@ function QuestionSetQuestionsPage() {
                     />
                   </div>
                 ))}
-              </div>
-              <div className="qsq-modal-group">
-                <label>Tránh cùng nguồn tài liệu</label>
-                <select className="qsq-input-red" value={String(avoidSameSource)} onChange={(event) => setAvoidSameSource(event.target.value === 'true')}>
-                  <option value="true">Có</option>
-                  <option value="false">Không</option>
-                </select>
               </div>
               {previewResult && (
                 <div className="qsq-preview-box">

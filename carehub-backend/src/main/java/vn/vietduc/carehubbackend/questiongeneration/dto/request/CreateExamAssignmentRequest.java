@@ -13,8 +13,11 @@ public record CreateExamAssignmentRequest(
         List<Long> positionIds,
         List<Long> groupIds,
         Boolean allEmployees,
+        LocalDateTime availableFrom,
         LocalDateTime dueAt,
         Integer maxAttempts,
+        Boolean shuffleQuestions,
+        Boolean shuffleOptions,
         String resultVisibility,
         String status
 ) {

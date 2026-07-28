@@ -18,6 +18,7 @@ import { examPaperApi } from '../api/examPaperApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
 import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
+import { allocateDifficultyCounts, EXAM_DIFFICULTY_LEVELS } from '../utils/examDifficulty.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
@@ -29,8 +30,13 @@ const DEFAULT_FORM = {
   totalQuestions: 30,
   timeLimitMinutes: 45,
   passingScore: 7,
+  availableFrom: '',
   dueAt: '',
   maxAttempts: 1,
+  shuffleQuestions: true,
+  shuffleOptions: true,
+  difficultyPercentages: { easy: 30, medium: 50, hard: 20 },
+  resultVisibility: 'SCORE_ONLY',
   departmentIds: [],
   userIds: [],
 }
@@ -88,6 +94,10 @@ function ExamConfigPage() {
     () => questionSets.find((item) => String(item.id) === String(form.questionSetId)),
     [form.questionSetId, questionSets],
   )
+  const difficultyCounts = useMemo(
+    () => allocateDifficultyCounts(form.totalQuestions, form.difficultyPercentages),
+    [form.difficultyPercentages, form.totalQuestions],
+  )
 
   const filteredUsers = useMemo(() => {
     const normalized = keyword.trim().toLowerCase()
@@ -128,6 +138,16 @@ function ExamConfigPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  function updateDifficultyPercentage(key, value) {
+    setForm((current) => ({
+      ...current,
+      difficultyPercentages: {
+        ...current.difficultyPercentages,
+        [key]: value,
+      },
+    }))
+  }
+
   function toggleId(field, value) {
     setForm((current) => ({
       ...current,
@@ -144,11 +164,17 @@ function ExamConfigPage() {
     if (Number(form.totalQuestions) > Number(selectedSet?.questionCount || 0)) {
       return `Bộ câu hỏi chỉ có ${selectedSet?.questionCount || 0} câu.`
     }
+    const difficultyTotal = Object.values(form.difficultyPercentages)
+      .reduce((sum, value) => sum + (Number(value) || 0), 0)
+    if (difficultyTotal !== 100) return 'Tổng tỷ lệ Dễ, Trung bình và Khó phải bằng 100%.'
     // Backend lưu passingScore kiểu Integer (ExamConfig/ExamPaper) nên chỉ nhận số nguyên;
     // gửi 8.5 sẽ bị Jackson cắt âm thầm thành 8.
     const passingScore = Number(form.passingScore)
     if (form.passingScore === '' || !Number.isInteger(passingScore) || passingScore < 0 || passingScore > 10) {
       return 'Điểm đạt phải là số nguyên trong khoảng 0-10.'
+    }
+    if (form.availableFrom && form.dueAt && new Date(form.availableFrom) >= new Date(form.dueAt)) {
+      return 'Thời gian bắt đầu phải sớm hơn hạn nộp.'
     }
     if (!form.departmentIds.length && !form.userIds.length) return 'Vui lòng chọn khoa/phòng hoặc nhân viên nhận bài.'
     return ''
@@ -212,16 +238,23 @@ function ExamConfigPage() {
         timeLimitMinutes: Number(form.timeLimitMinutes),
         passingScore: Number(form.passingScore),
         maxRetakes: Math.max(0, Number(form.maxAttempts) - 1),
-        shuffleQuestions: true,
-        shuffleOptions: true,
+        // Đảo theo từng lượt được áp dụng ở phân công; bộ đề gốc giữ một thứ tự ổn định.
+        shuffleQuestions: false,
+        shuffleOptions: false,
+        questionSelectionMode: 'PER_ATTEMPT_BALANCED',
+        difficultyPercentages: Object.fromEntries(
+          Object.entries(form.difficultyPercentages).map(([key, value]) => [key, Number(value) || 0]),
+        ),
         status: 'ACTIVE',
-        distributions: [{
-          categoryId: null,
-          categoryName: null,
-          difficulty: null,
-          questionCount: Number(form.totalQuestions),
-          required: true,
-        }],
+        distributions: EXAM_DIFFICULTY_LEVELS
+          .filter(({ key }) => difficultyCounts[key] > 0)
+          .map(({ key }) => ({
+            categoryId: null,
+            categoryName: null,
+            difficulty: key.toUpperCase(),
+            questionCount: difficultyCounts[key],
+            required: true,
+          })),
       })
       const config = apiData(configResponse)
 
@@ -244,10 +277,13 @@ function ExamConfigPage() {
         description: null,
         examPaperId: Number(paper.id),
         professionalFieldId: Number(form.professionalFieldId),
+        availableFrom: form.availableFrom || null,
         dueAt: form.dueAt || null,
         maxAttempts: Number(form.maxAttempts),
+        shuffleQuestions: form.shuffleQuestions,
+        shuffleOptions: form.shuffleOptions,
         status: 'OPEN',
-        resultVisibility: 'SCORE_ONLY',
+        resultVisibility: form.resultVisibility,
         userIds: form.userIds,
         departmentIds: form.departmentIds,
         positionIds: [],
@@ -289,7 +325,7 @@ function ExamConfigPage() {
               </section>
 
               <div className="exam-flow__steps" aria-label="Quy trình tạo bài kiểm tra">
-                {['Thiết lập bài kiểm tra', 'Chọn người nhận', 'Tự động sinh và giao đề'].map((label, index) => (
+                {['Thông tin bài kiểm tra', 'Cài đặt tổ chức thi', 'Chọn người nhận', 'Tự động sinh và giao đề'].map((label, index) => (
                   <div key={label}><span>{index + 1}</span><strong>{label}</strong></div>
                 ))}
               </div>
@@ -341,7 +377,7 @@ function ExamConfigPage() {
                       <div className="exam-flow__set-summary">
                         <span>
                           <strong>{selectedSet.name}</strong>
-                          {selectedSet.questionCount || 0} câu · {difficultyText(selectedSet.difficulty)}
+                          {selectedSet.questionCount || 0} câu
                         </span>
                         <button type="button" className="exp-btn-secondary" onClick={openSelectedSet}>
                           <EyeOutlined /> Xem và sửa bộ câu hỏi
@@ -366,15 +402,101 @@ function ExamConfigPage() {
                     Số lượt làm tối đa
                     <input type="number" min="1" max="10" value={form.maxAttempts} onChange={(event) => update('maxAttempts', event.target.value)} required />
                   </label>
-                  <label>
-                    Hạn nộp
-                    <input type="datetime-local" value={form.dueAt} onChange={(event) => update('dueAt', event.target.value)} />
-                  </label>
                 </div>
               </section>
 
               <section className="exp-form-card exam-flow__section">
-                <header><span>2</span><div><h2>Người nhận bài</h2><p>Chọn cả khoa/phòng hoặc thêm từng nhân viên cụ thể.</p></div></header>
+                <header><span>2</span><div><h2>Cài đặt tổ chức thi</h2><p>Kiểm soát thứ tự hiển thị, thời gian truy cập và cách công bố kết quả.</p></div></header>
+                <div className="exam-flow__toggle-grid">
+                  <label className={`exam-flow__toggle-card${form.shuffleQuestions ? ' is-active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.shuffleQuestions}
+                      onChange={(event) => update('shuffleQuestions', event.target.checked)}
+                    />
+                    <span>
+                      <strong>Đảo thứ tự câu hỏi</strong>
+                      <small>Mỗi lượt làm nhận một thứ tự riêng và giữ nguyên khi tải lại.</small>
+                    </span>
+                  </label>
+                  <label className={`exam-flow__toggle-card${form.shuffleOptions ? ' is-active' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.shuffleOptions}
+                      onChange={(event) => update('shuffleOptions', event.target.checked)}
+                    />
+                    <span>
+                      <strong>Đảo thứ tự đáp án</strong>
+                      <small>Đáp án A–D được hoán đổi riêng cho từng lượt và chấm theo đúng ánh xạ.</small>
+                    </span>
+                  </label>
+                </div>
+                <div className="exam-flow__difficulty-panel">
+                  <div className="exam-flow__difficulty-heading">
+                    <div>
+                      <strong>Phân bổ độ khó</strong>
+                      <small>Mỗi lượt làm được chọn ngẫu nhiên nhưng luôn giữ đúng cơ cấu này.</small>
+                    </div>
+                    <span className={Object.values(form.difficultyPercentages).reduce((sum, value) => sum + (Number(value) || 0), 0) === 100 ? 'is-valid' : 'is-invalid'}>
+                      Tổng {Object.values(form.difficultyPercentages).reduce((sum, value) => sum + (Number(value) || 0), 0)}%
+                    </span>
+                  </div>
+                  <div className="exam-flow__difficulty-grid">
+                    {EXAM_DIFFICULTY_LEVELS.map(({ key, label }) => (
+                      <label key={key}>
+                        <span>{label}</span>
+                        <div className="exam-flow__percentage-input">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={form.difficultyPercentages[key]}
+                            onChange={(event) => updateDifficultyPercentage(key, event.target.value)}
+                            required
+                          />
+                          <span>%</span>
+                        </div>
+                        <small>{difficultyCounts[key]} câu trong mỗi lượt</small>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="exp-form-grid exam-flow__schedule-grid">
+                  <label>
+                    Thời gian bắt đầu
+                    <input
+                      type="datetime-local"
+                      value={form.availableFrom}
+                      max={form.dueAt || undefined}
+                      onChange={(event) => update('availableFrom', event.target.value)}
+                    />
+                    <small className="exam-flow__field-hint">Để trống nếu nhân viên được làm ngay sau khi giao.</small>
+                  </label>
+                  <label>
+                    Hạn nộp
+                    <input
+                      type="datetime-local"
+                      value={form.dueAt}
+                      min={form.availableFrom || undefined}
+                      onChange={(event) => update('dueAt', event.target.value)}
+                    />
+                  </label>
+                  <label className="exam-flow__wide">
+                    Hiển thị kết quả
+                    <select value={form.resultVisibility} onChange={(event) => update('resultVisibility', event.target.value)}>
+                      <option value="SCORE_ONLY">Xem điểm ngay sau khi nộp</option>
+                      <option value="SCORE_AND_ANSWERS">Xem điểm và đáp án sau khi đợt thi kết thúc</option>
+                      <option value="HIDDEN_UNTIL_END">Ẩn toàn bộ kết quả đến khi đợt thi kết thúc</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="exam-flow__safety-note">
+                  Bài luôn được tự động nộp khi hết giờ và hệ thống luôn cảnh báo nếu còn câu chưa trả lời.
+                </div>
+              </section>
+
+              <section className="exp-form-card exam-flow__section">
+                <header><span>3</span><div><h2>Người nhận bài</h2><p>Chọn cả khoa/phòng hoặc thêm từng nhân viên cụ thể.</p></div></header>
                 <div className="exam-flow__target-columns">
                   <div>
                     <div className="exam-flow__target-title"><strong>Khoa/phòng</strong><span>{form.departmentIds.length} đã chọn</span></div>
@@ -445,7 +567,7 @@ function ExamConfigPage() {
                 </h2>
                 <p>
                   {selectedSetDetail
-                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu · ${difficultyText(selectedSetDetail.difficulty)}`
+                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu`
                     : 'Đang tải nội dung bộ câu hỏi'}
                 </p>
               </div>

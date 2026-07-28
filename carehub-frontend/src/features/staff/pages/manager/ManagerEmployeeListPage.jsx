@@ -85,17 +85,17 @@ function ManagerEmployeeListPage() {
       {/* Toolbar */}
       <div className="mgr-toolbar">
         <div className="mgr-search-box">
-          <input 
-            type="text" 
-            placeholder="Tìm nhân sự theo tên, mã NV..." 
+          <input
+            type="text"
+            placeholder="Tìm nhân sự theo tên, mã NV..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
           <SearchOutlined />
         </div>
-        
+
         <div className="mgr-filter-group">
-          <select 
+          <select
             className="mgr-select"
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
@@ -145,7 +145,7 @@ function ManagerEmployeeListPage() {
                   <td data-label="Chức danh">{emp.jobPositionName || '---'}</td>
                   <td data-label="Khoa / Phòng">{emp.departmentName || '---'}</td>
                   <td data-label="Giờ đào tạo">
-                    <strong style={{ 
+                    <strong style={{
                       color: getStatusColor(emp.complianceStatus) === 'green' ? 'var(--mgr-green)' : getStatusColor(emp.complianceStatus) === 'red' ? 'var(--mgr-red)' : 'var(--mgr-amber)',
                       fontSize: 14
                     }}>
@@ -158,7 +158,7 @@ function ManagerEmployeeListPage() {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button 
+                    <button
                       onClick={() => navigate(`/manager/employees/${emp.employeeId}`)}
                       style={{
                         border: '1px solid #e2e8f0',

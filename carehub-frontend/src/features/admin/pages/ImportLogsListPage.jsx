@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi'
-import { LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
+import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
 
 // Helper to generate 248 mock import logs for offline/fallback mode
@@ -9,11 +9,11 @@ const generateMockLogs = () => {
   const logs = []
   const startTimestamp = new Date(2026, 5, 17, 18, 0, 0).getTime() // June 17, 2026
   const files = ['nhan_vien_goc.xlsx', 'phong_ban_goc.xlsx']
-  
+
   for (let i = 0; i < 248; i++) {
     const id = 248 - i
     const fileIndex = i % 2
-    
+
     // Distribute statuses realistically
     const statusRand = i % 10
     let status = 'SUCCESS'
@@ -22,7 +22,7 @@ const generateMockLogs = () => {
     } else if (statusRand === 9) {
       status = 'FAILED'
     }
-    
+
     const totalRows = 50 + (i * 3) % 150
     let failedRows = 0
     if (status === 'PARTIAL') {
@@ -30,7 +30,7 @@ const generateMockLogs = () => {
     } else if (status === 'FAILED') {
       failedRows = totalRows
     }
-    
+
     let insertedRows = 0
     let updatedRows = 0
     if (status === 'SUCCESS') {
@@ -41,7 +41,7 @@ const generateMockLogs = () => {
       insertedRows = Math.floor(successRows * 0.6)
       updatedRows = successRows - insertedRows
     }
-    
+
     // Decreasing timestamp by i * 4 hours
     const logTime = new Date(startTimestamp - i * 4 * 3600 * 1000)
 
@@ -79,7 +79,7 @@ const generateMockLogs = () => {
         message: rMsg
       })
     }
-    
+
     logs.push({
       id,
       sourceFile: files[fileIndex],
@@ -196,7 +196,7 @@ function ImportLogsListPage() {
 
   // Fetch data
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setLoading(true)
 
     if (useMock) {
@@ -255,14 +255,14 @@ function ImportLogsListPage() {
 
   // Reset page to 1 when filters change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setPage(1)
   }, [fileFilter, statusFilter, dateFrom, dateTo])
 
   // Re-apply filters for mock data when page or filters change
   useEffect(() => {
     if (useMock) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       applyMockFilters()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -390,7 +390,7 @@ function ImportLogsListPage() {
   return (
     <AppShell breadcrumbs={breadcrumbs}>
             <div className="il-page">
-              
+
               {/* Title & Subtitle Card */}
               <div className="il-title-card">
                 <h1 className="il-title">
@@ -463,16 +463,16 @@ function ImportLogsListPage() {
 
               {/* Table Card */}
               <div className="il-table-card">
-                <table className="il-table">
+                <table className="il-table admin-table-uppercase">
                   <thead>
                     <tr>
                       <th>Thời gian diễn ra</th>
                       <th>Loại dữ liệu nhập</th>
-                      <th style={{ textAlign: 'right' }}>Tổng</th>
-                      <th style={{ textAlign: 'right' }}>Thành công</th>
-                      <th style={{ textAlign: 'right' }}>Lỗi</th>
+                      <th>Tổng</th>
+                      <th>Thành công</th>
+                      <th>Lỗi</th>
                       <th>Trạng thái</th>
-                      <th style={{ textAlign: 'center' }}>Hành động</th>
+                      <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -497,20 +497,23 @@ function ImportLogsListPage() {
                             <td>
                               <span className="il-source-file">{log.sourceFile}</span>
                             </td>
-                            <td style={{ textAlign: 'right' }}>{log.totalRows}</td>
-                            <td style={{ textAlign: 'right' }}>{successCount}</td>
-                            <td style={{ textAlign: 'right' }}>
+                            <td>{log.totalRows}</td>
+                            <td>{successCount}</td>
+                            <td>
                               <span className={log.failedRows > 0 ? "il-failed-count--more" : "il-failed-count--zero"}>
                                 {log.failedRows}
                               </span>
                             </td>
                             <td>{renderStatusBadge(log.status)}</td>
-                            <td style={{ textAlign: 'center' }}>
+                            <td>
                               <button
-                                className="il-action-btn"
+                                aria-label={`Xem chi tiết đợt nhập dữ liệu ${log.id}`}
+                                className="il-action-btn admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => handleOpenDetailModal(log)}
+                                title="Xem chi tiết"
+                                type="button"
                               >
-                                Chi tiết
+                                <EyeOutlined />
                               </button>
                             </td>
                           </tr>
@@ -656,7 +659,7 @@ function ImportLogsListPage() {
                     </div>
 
                     <div className="il-row-table-container">
-                      <table className="il-row-table">
+                      <table className="il-row-table admin-table-uppercase">
                         <thead>
                           <tr>
                             <th className="il-row-col--num">Dòng Excel</th>

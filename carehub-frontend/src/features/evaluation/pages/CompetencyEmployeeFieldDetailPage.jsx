@@ -42,7 +42,7 @@ function CompetencyEmployeeFieldDetailPage() {
     } finally {
       setLoading(false)
     }
-  }, [employeeId, showToast])
+  }, [employeeId, fromDate, showToast, toDate])
 
   useEffect(() => { loadData() }, [loadData])
 

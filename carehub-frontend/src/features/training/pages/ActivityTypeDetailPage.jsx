@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../auth/utils/apiError.js'
@@ -12,7 +12,7 @@ function ActivityTypeDetailPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
 
-  const fetchDetail = async () => {
+  const fetchDetail = useCallback(async () => {
     setIsLoading(true)
     setErrorMessage('')
     try {
@@ -23,11 +23,11 @@ function ActivityTypeDetailPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     fetchDetail()
-  }, [id])
+  }, [fetchDetail])
 
   const toggleStatus = async () => {
     if (!activityType) return
@@ -56,7 +56,7 @@ function ActivityTypeDetailPage() {
   return (
     <AppShell back={{ to: '/admin/training/activity-types', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="training-detail-page-container" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              
+
               {/* Header Panel */}
               <div className="atl-title-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>

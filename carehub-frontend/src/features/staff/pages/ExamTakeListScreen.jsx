@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, LoadingOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
+import { EyeOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
@@ -68,7 +68,12 @@ export default function ExamTakeListScreen() {
     finally { setStartingId(null) }
   }
 
-  const assessmentLabel = value => value === 'PASSED' ? 'Đạt' : value === 'FAILED' ? 'Chưa đạt' : 'Chưa làm'
+  const assessmentLabel = value => {
+    if (value === 'PASSED') return 'Đạt'
+    if (value === 'FAILED') return 'Chưa đạt'
+    if (value === 'PENDING') return 'Chờ công bố'
+    return 'Chưa làm'
+  }
   const canStart = item => Boolean(item.currentAttemptId || item.actionable)
   // detailAttemptId là lượt điểm cao nhất; khi chưa có lượt nào được chấm nó trùng
   // currentAttemptId → bỏ qua để không render hai nút cùng đích.
@@ -131,7 +136,16 @@ export default function ExamTakeListScreen() {
           </label>
         </div>
       </div>
-      <div className="eh-table-card"><table className="eh-table eh-table--cards"><thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm cao nhất</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
+      <div className="eh-table-card"><table className="eh-table eh-table--cards eh-take-table admin-table-uppercase">
+        <colgroup>
+          <col className="eh-take-table__name-col" />
+          <col className="eh-take-table__due-col" />
+          <col className="eh-take-table__attempt-col" />
+          <col className="eh-take-table__score-col" />
+          <col className="eh-take-table__status-col" />
+          <col className="eh-take-table__action-col" />
+        </colgroup>
+        <thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm cao nhất</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
         {loading ? <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="6">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
           <td data-label="Tên bài kiểm tra"><strong>{item.name}</strong></td><td data-label="Thời hạn">{formatDateTime(item.dueAt)}</td>
           <td data-label="Lượt làm bài"><span className="eh-attempt-cell">
@@ -142,15 +156,22 @@ export default function ExamTakeListScreen() {
           </span></td>
           <td data-label="Điểm cao nhất">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
           <td data-label="Đánh giá"><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
-          <td><span className="eh-row-actions">
-            {detailIdOf(item) ? <button type="button" className="eh-btn eh-btn--view" onClick={() => openAttempt(detailIdOf(item))} title="Xem chi tiết lượt điểm cao nhất">
-              <EyeOutlined /><span>Xem chi tiết</span>
+          <td data-label="Hành động"><span className="eh-row-actions">
+            {detailIdOf(item) ? <button type="button" className="eh-btn eh-btn--view admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => openAttempt(detailIdOf(item))} title="Xem chi tiết lượt điểm cao nhất" aria-label={`Xem kết quả ${item.name}`}>
+              <EyeOutlined />
             </button> : null}
             {/* Tooltip đặt trên span bọc ngoài: trình duyệt không hiện title của button bị disabled */}
             <span className="eh-action-wrap" title={primaryHint(item)}>
-              <button type="button" className="eh-btn eh-btn--retry" onClick={() => startAssignment(item)} disabled={startingId !== null || !canStart(item)} title={primaryHint(item)} aria-busy={startingId === item.id}>
-                {startingId === item.id ? <LoadingOutlined spin /> : canStart(item) ? <PlayCircleOutlined /> : null}
-                <span>{primaryLabel(item)}</span>
+              <button
+                type="button"
+                className="eh-btn eh-btn--retry admin-table-action admin-table-action--icon admin-table-action--success"
+                onClick={() => startAssignment(item)}
+                disabled={startingId !== null || !canStart(item)}
+                title={primaryHint(item)}
+                aria-label={`${primaryLabel(item)}: ${item.name}`}
+                aria-busy={startingId === item.id}
+              >
+                {startingId === item.id ? <LoadingOutlined spin /> : canStart(item) ? <PlayCircleOutlined /> : <LockOutlined />}
               </button>
             </span>
           </span></td>

@@ -121,6 +121,8 @@ class ExamConfigServiceTest {
                 0,
                 true,
                 true,
+                null,
+                null,
                 "ACTIVE",
                 List.of()
         );
@@ -161,6 +163,35 @@ class ExamConfigServiceTest {
                 .hasMessageContaining("Không thể kích hoạt cấu hình");
     }
 
+    @Test
+    void balancedConfigPersistsPercentagesAndCalculatedCounts() {
+        questionSet.setQuestionCount(10);
+        when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
+                .thenReturn(questionSetItemsByDifficulty(3, 5, 2));
+        UpsertExamConfigRequest request = balancedRequest("ACTIVE");
+
+        var response = service.create(request, "admin");
+
+        assertThat(response.questionSelectionMode()).isEqualTo("PER_ATTEMPT_BALANCED");
+        assertThat(response.difficultyPercentages())
+                .isEqualTo(new vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamConfigResponse.DifficultyPercentages(30, 50, 20));
+        assertThat(response.difficultyQuestionCounts())
+                .isEqualTo(new vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamConfigResponse.DifficultyQuestionCounts(3, 5, 2));
+    }
+
+    @Test
+    void balancedConfigRejectsMissingHardQuestions() {
+        questionSet.setQuestionCount(10);
+        when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
+                .thenReturn(questionSetItemsByDifficulty(3, 7, 0));
+
+        assertThatThrownBy(() -> service.create(balancedRequest("ACTIVE"), "admin"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Khó")
+                .hasMessageContaining("2 câu")
+                .hasMessageContaining("0 câu");
+    }
+
     private UpsertExamConfigRequest request(int totalQuestions, int distributionQuestions, String status) {
         return new UpsertExamConfigRequest(
                 "Cấu hình kiểm tra",
@@ -172,6 +203,8 @@ class ExamConfigServiceTest {
                 3,
                 true,
                 true,
+                null,
+                null,
                 status,
                 List.of(new UpsertExamConfigRequest.Distribution(
                         category.getId(),
@@ -181,6 +214,56 @@ class ExamConfigServiceTest {
                         true
                 ))
         );
+    }
+
+    private UpsertExamConfigRequest balancedRequest(String status) {
+        return new UpsertExamConfigRequest(
+                "Cấu hình cân bằng",
+                null,
+                questionSet.getId(),
+                10,
+                45,
+                7,
+                2,
+                false,
+                false,
+                "PER_ATTEMPT_BALANCED",
+                new UpsertExamConfigRequest.DifficultyPercentages(30, 50, 20),
+                status,
+                List.of(
+                        new UpsertExamConfigRequest.Distribution(null, null, "EASY", 3, true),
+                        new UpsertExamConfigRequest.Distribution(null, null, "MEDIUM", 5, true),
+                        new UpsertExamConfigRequest.Distribution(null, null, "HARD", 2, true)
+                )
+        );
+    }
+
+    private List<QuestionSetItem> questionSetItemsByDifficulty(int easy, int medium, int hard) {
+        List<QuestionSetItem> items = new ArrayList<>();
+        addDifficultyItems(items, "EASY", easy);
+        addDifficultyItems(items, "MEDIUM", medium);
+        addDifficultyItems(items, "HARD", hard);
+        return items;
+    }
+
+    private void addDifficultyItems(List<QuestionSetItem> items, String difficulty, int count) {
+        for (int index = 0; index < count; index++) {
+            long id = items.size() + 1L;
+            QuestionBankQuestion question = QuestionBankQuestion.builder()
+                    .id(id)
+                    .stem("Câu " + difficulty + " " + index)
+                    .topic(category.getName())
+                    .difficulty(difficulty)
+                    .build();
+            items.add(QuestionSetItem.builder()
+                    .id(id + 100)
+                    .questionSet(questionSet)
+                    .question(question)
+                    .position(items.size() + 1)
+                    .points(BigDecimal.ONE)
+                    .required(true)
+                    .build());
+        }
     }
 
     private List<QuestionSetItem> questionSetItems(int count) {
