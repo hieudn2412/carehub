@@ -68,7 +68,7 @@ function QuestionSetListPage() {
 
   useEffect(() => {
     // Hydrate the list from the API when its server-side filters change.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadSets()
   }, [loadSets])
 

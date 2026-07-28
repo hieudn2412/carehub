@@ -8,13 +8,13 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { formatEvidenceStorageSummary, getEvidenceFileError } from '../utils/evidenceFile.js'
-import { 
-  UploadOutlined, 
-  FilePdfOutlined, 
-  FileImageOutlined, 
-  DeleteOutlined, 
-  DownloadOutlined, 
-  InboxOutlined, 
+import {
+  UploadOutlined,
+  FilePdfOutlined,
+  FileImageOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  InboxOutlined,
   LoadingOutlined,
   FileUnknownOutlined,
   InfoCircleOutlined
@@ -24,7 +24,7 @@ import '../styles/training.css'
 function TrainingRecordEvidencePage() {
   const { id } = useParams()
   const { showToast } = useToast()
-  
+
   const [record, setRecord] = useState(null)
   const [evidences, setEvidences] = useState([])
   const [selectedFile, setSelectedFile] = useState(null)
@@ -276,7 +276,7 @@ function TrainingRecordEvidencePage() {
         <article className="training-panel">
           <form className="training-form" onSubmit={upload}>
             {isEditable ? (
-              <div 
+              <div
                 className={`evidence-dropzone ${isDragActive ? 'drag-active' : ''} ${selectedFile ? 'file-selected' : ''}`}
                 onDragEnter={handleDrag}
                 onDragOver={handleDrag}
@@ -293,9 +293,9 @@ function TrainingRecordEvidencePage() {
                 tabIndex={0}
                 aria-label="Chọn tệp minh chứng"
               >
-                <input 
+                <input
                   id="evidence-file-input"
-                  type="file" 
+                  type="file"
                   accept="image/png,image/jpeg,application/pdf"
                   onChange={(e) => selectFile(e.target.files?.[0])}
                   style={{ display: 'none' }}
@@ -326,27 +326,27 @@ function TrainingRecordEvidencePage() {
 
             <div className="training-form-actions" style={{ justifyContent: 'flex-end', marginTop: 12 }}>
               {selectedFile && (
-                <button 
-                  className="training-button" 
-                  type="button" 
-                  onClick={() => setSelectedFile(null)} 
+                <button
+                  className="training-button"
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
                   style={{ marginRight: 'auto', background: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5' }}
                 >
                   Hủy tệp
                 </button>
               )}
-              <button 
-                className="training-button training-button--primary" 
-                disabled={isWorking || !selectedFile || !isEditable} 
+              <button
+                className="training-button training-button--primary"
+                disabled={isWorking || !selectedFile || !isEditable}
                 type="submit"
                 style={{ borderRadius: '8px', padding: '8px 18px' }}
               >
                 {isWorking ? <LoadingOutlined style={{ marginRight: 6 }} /> : <UploadOutlined style={{ marginRight: 6 }} />} Tải lên minh chứng
               </button>
-              <button 
-                className="training-button" 
-                disabled={isWorking || !record || !isEditable} 
-                onClick={submit} 
+              <button
+                className="training-button"
+                disabled={isWorking || !record || !isEditable}
+                onClick={submit}
                 type="button"
                 style={{ borderRadius: '8px', padding: '8px 18px', background: '#f8fafc', fontWeight: 600 }}
               >
@@ -360,7 +360,7 @@ function TrainingRecordEvidencePage() {
           <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#334155', borderBottom: '2px solid #e2e8f0', paddingBottom: 8, marginBottom: 8 }}>
             Tệp minh chứng đã tải lên
           </h2>
-          
+
           {isLoading ? (
             <LoadingState label="Đang tải danh sách..." />
           ) : evidences.length === 0 ? (
@@ -390,20 +390,20 @@ function TrainingRecordEvidencePage() {
                       {getModerationLabel(item.moderationStatus)}
                     </span>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button 
-                        className="training-button" 
-                        onClick={() => download(item.id)} 
+                      <button
+                        className="training-button"
+                        onClick={() => download(item.id)}
                         disabled={isWorking}
                         style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px' }}
                         type="button"
                       >
                         <DownloadOutlined style={{ marginRight: 4 }} /> Tải về
                       </button>
-                      
+
                       {isEditable && (
-                        <button 
-                          className="training-button" 
-                          onClick={() => remove(item.id)} 
+                        <button
+                          className="training-button"
+                          onClick={() => remove(item.id)}
                           disabled={isWorking}
                           style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px', color: '#b91c1c', borderColor: '#fca5a5', background: '#fef2f2' }}
                           type="button"
@@ -455,7 +455,7 @@ function toAbsoluteDownloadUrl(downloadUrl) {
   if (!downloadUrl) return ''
   if (/^https?:\/\//i.test(downloadUrl)) return downloadUrl
 
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1'
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1'
   const apiBase = new URL(apiBaseUrl, window.location.origin)
   return new URL(downloadUrl, apiBase.origin).toString()
 }

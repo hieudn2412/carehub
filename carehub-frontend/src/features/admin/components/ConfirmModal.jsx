@@ -54,25 +54,25 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmText
             {message}
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <button 
+            <button
               type="button"
-              className="am-modal-btn" 
+              className="am-modal-btn"
               style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}
               onClick={onCancel}
               ref={cancelRef}
             >
               {cancelText}
             </button>
-            <button 
+            <button
               type="button"
-              className="am-btn-primary" 
-              style={{ 
+              className="am-btn-primary"
+              style={{
                 borderRadius: '8px',
                 padding: '8px 16px',
                 fontSize: '13.5px',
-                background: danger ? '#dc2626' : '#2563eb', 
-                color: '#fff', 
-                borderColor: 'transparent' 
+                background: danger ? '#dc2626' : '#2563eb',
+                color: '#fff',
+                borderColor: 'transparent'
               }}
               onClick={onConfirm}
               ref={confirmRef}

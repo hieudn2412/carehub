@@ -289,7 +289,7 @@ function TrainingHoursFormScreen() {
 
   // Fetch options (activity types) on mount
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setLoading(true)
     trainingApi.getRecordOptions()
       .then(res => {
@@ -307,7 +307,7 @@ function TrainingHoursFormScreen() {
   // Fetch record detail if in edit mode
   useEffect(() => {
     if (isEditMode) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+
       setLoading(true)
       trainingApi.getRecord(id)
         .then(res => {

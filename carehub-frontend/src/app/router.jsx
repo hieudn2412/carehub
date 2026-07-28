@@ -44,8 +44,6 @@ import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/Comp
 import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceByTechniquePage.jsx'
 import ComplianceEmployeeTechniqueDetailPage from '../features/evaluation/pages/ComplianceEmployeeTechniqueDetailPage.jsx'
 import CompetencySummaryPage from '../features/evaluation/pages/CompetencySummaryPage.jsx'
-import PromptTemplateListPage from '../features/evaluation/pages/PromptTemplateListPage.jsx'
-import PromptTemplateFormPage from '../features/evaluation/pages/PromptTemplateFormPage.jsx'
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage.jsx'
 import TrainingDashboardPage from '../features/admin/pages/TrainingDashboardPage.jsx'
@@ -87,7 +85,6 @@ import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQuality
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
 import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
-import ComingSoonPage from '../features/admin/pages/ComingSoonPage.jsx'
 
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
 import ManagerEmployeeListPage from '../features/staff/pages/manager/ManagerEmployeeListPage.jsx'
@@ -165,7 +162,6 @@ function AppRouter() {
 
       <Route path="/admin/dashboard" element={adminElement(<AdminDashboard />)} />
       <Route path="/admin/accounts" element={adminElement(<AdminAccountsScreen />)} />
-      <Route path="/admin/system-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system/import-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/reference/sync-history" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/system-settings" element={adminElement(<SystemSettingsScreen />)} />
@@ -237,9 +233,6 @@ function AppRouter() {
         path="/admin/evaluation/competency-summary"
         element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
       />
-      <Route path="/admin/evaluation/prompt-templates" element={evaluationElement(<PromptTemplateListPage />)} />
-      <Route path="/admin/evaluation/prompt-templates/new" element={evaluationElement(<PromptTemplateFormPage />)} />
-      <Route path="/admin/evaluation/prompt-templates/:id/edit" element={evaluationElement(<PromptTemplateFormPage />)} />
       <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
 
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
@@ -250,15 +243,6 @@ function AppRouter() {
       <Route
         path="/admin/quality/formulas"
         element={adminElement(<ScoringFormulaPage />)}
-      />
-      <Route
-        path="/admin/quality/targets"
-        element={adminElement(
-          <ComingSoonPage
-            title="Mục tiêu chất lượng"
-            breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Mục tiêu chất lượng' }]}
-          />
-        )}
       />
       <Route
         path="/admin/reports/training-dashboard"

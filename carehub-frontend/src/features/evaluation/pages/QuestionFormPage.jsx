@@ -39,7 +39,7 @@ function QuestionFormPage() {
   const [backendCategories, setBackendCategories] = useState([])
   const [impactWarning, setImpactWarning] = useState(null)
   const [loadError, setLoadError] = useState('')
-  
+
   // Dynamic Options State
   const [options, setOptions] = useState(EMPTY_OPTIONS)
   const [correctOptionIndices, setCorrectOptionIndices] = useState([0])
@@ -205,7 +205,7 @@ function QuestionFormPage() {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    
+
     if (!content.trim()) {
       showToast('Vui lòng nhập nội dung câu hỏi.', 'warning')
       return

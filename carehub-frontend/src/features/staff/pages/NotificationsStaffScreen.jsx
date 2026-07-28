@@ -27,15 +27,15 @@ function NotificationsStaffScreen() {
     { label: 'Hệ thống' },
     { label: 'Thông báo của tôi' }
   ]
-  
+
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  
+
   const [activeTab, setActiveTab] = useState('all') // all, unread, read
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
-  
+
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
@@ -59,14 +59,14 @@ function NotificationsStaffScreen() {
     setLoading(true)
     const token = tokenStorage.getAccessToken()
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    
+
     const params = {
       page,
       size,
       sort: 'createdAt,desc',
       q: debouncedQuery.trim() || undefined,
     }
-    
+
     if (activeTab === 'unread') {
       params.read = false
     } else if (activeTab === 'read') {
@@ -99,12 +99,12 @@ function NotificationsStaffScreen() {
   const handleOpenDetail = async (notif) => {
     setDetailLoading(true)
     setSelectedNotification(notif)
-    
+
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const response = await httpClient.get(`/me/notifications/${notif.id}`, { headers })
-      
+
       const freshData = response.data?.data
       if (freshData) {
         setSelectedNotification(freshData)
@@ -125,7 +125,7 @@ function NotificationsStaffScreen() {
   // Đánh dấu đã đọc một thông báo
   const handleMarkAsRead = async (id, silent = false) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-    
+
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
@@ -142,7 +142,7 @@ function NotificationsStaffScreen() {
   // Xóa một thông báo (gắn API DELETE /api/v1/me/notifications/{id})
   const handleDelete = async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
-    
+
     try {
       const token = tokenStorage.getAccessToken()
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
@@ -227,19 +227,19 @@ function NotificationsStaffScreen() {
               {/* Bộ lọc & Tìm kiếm */}
               <div className="notify-filters-bar">
                 <div className="notify-tabs">
-                  <button 
+                  <button
                     onClick={() => { setActiveTab('all'); setPage(0); }}
                     className={`notify-tab-btn ${activeTab === 'all' ? 'notify-tab-btn--active' : ''}`}
                   >
                     Tất cả
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setActiveTab('unread'); setPage(0); }}
                     className={`notify-tab-btn ${activeTab === 'unread' ? 'notify-tab-btn--active' : ''}`}
                   >
                     Chưa đọc
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setActiveTab('read'); setPage(0); }}
                     className={`notify-tab-btn ${activeTab === 'read' ? 'notify-tab-btn--active' : ''}`}
                   >
@@ -281,8 +281,8 @@ function NotificationsStaffScreen() {
               ) : (
                 <div className="notify-list">
                   {notifications.map((n) => (
-                    <div 
-                      key={n.id} 
+                    <div
+                      key={n.id}
                       className={`notify-item-card ${!n.read ? 'notify-item-card--unread' : ''}`}
                       onClick={() => handleOpenDetail(n)}
                       style={{ cursor: 'pointer' }}
@@ -290,7 +290,7 @@ function NotificationsStaffScreen() {
                       <div className={`notify-icon-box ${getIconClass(n.type)}`}>
                         {getIcon(n.type)}
                       </div>
-                      
+
                       <div className="notify-item-content">
                         <div className="notify-item-header">
                           <h4 className="notify-item-title">{n.title}</h4>
@@ -299,7 +299,7 @@ function NotificationsStaffScreen() {
                         <p className="notify-item-desc" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {n.content}
                         </p>
-                        
+
                         <div className="notify-item-footer">
                           <span>Hệ thống</span>
                           <span>•</span>
@@ -309,7 +309,7 @@ function NotificationsStaffScreen() {
 
                       <div className="notify-item-actions">
                         {!n.read && (
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleMarkAsRead(n.id); }}
                             className="notify-action-circle-btn notify-action-circle-btn--success"
                             title="Đánh dấu đã đọc"
@@ -317,7 +317,7 @@ function NotificationsStaffScreen() {
                             <CheckOutlined />
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(n.id); }}
                           className="notify-action-circle-btn notify-action-circle-btn--danger"
                           title="Xóa thông báo"
@@ -373,7 +373,7 @@ function NotificationsStaffScreen() {
             <button className="notify-modal-close" onClick={() => setSelectedNotification(null)}>
               <CloseOutlined />
             </button>
-            
+
             {detailLoading ? (
               <LoadingState label="Đang tải chi tiết thông báo..." />
             ) : (
@@ -389,15 +389,15 @@ function NotificationsStaffScreen() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="notify-modal-content">
                   {selectedNotification.content}
                 </div>
-                
+
                 <div className="notify-modal-footer">
                   {selectedNotification.deepLink && (
-                    <Link 
-                      to={selectedNotification.deepLink} 
+                    <Link
+                      to={selectedNotification.deepLink}
                       className="training-button training-button--primary"
                       style={{ textDecoration: 'none', height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', fontSize: 13.5 }}
                       onClick={() => setSelectedNotification(null)}
@@ -405,7 +405,7 @@ function NotificationsStaffScreen() {
                       <LinkOutlined style={{ marginRight: 6 }} /> Xem chi tiết
                     </Link>
                   )}
-                  <button 
+                  <button
                     className="training-button"
                     style={{ height: 38, borderRadius: 8, fontSize: 13.5 }}
                     onClick={() => setSelectedNotification(null)}

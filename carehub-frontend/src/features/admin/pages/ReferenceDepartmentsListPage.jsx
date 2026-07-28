@@ -51,7 +51,7 @@ function ReferenceDepartmentsListPage() {
 
   // Fetch departments from backend
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadDepartments()
   }, [loadDepartments])
 
@@ -130,7 +130,7 @@ function ReferenceDepartmentsListPage() {
 
   // Reset page when filters change
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     setPage(1)
   }, [search])
 
@@ -180,7 +180,7 @@ function ReferenceDepartmentsListPage() {
   return (
     <AppShell breadcrumbs={breadcrumbs}>
             <div className="rdl-page">
-              
+
               {/* Title Card */}
               <div className="rdl-title-card">
                 <h1 className="rdl-title">Danh mục phòng ban</h1>
@@ -203,7 +203,7 @@ function ReferenceDepartmentsListPage() {
                 </div>
 
                 <span className="rdl-results-count">{totalElements} kết quả</span>
-                
+
                 <button className="rdl-btn-primary" onClick={handleOpenCreateModal}>
                   <PlusOutlined /> Thêm phòng ban
                 </button>
@@ -329,7 +329,7 @@ function ReferenceDepartmentsListPage() {
                 <CloseOutlined />
               </button>
             </div>
-            
+
             <form onSubmit={handleFormSubmit}>
               <div className="rdl-modal-body">
                 <div className="rdl-form-group">
@@ -343,7 +343,7 @@ function ReferenceDepartmentsListPage() {
                     required
                   />
                 </div>
-                
+
                 <div className="rdl-form-group">
                   <label className="rdl-form-label">Tên khoa/phòng ban *</label>
                   <input
@@ -356,7 +356,7 @@ function ReferenceDepartmentsListPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="rdl-modal-footer">
                 <button type="button" className="rdl-modal-btn" onClick={() => setIsModalOpen(false)}>
                   Huỷ

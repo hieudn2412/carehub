@@ -7,11 +7,11 @@ import { expect, request as playwrightRequest } from '@playwright/test'
  * helpers create the rows a journey needs by calling the same REST endpoints the L3 suite already
  * pins (see docs/l3-system-api-tests/), then the spec starts at the screen it actually tests.
  *
- * The backend is reached directly on API_BASE (default http://localhost:8081/api/v1) rather than
+ * The backend is reached directly on API_BASE (default http://localhost:8080/api/v1) rather than
  * through the Vite proxy, so seeding does not depend on the dev server being up yet.
  */
 
-const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:8081/api/v1'
+const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:8080/api/v1'
 
 export async function apiClient(account) {
   const context = await playwrightRequest.newContext({ baseURL: API_BASE })

@@ -16,7 +16,7 @@ function ClassificationRuleListPage() {
   const [keyword, setKeyword] = useState('')
   const [enabledFilter, setEnabledFilter] = useState('')
   const [pendingDisable, setPendingDisable] = useState(null)
-  
+
   const loadRules = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -31,7 +31,7 @@ function ClassificationRuleListPage() {
 
   useEffect(() => {
     // Hydrate classification rules when the screen mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadRules()
   }, [loadRules])
 
@@ -110,8 +110,8 @@ function ClassificationRuleListPage() {
               <option value="false">Tạm ngưng</option>
             </select>
           </div>
-          <button 
-            className="crl-btn-add" 
+          <button
+            className="crl-btn-add"
             onClick={() => navigate('/admin/evaluation/classification-rules/new')}
           >
             <PlusCircleOutlined /> Thêm quy tắc

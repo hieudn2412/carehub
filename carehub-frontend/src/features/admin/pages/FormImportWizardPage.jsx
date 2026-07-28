@@ -565,7 +565,7 @@ function FormImportWizardPage() {
               ) : (
                 /* Step 2: Show Batch Validation & Apply */
                 <div className="fiw-container">
-                  
+
                   {/* Status Banner */}
                   <div className="fiw-card fiw-status-banner">
                     <div className="fiw-status-info">
@@ -620,7 +620,7 @@ function FormImportWizardPage() {
                           </div>
                         ) : batchRows.map((row, idx) => (
                           <div key={row.id || idx} className="fiw-row-card">
-                            
+
                             <div className="fiw-row-header">
                               <div>
                                 <span

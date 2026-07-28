@@ -8,6 +8,8 @@ import {
   RightOutlined,
   EyeOutlined,
   ReloadOutlined,
+  SendOutlined,
+  EditOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -28,6 +30,8 @@ function TrainingHoursListScreen() {
   const [loading, setLoading] = useState(false)
   const [listError, setListError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [status, setStatus] = useState('')
+  const [submittingId, setSubmittingId] = useState(null)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
@@ -67,6 +71,7 @@ function TrainingHoursListScreen() {
         page,
         size,
         titleKeyword: search || undefined,
+        workflowStatus: status || undefined,
         ...(myEmployeeId != null && { employeeId: myEmployeeId }),
       }
       trainingApi.listRecords(params)
@@ -84,7 +89,26 @@ function TrainingHoursListScreen() {
         .finally(() => setLoading(false))
     }, 300)
     return () => clearTimeout(timer)
-  }, [page, search, myEmployeeId, reloadKey])
+  }, [page, search, status, myEmployeeId, reloadKey])
+
+  const getStatusLabel = (workflowStatus) => ({
+    DRAFT: 'Bản nháp',
+    SUBMITTED: 'Đã nộp',
+    CANCELLED: 'Đã hủy',
+  }[workflowStatus] || workflowStatus || '-')
+
+  const handleDirectSubmit = async (recordId, version) => {
+    setSubmittingId(recordId)
+    setListError('')
+    try {
+      await trainingApi.submitRecord(recordId, { version })
+      setReloadKey((value) => value + 1)
+    } catch {
+      setListError('Không thể nộp hồ sơ đào tạo. Vui lòng kiểm tra minh chứng và thử lại.')
+    } finally {
+      setSubmittingId(null)
+    }
+  }
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-'
@@ -252,7 +276,7 @@ function TrainingHoursListScreen() {
                               {r.workflowStatus === 'DRAFT' && (
                                 <button
                                   className="th-action-btn th-action-btn--submit admin-table-action admin-table-action--icon admin-table-action--success"
-                                  onClick={() => handleDirectSubmit(r.id, r.version, r.startDate)}
+                                  onClick={() => handleDirectSubmit(r.id, r.version)}
                                   disabled={submittingId === r.id}
                                   title="Nộp hồ sơ"
                                   aria-label={`Nộp hồ sơ ${r.title}`}

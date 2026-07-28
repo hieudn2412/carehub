@@ -272,7 +272,7 @@ function FormPreviewPage() {
   return (
     <AppShell back={{ to: `/admin/quality/checklists/${id}/edit`, label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="form-preview-page">
-              
+
               {loading ? (
                 <div className="fpp-loading">
                   <LoadingOutlined /> Đang tải giao diện xem trước...
@@ -293,11 +293,11 @@ function FormPreviewPage() {
                 </div>
               ) : (
                 <div className="fpp-container">
-                  
+
                   {/* Warning banner preview */}
                   <div className="fpp-banner-preview">
-                    <ExclamationCircleOutlined /> Đây là giao diện xem trước (Preview) cho 
-                    <strong> Phiên bản v{version?.versionNumber} ({version?.status})</strong>. 
+                    <ExclamationCircleOutlined /> Đây là giao diện xem trước (Preview) cho
+                    <strong> Phiên bản v{version?.versionNumber} ({version?.status})</strong>.
                     Mọi hành động nhập liệu và nộp bài ở đây chỉ để thử nghiệm hiển thị và không lưu vào dữ liệu.
                   </div>
 
@@ -318,7 +318,7 @@ function FormPreviewPage() {
                     <div className="fpp-card fpp-subject-lookup-card">
                       <h3 className="fpp-card-title">I. Tra cứu đối tượng đánh giá</h3>
                       <p className="fpp-card-desc">Nhập mã nhân viên để tự động tải thông tin hồ sơ y tế:</p>
-                      
+
                       <div className="fpp-lookup-row">
                         <div className="fpp-search-wrapper">
                           <input
@@ -379,7 +379,7 @@ function FormPreviewPage() {
                       <div className="fpp-items-list">
                         {getSortedItems(sec).map((item, itemIdx) => (
                           <div key={item.id || itemIdx} className="fpp-item-row">
-                            
+
                             {item.itemType === 'INSTRUCTION' && (
                               <div className="fpp-instruction-box">
                                 {item.description}
@@ -404,7 +404,7 @@ function FormPreviewPage() {
                               <div className="fpp-question-box">
                                 <div className="fpp-question-header">
                                   <span className="fpp-q-title">
-                                    {item.question.title} 
+                                    {item.question.title}
                                     {item.question.required && <span className="fpp-req-star"> *</span>}
                                   </span>
                                   <div className="fpp-q-badges">

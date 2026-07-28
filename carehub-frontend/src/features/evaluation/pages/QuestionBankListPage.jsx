@@ -126,7 +126,7 @@ function QuestionBankListPage() {
 
   useEffect(() => {
     // Initial API hydration is intentionally triggered once when the screen mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadQuestions()
   }, [loadQuestions])
 
