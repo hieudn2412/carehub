@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentChunkResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobResponse;
@@ -19,7 +21,9 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
 public class DocumentQuestionMapper {
+    private final ValidationRulesProperties validationRules;
 
     public DocumentResponse toDocumentResponse(
             QuestionDocument document,
@@ -131,6 +135,10 @@ public class DocumentQuestionMapper {
                 candidate.getStatus().name(),
                 QuestionGenerationLabels.candidateStatus(candidate.getStatus()),
                 candidate.getDuplicateMaxSimilarity(),
+                candidate.getDuplicateMaxSimilarity() != null
+                        && candidate.getDuplicateMaxSimilarity() >= validationRules.getDuplicate().getReviewMin(),
+                candidate.getDuplicateMaxSimilarity() != null
+                        && candidate.getDuplicateMaxSimilarity() >= validationRules.getDuplicate().getStrongMin(),
                 candidate.getDuplicateQuestionId(),
                 candidate.getDuplicateQuestionStemSnapshot(),
                 candidate.getReviewerNotes(),

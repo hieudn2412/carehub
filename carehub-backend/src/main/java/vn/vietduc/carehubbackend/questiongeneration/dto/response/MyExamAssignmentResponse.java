@@ -14,6 +14,7 @@ public record MyExamAssignmentResponse(
         String professionalFieldName,
         String status,
         String statusText,
+        LocalDateTime availableFrom,
         LocalDateTime dueAt,
         LocalDateTime openedAt,
         LocalDateTime createdAt,

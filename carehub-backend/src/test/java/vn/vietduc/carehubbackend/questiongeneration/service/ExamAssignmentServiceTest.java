@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -196,13 +198,18 @@ class ExamAssignmentServiceTest {
                 null,
                 false,
                 null,
+                null,
                 2,
+                true,
+                true,
                 "SCORE_AND_ANSWERS",
                 "OPEN"
         ), "admin");
 
         assertThat(response.targetCount()).isEqualTo(2);
         assertThat(response.resultVisibility()).isEqualTo("SCORE_AND_ANSWERS");
+        assertThat(response.shuffleQuestions()).isTrue();
+        assertThat(response.shuffleOptions()).isTrue();
         assertThat(response.professionalFieldName()).isEqualTo("Nội khoa");
         assertThat(savedTargets)
                 .extracting(target -> target.getUser().getId())
@@ -256,6 +263,84 @@ class ExamAssignmentServiceTest {
         assertThat(response.get(0).actionLabel()).isEqualTo("Tiếp tục");
         assertThat(response.get(0).usedAttempts()).isEqualTo(1);
         assertThat(response.get(0).remainingAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    void listForUserMarksFutureAssignmentAsUpcomingAndHidesPendingResults() {
+        ExamPaper paper = ExamPaper.builder()
+                .id(10L)
+                .code("EP-10")
+                .name("Đề kiểm tra")
+                .status(ExamPaperStatus.PUBLISHED)
+                .totalQuestions(10)
+                .timeLimitMinutes(30)
+                .passingScore(7)
+                .version(1)
+                .randomSeed(1L)
+                .build();
+        ExamAssignment assignment = ExamAssignment.builder()
+                .id(20L)
+                .name("Đợt kiểm tra sắp mở")
+                .examPaper(paper)
+                .status(ExamAssignmentStatus.OPEN)
+                .availableFrom(LocalDateTime.now().plusHours(2))
+                .dueAt(LocalDateTime.now().plusDays(1))
+                .maxAttempts(2)
+                .resultVisibility(ExamResultVisibility.HIDDEN_UNTIL_END)
+                .build();
+        User employee = user(40L, "NV001", "Nguyễn Văn A", null);
+        ExamAttempt gradedAttempt = ExamAttempt.builder()
+                .id(50L)
+                .assignment(assignment)
+                .examPaper(paper)
+                .user(employee)
+                .attemptNumber(1)
+                .status(ExamAttemptStatus.GRADED)
+                .startedAt(LocalDateTime.now().minusDays(1))
+                .submittedAt(LocalDateTime.now().minusDays(1))
+                .score(new BigDecimal("8.00"))
+                .passed(true)
+                .build();
+        when(userRepository.findById(employee.getId())).thenReturn(Optional.of(employee));
+        when(targetRepository.findByUserOrderByAssignmentUpdatedAtDesc(employee))
+                .thenReturn(List.of(target(assignment, employee)));
+        when(attemptRepository.findByUserOrderByStartedAtDesc(employee))
+                .thenReturn(List.of(gradedAttempt));
+
+        var response = service.listForUser(employee.getId()).get(0);
+
+        assertThat(response.availabilityStatus()).isEqualTo("UPCOMING");
+        assertThat(response.availabilityText()).isEqualTo("Chưa đến giờ làm");
+        assertThat(response.actionable()).isFalse();
+        assertThat(response.bestScore()).isNull();
+        assertThat(response.assessmentStatus()).isEqualTo("PENDING");
+        assertThat(response.detailAttemptId()).isNull();
+    }
+
+    @Test
+    void createRejectsAvailableFromAtOrAfterDueDate() {
+        LocalDateTime dueAt = LocalDateTime.now().plusHours(1);
+
+        assertThatThrownBy(() -> service.create(new CreateExamAssignmentRequest(
+                "Đợt kiểm tra",
+                null,
+                10L,
+                20L,
+                List.of(30L),
+                null,
+                null,
+                null,
+                false,
+                dueAt,
+                dueAt,
+                1,
+                true,
+                true,
+                "SCORE_ONLY",
+                "OPEN"
+        ), "admin"))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("Thời gian bắt đầu");
     }
 
     // ── Block: create() — maxAttempts clamp (sheet BoundaryValues, BV-10, FR-050) ──
@@ -313,7 +398,10 @@ class ExamAssignmentServiceTest {
                 null,
                 false,
                 null,
+                null,
                 "null".equals(requested) ? null : Integer.valueOf(requested),
+                true,
+                true,
                 "SCORE_AND_ANSWERS",
                 "OPEN"
         ), "admin");

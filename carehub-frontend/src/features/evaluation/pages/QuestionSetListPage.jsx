@@ -246,7 +246,6 @@ function QuestionSetListPage() {
               <tr>
                 <th>Tên bộ câu hỏi</th>
                 <th>Số câu hỏi</th>
-                <th>Độ khó</th>
                 <th>Trạng thái</th>
                 <th style={{ width: '270px' }}>Hành động</th>
               </tr>
@@ -254,13 +253,13 @@ function QuestionSetListPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
+                  <td colSpan="4" style={{ textAlign: 'center', color: '#64748b', padding: '40px 0' }}>
                     <LoadingOutlined /> Đang tải bộ câu hỏi...
                   </td>
                 </tr>
               ) : displayRows.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                  <td colSpan="4" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                     Không tìm thấy bộ câu hỏi nào.
                   </td>
                 </tr>
@@ -269,11 +268,6 @@ function QuestionSetListPage() {
                   <tr key={item.id}>
                     <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
                     <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
-                    <td>
-                      <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>
-                        {difficultyText(item.difficulty)}
-                      </span>
-                    </td>
                     <td>
                       <span className={`qsl-status-badge qsl-status-badge--${String(item.status || 'DRAFT').toLowerCase()}`}>
                         {item.statusText || statusText(item.status)}
@@ -419,21 +413,6 @@ function QuestionSetListPage() {
   )
 }
 
-function getDifficultyClass(value) {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'easy' || value === 'Dễ') return 'diff-badge--easy'
-  if (normalized === 'medium' || value === 'Trung bình') return 'diff-badge--medium'
-  return 'diff-badge--hard'
-}
-
-function difficultyText(value) {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'easy') return 'Dễ'
-  if (normalized === 'medium') return 'Trung bình'
-  if (normalized === 'hard') return 'Khó'
-  return value || '---'
-}
-
 function statusText(value) {
   if (value === 'ACTIVE') return 'Hoạt động'
   if (value === 'INACTIVE') return 'Tạm ngưng'
@@ -493,7 +472,7 @@ function printQuestionSet(detail) {
       </head>
       <body>
         <h1>${escapeHtml(detail.name)}</h1>
-        <div class="meta">${escapeHtml(difficultyText(detail.difficulty))} - ${detail.questionCount || 0} câu hỏi</div>
+        <div class="meta">${detail.questionCount || 0} câu hỏi</div>
         ${rows}
       </body>
     </html>

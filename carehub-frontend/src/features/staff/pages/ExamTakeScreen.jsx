@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  CheckCircleOutlined,
+  FlagFilled,
+  FlagOutlined,
   LoadingOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   SaveOutlined,
   SendOutlined,
 } from '@ant-design/icons'
@@ -18,6 +21,10 @@ const AUTOSAVE_INTERVAL_MS = 15000
 
 function cacheKey(attemptId) {
   return `carehub-exam-draft:${attemptId}`
+}
+
+function flagCacheKey(attemptId) {
+  return `carehub-exam-flags:${attemptId}`
 }
 
 function readCachedAnswers(attemptId, validQuestionIds) {
@@ -43,9 +50,31 @@ function persistCachedAnswers(attemptId, answers) {
   }
 }
 
+function readCachedFlags(attemptId, validQuestionIds) {
+  try {
+    const cached = JSON.parse(window.localStorage.getItem(flagCacheKey(attemptId)) || '[]')
+    return new Set(
+      (Array.isArray(cached) ? cached : [])
+        .map(Number)
+        .filter(questionId => validQuestionIds.has(questionId)),
+    )
+  } catch {
+    return new Set()
+  }
+}
+
+function persistCachedFlags(attemptId, flags) {
+  try {
+    window.localStorage.setItem(flagCacheKey(attemptId), JSON.stringify([...flags]))
+  } catch {
+    // Flags remain available in memory for the current page.
+  }
+}
+
 function clearCachedAnswers(attemptId) {
   try {
     window.localStorage.removeItem(cacheKey(attemptId))
+    window.localStorage.removeItem(flagCacheKey(attemptId))
   } catch {
     // Ignore storage restrictions.
   }
@@ -79,6 +108,8 @@ function ExamTakeScreen() {
   const [saveStatus, setSaveStatus] = useState('')
   const [loadError, setLoadError] = useState('')
   const [confirmSubmitMessage, setConfirmSubmitMessage] = useState(null)
+  const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
+  const [isNavbarHidden, setIsNavbarHidden] = useState(false)
 
   const attemptRef = useRef(null)
   const answersRef = useRef({})
@@ -115,6 +146,9 @@ function ExamTakeScreen() {
         const cachedAnswers = data?.status === 'IN_PROGRESS'
           ? readCachedAnswers(attemptId, questionIds)
           : {}
+        const cachedFlags = data?.status === 'IN_PROGRESS'
+          ? readCachedFlags(attemptId, questionIds)
+          : new Set()
         const mergedAnswers = { ...serverAnswers, ...cachedAnswers }
         const recoveredDraft = !answersEqual(serverAnswers, mergedAnswers)
 
@@ -122,6 +156,7 @@ function ExamTakeScreen() {
         answersRef.current = mergedAnswers
         dirtyRef.current = recoveredDraft
         setAnswers(mergedAnswers)
+        setFlaggedQuestions(cachedFlags)
         setRemainingSeconds(null)
         setSaveStatus(recoveredDraft ? 'Đã khôi phục đáp án chưa đồng bộ' : '')
         if (data?.status !== 'IN_PROGRESS') {
@@ -334,6 +369,20 @@ function ExamTakeScreen() {
     setConfirmSubmitMessage(warning)
   }
 
+  function toggleQuestionFlag(questionId) {
+    if (!isWritable) return
+    setFlaggedQuestions(current => {
+      const next = new Set(current)
+      if (next.has(questionId)) {
+        next.delete(questionId)
+      } else {
+        next.add(questionId)
+      }
+      persistCachedFlags(attemptId, next)
+      return next
+    })
+  }
+
   function leaveExam() {
     if (dirtyRef.current) {
       saveAnswers(true, true)
@@ -362,8 +411,12 @@ function ExamTakeScreen() {
   }, [autoSaving, saveStatus])
 
   return (
-    <AppShell back={{ onClick: leaveExam, label: 'Quay lại' }} title="Làm bài thi">
-      <div className="eh-page">
+    <AppShell
+      back={{ onClick: leaveExam, label: 'Quay lại' }}
+      title="Làm bài thi"
+      hideSidebar={isNavbarHidden}
+    >
+      <div className="eh-page eh-exam-page">
         {isLoading ? (
           <div className="eh-table-card eh-loading-state"><LoadingOutlined spin /> Đang tải bài kiểm tra...</div>
         ) : loadError ? (
@@ -372,7 +425,7 @@ function ExamTakeScreen() {
           <>
             <div className="eh-header eh-detail-header eh-exam-toolbar">
               <div>
-                <h2 className="eh-page-title">{attempt?.examPaperName || 'Bài kiểm tra'}</h2>
+                <h2 className="eh-page-title">{attempt?.assignmentName || attempt?.examPaperName || 'Bài kiểm tra'}</h2>
                 <p className="eh-page-sub">Hạn lượt làm: {formatDateTime(attempt?.expiresAt)}</p>
                 <p className="eh-page-sub eh-save-indicator">
                   {saveLabel}
@@ -380,88 +433,118 @@ function ExamTakeScreen() {
                 </p>
               </div>
               <div className="eh-exam-toolbar__right">
+                <button
+                  type="button"
+                  className="eh-btn eh-btn--view eh-navbar-toggle"
+                  onClick={() => setIsNavbarHidden(current => !current)}
+                  aria-pressed={isNavbarHidden}
+                  title={isNavbarHidden ? 'Hiện thanh điều hướng' : 'Ẩn thanh điều hướng'}
+                >
+                  {isNavbarHidden ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                  {isNavbarHidden ? 'Hiện navbar' : 'Ẩn navbar'}
+                </button>
                 <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
                   <span>Thời gian còn lại</span>
                   <strong>{formatRemaining(remainingSeconds)}</strong>
                 </div>
-                <div className="eh-actions">
+              </div>
+            </div>
+
+            <div className="eh-exam-workspace">
+              <aside className="eh-table-card eh-exam-progress eh-exam-side-panel">
+                <div className="eh-exam-progress__summary">
+                  <div>
+                    <strong>{answeredCount}/{questions.length} câu đã trả lời</strong>
+                    <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Đã trả lời tất cả câu hỏi'}</span>
+                  </div>
+                  <strong>{progressPercent}%</strong>
+                </div>
+                <div className="eh-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
+                <div className="eh-question-nav" aria-label="Điều hướng câu hỏi">
+                  {questions.map((question) => {
+                    const isAnswered = Boolean(answers[question.paperQuestionId])
+                    const isFlagged = flaggedQuestions.has(question.paperQuestionId)
+                    return (
+                      <button
+                        type="button"
+                        key={question.paperQuestionId}
+                        className={`${isAnswered ? 'is-answered' : ''}${isFlagged ? ' is-flagged' : ''}`}
+                        onClick={() => scrollToQuestion(question.paperQuestionId)}
+                        aria-label={`Câu ${question.position}${isAnswered ? ', đã trả lời' : ', chưa trả lời'}${isFlagged ? ', đã đánh dấu' : ''}`}
+                        title={`Câu ${question.position}${isAnswered ? ' - đã trả lời' : ' - chưa trả lời'}${isFlagged ? ' - đã đánh dấu' : ''}`}
+                      >
+                        {question.position}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="eh-question-nav-legend" aria-label="Chú thích trạng thái câu hỏi">
+                  <span><i className="is-answered" /> Đã trả lời</span>
+                  <span><i className="is-flagged" /> Đã đánh dấu</span>
+                </div>
+                <div className="eh-exam-side-actions">
                   <button className="eh-btn eh-btn--view" onClick={() => saveAnswers(false, true)} disabled={saving || autoSaving || !isWritable}>
-                    <SaveOutlined /> Lưu
+                    <SaveOutlined /> Lưu bài
                   </button>
                   <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving || !isWritable}>
                     <SendOutlined /> Nộp bài
                   </button>
                 </div>
+              </aside>
+
+              <div className="eh-exam-question-list">
+                {!isWritable && attempt && (
+                  <div className="eh-table-card">
+                    <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
+                  </div>
+                )}
+
+                {questions.map((question) => {
+                  const isFlagged = flaggedQuestions.has(question.paperQuestionId)
+                  return (
+                    <section
+                      id={`exam-question-${question.paperQuestionId}`}
+                      key={question.paperQuestionId}
+                      className={`eh-table-card eh-question-review eh-exam-question${isFlagged ? ' eh-exam-question--flagged' : ''}`}
+                    >
+                      <div className="eh-detail-header">
+                        <div className="eh-question-heading">
+                          <strong>Câu {question.position}</strong>
+                          <button
+                            type="button"
+                            className={`eh-question-flag${isFlagged ? ' is-flagged' : ''}`}
+                            onClick={() => toggleQuestionFlag(question.paperQuestionId)}
+                            disabled={!isWritable}
+                            aria-pressed={isFlagged}
+                            aria-label={`${isFlagged ? 'Bỏ đánh dấu' : 'Đánh dấu'} câu ${question.position}`}
+                          >
+                            {isFlagged ? <FlagFilled /> : <FlagOutlined />}
+                            {isFlagged ? 'Đã đánh dấu' : 'Đánh dấu'}
+                          </button>
+                        </div>
+                        <span>{answers[question.paperQuestionId] ? `Đã chọn ${answers[question.paperQuestionId]}` : 'Chưa trả lời'}</span>
+                      </div>
+                      <p>{question.stem}</p>
+                      {['A', 'B', 'C', 'D'].map((optionKey) => (
+                        <label
+                          key={optionKey}
+                          className={`eh-option-row ${answers[question.paperQuestionId] === optionKey ? 'eh-option-row--selected' : ''}`}
+                        >
+                          <input
+                            type="radio"
+                            name={`question-${question.paperQuestionId}`}
+                            checked={answers[question.paperQuestionId] === optionKey}
+                            disabled={!isWritable}
+                            onChange={() => selectAnswer(question.paperQuestionId, optionKey)}
+                          />
+                          <span><strong>{optionKey}.</strong> {question[`option${optionKey}`]}</span>
+                        </label>
+                      ))}
+                    </section>
+                  )
+                })}
               </div>
             </div>
-
-            <section className="eh-table-card eh-exam-progress">
-              <div className="eh-exam-progress__summary">
-                <div>
-                  <strong>{answeredCount}/{questions.length} câu đã trả lời</strong>
-                  <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Đã trả lời tất cả câu hỏi'}</span>
-                </div>
-                <strong>{progressPercent}%</strong>
-              </div>
-              <div className="eh-progress-track"><span style={{ width: `${progressPercent}%` }} /></div>
-              <div className="eh-question-nav" aria-label="Điều hướng câu hỏi">
-                {questions.map((question) => (
-                  <button
-                    type="button"
-                    key={question.paperQuestionId}
-                    className={answers[question.paperQuestionId] ? 'is-answered' : ''}
-                    onClick={() => scrollToQuestion(question.paperQuestionId)}
-                    title={`Câu ${question.position}${answers[question.paperQuestionId] ? ' - đã trả lời' : ' - chưa trả lời'}`}
-                  >
-                    {answers[question.paperQuestionId] ? <CheckCircleOutlined /> : question.position}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            {!isWritable && attempt && (
-              <div className="eh-table-card">
-                <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
-              </div>
-            )}
-
-            {questions.map((question) => (
-              <section
-                id={`exam-question-${question.paperQuestionId}`}
-                key={question.paperQuestionId}
-                className="eh-table-card eh-question-review eh-exam-question"
-              >
-                <div className="eh-detail-header">
-                  <strong>Câu {question.position}</strong>
-                  <span>{answers[question.paperQuestionId] ? `Đã chọn ${answers[question.paperQuestionId]}` : 'Chưa trả lời'}</span>
-                </div>
-                <p>{question.stem}</p>
-                {['A', 'B', 'C', 'D'].map((optionKey) => (
-                  <label
-                    key={optionKey}
-                    className={`eh-option-row ${answers[question.paperQuestionId] === optionKey ? 'eh-option-row--selected' : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${question.paperQuestionId}`}
-                      checked={answers[question.paperQuestionId] === optionKey}
-                      disabled={!isWritable}
-                      onChange={() => selectAnswer(question.paperQuestionId, optionKey)}
-                    />
-                    <span><strong>{optionKey}.</strong> {question[`option${optionKey}`]}</span>
-                  </label>
-                ))}
-              </section>
-            ))}
-
-            {isWritable && questions.length > 0 && (
-              <div className="eh-exam-submit-bar">
-                <span>{unansweredCount > 0 ? `Còn ${unansweredCount} câu chưa trả lời` : 'Bạn đã hoàn thành tất cả câu hỏi'}</span>
-                <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving}>
-                  <SendOutlined /> Nộp bài kiểm tra
-                </button>
-              </div>
-            )}
           </>
         )}
       </div>

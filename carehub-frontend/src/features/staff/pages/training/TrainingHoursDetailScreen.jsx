@@ -8,11 +8,13 @@ import {
   DownloadOutlined,
   RollbackOutlined,
   FolderOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
+import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import '../../styles/TrainingHours.css'
 
 const PREVIEWABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
@@ -31,6 +33,8 @@ function TrainingHoursDetailScreen() {
   const [returningToDraft, setReturningToDraft] = useState(false)
   const [evidencePreviews, setEvidencePreviews] = useState({})
   const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -149,10 +153,25 @@ function TrainingHoursDetailScreen() {
       await trainingApi.returnToDraft(id)
       showToast("Đã trả hồ sơ về nháp!", "success")
       fetchRecord()
-    } catch {
-      showToast("Không thể trả hồ sơ về nháp.", "error")
+    } catch (error) {
+      showToast(getApiErrorMessage(error, "Không thể trả hồ sơ về nháp."), "error")
     } finally {
       setReturningToDraft(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!record) return
+    setDeleteConfirmOpen(false)
+    setDeleting(true)
+    try {
+      await trainingApi.deleteRecord(id, record.version)
+      showToast("Đã xóa hồ sơ đào tạo.", "success")
+      navigate('/staff/training')
+    } catch (error) {
+      showToast(getApiErrorMessage(error, "Không thể xóa hồ sơ đào tạo."), "error")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -336,6 +355,13 @@ function TrainingHoursDetailScreen() {
                       <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/evidence`)}>
                         <PaperClipOutlined /> Quản lý minh chứng
                       </button>
+                      <button
+                        className="th-detail-btn th-detail-btn--danger"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                        disabled={deleting}
+                      >
+                        <DeleteOutlined /> {deleting ? 'Đang xóa...' : 'Xóa hồ sơ'}
+                      </button>
                     </>
                   )}
                   {record.workflowStatus === 'SUBMITTED' && (
@@ -358,6 +384,15 @@ function TrainingHoursDetailScreen() {
         confirmText="Trả về nháp"
         onConfirm={handleReturnToDraft}
         onCancel={() => setReturnConfirmOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        title="Xóa hồ sơ đào tạo"
+        message="Bạn có chắc chắn muốn xóa hồ sơ này không? Hồ sơ sẽ được lưu trạng thái đã hủy để bảo đảm lịch sử thay đổi."
+        confirmText="Xóa hồ sơ"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirmOpen(false)}
       />
     </AppShell>
   )

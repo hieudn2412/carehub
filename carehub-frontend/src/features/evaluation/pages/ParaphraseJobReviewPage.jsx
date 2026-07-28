@@ -6,7 +6,6 @@ import {
   LoadingOutlined,
   ReloadOutlined,
   SaveOutlined,
-  SearchOutlined,
   StopOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
@@ -17,13 +16,9 @@ import { questionBankApi } from '../api/questionBankApi.js'
 import {
   apiData,
   apiErrorMessage,
-  candidateLabelText,
   candidateStatusText,
-  difficultyText,
   formatDateTime,
-  formatNumber,
   jobStatusText,
-  normalizeText,
   parseJsonList,
   statusTone,
 } from '../utils/documentQuestionUi.js'
@@ -36,11 +31,8 @@ function ParaphraseJobReviewPage() {
   const [jobDetail, setJobDetail] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [candidateActionId, setCandidateActionId] = useState(null)
-  const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
   const [editingCandidate, setEditingCandidate] = useState(null)
   const [editForm, setEditForm] = useState(null)
-  const [selectedCandidateId, setSelectedCandidateId] = useState(null)
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
   const [isBatching, setIsBatching] = useState(false)
 
@@ -75,15 +67,6 @@ function ParaphraseJobReviewPage() {
   }, [jobDetail?.status, loadJob])
 
   const candidates = useMemo(() => jobDetail?.candidates || [], [jobDetail])
-  const filteredCandidates = useMemo(() => {
-    const normalizedKeyword = normalizeText(keyword)
-    return candidates.filter((candidate) => {
-      const matchesKeyword = !normalizedKeyword || normalizeText(candidate.stem).includes(normalizedKeyword)
-      const matchesStatus = !statusFilter || candidate.status === statusFilter || candidate.label === statusFilter
-      return matchesKeyword && matchesStatus
-    })
-  }, [candidates, keyword, statusFilter])
-  const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
   const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
   const selectedApprovableIds = selectedCandidates
     .filter((candidate) => !['REJECTED', 'APPROVED', 'SAVED'].includes(candidate.status))
@@ -103,7 +86,6 @@ function ParaphraseJobReviewPage() {
         candidate.id === updatedCandidate.id ? updatedCandidate : candidate
       ),
     }))
-    setSelectedCandidateId(updatedCandidate.id)
   }
 
   function replaceCandidates(updatedCandidates) {
@@ -113,7 +95,6 @@ function ParaphraseJobReviewPage() {
       ...current,
       candidates: (current?.candidates || []).map((candidate) => updatedById.get(candidate.id) || candidate),
     }))
-    setSelectedCandidateId(updatedCandidates[0].id)
   }
 
   function toggleCandidateSelection(candidateId) {
@@ -124,14 +105,14 @@ function ParaphraseJobReviewPage() {
     )
   }
 
-  function toggleFilteredSelection() {
-    const filteredIds = filteredCandidates.map((candidate) => candidate.id)
-    const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedCandidateIds.includes(id))
+  function toggleAllSelection() {
+    const candidateIds = candidates.map((candidate) => candidate.id)
+    const allSelected = candidateIds.length > 0 && candidateIds.every((id) => selectedCandidateIds.includes(id))
     setSelectedCandidateIds((current) => {
       if (allSelected) {
-        return current.filter((id) => !filteredIds.includes(id))
+        return current.filter((id) => !candidateIds.includes(id))
       }
-      return Array.from(new Set([...current, ...filteredIds]))
+      return Array.from(new Set([...current, ...candidateIds]))
     })
   }
 
@@ -265,7 +246,7 @@ function ParaphraseJobReviewPage() {
         <AdminHeader back={{ onClick: () => navigate(-1), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
         <div className="dashboard-root">
           <main className="dashboard-body">
-            <div className="qdoc-page">
+            <div className="qdoc-page qdoc-paraphrase-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên diễn đạt lại...</section>
               ) : !jobDetail ? (
@@ -274,14 +255,13 @@ function ParaphraseJobReviewPage() {
                 <>
                   <section className="qdoc-detail-hero">
                     <div className="qdoc-detail-heading">
-                      <div className="qdoc-file-badge">PQ</div>
                       <div>
-                        <h1>Review phiên diễn đạt lại #{jobDetail.id}</h1>
+                        <h1>Duyệt câu hỏi diễn đạt lại</h1>
                         <div className="qdoc-detail-meta">
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>{jobStatusText(jobDetail)}</span>
-                          <span>{jobDetail.provider}</span>
-                          <span>{jobDetail.model}</span>
-                          <span>Tối đa {jobDetail.requestedCount} biến thể</span>
+                          <span>{candidates.length}/{jobDetail.requestedCount} biến thể</span>
+                          <span>{candidates.filter((item) => item.status === 'APPROVED').length} đã duyệt</span>
+                          <span>{candidates.filter((item) => item.status === 'SAVED').length} đã lưu</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
                         </div>
                       </div>
@@ -299,72 +279,50 @@ function ParaphraseJobReviewPage() {
                     </section>
                   )}
 
-                  <section className="qdoc-metric-grid">
-                    <Metric label="Candidate" value={formatNumber(candidates.length)} />
-                    <Metric label="Đã duyệt" value={formatNumber(candidates.filter((item) => item.status === 'APPROVED').length)} />
-                    <Metric label="Đã lưu" value={formatNumber(candidates.filter((item) => item.status === 'SAVED').length)} />
-                    <Metric label="Cần xem xét" value={formatNumber(candidates.filter((item) => item.status === 'NEED_REVIEW').length)} />
-                  </section>
-
-                  <section className="qdoc-filter-bar">
-                    <div className="qdoc-search">
-                      <SearchOutlined className="qdoc-search-icon" />
-                      <input
-                        type="text"
-                        placeholder="Tìm theo nội dung candidate..."
-                        value={keyword}
-                        onChange={(event) => setKeyword(event.target.value)}
-                      />
-                    </div>
-                    <select className="qdoc-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="VALIDATED">Đã kiểm tra</option>
-                      <option value="NEED_REVIEW">Cần xem xét</option>
-                      <option value="REJECTED">Đã từ chối</option>
-                      <option value="APPROVED">Đã duyệt</option>
-                      <option value="SAVED">Đã lưu</option>
-                    </select>
-                  </section>
-
-                  {filteredCandidates.length > 0 && (
+                  {candidates.length > 1 && (
                     <section className="qdoc-batch-bar">
                       <label className="qdoc-checkline">
                         <input
                           type="checkbox"
-                          checked={filteredCandidates.every((candidate) => selectedCandidateIds.includes(candidate.id))}
-                          onChange={toggleFilteredSelection}
+                          checked={candidates.every((candidate) => selectedCandidateIds.includes(candidate.id))}
+                          onChange={toggleAllSelection}
                         />
-                        <span>Chọn tất cả trong bộ lọc</span>
+                        <span>Chọn tất cả</span>
                       </label>
-                      <strong>{formatNumber(selectedCandidateIds.length)} đã chọn</strong>
-                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--success" onClick={approveSelected} disabled={isBatching || selectedApprovableIds.length === 0}>
-                        <CheckCircleOutlined />
-                        <span>Duyệt</span>
-                      </button>
-                      <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={rejectSelected} disabled={isBatching || selectedRejectableIds.length === 0}>
-                        <StopOutlined />
-                        <span>Từ chối</span>
-                      </button>
-                      <button type="button" className="qdoc-primary-btn" onClick={saveSelected} disabled={isBatching || selectedSavableIds.length === 0}>
-                        {isBatching ? <LoadingOutlined /> : <SaveOutlined />}
-                        <span>Lưu vào ngân hàng</span>
-                      </button>
+                      {selectedCandidateIds.length === 0 ? (
+                        <span className="qdoc-batch-hint">Chọn câu để thao tác hàng loạt</span>
+                      ) : (
+                        <>
+                          <strong>{selectedCandidateIds.length} đã chọn</strong>
+                          <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--success" onClick={approveSelected} disabled={isBatching || selectedApprovableIds.length === 0}>
+                            <CheckCircleOutlined />
+                            <span>Duyệt</span>
+                          </button>
+                          <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={rejectSelected} disabled={isBatching || selectedRejectableIds.length === 0}>
+                            <StopOutlined />
+                            <span>Từ chối</span>
+                          </button>
+                          <button type="button" className="qdoc-primary-btn" onClick={saveSelected} disabled={isBatching || selectedSavableIds.length === 0}>
+                            {isBatching ? <LoadingOutlined /> : <SaveOutlined />}
+                            <span>Lưu vào ngân hàng</span>
+                          </button>
+                        </>
+                      )}
                     </section>
                   )}
 
                   <section className="qdoc-review-layout">
                     <div className="qdoc-candidate-list">
-                      {filteredCandidates.length === 0 ? (
-                        <div className="qdoc-panel qdoc-empty-state">Không có candidate phù hợp bộ lọc.</div>
+                      {candidates.length === 0 ? (
+                        <div className="qdoc-panel qdoc-empty-state">Chưa có câu diễn đạt nào.</div>
                       ) : (
-                        filteredCandidates.map((candidate) => (
+                        candidates.map((candidate) => (
                           <ParaphraseCandidateCard
                             key={candidate.id}
                             candidate={candidate}
-                            isSelected={candidate.id === selectedCandidate?.id}
+                            showSelection={candidates.length > 1}
                             isChecked={selectedCandidateIds.includes(candidate.id)}
                             isBusy={candidateActionId === candidate.id}
-                            onSelect={() => setSelectedCandidateId(candidate.id)}
                             onToggleSelection={() => toggleCandidateSelection(candidate.id)}
                             onEdit={() => openEditModal(candidate)}
                             onApprove={() => approveCandidate(candidate)}
@@ -378,12 +336,6 @@ function ParaphraseJobReviewPage() {
                     <aside className="qdoc-evidence-panel">
                       <h2>Câu hỏi gốc</h2>
                       <SourceQuestion question={jobDetail.sourceQuestion} />
-                      {selectedCandidate && (
-                        <>
-                          <InfoRow label="Candidate đang chọn" value={`#${selectedCandidate.id}`} />
-                          <Warnings warnings={selectedCandidate.warnings} />
-                        </>
-                      )}
                     </aside>
                   </section>
                 </>
@@ -396,7 +348,7 @@ function ParaphraseJobReviewPage() {
       {editingCandidate && editForm && (
         <div className="qdoc-modal-backdrop">
           <div className="qdoc-modal qdoc-modal--wide" role="dialog" aria-modal="true" aria-labelledby="edit-paraphrase-title">
-            <h2 id="edit-paraphrase-title">Sửa candidate diễn đạt lại</h2>
+            <h2 id="edit-paraphrase-title">Sửa câu diễn đạt lại</h2>
             <div className="qdoc-edit-grid">
               <TextAreaField label="Câu hỏi" value={editForm.stem} onChange={(value) => setEditFormField('stem', value)} />
               <TextAreaField label="Phương án A" value={editForm.optionA} onChange={(value) => setEditFormField('optionA', value)} />
@@ -420,7 +372,7 @@ function ParaphraseJobReviewPage() {
                 <input value={editForm.topic} onChange={(event) => setEditFormField('topic', event.target.value)} />
               </label>
               <TextAreaField label="Giải thích" value={editForm.explanation} onChange={(value) => setEditFormField('explanation', value)} />
-              <TextAreaField label="Ghi chú reviewer" value={editForm.reviewerNotes} onChange={(value) => setEditFormField('reviewerNotes', value)} />
+              <TextAreaField label="Ghi chú duyệt" value={editForm.reviewerNotes} onChange={(value) => setEditFormField('reviewerNotes', value)} />
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setEditingCandidate(null)} disabled={candidateActionId === editingCandidate.id}>
@@ -444,10 +396,9 @@ function ParaphraseJobReviewPage() {
 
 function ParaphraseCandidateCard({
   candidate,
-  isSelected,
+  showSelection,
   isChecked,
   isBusy,
-  onSelect,
   onToggleSelection,
   onEdit,
   onApprove,
@@ -460,27 +411,25 @@ function ParaphraseCandidateCard({
   const canSave = candidate.status === 'APPROVED'
 
   return (
-    <article className={`qdoc-candidate-card ${isSelected ? 'qdoc-candidate-card--active' : ''}`} onClick={onSelect}>
+    <article className="qdoc-candidate-card qdoc-paraphrase-card">
       <header className="qdoc-candidate-header">
         <div className="qdoc-candidate-badges">
-          <label className="qdoc-card-check" onClick={(event) => event.stopPropagation()}>
-            <input type="checkbox" checked={isChecked} onChange={onToggleSelection} />
-          </label>
+          {showSelection && (
+            <label className="qdoc-card-check">
+              <input type="checkbox" checked={isChecked} onChange={onToggleSelection} />
+            </label>
+          )}
           <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{candidateStatusText(candidate)}</span>
-          {candidate.label && <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{candidateLabelText(candidate)}</span>}
-          <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>
+          {candidate.semanticSimilarityToSource != null && (
+            <span className="qdoc-paraphrase-similarity">
+              Tương đồng câu gốc {Math.round(candidate.semanticSimilarityToSource * 100)}%
+            </span>
+          )}
         </div>
       </header>
 
       <h2>{candidate.stem}</h2>
       <Options candidate={candidate} />
-
-      <div className="qdoc-candidate-meta">
-        <InfoRow label="Đáp án đúng" value={candidate.correctAnswer} />
-        <InfoRow label="Chủ đề" value={candidate.topic || '---'} />
-        <InfoRow label="Tương đồng câu gốc" value={candidate.semanticSimilarityToSource == null ? '---' : `${Math.round(candidate.semanticSimilarityToSource * 100)}%`} />
-        <InfoRow label="Khác biệt từ khóa" value={candidate.lexicalDifferenceFromSource == null ? '---' : `${Math.round(candidate.lexicalDifferenceFromSource * 100)}%`} />
-      </div>
 
       {candidate.explanation && (
         <div className="qdoc-soft-box">
@@ -500,7 +449,7 @@ function ParaphraseCandidateCard({
 
       {candidate.reviewerNotes && (
         <div className="qdoc-soft-box">
-          <strong>Ghi chú reviewer</strong>
+          <strong>Ghi chú duyệt</strong>
           <p>{candidate.reviewerNotes}</p>
         </div>
       )}
@@ -520,7 +469,7 @@ function ParaphraseCandidateCard({
         </button>
         <button type="button" className="qdoc-primary-btn" onClick={stopAnd(onSave)} disabled={!canSave || isBusy}>
           {isBusy ? <LoadingOutlined /> : <SaveOutlined />}
-          <span>Lưu vào ngân hàng câu hỏi</span>
+          <span>Lưu vào ngân hàng</span>
         </button>
       </footer>
     </article>
@@ -537,11 +486,9 @@ function ParaphraseCandidateCard({
 function SourceQuestion({ question }) {
   if (!question) return <p>Không có dữ liệu câu hỏi gốc.</p>
   return (
-    <div className="qdoc-soft-box">
+    <div className="qdoc-source-question">
       <strong>{question.stem}</strong>
       <Options candidate={question} />
-      <InfoRow label="Đáp án đúng" value={question.correctAnswer} />
-      <InfoRow label="Chủ đề" value={question.topic || '---'} />
     </div>
   )
 }
@@ -585,24 +532,6 @@ function TextAreaField({ label, value, onChange }) {
       <span>{label}</span>
       <textarea value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
-  )
-}
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="qdoc-info-row">
-      <span>{label}</span>
-      <strong>{value || '---'}</strong>
-    </div>
-  )
-}
-
-function Metric({ label, value }) {
-  return (
-    <div className="qdoc-metric">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
   )
 }
 

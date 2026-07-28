@@ -20,15 +20,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <pre>
  *   DRAFT     -> SUBMITTED  : allowed, any actor
  *   DRAFT     -> CANCELLED  : allowed, any actor
- *   SUBMITTED -> DRAFT      : allowed only when adminActor == true
+ *   SUBMITTED -> DRAFT      : allowed; ownership is enforced by the application service
  *   SUBMITTED -> CANCELLED  : allowed only when adminActor == true
  *   CANCELLED -> *          : rejected (terminal)
  *   from == to / null       : rejected
  * </pre>
  *
- * <p>The {@code adminActor} guard covers BOTH targets out of SUBMITTED — as of the merge of
- * origin/main a plain owner can no longer return their own submitted record to draft.
- * {@code L1-TRSM-17} pins that full truth table.
+ * <p>The {@code adminActor} guard only protects cancellation of a submitted record.
+ * Returning to draft is allowed by the state machine after the application service has
+ * confirmed that the actor is either the record owner or an administrator.
  */
 class TrainingRecordStateMachineTest {
     private final TrainingRecordStateMachine stateMachine = new TrainingRecordStateMachine();
@@ -63,11 +63,11 @@ class TrainingRecordStateMachineTest {
     // ── Block: canTransition() — the adminActor guard out of SUBMITTED ─────────
 
     @Test
-    @DisplayName("L1-TRSM-04 | Guard-FALSE: SUBMITTED + return-to-draft by owner → rejected")
-    void submittedCannotBeReturnedToDraftByOwner() {
+    @DisplayName("L1-TRSM-04 | Owner flow: SUBMITTED + return-to-draft → allowed")
+    void submittedCanBeReturnedToDraftByOwner() {
         assertThat(stateMachine.canTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.DRAFT, false
-        )).isFalse();
+        )).isTrue();
     }
 
     @Test
@@ -96,7 +96,7 @@ class TrainingRecordStateMachineTest {
 
     @ParameterizedTest(name = "SUBMITTED -> {0}, adminActor={1} → {2}")
     @CsvSource({
-            "DRAFT,     false, false",
+            "DRAFT,     false, true",
             "DRAFT,     true,  true",
             "CANCELLED, false, false",
             "CANCELLED, true,  true"
@@ -151,14 +151,12 @@ class TrainingRecordStateMachineTest {
     }
 
     @Test
-    @DisplayName("L1-TRSM-18 | Guard-FALSE: requireTransition SUBMITTED→DRAFT as non-admin throws")
-    void requireTransitionThrowsForOwnerReturnToDraft() {
-        assertThatThrownBy(() -> stateMachine.requireTransition(
+    @DisplayName("L1-TRSM-18 | Owner flow: requireTransition SUBMITTED→DRAFT succeeds")
+    void requireTransitionAllowsOwnerReturnToDraft() {
+        assertThatCode(() -> stateMachine.requireTransition(
                 TrainingRecordStatus.SUBMITTED, TrainingRecordStatus.DRAFT, false
         ))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("SUBMITTED")
-                .hasMessageContaining("DRAFT");
+                .doesNotThrowAnyException();
     }
 
     @Test

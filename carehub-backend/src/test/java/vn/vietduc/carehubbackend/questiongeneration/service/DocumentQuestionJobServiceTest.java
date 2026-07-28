@@ -7,6 +7,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
 import vn.vietduc.carehubbackend.questiongeneration.config.DocumentProcessingProperties;
+import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
@@ -56,7 +57,7 @@ class DocumentQuestionJobServiceTest {
                 duplicateCheckService,
                 generationKeyService,
                 questionCategoryRepository,
-                new DocumentQuestionMapper(),
+                new DocumentQuestionMapper(new ValidationRulesProperties()),
                 new AiGenerationProperties(),
                 new DocumentProcessingProperties(),
                 new ObjectMapper(),

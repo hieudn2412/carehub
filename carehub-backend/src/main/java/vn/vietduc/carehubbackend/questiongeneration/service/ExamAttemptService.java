@@ -14,15 +14,18 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptResp
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -32,12 +35,15 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,12 +51,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExamAttemptService {
     private static final Set<String> VALID_ANSWERS = Set.of("A", "B", "C", "D");
-    // Giữ đồng bộ với ExamAssignmentService.DEFAULT_MAX_ATTEMPTS
-    private static final int DEFAULT_MAX_ATTEMPTS = 1;
 
     private final ExamAssignmentService assignmentService;
     private final ExamAttemptRepository attemptRepository;
     private final ExamAttemptAnswerRepository answerRepository;
+    private final ExamAttemptQuestionRepository attemptQuestionRepository;
     private final ExamAssignmentTargetRepository targetRepository;
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
@@ -76,7 +81,7 @@ public class ExamAttemptService {
                 .filter(attempt -> professionalFieldId == null
                         || (attempt.getAssignment().getProfessionalField() != null
                         && professionalFieldId.equals(attempt.getAssignment().getProfessionalField().getId())))
-                .map(attempt -> toResponse(attempt, false, true))
+                .map(attempt -> toResponse(attempt, false, true, true))
                 .toList();
     }
 
@@ -84,7 +89,7 @@ public class ExamAttemptService {
     public ExamAttemptResponse getAdmin(Long attemptId) {
         ExamAttempt attempt = find(attemptId);
         expireIfNeeded(attempt);
-        return toResponse(attempt, true, true);
+        return toResponse(attempt, true, true, true);
     }
 
     @Transactional
@@ -92,7 +97,7 @@ public class ExamAttemptService {
         User user = findUser(userId);
         return attemptRepository.findByUserOrderByStartedAtDesc(user).stream()
                 .peek(this::expireIfNeeded)
-                .map(attempt -> toResponse(attempt, false, false))
+                .map(attempt -> toResponse(attempt, false, false, canRevealScore(attempt)))
                 .toList();
     }
 
@@ -101,7 +106,7 @@ public class ExamAttemptService {
         ExamAttempt attempt = find(attemptId);
         requireOwner(attempt, userId);
         expireIfNeeded(attempt);
-        return toResponse(attempt, true, canRevealAnswers(attempt));
+        return toResponse(attempt, canRevealQuestionReview(attempt), canRevealAnswers(attempt), canRevealScore(attempt));
     }
 
     @Transactional
@@ -116,7 +121,7 @@ public class ExamAttemptService {
                 if (isExpired(existingAttempt)) {
                     gradeAttempt(existingAttempt, null, effectiveExpiry(existingAttempt));
                 } else {
-                    return toResponse(existingAttempt, true, false);
+                    return toResponse(existingAttempt, true, false, true);
                 }
             }
         }
@@ -139,8 +144,10 @@ public class ExamAttemptService {
                 .startedAt(now)
                 .expiresAt(expiresAt)
                 .totalQuestions(assignment.getExamPaper().getTotalQuestions())
+                .presentationSeed(ThreadLocalRandom.current().nextLong())
                 .build());
-        return toResponse(attempt, true, false);
+        initializeAttemptQuestions(attempt);
+        return toResponse(attempt, true, false, true);
     }
 
     @Transactional
@@ -152,10 +159,10 @@ public class ExamAttemptService {
             // Hết giờ: chốt bài bằng đáp án ĐÃ lưu trước hạn, bỏ qua payload gửi kèm
             // (nếu không, client sửa giờ máy vẫn nộp được đáp án mới sau khi hết giờ).
             ExamAttempt saved = gradeAttempt(attempt, null, effectiveExpiry(attempt));
-            return toResponse(saved, true, canRevealAnswers(saved));
+            return toResponse(saved, canRevealQuestionReview(saved), canRevealAnswers(saved), canRevealScore(saved));
         }
         upsertAnswers(attempt, request);
-        return toResponse(attempt, true, false);
+        return toResponse(attempt, true, false, true);
     }
 
     @Transactional
@@ -167,7 +174,7 @@ public class ExamAttemptService {
         LocalDateTime submittedAt = expired ? effectiveExpiry(attempt) : LocalDateTime.now();
         // Quá hạn thì chỉ chấm phần đã lưu trước hạn — đáp án gửi kèm lần nộp muộn bị bỏ qua.
         ExamAttempt saved = gradeAttempt(attempt, expired ? null : request, submittedAt);
-        return toResponse(saved, true, canRevealAnswers(saved));
+        return toResponse(saved, canRevealQuestionReview(saved), canRevealAnswers(saved), canRevealScore(saved));
     }
 
     private ExamAttempt gradeAttempt(
@@ -176,7 +183,7 @@ public class ExamAttemptService {
             LocalDateTime submittedAt
     ) {
         upsertAnswers(attempt, request);
-        List<ExamPaperQuestion> questions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
+        List<ExamPaperQuestion> questions = questionsForAttempt(attempt);
         Map<Long, ExamAttemptAnswer> answersByQuestionId = answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity()));
         int correctCount = 0;
@@ -189,8 +196,9 @@ public class ExamAttemptService {
                             .paperQuestion(question)
                             .build()
             ));
+            String displayedCorrectAnswer = optionPresentation(attempt, question, snapshot).correctAnswer();
             boolean correct = normalizeAnswer(answer.getSelectedAnswer()) != null
-                    && normalizeAnswer(answer.getSelectedAnswer()).equals(normalizeAnswer(snapshot.getCorrectAnswer()));
+                    && normalizeAnswer(answer.getSelectedAnswer()).equals(normalizeAnswer(displayedCorrectAnswer));
             answer.setCorrect(correct);
             answerRepository.save(answer);
             if (correct) {
@@ -229,7 +237,7 @@ public class ExamAttemptService {
         if (request == null || request.answers() == null) {
             return;
         }
-        Map<Long, ExamPaperQuestion> questionsById = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper()).stream()
+        Map<Long, ExamPaperQuestion> questionsById = questionsForAttempt(attempt).stream()
                 .collect(Collectors.toMap(ExamPaperQuestion::getId, Function.identity()));
         for (SaveExamAttemptAnswersRequest.Answer submittedAnswer : request.answers()) {
             if (submittedAnswer == null || submittedAnswer.paperQuestionId() == null) {
@@ -253,21 +261,24 @@ public class ExamAttemptService {
         }
     }
 
-    private ExamAttemptResponse toResponse(ExamAttempt attempt, boolean includeQuestions, boolean revealAnswers) {
+    private ExamAttemptResponse toResponse(
+            ExamAttempt attempt,
+            boolean includeQuestions,
+            boolean revealAnswers,
+            boolean revealScore
+    ) {
         Map<Long, ExamAttemptAnswer> answersByQuestionId = includeQuestions || revealAnswers
                 ? answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity(), (left, right) -> left, LinkedHashMap::new))
                 : Map.of();
+        List<ExamPaperQuestion> presentedQuestions = includeQuestions || revealAnswers
+                ? presentedQuestions(attempt)
+                : List.of();
         List<ExamAttemptQuestionResponse> questions = includeQuestions
-                ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper()).stream()
-                .map(question -> toQuestionResponse(question, answersByQuestionId.get(question.getId())))
-                .toList()
+                ? toQuestionResponses(attempt, presentedQuestions, answersByQuestionId)
                 : List.of();
         List<ExamAttemptAnswerResponse> answers = revealAnswers
-                ? paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper()).stream()
-                .sorted(Comparator.comparing(ExamPaperQuestion::getPosition))
-                .map(question -> toAnswerResponse(question, answersByQuestionId.get(question.getId())))
-                .toList()
+                ? toAnswerResponses(attempt, presentedQuestions, answersByQuestionId)
                 : List.of();
         return new ExamAttemptResponse(
                 attempt.getId(),
@@ -288,51 +299,237 @@ public class ExamAttemptService {
                 attempt.getStartedAt(),
                 attempt.getSubmittedAt(),
                 attempt.getExpiresAt(),
-                attempt.getScore(),
-                attempt.getCorrectCount(),
+                revealScore ? attempt.getScore() : null,
+                revealScore ? attempt.getCorrectCount() : null,
                 attempt.getTotalQuestions(),
-                attempt.getPassed(),
-                attempt.getClassification() == null ? null : attempt.getClassification().name(),
-                attempt.getClassification() == null ? null : QuestionGenerationLabels.competencyLevel(attempt.getClassification()),
+                revealScore ? attempt.getPassed() : null,
+                revealScore && attempt.getClassification() != null ? attempt.getClassification().name() : null,
+                revealScore && attempt.getClassification() != null ? QuestionGenerationLabels.competencyLevel(attempt.getClassification()) : null,
                 attempt.getTimeSpentSeconds(),
                 questions,
                 answers
         );
     }
 
-    private ExamAttemptQuestionResponse toQuestionResponse(ExamPaperQuestion question, ExamAttemptAnswer answer) {
-        ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(question)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
-        return new ExamAttemptQuestionResponse(
-                question.getId(),
-                question.getPosition(),
-                snapshot.getStem(),
-                snapshot.getOptionA(),
-                snapshot.getOptionB(),
-                snapshot.getOptionC(),
-                snapshot.getOptionD(),
-                answer == null ? null : answer.getSelectedAnswer()
+    private List<ExamAttemptQuestionResponse> toQuestionResponses(
+            ExamAttempt attempt,
+            List<ExamPaperQuestion> questions,
+            Map<Long, ExamAttemptAnswer> answersByQuestionId
+    ) {
+        List<ExamAttemptQuestionResponse> responses = new ArrayList<>();
+        for (int index = 0; index < questions.size(); index++) {
+            ExamPaperQuestion question = questions.get(index);
+            ExamPaperQuestionSnapshot snapshot = snapshot(question);
+            OptionPresentation options = optionPresentation(attempt, question, snapshot);
+            ExamAttemptAnswer answer = answersByQuestionId.get(question.getId());
+            responses.add(new ExamAttemptQuestionResponse(
+                    question.getId(),
+                    index + 1,
+                    snapshot.getStem(),
+                    options.optionA(),
+                    options.optionB(),
+                    options.optionC(),
+                    options.optionD(),
+                    answer == null ? null : answer.getSelectedAnswer()
+            ));
+        }
+        return responses;
+    }
+
+    private List<ExamAttemptAnswerResponse> toAnswerResponses(
+            ExamAttempt attempt,
+            List<ExamPaperQuestion> questions,
+            Map<Long, ExamAttemptAnswer> answersByQuestionId
+    ) {
+        List<ExamAttemptAnswerResponse> responses = new ArrayList<>();
+        for (int index = 0; index < questions.size(); index++) {
+            ExamPaperQuestion question = questions.get(index);
+            ExamPaperQuestionSnapshot snapshot = snapshot(question);
+            OptionPresentation options = optionPresentation(attempt, question, snapshot);
+            ExamAttemptAnswer answer = answersByQuestionId.get(question.getId());
+            responses.add(new ExamAttemptAnswerResponse(
+                    question.getId(),
+                    index + 1,
+                    answer == null ? null : answer.getSelectedAnswer(),
+                    answer != null && Boolean.TRUE.equals(answer.getCorrect()),
+                    options.correctAnswer(),
+                    snapshot.getExplanation()
+            ));
+        }
+        return responses;
+    }
+
+    private List<ExamPaperQuestion> presentedQuestions(ExamAttempt attempt) {
+        List<ExamAttemptQuestion> selections = attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt);
+        if (!selections.isEmpty()) {
+            return selections.stream().map(ExamAttemptQuestion::getPaperQuestion).toList();
+        }
+        List<ExamPaperQuestion> questions = new ArrayList<>(questionsForAttempt(attempt));
+        ExamAssignment assignment = attempt.getAssignment();
+        if (attempt.getPresentationSeed() == null
+                || assignment == null
+                || !Boolean.TRUE.equals(assignment.getShuffleQuestions())
+                || questions.size() < 2) {
+            return questions;
+        }
+        Collections.shuffle(questions, new Random(mixSeed(attempt.getPresentationSeed(), attempt.getExamPaper().getId())));
+        return questions;
+    }
+
+    private void initializeAttemptQuestions(ExamAttempt attempt) {
+        if (selectionMode(attempt) != ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
+                || !attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt).isEmpty()) {
+            return;
+        }
+        List<ExamPaperQuestion> pool = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
+        ExamDifficultyAllocator.Percentages percentages = ExamDifficultyAllocator.percentages(
+                attempt.getExamPaper().getEasyPercentage(),
+                attempt.getExamPaper().getMediumPercentage(),
+                attempt.getExamPaper().getHardPercentage()
+        );
+        ExamDifficultyAllocator.Counts required = ExamDifficultyAllocator.allocate(
+                attempt.getExamPaper().getTotalQuestions(),
+                percentages
+        );
+        Set<Long> seenIds = Set.copyOf(attemptQuestionRepository.findPreviouslySeenQuestionIds(
+                attempt.getAssignment(),
+                attempt.getUser(),
+                attempt.getAttemptNumber()
+        ));
+        Map<String, List<ExamPaperQuestion>> byDifficulty = pool.stream()
+                .collect(Collectors.groupingBy(question ->
+                        ExamDifficultyAllocator.normalizeDifficulty(snapshot(question).getDifficulty())));
+        List<ExamPaperQuestion> selected = new ArrayList<>();
+        selectDifficultyBucket(selected, byDifficulty.getOrDefault("EASY", List.of()), required.easy(), seenIds,
+                mixSeed(attempt.getPresentationSeed(), 101L));
+        selectDifficultyBucket(selected, byDifficulty.getOrDefault("MEDIUM", List.of()), required.medium(), seenIds,
+                mixSeed(attempt.getPresentationSeed(), 211L));
+        selectDifficultyBucket(selected, byDifficulty.getOrDefault("HARD", List.of()), required.hard(), seenIds,
+                mixSeed(attempt.getPresentationSeed(), 307L));
+        if (selected.size() != attempt.getExamPaper().getTotalQuestions()) {
+            throw new BadRequestException("Bộ câu hỏi không còn đủ câu theo tỷ lệ độ khó đã cấu hình");
+        }
+        if (Boolean.TRUE.equals(attempt.getAssignment().getShuffleQuestions())) {
+            Collections.shuffle(selected, new Random(mixSeed(attempt.getPresentationSeed(), attempt.getExamPaper().getId())));
+        } else {
+            selected.sort(java.util.Comparator.comparing(ExamPaperQuestion::getPosition));
+        }
+        for (int index = 0; index < selected.size(); index++) {
+            attemptQuestionRepository.save(ExamAttemptQuestion.builder()
+                    .attempt(attempt)
+                    .paperQuestion(selected.get(index))
+                    .position(index + 1)
+                    .build());
+        }
+    }
+
+    private void selectDifficultyBucket(
+            List<ExamPaperQuestion> selected,
+            List<ExamPaperQuestion> candidates,
+            int required,
+            Set<Long> seenIds,
+            long seed
+    ) {
+        if (required == 0) {
+            return;
+        }
+        List<ExamPaperQuestion> unseen = candidates.stream()
+                .filter(question -> !seenIds.contains(question.getId()))
+                .collect(Collectors.toCollection(ArrayList::new));
+        List<ExamPaperQuestion> seen = candidates.stream()
+                .filter(question -> seenIds.contains(question.getId()))
+                .collect(Collectors.toCollection(ArrayList::new));
+        Collections.shuffle(unseen, new Random(seed));
+        Collections.shuffle(seen, new Random(mixSeed(seed, 401L)));
+        unseen.stream().limit(required).forEach(selected::add);
+        if (unseen.size() < required) {
+            seen.stream().limit(required - unseen.size()).forEach(selected::add);
+        }
+    }
+
+    private List<ExamPaperQuestion> questionsForAttempt(ExamAttempt attempt) {
+        List<ExamAttemptQuestion> selections = attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt);
+        if (!selections.isEmpty()) {
+            return selections.stream().map(ExamAttemptQuestion::getPaperQuestion).toList();
+        }
+        return paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
+    }
+
+    private ExamQuestionSelectionMode selectionMode(ExamAttempt attempt) {
+        return attempt.getExamPaper().getQuestionSelectionMode() == null
+                ? ExamQuestionSelectionMode.FIXED_PAPER
+                : attempt.getExamPaper().getQuestionSelectionMode();
+    }
+
+    private OptionPresentation optionPresentation(
+            ExamAttempt attempt,
+            ExamPaperQuestion question,
+            ExamPaperQuestionSnapshot snapshot
+    ) {
+        List<OptionChoice> choices = new ArrayList<>(List.of(
+                new OptionChoice("A", snapshot.getOptionA()),
+                new OptionChoice("B", snapshot.getOptionB()),
+                new OptionChoice("C", snapshot.getOptionC()),
+                new OptionChoice("D", snapshot.getOptionD())
+        ));
+        ExamAssignment assignment = attempt.getAssignment();
+        if (attempt.getPresentationSeed() != null
+                && assignment != null
+                && Boolean.TRUE.equals(assignment.getShuffleOptions())) {
+            Collections.shuffle(choices, new Random(mixSeed(attempt.getPresentationSeed(), question.getId())));
+            if (isOriginalOptionOrder(choices)) {
+                Collections.rotate(choices, 1);
+            }
+        }
+        String sourceCorrectAnswer = normalizeAnswer(snapshot.getCorrectAnswer());
+        String displayedCorrectAnswer = sourceCorrectAnswer;
+        List<String> displayedLabels = List.of("A", "B", "C", "D");
+        for (int index = 0; index < choices.size(); index++) {
+            if (choices.get(index).sourceLabel().equals(sourceCorrectAnswer)) {
+                displayedCorrectAnswer = displayedLabels.get(index);
+                break;
+            }
+        }
+        return new OptionPresentation(
+                choices.get(0).text(),
+                choices.get(1).text(),
+                choices.get(2).text(),
+                choices.get(3).text(),
+                displayedCorrectAnswer
         );
     }
 
-    private ExamAttemptAnswerResponse toAnswerResponse(ExamPaperQuestion question, ExamAttemptAnswer answer) {
-        ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(question)
+    private ExamPaperQuestionSnapshot snapshot(ExamPaperQuestion question) {
+        return snapshotRepository.findByExamPaperQuestion(question)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
-        return new ExamAttemptAnswerResponse(
-                question.getId(),
-                question.getPosition(),
-                answer == null ? null : answer.getSelectedAnswer(),
-                answer == null ? false : Boolean.TRUE.equals(answer.getCorrect()),
-                snapshot.getCorrectAnswer(),
-                snapshot.getExplanation()
-        );
+    }
+
+    private boolean isOriginalOptionOrder(List<OptionChoice> choices) {
+        return choices.size() == 4
+                && "A".equals(choices.get(0).sourceLabel())
+                && "B".equals(choices.get(1).sourceLabel())
+                && "C".equals(choices.get(2).sourceLabel())
+                && "D".equals(choices.get(3).sourceLabel());
+    }
+
+    private long mixSeed(long seed, Long discriminator) {
+        long value = seed ^ (discriminator == null ? 0L : discriminator * 0x9E3779B97F4A7C15L);
+        value ^= value >>> 30;
+        value *= 0xBF58476D1CE4E5B9L;
+        value ^= value >>> 27;
+        value *= 0x94D049BB133111EBL;
+        return value ^ (value >>> 31);
     }
 
     private void validateStartableAssignment(ExamAssignment assignment, User user) {
+        LocalDateTime now = LocalDateTime.now();
         if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
             throw new BadRequestException("Phân công kiểm tra chưa mở");
         }
-        if (assignment.getDueAt() != null && LocalDateTime.now().isAfter(assignment.getDueAt())) {
+        if (assignment.getAvailableFrom() != null && now.isBefore(assignment.getAvailableFrom())) {
+            throw new BadRequestException("Chưa đến thời gian bắt đầu bài kiểm tra");
+        }
+        if (assignment.getDueAt() != null && now.isAfter(assignment.getDueAt())) {
             throw new BadRequestException("Phân công kiểm tra đã quá hạn");
         }
         if (assignment.getExamPaper().getStatus() != ExamPaperStatus.PUBLISHED) {
@@ -369,43 +566,16 @@ public class ExamAttemptService {
         if (attempt.getStatus() != ExamAttemptStatus.SUBMITTED && attempt.getStatus() != ExamAttemptStatus.GRADED) {
             return false;
         }
-        // Chống lỗ hổng "xem đáp án rồi thi lại trên cùng một đề": mọi lượt của một phân công
-        // đều dùng chung một bộ đề, nên chỉ tiết lộ đáp án đúng + giải thích khi người dùng
-        // KHÔNG còn cách nào tác động tới kết quả nữa (không còn lượt đang làm dở và không
-        // bắt đầu thêm lượt mới được vì hết lượt / phân công đã đóng / đã quá hạn).
-        return !hasRemainingExamAccess(attempt);
+        return assignmentService.isAssignmentEnded(attempt.getAssignment(), LocalDateTime.now());
     }
 
-    /**
-     * Người dùng còn có thể tác động tới kết quả của phân công này hay không:
-     * đang có một lượt làm dở chưa hết giờ, hoặc còn được bắt đầu thêm một lượt mới.
-     */
-    private boolean hasRemainingExamAccess(ExamAttempt attempt) {
-        ExamAssignment assignment = attempt.getAssignment();
-        if (assignment == null) {
-            // Không xác định được phân công: giữ nguyên hành vi cũ (cho phép tiết lộ).
-            return false;
-        }
-        List<ExamAttempt> attempts = attemptRepository
-                .findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, attempt.getUser());
-        // Còn lượt đang làm dở trên cùng bộ đề (kể cả khi phân công đã đóng, vì submit()
-        // chỉ kiểm tra trạng thái lượt) — chưa được lộ đáp án của các lượt trước.
-        boolean hasLiveAttempt = attempts.stream()
-                .anyMatch(other -> other.getStatus() == ExamAttemptStatus.IN_PROGRESS && !isExpired(other));
-        if (hasLiveAttempt) {
-            return true;
-        }
-        if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
-            return false;
-        }
-        if (assignment.getDueAt() != null && LocalDateTime.now().isAfter(assignment.getDueAt())) {
-            return false;
-        }
-        // Đếm y hệt cách start() đang chặn vượt số lượt (countByAssignmentAndUser = số dòng lượt).
-        int maxAttempts = assignment.getMaxAttempts() == null
-                ? DEFAULT_MAX_ATTEMPTS
-                : assignment.getMaxAttempts();
-        return attempts.size() < maxAttempts;
+    private boolean canRevealScore(ExamAttempt attempt) {
+        return resultVisibility(attempt) == ExamResultVisibility.SCORE_ONLY
+                || assignmentService.isAssignmentEnded(attempt.getAssignment(), LocalDateTime.now());
+    }
+
+    private boolean canRevealQuestionReview(ExamAttempt attempt) {
+        return attempt.getStatus() == ExamAttemptStatus.IN_PROGRESS || canRevealScore(attempt);
     }
 
     private ExamResultVisibility resultVisibility(ExamAttempt attempt) {
@@ -449,5 +619,17 @@ public class ExamAttemptService {
         }
         String normalized = answer.trim().toUpperCase(Locale.ROOT);
         return VALID_ANSWERS.contains(normalized) ? normalized : null;
+    }
+
+    private record OptionChoice(String sourceLabel, String text) {
+    }
+
+    private record OptionPresentation(
+            String optionA,
+            String optionB,
+            String optionC,
+            String optionD,
+            String correctAnswer
+    ) {
     }
 }

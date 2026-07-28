@@ -68,6 +68,12 @@ export const documentQuestionApi = {
     })
   },
 
+  getPotentialDuplicates(candidateId) {
+    return httpClient.get(`/document-question-candidates/${candidateId}/potential-duplicates`, {
+      headers: authHeaders(),
+    })
+  },
+
   updateCandidate(candidateId, payload) {
     return httpClient.put(`/document-question-candidates/${candidateId}`, payload, {
       headers: authHeaders(),

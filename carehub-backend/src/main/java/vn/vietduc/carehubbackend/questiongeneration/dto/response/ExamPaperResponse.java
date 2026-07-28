@@ -16,11 +16,16 @@ public record ExamPaperResponse(
         String status,
         String statusText,
         Integer totalQuestions,
+        Integer poolQuestionCount,
         Integer timeLimitMinutes,
         Integer passingScore,
+        String questionSelectionMode,
+        DifficultyPercentages difficultyPercentages,
         List<ExamPaperQuestionResponse> questions,
         LocalDateTime publishedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+    public record DifficultyPercentages(Integer easy, Integer medium, Integer hard) {
+    }
 }

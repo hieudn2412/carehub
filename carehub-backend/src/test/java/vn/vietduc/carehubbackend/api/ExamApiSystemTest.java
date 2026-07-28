@@ -12,6 +12,13 @@ import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -290,6 +297,59 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 .isEqualTo("Bạn không có quyền truy cập lượt làm bài này");
     }
 
+    @DisplayName("L3-EXM-17 | Balanced random: each attempt keeps a stable 30/50/20 selection and prefers unseen questions")
+    @Test
+    void balancedAttemptsKeepDifficultyMixAndPreferUnseenQuestions() {
+        List<Long> questionIds = new ArrayList<>();
+        for (int index = 0; index < 3; index++) questionIds.add(approvedQuestion("easy-" + index, "EASY"));
+        for (int index = 0; index < 5; index++) questionIds.add(approvedQuestion("medium-" + index, "MEDIUM"));
+        for (int index = 0; index < 2; index++) questionIds.add(approvedQuestion("hard-" + index, "HARD"));
+        String joinedIds = questionIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        long setId = id(post(API + "/question-sets", adminToken, """
+                {"name":"Bộ cân bằng %d","questionIds":[%s]}
+                """.formatted(nextSeq(), joinedIds)));
+        assertOk(post(API + "/question-sets/" + setId + "/activate", adminToken, "{}"));
+
+        long configId = id(post(API + "/exam-configs", adminToken, """
+                {"name":"Cấu hình cân bằng %d","questionSetId":%d,"totalQuestions":5,"timeLimitMinutes":30,
+                 "passingScore":5,"maxRetakes":1,"shuffleQuestions":false,"shuffleOptions":false,
+                 "questionSelectionMode":"PER_ATTEMPT_BALANCED",
+                 "difficultyPercentages":{"easy":30,"medium":50,"hard":20},"status":"ACTIVE",
+                 "distributions":[
+                   {"difficulty":"EASY","questionCount":1,"required":true},
+                   {"difficulty":"MEDIUM","questionCount":3,"required":true},
+                   {"difficulty":"HARD","questionCount":1,"required":true}
+                 ]}
+                """.formatted(nextSeq(), setId)));
+        ResponseEntity<String> generated = post(API + "/exam-papers/generate", adminToken, """
+                {"examConfigId":%d,"namePrefix":"Đề cân bằng","variantCount":1,"randomSeed":99}
+                """.formatted(configId));
+        assertOk(generated);
+        JsonNode paper = data(generated).get(0);
+        assertThat(paper.get("totalQuestions").asInt()).isEqualTo(5);
+        assertThat(paper.get("poolQuestionCount").asInt()).isEqualTo(10);
+        Map<Long, String> difficultyByPaperQuestion = new HashMap<>();
+        paper.get("questions").forEach(question ->
+                difficultyByPaperQuestion.put(question.get("id").asLong(), question.get("difficulty").asText()));
+        long paperId = paper.get("id").asLong();
+        assertOk(post(API + "/exam-papers/" + paperId + "/publish", adminToken, "{}"));
+        long assignmentId = id(post(API + "/exam-assignments", adminToken, assignmentBody(paperId, 2)));
+        assertOk(post(API + "/exam-assignments/" + assignmentId + "/open", adminToken, "{}"));
+
+        JsonNode first = data(post(API + "/me/exam-assignments/" + assignmentId + "/start", employeeToken, "{}"));
+        long firstAttemptId = first.get("id").asLong();
+        Set<Long> firstIds = questionIds(first);
+        assertDifficultyCounts(firstIds, difficultyByPaperQuestion, 1, 3, 1);
+        JsonNode reloaded = data(get(API + "/me/exam-attempts/" + firstAttemptId, employeeToken));
+        assertThat(questionIds(reloaded)).containsExactlyInAnyOrderElementsOf(firstIds);
+        assertOk(post(API + "/me/exam-attempts/" + firstAttemptId + "/submit", employeeToken, "{\"answers\":[]}"));
+
+        JsonNode second = data(post(API + "/me/exam-assignments/" + assignmentId + "/start", employeeToken, "{}"));
+        Set<Long> secondIds = questionIds(second);
+        assertDifficultyCounts(secondIds, difficultyByPaperQuestion, 1, 3, 1);
+        assertThat(secondIds).isNotEqualTo(firstIds);
+    }
+
     // ------------------------------------------------------------------ chain helpers
 
     private String questionBody(String label) {
@@ -297,6 +357,13 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
                  "correctAnswer":"A","explanation":"L3 system test","topic":"An toàn","difficulty":"EASY","language":"vi"}
                 """.formatted(label, nextSeq());
+    }
+
+    private String questionBody(String label, String difficulty) {
+        return """
+                {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
+                 "correctAnswer":"A","explanation":"L3 system test","topic":"An toàn","difficulty":"%s","language":"vi"}
+                """.formatted(label, nextSeq(), difficulty);
     }
 
     /** Explicit DRAFT — without a status the service approves on create (D41). */
@@ -309,6 +376,35 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         long questionId = id(post(API + "/questions", adminToken, questionBody(label)));
         assertOk(post(API + "/questions/" + questionId + "/approve", adminToken, "{}"));
         return questionId;
+    }
+
+    private long approvedQuestion(String label, String difficulty) {
+        long questionId = id(post(API + "/questions", adminToken, questionBody(label, difficulty)));
+        assertOk(post(API + "/questions/" + questionId + "/approve", adminToken, "{}"));
+        return questionId;
+    }
+
+    private Set<Long> questionIds(JsonNode attempt) {
+        Set<Long> ids = new HashSet<>();
+        attempt.get("questions").forEach(question -> ids.add(question.get("paperQuestionId").asLong()));
+        return ids;
+    }
+
+    private void assertDifficultyCounts(
+            Set<Long> paperQuestionIds,
+            Map<Long, String> difficultyByPaperQuestion,
+            long easy,
+            long medium,
+            long hard
+    ) {
+        Map<String, Long> counts = paperQuestionIds.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        difficultyByPaperQuestion::get,
+                        java.util.stream.Collectors.counting()
+                ));
+        assertThat(counts.getOrDefault("EASY", 0L)).isEqualTo(easy);
+        assertThat(counts.getOrDefault("MEDIUM", 0L)).isEqualTo(medium);
+        assertThat(counts.getOrDefault("HARD", 0L)).isEqualTo(hard);
     }
 
     private long activeQuestionSet() {
@@ -346,7 +442,8 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
     private String assignmentBody(long paperId, int maxAttempts) {
         return """
                 {"name":"Phân công L3 %d","examPaperId":%d,"professionalFieldId":%d,"userIds":[%d],
-                 "maxAttempts":%d,"resultVisibility":"SCORE_AND_ANSWERS","status":"DRAFT"}
+                 "maxAttempts":%d,"shuffleQuestions":false,"shuffleOptions":false,
+                 "resultVisibility":"SCORE_ONLY","status":"DRAFT"}
                 """.formatted(nextSeq(), paperId, professionalField.getId(), employee.getId(), maxAttempts);
     }
 

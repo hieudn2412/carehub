@@ -10,16 +10,21 @@ import {
   ReloadOutlined,
   SendOutlined,
   EditOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
 import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
+import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
+import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import '../../styles/TrainingHours.css'
 
 function TrainingHoursListScreen() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
@@ -32,6 +37,8 @@ function TrainingHoursListScreen() {
   const [reloadKey, setReloadKey] = useState(0)
   const [status, setStatus] = useState('')
   const [submittingId, setSubmittingId] = useState(null)
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [totalElements, setTotalElements] = useState(0)
   const [page, setPage] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
@@ -107,6 +114,21 @@ function TrainingHoursListScreen() {
       setListError('Không thể nộp hồ sơ đào tạo. Vui lòng kiểm tra minh chứng và thử lại.')
     } finally {
       setSubmittingId(null)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeletingId(deleteTarget.id)
+    try {
+      await trainingApi.deleteRecord(deleteTarget.id, deleteTarget.version)
+      showToast("Đã xóa hồ sơ đào tạo.", "success")
+      setDeleteTarget(null)
+      setReloadKey(value => value + 1)
+    } catch (error) {
+      showToast(getApiErrorMessage(error, "Không thể xóa hồ sơ đào tạo."), "error")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -293,14 +315,25 @@ function TrainingHoursListScreen() {
                                 <EyeOutlined />
                               </button>
                               {r.workflowStatus === 'DRAFT' && (
-                                <button
-                                  className="th-action-btn th-action-btn--edit admin-table-action admin-table-action--icon"
-                                  onClick={() => navigate(`/staff/training/${r.id}/edit`)}
-                                  title="Chỉnh sửa"
-                                  aria-label={`Chỉnh sửa ${r.title}`}
-                                >
-                                  <EditOutlined />
-                                </button>
+                                <>
+                                  <button
+                                    className="th-action-btn th-action-btn--edit admin-table-action admin-table-action--icon"
+                                    onClick={() => navigate(`/staff/training/${r.id}/edit`)}
+                                    title="Chỉnh sửa"
+                                    aria-label={`Chỉnh sửa ${r.title}`}
+                                  >
+                                    <EditOutlined />
+                                  </button>
+                                  <button
+                                    className="th-action-btn admin-table-action admin-table-action--icon admin-table-action--danger"
+                                    onClick={() => setDeleteTarget(r)}
+                                    disabled={deletingId === r.id}
+                                    title="Xóa hồ sơ"
+                                    aria-label={`Xóa hồ sơ ${r.title}`}
+                                  >
+                                    <DeleteOutlined />
+                                  </button>
+                                </>
                               )}
                               <button
                                 className="th-action-btn th-action-btn--evidence admin-table-action admin-table-action--icon"
@@ -348,6 +381,15 @@ function TrainingHoursListScreen() {
               )}
             </div>
       </div>
+      <ConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title="Xóa hồ sơ đào tạo"
+        message={`Bạn có chắc chắn muốn xóa hồ sơ “${deleteTarget?.title || ''}” không? Hồ sơ sẽ được lưu trạng thái đã hủy để bảo đảm lịch sử thay đổi.`}
+        confirmText="Xóa hồ sơ"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </AppShell>
   )
 }

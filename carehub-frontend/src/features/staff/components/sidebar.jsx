@@ -533,6 +533,7 @@ function Sidebar() {
           {navSections.map((section) => {
             const isExpanded = expandedSectionLabel === section.label
             const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
+            const directItem = section.items.length === 1 ? section.items[0] : null
 
             return (
               <div
@@ -541,37 +542,50 @@ function Sidebar() {
                   containsActiveItem ? 'sidebar__section--active' : ''
                 }`}
               >
-                <button
-                  type="button"
-                  className="sidebar__section-trigger"
-                  aria-expanded={isExpanded}
-                  onClick={() => handleSectionToggle(section.label)}
-                >
-                  <span>{section.label}</span>
-                  <DownOutlined className="sidebar__section-chevron" />
-                </button>
+                {directItem ? (
+                  <NavLink
+                    to={directItem.path}
+                    className="sidebar__section-trigger sidebar__section-trigger--link"
+                    onClick={() => setIsMobileOpen(false)}
+                  >
+                    <span className="sidebar__item-icon">{directItem.icon}</span>
+                    <span>{section.label}</span>
+                  </NavLink>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="sidebar__section-trigger"
+                      aria-expanded={isExpanded}
+                      onClick={() => handleSectionToggle(section.label)}
+                    >
+                      <span>{section.label}</span>
+                      <DownOutlined className="sidebar__section-chevron" />
+                    </button>
 
-                <div
-                  className={`sidebar__section-items ${
-                    isExpanded ? 'sidebar__section-items--open' : ''
-                  }`}
-                >
-                  <div className="sidebar__section-items-inner">
-                    {section.items.map((item) => (
-                      <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={() =>
-                          `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
-                        }
-                        onClick={() => setIsMobileOpen(false)}
-                      >
-                        <span className="sidebar__item-icon">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
+                    <div
+                      className={`sidebar__section-items ${
+                        isExpanded ? 'sidebar__section-items--open' : ''
+                      }`}
+                    >
+                      <div className="sidebar__section-items-inner">
+                        {section.items.map((item) => (
+                          <NavLink
+                            key={item.path}
+                            to={item.path}
+                            className={() =>
+                              `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
+                            }
+                            onClick={() => setIsMobileOpen(false)}
+                          >
+                            <span className="sidebar__item-icon">{item.icon}</span>
+                            <span>{item.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )
           })}

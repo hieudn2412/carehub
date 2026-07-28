@@ -23,4 +23,6 @@ public interface TrainingRecordService {
     TrainingRecordDetailResponse submit(Long id, TrainingRecordSubmitRequest request);
 
     TrainingRecordDetailResponse returnToDraft(Long id);
+
+    TrainingRecordDetailResponse delete(Long id, Long version);
 }

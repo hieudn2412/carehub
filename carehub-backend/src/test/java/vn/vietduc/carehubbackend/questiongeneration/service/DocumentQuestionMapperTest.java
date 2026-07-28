@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import org.junit.jupiter.api.Test;
+import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
@@ -13,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DocumentQuestionMapperTest {
 
-    private final DocumentQuestionMapper mapper = new DocumentQuestionMapper();
+    private final DocumentQuestionMapper mapper = new DocumentQuestionMapper(new ValidationRulesProperties());
 
     @Test
     void documentResponseIncludesLatestQuestionJobSummary() {

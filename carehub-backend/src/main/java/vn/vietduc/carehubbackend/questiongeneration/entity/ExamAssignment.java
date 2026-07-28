@@ -50,8 +50,17 @@ public class ExamAssignment extends BaseEntity {
     @Column(name = "due_at")
     private LocalDateTime dueAt;
 
+    @Column(name = "available_from")
+    private LocalDateTime availableFrom;
+
     @Column(name = "max_attempts", nullable = false)
     private Integer maxAttempts;
+
+    @Column(name = "shuffle_questions")
+    private Boolean shuffleQuestions;
+
+    @Column(name = "shuffle_options")
+    private Boolean shuffleOptions;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "result_visibility", length = 32)

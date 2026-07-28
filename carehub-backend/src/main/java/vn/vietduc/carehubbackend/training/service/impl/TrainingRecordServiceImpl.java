@@ -276,6 +276,34 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         return detailResponse(saved, 0);
     }
 
+    @Override
+    @Transactional
+    public TrainingRecordDetailResponse delete(Long id, Long version) {
+        TrainingRecord record = findScopedRecord(id);
+        User actor = accessPolicy.currentActor();
+        boolean isAdminUser = isAdmin();
+        boolean isOwner = record.getEmployee().getId().equals(actor.getId());
+
+        if (!isAdminUser && !isOwner) {
+            throw new ForbiddenException("Bạn không có quyền xóa hồ sơ này");
+        }
+
+        requireFreshVersion(record, version);
+        Map<String, Object> before = snapshot(record);
+        stateMachine.requireTransition(
+                record.getWorkflowStatus(),
+                TrainingRecordStatus.CANCELLED,
+                isAdminUser
+        );
+        record.setWorkflowStatus(TrainingRecordStatus.CANCELLED);
+        record.setSubmittedAt(null);
+        record.setUpdatedByUser(actor);
+
+        TrainingRecord saved = recordRepository.save(record);
+        safeAuditLog(saved, TrainingRecordChangeType.CANCELLED, before, actor);
+        return detailResponse(saved, 0);
+    }
+
     private TrainingRecord findScopedRecord(Long id) {
         TrainingRecord record = recordRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Training record not found"));

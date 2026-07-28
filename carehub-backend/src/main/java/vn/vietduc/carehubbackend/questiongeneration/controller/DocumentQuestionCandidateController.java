@@ -17,10 +17,12 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchDocumentQue
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDocumentQuestionCandidateRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchDocumentQuestionCandidateActionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionDuplicateMatchResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.CandidateReviewService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("${app.api-prefix}/document-question-candidates")
@@ -35,6 +37,16 @@ public class DocumentQuestionCandidateController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy chi tiết câu hỏi đề xuất thành công",
                 candidateReviewService.get(candidateId)
+        ));
+    }
+
+    @GetMapping("/{candidateId}/potential-duplicates")
+    public ResponseEntity<ApiResponse<List<QuestionDuplicateMatchResponse>>> potentialDuplicates(
+            @PathVariable Long candidateId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy danh sách câu hỏi có khả năng trùng thành công",
+                candidateReviewService.potentialDuplicates(candidateId)
         ));
     }
 
