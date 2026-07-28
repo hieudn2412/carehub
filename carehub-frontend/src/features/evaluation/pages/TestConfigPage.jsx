@@ -97,7 +97,7 @@ function TestConfigPage() {
 
   useEffect(() => {
     // Hydrate exam configuration data on mount.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 

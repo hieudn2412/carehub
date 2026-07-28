@@ -44,7 +44,7 @@ function QuestionSetCategoryListPage() {
 
   useEffect(() => {
     // Hydrate categories when the screen mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadCategories()
   }, [loadCategories])
 

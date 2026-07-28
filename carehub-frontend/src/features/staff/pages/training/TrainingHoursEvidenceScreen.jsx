@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   FileTextOutlined,
   FileImageOutlined,
@@ -8,7 +8,8 @@ import {
   DeleteOutlined,
   InfoCircleOutlined,
   InboxOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -20,6 +21,7 @@ import '../../styles/TrainingHours.css'
 
 function TrainingHoursEvidenceScreen() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const { showToast } = useToast()
 
@@ -206,7 +208,7 @@ function TrainingHoursEvidenceScreen() {
   const toAbsoluteDownloadUrl = (downloadUrl) => {
     if (!downloadUrl) return ''
     if (/^https?:\/\//i.test(downloadUrl)) return downloadUrl
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1'
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api/v1'
     const apiBase = new URL(apiBaseUrl, window.location.origin)
     return new URL(downloadUrl, apiBase.origin).toString()
   }
@@ -285,7 +287,7 @@ function TrainingHoursEvidenceScreen() {
                       accept="image/png,image/jpeg,application/pdf"
                       style={{ display: 'none' }}
                     />
-                    
+
                     {isEditable ? (
                       <div
                         onDragOver={handleDragOver}
@@ -326,7 +328,7 @@ function TrainingHoursEvidenceScreen() {
                   <h2 className="th-evidence-list-title" id="attached-evidence-heading">
                     Danh sách tệp minh chứng đã đính kèm
                   </h2>
-                  
+
                   {evidenceList.length === 0 ? (
                     <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280', border: '1px dashed #e5e7eb', borderRadius: 8 }}>
                       Chưa có tệp minh chứng nào được tải lên cho hồ sơ này.
@@ -354,19 +356,19 @@ function TrainingHoursEvidenceScreen() {
                               {getModerationLabel(f.moderationStatus)}
                             </span>
                             <div style={{ display: 'flex', gap: 8 }}>
-                              <button 
-                                className="training-button" 
-                                onClick={() => handleDownload(f.id)} 
+                              <button
+                                className="training-button"
+                                onClick={() => handleDownload(f.id)}
                                 style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px' }}
                                 type="button"
                               >
                                 <DownloadOutlined style={{ marginRight: 4 }} /> Tải về
                               </button>
-                              
+
                               {isEditable && (
-                                <button 
-                                  className="training-button" 
-                                  onClick={() => handleDelete(f.id)} 
+                                <button
+                                  className="training-button"
+                                  onClick={() => handleDelete(f.id)}
                                   style={{ padding: '4px 10px', minHeight: '30px', fontSize: '12.5px', borderRadius: '6px', color: '#b91c1c', borderColor: '#fca5a5', background: '#fef2f2' }}
                                   type="button"
                                 >

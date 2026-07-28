@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test'
  * L4 E2E — see docs/l4-e2e-tests/README.md for what has to be running first.
  *
  * The suite talks to a real browser, a real frontend and a real backend; nothing is mocked. Only the
- * Vite dev server is started here — the backend on 8081 is an external precondition because it needs
+ * Vite dev server is started here — the backend on 8080 is an external precondition because it needs
  * a database, and pointing it at the wrong one writes test data into a shared environment.
  */
 export default defineConfig({

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { 
-  EyeOutlined, 
-  UploadOutlined, 
+import {
+  EyeOutlined,
+  UploadOutlined,
   LoadingOutlined,
   FileDoneOutlined,
   FileExclamationOutlined,
@@ -14,7 +14,7 @@ import '../../styles/TrainingHours.css'
 
 function TrainingHoursEvidencesListScreen() {
   const navigate = useNavigate()
-  
+
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -116,11 +116,11 @@ function TrainingHoursEvidencesListScreen() {
                         </span>
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#2563eb' }}>{r.declaredHours} giờ</span>
                       </div>
-                      
+
                       <h2 className="th-evidence-record-title">
                         {r.title}
                       </h2>
-                      
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#6b7280', marginBottom: 12 }}>
                         {r.evidenceCount > 0 ? (
                           <>

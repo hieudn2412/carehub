@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useCallback, useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   CheckCircleOutlined,
@@ -22,7 +22,7 @@ function StaffQuestionReviewPage() {
   const [loading, setLoading] = useState(true)
   const [processingId, setProcessingId] = useState(null)
 
-  const load = async (silent) => {
+  const load = useCallback(async (silent) => {
     if (!silent) setLoading(true)
     try {
       const res = await documentQuestionApi.getQuestionJob(jobId)
@@ -32,14 +32,14 @@ function StaffQuestionReviewPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }
+  }, [jobId, showToast])
 
-  useEffect(() => { load() }, [jobId])
+  useEffect(() => { load() }, [load])
   useEffect(() => {
     if (!job || !['CREATED', 'GENERATING'].includes(job.status)) return
     const i = setInterval(() => load(true), 3000)
     return () => clearInterval(i)
-  }, [job?.status])
+  }, [job, load])
 
   // Polling for generating
   const candidates = useMemo(() => job?.candidates || [], [job])

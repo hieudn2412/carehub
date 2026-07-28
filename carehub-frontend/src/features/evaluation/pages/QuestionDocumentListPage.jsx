@@ -76,7 +76,7 @@ function QuestionDocumentListPage() {
   const displayRows = filteredDocuments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadDocuments()
   }, [loadDocuments])
 

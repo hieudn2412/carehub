@@ -103,7 +103,7 @@ function QuestionSetFormPage() {
 
   useEffect(() => {
     // Hydrate form and question-bank data when the edited set changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 

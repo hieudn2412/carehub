@@ -69,7 +69,7 @@ function QuestionSetQuestionsPage() {
 
   useEffect(() => {
     // Hydrate the selected set and approved question bank when the route changes.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData()
   }, [loadData])
 

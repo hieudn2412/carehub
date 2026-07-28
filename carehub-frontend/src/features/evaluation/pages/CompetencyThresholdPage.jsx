@@ -52,7 +52,7 @@ function CompetencyThresholdPage() {
 
   useEffect(() => {
     // Hydrate thresholds from the API when the page mounts.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadThresholds()
   }, [loadThresholds])
 

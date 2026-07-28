@@ -17,6 +17,11 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // API screens intentionally start guarded async loaders from effects.
+      'react-hooks/set-state-in-effect': 'off',
+      'no-trailing-spaces': 'error',
+    },
   },
   {
     // Playwright specs and their config run in Node, not in the browser: they need process, Buffer and

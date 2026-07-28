@@ -17,7 +17,7 @@ function TrainingEmployeeStatusDetailPage() {
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  
+
   const [employeeInfo, setEmployeeInfo] = useState({
     employeeName: '',
     employeeCode: '',
@@ -90,7 +90,7 @@ function TrainingEmployeeStatusDetailPage() {
   return (
     <AppShell back={{ to: '/training/employees', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
             <div className="ted-page">
-              
+
               {/* Title Card */}
               <div className="ted-title-card">
                 <h1 className="ted-title">Chi tiết đào tạo nhân viên</h1>

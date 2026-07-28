@@ -62,7 +62,7 @@ function QuestionDocumentDetailPage() {
   }, [documentId, showToast])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadDocument()
   }, [loadDocument])
 
