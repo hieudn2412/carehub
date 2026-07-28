@@ -231,6 +231,7 @@
 .eh-table {
   width: 100%;
   border-collapse: collapse;
+  background: #fff;
 }
 
 .eh-table th {
@@ -241,6 +242,9 @@
   padding: 14px 16px;
   border-bottom: 1px solid #e2e8f0;
   background: #f8fafc;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .eh-table td {
@@ -249,6 +253,7 @@
   font-size: 14px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  line-height: 1.45;
 }
 
 .eh-table tr:last-child td {
@@ -257,6 +262,44 @@
 
 .eh-table tr:hover td {
   background: #f8fafc;
+}
+
+.eh-take-table {
+  min-width: 940px;
+  table-layout: fixed;
+}
+
+.eh-take-table__name-col {
+  width: 260px;
+}
+
+.eh-take-table__due-col {
+  width: 170px;
+}
+
+.eh-take-table__attempt-col {
+  width: 180px;
+}
+
+.eh-take-table__score-col {
+  width: 130px;
+}
+
+.eh-take-table__status-col {
+  width: 130px;
+}
+
+.eh-take-table__action-col {
+  width: 112px;
+}
+
+.eh-take-table td:first-child strong {
+  display: block;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .eh-score {
@@ -911,10 +954,16 @@
 }
 
 .eh-row-actions {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
+}
+
+.eh-row-actions .eh-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
 }
 
 .eh-action-wrap {

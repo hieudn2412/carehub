@@ -141,16 +141,23 @@ function CompetencyThresholdPage() {
         {loading ? (
           <section className="evd-panel evd-empty">Đang tải cấu hình...</section>
         ) : (
-          <section className="evd-panel">
+          <section className="evd-panel evd-threshold-panel">
             <div className="evd-table-scroll">
-              <table className="evd-table admin-table-uppercase">
+              <table className="evd-table evd-threshold-table admin-table-uppercase">
+                <colgroup>
+                  <col className="evd-threshold-table__level-col" />
+                  <col className="evd-threshold-table__label-col" />
+                  <col className="evd-threshold-table__score-col" />
+                  <col className="evd-threshold-table__score-col" />
+                  <col className="evd-threshold-table__color-col" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Mức năng lực</th>
-                    <th>Nhãn hiển thị</th>
-                    <th>Điểm tối thiểu (0–10)</th>
-                    <th>Điểm tối đa (0–10)</th>
-                    <th>Màu sắc</th>
+                    <th>Tên hiển thị</th>
+                    <th>Điểm từ</th>
+                    <th>Điểm đến</th>
+                    <th>Màu đại diện</th>
                   </tr>
                 </thead>
                 <tbody>

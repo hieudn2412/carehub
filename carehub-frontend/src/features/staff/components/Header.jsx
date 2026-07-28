@@ -127,6 +127,19 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     }
   }
 
+  const getNotificationTone = (type) => {
+    switch (type) {
+      case 'DANGER':
+        return 'danger'
+      case 'WARNING':
+        return 'warning'
+      case 'SUCCESS':
+        return 'success'
+      default:
+        return 'info'
+    }
+  }
+
   const renderNotificationContent = () => {
     if (notifications.length === 0) {
       return (
@@ -142,14 +155,14 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
           <button
             type="button"
             key={item.id}
-            className={`notify-item ${item.read ? 'read' : ''}`}
+            className={`notify-item${item.read ? '' : ' notify-item--unread'}`}
             onClick={() => markAsRead(item.id)}
           >
-            <div className={`notify-item__icon ${item.type?.toLowerCase()}`}>
+            <div className={`notify-item__icon-wrapper notify-item__icon-wrapper--${getNotificationTone(item.type)}`}>
               {getIcon(item.type)}
             </div>
             <div className="notify-item__content">
-              <p className="notify-item__text">{item.message}</p>
+              <p className="notify-item__desc">{item.message}</p>
               <p className="notify-item__footer">{item.sender} - {item.createdAt}</p>
             </div>
           </button>
@@ -235,8 +248,12 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
                     Bạn có <span>{unreadCount} thông báo</span> hôm nay
                   </p>
                 </div>
-                <button className="notify-popover__mark-read" onClick={markAllAsRead}>
-                  Đánh dấu đã đọc
+                <button
+                  className="notify-popover__mark-read"
+                  onClick={markAllAsRead}
+                  disabled={unreadCount === 0}
+                >
+                  Đọc tất cả
                 </button>
               </div>
 
