@@ -25,3 +25,86 @@
 .cfs-textarea { max-width: 600px; resize: vertical; }
 .cfs-readonly-answer { margin-left: 24px; padding: 8px 12px; background: #f8fafc; border-radius: 6px; color: #475569; font-size: 14px; }
 .cfs-empty { text-align: center; padding: 40px; color: #94a3b8; }
+
+/* bp-sm */
+@media (max-width: 768px) {
+  .cfs-container {
+    max-width: none;
+    padding: 2px;
+  }
+
+  .cfs-header {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .cfs-header h2 {
+    font-size: 20px;
+    line-height: 1.35;
+  }
+
+  .cfs-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .cfs-actions > button {
+    min-height: 44px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .cfs-section {
+    margin-bottom: 12px;
+    padding: 15px;
+  }
+
+  .cfs-question {
+    padding-block: 15px;
+  }
+
+  .cfs-question--answered {
+    padding-left: 10px;
+  }
+
+  .cfs-question-header {
+    align-items: flex-start;
+  }
+
+  .cfs-options {
+    gap: 9px;
+    margin-left: 0;
+  }
+
+  .cfs-option {
+    min-height: 46px;
+    padding: 10px 12px;
+  }
+
+  .cfs-option input {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+  }
+
+  .cfs-input,
+  .cfs-select,
+  .cfs-textarea,
+  .cfs-readonly-answer {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    box-sizing: border-box;
+  }
+
+  .cfs-input,
+  .cfs-select {
+    min-height: 44px;
+  }
+
+  .cfs-loading,
+  .cfs-error,
+  .cfs-empty {
+    padding: 36px 16px;
+  }
+}

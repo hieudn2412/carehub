@@ -352,7 +352,8 @@
 /* bp-sm */
 @media (max-width: 768px) {
   .profile-card {
-    padding: 22px 18px;
+    padding: 20px 16px;
+    border-radius: 10px;
   }
 
   .profile-card__header {
@@ -362,7 +363,9 @@
   }
 
   .profile-change-pw-btn {
-    align-self: flex-start;
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
   }
 
   .profile-info-grid {
@@ -380,10 +383,35 @@
   .profile-info-item:last-child {
     border-bottom: none;
   }
+
+  .profile-info-item > div:last-child {
+    min-width: 0;
+  }
+
+  .profile-info-value {
+    overflow-wrap: anywhere;
+  }
 }
 
 /* bp-xs */
 @media (max-width: 560px) {
+  .profile-card {
+    padding: 18px 14px;
+  }
+
+  .profile-card__sub {
+    margin-bottom: 18px;
+  }
+
+  .profile-card__avatar-row {
+    align-items: flex-start;
+  }
+
+  .profile-badges {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
   .profile-change-pw-btn,
   .change-password-modal__action {
     min-height: 44px;

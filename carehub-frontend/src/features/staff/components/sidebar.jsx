@@ -11,7 +11,10 @@ import {
   TeamOutlined,
   CheckSquareOutlined,
   FileDoneOutlined,
-  DownOutlined
+  DownOutlined,
+  LeftOutlined,
+  SearchOutlined,
+  BellOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -26,6 +29,15 @@ import logo from '../../../assets/logo.png'
 import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
 
+function normalizeSearchText(value) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLocaleLowerCase('vi')
+}
+
 /* TODO(ui-refactor): component này đang là "facade" sidebar duy nhất của app
    (AppShell dùng nó; khi user là admin nó render AdminSidebar). Bước hợp nhất
    vật lý AdminSidebar + Sidebar thành một AppSidebar nhận config menu theo
@@ -36,6 +48,9 @@ function Sidebar() {
   const currentPath = location.pathname
   const navRef = useRef(null)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [isMobileClosing, setIsMobileClosing] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [pendingRoute, setPendingRoute] = useState(null)
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -162,16 +177,31 @@ function Sidebar() {
   useEffect(() => {
     if (isAdmin) return undefined
 
-    const handleMenuToggle = () => setIsMobileOpen((current) => !current)
+    const handleMenuToggle = () => {
+      if (isMobileClosing) return
+
+      if (isMobileOpen) {
+        setIsMobileClosing(true)
+        setIsMobileOpen(false)
+        return
+      }
+
+      setPendingRoute(null)
+      setIsMobileOpen(true)
+    }
     window.addEventListener('staff-sidebar-toggle', handleMenuToggle)
     return () => window.removeEventListener('staff-sidebar-toggle', handleMenuToggle)
-  }, [isAdmin])
+  }, [isAdmin, isMobileClosing, isMobileOpen])
 
   useEffect(() => {
-    if (isAdmin || !isMobileOpen) return undefined
+    if (isAdmin || (!isMobileOpen && !isMobileClosing)) return undefined
 
     const handleEscape = (event) => {
-      if (event.key === 'Escape') setIsMobileOpen(false)
+      if (event.key !== 'Escape' || isMobileClosing) return
+
+      setPendingRoute(null)
+      setIsMobileClosing(true)
+      setIsMobileOpen(false)
     }
     document.body.classList.add('staff-sidebar-open')
     document.addEventListener('keydown', handleEscape)
@@ -180,7 +210,7 @@ function Sidebar() {
       document.body.classList.remove('staff-sidebar-open')
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [isAdmin, isMobileOpen])
+  }, [isAdmin, isMobileClosing, isMobileOpen])
 
   if (isAdmin) {
     return <AdminSidebar />
@@ -201,6 +231,180 @@ function Sidebar() {
     navigate(AUTH_ROUTES.login, { replace: true })
   }
 
+  const closeStaffMobileMenu = (route = null) => {
+    if (!isMobileOpen || isMobileClosing) return
+
+    setPendingRoute(route)
+    setIsMobileClosing(true)
+    setIsMobileOpen(false)
+  }
+
+  const handleSidebarTransitionEnd = (event) => {
+    if (
+      event.target !== event.currentTarget ||
+      event.propertyName !== 'transform' ||
+      isMobileOpen ||
+      !isMobileClosing
+    ) {
+      return
+    }
+
+    const route = pendingRoute
+    setSearchKeyword('')
+    setPendingRoute(null)
+    setIsMobileClosing(false)
+
+    if (route && route !== currentPath) {
+      navigate(route)
+    }
+  }
+
+  const mobileMenuGroups = [
+    {
+      title: 'Trang chủ',
+      items: [
+        {
+          icon: <DashboardOutlined />,
+          label: 'Dashboard tổng quan',
+          route: isManager ? '/manager/dashboard' : '/staff/dashboard',
+        },
+      ],
+    },
+    {
+      title: 'Theo dõi cá nhân',
+      items: [
+        {
+          icon: <ClockCircleOutlined />,
+          label: 'Giờ đào tạo liên tục',
+          route: '/staff/training',
+        },
+        {
+          icon: <BarChartOutlined />,
+          label: 'Tiến độ đào tạo',
+          route: '/staff/training-status',
+        },
+        {
+          icon: <CheckSquareOutlined />,
+          label: 'Tuân thủ quy trình, quy định',
+          route: '/staff/competency',
+        },
+        {
+          icon: <TrophyOutlined />,
+          label: 'Năng lực chuyên môn',
+          route: '/staff/professional-competency',
+        },
+      ],
+    },
+    ...(!isManager ? [
+      {
+        title: 'Bài kiểm tra',
+        items: [
+          {
+            icon: <FileDoneOutlined />,
+            label: 'Làm bài kiểm tra',
+            route: '/staff/exam/take',
+          },
+          {
+            icon: <HistoryOutlined />,
+            label: 'Lịch sử bài kiểm tra',
+            route: '/staff/exam/history',
+          },
+        ],
+      },
+      {
+        title: 'Tuân thủ',
+        items: [
+          ...(hasAssignedChecklist ? [
+            {
+              icon: <FileDoneOutlined />,
+              label: 'Bảng kiểm được giao',
+              route: '/staff/checklists',
+            },
+            {
+              icon: <HistoryOutlined />,
+              label: 'Lịch sử đánh giá',
+              route: '/staff/quality/history',
+            },
+          ] : []),
+        ],
+      },
+    ] : [
+      {
+        title: 'Quản lý khoa',
+        items: [
+          {
+            icon: <BarChartOutlined />,
+            label: 'Dashboard giờ đào tạo',
+            route: '/manager/reports/training-dashboard',
+          },
+          {
+            icon: <TrophyOutlined />,
+            label: 'Dashboard năng lực chuyên môn',
+            route: '/manager/reports/quality-dashboard',
+          },
+          {
+            icon: <CheckSquareOutlined />,
+            label: 'Chất lượng chăm sóc',
+            route: '/manager/reports/checklist-dashboard',
+          },
+          {
+            icon: <CheckSquareOutlined />,
+            label: 'Tuân thủ theo kỹ thuật',
+            route: '/manager/compliance-by-technique',
+          },
+          {
+            icon: <BarChartOutlined />,
+            label: 'Dashboard năng lực',
+            route: '/manager/competency-summary',
+          },
+          {
+            icon: <TeamOutlined />,
+            label: 'Nhân sự và giờ đào tạo',
+            route: '/manager/employees',
+          },
+          {
+            icon: <FileDoneOutlined />,
+            label: 'Kết quả năng lực chuyên môn',
+            route: '/manager/exam-results',
+          },
+          {
+            icon: <CheckSquareOutlined />,
+            label: 'Thực hiện đánh giá',
+            route: '/manager/quality/checklists',
+          },
+          {
+            icon: <HistoryOutlined />,
+            label: 'Lịch sử đánh giá',
+            route: '/manager/quality/history',
+          },
+        ],
+      },
+    ]),
+    {
+      title: 'Tài khoản',
+      items: [
+        {
+          icon: <UserOutlined />,
+          label: 'Hồ sơ cá nhân',
+          route: '/staff/profile',
+        },
+        {
+          icon: <BellOutlined />,
+          label: 'Thông báo',
+          route: '/staff/notifications',
+        },
+      ],
+    },
+  ].filter((group) => group.items.length > 0)
+
+  const normalizedSearchKeyword = normalizeSearchText(searchKeyword.trim())
+  const isSearching = normalizedSearchKeyword.length > 0
+  const filteredMobileItems = mobileMenuGroups
+    .flatMap((group) => group.items)
+    .filter((item) =>
+      normalizeSearchText(item.label).includes(normalizedSearchKeyword)
+    )
+
   return (
     <>
       {isMobileOpen && (
@@ -208,13 +412,113 @@ function Sidebar() {
           type="button"
           className="sidebar__backdrop"
           aria-label="Đóng menu điều hướng"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={() => closeStaffMobileMenu()}
         />
       )}
       <aside
-        className={`sidebar ${isMobileOpen ? 'sidebar--mobile-open' : ''}`}
+        className={`sidebar sidebar--staff-user${isMobileOpen ? ' sidebar--mobile-open' : ''}`}
         aria-label="Điều hướng chính"
+        onTransitionEnd={handleSidebarTransitionEnd}
       >
+        <div className="staff-mobile-menu" aria-hidden={!isMobileOpen}>
+            <div className="staff-mobile-menu__topbar">
+              <button
+                type="button"
+                className="staff-mobile-menu__back"
+                aria-label="Quay lại nội dung trang"
+                tabIndex={isMobileOpen ? 0 : -1}
+                onClick={() => closeStaffMobileMenu()}
+              >
+                <LeftOutlined />
+              </button>
+              <div className="staff-mobile-menu__brand">
+                <img src={logo} alt="" aria-hidden="true" />
+                <span>VietDuc Care</span>
+              </div>
+            </div>
+
+            <label className="staff-mobile-menu__search">
+              <SearchOutlined aria-hidden="true" />
+              <input
+                type="search"
+                value={searchKeyword}
+                placeholder="Tìm chức năng..."
+                aria-label="Tìm chức năng"
+                tabIndex={isMobileOpen ? 0 : -1}
+                onChange={(event) => setSearchKeyword(event.target.value)}
+              />
+            </label>
+
+            <nav className="staff-mobile-menu__content" aria-label="Chức năng của nhân viên">
+              {!isSearching && mobileMenuGroups.map((group) => (
+                <section key={group.title} className="staff-mobile-menu__section">
+                  <h2>{group.title}</h2>
+                  <div className="staff-mobile-menu__grid">
+                    {group.items.map((item) => {
+                      const active = isLinkActive(item.route)
+                      return (
+                        <NavLink
+                          key={item.route}
+                          to={item.route}
+                          className={`staff-mobile-menu__item${active ? ' staff-mobile-menu__item--active' : ''}`}
+                          tabIndex={isMobileOpen ? 0 : -1}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            closeStaffMobileMenu(item.route)
+                          }}
+                        >
+                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
+
+              {isSearching && filteredMobileItems.length > 0 && (
+                <section className="staff-mobile-menu__section" aria-label="Kết quả tìm kiếm">
+                  <div className="staff-mobile-menu__grid">
+                    {filteredMobileItems.map((item) => {
+                      const active = isLinkActive(item.route)
+                      return (
+                        <NavLink
+                          key={item.route}
+                          to={item.route}
+                          className={`staff-mobile-menu__item${active ? ' staff-mobile-menu__item--active' : ''}`}
+                          tabIndex={isMobileOpen ? 0 : -1}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            closeStaffMobileMenu(item.route)
+                          }}
+                        >
+                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </NavLink>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {isSearching && filteredMobileItems.length === 0 && (
+                <div className="staff-mobile-menu__empty" role="status">
+                  Không tìm thấy chức năng phù hợp
+                </div>
+              )}
+            </nav>
+
+            <button
+              type="button"
+              className="staff-mobile-menu__logout"
+              tabIndex={isMobileOpen ? 0 : -1}
+              onClick={handleLogout}
+            >
+              <LogoutOutlined />
+              Đăng xuất
+            </button>
+        </div>
+
         <div className="sidebar__logo">
           <img className="sidebar__logo-icon" src={logo} alt="VietDuc Care Logo" />
           <div>

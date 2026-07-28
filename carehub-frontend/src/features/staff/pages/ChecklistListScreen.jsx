@@ -4,6 +4,7 @@ import { FormOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-des
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../api/staffApi.js'
+import '../styles/ChecklistListScreen.css'
 
 function ChecklistListScreen() {
   const navigate = useNavigate()
@@ -48,11 +49,11 @@ function ChecklistListScreen() {
 
   return (
     <AppShell title="Phiếu kiểm tra">
-      <div className="ch-toolbar">
-        <h2 style={{ margin: 0 }}>Danh sách phiếu kiểm tra được giao</h2>
+      <div className="ch-toolbar staff-checklist-toolbar">
+        <h2>Danh sách phiếu kiểm tra được giao</h2>
       </div>
-      <div className="ch-table-wrap">
-        <table className="ch-table">
+      <div className="ch-table-wrap staff-checklist-table-wrap">
+        <table className="ch-table staff-checklist-table">
           <thead>
             <tr>
               <th>Tên phiếu</th>
@@ -65,20 +66,20 @@ function ChecklistListScreen() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="ch-empty">Đang tải...</td></tr>
+              <tr className="staff-checklist-table__empty"><td colSpan={6} className="ch-empty">Đang tải...</td></tr>
             ) : assignments.length === 0 ? (
-              <tr><td colSpan={6} className="ch-empty">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
+              <tr className="staff-checklist-table__empty"><td colSpan={6} className="ch-empty">Bạn chưa có phiếu kiểm tra nào được giao</td></tr>
             ) : (
               assignments.map(item => (
                 <tr key={item.id}>
-                  <td><strong>{item.formName || item.name || `Phiếu #${item.id}`}</strong></td>
-                  <td>{item.description || '—'}</td>
-                  <td>
+                  <td data-label="Tên phiếu"><strong>{item.formName || item.name || `Phiếu #${item.id}`}</strong></td>
+                  <td data-label="Mô tả">{item.description || '—'}</td>
+                  <td data-label="Trạng thái">
                     <span className={`ch-badge ch-badge--${item.status === 'COMPLETED' ? 'green' : 'amber'}`}>
                       {statusIcon(item.status)} {statusLabel(item.status)}
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Điểm sàn">
                     {item.version?.passingScore !== undefined && item.version?.passingScore !== null ? (
                       <strong style={{ color: '#0f6e56' }}>
                         {Number(item.version.passingScore).toFixed(1)}/10
@@ -87,8 +88,8 @@ function ChecklistListScreen() {
                       <span className="ch-text-muted">—</span>
                     )}
                   </td>
-                  <td>{item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '—'}</td>
-                  <td>
+                  <td data-label="Hạn nộp">{item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '—'}</td>
+                  <td data-label="Hành động">
                     <button
                       className="ch-btn ch-btn--primary ch-btn--sm"
                       onClick={() => navigate(`/staff/checklists/${item.id}`)}
