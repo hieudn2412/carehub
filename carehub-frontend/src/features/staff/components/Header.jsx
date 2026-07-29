@@ -69,7 +69,14 @@ function getFallbackLink(label, roles = []) {
   return null
 }
 
-function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs, back }) {
+function Header({
+  title = 'Trang chủ',
+  userName = '',
+  roleName = '',
+  breadcrumbs,
+  back,
+  onAlertSummaryChange,
+}) {
   const [profile, setProfile] = useState(null)
 
   const accessToken = tokenStorage.getAccessToken()
@@ -98,6 +105,10 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
     markAllAsRead,
     markAsRead,
   } = useNotifications()
+
+  useEffect(() => {
+    onAlertSummaryChange?.({ unreadCount, pendingExamCount })
+  }, [onAlertSummaryChange, pendingExamCount, unreadCount])
 
   // Xử lý đóng popover khi click ra ngoài
   useEffect(() => {
@@ -177,12 +188,23 @@ function Header({ title = 'Trang chủ', userName = '', roleName = '', breadcrum
         <button
           type="button"
           className="dashboard-header__menu-button"
-          aria-label="Mở menu điều hướng"
+          aria-label={`Mở menu điều hướng${
+            unreadCount + pendingExamCount > 0
+              ? `, ${unreadCount + pendingExamCount} mục cần chú ý`
+              : ''
+          }`}
           onClick={() => window.dispatchEvent(new CustomEvent(isAdmin ? 'admin-sidebar-toggle' : 'staff-sidebar-toggle'))}
         >
           <MenuOutlined />
+          {unreadCount + pendingExamCount > 0 && (
+            <span className="dashboard-header__menu-alert-dot" aria-hidden="true" />
+          )}
         </button>
-        <div className="dashboard-header__navigation">
+        <div
+          className={`dashboard-header__navigation${
+            back ? ' dashboard-header__navigation--with-back' : ''
+          }`}
+        >
           {back ? <HeaderBackNavigation {...back} /> : null}
           {breadcrumbs && breadcrumbs.length > 0 ? (
             <div className="dashboard-header__breadcrumbs">
