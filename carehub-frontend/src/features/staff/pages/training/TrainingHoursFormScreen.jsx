@@ -7,6 +7,8 @@ import {
   SearchOutlined,
   DownOutlined,
   CloseOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -26,6 +28,16 @@ const todayIso = () => {
   const now = new Date()
   const offset = now.getTimezoneOffset() * 60000
   return new Date(now.getTime() - offset).toISOString().slice(0, 10)
+}
+
+const getDateParts = (value) => {
+  const [year, month, day] = String(value || todayIso()).split('-').map(Number)
+  return { year, month, day }
+}
+
+const formatDisplayDate = (value) => {
+  const { year, month, day } = getDateParts(value)
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`
 }
 
 function SearchableDropdown({
@@ -246,6 +258,7 @@ function TrainingHoursFormScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [recordVersion, setRecordVersion] = useState(null)
+  const [mobileStep, setMobileStep] = useState(0)
 
   // Evidence states
   const fileInputRef = useRef(null)
@@ -260,6 +273,33 @@ function TrainingHoursFormScreen() {
   const [customModalOpen, setCustomModalOpen] = useState(false)
   const [tempCustomName, setTempCustomName] = useState('')
   const [tempCustomNameError, setTempCustomNameError] = useState('')
+  const [mobileDateOpen, setMobileDateOpen] = useState(false)
+  const [mobileDateDraft, setMobileDateDraft] = useState(() => getDateParts(todayIso()))
+
+  const openMobileDatePicker = () => {
+    setMobileDateDraft(getDateParts(form.date))
+    setMobileDateOpen(true)
+  }
+
+  const updateMobileDateDraft = (changes) => {
+    setMobileDateDraft(currentDraft => {
+      const nextDraft = { ...currentDraft, ...changes }
+      const maxDay = new Date(nextDraft.year, nextDraft.month, 0).getDate()
+      return { ...nextDraft, day: Math.min(nextDraft.day, maxDay) }
+    })
+  }
+
+  const applyMobileDate = () => {
+    const { year, month, day } = mobileDateDraft
+    const value = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    setForm(currentForm => ({ ...currentForm, date: value }))
+    setErrors(currentErrors => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors.date
+      return nextErrors
+    })
+    setMobileDateOpen(false)
+  }
 
   useEffect(() => () => {
     previewUrlsRef.current.forEach(url => URL.revokeObjectURL(url))
@@ -388,7 +428,47 @@ function TrainingHoursFormScreen() {
     }
 
     setErrors(e)
+    if (Object.keys(e).length > 0) {
+      if (e.name || e.date || e.hours) setMobileStep(0)
+      else if (e.type || e.professionalFieldId || e.customProfessionalField) setMobileStep(1)
+    }
     return Object.keys(e).length === 0;
+  }
+
+  const goToNextMobileStep = () => {
+    const stepErrors = {}
+
+    if (mobileStep === 0) {
+      if (!form.name) stepErrors.name = true
+      if (!form.date) stepErrors.date = true
+      if (!form.hours) stepErrors.hours = true
+      else {
+        const hours = parseFloat(form.hours)
+        if (isNaN(hours) || hours < 0.5) stepErrors.hours = 'Số giờ phải >= 0.5'
+      }
+    }
+
+    if (mobileStep === 1) {
+      if (!form.type) stepErrors.type = true
+      if (form.professionalFieldId === 'OTHER' && !form.customProfessionalField.trim()) {
+        stepErrors.customProfessionalField = 'Vui lòng nhập tên lĩnh vực chuyên môn khác'
+      }
+    }
+
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(currentErrors => ({ ...currentErrors, ...stepErrors }))
+      return
+    }
+
+    setErrors(currentErrors => {
+      const nextErrors = { ...currentErrors }
+      const resolvedKeys = mobileStep === 0
+        ? ['name', 'date', 'hours']
+        : ['type', 'professionalFieldId', 'customProfessionalField']
+      resolvedKeys.forEach(key => delete nextErrors[key])
+      return nextErrors
+    })
+    setMobileStep(currentStep => Math.min(2, currentStep + 1))
   }
 
   const saveRecord = async (shouldSubmit) => {
@@ -540,18 +620,19 @@ function TrainingHoursFormScreen() {
 
   return (
     <AppShell
+      className="training-hours-form-shell"
       back={{ to: isEditMode && id ? `/staff/training/${id}` : '/staff/training', label: 'Quay lại' }}
       breadcrumbs={[
         { label: 'Giờ đào tạo', link: '/staff/training' },
         { label: isEditMode ? 'Chỉnh sửa' : 'Cập nhật giờ đào tạo' }
       ]}
     >
-      <div className="training-page">
+      <div className="training-page training-page--form">
 
             {loading ? (
               <div style={{ padding: 40, textAlign: 'center', color: '#6b7280' }}>Đang tải thông tin biểu mẫu...</div>
             ) : (
-              <div>
+              <div className="th-form-content">
                 <div className="th-page-heading">
                   <h1 className="th-page-title">
                     {isEditMode ? 'Chỉnh sửa hồ sơ đào tạo' : 'Thêm hồ sơ đào tạo'}
@@ -562,6 +643,32 @@ function TrainingHoursFormScreen() {
                 </div>
 
                 <div className="detail-card">
+                  <div className="th-mobile-form-topbar">
+                    <button
+                      type="button"
+                      className="th-mobile-form-back"
+                      onClick={() => navigate(isEditMode && id ? `/staff/training/${id}` : '/staff/training')}
+                      aria-label="Quay lại danh sách giờ đào tạo"
+                    >
+                      <LeftOutlined />
+                    </button>
+                  <nav className="th-mobile-form-steps" aria-label="Các bước thêm hồ sơ đào tạo">
+                    {['Thông tin', 'Phân loại', 'Minh chứng'].map((label, index) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className={mobileStep === index ? 'is-active' : mobileStep > index ? 'is-complete' : ''}
+                        onClick={() => setMobileStep(index)}
+                        aria-current={mobileStep === index ? 'step' : undefined}
+                      >
+                        <span>{index + 1}</span>
+                        <small>{label}</small>
+                      </button>
+                    ))}
+                  </nav>
+                  </div>
+
+                  <div className={`th-form-step-panel${mobileStep === 0 ? ' is-active' : ''}`}>
                   {/* Name */}
                   <div style={{ marginBottom: 20 }}>
                     <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
@@ -582,7 +689,7 @@ function TrainingHoursFormScreen() {
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                         Ngày đào tạo liên tục <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <div style={{ position: 'relative' }}>
+                      <div className="th-desktop-date-picker" style={{ position: 'relative' }}>
                         <input
                           type="date"
                           value={form.date}
@@ -593,6 +700,16 @@ function TrainingHoursFormScreen() {
                           <CalendarOutlined style={{ color: '#9ca3af' }} />
                         </span>
                       </div>
+                      <button
+                        type="button"
+                        className={`th-mobile-date-trigger${errors.date ? ' has-error' : ''}`}
+                        onClick={openMobileDatePicker}
+                        aria-label={`Chọn ngày đào tạo, hiện tại ${formatDisplayDate(form.date)}`}
+                      >
+                        <CalendarOutlined aria-hidden="true" />
+                        <span>{formatDisplayDate(form.date)}</span>
+                        <DownOutlined aria-hidden="true" />
+                      </button>
                       {errors.date && (
                         <span style={{ color: '#ef4444', fontSize: 12 }}>
                           {typeof errors.date === 'string' ? errors.date : 'Bắt buộc chọn ngày'}
@@ -624,8 +741,10 @@ function TrainingHoursFormScreen() {
                       )}
                     </div>
                   </div>
+                  </div>
 
                   {/* Type + ProfessionalField */}
+                  <div className={`th-form-step-panel${mobileStep === 1 ? ' is-active' : ''}`}>
                   <div className="th-form-grid">
                     <div>
                       <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
@@ -675,8 +794,10 @@ function TrainingHoursFormScreen() {
                       style={{ ...fieldStyle('notes'), resize: 'vertical' }}
                     />
                   </div>
+                  </div>
 
                   {/* Evidence Section */}
+                  <div className={`th-form-step-panel${mobileStep === 2 ? ' is-active' : ''}`}>
                   <div style={{ marginBottom: 24 }}>
                     <label style={{ fontSize: 13, fontWeight: 500, color: '#374151', display: 'block', marginBottom: 6 }}>
                       <PaperClipOutlined style={{ marginRight: 6 }} />Minh chứng đào tạo
@@ -791,6 +912,7 @@ function TrainingHoursFormScreen() {
                       <span style={{ color: '#ef4444', fontSize: 12, marginTop: 6, display: 'block' }}>{fileError}</span>
                     )}
                   </div>
+                  </div>
 
                   {/* Form Actions */}
                   <div className="th-form-actions">
@@ -804,11 +926,111 @@ function TrainingHoursFormScreen() {
                       <SaveOutlined /> {saving ? 'Đang lưu...' : 'Lưu và nộp'}
                     </button>
                   </div>
+
+                  <div className="th-mobile-form-actions">
+                    <button
+                      type="button"
+                      className="th-mobile-form-actions__back"
+                      onClick={() => setMobileStep(currentStep => Math.max(0, currentStep - 1))}
+                      disabled={mobileStep === 0 || saving}
+                    >
+                      <LeftOutlined /> Trước
+                    </button>
+                    <span>{mobileStep + 1}/3</span>
+                    {mobileStep < 2 ? (
+                      <button type="button" className="th-mobile-form-actions__next" onClick={goToNextMobileStep}>
+                        Tiếp theo <RightOutlined />
+                      </button>
+                    ) : (
+                      <div>
+                        <button type="button" onClick={handleSaveDraft} disabled={saving}>
+                          <SaveOutlined /> Nháp
+                        </button>
+                        <button type="button" className="th-mobile-form-actions__submit" onClick={handleSaveAndSubmit} disabled={saving}>
+                          <SaveOutlined /> Nộp
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="th-form-bottom-space" aria-hidden="true" />
               </div>
             )}
       </div>
+
+      {mobileDateOpen && (
+        <div className="th-mobile-date-backdrop" onClick={() => setMobileDateOpen(false)}>
+          <section
+            className="th-mobile-date-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="th-mobile-date-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <header>
+              <div>
+                <small>Ngày đào tạo liên tục</small>
+                <strong id="th-mobile-date-title">
+                  {String(mobileDateDraft.day).padStart(2, '0')}/
+                  {String(mobileDateDraft.month).padStart(2, '0')}/
+                  {mobileDateDraft.year}
+                </strong>
+              </div>
+              <button type="button" onClick={() => setMobileDateOpen(false)} aria-label="Đóng bộ chọn ngày">
+                <CloseOutlined />
+              </button>
+            </header>
+
+            <div className="th-mobile-date-fields">
+              <label>
+                <span>Ngày</span>
+                <select
+                  value={mobileDateDraft.day}
+                  onChange={event => updateMobileDateDraft({ day: Number(event.target.value) })}
+                >
+                  {Array.from(
+                    { length: new Date(mobileDateDraft.year, mobileDateDraft.month, 0).getDate() },
+                    (_, index) => index + 1,
+                  ).map(day => <option key={day} value={day}>{day}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Tháng</span>
+                <select
+                  value={mobileDateDraft.month}
+                  onChange={event => updateMobileDateDraft({ month: Number(event.target.value) })}
+                >
+                  {Array.from({ length: 12 }, (_, index) => index + 1)
+                    .map(month => <option key={month} value={month}>Tháng {month}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Năm</span>
+                <select
+                  value={mobileDateDraft.year}
+                  onChange={event => updateMobileDateDraft({ year: Number(event.target.value) })}
+                >
+                  {Array.from({ length: 22 }, (_, index) => new Date().getFullYear() + 1 - index)
+                    .map(year => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <footer>
+              <button
+                type="button"
+                className="th-mobile-date-today"
+                onClick={() => setMobileDateDraft(getDateParts(todayIso()))}
+              >
+                Hôm nay
+              </button>
+              <button type="button" className="th-mobile-date-apply" onClick={applyMobileDate}>
+                Chọn ngày
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
       {/* Modal đề xuất lĩnh vực mới */}
       {customModalOpen && (

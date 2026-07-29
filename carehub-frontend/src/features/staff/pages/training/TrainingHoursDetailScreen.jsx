@@ -9,6 +9,7 @@ import {
   RollbackOutlined,
   FolderOutlined,
   DeleteOutlined,
+  LeftOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -35,6 +36,7 @@ function TrainingHoursDetailScreen() {
   const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [mobileTab, setMobileTab] = useState('info')
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -186,16 +188,22 @@ function TrainingHoursDetailScreen() {
     DRAFT: { label: 'Nháp', cls: 'th-badge--warning' },
     CANCELLED: { label: 'Đã hủy', cls: 'th-badge--danger' },
   }
+  const visibleEvidences = record?.evidences
+    ? (record.workflowStatus === 'DRAFT'
+        ? record.evidences
+        : record.evidences.filter(canPreviewEvidence))
+    : []
 
   return (
     <AppShell
+      className="training-hours-detail-shell"
       back={{ to: '/staff/training', label: 'Quay lại' }}
       breadcrumbs={[
         { label: 'Giờ đào tạo', link: '/staff/training' },
         { label: 'Chi tiết' }
       ]}
     >
-      <div className="training-page th-detail-page">
+      <div className={`training-page th-detail-page th-detail-page--mobile-${mobileTab}`}>
 
             {loading ? (
               <div className="th-table-state">Đang tải thông tin...</div>
@@ -204,11 +212,19 @@ function TrainingHoursDetailScreen() {
             ) : (
               <>
                 <div className="th-detail-header">
+                  <button
+                    type="button"
+                    className="th-mobile-detail-back"
+                    onClick={() => navigate('/staff/training')}
+                    aria-label="Quay lại danh sách giờ đào tạo"
+                  >
+                    <LeftOutlined />
+                  </button>
                   <div className="th-detail-header__left">
                     <h1 className="th-detail-title">{record.title}</h1>
                     <div className="th-detail-meta">
-                      <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
-                      {record.professionalFieldName && <span><FolderOutlined /> {record.professionalFieldName}</span>}
+                      <span className="th-detail-meta__date"><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
+                      {record.professionalFieldName && <span className="th-detail-meta__field"><FolderOutlined /> {record.professionalFieldName}</span>}
                       <span className={`th-badge ${(statusCfg[record.workflowStatus] || statusCfg.DRAFT).cls}`}>
                         {(statusCfg[record.workflowStatus] || statusCfg.DRAFT).label}
                       </span>
@@ -228,8 +244,26 @@ function TrainingHoursDetailScreen() {
                   </div>
                 </div>
 
+                <nav className="th-mobile-detail-tabs" aria-label="Nội dung chi tiết hồ sơ">
+                  <button
+                    type="button"
+                    className={mobileTab === 'info' ? 'is-active' : ''}
+                    onClick={() => setMobileTab('info')}
+                  >
+                    Thông tin
+                  </button>
+                  <button
+                    type="button"
+                    className={mobileTab === 'evidence' ? 'is-active' : ''}
+                    onClick={() => setMobileTab('evidence')}
+                  >
+                    Minh chứng <span>{visibleEvidences.length}</span>
+                  </button>
+                </nav>
+
+                <div className="th-mobile-detail-content">
                 {/* Evidence is the primary verification object, so it appears first. */}
-                {record.evidences && (record.workflowStatus === 'DRAFT' ? record.evidences.length > 0 : record.evidences.filter(canPreviewEvidence).length > 0) && (
+                {visibleEvidences.length > 0 && (
                   <section className="th-detail-section th-detail-section--evidence-first" aria-labelledby="training-evidence-heading">
                     <div className="th-detail-section-heading">
                       <div>
@@ -239,11 +273,11 @@ function TrainingHoursDetailScreen() {
                         </h2>
                       </div>
                       <span className="th-detail-section-count">
-                        {record.workflowStatus === 'DRAFT' ? record.evidences.length : record.evidences.filter(canPreviewEvidence).length} tệp
+                        {visibleEvidences.length} tệp
                       </span>
                     </div>
                     <div className="th-evidence-grid th-evidence-grid--featured">
-                      {(record.workflowStatus === 'DRAFT' ? record.evidences : record.evidences.filter(canPreviewEvidence)).map(ev => {
+                      {visibleEvidences.map(ev => {
                         const isPreviewable = canPreviewEvidence(ev)
                         const preview = evidencePreviews[ev.id]
 
@@ -313,6 +347,13 @@ function TrainingHoursDetailScreen() {
                     </div>
                   </section>
                 )}
+                {visibleEvidences.length === 0 && (
+                  <div className="th-mobile-detail-empty">
+                    <PaperClipOutlined />
+                    <strong>Chưa có minh chứng</strong>
+                    <span>Hồ sơ này chưa đính kèm tệp minh chứng đào tạo.</span>
+                  </div>
+                )}
 
                 {/* Info Grid */}
                 <div className="th-detail-grid">
@@ -340,6 +381,7 @@ function TrainingHoursDetailScreen() {
                     <label className="th-detail-label">Ghi chú</label>
                     <div className="th-detail-text">{record.description || 'Không có ghi chú'}</div>
                   </div>
+                </div>
                 </div>
 
                 {/* Actions */}

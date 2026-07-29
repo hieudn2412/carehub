@@ -41,12 +41,20 @@
 /* bp-sm — reflow thật cho tablet dọc + phone */
 @media (max-width: 768px) {
   .auth-page {
+    box-sizing: border-box;
+    overflow-x: hidden;
     padding: 0;
   }
 
   .auth-scene {
+    align-items: center;
+    box-sizing: border-box;
     display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: center;
     min-height: 100svh;
+    overflow-x: hidden;
     overflow-y: auto;
     padding: 24px 16px;
     width: 100%;
@@ -61,10 +69,12 @@
     transform: none;
     left: auto;
     top: auto;
+    box-sizing: border-box;
     width: min(480px, 100%);
-    max-width: none;
+    max-width: 100%;
+    min-width: 0;
     height: auto;
-    margin: auto; /* căn giữa trong flex scene, không cắt khi card cao hơn màn */
+    margin: auto;
     padding: 28px 22px 32px;
     border-radius: 22px;
   }
@@ -92,12 +102,23 @@
   }
 
   /* ── Form ── */
+  .auth-card .auth-form,
+  .auth-card .form-field,
+  .auth-card .form-options {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+  }
+
   .auth-card .form-field__label,
   .auth-card .otp-group__heading {
     font-size: 15px;
   }
 
   .auth-card .form-field__control {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
     border-radius: 10px;
     height: 52px;
     padding: 0 14px;
@@ -174,15 +195,348 @@
     font-size: 13px;
   }
 
+  /* ── Quên mật khẩu ── */
+  .auth-card--forgot-account,
+  .auth-card--otp {
+    margin: auto auto 0;
+  }
+
+  .auth-card--forgot-account .security-badge {
+    height: 58px;
+    margin: 0 auto 12px;
+    width: 58px;
+  }
+
+  .auth-card--forgot-account .auth-card__header h1 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+
+  .auth-card--forgot-account .auth-card__header p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .auth-card--forgot-account .stepper {
+    margin: 22px auto 26px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .auth-card--forgot-account .stepper::before {
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    top: 20px;
+  }
+
+  .auth-card--forgot-account .stepper__item {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .auth-card--forgot-account .stepper__circle {
+    font-size: 18px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .auth-card--forgot-account .stepper__label {
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .auth-card--forgot-account .auth-form {
+    gap: 12px;
+  }
+
+  .auth-card--forgot-account .form-field {
+    gap: 6px;
+  }
+
+  .auth-card--forgot-account .form-field__label {
+    font-size: 15px;
+  }
+
+  .auth-card--forgot-account .form-field__control {
+    border-radius: 10px;
+    height: 52px;
+    padding: 0 14px;
+  }
+
+  .auth-card--forgot-account .form-field__icon {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+
+  .auth-card--forgot-account .form-field input {
+    font-size: 16px;
+  }
+
+  .auth-card--forgot-account .form-field__error {
+    font-size: 13px;
+  }
+
+  .auth-card--forgot-account .primary-button {
+    border-radius: 12px;
+    font-size: 17px;
+    height: 48px;
+    margin-top: 4px;
+  }
+
+  .auth-card--forgot-account .back-link {
+    position: static;
+    justify-content: center;
+    margin-top: 18px;
+    width: 100%;
+  }
+
+  /* ── Xác thực OTP ── */
+  .auth-card--otp .security-badge {
+    height: 58px;
+    margin: 0 auto 12px;
+    width: 58px;
+  }
+
+  .auth-card--otp .auth-card__header h1 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+
+  .auth-card--otp .auth-card__header p {
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .auth-card--otp .stepper {
+    margin: 22px auto 26px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .auth-card--otp .stepper::before {
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    top: 20px;
+  }
+
+  .auth-card--otp .stepper__item {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .auth-card--otp .stepper__circle {
+    font-size: 18px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .auth-card--otp .stepper__label {
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .auth-card--otp .auth-form {
+    gap: 12px;
+  }
+
+  .auth-card--otp .otp-group {
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .auth-card--otp .otp-group__heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    font-size: 15px;
+  }
+
+  .auth-card--otp .form-field__error {
+    font-size: 12px;
+  }
+
+  .auth-card--otp .otp-inputs {
+    gap: 6px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .auth-card--otp .otp-inputs input {
+    aspect-ratio: auto;
+    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 20px;
+    height: 46px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .auth-card--otp .otp-group p {
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .auth-card--otp .primary-button {
+    border-radius: 12px;
+    font-size: 17px;
+    height: 48px;
+  }
+
+  .auth-card--otp .resend-line {
+    flex-wrap: wrap;
+    font-size: 13px;
+    gap: 5px 8px;
+    margin-top: 16px;
+    text-align: center;
+  }
+
+  .auth-card--otp .resend-line .text-button {
+    font-size: 14px;
+  }
+
+  .auth-card--otp .back-link {
+    position: static;
+    justify-content: center;
+    margin-top: 14px;
+    width: 100%;
+  }
+
+  /* ── Đặt lại mật khẩu ── */
+  .auth-card--reset-password .security-badge {
+    height: 58px;
+    margin: 0 auto 10px;
+    width: 58px;
+  }
+
+  .auth-card--reset-password .auth-card__header h1 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin: 0 0 8px;
+  }
+
+  .auth-card--reset-password .auth-card__header p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .auth-card--reset-password .stepper {
+    margin: 20px auto 22px;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .auth-card--reset-password .stepper::before {
+    left: calc(100% / 6);
+    right: calc(100% / 6);
+    top: 20px;
+  }
+
+  .auth-card--reset-password .stepper__item {
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .auth-card--reset-password .stepper__circle {
+    font-size: 18px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .auth-card--reset-password .stepper__label {
+    font-size: 11px;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .auth-card--reset-password .auth-form {
+    gap: 10px;
+  }
+
+  .auth-card--reset-password .form-field {
+    gap: 6px;
+  }
+
+  .auth-card--reset-password .form-field__label {
+    font-size: 15px;
+  }
+
+  .auth-card--reset-password .form-field__control {
+    border-radius: 10px;
+    height: 52px;
+    padding: 0 14px;
+  }
+
+  .auth-card--reset-password .form-field__icon {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+
+  .auth-card--reset-password .form-field input {
+    font-size: 16px;
+  }
+
+  .auth-card--reset-password .form-field__password-toggle {
+    font-size: 20px;
+    margin-left: 8px;
+  }
+
+  .auth-card--reset-password .form-field__error {
+    font-size: 13px;
+  }
+
+  .auth-card--reset-password .password-rules {
+    gap: 5px;
+    margin: -2px 0 8px;
+    padding-left: 4px;
+  }
+
+  .auth-card--reset-password .password-rules li {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .auth-card--reset-password .password-rules li::before {
+    font-size: 13px;
+  }
+
+  .auth-card--reset-password .otp-expiry-note {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .auth-card--reset-password .primary-button {
+    border-radius: 12px;
+    font-size: 17px;
+    height: 48px;
+    margin-top: 4px;
+  }
+
+  .auth-card--reset-password .back-link {
+    position: static;
+    justify-content: center;
+    margin-top: 14px;
+    width: 100%;
+  }
+
   /* ── Support notice ── */
   .support-notice {
-    bottom: 16px;
+    bottom: auto;
+    box-sizing: border-box;
+    flex: 0 0 auto;
     gap: 10px;
-    left: 50%;
+    left: auto;
     min-height: 0;
+    margin: 0 auto auto;
     padding: 12px 14px;
+    position: static;
     right: auto;
-    transform: translateX(-50%);
+    transform: none;
     width: min(360px, calc(100% - 36px));
     z-index: 4;
   }
@@ -231,5 +585,31 @@
   .auth-card .otp-inputs input {
     height: 48px;
     width: 40px;
+  }
+
+  .auth-card--forgot-account .auth-card__header h1 {
+    font-size: 23px;
+  }
+
+  .auth-card--otp .auth-card__header h1,
+  .auth-card--reset-password .auth-card__header h1 {
+    font-size: 23px;
+  }
+
+  .auth-card--forgot-account .stepper__label {
+    font-size: 10px;
+  }
+
+  .auth-card--otp .stepper__label,
+  .auth-card--reset-password .stepper__label {
+    font-size: 10px;
+  }
+
+  .auth-card--otp .otp-inputs {
+    gap: 5px;
+  }
+
+  .auth-card--otp .otp-inputs input {
+    height: 43px;
   }
 }

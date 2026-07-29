@@ -146,7 +146,7 @@ export default function OverviewDashboard({
   const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
 
   return (
-    <div className="overview-dashboard">
+    <div className={`overview-dashboard overview-dashboard--${role}`}>
       <section className="overview-heading">
         <div>
           <span className="overview-heading__eyebrow">VIETDUC CARE</span>
@@ -261,7 +261,10 @@ export default function OverviewDashboard({
         </section>
       )}
 
-      <section className="overview-domain-grid">
+      <section
+        className="overview-domain-grid"
+        aria-label={isStaff ? 'Các dashboard năng lực' : undefined}
+      >
         {visibleTypes.map((type) => (
           <DomainCard
             key={type}

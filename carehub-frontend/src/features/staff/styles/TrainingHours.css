@@ -28,6 +28,25 @@
   height: 80px;
 }
 
+.th-mobile-form-steps,
+.th-mobile-form-actions {
+  display: none;
+}
+
+.th-mobile-form-topbar {
+  display: contents;
+}
+
+.th-mobile-form-back,
+.th-mobile-date-trigger,
+.th-mobile-date-backdrop {
+  display: none;
+}
+
+.th-form-step-panel {
+  display: contents;
+}
+
 /* ── Compliance Banner ── */
 .th-compliance-banner {
   display: flex;
@@ -215,6 +234,15 @@
   box-shadow: 0 0 0 2px rgba(26,170,132,0.12);
 }
 
+.th-filter-control {
+  display: contents;
+}
+
+.th-filter-control__trigger,
+.th-filter-menu {
+  display: none;
+}
+
 .th-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -262,6 +290,10 @@
 .th-table-state--error p {
   margin: 0;
   font-weight: 600;
+}
+
+.th-infinite-loading {
+  display: none;
 }
 
 .th-retry-btn {
@@ -821,6 +853,16 @@
 .th-detail-page {
   display: flex;
   flex-direction: column;
+}
+
+.th-mobile-detail-back,
+.th-mobile-detail-tabs,
+.th-mobile-detail-empty {
+  display: none;
+}
+
+.th-mobile-detail-content {
+  display: contents;
 }
 
 .th-detail-page .th-detail-header {
@@ -1384,6 +1426,1238 @@
 
 /* bp-sm */
 @media (max-width: 768px) {
+  .training-hours-detail-shell .dashboard-header__back {
+    display: none;
+  }
+
+  .training-hours-detail-shell .dashboard-header__navigation--with-back {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(100% - 136px);
+    min-width: 0;
+    transform: translate(-50%, -50%);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .training-hours-detail-shell
+    .dashboard-header__navigation--with-back
+    .dashboard-header__breadcrumbs {
+    max-width: 100%;
+    justify-content: center;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .training-hours-detail-shell
+    .dashboard-header__navigation--with-back
+    .dashboard-header__breadcrumb-current {
+    width: 100%;
+    text-align: center;
+  }
+
+  .training-hours-detail-shell .app-shell__body {
+    overflow-y: hidden;
+    padding-bottom: 10px;
+  }
+
+  .training-hours-detail-shell .th-detail-page {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .training-hours-detail-shell .th-detail-page > .th-table-state {
+    display: grid;
+    min-height: 0;
+    flex: 1 1 auto;
+    place-content: center;
+    padding: 20px;
+  }
+
+  .training-hours-detail-shell .th-detail-header {
+    display: grid;
+    min-height: 0;
+    flex: 0 0 auto;
+    order: 0;
+    grid-template-columns: 38px minmax(0, 1fr) 94px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 10px;
+    border: 1px solid #dce7e4;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(22, 50, 79, 0.06);
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-back {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #d6e2df;
+    border-radius: 10px;
+    background: #f7faf9;
+    color: #087e68;
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .training-hours-detail-shell .th-detail-header__left {
+    min-width: 0;
+  }
+
+  .training-hours-detail-shell .th-detail-title {
+    display: -webkit-box;
+    margin: 0 0 5px;
+    overflow: hidden;
+    font-size: 15px;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .training-hours-detail-shell .th-detail-meta {
+    min-width: 0;
+    gap: 6px;
+    flex-wrap: nowrap;
+    font-size: 10px;
+  }
+
+  .training-hours-detail-shell .th-detail-meta__field {
+    display: none;
+  }
+
+  .training-hours-detail-shell .th-detail-meta__date {
+    white-space: nowrap;
+  }
+
+  .training-hours-detail-shell .th-detail-meta .th-badge {
+    max-width: 90px;
+    overflow: hidden;
+    padding: 2px 6px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+
+  .training-hours-detail-shell .th-detail-header__right {
+    display: grid;
+    width: 94px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .training-hours-detail-shell .th-detail-hours-ring,
+  .training-hours-detail-shell .th-detail-evidence-ring {
+    min-width: 0;
+    padding: 7px 3px;
+    border-radius: 9px;
+  }
+
+  .training-hours-detail-shell .th-detail-hours-value,
+  .training-hours-detail-shell .th-detail-evidence-value {
+    font-size: 15px;
+  }
+
+  .training-hours-detail-shell .th-detail-hours-label,
+  .training-hours-detail-shell .th-detail-evidence-label {
+    display: none;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-tabs {
+    display: grid;
+    min-height: 42px;
+    flex: 0 0 auto;
+    order: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    margin-bottom: 8px;
+    padding: 4px;
+    border-radius: 11px;
+    background: #eaf1ef;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-tabs button {
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #71817c;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-tabs button.is-active {
+    background: #fff;
+    color: #087e68;
+    box-shadow: 0 2px 8px rgba(20, 51, 44, 0.08);
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-tabs button span {
+    display: inline-grid;
+    min-width: 18px;
+    height: 18px;
+    margin-left: 3px;
+    place-items: center;
+    border-radius: 9px;
+    background: #dce9e5;
+    font-size: 9px;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-content {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    order: 2;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-content > .th-detail-section,
+  .training-hours-detail-shell .th-mobile-detail-content > .th-detail-grid,
+  .training-hours-detail-shell .th-mobile-detail-content > .th-mobile-detail-empty {
+    display: none;
+  }
+
+  .training-hours-detail-shell
+    .th-detail-page--mobile-info
+    .th-mobile-detail-content
+    > .th-detail-grid {
+    display: grid;
+  }
+
+  .training-hours-detail-shell
+    .th-detail-page--mobile-evidence
+    .th-mobile-detail-content
+    > .th-detail-section {
+    display: flex;
+  }
+
+  .training-hours-detail-shell
+    .th-detail-page--mobile-evidence
+    .th-mobile-detail-content
+    > .th-mobile-detail-empty {
+    display: flex;
+  }
+
+  .training-hours-detail-shell .th-detail-grid {
+    min-height: 0;
+    width: 100%;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    margin: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border-color: #dce7e4;
+    border-radius: 12px;
+    scrollbar-width: none;
+  }
+
+  .training-hours-detail-shell .th-detail-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .training-hours-detail-shell .th-detail-block {
+    min-width: 0;
+    padding: 10px 11px;
+  }
+
+  .training-hours-detail-shell .th-detail-block:first-child,
+  .training-hours-detail-shell .th-detail-block--full {
+    grid-column: 1 / -1;
+  }
+
+  .training-hours-detail-shell .th-detail-label {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  .training-hours-detail-shell .th-detail-text,
+  .training-hours-detail-shell .th-detail-text--em {
+    overflow: hidden;
+    color: #374151;
+    font-size: 12px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+  }
+
+  .training-hours-detail-shell .th-detail-section--evidence-first {
+    min-height: 0;
+    width: 100%;
+    max-height: 100%;
+    flex: 0 1 auto;
+    align-self: flex-start;
+    flex-direction: column;
+    margin: 0;
+    border-radius: 12px;
+  }
+
+  .training-hours-detail-shell .th-detail-section-heading {
+    flex: 0 0 auto;
+    align-items: center;
+    flex-direction: row;
+    gap: 8px;
+    padding: 9px 11px;
+  }
+
+  .training-hours-detail-shell .th-detail-section-eyebrow {
+    display: none;
+  }
+
+  .training-hours-detail-shell
+    .th-detail-section--evidence-first
+    .th-detail-section-title {
+    font-size: 13px;
+  }
+
+  .training-hours-detail-shell .th-detail-section-count {
+    padding: 3px 7px;
+    font-size: 9px;
+  }
+
+  .training-hours-detail-shell
+    .th-detail-section--evidence-first
+    .th-evidence-grid {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 18px 8px 8px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .training-hours-detail-shell .th-evidence-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .training-hours-detail-shell .th-evidence-item {
+    width: calc(100% - 20px);
+    min-width: calc(100% - 20px);
+    flex: 0 0 calc(100% - 20px);
+    align-self: flex-start;
+    scroll-snap-align: start;
+  }
+
+  .training-hours-detail-shell .th-evidence-preview,
+  .training-hours-detail-shell
+    .th-evidence-grid--featured
+    > .th-evidence-item--with-preview:first-child
+    .th-evidence-preview {
+    min-height: 180px;
+    max-height: 220px;
+    padding: 8px;
+  }
+
+  .training-hours-detail-shell .th-evidence-preview__image,
+  .training-hours-detail-shell
+    .th-evidence-grid--featured
+    > .th-evidence-item--with-preview:first-child
+    .th-evidence-preview__image {
+    max-height: 204px;
+  }
+
+  .training-hours-detail-shell .th-evidence-item__info {
+    gap: 6px;
+    padding: 9px !important;
+  }
+
+  .training-hours-detail-shell .th-evidence-item__download {
+    width: 36px;
+    min-height: 34px;
+    margin-left: auto;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .training-hours-detail-shell .th-evidence-item__download .anticon {
+    font-size: 13px;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-empty {
+    width: 100%;
+    min-height: 150px;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px dashed #cddbd7;
+    border-radius: 12px;
+    background: #f8fbfa;
+    color: #7b8a85;
+    text-align: center;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-empty > .anticon {
+    color: #1aaa84;
+    font-size: 24px;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-empty strong {
+    color: #374151;
+    font-size: 13px;
+  }
+
+  .training-hours-detail-shell .th-mobile-detail-empty span {
+    max-width: 250px;
+    font-size: 11px;
+  }
+
+  .training-hours-detail-shell .th-detail-actions {
+    display: flex;
+    min-height: 48px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    order: 3;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 0;
+  }
+
+  .training-hours-detail-shell .th-detail-actions:empty {
+    display: none;
+  }
+
+  .training-hours-detail-shell .th-detail-actions .th-detail-btn {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 0;
+    min-height: 44px;
+    justify-content: center;
+    padding: 5px 7px;
+    border-radius: 10px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .training-hours-detail-shell .th-detail-actions .th-detail-btn:only-child {
+    max-width: 180px;
+    flex: 0 1 180px;
+  }
+
+  .training-hours-form-shell .dashboard-header__back {
+    display: none;
+  }
+
+  .training-hours-form-shell .dashboard-header__navigation--with-back {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(100% - 136px);
+    min-width: 0;
+    transform: translate(-50%, -50%);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .training-hours-form-shell
+    .dashboard-header__navigation--with-back
+    .dashboard-header__breadcrumbs {
+    max-width: 100%;
+    justify-content: center;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .training-hours-form-shell
+    .dashboard-header__navigation--with-back
+    .dashboard-header__breadcrumb-current {
+    width: 100%;
+    text-align: center;
+  }
+
+  .training-hours-form-shell .app-shell__body {
+    overflow-y: hidden;
+    padding-bottom: 10px;
+  }
+
+  .training-page--form,
+  .training-page--form .th-form-content {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .training-page--form .th-page-heading {
+    display: none;
+  }
+
+  .training-page--form .detail-card {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    margin-top: 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    border: 1px solid #dce7e4;
+    border-radius: 14px;
+    box-shadow: 0 5px 18px rgba(22, 50, 79, 0.06);
+  }
+
+  .training-page--form .th-mobile-form-topbar {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 7px;
+    margin-bottom: 8px;
+  }
+
+  .training-page--form .th-mobile-form-back {
+    display: grid;
+    width: 40px;
+    min-height: 58px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #d6e2df;
+    border-radius: 12px;
+    background: #fff;
+    color: #087e68;
+    font: inherit;
+    font-size: 17px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(20, 51, 44, 0.06);
+  }
+
+  .training-page--form .th-mobile-form-steps {
+    position: relative;
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    margin-bottom: 0;
+    padding: 5px;
+    border-radius: 12px;
+    background: #f1f6f4;
+  }
+
+  .training-page--form .th-mobile-form-steps button {
+    display: grid;
+    min-width: 0;
+    min-height: 48px;
+    place-items: center;
+    gap: 2px;
+    padding: 4px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #7b8a85;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .training-page--form .th-mobile-form-steps button > span {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    border: 1px solid #c9d7d3;
+    border-radius: 50%;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .training-page--form .th-mobile-form-steps button > small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .training-page--form .th-mobile-form-steps button.is-active {
+    background: #fff;
+    color: #087e68;
+    box-shadow: 0 2px 8px rgba(20, 51, 44, 0.08);
+  }
+
+  .training-page--form .th-mobile-form-steps button.is-active > span,
+  .training-page--form .th-mobile-form-steps button.is-complete > span {
+    border-color: #1aaa84;
+    background: #1aaa84;
+    color: #fff;
+  }
+
+  .training-page--form .th-form-step-panel {
+    display: none;
+  }
+
+  .training-page--form .th-form-step-panel.is-active {
+    display: block;
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 8px 2px 4px;
+    overscroll-behavior-y: contain;
+    scrollbar-width: none;
+  }
+
+  .training-page--form .th-form-step-panel.is-active::-webkit-scrollbar {
+    display: none;
+  }
+
+  .training-page--form .th-form-grid {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .training-page--form .th-form-step-panel > div {
+    margin-bottom: 12px !important;
+  }
+
+  .training-page--form .th-desktop-date-picker {
+    display: none;
+  }
+
+  .training-page--form .th-mobile-date-trigger {
+    display: grid;
+    width: 100%;
+    min-height: 46px;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 0 13px;
+    border: 1px solid #dbe3e1;
+    border-radius: 10px;
+    background: #fff;
+    color: #26332f;
+    font: inherit;
+    font-size: 15px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .training-page--form .th-mobile-date-trigger > .anticon:first-child {
+    color: #1aaa84;
+    font-size: 17px;
+  }
+
+  .training-page--form .th-mobile-date-trigger > .anticon:last-child {
+    color: #7b8a85;
+    font-size: 11px;
+  }
+
+  .training-page--form .th-mobile-date-trigger.has-error {
+    border-color: #ef4444;
+  }
+
+  .training-hours-form-shell .th-mobile-date-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(16, 35, 30, 0.44);
+    backdrop-filter: blur(2px);
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet {
+    width: min(100%, 480px);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 -14px 40px rgba(13, 42, 34, 0.2);
+    animation: th-mobile-date-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet > header > div {
+    display: grid;
+    gap: 3px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet header small {
+    color: #71817c;
+    font-size: 11px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet header strong {
+    color: #17231f;
+    font-size: 22px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet header button {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #eef4f2;
+    color: #52645f;
+    font-size: 15px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-fields {
+    display: grid;
+    grid-template-columns: 0.8fr 1.25fr 1fr;
+    gap: 8px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-fields label {
+    display: grid;
+    gap: 6px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-fields label > span {
+    color: #71817c;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .training-hours-form-shell .th-mobile-date-fields select {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 9px;
+    border: 1px solid #d6e2df;
+    border-radius: 11px;
+    background: #f8fbfa;
+    color: #17231f;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet > footer {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 9px;
+    margin-top: 18px;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet footer button {
+    min-height: 46px;
+    border: 1px solid #cfe0dc;
+    border-radius: 12px;
+    background: #fff;
+    color: #087e68;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet footer .th-mobile-date-apply {
+    border-color: #1aaa84;
+    background: #1aaa84;
+    color: #fff;
+  }
+
+  @keyframes th-mobile-date-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .training-page--form .th-form-step-panel textarea {
+    min-height: 82px;
+    max-height: 96px;
+    resize: none !important;
+  }
+
+  .training-page--form .th-form-step-panel.is-active > div > p {
+    display: -webkit-box;
+    margin-bottom: 8px !important;
+    overflow: hidden;
+    font-size: 11px !important;
+    line-height: 1.4;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .training-page--form .evidence-dropzone {
+    min-height: 82px;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .training-page--form .evidence-dropzone > .anticon {
+    margin-bottom: 5px !important;
+    font-size: 19px !important;
+  }
+
+  .training-page--form .evidence-chip {
+    max-width: 100%;
+  }
+
+  .training-page--form .th-form-actions,
+  .training-page--form .th-form-bottom-space {
+    display: none;
+  }
+
+  .training-page--form .th-mobile-form-actions {
+    display: grid;
+    min-height: 50px;
+    flex: 0 0 auto;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 7px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #e4ece9;
+  }
+
+  .training-page--form .th-mobile-form-actions > span {
+    color: #7b8a85;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .training-page--form .th-mobile-form-actions button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 12px;
+    border: 1px solid #cfdbd8;
+    border-radius: 10px;
+    background: #fff;
+    color: #52645f;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  .training-page--form .th-mobile-form-actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .training-page--form .th-mobile-form-actions__next,
+  .training-page--form .th-mobile-form-actions__submit {
+    border-color: #1aaa84 !important;
+    background: #1aaa84 !important;
+    color: #fff !important;
+  }
+
+  .training-page--form .th-mobile-form-actions > div {
+    display: flex;
+    gap: 6px;
+  }
+
+  .training-hours-list-shell .app-shell__body {
+    overflow-y: hidden;
+    padding-bottom: 10px;
+  }
+
+  .training-page--list {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .training-page--list .th-compliance-banner {
+    min-height: 68px;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    margin-bottom: 8px;
+    padding: 9px 12px;
+    gap: 0;
+    border-radius: 12px;
+  }
+
+  .training-page--list .th-compliance-banner__left {
+    display: none;
+  }
+
+  .training-page--list .th-compliance-banner__right {
+    width: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .training-page--list .th-compliance-ring,
+  .training-page--list .th-ring-svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .training-page--list .th-compliance-total {
+    font-size: 20px;
+  }
+
+  .training-page--list .th-filter-bar {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    margin-bottom: 8px;
+    padding: 0;
+    gap: 6px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .training-page--list .th-search-box {
+    width: 40px;
+    min-width: 40px;
+    flex: 0 0 40px;
+    overflow: hidden;
+    border: 1px solid #d8e3e0;
+    border-radius: 20px;
+    background: #fff;
+    transition: width 440ms cubic-bezier(0.22, 1, 0.36, 1),
+      flex-basis 440ms cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 260ms ease, box-shadow 260ms ease;
+  }
+
+  .training-page--list .th-search-box--expanded,
+  .training-page--list .th-search-box:focus-within {
+    width: calc(100% - 46px);
+    min-width: 0;
+    flex: 0 1 calc(100% - 46px);
+    border-color: #1aaa84;
+    box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
+  }
+
+  .training-page--list .th-search-icon {
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 360ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .training-page--list .th-search-box--expanded .th-search-icon,
+  .training-page--list .th-search-box:focus-within .th-search-icon {
+    left: 12px;
+    transform: translateY(-50%);
+  }
+
+  .training-page--list .th-search-input {
+    height: 40px;
+    min-height: 40px;
+    padding-block: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 260ms ease 80ms;
+  }
+
+  .training-page--list .th-search-input:focus {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .training-page--list .th-search-box--expanded .th-search-input,
+  .training-page--list .th-search-box:focus-within .th-search-input {
+    opacity: 1;
+  }
+
+  .training-page--list .th-filter-control {
+    position: relative;
+    display: block;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    flex: 0 0 40px;
+  }
+
+  .training-page--list .th-filter-control__trigger {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #d8e3e0;
+    border-radius: 50%;
+    background: #fff;
+    color: #52645f;
+    font: inherit;
+    font-size: 17px;
+    cursor: pointer;
+  }
+
+  .training-page--list .th-filter-control--active .th-filter-control__trigger {
+    border-color: #1aaa84;
+    background: #e9f7f3;
+    color: #087e68;
+  }
+
+  .training-page--list .th-filter-control--active::after {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 7px;
+    height: 7px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #1aaa84;
+    content: "";
+  }
+
+  .training-page--list .th-filter-select {
+    display: none;
+  }
+
+  .training-page--list .th-filter-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    z-index: 20;
+    display: block;
+    width: min(250px, calc(100vw - 32px));
+    overflow: hidden;
+    border: 1px solid #dce7e4;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(20, 51, 44, 0.18);
+    animation: th-filter-menu-in 180ms ease-out;
+  }
+
+  .training-page--list .th-filter-menu button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #26332f;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .training-page--list .th-filter-menu__group {
+    display: flex;
+    min-height: 64px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .training-page--list .th-filter-menu__group span {
+    display: grid;
+    gap: 4px;
+  }
+
+  .training-page--list .th-filter-menu__group strong {
+    font-size: 14px;
+  }
+
+  .training-page--list .th-filter-menu__group small {
+    color: #7b8a85;
+    font-size: 11px;
+  }
+
+  .training-page--list .th-filter-menu__back {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e8efed !important;
+    color: #087e68 !important;
+    font-weight: 650 !important;
+  }
+
+  .training-page--list .th-filter-menu__options {
+    padding: 6px;
+  }
+
+  .training-page--list .th-filter-menu__options button {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 10px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+
+  .training-page--list .th-filter-menu__options button.is-selected {
+    background: #e9f7f3;
+    color: #087e68;
+    font-weight: 650;
+  }
+
+  @keyframes th-filter-menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-5px) scale(0.98);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .training-page--list .th-btn-primary--fab {
+    position: fixed;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 100;
+    width: 54px;
+    height: 54px;
+    min-height: 54px;
+    min-width: 54px;
+    flex: none;
+    justify-content: center;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 10px 24px rgba(8, 126, 104, 0.3);
+  }
+
+  .training-page--list .th-btn-primary--fab .anticon {
+    font-size: 21px;
+  }
+
+  .training-page--list .th-btn-primary--fab span:not(.anticon) {
+    display: none;
+  }
+
+  .training-page--list .th-table-card {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .training-page--list .th-table {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .training-page--list .th-table tbody {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 18px 6px 1px;
+    scroll-padding-inline: 1px;
+    scroll-snap-type: x mandatory;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .training-page--list .th-table tbody::-webkit-scrollbar {
+    display: none;
+  }
+
+  .training-page--list .th-table tr {
+    width: calc(100% - 22px);
+    min-width: calc(100% - 22px);
+    max-height: 100%;
+    flex: 0 0 calc(100% - 22px);
+    margin-bottom: 0;
+    overflow: hidden;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .training-page--list .th-table td:nth-child(2) {
+    height: 86px;
+    min-height: 86px;
+    max-height: 86px;
+    padding-block: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .training-page--list .th-record-title {
+    display: -webkit-box;
+    overflow: hidden;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .training-page--list .th-record-provider {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .training-page--list .th-evidence-count {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .training-page--list .th-infinite-loading {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    z-index: 2;
+    display: block;
+    padding: 5px 9px;
+    border: 1px solid #cfe5df;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #087e68;
+    font-size: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(20, 51, 44, 0.1);
+  }
+
+  .training-page--list .th-infinite-loading--error {
+    border-color: #fecaca;
+    color: #b42318;
+    cursor: pointer;
+  }
+
+  .training-page--list .th-pagination {
+    display: none;
+  }
+
+  .training-page--list .th-pagination-info {
+    display: none;
+  }
+
+  .training-page--list .th-pagination-pages {
+    gap: 4px;
+  }
+
+  .training-page--list .th-page-btn {
+    min-width: 34px;
+    height: 34px;
+  }
+
   .th-form-grid,
   .detail-grid {
     grid-template-columns: 1fr;
@@ -1620,6 +2894,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .training-page--list .th-search-box,
+  .training-page--list .th-search-icon,
+  .training-page--list .th-search-input {
+    transition: none;
+  }
+
+  .training-page--list .th-filter-menu {
+    animation: none;
+  }
+
+  .training-hours-form-shell .th-mobile-date-sheet {
+    animation: none;
+  }
+
   .th-ring-fill,
   .th-clickable-row,
   .th-action-btn,
