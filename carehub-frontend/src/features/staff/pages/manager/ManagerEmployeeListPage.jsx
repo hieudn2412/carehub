@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../../shared/components/AdminFilterDisclosure.jsx'
 import { trainingApi } from '../../../training/api/trainingApi'
 import '../../styles/ManagerPages.css'
 
@@ -75,15 +76,7 @@ function ManagerEmployeeListPage() {
 
   return (
     <AppShell title="Nhân sự trong khoa">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Nhân sự trong khoa</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          Danh sách và tiến độ đào tạo của nhân sự trong khoa
-        </p>
-      </div>
-
-      {/* Toolbar */}
-      <div className="mgr-toolbar">
+      <div className="mgr-toolbar mgr-toolbar--standard">
         <div className="mgr-search-box">
           <input
             type="text"
@@ -94,19 +87,18 @@ function ManagerEmployeeListPage() {
           <SearchOutlined />
         </div>
 
-        <div className="mgr-filter-group">
-          <select
-            className="mgr-select"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="COMPLIANT">Đạt</option>
-            <option value="NON_COMPLIANT">Chưa đạt</option>
-            <option value="AT_RISK">Đang theo dõi</option>
-            <option value="NOT_CONFIGURED">Chưa thiết lập</option>
-          </select>
-        </div>
+        <AdminFilterDisclosure activeCount={statusFilter === 'all' ? 0 : 1}>
+          <label className="admin-control-toolbar__field">
+            <span>Trạng thái đào tạo</span>
+            <select className="mgr-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="COMPLIANT">Đạt</option>
+              <option value="NON_COMPLIANT">Chưa đạt</option>
+              <option value="AT_RISK">Đang theo dõi</option>
+              <option value="NOT_CONFIGURED">Chưa thiết lập</option>
+            </select>
+          </label>
+        </AdminFilterDisclosure>
       </div>
 
       {/* Table Card */}
@@ -157,22 +149,11 @@ function ManagerEmployeeListPage() {
                       {getStatusText(emp.complianceStatus)}
                     </span>
                   </td>
-                  <td style={{ textAlign: 'center' }}>
+                  <td className="mgr-table-action-cell">
                     <button
                       onClick={() => navigate(`/manager/employees/${emp.employeeId}`)}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        background: '#fff',
-                        padding: '6px 10px',
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                        color: '#475569',
-                        transition: 'all 0.15s'
-                      }}
                       title="Xem tổng hợp nhân sự"
-                      className="mgr-view-btn"
-                      onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
-                      onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
+                      className="mgr-view-btn admin-table-action admin-table-action--icon admin-table-action--primary"
                     >
                       <EyeOutlined />
                     </button>

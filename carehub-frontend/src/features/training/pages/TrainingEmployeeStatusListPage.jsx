@@ -5,7 +5,7 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
-import { DownloadOutlined, EyeOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownloadOutlined, EyeOutlined, FilterOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/TrainingEmployeeStatusListPage.css'
 
@@ -129,6 +129,7 @@ function TrainingEmployeeStatusListPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -234,71 +235,99 @@ function TrainingEmployeeStatusListPage() {
               </div>
 
               <div className="tes-filter-bar">
-                <div className="tes-search">
-                  <SearchOutlined className="tes-search-icon" />
-                  <input
-                    type="text"
-                    className="tes-search-input"
-                    placeholder="Tìm theo tên/mã nhân viên..."
-                    value={keyword}
-                    onChange={e => setKeyword(e.target.value)}
-                  />
-                </div>
-                <div className="tes-department-filter">
-                  <SearchableSelect
-                    value={departmentId}
-                    onChange={(value) => {
-                      setDepartmentId(value)
-                      setPage(1)
-                    }}
-                    options={[
-                      { value: '', label: 'Tất cả khoa/phòng' },
-                      ...departments.map((department) => ({ value: department.id, label: department.name })),
-                    ]}
-                    placeholder="Tất cả khoa/phòng"
-                    searchPlaceholder="Tìm tên khoa/phòng..."
-                    ariaLabel="Tìm và chọn khoa/phòng"
-                  />
-                </div>
-                {professionalFields.length > 0 && (
-                  <div className="tes-field-filter">
-                    <SearchableSelect
-                      value={professionalFieldId}
-                      onChange={(value) => {
-                        setProfessionalFieldId(value)
-                        setPage(1)
-                      }}
-                      options={[
-                        { value: '', label: 'Tất cả lĩnh vực' },
-                        ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                      ]}
-                      placeholder="Tất cả lĩnh vực"
-                      searchPlaceholder="Tìm tên lĩnh vực..."
-                      ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-                    />
+                <div className="tes-toolbar-main">
+                  <div className="tes-search-filter-group">
+                    <div className="tes-search">
+                      <SearchOutlined className="tes-search-icon" />
+                      <input
+                        type="text"
+                        className="tes-search-input"
+                        placeholder="Tìm theo tên/mã nhân viên..."
+                        value={keyword}
+                        onChange={e => setKeyword(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`tes-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-expanded={isFilterOpen}
+                      aria-controls="training-employee-filter-panel"
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {[departmentId, professionalFieldId, complianceStatus].filter(Boolean).length > 0 && (
+                        <span className="tes-filter-count">
+                          {[departmentId, professionalFieldId, complianceStatus].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
                   </div>
-                )}
-                <select className="tes-filter-select" value={complianceStatus} onChange={e => {
-                  setComplianceStatus(e.target.value)
-                  setPage(1)
-                }}>
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="COMPLIANT">Đạt</option>
-                  <option value="NON_COMPLIANT">Chưa đạt</option>
-                </select>
-                <div className="tes-total-label">
-                  {totalElements} nhân viên
+                  <div className="tes-toolbar-actions">
+                    <div className="tes-total-label">{totalElements} nhân viên</div>
+                    {isAdmin && (
+                      <button
+                        className="tes-export-button"
+                        disabled={exporting || loading || totalElements === 0}
+                        onClick={handleExport}
+                        type="button"
+                      >
+                        {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
+                        {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {isAdmin && (
-                  <button
-                    className="tes-export-button"
-                    disabled={exporting || loading || totalElements === 0}
-                    onClick={handleExport}
-                    type="button"
-                  >
-                    {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
-                    {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
-                  </button>
+
+                {isFilterOpen && (
+                  <div className="tes-filter-panel" id="training-employee-filter-panel">
+                    <div className="tes-department-filter">
+                      <span className="tes-filter-label">Khoa/phòng</span>
+                      <SearchableSelect
+                        value={departmentId}
+                        onChange={(value) => {
+                          setDepartmentId(value)
+                          setPage(1)
+                        }}
+                        options={[
+                          { value: '', label: 'Tất cả khoa/phòng' },
+                          ...departments.map((department) => ({ value: department.id, label: department.name })),
+                        ]}
+                        placeholder="Tất cả khoa/phòng"
+                        searchPlaceholder="Tìm tên khoa/phòng..."
+                        ariaLabel="Tìm và chọn khoa/phòng"
+                      />
+                    </div>
+                    {professionalFields.length > 0 && (
+                      <div className="tes-field-filter">
+                        <span className="tes-filter-label">Lĩnh vực chuyên môn</span>
+                        <SearchableSelect
+                          value={professionalFieldId}
+                          onChange={(value) => {
+                            setProfessionalFieldId(value)
+                            setPage(1)
+                          }}
+                          options={[
+                            { value: '', label: 'Tất cả lĩnh vực' },
+                            ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                          ]}
+                          placeholder="Tất cả lĩnh vực"
+                          searchPlaceholder="Tìm tên lĩnh vực..."
+                          ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                        />
+                      </div>
+                    )}
+                    <label className="tes-filter-field">
+                      <span className="tes-filter-label">Trạng thái</span>
+                      <select className="tes-filter-select" value={complianceStatus} onChange={e => {
+                        setComplianceStatus(e.target.value)
+                        setPage(1)
+                      }}>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="COMPLIANT">Đạt</option>
+                        <option value="NON_COMPLIANT">Chưa đạt</option>
+                      </select>
+                    </label>
+                  </div>
                 )}
               </div>
 

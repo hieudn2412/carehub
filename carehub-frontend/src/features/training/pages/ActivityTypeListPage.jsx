@@ -4,7 +4,7 @@ import { getApiErrorMessage } from '../../auth/utils/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
-import { SearchOutlined, EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import { SearchOutlined, EditOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import '../styles/ActivityTypeListPage.css'
 
 const EMPTY_FORM = {
@@ -36,6 +36,7 @@ function ActivityTypeListPage() {
   const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('') // '', 'true', 'false'
   const [page, setPage] = useState(0)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
@@ -186,37 +187,56 @@ function ActivityTypeListPage() {
 
               {/* Filter Bar */}
               <div className="atl-filter-bar">
-                <div className="atl-filter-left">
-                  <div className="atl-search">
-                    <span className="atl-search-icon">
-                      <SearchOutlined />
-                    </span>
-                    <input
-                      type="text"
-                      className="atl-search-input"
-                      placeholder="Tìm theo hình thức..."
-                      value={keyword}
-                      onChange={(e) => setKeyword(e.target.value)}
-                    />
+                <div className="atl-toolbar-main">
+                  <div className="atl-filter-left">
+                    <div className="atl-search">
+                      <span className="atl-search-icon">
+                        <SearchOutlined />
+                      </span>
+                      <input
+                        type="text"
+                        className="atl-search-input"
+                        placeholder="Tìm theo hình thức..."
+                        value={keyword}
+                        onChange={(e) => setKeyword(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`atl-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-expanded={isFilterOpen}
+                      aria-controls="activity-type-filter-panel"
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {status && <span className="atl-filter-count">1</span>}
+                    </button>
                   </div>
 
-                  <select
-                    className="atl-filter-select"
-                    value={status}
-                    onChange={handleStatusChange}
+                  <button
+                    className="atl-btn-add"
+                    onClick={handleOpenCreateModal}
                   >
-                    <option value="">Trạng thái</option>
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
-                  </select>
+                    <PlusCircleOutlined /> Thêm hình thức
+                  </button>
                 </div>
 
-                <button
-                  className="atl-btn-add"
-                  onClick={handleOpenCreateModal}
-                >
-                  <PlusCircleOutlined /> Thêm hình thức
-                </button>
+                {isFilterOpen && (
+                  <div className="atl-filter-panel" id="activity-type-filter-panel">
+                    <label>
+                      <span>Trạng thái</span>
+                      <select
+                        className="atl-filter-select"
+                        value={status}
+                        onChange={handleStatusChange}
+                      >
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="true">Hoạt động</option>
+                        <option value="false">Ngưng hoạt động</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Feedback Alerts */}

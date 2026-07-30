@@ -36,19 +36,31 @@
   gap: 16px;
   align-items: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  flex-direction: column;
   justify-content: space-between;
+}
+
+.atl-toolbar-main {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .atl-filter-left {
   display: flex;
-  gap: 16px;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
   flex: 1;
-  max-width: 600px;
 }
 
 .atl-search {
   position: relative;
-  flex: 1;
+  width: min(680px, 100%);
+  min-width: 240px;
 }
 
 .atl-search-input {
@@ -61,6 +73,7 @@
   color: #334155;
   box-sizing: border-box;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 .atl-search-input:focus {
@@ -100,6 +113,72 @@
 .atl-filter-select:focus {
   border-color: var(--focus);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.atl-filter-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.atl-filter-trigger.is-open,
+.atl-filter-trigger:hover {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.atl-filter-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.atl-filter-panel {
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: minmax(220px, 300px);
+  align-items: end;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.atl-filter-panel label {
+  display: grid;
+  gap: 6px;
+}
+
+.atl-filter-panel label > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.atl-filter-panel .atl-filter-select {
+  width: 100%;
+  min-height: 44px;
 }
 
 .atl-btn-add {
@@ -552,6 +631,23 @@ select.atl-input-green {
 
 /* bp-sm */
 @media (max-width: 768px) {
+  .atl-toolbar-main,
+  .atl-filter-left {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .atl-search,
+  .atl-filter-trigger,
+  .atl-btn-add {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .atl-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
   .atl-filter-left {
     flex-wrap: wrap;
   }

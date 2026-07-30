@@ -4,8 +4,10 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   EditOutlined,
+  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons'
 import AdminHeader from '../components/AdminHeader.jsx'
@@ -22,6 +24,7 @@ function ProfessionalFieldManagementPage() {
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editingId, setEditingId] = useState(null)
@@ -177,12 +180,6 @@ function ProfessionalFieldManagementPage() {
               <h1>Quản lý lĩnh vực chuyên môn</h1>
               <p>Danh mục dùng chung khi tạo bài kiểm tra, lọc kết quả và khai báo giờ đào tạo.</p>
             </div>
-            <div className="pfm-heading-actions">
-              <button className="pfm-create-btn" type="button" onClick={createField}>
-                <PlusOutlined /> Tạo mới lĩnh vực
-              </button>
-              <button type="button" onClick={loadFields}><ReloadOutlined /> Tải lại</button>
-            </div>
           </section>
 
           <div className="pfm-layout">
@@ -205,17 +202,47 @@ function ProfessionalFieldManagementPage() {
                   </button>
                 </div>
                 <div className="pfm-search-box">
-                  <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
-                  {activeTab === 'existing' && (
-                    <select
-                      value={statusFilter}
-                      onChange={e => setStatusFilter(e.target.value)}
-                      className="pfm-status-select"
-                    >
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="true">Đang dùng</option>
-                      <option value="false">Ngừng dùng</option>
-                    </select>
+                  <div className="pfm-toolbar-main">
+                    <div className="pfm-search-filter-group">
+                      <div className="pfm-search">
+                        <SearchOutlined />
+                        <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
+                      </div>
+                      {activeTab === 'existing' && (
+                        <button
+                          type="button"
+                          className={`pfm-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                          aria-expanded={isFilterOpen}
+                          aria-controls="professional-field-filter-panel"
+                          onClick={() => setIsFilterOpen((current) => !current)}
+                        >
+                          <FilterOutlined /> Bộ lọc
+                          {statusFilter && <span className="pfm-filter-count">1</span>}
+                        </button>
+                      )}
+                    </div>
+                    <div className="pfm-toolbar-actions">
+                      <button className="pfm-create-btn" type="button" onClick={createField}>
+                        <PlusOutlined /> Tạo mới lĩnh vực
+                      </button>
+                      <button type="button" onClick={loadFields}><ReloadOutlined /> Tải lại</button>
+                    </div>
+                  </div>
+                  {activeTab === 'existing' && isFilterOpen && (
+                    <div className="pfm-filter-panel" id="professional-field-filter-panel">
+                      <label>
+                        <span>Trạng thái</span>
+                        <select
+                          value={statusFilter}
+                          onChange={e => setStatusFilter(e.target.value)}
+                          className="pfm-status-select"
+                        >
+                          <option value="">Tất cả trạng thái</option>
+                          <option value="true">Đang dùng</option>
+                          <option value="false">Ngừng dùng</option>
+                        </select>
+                      </label>
+                    </div>
                   )}
                 </div>
               </div>

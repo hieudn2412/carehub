@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DownloadOutlined, EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationImportApi } from '../api/evaluationImportApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -86,13 +87,15 @@ function EvaluationImportHistoryPage() {
                   <SearchOutlined />
                   <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm file, người import, mã import..." />
                 </div>
-                <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                  <option value="">Trạng thái</option>
-                  <option value="PREVIEWED">Đã preview</option>
-                  <option value="COMMITTED">Đã import</option>
-                  <option value="FAILED">Thất bại</option>
-                  <option value="CANCELLED">Đã hủy</option>
-                </select>
+                <AdminFilterDisclosure activeCount={status ? 1 : 0}>
+                  <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                    <option value="">Trạng thái</option>
+                    <option value="PREVIEWED">Đã preview</option>
+                    <option value="COMMITTED">Đã import</option>
+                    <option value="FAILED">Thất bại</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </AdminFilterDisclosure>
               </div>
 
               <div className="exp-table-card">

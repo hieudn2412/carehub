@@ -5,6 +5,12 @@
   color: #172033;
 }
 
+.ts-progress-card__status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .ts-heading {
   display: flex;
   align-items: center;
@@ -158,7 +164,7 @@
 
 /* bp-md */
 @media (max-width: 1024px) {
-  .ts-stat-cards { grid-template-columns: 1fr; }
+  .ts-stat-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* bp-sm */
@@ -211,6 +217,11 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 8px;
+  }
+
+  .ts-progress-card__status {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .ts-progress-track {

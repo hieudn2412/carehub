@@ -43,16 +43,36 @@
   display: flex;
   gap: 16px;
   flex: 1;
-  max-width: 600px;
+  max-width: 820px;
+  align-items: flex-start;
 }
 
 .qcl-search {
   position: relative;
   flex: 1;
+  width: min(680px, 100%);
+  min-width: 280px;
+  max-width: 680px;
+}
+
+.qcl-filter-left > .admin-filter-disclosure {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.qcl-filter-left > .admin-filter-disclosure .admin-filter-disclosure__panel {
+  width: 240px;
+  align-items: stretch;
+}
+
+.qcl-filter-left > .admin-filter-disclosure .qcl-filter-select {
+  width: 100%;
+  min-width: 0;
 }
 
 .qcl-search-input {
   width: 100%;
+  min-height: 44px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 9px 12px 9px 38px;
@@ -120,6 +140,23 @@
 
 .qcl-btn-add:hover {
   background: #0062cc;
+}
+
+@media (max-width: 768px) {
+  .qcl-filter-left {
+    width: 100%;
+    max-width: none;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .qcl-search,
+  .qcl-filter-left > .admin-filter-disclosure,
+  .qcl-filter-left > .admin-filter-disclosure .admin-filter-disclosure__panel {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
 }
 
 /* Table Card */

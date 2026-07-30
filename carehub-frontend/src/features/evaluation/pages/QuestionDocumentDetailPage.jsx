@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -233,15 +234,17 @@ function QuestionDocumentDetailPage() {
                     {activeTab === 'jobs' && (
                       <div className="qdoc-tab-body">
                         <div className="qdoc-filter-bar qdoc-filter-bar--compact">
-                          <select className="qdoc-select" value={jobStatusFilter} onChange={(event) => setJobStatusFilter(event.target.value)}>
-                            <option value="">Tất cả trạng thái</option>
-                            <option value="CREATED">Đã tạo</option>
-                            <option value="GENERATING">Đang tạo</option>
-                            <option value="GENERATED">Đã tạo xong</option>
-                            <option value="PARTIALLY_COMPLETED">Hoàn thành một phần</option>
-                            <option value="FAILED">Thất bại</option>
-                            <option value="CANCELLED">Đã hủy</option>
-                          </select>
+                          <AdminFilterDisclosure activeCount={jobStatusFilter ? 1 : 0}>
+                            <select className="qdoc-select" value={jobStatusFilter} onChange={(event) => setJobStatusFilter(event.target.value)}>
+                              <option value="">Tất cả trạng thái</option>
+                              <option value="CREATED">Đã tạo</option>
+                              <option value="GENERATING">Đang tạo</option>
+                              <option value="GENERATED">Đã tạo xong</option>
+                              <option value="PARTIALLY_COMPLETED">Hoàn thành một phần</option>
+                              <option value="FAILED">Thất bại</option>
+                              <option value="CANCELLED">Đã hủy</option>
+                            </select>
+                          </AdminFilterDisclosure>
                         </div>
                         <div className="qdoc-table-scroll">
                           <table className="qdoc-table">

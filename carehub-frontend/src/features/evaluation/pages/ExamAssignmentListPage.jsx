@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, BarChartOutlined, LoadingOutlined } from '@ant-design/icons'
+import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, BarChartOutlined, LoadingOutlined, FilterOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
@@ -22,6 +22,7 @@ function ExamAssignmentListPage({
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null)
   const [results, setResults] = useState(null)
   const [isLoadingResults, setIsLoadingResults] = useState(false)
@@ -128,43 +129,58 @@ function ExamAssignmentListPage({
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="exp-page">
-              <div className="exp-title-card">
-                <div>
-                  <h1 className="exp-title">Quản lý bài kiểm tra</h1>
-                  <p className="exp-subtitle">Theo dõi bài đã giao và xem điểm từng nhân viên ngay tại đây</p>
-                </div>
-                <div className="exp-title-actions">
-                  <button type="button" className="exp-btn-secondary" onClick={loadAssignments} disabled={isLoading}>
-                    <ReloadOutlined /> Tải lại
-                  </button>
-                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
-                    <PlusCircleOutlined /> Tạo & giao bài
-                  </button>
-                </div>
-              </div>
+              <section className="exp-management-card">
+                <ExamManagementViewSwitch
+                  activeView={activeView}
+                  canViewPapers={canViewPapers}
+                  canViewAssignments={canViewAssignments}
+                  onChange={onViewChange}
+                />
 
-              <ExamManagementViewSwitch
-                activeView={activeView}
-                canViewPapers={canViewPapers}
-                canViewAssignments={canViewAssignments}
-                onChange={onViewChange}
-              />
-
-              <div className="exp-filter-bar">
-                <div className="exp-search">
-                  <SearchOutlined />
-                  <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm phân công, mã đề, tên đề" />
+                <div className="exp-filter-bar admin-control-toolbar">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="exp-search admin-control-toolbar__search">
+                      <SearchOutlined />
+                      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm phân công, mã đề, tên đề" />
+                    </div>
+                    <button
+                      aria-controls="exam-assignment-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                      type="button"
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {status && <span className="admin-control-toolbar__filter-count">1</span>}
+                    </button>
+                  </div>
+                  <div className="exp-title-actions">
+                    <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
+                      <PlusCircleOutlined /> Tạo & giao bài
+                    </button>
+                    <button type="button" className="exp-btn-secondary" onClick={loadAssignments} disabled={isLoading}>
+                      <ReloadOutlined /> Tải lại
+                    </button>
+                  </div>
                 </div>
-                <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                  <option value="">Trạng thái</option>
-                  <option value="DRAFT">Bản nháp</option>
-                  <option value="OPEN">Đang mở</option>
-                  <option value="CLOSED">Đã đóng</option>
-                  <option value="ARCHIVED">Đã lưu trữ</option>
-                </select>
-              </div>
+                {isFilterOpen && (
+                  <div className="admin-control-toolbar__panel" id="exam-assignment-filter-panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Trạng thái</span>
+                      <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="DRAFT">Bản nháp</option>
+                        <option value="OPEN">Đang mở</option>
+                        <option value="CLOSED">Đã đóng</option>
+                        <option value="ARCHIVED">Đã lưu trữ</option>
+                      </select>
+                    </label>
+                  </div>
+                  )}
+                </div>
 
-              <div className="exp-table-card">
+                <div className="exp-table-card">
                 <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
@@ -276,7 +292,8 @@ function ExamAssignmentListPage({
                     )}
                   </section>
                 )}
-              </div>
+                </div>
+              </section>
             </div>
           </main>
         </div>

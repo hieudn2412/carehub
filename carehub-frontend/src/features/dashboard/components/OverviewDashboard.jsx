@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   AlertOutlined,
   BookOutlined,
@@ -5,6 +6,7 @@ import {
   ClockCircleOutlined,
   DownloadOutlined,
   ExperimentOutlined,
+  FilterOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -144,79 +146,92 @@ export default function OverviewDashboard({
 }) {
   const isStaff = role === 'staff'
   const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const activeFilterCount = [
+    role === 'admin' && filters.departmentId,
+    filters.period && filters.period !== '30d',
+    filters.professionalFieldId,
+  ].filter(Boolean).length
 
   return (
     <div className={`overview-dashboard overview-dashboard--${role}`}>
-      <section className="overview-heading">
-        <div>
-          <span className="overview-heading__eyebrow">VIETDUC CARE</span>
-          <h1>{isStaff ? 'Năng lực của tôi' : 'Dashboard tổng quan'}</h1>
-          <p>
-            {isStaff
-              ? 'Theo dõi kết quả đào tạo, kiểm tra chuyên môn và tuân thủ của cá nhân bạn.'
-              : role === 'manager'
-                ? `Theo dõi nhân sự và chất lượng trong ${profile?.departmentName || 'khoa được phân công'}.`
-                : 'Theo dõi đào tạo, năng lực chuyên môn và chất lượng chăm sóc trên toàn viện.'}
-          </p>
-        </div>
-        {!isStaff && onExport && (
-          <button className="overview-export" type="button" onClick={onExport}>
-            <DownloadOutlined /> Xuất dữ liệu giờ đào tạo
-          </button>
-        )}
-      </section>
-
       {!isStaff && (
-        <section className="overview-filters" aria-label="Bộ lọc dashboard">
-          <label>
-            <span>Khoa/Phòng</span>
-            {role === 'admin' ? (
-              <SearchableSelect
-                value={filters.departmentId}
-                onChange={(value) => onFilterChange('departmentId', value)}
-                ariaLabel="Tìm và chọn khoa/phòng"
-                placeholder="Toàn viện"
-                searchPlaceholder="Gõ tên khoa/phòng..."
-                options={[
-                  { value: '', label: 'Toàn viện' },
-                  ...departments.map((department) => ({
-                    value: department.id,
-                    label: department.name,
-                    searchText: department.code || department.departmentCode,
-                  })),
-                ]}
-              />
-            ) : (
-              <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
+        <section className="overview-filter-toolbar admin-control-toolbar" aria-label="Bộ lọc dashboard">
+          <div className="admin-control-toolbar__main">
+            <div className="admin-control-toolbar__controls">
+              <button
+                aria-controls="overview-dashboard-filter-panel"
+                aria-expanded={isFilterOpen}
+                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                onClick={() => setIsFilterOpen((current) => !current)}
+                type="button"
+              >
+                <FilterOutlined /> Bộ lọc
+                {activeFilterCount > 0 && (
+                  <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+                )}
+              </button>
+            </div>
+            {onExport && (
+              <button className="overview-export" type="button" onClick={onExport}>
+                <DownloadOutlined /> Xuất dữ liệu giờ đào tạo
+              </button>
             )}
-          </label>
-          <label>
-            <span>Thời gian</span>
-            <select value={filters.period} onChange={(event) => onFilterChange('period', event.target.value)}>
-              <option value="30d">30 ngày gần nhất</option>
-              <option value="90d">90 ngày gần nhất</option>
-              <option value="year">Năm hiện tại</option>
-              <option value="all">Toàn bộ thời gian</option>
-            </select>
-          </label>
-          <label>
-            <span>Lĩnh vực chuyên môn</span>
-            <SearchableSelect
-              value={filters.professionalFieldId}
-              onChange={(value) => onFilterChange('professionalFieldId', value)}
-              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-              placeholder="Tất cả lĩnh vực"
-              searchPlaceholder="Gõ tên lĩnh vực..."
-              options={[
-                { value: '', label: 'Tất cả lĩnh vực' },
-                ...professionalFields.map((field) => ({
-                  value: field.id,
-                  label: field.name,
-                  searchText: field.code,
-                })),
-              ]}
-            />
-          </label>
+          </div>
+
+          {isFilterOpen && (
+            <div className="overview-filters overview-filter-panel" id="overview-dashboard-filter-panel">
+              <label>
+                <span>Khoa/Phòng</span>
+                {role === 'admin' ? (
+                  <SearchableSelect
+                    value={filters.departmentId}
+                    onChange={(value) => onFilterChange('departmentId', value)}
+                    ariaLabel="Tìm và chọn khoa/phòng"
+                    placeholder="Toàn viện"
+                    searchPlaceholder="Gõ tên khoa/phòng..."
+                    options={[
+                      { value: '', label: 'Toàn viện' },
+                      ...departments.map((department) => ({
+                        value: department.id,
+                        label: department.name,
+                        searchText: department.code || department.departmentCode,
+                      })),
+                    ]}
+                  />
+                ) : (
+                  <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
+                )}
+              </label>
+              <label>
+                <span>Thời gian</span>
+                <select value={filters.period} onChange={(event) => onFilterChange('period', event.target.value)}>
+                  <option value="30d">30 ngày gần nhất</option>
+                  <option value="90d">90 ngày gần nhất</option>
+                  <option value="year">Năm hiện tại</option>
+                  <option value="all">Toàn bộ thời gian</option>
+                </select>
+              </label>
+              <label>
+                <span>Lĩnh vực chuyên môn</span>
+                <SearchableSelect
+                  value={filters.professionalFieldId}
+                  onChange={(value) => onFilterChange('professionalFieldId', value)}
+                  ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+                  placeholder="Tất cả lĩnh vực"
+                  searchPlaceholder="Gõ tên lĩnh vực..."
+                  options={[
+                    { value: '', label: 'Tất cả lĩnh vực' },
+                    ...professionalFields.map((field) => ({
+                      value: field.id,
+                      label: field.name,
+                      searchText: field.code,
+                    })),
+                  ]}
+                />
+              </label>
+            </div>
+          )}
         </section>
       )}
 

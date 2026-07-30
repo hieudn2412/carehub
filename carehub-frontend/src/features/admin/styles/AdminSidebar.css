@@ -183,6 +183,26 @@
   padding-block: 3px 5px;
 }
 
+@media (min-width: 769px) {
+  .admin-sidebar__group-button > span:last-child,
+  .admin-sidebar__section-trigger > span:first-child {
+    display: inline-block;
+    min-width: 0;
+    overflow: hidden;
+    visibility: visible;
+    opacity: 1;
+    color: inherit;
+    text-overflow: ellipsis;
+  }
+
+  .admin-sidebar__section-trigger > span:first-child {
+    flex: 1;
+    font-size: 11px;
+    line-height: 1.35;
+    white-space: normal;
+  }
+}
+
 .admin-sidebar__item {
   display: flex;
   align-items: center;

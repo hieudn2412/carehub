@@ -39,9 +39,33 @@
   flex-wrap: wrap;
 }
 
+.tes-toolbar-main {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tes-search-filter-group {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.tes-toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .tes-search {
   position: relative;
-  flex: 1;
+  width: min(680px, 100%);
   min-width: 220px;
 }
 
@@ -65,6 +89,7 @@
   color: #334155;
   box-sizing: border-box;
   transition: all 0.15s;
+  min-height: 44px;
 }
 
 .tes-search-input:focus {
@@ -77,7 +102,71 @@
   color: #94a3b8;
   font-weight: 500;
   white-space: nowrap;
-  padding-left: 4px;
+}
+
+.tes-filter-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tes-filter-trigger.is-open,
+.tes-filter-trigger:hover {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.tes-filter-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tes-filter-panel {
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: repeat(3, minmax(220px, 300px));
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.tes-filter-field,
+.tes-filter-panel .tes-department-filter,
+.tes-filter-panel .tes-field-filter {
+  display: grid;
+  width: 100%;
+  gap: 6px;
+}
+
+.tes-filter-label {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .tes-export-button {
@@ -360,6 +449,27 @@
 
 /* bp-sm */
 @media (max-width: 768px) {
+  .tes-toolbar-main,
+  .tes-search-filter-group,
+  .tes-toolbar-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .tes-search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tes-filter-trigger,
+  .tes-export-button {
+    width: 100%;
+  }
+
+  .tes-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
   .tes-search {
     flex: 1 1 100%;
   }

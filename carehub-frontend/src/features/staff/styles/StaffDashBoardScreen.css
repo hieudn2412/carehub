@@ -201,6 +201,23 @@
   padding-block: 3px 5px;
 }
 
+@media (min-width: 769px) {
+  .sidebar__section-trigger:not(.sidebar__section-trigger--link) > span:first-child,
+  .sidebar__section-trigger--link > span:last-child {
+    display: inline-block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    visibility: visible;
+    opacity: 1;
+    color: inherit;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: normal;
+  }
+}
+
 
 .sidebar__item {
   display: flex;

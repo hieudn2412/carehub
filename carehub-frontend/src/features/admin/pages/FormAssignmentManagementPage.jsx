@@ -11,6 +11,7 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/FormAssignmentManagementPage.css'
@@ -345,20 +346,22 @@ function FormAssignmentManagementPage() {
                       <h2>Manager được phân quyền</h2>
                       <p>{totalAssignments} bản ghi theo trạng thái đang lọc.</p>
                     </div>
-                    <label className="fam-status-filter">
-                      <span>Trạng thái</span>
-                      <select
-                        disabled={loading}
-                        onChange={(event) => setStatus(event.target.value)}
-                        value={status}
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <AdminFilterDisclosure activeCount={status !== 'ACTIVE' ? 1 : 0}>
+                      <label className="fam-status-filter">
+                        <span>Trạng thái</span>
+                        <select
+                          disabled={loading}
+                          onChange={(event) => setStatus(event.target.value)}
+                          value={status}
+                        >
+                          {STATUS_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </AdminFilterDisclosure>
                   </div>
 
                   {loading ? (

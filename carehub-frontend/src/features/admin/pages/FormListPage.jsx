@@ -5,6 +5,7 @@ import {
   DownOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
+  FilterOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
   ImportOutlined,
@@ -294,6 +295,7 @@ function FormListPage() {
   const [formStats, setFormStats] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false)
   const [assignmentLoading, setAssignmentLoading] = useState(false)
   const [assignmentSubmitting, setAssignmentSubmitting] = useState(false)
@@ -913,66 +915,117 @@ function FormListPage() {
               )}
 
               <section className="flp-toolbar" aria-label="Bộ lọc checklist">
-                <div className="flp-search-box">
-                  <SearchOutlined className="flp-search-icon" />
-                  <input
-                    aria-label="Tìm kiếm checklist"
-                    className="flp-search-input"
-                    onChange={(event) => {
-                      setErrorMessage('')
-                      setKeyword(event.target.value)
-                      setPage(1)
-                    }}
-                    placeholder="Tìm theo mã hoặc tiêu đề..."
-                    type="search"
-                    value={keyword}
-                  />
-                </div>
-
-                <div className="flp-filters">
-                  <label className="flp-filter-group">
-                    <span>Trạng thái</span>
-                    <select className="flp-select" onChange={updateStatus} value={status}>
-                      <option value="all">Tất cả trạng thái</option>
-                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flp-filter-group">
-                    <span>Khoa/phòng</span>
-                    <div className="flp-department-filter">
-                      <SearchableSelect
-                        onChange={(value) => {
-                        setErrorMessage('')
-                        setLoading(true)
-                        setDepartmentId(value)
-                        setPage(1)
-                      }}
-                        value={departmentId}
-                        options={[
-                          { value: 'all', label: 'Tất cả khoa/phòng' },
-                          ...departments.map((department) => ({
-                            value: department.id,
-                            label: department.name || department.code,
-                          })),
-                        ]}
-                        placeholder="Tất cả khoa/phòng"
-                        searchPlaceholder="Tìm tên khoa/phòng..."
-                        ariaLabel="Tìm và chọn khoa/phòng"
+                <div className="flp-toolbar-main">
+                  <div className="flp-search-filter-group">
+                    <div className="flp-search-box">
+                      <SearchOutlined className="flp-search-icon" />
+                      <input
+                        aria-label="Tìm kiếm checklist"
+                        className="flp-search-input"
+                        onChange={(event) => {
+                          setErrorMessage('')
+                          setKeyword(event.target.value)
+                          setPage(1)
+                        }}
+                        placeholder="Tìm theo mã hoặc tiêu đề..."
+                        type="search"
+                        value={keyword}
                       />
                     </div>
-                  </label>
-
-                  {hasFilters && (
-                    <button className="flp-clear-filters" onClick={clearFilters} type="button">
-                      Xóa bộ lọc
+                    <button
+                      type="button"
+                      className={`flp-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-expanded={isFilterOpen}
+                      aria-controls="checklist-filter-panel"
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {[status !== 'all', departmentId !== 'all'].filter(Boolean).length > 0 && (
+                        <span className="flp-filter-count">
+                          {[status !== 'all', departmentId !== 'all'].filter(Boolean).length}
+                        </span>
+                      )}
                     </button>
-                  )}
+                  </div>
+                  <div className="flp-toolbar-actions">
+                    <button className="flp-btn-assign" onClick={openAssignmentModal} type="button">
+                      <UserSwitchOutlined /> Giao checklist
+                    </button>
+                    <div
+                      className={`flp-import-menu${importMenuOpen ? ' is-open' : ''}`}
+                      onBlur={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget)) setImportMenuOpen(false)
+                      }}
+                    >
+                      <button
+                        aria-expanded={importMenuOpen}
+                        aria-haspopup="menu"
+                        className="flp-btn-import"
+                        onClick={() => setImportMenuOpen((current) => !current)}
+                        type="button"
+                      >
+                        <ImportOutlined /> Import Google Form
+                        <DownOutlined className="flp-btn-import__chevron" />
+                      </button>
+                      {importMenuOpen && (
+                        <div className="flp-import-menu__panel" role="menu">
+                          <button className="flp-import-menu__option" onClick={navigateToLegacyImport} role="menuitem" type="button">
+                            <span className="flp-import-menu__icon"><ImportOutlined /></span>
+                            <span><strong>Import 18 form cũ</strong><small>Nạp sẵn danh sách Google Form điều dưỡng 2026.</small></span>
+                          </button>
+                          <button className="flp-import-menu__option" onClick={navigateToCustomImport} role="menuitem" type="button">
+                            <span className="flp-import-menu__icon"><PlusCircleOutlined /></span>
+                            <span><strong>Import form mới</strong><small>Nhập mã và link Google Form thủ công như hiện tại.</small></span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button className="flp-btn-create" onClick={() => navigate('/admin/quality/checklists/new')} type="button">
+                      <PlusCircleOutlined /> Tạo biểu mẫu mới
+                    </button>
+                  </div>
                 </div>
+
+                {isFilterOpen && (
+                  <div className="flp-filter-panel" id="checklist-filter-panel">
+                    <label className="flp-filter-group">
+                      <span>Trạng thái</span>
+                      <select className="flp-select" onChange={updateStatus} value={status}>
+                        <option value="all">Tất cả trạng thái</option>
+                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flp-filter-group">
+                      <span>Khoa/phòng</span>
+                      <div className="flp-department-filter">
+                        <SearchableSelect
+                          onChange={(value) => {
+                            setErrorMessage('')
+                            setLoading(true)
+                            setDepartmentId(value)
+                            setPage(1)
+                          }}
+                          value={departmentId}
+                          options={[
+                            { value: 'all', label: 'Tất cả khoa/phòng' },
+                            ...departments.map((department) => ({
+                              value: department.id,
+                              label: department.name || department.code,
+                            })),
+                          ]}
+                          placeholder="Tất cả khoa/phòng"
+                          searchPlaceholder="Tìm tên khoa/phòng..."
+                          ariaLabel="Tìm và chọn khoa/phòng"
+                        />
+                      </div>
+                    </label>
+                    {hasFilters && (
+                      <button className="flp-clear-filters" onClick={clearFilters} type="button">Xóa bộ lọc</button>
+                    )}
+                  </div>
+                )}
               </section>
 
               <section className="flp-table-card" aria-busy={loading}>

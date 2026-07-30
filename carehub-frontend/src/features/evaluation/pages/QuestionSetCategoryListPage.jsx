@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -172,19 +173,21 @@ function QuestionSetCategoryListPage() {
               />
             </div>
 
-            <select
-              className="qscl-filter-select"
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value)
-                setPage(0)
-              }}
-            >
-              <option value="">Trạng thái</option>
-              <option value="ACTIVE">Hoạt động</option>
-              <option value="INACTIVE">Tạm ngưng</option>
-              <option value="ARCHIVED">Đã lưu trữ</option>
-            </select>
+            <AdminFilterDisclosure activeCount={status ? 1 : 0}>
+              <select
+                className="qscl-filter-select"
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value)
+                  setPage(0)
+                }}
+              >
+                <option value="">Trạng thái</option>
+                <option value="ACTIVE">Hoạt động</option>
+                <option value="INACTIVE">Tạm ngưng</option>
+                <option value="ARCHIVED">Đã lưu trữ</option>
+              </select>
+            </AdminFilterDisclosure>
           </div>
 
           <button className="qscl-btn-add" onClick={handleOpenCreateModal}>

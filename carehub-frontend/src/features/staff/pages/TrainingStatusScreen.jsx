@@ -45,20 +45,6 @@ export default function TrainingStatusScreen() {
   return (
     <AppShell title="Tiến độ giờ đào tạo">
       <div className="ts-page">
-        <header className="ts-heading">
-          <div>
-            <span>ĐÀO TẠO CỦA TÔI</span>
-            <h1>Tiến độ hoàn thành chuẩn đào tạo</h1>
-            <p>Dashboard chỉ hiển thị số liệu tổng quan. Hồ sơ chi tiết được quản lý tại màn Giờ đào tạo.</p>
-          </div>
-          {configured && (
-            <strong className={`ts-status ts-status--${tone}`}>
-              {completed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
-              {completed ? 'Đã hoàn thành' : 'Chưa đủ giờ'}
-            </strong>
-          )}
-        </header>
-
         {loading ? (
           <LoadingState label="Đang tải tiến độ đào tạo..." />
         ) : error ? (
@@ -86,7 +72,16 @@ export default function TrainingStatusScreen() {
             </section>
 
             <section className={`ts-progress-card ts-progress-card--${tone}`}>
-              <header><div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{formattedRequiredHours} giờ</strong></div><b>{progress.toFixed(1).replace('.', ',')}%</b></header>
+              <header>
+                <div><span>Tiến độ tổng thể</span><strong>{completedHours.toLocaleString('vi-VN', { maximumFractionDigits: 1 })}/{formattedRequiredHours} giờ</strong></div>
+                <div className="ts-progress-card__status">
+                  <strong className={`ts-status ts-status--${tone}`}>
+                    {completed ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+                    {completed ? 'Đã hoàn thành' : 'Chưa đủ giờ'}
+                  </strong>
+                  <b>{progress.toFixed(1).replace('.', ',')}%</b>
+                </div>
+              </header>
               <div className="ts-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}>
                 <span style={{ width: `${progress}%` }} />
               </div>

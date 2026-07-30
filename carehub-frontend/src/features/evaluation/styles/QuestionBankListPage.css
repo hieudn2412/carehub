@@ -227,6 +227,39 @@
   flex-wrap: wrap;
 }
 
+.qbl-results-count {
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.qbl-toolbar-icon-btn {
+  display: inline-flex;
+  width: 44px !important;
+  min-width: 44px !important;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+
+.qbl-toolbar-icon-btn:hover:not(:disabled) {
+  border-color: #1aaa84;
+  background: #f8fafc;
+  color: #1aaa84;
+}
+
+.qbl-toolbar-icon-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
 .qbl-import-summary {
   display: flex;
   align-items: center;

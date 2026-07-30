@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   EyeOutlined,
+  FilterOutlined,
   ReloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -14,6 +16,9 @@ import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
+
+const today = new Date().toISOString().slice(0, 10)
+const yearStart = `${new Date().getFullYear()}-01-01`
 
 function ComplianceByTechniquePage() {
   const navigate = useNavigate()
@@ -30,8 +35,9 @@ function ComplianceByTechniquePage() {
 
   const [departmentId, setDepartmentId] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [fromDate, setFromDate] = useState(`${new Date().getFullYear()}-01-01`)
-  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10))
+  const [fromDate, setFromDate] = useState(yearStart)
+  const [toDate, setToDate] = useState(today)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
 
@@ -97,78 +103,91 @@ function ComplianceByTechniquePage() {
   ]
 
   const totalCount = data?.items ? data.items.length : 0
+  const activeFilterCount = [
+    isAdmin && departmentId,
+    fromDate && fromDate !== yearStart,
+    toDate && toDate !== today,
+  ].filter(Boolean).length
 
   return (
     <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined}>
             <div className="evd-page">
-              <section className="evd-title-card">
-                <div>
-                  <h1>Tuân thủ quy trình, quy định</h1>
-                  <p>Tổng hợp mọi lượt kiểm tra giám sát theo nhân viên</p>
-                </div>
-                <button className="evd-btn" onClick={loadData} disabled={loading}>
-                  <ReloadOutlined /> Tải lại
-                </button>
-              </section>
-
-              <section className="evd-filter-bar evd-x-filter-bar">
-                {isAdmin && (
-                  <div className="evd-x-filter-field evd-x-filter-field--wide">
-                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                    <SearchableSelect
-                      value={departmentId}
-                      onChange={setDepartmentId}
-                      options={[
-                        { value: '', label: 'Toàn viện' },
-                        ...departments.map((department) => ({ value: department.id, label: department.name })),
-                      ]}
-                      placeholder="Toàn viện"
-                      searchPlaceholder="Tìm tên khoa/phòng..."
-                      ariaLabel="Tìm và chọn khoa/phòng"
-                    />
-                  </div>
-                )}
-                {!isAdmin && departments.length > 0 && (
-                  <div className="evd-x-filter-field">
-                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                    <span style={{ padding: '7px 0', color: '#374151', fontSize: 13, fontWeight: 600 }}>
-                      {departments[0].name}
-                    </span>
-                  </div>
-                )}
-                <div className="evd-x-filter-field">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Tên nhân viên</label>
-                  <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Tìm theo tên nhân viên"
-                    className="evd-x-input evd-x-input--wide" />
-                </div>
-                <div className="evd-x-filter-field">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
-                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                    className="evd-x-input" />
-                </div>
-                <div className="evd-x-filter-field">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Đến ngày</label>
-                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                    className="evd-x-input" />
-                </div>
-              </section>
-
-              {data && (
-                <section className="evd-panel" style={{
-                  padding: 16, marginBottom: 16, display: 'flex', gap: 24, flexWrap: 'wrap',
-                }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: '#374151' }}>
-                    Nhân viên đã được đánh giá: <span style={{ color: '#2563eb' }}>{totalCount}</span>
-                  </div>
-                  {totalCount === 0 && data && (
-                    <div style={{ fontSize: 14, color: '#9ca3af' }}>
-                      Chưa có dữ liệu tuân thủ kỹ thuật trong khoảng thời gian đã chọn.
+              <section className="compliance-toolbar admin-control-toolbar" aria-label="Công cụ tuân thủ theo nhân viên">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="compliance-toolbar__search admin-control-toolbar__search">
+                      <SearchOutlined />
+                      <input
+                        aria-label="Tìm theo tên nhân viên"
+                        value={keyword}
+                        onChange={(event) => setKeyword(event.target.value)}
+                        placeholder="Tìm theo tên nhân viên..."
+                      />
                     </div>
-                  )}
-                </section>
-              )}
+                    <button
+                      type="button"
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-controls="compliance-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined />
+                      Bộ lọc
+                      {activeFilterCount > 0 && (
+                        <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="compliance-toolbar__actions">
+                    <span>{totalCount} nhân viên</span>
+                    <button
+                      type="button"
+                      className="compliance-toolbar__reload"
+                      onClick={loadData}
+                      disabled={loading}
+                      aria-label="Tải lại dữ liệu"
+                      title="Tải lại"
+                    >
+                      <ReloadOutlined spin={loading} />
+                    </button>
+                  </div>
+                </div>
 
-              <div className="evd-card evd-x-table-card">
+                {isFilterOpen && (
+                  <div id="compliance-filter-panel" className="compliance-filter-panel admin-control-toolbar__panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Khoa/phòng</span>
+                      {isAdmin ? (
+                        <SearchableSelect
+                          value={departmentId}
+                          onChange={setDepartmentId}
+                          options={[
+                            { value: '', label: 'Toàn viện' },
+                            ...departments.map((department) => ({ value: department.id, label: department.name })),
+                          ]}
+                          placeholder="Toàn viện"
+                          searchPlaceholder="Tìm tên khoa/phòng..."
+                          ariaLabel="Tìm và chọn khoa/phòng"
+                        />
+                      ) : (
+                        <div className="compliance-filter-panel__fixed">
+                          {departments[0]?.name || 'Khoa của tôi'}
+                        </div>
+                      )}
+                    </label>
+                    <label className="admin-control-toolbar__field">
+                      <span>Từ ngày</span>
+                      <input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
+                    </label>
+                    <label className="admin-control-toolbar__field">
+                      <span>Đến ngày</span>
+                      <input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
+                    </label>
+                  </div>
+                )}
+              </section>
+
+              <div className="evd-card evd-x-table-card compliance-table-card">
                 <table className="evd-table admin-table-uppercase">
                   <thead>
                     <tr>

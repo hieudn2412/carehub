@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
-import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined, FilterOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -23,6 +23,7 @@ function QuestionCategoryListPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
 
   // Modal State
@@ -159,42 +160,59 @@ function QuestionCategoryListPage() {
         </div>
 
         {/* Filter Bar */}
-        <div className="qcl-filter-bar">
-          <div className="qcl-filter-left">
-            <div className="qcl-search">
-              <span className="qcl-search-icon">
-                <SearchOutlined />
-              </span>
-              <input
-                type="text"
-                className="qcl-search-input"
-                placeholder="Tìm danh mục..."
-                value={keyword}
-                onChange={(e) => {
-                  setKeyword(e.target.value)
-                  setPage(0)
-                }}
-              />
+        <div className="qcl-filter-bar admin-control-toolbar">
+          <div className="admin-control-toolbar__main">
+            <div className="admin-control-toolbar__controls">
+              <div className="qcl-search admin-control-toolbar__search">
+                <span className="qcl-search-icon">
+                  <SearchOutlined />
+                </span>
+                <input
+                  type="text"
+                  className="qcl-search-input"
+                  placeholder="Tìm danh mục..."
+                  value={keyword}
+                  onChange={(e) => {
+                    setKeyword(e.target.value)
+                    setPage(0)
+                  }}
+                />
+              </div>
+              <button
+                aria-controls="question-category-filter-panel"
+                aria-expanded={isFilterOpen}
+                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                onClick={() => setIsFilterOpen((current) => !current)}
+                type="button"
+              >
+                <FilterOutlined /> Bộ lọc
+                {status && <span className="admin-control-toolbar__filter-count">1</span>}
+              </button>
             </div>
-
-            <select
-              className="qcl-filter-select"
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value)
-                setPage(0)
-              }}
-            >
-              <option value="">Trạng thái</option>
-              <option value="ACTIVE">Hoạt động</option>
-              <option value="INACTIVE">Tạm ngưng</option>
-              <option value="ARCHIVED">Đã lưu trữ</option>
-            </select>
+            <button className="qcl-btn-add" onClick={handleOpenCreateModal}>
+              <PlusCircleOutlined /> Thêm danh mục
+            </button>
           </div>
-
-          <button className="qcl-btn-add" onClick={handleOpenCreateModal}>
-            <PlusCircleOutlined /> Thêm danh mục
-          </button>
+          {isFilterOpen && (
+            <div className="admin-control-toolbar__panel" id="question-category-filter-panel">
+              <label className="admin-control-toolbar__field">
+                <span>Trạng thái</span>
+                <select
+                  className="qcl-filter-select"
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value)
+                    setPage(0)
+                  }}
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Hoạt động</option>
+                  <option value="INACTIVE">Tạm ngưng</option>
+                  <option value="ARCHIVED">Đã lưu trữ</option>
+                </select>
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Table Card */}

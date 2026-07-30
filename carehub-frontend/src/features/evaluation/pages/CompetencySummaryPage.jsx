@@ -10,6 +10,7 @@ import {
   CaretUpOutlined,
   CaretDownOutlined,
   EyeOutlined,
+  FilterOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons'
@@ -35,6 +36,8 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
+const today = new Date().toISOString().slice(0, 10)
+const yearStart = `${new Date().getFullYear()}-01-01`
 
 function CompetencySummaryPage() {
   const { showToast } = useToast()
@@ -50,8 +53,9 @@ function CompetencySummaryPage() {
   const [loading, setLoading] = useState(false)
   const [departments, setDepartments] = useState([])
   const [departmentId, setDepartmentId] = useState('')
-  const [fromDate, setFromDate] = useState(`${new Date().getFullYear()}-01-01`)
-  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10))
+  const [fromDate, setFromDate] = useState(yearStart)
+  const [toDate, setToDate] = useState(today)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   // Field specific states
   const [categories, setCategories] = useState([])
@@ -269,6 +273,13 @@ function CompetencySummaryPage() {
   const complianceTarget = data?.complianceTarget || 80.0
   const belowCount = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalCount = data?.items ? data.items.length : 0
+  const activeFilterCount = [
+    isAdmin && departmentId,
+    fromDate && fromDate !== yearStart,
+    toDate && toDate !== today,
+    reportType === 'field' && selectedCategory,
+    reportType === 'technique' && selectedFormId,
+  ].filter(Boolean).length
 
   const visiblePages = () => {
     if (totalPages <= 7) {
@@ -351,22 +362,8 @@ function CompetencySummaryPage() {
   return (
     <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? pageTitle : undefined}>
             <div className="evd-page">
-              <section className="evd-title-card">
-                <div>
-                  <h1>Dashboard năng lực</h1>
-                  <p>
-                    Tổng hợp điểm lý thuyết từ bài test và điểm thực hành từ checklist
-                    để theo dõi năng lực nhân viên.
-                  </p>
-                </div>
-                <button className="evd-btn" onClick={loadData} disabled={loading}>
-                  <ReloadOutlined /> Tải lại
-                </button>
-              </section>
-
-              {/* Segmented Control Filter for Dashboard Screen */}
-              <section className="evd-panel evd-x-segmented">
-                <div className="evd-x-segmented__list">
+              <section className="competency-dashboard-toolbar admin-control-toolbar" aria-label="Công cụ dashboard năng lực">
+                <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
                   {[
                     { key: 'summary', label: 'Lý thuyết + thực hành' },
                     { key: 'field', label: 'Năng lực theo lĩnh vực' },
@@ -379,95 +376,129 @@ function CompetencySummaryPage() {
                         setSearchTerm('')
                         setPage(0)
                       }}
-                      className={reportType === tab.key ? 'evd-x-segmented__btn is-active' : 'evd-x-segmented__btn'}
+                      className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
+                      role="tab"
+                      aria-selected={reportType === tab.key}
                     >
                       {tab.label}
                     </button>
                   ))}
                 </div>
-              </section>
 
-              {/* Filters panel */}
-              <section className="evd-filter-bar evd-x-filter-bar">
-                <div className="evd-x-filter-field evd-x-filter-field--wide">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Khoa/phòng</label>
-                  <SearchableSelect
-                    value={departmentId}
-                    onChange={(value) => {
-                      setDepartmentId(value)
-                      setPage(0)
-                    }}
-                    disabled={!isAdmin}
-                    options={[
-                      ...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []),
-                      ...departments.map((department) => ({ value: department.id, label: department.name })),
-                    ]}
-                    placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'}
-                    searchPlaceholder="Tìm tên khoa/phòng..."
-                    ariaLabel="Tìm và chọn khoa/phòng"
-                  />
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="competency-dashboard-search admin-control-toolbar__search">
+                      <SearchOutlined />
+                      <input
+                        aria-label="Tìm theo tên hoặc mã nhân viên"
+                        type="text"
+                        placeholder="Tìm theo tên hoặc mã nhân viên..."
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-controls="competency-dashboard-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined />
+                      Bộ lọc
+                      {activeFilterCount > 0 && (
+                        <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="competency-dashboard-toolbar__actions">
+                    <span>{totalElements} kết quả</span>
+                    <button
+                      type="button"
+                      className="competency-dashboard-reload"
+                      onClick={loadData}
+                      disabled={loading}
+                      aria-label="Tải lại dữ liệu"
+                      title="Tải lại"
+                    >
+                      <ReloadOutlined spin={loading} />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="evd-x-filter-field">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Từ ngày</label>
-                  <input type="date" value={fromDate} onChange={(e) => {
-                    setFromDate(e.target.value)
-                    setPage(0)
-                  }}
-                    className="evd-x-input" />
-                </div>
-
-                <div className="evd-x-filter-field">
-                  <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Đến ngày</label>
-                  <input type="date" value={toDate} onChange={(e) => {
-                    setToDate(e.target.value)
-                    setPage(0)
-                  }}
-                    className="evd-x-input" />
-                </div>
-
-                {reportType === 'field' && (
-                  <div className="evd-x-filter-field evd-x-filter-field--wide">
-                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Lĩnh vực</label>
-                    <SearchableSelect
-                      value={selectedCategory}
-                      onChange={(value) => {
-                        setSelectedCategory(value)
+                {isFilterOpen && (
+                  <div id="competency-dashboard-filter-panel" className="competency-dashboard-filter-panel admin-control-toolbar__panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Khoa/phòng</span>
+                      <SearchableSelect
+                        value={departmentId}
+                        onChange={(value) => {
+                          setDepartmentId(value)
+                          setPage(0)
+                        }}
+                        disabled={!isAdmin}
+                        options={[
+                          ...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []),
+                          ...departments.map((department) => ({ value: department.id, label: department.name })),
+                        ]}
+                        placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'}
+                        searchPlaceholder="Tìm tên khoa/phòng..."
+                        ariaLabel="Tìm và chọn khoa/phòng"
+                      />
+                    </label>
+                    <label className="admin-control-toolbar__field">
+                      <span>Từ ngày</span>
+                      <input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => {
+                        setFromDate(event.target.value)
                         setPage(0)
-                      }}
-                      options={[
-                        { value: '', label: 'Tất cả lĩnh vực' },
-                        ...categories.map((category) => ({ value: category.id, label: category.name })),
-                      ]}
-                      placeholder="Tất cả lĩnh vực"
-                      searchPlaceholder="Tìm tên lĩnh vực..."
-                      ariaLabel="Tìm và chọn lĩnh vực"
-                    />
-                  </div>
-                )}
-
-                {reportType === 'technique' && (
-                  <div className="evd-x-filter-field">
-                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Kỹ thuật</label>
-                    <select value={selectedFormId} onChange={(e) => {
-                      setSelectedFormId(e.target.value)
-                      setPage(0)
-                    }}
-                      className="evd-x-input evd-x-input--wide">
-                      <option value="">-- Tất cả kỹ thuật --</option>
-                      {forms.map(f => (
-                        <option key={f.id} value={f.id}>{f.title}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {reportType === 'summary' && data && (
-                  <div className="evd-x-filter-field">
-                    <label style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Trọng số</label>
-                    <span style={{ fontSize: 13, color: '#374151', padding: '6px 0' }}>
-                      Lý thuyết: {knowledgeWeight}% — Thực hành: {skillWeight}%
-                    </span>
+                      }} />
+                    </label>
+                    <label className="admin-control-toolbar__field">
+                      <span>Đến ngày</span>
+                      <input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => {
+                        setToDate(event.target.value)
+                        setPage(0)
+                      }} />
+                    </label>
+                    {reportType === 'field' && (
+                      <label className="admin-control-toolbar__field">
+                        <span>Lĩnh vực</span>
+                        <SearchableSelect
+                          value={selectedCategory}
+                          onChange={(value) => {
+                            setSelectedCategory(value)
+                            setPage(0)
+                          }}
+                          options={[
+                            { value: '', label: 'Tất cả lĩnh vực' },
+                            ...categories.map((category) => ({ value: category.id, label: category.name })),
+                          ]}
+                          placeholder="Tất cả lĩnh vực"
+                          searchPlaceholder="Tìm tên lĩnh vực..."
+                          ariaLabel="Tìm và chọn lĩnh vực"
+                        />
+                      </label>
+                    )}
+                    {reportType === 'technique' && (
+                      <label className="admin-control-toolbar__field">
+                        <span>Kỹ thuật</span>
+                        <select value={selectedFormId} onChange={(event) => {
+                          setSelectedFormId(event.target.value)
+                          setPage(0)
+                        }}>
+                          <option value="">Tất cả kỹ thuật</option>
+                          {forms.map((form) => (
+                            <option key={form.id} value={form.id}>{form.title}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
+                    {reportType === 'summary' && data && (
+                      <div className="competency-dashboard-weight">
+                        <span>Trọng số hiện tại</span>
+                        <strong>Lý thuyết {knowledgeWeight}% · Thực hành {skillWeight}%</strong>
+                      </div>
+                    )}
                   </div>
                 )}
               </section>
@@ -475,26 +506,19 @@ function CompetencySummaryPage() {
               {/* REPORT TYPE: 1. SUMMARY VIEW */}
               {reportType === 'summary' && (
                 <>
-                  {departmentId && <section className="evd-panel" style={{
-                    padding: 16,
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'flex-end',
-                    justifyContent: 'space-between',
-                    gap: 16,
-                    flexWrap: 'wrap',
-                  }}>
+                  <div className="competency-dashboard-insights">
+                  {departmentId && <section className="evd-panel competency-dashboard-target">
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#374151' }}>
+                      <strong>
                         Điểm mục tiêu của khoa
-                      </div>
-                      <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
+                      </strong>
+                      <p>
                         Dùng để xác định nhân viên đang đạt hoặc dưới mục tiêu năng lực tổng hợp.
-                      </div>
+                      </p>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Điểm / 10</span>
+                    <div className="competency-dashboard-target__form">
+                      <label>
+                        <span>Điểm / 10</span>
                         <input
                           type="number"
                           min="0"
@@ -502,13 +526,6 @@ function CompetencySummaryPage() {
                           step="0.01"
                           value={targetInput}
                           onChange={(event) => setTargetInput(event.target.value)}
-                          style={{
-                            width: 120,
-                            padding: '7px 10px',
-                            borderRadius: 6,
-                            border: '1px solid #d1d5db',
-                            fontSize: 13,
-                          }}
                         />
                       </label>
                       <button
@@ -523,11 +540,11 @@ function CompetencySummaryPage() {
                   </section>}
 
                   {data && distribution.length > 0 && (
-                    <section className="evd-panel" style={{ padding: 20, marginBottom: 16 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+                    <section className="evd-panel competency-dashboard-distribution">
+                      <strong>
                         Phân bố trên trang hiện tại — {data.departmentName || 'Khoa đã chọn'}
-                      </div>
-                      <ResponsiveContainer width="100%" height={220}>
+                      </strong>
+                      <ResponsiveContainer width="100%" height={190}>
                         <BarChart data={distribution} layout="vertical" margin={{ left: 100, right: 20, top: 5, bottom: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                           <XAxis type="number" allowDecimals={false} />
@@ -545,21 +562,9 @@ function CompetencySummaryPage() {
                       </ResponsiveContainer>
                     </section>
                   )}
+                  </div>
 
-                  <section className="evd-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div className="mgr-search-box" style={{ maxWidth: 300 }}>
-                      <input
-                        type="text"
-                        placeholder="Tìm theo tên hoặc mã NV..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-                      />
-                      <SearchOutlined />
-                    </div>
-                  </section>
-
-                  <div className="evd-card evd-x-table-card">
+                  <div className="evd-card evd-x-table-card competency-dashboard-table-card">
                     <table className="evd-table admin-table-uppercase">
                       <thead>
                         <tr>
@@ -643,20 +648,7 @@ function CompetencySummaryPage() {
                     </section>
                   )}
 
-                  <section className="evd-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div className="mgr-search-box" style={{ maxWidth: 300 }}>
-                      <input
-                        type="text"
-                        placeholder="Tìm theo tên hoặc mã NV..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-                      />
-                      <SearchOutlined />
-                    </div>
-                  </section>
-
-                  <div className="evd-card evd-x-table-card">
+                  <div className="evd-card evd-x-table-card competency-dashboard-table-card">
                     <table className="evd-table evd-competency-table evd-competency-table--field admin-table-uppercase">
                       <colgroup>
                         <col className="evd-col-index" />
@@ -767,20 +759,7 @@ function CompetencySummaryPage() {
                     </section>
                   )}
 
-                  <section className="evd-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <div className="mgr-search-box" style={{ maxWidth: 300 }}>
-                      <input
-                        type="text"
-                        placeholder="Tìm theo tên hoặc mã NV..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-                      />
-                      <SearchOutlined />
-                    </div>
-                  </section>
-
-                  <div className="evd-card evd-x-table-card">
+                  <div className="evd-card evd-x-table-card competency-dashboard-table-card">
                     <table className="evd-table evd-competency-table evd-competency-table--technique admin-table-uppercase">
                       <colgroup>
                         <col className="evd-col-index" />

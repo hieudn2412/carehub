@@ -6,6 +6,7 @@ import {
   CloseOutlined,
   EyeOutlined,
   FileExcelOutlined,
+  FilterOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -175,6 +176,7 @@ function AdminQualityHistoryVersionPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [departments, setDepartments] = useState([])
   const [evaluatorQuery, setEvaluatorQuery] = useState('')
   const [evaluatorOptions, setEvaluatorOptions] = useState([])
@@ -534,44 +536,70 @@ function AdminQualityHistoryVersionPage() {
                 </div>
 
                 <div className="aqh-history-filters">
-                  <label className="aqh-filter-field aqh-filter-field--keyword">
-                    <span>Nhân viên được đánh giá</span>
-                    <div><SearchOutlined /><input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} placeholder="Tìm theo tên hoặc mã nhân viên..." /></div>
-                  </label>
-                  <label className="aqh-filter-field">
-                    <span>Người thực hiện chấm</span>
-                    <SearchableSelect
-                      ariaLabel="Lọc theo người thực hiện chấm"
-                      loading={evaluatorsLoading}
-                      onChange={(value) => updateQuery({ submittedByUserId: value })}
-                      onSearch={setEvaluatorQuery}
-                      options={evaluatorSelectOptions}
-                      placeholder="Tất cả người chấm"
-                      searchPlaceholder="Tìm tên hoặc mã người chấm..."
-                      selectedOption={selectedEvaluatorOption}
-                      value={submittedByUserId}
-                    />
-                  </label>
-                  <label className="aqh-filter-field">
-                    <span>Khoa/phòng</span>
-                    <SearchableSelect
-                      ariaLabel="Lọc theo khoa phòng"
-                      onChange={(value) => updateQuery({ departmentId: value })}
-                      options={departmentOptions}
-                      placeholder="Tất cả khoa/phòng"
-                      searchPlaceholder="Tìm khoa/phòng..."
-                      value={departmentId}
-                    />
-                  </label>
-                  <label className="aqh-filter-field">
-                    <span>Kết quả</span>
-                    <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
-                      {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </label>
-                  <label className="aqh-filter-field"><span>Từ ngày</span><input type="date" value={dateFrom} onChange={(event) => updateQuery({ dateFrom: event.target.value })} /></label>
-                  <label className="aqh-filter-field"><span>Đến ngày</span><input type="date" value={dateTo} onChange={(event) => updateQuery({ dateTo: event.target.value })} /></label>
-                  {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize) }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
+                  <div className="aqh-history-filter-toolbar">
+                    <div className="aqh-history-search">
+                      <SearchOutlined />
+                      <input
+                        aria-label="Tìm nhân viên được đánh giá"
+                        type="text"
+                        value={keywordInput}
+                        onChange={(event) => setKeywordInput(event.target.value)}
+                        placeholder="Tìm theo tên hoặc mã nhân viên..."
+                      />
+                    </div>
+                    <button
+                      aria-controls="quality-history-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      className={`aqh-history-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                      type="button"
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {[submittedByUserId, departmentId, result, dateFrom, dateTo].filter(Boolean).length > 0 && (
+                        <span className="aqh-history-filter-count">
+                          {[submittedByUserId, departmentId, result, dateFrom, dateTo].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  {isFilterOpen && (
+                    <div className="aqh-history-filter-panel" id="quality-history-filter-panel">
+                    <label className="aqh-filter-field">
+                      <span>Người thực hiện chấm</span>
+                      <SearchableSelect
+                        ariaLabel="Lọc theo người thực hiện chấm"
+                        loading={evaluatorsLoading}
+                        onChange={(value) => updateQuery({ submittedByUserId: value })}
+                        onSearch={setEvaluatorQuery}
+                        options={evaluatorSelectOptions}
+                        placeholder="Tất cả người chấm"
+                        searchPlaceholder="Tìm tên hoặc mã người chấm..."
+                        selectedOption={selectedEvaluatorOption}
+                        value={submittedByUserId}
+                      />
+                    </label>
+                    <label className="aqh-filter-field">
+                      <span>Khoa/phòng</span>
+                      <SearchableSelect
+                        ariaLabel="Lọc theo khoa phòng"
+                        onChange={(value) => updateQuery({ departmentId: value })}
+                        options={departmentOptions}
+                        placeholder="Tất cả khoa/phòng"
+                        searchPlaceholder="Tìm khoa/phòng..."
+                        value={departmentId}
+                      />
+                    </label>
+                    <label className="aqh-filter-field">
+                      <span>Kết quả</span>
+                      <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
+                        {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="aqh-filter-field"><span>Từ ngày</span><input type="date" value={dateFrom} onChange={(event) => updateQuery({ dateFrom: event.target.value })} /></label>
+                    <label className="aqh-filter-field"><span>Đến ngày</span><input type="date" value={dateTo} onChange={(event) => updateQuery({ dateTo: event.target.value })} /></label>
+                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize) }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
+                    </div>
+                  )}
                 </div>
 
                 {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}
