@@ -93,19 +93,16 @@ export default function StaffCompetencyPage() {
                 <span>Đến ngày</span>
                 <input type="date" value={toDate} min={fromDate || undefined} max={today} onChange={event => setToDate(event.target.value)} />
               </label>
-              <button type="button" className="sc-filter__btn" onClick={load}>Áp dụng</button>
             </AdminFilterDisclosure>
             <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => navigate('/staff/checklists')}>
               Thực hiện đánh giá được giao
             </button>
           </div>
         </section>
-        <section className="sc-personal-overview">
-          <div className="sc-personal-overview__heading"><div><span>TỶ LỆ TUÂN THỦ CHUNG</span><h3>{totals.passed}/{totals.evaluated} – {formatNumber(totals.rate)}%</h3></div></div>
-          <div className="sc-personal-metrics">
-            <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><CheckCircleFilled /></span><div><span>Số lượt đạt</span><strong>{totals.passed}</strong></div></article>
-            <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tổng lượt được chấm</span><strong>{totals.evaluated}</strong></div></article>
-          </div>
+        <section className="sc-personal-metrics sc-personal-metrics--compact" aria-label="Tổng quan tuân thủ">
+          <article className="sc-personal-metric sc-personal-metric--primary"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tỷ lệ tuân thủ chung</span><strong>{formatNumber(totals.rate)}%</strong></div></article>
+          <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><CheckCircleFilled /></span><div><span>Số lượt đạt</span><strong>{totals.passed}</strong></div></article>
+          <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tổng lượt được chấm</span><strong>{totals.evaluated}</strong></div></article>
         </section>
         <div className="sc-content">
           {loading ? <LoadingState /> : !(data?.items?.length) ? <EmptyState>Chưa có lượt đánh giá trong khoảng thời gian này.</EmptyState> : (

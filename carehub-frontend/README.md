@@ -17,6 +17,7 @@ Tài liệu này là điểm bắt đầu cho thành viên mới và AI agent tr
 - CSS thuần, tổ chức theo feature
 - Vitest + Testing Library
 - Playwright cho end-to-end test
+- Knip + Madge để phân tích code thừa và quan hệ phụ thuộc
 
 ## 2. Yêu cầu môi trường
 
@@ -86,6 +87,8 @@ Quy ước:
 | `npm run test:coverage` | Chạy unit test và tạo coverage |
 | `npm run test:e2e` | Chạy Playwright end-to-end test |
 | `npm run test:e2e:list` | Liệt kê Playwright test |
+| `npm run analyze:unused` | Dùng Knip tìm file, dependency và export có khả năng không được sử dụng |
+| `npm run analyze:deps` | Dùng Madge kiểm tra vòng lặp phụ thuộc từ entry point `src/main.jsx` |
 
 Trước khi commit tối thiểu phải chạy:
 
@@ -94,6 +97,30 @@ npm run lint
 npm test
 npm run build
 ```
+
+### Phân tích code thừa và phụ thuộc
+
+Chạy Knip để tìm các file, dependency và export có khả năng không còn được sử dụng:
+
+```powershell
+npm run analyze:unused
+```
+
+Cấu hình Knip nằm tại `knip.json`. Lệnh sẽ trả mã thoát khác `0` khi phát hiện
+vấn đề; đây là kết quả phân tích cần xem xét, không đồng nghĩa ứng dụng build lỗi.
+Trước khi xóa nội dung được báo cáo, vẫn phải kiểm tra route, dynamic import, test,
+CSS, asset public và các điểm tích hợp từ bên ngoài.
+
+Chạy Madge để kiểm tra vòng lặp phụ thuộc trong cây import bắt đầu từ
+`src/main.jsx`:
+
+```powershell
+npm run analyze:deps
+```
+
+Kết quả `No circular dependency found!` nghĩa là Madge không phát hiện import
+vòng trong phạm vi đã quét. Hai công cụ này hỗ trợ rà soát kiến trúc nhưng không
+thay thế ESLint, unit test và production build.
 
 ## 6. Cấu trúc thư mục
 
