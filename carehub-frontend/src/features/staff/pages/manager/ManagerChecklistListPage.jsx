@@ -150,14 +150,7 @@ function ManagerChecklistListPage() {
 
   return (
     <AppShell title="Quy trình chất lượng">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Quy trình giám sát</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          Danh sách các quy trình đã được Admin giao để thực hiện đánh giá.
-        </p>
-      </div>
-
-      <div className="mgr-toolbar">
+      <div className="mgr-toolbar mgr-toolbar--standard">
         <div className="mgr-search-box">
           <input
             type="text"
@@ -168,12 +161,13 @@ function ManagerChecklistListPage() {
           <SearchOutlined />
         </div>
         <button
-          className="training-button"
+          className="mgr-toolbar__icon-button"
           onClick={loadAssignedForms}
-          style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
           type="button"
+          title="Tải lại danh sách"
+          aria-label="Tải lại danh sách"
         >
-          <ReloadOutlined /> Tải lại
+          <ReloadOutlined />
         </button>
       </div>
 

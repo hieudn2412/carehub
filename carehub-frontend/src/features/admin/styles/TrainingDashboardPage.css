@@ -11,82 +11,55 @@
   color: #172033;
 }
 
-.training-dashboard__hero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 22px 24px;
-  border: 1px solid #d9e7ec;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #f1fffb, #ffffff 56%, #eef7ff);
-  box-shadow: 0 16px 38px rgba(29, 54, 82, 0.07);
+.training-dashboard__toolbar {
+  padding: 16px 20px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #fff;
 }
 
-.training-dashboard__hero span {
-  color: #087f6d;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-
-.training-dashboard__hero h1 {
-  margin: 7px 0 0;
-  font-size: 28px;
-  font-weight: 650;
-}
-
-.training-dashboard__hero p {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 14px;
-}
-
-.training-dashboard__hero button {
+.training-dashboard__export {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 42px;
   padding: 0 18px;
   border: 0;
-  border-radius: 10px;
-  background: #11172d;
+  border-radius: 8px;
+  background: #087f6d;
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 4px 10px rgba(8, 127, 109, 0.18);
 }
 
-.training-dashboard__hero button:disabled {
+.training-dashboard__export:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.training-dashboard__filters {
+.training-dashboard__filter-panel {
   display: grid;
-  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
   gap: 12px;
-  padding: 16px;
-  border: 1px solid #dde6ef;
-  border-radius: 12px;
-  background: #fff;
 }
 
-.training-dashboard__filters label {
+.training-dashboard__filter-panel label {
   display: grid;
   gap: 7px;
   min-width: 0;
 }
 
-.training-dashboard__filters label > span {
+.training-dashboard__filter-panel label > span {
   color: #64748b;
   font-size: 12px;
   font-weight: 600;
 }
 
-.training-dashboard__filters select,
-.training-dashboard__filters input,
-.training-dashboard__filters label > div:not(.searchable-select) {
+.training-dashboard__filter-panel select,
+.training-dashboard__filter-panel input,
+.training-dashboard__filter-panel label > div:not(.searchable-select) {
   width: 100%;
   min-height: 42px;
   box-sizing: border-box;
@@ -99,13 +72,13 @@
   outline: none;
 }
 
-.training-dashboard__filters label > div:not(.searchable-select) {
+.training-dashboard__filter-panel label > div:not(.searchable-select) {
   display: flex;
   align-items: center;
   background: #f8fafc;
 }
 
-.training-dashboard__filters .searchable-select > input {
+.training-dashboard__filter-panel .searchable-select > input {
   min-height: 42px;
   padding: 0 34px;
   border-radius: 9px;
@@ -274,7 +247,7 @@
 }
 
 @media (max-width: 1280px) {
-  .training-dashboard__filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .training-dashboard__filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__charts { grid-template-columns: 1fr; }
 }
@@ -282,9 +255,7 @@
 /* bp-sm */
 @media (max-width: 768px) {
   .training-dashboard { padding: 14px; }
-  .training-dashboard__hero { align-items: flex-start; flex-direction: column; }
-  .training-dashboard__hero h1 { font-size: 24px; }
-  .training-dashboard__hero button { width: 100%; }
-  .training-dashboard__filters,
+  .training-dashboard__export { width: 100%; }
+  .training-dashboard__filter-panel,
   .training-dashboard__kpis { grid-template-columns: 1fr; }
 }

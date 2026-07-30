@@ -4,6 +4,7 @@ import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutline
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
+import AdminFilterDisclosure from '../../../../shared/components/AdminFilterDisclosure.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
@@ -81,16 +82,24 @@ export default function StaffCompetencyPage() {
   return (
     <AppShell breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định' }]}>
       <div className="sc-page">
-        <div className="sc-header">
-          <div className="sc-header__title-row"><SafetyCertificateOutlined className="sc-header__icon" /><h1 className="sc-header__title">Tuân thủ quy trình, quy định</h1></div>
-          <p className="sc-header__desc">Các quy trình bạn đã được đánh giá trong khoảng thời gian đã chọn</p>
-          <button type="button" className="sc-filter__btn" onClick={() => navigate('/staff/checklists')}>Thực hiện đánh giá được giao</button>
-        </div>
-        <div className="sc-filter">
-          <label className="sc-filter__label">Từ ngày</label><input type="date" className="sc-filter__input" value={fromDate} onChange={event => setFromDate(event.target.value)} />
-          <label className="sc-filter__label">Đến ngày</label><input type="date" className="sc-filter__input" value={toDate} max={today} onChange={event => setToDate(event.target.value)} />
-          <button type="button" className="sc-filter__btn" onClick={load}>Áp dụng</button>
-        </div>
+        <section className="sc-toolbar admin-control-toolbar" aria-label="Bộ lọc tuân thủ cá nhân">
+          <div className="admin-control-toolbar__main">
+            <AdminFilterDisclosure activeCount={Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
+              <label className="admin-control-toolbar__field">
+                <span>Từ ngày</span>
+                <input type="date" value={fromDate} max={toDate || today} onChange={event => setFromDate(event.target.value)} />
+              </label>
+              <label className="admin-control-toolbar__field">
+                <span>Đến ngày</span>
+                <input type="date" value={toDate} min={fromDate || undefined} max={today} onChange={event => setToDate(event.target.value)} />
+              </label>
+              <button type="button" className="sc-filter__btn" onClick={load}>Áp dụng</button>
+            </AdminFilterDisclosure>
+            <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => navigate('/staff/checklists')}>
+              Thực hiện đánh giá được giao
+            </button>
+          </div>
+        </section>
         <section className="sc-personal-overview">
           <div className="sc-personal-overview__heading"><div><span>TỶ LỆ TUÂN THỦ CHUNG</span><h3>{totals.passed}/{totals.evaluated} – {formatNumber(totals.rate)}%</h3></div></div>
           <div className="sc-personal-metrics">

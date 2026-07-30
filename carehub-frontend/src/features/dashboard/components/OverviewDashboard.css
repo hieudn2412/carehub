@@ -55,6 +55,26 @@
   cursor: pointer;
 }
 
+.overview-filter-toolbar {
+  padding: 16px 18px;
+  border: 1px solid var(--overview-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.overview-filter-toolbar .admin-control-toolbar__controls {
+  flex: 1 1 auto;
+}
+
+.overview-filter-panel.overview-filters {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 14px;
+  border-color: #dbe3ee;
+  background: #f8fafc;
+}
+
 .overview-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(180px, 1fr));

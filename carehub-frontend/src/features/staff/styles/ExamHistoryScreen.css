@@ -105,6 +105,30 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.eh-filter-bar > .admin-filter-disclosure {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.eh-filter-bar > .admin-filter-disclosure[open] {
+  flex-basis: 100%;
+  width: 100%;
+  order: 3;
+}
+
+.eh-filter-bar .admin-filter-disclosure__panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+}
+
+.eh-filter-bar .admin-filter-disclosure__panel input {
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 11px;
+}
+
 .eh-search {
   position: relative;
   flex: 1;
@@ -832,7 +856,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .eh-filter-bar,
   .eh-detail-header,
   .eh-exam-toolbar__right {
     align-items: stretch;
@@ -843,10 +866,9 @@
     width: 100%;
   }
 
-  .eh-field-filter,
-  .eh-date-range {
-    width: 100%;
-  }
+  .eh-filter-bar > .admin-filter-disclosure,
+  .eh-filter-bar > .admin-filter-disclosure[open] { width: 100%; flex-basis: 100%; }
+  .eh-filter-bar .admin-filter-disclosure__panel { grid-template-columns: 1fr; }
 
   .eh-date-filter {
     flex: 1;

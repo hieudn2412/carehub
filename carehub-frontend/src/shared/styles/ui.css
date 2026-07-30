@@ -524,7 +524,218 @@ textarea.ch-input {
   }
 }
 
+/* ── Thanh tìm kiếm / bộ lọc dùng chung cho màn hình quản trị ── */
+.admin-control-toolbar.admin-control-toolbar {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-control-toolbar__main {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-control-toolbar__controls {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-control-toolbar__search {
+  width: min(680px, 100%);
+  min-width: 280px;
+  max-width: 680px;
+  flex: 1 1 680px;
+}
+
+.admin-control-toolbar__filter-trigger {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-control-toolbar__filter-trigger.is-open,
+.admin-control-toolbar__filter-trigger:hover {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.admin-control-toolbar__filter-count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.admin-control-toolbar__panel {
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+  grid-template-columns: minmax(220px, 300px);
+  align-items: end;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-control-toolbar__field {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.admin-control-toolbar__field > span {
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.admin-control-toolbar__field select,
+.admin-control-toolbar__field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+
+@media (max-width: 768px) {
+  .admin-control-toolbar__main,
+  .admin-control-toolbar__controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-control-toolbar__search,
+  .admin-control-toolbar__filter-trigger,
+  .admin-control-toolbar__main > button {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .admin-control-toolbar__panel {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Tiện ích ────────────────────────────────────────────── */
+.admin-filter-disclosure {
+  width: 100%;
+}
+
+.admin-filter-disclosure > summary {
+  display: inline-flex;
+  min-height: 44px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.admin-filter-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-filter-disclosure[open] > summary,
+.admin-filter-disclosure > summary:hover {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.admin-filter-disclosure__count {
+  display: inline-flex;
+  min-width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.admin-filter-disclosure__panel {
+  display: flex;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-filter-disclosure__panel > label,
+.admin-filter-disclosure__panel > div {
+  min-width: 180px;
+}
+
+@media (max-width: 768px) {
+  .admin-filter-disclosure > summary {
+    width: 100%;
+  }
+
+  .admin-filter-disclosure__panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-filter-disclosure__panel > label,
+  .admin-filter-disclosure__panel > div {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .ch-text-center {
   text-align: center;
 }

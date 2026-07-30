@@ -6,6 +6,7 @@ import {
   CloseCircleOutlined,
   FileDoneOutlined,
   FileTextOutlined,
+  FilterOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   TrophyOutlined,
@@ -64,6 +65,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const [summary, setSummary] = useState(null)
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const [filters, setFilters] = useState({
     fromDate: '',
@@ -209,6 +211,15 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const completed = numberOrNull(summary?.gradedAttempts)
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
+  const activeFilterCount = [
+    filters.fromDate,
+    filters.toDate,
+    !isManager && filters.departmentId,
+    filters.paperId,
+    filters.professionalFieldId,
+    filters.employeeId,
+    filters.resultStatus,
+  ].filter(Boolean).length
 
   const pageTitle = 'Dashboard lý thuyết'
 
@@ -218,99 +229,108 @@ function EvaluationDashboardPage({ role = 'admin' }) {
       title={isManager ? pageTitle : undefined}
     >
         <div className="exam-dashboard">
-          <section className="exam-dashboard__hero">
-            <div>
-              <span>ĐIỂM LÝ THUYẾT</span>
-              <h1>Điểm bài kiểm tra</h1>
-              <p>
-                {isManager
-                  ? 'Tổng hợp điểm bài test lý thuyết của nhân viên trong khoa theo phạm vi quản lý.'
-                  : 'Theo dõi tiến độ làm bài, kết quả và điểm số theo phạm vi quản lý.'}
-              </p>
+          <section className="exam-dashboard__toolbar admin-control-toolbar" aria-label="Bộ lọc dashboard năng lực chuyên môn">
+            <div className="admin-control-toolbar__main">
+              <div className="admin-control-toolbar__controls">
+                <button
+                  type="button"
+                  className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                  aria-controls="exam-dashboard-filter-panel"
+                  aria-expanded={isFilterOpen}
+                  onClick={() => setIsFilterOpen((current) => !current)}
+                >
+                  <FilterOutlined />
+                  Bộ lọc
+                  {activeFilterCount > 0 && (
+                    <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+                  )}
+                </button>
+              </div>
             </div>
-            <div className="exam-dashboard__assignment-count">
-              <FileTextOutlined />
-              <span><strong>{formatNumber(overview?.targetCount)}</strong> lượt được phân công</span>
-            </div>
-          </section>
 
-          <section className="exam-dashboard__filters" aria-label="Bộ lọc dashboard bài kiểm tra">
-            <Filter label="Từ ngày"><input type="date" value={filters.fromDate} onChange={(event) => setFilters({ ...filters, fromDate: event.target.value })} /></Filter>
-            <Filter label="Đến ngày"><input type="date" value={filters.toDate} onChange={(event) => setFilters({ ...filters, toDate: event.target.value })} /></Filter>
-            <Filter label="Khoa/phòng">
-              <SearchableSelect
-                value={filters.departmentId}
-                disabled={isManager}
-                onChange={(value) => setFilters({ ...filters, departmentId: value })}
-                placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
-                searchPlaceholder="Gõ tên khoa/phòng..."
-                options={[
-                  ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
-                  ...departments.map((department) => ({
-                    value: department.id,
-                    label: department.name,
-                    searchText: department.code || department.departmentCode,
-                  })),
-                ]}
-              />
-            </Filter>
-            <Filter label="Bài kiểm tra">
-              <SearchableSelect
-                value={filters.paperId}
-                onChange={(value) => setFilters({ ...filters, paperId: value })}
-                placeholder="Tất cả bài kiểm tra"
-                searchPlaceholder="Gõ tên bài kiểm tra..."
-                options={[
-                  { value: '', label: 'Tất cả bài kiểm tra' },
-                  ...papers.map((paper) => ({
-                    value: paper.id,
-                    label: paper.name || paper.code,
-                    description: paper.name && paper.code ? paper.code : '',
-                    searchText: paper.code,
-                  })),
-                ]}
-              />
-            </Filter>
-            <Filter label="Lĩnh vực chuyên môn">
-              <SearchableSelect
-                value={filters.professionalFieldId}
-                onChange={(value) => setFilters({ ...filters, professionalFieldId: value })}
-                placeholder="Tất cả lĩnh vực"
-                searchPlaceholder="Gõ tên lĩnh vực..."
-                options={[
-                  { value: '', label: 'Tất cả lĩnh vực' },
-                  ...professionalFields.map((field) => ({
-                    value: field.id,
-                    label: field.name,
-                    searchText: field.code,
-                  })),
-                ]}
-              />
-            </Filter>
-            <Filter label="Nhân viên">
-              <SearchableSelect
-                value={filters.employeeId}
-                onChange={(value) => setFilters({ ...filters, employeeId: value })}
-                placeholder="Tất cả nhân viên"
-                searchPlaceholder="Gõ tên hoặc mã nhân viên..."
-                options={[
-                  { value: '', label: 'Tất cả nhân viên' },
-                  ...(overview?.employees || []).map((employee) => ({
-                    value: employee.id,
-                    label: employee.name,
-                    description: employee.employeeCode,
-                    searchText: employee.employeeCode,
-                  })),
-                ]}
-              />
-            </Filter>
-            <Filter label="Trạng thái kết quả">
-              <select value={filters.resultStatus} onChange={(event) => setFilters({ ...filters, resultStatus: event.target.value })}>
-                <option value="">Tất cả kết quả</option>
-                <option value="PASSED">Đạt</option>
-                <option value="FAILED">Không đạt</option>
-              </select>
-            </Filter>
+            {isFilterOpen && (
+              <div
+                id="exam-dashboard-filter-panel"
+                className="exam-dashboard__filter-panel admin-control-toolbar__panel"
+              >
+                <Filter label="Từ ngày"><input type="date" value={filters.fromDate} onChange={(event) => setFilters({ ...filters, fromDate: event.target.value })} /></Filter>
+                <Filter label="Đến ngày"><input type="date" value={filters.toDate} onChange={(event) => setFilters({ ...filters, toDate: event.target.value })} /></Filter>
+                <Filter label="Khoa/phòng">
+                  <SearchableSelect
+                    value={filters.departmentId}
+                    disabled={isManager}
+                    onChange={(value) => setFilters({ ...filters, departmentId: value })}
+                    placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
+                    searchPlaceholder="Gõ tên khoa/phòng..."
+                    options={[
+                      ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
+                      ...departments.map((department) => ({
+                        value: department.id,
+                        label: department.name,
+                        searchText: department.code || department.departmentCode,
+                      })),
+                    ]}
+                  />
+                </Filter>
+                <Filter label="Bài kiểm tra">
+                  <SearchableSelect
+                    value={filters.paperId}
+                    onChange={(value) => setFilters({ ...filters, paperId: value })}
+                    placeholder="Tất cả bài kiểm tra"
+                    searchPlaceholder="Gõ tên bài kiểm tra..."
+                    options={[
+                      { value: '', label: 'Tất cả bài kiểm tra' },
+                      ...papers.map((paper) => ({
+                        value: paper.id,
+                        label: paper.name || paper.code,
+                        description: paper.name && paper.code ? paper.code : '',
+                        searchText: paper.code,
+                      })),
+                    ]}
+                  />
+                </Filter>
+                <Filter label="Lĩnh vực chuyên môn">
+                  <SearchableSelect
+                    value={filters.professionalFieldId}
+                    onChange={(value) => setFilters({ ...filters, professionalFieldId: value })}
+                    placeholder="Tất cả lĩnh vực"
+                    searchPlaceholder="Gõ tên lĩnh vực..."
+                    options={[
+                      { value: '', label: 'Tất cả lĩnh vực' },
+                      ...professionalFields.map((field) => ({
+                        value: field.id,
+                        label: field.name,
+                        searchText: field.code,
+                      })),
+                    ]}
+                  />
+                </Filter>
+                <Filter label="Nhân viên">
+                  <SearchableSelect
+                    value={filters.employeeId}
+                    onChange={(value) => setFilters({ ...filters, employeeId: value })}
+                    placeholder="Tất cả nhân viên"
+                    searchPlaceholder="Gõ tên hoặc mã nhân viên..."
+                    options={[
+                      { value: '', label: 'Tất cả nhân viên' },
+                      ...(overview?.employees || []).map((employee) => ({
+                        value: employee.id,
+                        label: employee.name,
+                        description: employee.employeeCode,
+                        searchText: employee.employeeCode,
+                      })),
+                    ]}
+                  />
+                </Filter>
+                <Filter label="Trạng thái kết quả">
+                  <select value={filters.resultStatus} onChange={(event) => setFilters({ ...filters, resultStatus: event.target.value })}>
+                    <option value="">Tất cả kết quả</option>
+                    <option value="PASSED">Đạt</option>
+                    <option value="FAILED">Không đạt</option>
+                  </select>
+                </Filter>
+              </div>
+            )}
           </section>
 
           {error && <div className="exam-dashboard__notice exam-dashboard__notice--error"><InfoCircleOutlined /> {error}</div>}

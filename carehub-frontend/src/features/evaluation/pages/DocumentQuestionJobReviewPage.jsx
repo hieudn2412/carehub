@@ -14,6 +14,7 @@ import {
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -465,20 +466,24 @@ function DocumentQuestionJobReviewPage() {
                         onChange={(event) => setKeyword(event.target.value)}
                       />
                     </div>
-                    <select className="qdoc-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="GOOD">Đạt</option>
-                      <option value="NEED_REVIEW">Cần xem xét</option>
-                      <option value="REJECTED">Đã từ chối</option>
-                      <option value="APPROVED">Đã duyệt</option>
-                      <option value="SAVED">Đã lưu</option>
-                    </select>
-                    <select className="qdoc-select" value={difficultyFilter} onChange={(event) => setDifficultyFilter(event.target.value)}>
-                      <option value="">Tất cả độ khó</option>
-                      <option value="easy">Dễ</option>
-                      <option value="medium">Trung bình</option>
-                      <option value="hard">Khó</option>
-                    </select>
+                    <AdminFilterDisclosure
+                      activeCount={[statusFilter, difficultyFilter].filter(Boolean).length}
+                    >
+                      <select className="qdoc-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="GOOD">Đạt</option>
+                        <option value="NEED_REVIEW">Cần xem xét</option>
+                        <option value="REJECTED">Đã từ chối</option>
+                        <option value="APPROVED">Đã duyệt</option>
+                        <option value="SAVED">Đã lưu</option>
+                      </select>
+                      <select className="qdoc-select" value={difficultyFilter} onChange={(event) => setDifficultyFilter(event.target.value)}>
+                        <option value="">Tất cả độ khó</option>
+                        <option value="easy">Dễ</option>
+                        <option value="medium">Trung bình</option>
+                        <option value="hard">Khó</option>
+                      </select>
+                    </AdminFilterDisclosure>
                   </section>
 
                   {filteredCandidates.length > 0 && (

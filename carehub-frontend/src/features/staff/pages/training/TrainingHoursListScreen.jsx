@@ -319,6 +319,8 @@ function TrainingHoursListScreen() {
                   }}
                 >
                   <FilterOutlined aria-hidden="true" />
+                  <span className="th-filter-trigger-label">Bộ lọc</span>
+                  {status && <span className="th-filter-active-count">1</span>}
                 </button>
                 <select
                   value={status}
@@ -387,6 +389,27 @@ function TrainingHoursListScreen() {
                 <PlusOutlined />
                 <span>Cập nhật giờ đào tạo</span>
               </button>
+              {isFilterOpen && (
+                <div className="th-desktop-filter-panel">
+                  <label>
+                    <span>Trạng thái hồ sơ</span>
+                    <select
+                      value={status}
+                      onChange={e => {
+                        setStatus(e.target.value)
+                        setPage(0)
+                        setIsFilterOpen(false)
+                      }}
+                      className="th-filter-select th-filter-select--panel"
+                      aria-label="Lọc theo trạng thái hồ sơ"
+                    >
+                      {STATUS_FILTER_OPTIONS.map(option => (
+                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Table */}

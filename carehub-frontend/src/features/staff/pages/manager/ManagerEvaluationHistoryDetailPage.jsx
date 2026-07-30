@@ -72,18 +72,10 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
         { label: 'Chi tiết kết quả' }
       ]}
     >
-      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả đánh giá quy trình</h1>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-            {evaluation.title}
-          </p>
-        </div>
-
+      <div className="mgr-detail-actions">
         <button
           onClick={() => window.print()}
-          className="training-button"
-          style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
+          className="training-button mgr-detail-actions__button"
         >
           <PrinterOutlined /> In kết quả đánh giá
         </button>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   DeleteOutlined,
   EditOutlined,
+  FilterOutlined,
   LeftOutlined,
   PlusCircleOutlined,
   RightOutlined,
@@ -35,6 +36,7 @@ function EmailTemplatesListPage() {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [reloadToken, setReloadToken] = useState(0)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,45 +96,74 @@ function EmailTemplatesListPage() {
   return (
     <AppShell breadcrumbs={[{ label: 'Danh sách biểu mẫu email thông báo' }]}>
             <div className="etl-page">
-              <div className="etl-title-card">
-                <h1 className="etl-title">Biểu mẫu</h1>
-                <p className="etl-subtitle">Quản lý mẫu email cho từng sự kiện thông báo</p>
-              </div>
-
-              <div className="etl-filter-bar">
-                <div className="etl-search-wrapper">
-                  <span className="etl-search-icon"><SearchOutlined /></span>
-                  <input
-                    type="text"
-                    className="etl-search-input"
-                    placeholder="Tìm theo tên, mã hoặc tiêu đề..."
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                  />
+              <section className="etl-toolbar admin-control-toolbar" aria-label="Công cụ quản lý mẫu email">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="etl-search-wrapper admin-control-toolbar__search">
+                      <span className="etl-search-icon"><SearchOutlined /></span>
+                      <input
+                        type="text"
+                        className="etl-search-input"
+                        aria-label="Tìm mẫu email"
+                        placeholder="Tìm theo tên, mã hoặc tiêu đề..."
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-controls="email-template-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined />
+                      Bộ lọc
+                      {[categoryFilter, statusFilter].filter(Boolean).length > 0 && (
+                        <span className="admin-control-toolbar__filter-count">
+                          {[categoryFilter, statusFilter].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="etl-toolbar__actions">
+                    <span>{totalElements} kết quả</span>
+                    <button type="button" className="etl-btn-create" onClick={() => navigate('/admin/notifications/email-templates/new')}>
+                      <PlusCircleOutlined /> Tạo mới biểu mẫu
+                    </button>
+                  </div>
                 </div>
-                <select
-                  className="etl-filter-select"
-                  value={categoryFilter}
-                  onChange={(event) => { setCategoryFilter(event.target.value); setPage(1) }}
-                >
-                  <option value="">Danh mục</option>
-                  <option value="TRAINING">Đào tạo</option>
-                  <option value="EVALUATION">Đánh giá</option>
-                  <option value="QUALITY">Chất lượng</option>
-                </select>
-                <select
-                  className="etl-filter-select"
-                  value={statusFilter}
-                  onChange={(event) => { setStatusFilter(event.target.value); setPage(1) }}
-                >
-                  <option value="">Trạng thái</option>
-                  <option value="ACTIVE">Hoạt động</option>
-                  <option value="INACTIVE">Ngừng</option>
-                </select>
-                <button className="etl-btn-create" onClick={() => navigate('/admin/notifications/email-templates/new')}>
-                  <PlusCircleOutlined /> Tạo mới biểu mẫu
-                </button>
-              </div>
+
+                {isFilterOpen && (
+                  <div id="email-template-filter-panel" className="etl-filter-panel admin-control-toolbar__panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Danh mục</span>
+                      <select
+                        className="etl-filter-select"
+                        value={categoryFilter}
+                        onChange={(event) => { setCategoryFilter(event.target.value); setPage(1) }}
+                      >
+                        <option value="">Tất cả danh mục</option>
+                        <option value="TRAINING">Đào tạo</option>
+                        <option value="EVALUATION">Đánh giá</option>
+                        <option value="QUALITY">Chất lượng</option>
+                      </select>
+                    </label>
+                    <label className="admin-control-toolbar__field">
+                      <span>Trạng thái</span>
+                      <select
+                        className="etl-filter-select"
+                        value={statusFilter}
+                        onChange={(event) => { setStatusFilter(event.target.value); setPage(1) }}
+                      >
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="ACTIVE">Hoạt động</option>
+                        <option value="INACTIVE">Ngừng</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
+              </section>
 
               <div className="etl-table-card">
                 <table className="etl-table admin-table-uppercase">

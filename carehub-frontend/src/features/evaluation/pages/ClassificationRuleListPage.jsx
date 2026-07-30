@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { EditOutlined, DeleteOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -100,6 +101,7 @@ function ClassificationRuleListPage() {
                 onChange={(event) => setKeyword(event.target.value)}
               />
             </div>
+            <AdminFilterDisclosure activeCount={enabledFilter ? 1 : 0}>
             <select
               className="crl-filter-select"
               value={enabledFilter}
@@ -109,6 +111,7 @@ function ClassificationRuleListPage() {
               <option value="true">Hoạt động</option>
               <option value="false">Tạm ngưng</option>
             </select>
+            </AdminFilterDisclosure>
           </div>
           <button
             className="crl-btn-add"

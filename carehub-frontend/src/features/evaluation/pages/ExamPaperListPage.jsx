@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, FilterOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
@@ -24,6 +24,7 @@ function ExamPaperListPage({
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [showAnswers, setShowAnswers] = useState(false)
   const [actionId, setActionId] = useState(null)
@@ -143,46 +144,60 @@ function ExamPaperListPage({
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="exp-page">
-              <div className="exp-title-card">
-                <div>
-                  <h1 className="exp-title">Quản lý bài kiểm tra</h1>
-                  <p className="exp-subtitle">Tạo, giao, phát hành và quản lý đề kiểm tra tại một nơi</p>
-                </div>
-                <div className="exp-title-actions">
-                  <button type="button" className="exp-btn-secondary" onClick={loadPapers} disabled={isLoading}>
-                    <ReloadOutlined /> Tải lại
-                  </button>
-                  <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
-                    <PlusCircleOutlined /> Tạo & giao bài
-                  </button>
-                </div>
-              </div>
+              <section className="exp-management-card">
+                <ExamManagementViewSwitch
+                  activeView={activeView}
+                  canViewPapers={canViewPapers}
+                  canViewAssignments={canViewAssignments}
+                  onChange={onViewChange}
+                />
 
-              <ExamManagementViewSwitch
-                activeView={activeView}
-                canViewPapers={canViewPapers}
-                canViewAssignments={canViewAssignments}
-                onChange={onViewChange}
-              />
-
-              <div className="exp-filter-bar">
-                <div className="exp-search">
-                  <SearchOutlined />
-                  <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm mã đề, tên đề, cấu hình" />
+                <div className="exp-filter-bar admin-control-toolbar">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="exp-search admin-control-toolbar__search">
+                      <SearchOutlined />
+                      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm mã đề, tên đề, cấu hình" />
+                    </div>
+                    <button
+                      aria-controls="exam-paper-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                      type="button"
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {status && <span className="admin-control-toolbar__filter-count">1</span>}
+                    </button>
+                  </div>
+                  <div className="exp-title-actions">
+                    <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
+                      <PlusCircleOutlined /> Tạo & giao bài
+                    </button>
+                    <button type="button" className="exp-btn-secondary" onClick={loadPapers} disabled={isLoading}>
+                      <ReloadOutlined /> Tải lại
+                    </button>
+                  </div>
                 </div>
-                <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                  <option value="">Trạng thái</option>
-                  <option value="DRAFT">Bản nháp</option>
-                  <option value="PUBLISHED">Đã phát hành</option>
-                  <option value="ARCHIVED">Đã lưu trữ</option>
-                </select>
-              </div>
+                {isFilterOpen && (
+                  <div className="admin-control-toolbar__panel" id="exam-paper-filter-panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Trạng thái</span>
+                      <select value={status} onChange={(event) => setStatus(event.target.value)}>
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="DRAFT">Bản nháp</option>
+                        <option value="PUBLISHED">Đã phát hành</option>
+                        <option value="ARCHIVED">Đã lưu trữ</option>
+                      </select>
+                    </label>
+                  </div>
+                  )}
+                </div>
 
-              <div className="exp-table-card">
+                <div className="exp-table-card">
                 <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
-                      <th style={{ width: '40px' }}></th>
                       <th>Mã đề</th>
                       <th>Tên đề</th>
                       <th>Cấu hình</th>
@@ -194,16 +209,11 @@ function ExamPaperListPage({
                   </thead>
                   <tbody>
                     {isLoading ? (
-                      <tr><td colSpan="8" className="exp-empty">Đang tải bộ đề kiểm tra...</td></tr>
+                      <tr><td colSpan="7" className="exp-empty">Đang tải bộ đề kiểm tra...</td></tr>
                     ) : filteredPapers.length === 0 ? (
-                      <tr><td colSpan="8" className="exp-empty">Chưa có bộ đề kiểm tra.</td></tr>
+                      <tr><td colSpan="7" className="exp-empty">Chưa có bộ đề kiểm tra.</td></tr>
                     ) : filteredPapers.map((paper) => (
                       <tr key={paper.id}>
-                        <td style={{ textAlign: 'center' }}>
-                          <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => handleExpand(paper.id)} title="Xem chi tiết">
-                            {expandedId === paper.id ? <CloseOutlined /> : <EyeOutlined />}
-                          </button>
-                        </td>
                         <td><strong>{paper.code}</strong></td>
                         <td>{paper.name}</td>
                         <td>{paper.examConfigName}</td>
@@ -212,6 +222,9 @@ function ExamPaperListPage({
                         <td>{formatDateTime(paper.createdAt)}</td>
                         <td>
                           <div className="admin-table-actions exp-table-actions">
+                            <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => handleExpand(paper.id)} title="Xem chi tiết">
+                              {expandedId === paper.id ? <CloseOutlined /> : <EyeOutlined />}
+                            </button>
                             <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, false)} title="Tải đề DOCX"><DownloadOutlined /></button>
                             <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, true)} title="Tải đáp án DOCX"><FileTextOutlined /></button>
                             {paper.status === 'DRAFT' && <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--success" onClick={() => publishPaper(paper)} disabled={actionId === paper.id} title="Phát hành"><SendOutlined /></button>}
@@ -282,7 +295,8 @@ function ExamPaperListPage({
                     </div>
                   </div>
                 )}
-              </div>
+                </div>
+              </section>
             </div>
           </main>
         </div>

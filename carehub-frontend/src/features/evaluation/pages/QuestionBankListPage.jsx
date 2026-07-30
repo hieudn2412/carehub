@@ -384,16 +384,6 @@ function QuestionBankListPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="qbl-page">
-              <div className="qbl-title-card">
-                <div>
-                  <h1 className="qbl-title">Ngân hàng câu hỏi</h1>
-                  <p className="qbl-subtitle">Tìm kiếm, phân loại và quản lý nội dung câu hỏi dùng trong các bài kiểm tra.</p>
-                </div>
-                <button type="button" className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
-                  <PlusCircleOutlined /> Thêm câu hỏi
-                </button>
-              </div>
-
               {!apiAvailable && (
                 <div className="qbl-warning">
                   Đang hiển thị dữ liệu demo vì chưa lấy được ngân hàng câu hỏi từ backend.
@@ -432,11 +422,28 @@ function QuestionBankListPage() {
                   </div>
 
                   <div className="qbl-toolbar-actions">
-                    <button className="qbl-btn-secondary" onClick={exportQuestions} disabled={isExporting}>
-                      {isExporting ? <LoadingOutlined /> : <DownloadOutlined />} Xuất Excel
+                    <span className="qbl-results-count">{totalElements} kết quả</span>
+                    <button type="button" className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
+                      <PlusCircleOutlined /> Thêm câu hỏi
                     </button>
-                    <button className="qbl-btn-secondary" onClick={() => setIsImportModalOpen(true)}>
-                      <UploadOutlined /> Nhập dữ liệu
+                    <button
+                      aria-label="Nhập dữ liệu câu hỏi"
+                      className="qbl-toolbar-icon-btn"
+                      onClick={() => setIsImportModalOpen(true)}
+                      title="Nhập dữ liệu"
+                      type="button"
+                    >
+                      <DownloadOutlined />
+                    </button>
+                    <button
+                      aria-label="Xuất ngân hàng câu hỏi"
+                      className="qbl-toolbar-icon-btn"
+                      disabled={isExporting}
+                      onClick={exportQuestions}
+                      title="Xuất Excel"
+                      type="button"
+                    >
+                      {isExporting ? <LoadingOutlined /> : <UploadOutlined />}
                     </button>
                   </div>
                 </div>

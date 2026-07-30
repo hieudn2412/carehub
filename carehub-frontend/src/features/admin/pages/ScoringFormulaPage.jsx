@@ -3,6 +3,7 @@ import {
   CalculatorOutlined,
   CheckCircleOutlined,
   EditOutlined,
+  FilterOutlined,
   LoadingOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -57,6 +58,7 @@ function ScoringFormulaPage() {
   const [keyword, setKeyword] = useState('')
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [totalElements, setTotalElements] = useState(0)
@@ -174,35 +176,50 @@ function ScoringFormulaPage() {
           breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
         />
         <main className="sfp-main">
-          <header className="sfp-heading">
-            <div>
-              <span className="sfp-eyebrow"><CalculatorOutlined /> QUẢN TRỊ CÔNG THỨC</span>
-              <h1>Tỷ trọng và điểm sàn theo phiên bản</h1>
-              <p>Kiểm soát cách tính kết quả mà không làm thay đổi cấu trúc quy trình đã công bố.</p>
-            </div>
-            <div className="sfp-count"><strong>{totalElements}</strong><span>phiên bản</span></div>
-          </header>
-
           <section className="sfp-toolbar" aria-label="Bộ lọc công thức">
-            <form onSubmit={(event) => { event.preventDefault(); setPage(0); setSearch(keyword.trim()) }}>
-              <SearchOutlined />
-              <input
-                aria-label="Tìm quy trình hoặc phiên bản"
-                onChange={(event) => setKeyword(event.target.value)}
-                placeholder="Tìm theo mã hoặc tên quy trình..."
-                value={keyword}
-              />
-              <button type="submit">Tìm kiếm</button>
-            </form>
-            <label>
-              <span>Trạng thái</span>
-              <select value={status} onChange={(event) => { setPage(0); setStatus(event.target.value) }}>
-                {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-            <button className="sfp-refresh" onClick={() => loadRows()} title="Tải lại dữ liệu" type="button">
-              <ReloadOutlined />
-            </button>
+            <div className="sfp-toolbar-main">
+              <div className="sfp-search-filter-group">
+                <div className="sfp-search">
+                  <SearchOutlined />
+                  <input
+                    aria-label="Tìm quy trình hoặc phiên bản"
+                    onChange={(event) => {
+                      setKeyword(event.target.value)
+                      setSearch(event.target.value.trim())
+                      setPage(0)
+                    }}
+                    placeholder="Tìm theo mã hoặc tên quy trình..."
+                    value={keyword}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className={`sfp-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                  aria-expanded={isFilterOpen}
+                  aria-controls="scoring-formula-filter-panel"
+                  onClick={() => setIsFilterOpen((current) => !current)}
+                >
+                  <FilterOutlined /> Bộ lọc
+                  {status && <span className="sfp-filter-count">1</span>}
+                </button>
+              </div>
+              <div className="sfp-toolbar-actions">
+                <span className="sfp-result-count">{totalElements} phiên bản</span>
+                <button className="sfp-refresh" onClick={() => loadRows()} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" type="button">
+                  <ReloadOutlined />
+                </button>
+              </div>
+            </div>
+            {isFilterOpen && (
+              <div className="sfp-filter-panel" id="scoring-formula-filter-panel">
+                <label>
+                  <span>Trạng thái</span>
+                  <select value={status} onChange={(event) => { setPage(0); setStatus(event.target.value) }}>
+                    {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+              </div>
+            )}
           </section>
 
           {errorMessage && <div className="sfp-alert"><WarningOutlined /> {errorMessage}</div>}

@@ -16,6 +16,7 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function CompetencyByFieldPage() {
@@ -131,78 +132,64 @@ function CompetencyByFieldPage() {
   return (
     <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Năng lực theo lĩnh vực' : undefined}>
             <div className="evd-page">
-              <section className="evd-title-card">
-                <div>
-                  <h1>Năng lực theo lĩnh vực kiến thức</h1>
-                  <p>Xem điểm trung bình và phân loại năng lực của điều dưỡng theo từng lĩnh vực chuyên môn</p>
-                </div>
-                <button className="evd-btn" onClick={loadData} disabled={loading}>
-                  <ReloadOutlined /> Tải lại
-                </button>
-              </section>
-
-              <section className="evd-panel" style={{ padding: 16 }}>
-                <div className="evd-x-inline-filters">
-                  <label style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Khoa:</label>
-                  <div className="evd-x-select">
-                    <SearchableSelect
-                      value={selectedDeptId}
-                      onChange={setSelectedDeptId}
-                      disabled={!isAdmin}
-                      options={departments.map((department) => ({ value: department.id, label: department.name }))}
-                      placeholder="Chọn khoa/phòng"
-                      searchPlaceholder="Tìm tên khoa/phòng..."
-                      ariaLabel="Tìm và chọn khoa/phòng"
+              <section className="evd-competency-toolbar admin-control-toolbar" aria-label="Công cụ năng lực theo lĩnh vực">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__search">
+                    <SearchOutlined aria-hidden="true" />
+                    <input
+                      type="search"
+                      placeholder="Tìm theo tên hoặc mã nhân viên..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
                     />
                   </div>
-
-                  <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginLeft: 8 }}>Lĩnh vực:</label>
-                  <div className="evd-x-select">
-                    <SearchableSelect
-                      value={selectedCategory}
-                      onChange={setSelectedCategory}
-                      options={[
-                        { value: '', label: 'Tất cả lĩnh vực' },
-                        ...categories.map((category) => ({ value: category.id, label: category.name })),
-                      ]}
-                      placeholder="Tất cả lĩnh vực"
-                      searchPlaceholder="Tìm tên lĩnh vực..."
-                      ariaLabel="Tìm và chọn lĩnh vực"
-                    />
+                  <div className="admin-control-toolbar__controls">
+                    <AdminFilterDisclosure activeCount={Number(Boolean(selectedCategory)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
+                      <label className="admin-control-toolbar__field">
+                        <span>Khoa/phòng</span>
+                        <div>
+                          <SearchableSelect
+                            value={selectedDeptId}
+                            onChange={setSelectedDeptId}
+                            disabled={!isAdmin}
+                            options={departments.map((department) => ({ value: department.id, label: department.name }))}
+                            placeholder="Chọn khoa/phòng"
+                            searchPlaceholder="Tìm tên khoa/phòng..."
+                            ariaLabel="Tìm và chọn khoa/phòng"
+                          />
+                        </div>
+                      </label>
+                      <label className="admin-control-toolbar__field">
+                        <span>Lĩnh vực chuyên môn</span>
+                        <div>
+                          <SearchableSelect
+                            value={selectedCategory}
+                            onChange={setSelectedCategory}
+                            options={[
+                              { value: '', label: 'Tất cả lĩnh vực' },
+                              ...categories.map((category) => ({ value: category.id, label: category.name })),
+                            ]}
+                            placeholder="Tất cả lĩnh vực"
+                            searchPlaceholder="Tìm tên lĩnh vực..."
+                            ariaLabel="Tìm và chọn lĩnh vực"
+                          />
+                        </div>
+                      </label>
+                      <label className="admin-control-toolbar__field">
+                        <span>Từ ngày</span>
+                        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} />
+                      </label>
+                      <label className="admin-control-toolbar__field">
+                        <span>Đến ngày</span>
+                        <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} />
+                      </label>
+                      <button className="evd-btn" type="button" onClick={loadData}>Áp dụng</button>
+                    </AdminFilterDisclosure>
+                    <span className="evd-competency-toolbar__count">{filteredItems.length} nhân viên</span>
+                    <button className="evd-icon-btn" type="button" onClick={loadData} disabled={loading} title="Tải lại" aria-label="Tải lại">
+                      <ReloadOutlined />
+                    </button>
                   </div>
-
-                  <label style={{ fontWeight: 600, fontSize: 14, color: '#374151', marginLeft: 8 }}>Từ:</label>
-                  <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
-                    style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }} />
-
-                  <label style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>Đến:</label>
-                  <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
-                    style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }} />
-
-                  <button className="evd-btn" onClick={loadData}>Áp dụng</button>
-                </div>
-              </section>
-
-              {data && data.items && data.items.length > 0 && (
-                <section className="evd-panel" style={{ padding: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, color: '#374151' }}>
-                    <strong>{data.departmentName}</strong>
-                    {data.categoryName && <> — <em>{data.categoryName}</em></>}
-                    : {data.items.length} điều dưỡng có dữ liệu
-                  </div>
-                </section>
-              )}
-
-              <section className="evd-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <div className="mgr-search-box" style={{ maxWidth: 300 }}>
-                  <input
-                    type="text"
-                    placeholder="Tìm theo tên hoặc mã NV..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db' }}
-                  />
-                  <SearchOutlined />
                 </div>
               </section>
 

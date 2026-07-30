@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
-  DownloadOutlined,
   ExclamationCircleOutlined,
+  FilterOutlined,
   LoadingOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import {
   Bar,
@@ -133,8 +134,15 @@ function DashboardContent({ role }) {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const managerDepartmentId = profile?.departmentId || ''
+  const activeFilterCount = [
+    !isManager && filters.departmentId,
+    filters.professionalFieldId,
+    filters.asOf && filters.asOf !== today,
+    filters.status,
+  ].filter(Boolean).length
 
   useEffect(() => {
     let cancelled = false
@@ -242,66 +250,85 @@ function DashboardContent({ role }) {
 
   return (
     <div className="training-dashboard">
-      <section className="training-dashboard__hero">
-        <div>
-          <span>VIETDUC CARE TRAINING</span>
-          <h1>Dashboard giờ đào tạo</h1>
-          <p>
-            {isManager
-              ? `Theo dõi mức độ đáp ứng chuẩn đào tạo của nhân sự ${profile?.departmentName ? `tại ${profile.departmentName}` : 'trong khoa quản lý'}.`
-              : 'Theo dõi mức độ đáp ứng chuẩn giờ đào tạo đang áp dụng trên toàn viện hoặc theo từng khoa.'}
-          </p>
+      <section className="training-dashboard__toolbar admin-control-toolbar" aria-label="Công cụ dashboard giờ đào tạo">
+        <div className="admin-control-toolbar__main">
+          <div className="admin-control-toolbar__controls">
+            <button
+              type="button"
+              className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+              aria-expanded={isFilterOpen}
+              aria-controls="training-dashboard-filter-panel"
+              onClick={() => setIsFilterOpen((current) => !current)}
+            >
+              <FilterOutlined />
+              Bộ lọc
+              {activeFilterCount > 0 && (
+                <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+              )}
+            </button>
+          </div>
+          <button
+            type="button"
+            className="training-dashboard__export"
+            onClick={handleExport}
+            disabled={loading || exporting || metrics.total === 0}
+          >
+            {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+            {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
+          </button>
         </div>
-        <button type="button" onClick={handleExport} disabled={loading || exporting || metrics.total === 0}>
-          {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />} {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách theo bộ lọc'}
-        </button>
-      </section>
 
-      <section className="training-dashboard__filters" aria-label="Bộ lọc dashboard giờ đào tạo">
-        <label>
-          <span>Khoa/Phòng</span>
-          {isManager ? (
-            <div>{profile?.departmentName || 'Khoa của tôi'}</div>
-          ) : (
-            <SearchableSelect
-              value={filters.departmentId}
-              onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
-              options={[
-                { value: '', label: 'Toàn viện' },
-                ...departments.map((department) => ({ value: department.id, label: department.name })),
-              ]}
-              placeholder="Toàn viện"
-              searchPlaceholder="Tìm tên khoa/phòng..."
-              ariaLabel="Tìm và chọn khoa/phòng"
-            />
-          )}
-        </label>
-        <label>
-          <span>Lĩnh vực chuyên môn</span>
-          <SearchableSelect
-            value={filters.professionalFieldId}
-            onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
-            options={[
-              { value: '', label: 'Tất cả lĩnh vực' },
-              ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-            ]}
-            placeholder="Tất cả lĩnh vực"
-            searchPlaceholder="Tìm tên lĩnh vực..."
-            ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-          />
-        </label>
-        <label>
-          <span>Tính đến ngày</span>
-          <input type="date" value={filters.asOf} max={today} onChange={(event) => setFilters((current) => ({ ...current, asOf: event.target.value }))} />
-        </label>
-        <label>
-          <span>Trạng thái</span>
-          <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-            <option value="">Tất cả trạng thái</option>
-            <option value="COMPLIANT">Đạt</option>
-            <option value="NON_COMPLIANT">Chưa đạt</option>
-          </select>
-        </label>
+        {isFilterOpen && (
+          <div
+            id="training-dashboard-filter-panel"
+            className="training-dashboard__filter-panel admin-control-toolbar__panel"
+          >
+            <label>
+              <span>Khoa/Phòng</span>
+              {isManager ? (
+                <div>{profile?.departmentName || 'Khoa của tôi'}</div>
+              ) : (
+                <SearchableSelect
+                  value={filters.departmentId}
+                  onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
+                  options={[
+                    { value: '', label: 'Toàn viện' },
+                    ...departments.map((department) => ({ value: department.id, label: department.name })),
+                  ]}
+                  placeholder="Toàn viện"
+                  searchPlaceholder="Tìm tên khoa/phòng..."
+                  ariaLabel="Tìm và chọn khoa/phòng"
+                />
+              )}
+            </label>
+            <label>
+              <span>Lĩnh vực chuyên môn</span>
+              <SearchableSelect
+                value={filters.professionalFieldId}
+                onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
+                options={[
+                  { value: '', label: 'Tất cả lĩnh vực' },
+                  ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+                ]}
+                placeholder="Tất cả lĩnh vực"
+                searchPlaceholder="Tìm tên lĩnh vực..."
+                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              />
+            </label>
+            <label>
+              <span>Tính đến ngày</span>
+              <input type="date" value={filters.asOf} max={today} onChange={(event) => setFilters((current) => ({ ...current, asOf: event.target.value }))} />
+            </label>
+            <label>
+              <span>Trạng thái</span>
+              <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
+                <option value="">Tất cả trạng thái</option>
+                <option value="COMPLIANT">Đạt</option>
+                <option value="NON_COMPLIANT">Chưa đạt</option>
+              </select>
+            </label>
+          </div>
+        )}
       </section>
 
       {error && <div className="training-dashboard__alert"><ExclamationCircleOutlined /> {error}</div>}

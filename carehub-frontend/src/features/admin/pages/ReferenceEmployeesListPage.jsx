@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { adminApi } from '../api/adminApi.js'
@@ -179,7 +180,20 @@ function ReferenceEmployeesListPage() {
                       disabled={loading}
                     />
                   </div>
+                  <span className="rel-results-count">{totalElements} kết quả</span>
+                </div>
 
+                <AdminFilterDisclosure
+                  activeCount={[
+                    positionFilter !== 'all',
+                    degreeFilter !== 'all',
+                    deptFilter !== 'all',
+                    titleFilter !== 'all',
+                    genderFilter !== 'all',
+                    cbTypeFilter !== 'all',
+                  ].filter(Boolean).length}
+                >
+                  <div className="rel-filter-row">
                   <select
                     className="rel-filter-select"
                     value={positionFilter}
@@ -203,8 +217,6 @@ function ReferenceEmployeesListPage() {
                       <option key={deg} value={deg}>{deg}</option>
                     ))}
                   </select>
-
-                  <span className="rel-results-count">{totalElements} kết quả</span>
                 </div>
 
                 {/* Row 2 */}
@@ -263,6 +275,7 @@ function ReferenceEmployeesListPage() {
                     ))}
                   </select>
                 </div>
+                </AdminFilterDisclosure>
               </div>
 
               {/* Table Card */}

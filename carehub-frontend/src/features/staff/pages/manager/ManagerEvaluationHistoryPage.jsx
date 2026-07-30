@@ -40,7 +40,6 @@ function getVisiblePages(currentPage, totalPages) {
 
 function ManagerEvaluationHistoryPage({
   historyPath = '/manager/quality/history',
-  personal = false,
 }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -120,17 +119,7 @@ function ManagerEvaluationHistoryPage({
 
   return (
     <AppShell title="Lịch sử đánh giá">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Lịch sử đánh giá</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          {personal
-            ? 'Danh sách kết quả các lượt đánh giá quy trình bạn đã trực tiếp thực hiện'
-            : 'Danh sách kết quả các lần chấm quy trình giám sát chất lượng tại khoa'}
-        </p>
-      </div>
-
-      {/* Search toolbar */}
-      <div className="mgr-toolbar">
+      <div className="mgr-toolbar mgr-toolbar--standard">
         <div className="mgr-search-box">
           <input
             type="text"
