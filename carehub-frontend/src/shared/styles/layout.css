@@ -236,7 +236,6 @@
     .overview-heading,
     .qdoc-title-card,
     .sc-header,
-    .th-compliance-banner,
     .th-detail-header,
     .th-page-heading,
     .training-dashboard__hero,
@@ -299,9 +298,6 @@
   :where(.app-shell--manager, .app-shell--staff)
     .app-shell__body
     .sc-header__desc,
-  :where(.app-shell--manager, .app-shell--staff)
-    .app-shell__body
-    .th-compliance-banner__left,
   :where(.app-shell--manager, .app-shell--staff)
     .app-shell__body
     .training-dashboard__hero

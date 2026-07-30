@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
+import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
@@ -7,7 +7,6 @@ import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
-import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 
 export default function ExamTakeListScreen() {
   const navigate = useNavigate()
@@ -21,6 +20,7 @@ export default function ExamTakeListScreen() {
   const [toDate, setToDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(async () => {
@@ -101,31 +101,46 @@ export default function ExamTakeListScreen() {
         <div className="eh-take-summary-card"><span>Chưa làm</span><strong>{stats.notTaken}</strong></div>
       </div>
       <div className="eh-filter-bar admin-control-toolbar">
-        <div className="eh-search"><span className="eh-search-icon"><SearchOutlined /></span><input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={event => setSearch(event.target.value)} /></div>
-        <AdminFilterDisclosure activeCount={activeFilterCount}>
-          <label className="admin-control-toolbar__field eh-field-filter">
-            <span>Lĩnh vực chuyên môn</span>
-            <SearchableSelect
-              value={fieldId}
-              onChange={setFieldId}
-              options={[
-                { value: '', label: 'Tất cả lĩnh vực' },
-                ...fields.map(([id, name]) => ({ value: id, label: name })),
-              ]}
-              placeholder="Tất cả lĩnh vực"
-              searchPlaceholder="Tìm tên lĩnh vực..."
-              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-            />
-          </label>
-          <label className="admin-control-toolbar__field">
-            <span>Từ ngày</span>
-            <input type="date" value={fromDate} max={toDate || undefined} onChange={event => setFromDate(event.target.value)} />
-          </label>
-          <label className="admin-control-toolbar__field">
-            <span>Đến ngày</span>
-            <input type="date" value={toDate} min={fromDate || undefined} onChange={event => setToDate(event.target.value)} />
-          </label>
-        </AdminFilterDisclosure>
+        <div className="admin-control-toolbar__main">
+          <div className="eh-search"><span className="eh-search-icon"><SearchOutlined /></span><input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={event => setSearch(event.target.value)} /></div>
+          <button
+            type="button"
+            className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+            aria-expanded={isFilterOpen}
+            aria-controls="staff-exam-filter-panel"
+            onClick={() => setIsFilterOpen(current => !current)}
+          >
+            <FilterOutlined />
+            Bộ lọc
+            {activeFilterCount > 0 && <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>}
+          </button>
+        </div>
+        {isFilterOpen && (
+          <div id="staff-exam-filter-panel" className="eh-filter-panel admin-control-toolbar__panel">
+            <label className="admin-control-toolbar__field eh-field-filter">
+              <span>Lĩnh vực chuyên môn</span>
+              <SearchableSelect
+                value={fieldId}
+                onChange={setFieldId}
+                options={[
+                  { value: '', label: 'Tất cả lĩnh vực' },
+                  ...fields.map(([id, name]) => ({ value: id, label: name })),
+                ]}
+                placeholder="Tất cả lĩnh vực"
+                searchPlaceholder="Tìm tên lĩnh vực..."
+                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Từ ngày</span>
+              <input type="date" value={fromDate} max={toDate || undefined} onChange={event => setFromDate(event.target.value)} />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Đến ngày</span>
+              <input type="date" value={toDate} min={fromDate || undefined} onChange={event => setToDate(event.target.value)} />
+            </label>
+          </div>
+        )}
       </div>
       <div className="eh-table-card"><table className="eh-table eh-table--cards eh-take-table admin-table-uppercase">
         <colgroup>
