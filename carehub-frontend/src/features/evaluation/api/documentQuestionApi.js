@@ -56,6 +56,14 @@ export const documentQuestionApi = {
     })
   },
 
+  retryProblemChunks(jobId, chunkIds = null) {
+    return httpClient.post(
+      `/document-question-jobs/${jobId}/retry-problem-chunks`,
+      chunkIds?.length ? { chunkIds } : {},
+      { headers: authHeaders() },
+    )
+  },
+
   cancelQuestionJob(jobId) {
     return httpClient.post(`/document-question-jobs/${jobId}/cancel`, {}, {
       headers: authHeaders(),

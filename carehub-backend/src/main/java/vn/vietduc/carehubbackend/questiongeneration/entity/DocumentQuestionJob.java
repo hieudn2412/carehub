@@ -16,7 +16,9 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetDifficulty;
 
 @Entity
 @Getter
@@ -42,6 +44,17 @@ public class DocumentQuestionJob extends BaseEntity {
     private String promptVersion;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "pipeline_version", length = 32)
+    private GenerationPipelineVersion pipelineVersion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_difficulty", length = 16)
+    private TargetDifficulty targetDifficulty;
+
+    @Column(name = "prompt_hash", length = 64)
+    private String promptHash;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private JobStatus status;
 
@@ -63,6 +76,24 @@ public class DocumentQuestionJob extends BaseEntity {
 
     @Column(name = "candidate_count", nullable = false)
     private Integer candidateCount;
+
+    @Column(name = "eligible_chunk_count")
+    private Integer eligibleChunkCount;
+
+    @Column(name = "skipped_chunk_count")
+    private Integer skippedChunkCount;
+
+    @Column(name = "problem_chunk_count")
+    private Integer problemChunkCount;
+
+    @Column(name = "reviewable_candidate_count")
+    private Integer reviewableCandidateCount;
+
+    @Column(name = "rejected_candidate_count")
+    private Integer rejectedCandidateCount;
+
+    @Column(name = "critic_call_count")
+    private Integer criticCallCount;
 
     @Column(name = "chunk_errors", nullable = false, columnDefinition = "text")
     private String chunkErrors;
