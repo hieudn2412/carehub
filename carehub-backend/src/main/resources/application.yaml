@@ -60,6 +60,8 @@ ai:
     # v3: định nghĩa rõ generationEligible + yêu cầu sourceExcerpt trích nguyên văn.
     prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v3}
     pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
+    default-pipeline: ${GENERATION_DEFAULT_PIPELINE:LEGACY_V3}
+    grounded-v4-enabled: ${GENERATION_GROUNDED_V4_ENABLED:true}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
     connect-timeout-seconds: ${GENERATION_CONNECT_TIMEOUT_SECONDS:10}
     max-connections: ${GENERATION_MAX_CONNECTIONS:10}
@@ -77,6 +79,12 @@ ai:
     output-price-per-million: ${GENERATION_OUTPUT_PRICE:0.56}
     fallback-input-price-per-million: ${GENERATION_FALLBACK_INPUT_PRICE:0.55}
     fallback-output-price-per-million: ${GENERATION_FALLBACK_OUTPUT_PRICE:2.20}
+    knowledge-temperature: ${GENERATION_KNOWLEDGE_TEMPERATURE:0.1}
+    question-temperature: ${GENERATION_QUESTION_TEMPERATURE:0.3}
+    critic-temperature: ${GENERATION_CRITIC_TEMPERATURE:0.0}
+    knowledge-max-output-tokens: ${GENERATION_KNOWLEDGE_MAX_OUTPUT_TOKENS:1200}
+    question-max-output-tokens: ${GENERATION_QUESTION_MAX_OUTPUT_TOKENS:1800}
+    critic-max-output-tokens: ${GENERATION_CRITIC_MAX_OUTPUT_TOKENS:900}
 
   training:
     records:

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,9 +14,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateDocumentQuestionJobRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.RetryProblemChunksRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.DocumentQuestionJobService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
+import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationSecurity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 
 import java.util.List;
 import java.util.Map;
@@ -27,6 +31,7 @@ import java.util.Map;
 public class DocumentQuestionJobController {
     private final DocumentQuestionJobService jobService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationSecurity evaluationSecurity;
 
     @PostMapping("/documents/{documentId}/question-jobs")
     @PreAuthorize("@evaluationSecurity.canAuthor(authentication)")
@@ -35,6 +40,11 @@ public class DocumentQuestionJobController {
             @Valid @RequestBody(required = false) CreateDocumentQuestionJobRequest request,
             Authentication authentication
     ) {
+        if (request != null
+                && request.pipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
+                && !evaluationSecurity.canPilotGroundedV4(authentication)) {
+            throw new AccessDeniedException("Grounded v4 đang giới hạn cho admin pilot");
+        }
         DocumentQuestionJobResponse response = jobService.createJob(documentId, request, actor(authentication));
         auditLogService.record(
                 "DOCUMENT_JOB_CREATE",
@@ -88,6 +98,32 @@ public class DocumentQuestionJobController {
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Retry các chunk lỗi thành công",
+                response
+        ));
+    }
+
+    @PostMapping("/document-question-jobs/{jobId}/retry-problem-chunks")
+    @PreAuthorize("@evaluationSecurity.canReview(authentication)")
+    public ResponseEntity<ApiResponse<DocumentQuestionJobResponse>> retryProblemChunks(
+            @PathVariable Long jobId,
+            @RequestBody(required = false) RetryProblemChunksRequest request,
+            Authentication authentication
+    ) {
+        DocumentQuestionJobResponse response = jobService.retryProblemChunks(jobId, request);
+        auditLogService.record(
+                "DOCUMENT_JOB_RETRY_PROBLEMS",
+                "DOCUMENT_QUESTION_JOB",
+                jobId,
+                actor(authentication),
+                "Retry các chunk có vấn đề của phiên #" + jobId,
+                Map.of(
+                        "documentId", response.documentId(),
+                        "status", response.status(),
+                        "problemChunkCount", response.problemChunkCount()
+                )
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Đã retry các chunk có vấn đề",
                 response
         ));
     }

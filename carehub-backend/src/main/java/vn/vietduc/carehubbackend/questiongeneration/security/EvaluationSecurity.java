@@ -23,6 +23,10 @@ public class EvaluationSecurity {
         return hasAny(authentication, EvaluationPermissions.QUESTION_REVIEWER);
     }
 
+    public boolean canPilotGroundedV4(Authentication authentication) {
+        return isAdmin(authentication);
+    }
+
     public boolean canManageQuestionSet(Authentication authentication) {
         return hasAny(authentication, EvaluationPermissions.QUESTION_SET_MANAGER);
     }

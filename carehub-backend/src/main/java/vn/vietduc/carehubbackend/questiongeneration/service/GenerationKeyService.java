@@ -91,6 +91,36 @@ public class GenerationKeyService {
         return sha256(String.join("|", parts)).substring(0, 32);
     }
 
+    public String groundedCandidateKey(
+            String provider,
+            String model,
+            String pipelineVersion,
+            String promptHash,
+            Long documentId,
+            Long chunkId,
+            String chunkTextHash,
+            Long categoryId,
+            int questionsPerChunk,
+            String targetDifficulty,
+            int candidateIndex,
+            int attemptNumber
+    ) {
+        return sha256(String.join("|",
+                nullToEmpty(provider),
+                nullToEmpty(model),
+                nullToEmpty(pipelineVersion),
+                nullToEmpty(promptHash),
+                "DOC" + documentId,
+                "CHUNK" + chunkId,
+                nullToEmpty(chunkTextHash),
+                "CAT" + categoryId,
+                "MAX" + questionsPerChunk,
+                nullToEmpty(targetDifficulty),
+                "Q" + candidateIndex,
+                "ATTEMPT" + attemptNumber
+        )).substring(0, 32);
+    }
+
     private String sha256(String value) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

@@ -51,6 +51,7 @@ function DocumentQuestionJobReviewPage() {
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [difficultyFilter, setDifficultyFilter] = useState('')
+  const [validationGradeFilter, setValidationGradeFilter] = useState('')
   const [editingCandidate, setEditingCandidate] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
@@ -113,9 +114,10 @@ function DocumentQuestionJobReviewPage() {
       const matchesKeyword = !normalizedKeyword || normalizeText(candidate.stem).includes(normalizedKeyword)
       const matchesStatus = !statusFilter || candidate.status === statusFilter || candidate.label === statusFilter
       const matchesDifficulty = !difficultyFilter || normalizeText(candidate.difficulty) === normalizeText(difficultyFilter)
-      return matchesKeyword && matchesStatus && matchesDifficulty
+      const matchesValidationGrade = !validationGradeFilter || candidate.validationGrade === validationGradeFilter
+      return matchesKeyword && matchesStatus && matchesDifficulty && matchesValidationGrade
     })
-  }, [candidates, keyword, statusFilter, difficultyFilter])
+  }, [candidates, keyword, statusFilter, difficultyFilter, validationGradeFilter])
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
   const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
   const selectedApprovableIds = selectedCandidates
@@ -137,6 +139,19 @@ function DocumentQuestionJobReviewPage() {
       const response = await documentQuestionApi.retryFailedChunks(jobId)
       setJobDetail(apiData(response))
       showToast(canRetryNoNewQuestions ? 'Đã chạy lại toàn bộ đoạn nội dung.' : 'Thử lại các phần xử lý lỗi thành công.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
+  async function retryProblemChunks() {
+    setIsRetrying(true)
+    try {
+      const response = await documentQuestionApi.retryProblemChunks(jobId)
+      setJobDetail(apiData(response))
+      showToast('Đã chạy lại các đoạn có vấn đề.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
@@ -390,6 +405,8 @@ function DocumentQuestionJobReviewPage() {
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>
                             {jobStatusText(jobDetail)}
                           </span>
+                          <span className="qdoc-mini-badge">{jobDetail.pipelineVersion || 'LEGACY_V3'}</span>
+                          <span className="qdoc-mini-badge">{jobDetail.promptVersion || '---'}</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
                         </div>
                       </div>
@@ -409,7 +426,13 @@ function DocumentQuestionJobReviewPage() {
                   </section>
 
                   <section className="qdoc-metric-grid qdoc-metric-grid--wide">
-                    <Metric label="Tổng câu hỏi" value={formatNumber(jobDetail.candidateCount)} />
+                    <Metric label="Có thể review" value={formatNumber(jobDetail.reviewableCandidateCount)} />
+                    <Metric label="Bị rules/critic loại" value={formatNumber(jobDetail.rejectedCandidateCount)} />
+                    <Metric label="Không có đầu ra" value={formatNumber((jobDetail.chunkResults || []).filter(item => ['NO_KNOWLEDGE', 'NO_QUESTIONS'].includes(item.status)).length)} />
+                    <Metric label="Chunk có vấn đề" value={formatNumber(jobDetail.problemChunkCount)} />
+                    <Metric label="Tỷ lệ critic" value={`${Math.round((Number(jobDetail.criticCallCount || 0) / Math.max(1, Number(jobDetail.candidateCount || 0))) * 100)}%`} />
+                    <Metric label="Token" value={formatNumber(jobDetail.usage?.totalTokens)} />
+                    <Metric label="Chi phí ước tính" value={`$${Number(jobDetail.usage?.estimatedCostUsd || 0).toFixed(4)}`} />
                     <Metric label="Đã duyệt" value={formatNumber(candidates.filter(c => c.status === 'APPROVED' || c.status === 'SAVED').length)} />
                     <Metric label="Đã lưu vào ngân hàng" value={formatNumber(candidates.filter(c => c.status === 'SAVED').length)} />
                     <Metric label="Chờ duyệt" value={formatNumber(candidates.filter(c => c.status === 'VALIDATED' || c.status === 'NEED_REVIEW').length)} />
@@ -438,6 +461,19 @@ function DocumentQuestionJobReviewPage() {
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
                         <span>Thử lại đoạn lỗi</span>
+                      </button>
+                    </section>
+                  )}
+
+                  {Number(jobDetail.problemChunkCount) > 0 && (
+                    <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
+                      <div>
+                        <WarningOutlined />
+                        <span>{formatNumber(jobDetail.problemChunkCount)} đoạn lỗi, không có knowledge/câu hỏi, hoặc toàn bộ câu bị loại.</span>
+                      </div>
+                      <button type="button" className="qdoc-secondary-btn" onClick={retryProblemChunks} disabled={isRetrying}>
+                        {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
+                        <span>Retry problem chunks</span>
                       </button>
                     </section>
                   )}
@@ -478,6 +514,12 @@ function DocumentQuestionJobReviewPage() {
                       <option value="easy">Dễ</option>
                       <option value="medium">Trung bình</option>
                       <option value="hard">Khó</option>
+                    </select>
+                    <select className="qdoc-select" value={validationGradeFilter} onChange={(event) => setValidationGradeFilter(event.target.value)}>
+                      <option value="">Tất cả validation grade</option>
+                      <option value="PASS">PASS</option>
+                      <option value="REVIEW">REVIEW</option>
+                      <option value="REJECT">REJECT</option>
                     </select>
                   </section>
 
@@ -662,7 +704,7 @@ function DocumentQuestionJobReviewPage() {
   }
 }
 
-function CandidateCard({
+export function CandidateCard({
   candidate,
   isSelected,
   isChecked,
@@ -698,6 +740,12 @@ function CandidateCard({
             <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{labelText}</span>
           )}
           <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>
+          {candidate.validationGrade && (
+            <span className={`qdoc-mini-badge qdoc-mini-badge--${candidate.validationGrade === 'REJECT' ? 'danger' : candidate.validationGrade === 'REVIEW' ? 'warning' : 'success'}`}>
+              {candidate.validationGrade}
+            </span>
+          )}
+          {candidate.validationSource && <span className="qdoc-mini-badge">{candidate.validationSource}</span>}
         </div>
       </header>
 
@@ -725,6 +773,38 @@ function CandidateCard({
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
           <p>{candidate.explanation}</p>
+        </div>
+      )}
+
+      {(candidate.sourceExcerpt || candidate.answerEvidence || candidate.knowledgePointKey) && (
+        <div className="qdoc-grounding-panel">
+          <div className="qdoc-grounding-heading">
+            <strong>Grounding và kiểm định</strong>
+            <span>
+              Trang {candidate.pageStart ?? '—'}{candidate.pageEnd && candidate.pageEnd !== candidate.pageStart ? `–${candidate.pageEnd}` : ''}
+              {candidate.sectionPath ? ` · ${candidate.sectionPath}` : ''}
+            </span>
+          </div>
+          {candidate.knowledgePointKey && <p><b>Knowledge point:</b> {candidate.knowledgePointKey}</p>}
+          {candidate.questionType && <p><b>Loại câu:</b> {candidate.questionType}</p>}
+          {candidate.sourceExcerpt && <blockquote>{candidate.sourceExcerpt}</blockquote>}
+          {candidate.answerEvidence && <p><b>Bằng chứng đáp án:</b> {candidate.answerEvidence}</p>}
+          <p>
+            <b>Evidence:</b> {candidate.evidenceStatus || 'UNKNOWN'}
+            {' · '}<b>Critic:</b> {candidate.criticStatus || 'NOT_RUN'}
+          </p>
+          {candidate.validationIssues && candidate.validationIssues !== '[]' && (
+            <details>
+              <summary>Validation / critic issues</summary>
+              <pre>{candidate.validationIssues}</pre>
+            </details>
+          )}
+          {candidate.distractorRationales && (
+            <details>
+              <summary>Rationale các distractor</summary>
+              <pre>{candidate.distractorRationales}</pre>
+            </details>
+          )}
         </div>
       )}
 

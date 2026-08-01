@@ -39,6 +39,83 @@ class QuestionCandidateValidationServiceTest {
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("Trích dẫn nguồn chưa khớp"));
     }
 
+    @Test
+    void groundedV4RejectsEvidenceThatIsNotAnExactSourceExcerpt() {
+        GeneratedQuestion legacy = validQuestion(
+                "Chỉ cần hỏi tên người bệnh.",
+                "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
+        );
+        GeneratedQuestion grounded = new GeneratedQuestion(
+                legacy.stem(),
+                legacy.optionA(),
+                legacy.optionB(),
+                legacy.optionC(),
+                legacy.optionD(),
+                legacy.correctAnswer(),
+                legacy.explanation(),
+                legacy.difficulty(),
+                legacy.topic(),
+                legacy.sourceExcerpt(),
+                legacy.knowledgePointId(),
+                legacy.rawJson(),
+                null,
+                "FACT",
+                "Bằng chứng không có trong nguồn",
+                "{\"B\":\"trái nguồn\",\"C\":\"trái nguồn\",\"D\":\"trái nguồn\"}"
+        );
+
+        CandidateValidationResult result = service.validate(
+                grounded,
+                "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
+        );
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.validationGrade()).isEqualTo("REJECT");
+        assertThat(result.evidenceStatus()).isEqualTo("MISMATCH");
+    }
+
+    @Test
+    void groundedV4RejectsMediumQuestionThatCanBeGuessedWithoutDomainReasoning() {
+        String source = "Người bệnh cần được xác định bằng tối thiểu hai thông tin.";
+        GeneratedQuestion question = new GeneratedQuestion(
+                "Yêu cầu nào đúng khi xác định người bệnh?",
+                "Xác định bằng tối thiểu hai thông tin",
+                "Chỉ cần hỏi tên",
+                "Có thể bỏ qua hoàn toàn",
+                "Không bao giờ cần đối chiếu",
+                "A",
+                "Đáp án A bám nguồn.",
+                "medium",
+                "An toàn người bệnh",
+                source,
+                "KP1",
+                "{}",
+                """
+                        {
+                          "answerable":true,
+                          "singleBestAnswer":true,
+                          "correctAnswerSupported":true,
+                          "distractorsInvalid":true,
+                          "surfaceCueFree":false,
+                          "distractorsPlausible":false,
+                          "requiresDomainReasoning":false,
+                          "qualityScore":0.7,
+                          "issues":["Có thể loại trừ bằng từ tuyệt đối"]
+                        }
+                        """,
+                "application",
+                source,
+                "{\"B\":\"sai điều kiện\",\"C\":\"trái nguồn\",\"D\":\"trái nguồn\"}"
+        );
+
+        CandidateValidationResult result = service.validate(question, source);
+
+        assertThat(result.rejected()).isTrue();
+        assertThat(result.warnings())
+                .anyMatch(warning -> warning.contains("dấu hiệu hình thức"))
+                .anyMatch(warning -> warning.contains("chưa cần suy luận chuyên môn"));
+    }
+
     private GeneratedQuestion validQuestion(String optionB, String sourceExcerpt) {
         return new GeneratedQuestion(
                 "Theo tài liệu, yêu cầu nào đúng khi xác định người bệnh?",
