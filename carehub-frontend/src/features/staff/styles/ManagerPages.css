@@ -42,8 +42,8 @@
   }
 }
 
-/* bp-xs */
-@media (max-width: 560px) {
+/* Tablet và mobile: tránh ép bảng desktop vào vùng nội dung hẹp. */
+@media (max-width: 768px) {
   .mgr-dashboard-grid {
     grid-template-columns: 1fr;
   }
@@ -323,6 +323,91 @@
   flex-wrap: wrap;
 }
 
+.mgr-toolbar--standard {
+  align-items: flex-start;
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--mgr-border);
+  border-radius: var(--mgr-radius);
+  background: #fff;
+}
+
+.mgr-toolbar--standard .mgr-search-box {
+  flex: 1 1 420px;
+  max-width: none;
+}
+
+.mgr-toolbar--standard .mgr-search-box input {
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: 8px;
+}
+
+.mgr-toolbar--standard > .admin-filter-disclosure {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.mgr-toolbar--standard > .admin-filter-disclosure[open] {
+  flex-basis: 100%;
+  width: 100%;
+  order: 3;
+}
+
+.mgr-toolbar--standard .admin-filter-disclosure__panel {
+  margin-top: 0;
+}
+
+.mgr-toolbar--standard .mgr-select,
+.mgr-toolbar--standard .searchable-select > input {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.mgr-toolbar__icon-button {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  flex: 0 0 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.mgr-toolbar__icon-button:hover {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.mgr-table-action-cell {
+  text-align: center;
+}
+
+.mgr-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.mgr-detail-actions__button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.mgr-view-btn {
+  min-width: 40px;
+  min-height: 40px;
+}
+
 .mgr-search-box {
   position: relative;
   min-width: 260px;
@@ -366,6 +451,24 @@
   color: var(--mgr-text-soft);
   outline: none;
   cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .mgr-toolbar--standard {
+    padding: 14px;
+  }
+
+  .mgr-toolbar--standard .mgr-search-box,
+  .mgr-toolbar--standard > .admin-filter-disclosure,
+  .mgr-toolbar--standard > .admin-filter-disclosure[open] {
+    width: 100%;
+    min-width: 0;
+    flex-basis: 100%;
+  }
+
+  .mgr-toolbar--standard .mgr-toolbar__icon-button {
+    margin-left: auto;
+  }
 }
 
 .mgr-textarea {

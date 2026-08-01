@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
+import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
@@ -20,6 +20,7 @@ export default function ExamTakeListScreen() {
   const [toDate, setToDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => {
     const timer = window.setTimeout(async () => {
@@ -46,6 +47,7 @@ export default function ExamTakeListScreen() {
     failed: filtered.filter(item => item.assessmentStatus === 'FAILED').length,
     notTaken: filtered.filter(item => item.assessmentStatus === 'NOT_TAKEN').length,
   }), [filtered])
+  const activeFilterCount = Number(Boolean(fieldId)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))
 
   const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`)
 
@@ -92,49 +94,53 @@ export default function ExamTakeListScreen() {
   }
 
   return <AppShell title="Năng lực chuyên môn"><div className="eh-page">
-      <div className="eh-header"><h1 className="eh-page-title">Năng lực chuyên môn</h1><p className="eh-page-sub">Theo dõi và hoàn thành các bài kiểm tra được giao</p></div>
       <div className="eh-summary-grid">
         <div className="eh-take-summary-card"><span>Tổng</span><strong>{stats.total}</strong></div>
         <div className="eh-take-summary-card eh-take-summary-card--success"><span>Đạt</span><strong>{stats.passed}</strong></div>
         <div className="eh-take-summary-card eh-take-summary-card--danger"><span>Chưa đạt</span><strong>{stats.failed}</strong></div>
         <div className="eh-take-summary-card"><span>Chưa làm</span><strong>{stats.notTaken}</strong></div>
       </div>
-      <div className="eh-filter-bar">
-        <div className="eh-search"><span className="eh-search-icon"><SearchOutlined /></span><input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={event => setSearch(event.target.value)} /></div>
-        <div className="eh-field-filter"><SearchableSelect
-          value={fieldId}
-          onChange={setFieldId}
-          options={[
-            { value: '', label: 'Tất cả lĩnh vực' },
-            ...fields.map(([id, name]) => ({ value: id, label: name })),
-          ]}
-          placeholder="Tất cả lĩnh vực"
-          searchPlaceholder="Tìm tên lĩnh vực..."
-          ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-        /></div>
-        <div className="eh-date-range" role="group" aria-label="Khoảng thời hạn hoàn thành">
-          <label className="eh-date-filter">
-            <span className="eh-date-filter__label">Từ ngày</span>
-            <input
-              type="date"
-              value={fromDate}
-              max={toDate || undefined}
-              onChange={event => setFromDate(event.target.value)}
-              aria-label="Từ ngày"
-            />
-          </label>
-          <span className="eh-date-range__divider" aria-hidden="true" />
-          <label className="eh-date-filter">
-            <span className="eh-date-filter__label">Đến ngày</span>
-            <input
-              type="date"
-              value={toDate}
-              min={fromDate || undefined}
-              onChange={event => setToDate(event.target.value)}
-              aria-label="Đến ngày"
-            />
-          </label>
+      <div className="eh-filter-bar admin-control-toolbar">
+        <div className="admin-control-toolbar__main">
+          <div className="eh-search"><span className="eh-search-icon"><SearchOutlined /></span><input className="eh-search-input" placeholder="Tìm tên bài kiểm tra..." value={search} onChange={event => setSearch(event.target.value)} /></div>
+          <button
+            type="button"
+            className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+            aria-expanded={isFilterOpen}
+            aria-controls="staff-exam-filter-panel"
+            onClick={() => setIsFilterOpen(current => !current)}
+          >
+            <FilterOutlined />
+            Bộ lọc
+            {activeFilterCount > 0 && <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>}
+          </button>
         </div>
+        {isFilterOpen && (
+          <div id="staff-exam-filter-panel" className="eh-filter-panel admin-control-toolbar__panel">
+            <label className="admin-control-toolbar__field eh-field-filter">
+              <span>Lĩnh vực chuyên môn</span>
+              <SearchableSelect
+                value={fieldId}
+                onChange={setFieldId}
+                options={[
+                  { value: '', label: 'Tất cả lĩnh vực' },
+                  ...fields.map(([id, name]) => ({ value: id, label: name })),
+                ]}
+                placeholder="Tất cả lĩnh vực"
+                searchPlaceholder="Tìm tên lĩnh vực..."
+                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+              />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Từ ngày</span>
+              <input type="date" value={fromDate} max={toDate || undefined} onChange={event => setFromDate(event.target.value)} />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Đến ngày</span>
+              <input type="date" value={toDate} min={fromDate || undefined} onChange={event => setToDate(event.target.value)} />
+            </label>
+          </div>
+        )}
       </div>
       <div className="eh-table-card"><table className="eh-table eh-table--cards eh-take-table admin-table-uppercase">
         <colgroup>

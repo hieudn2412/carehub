@@ -5,12 +5,13 @@ import {
   CalendarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  DownloadOutlined,
   EditOutlined,
   FileSearchOutlined,
+  FilterOutlined,
   LoadingOutlined,
   SearchOutlined,
   TeamOutlined,
+  UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi.js'
@@ -134,6 +135,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [loading, setLoading] = useState(true)
   const [trendLoading, setTrendLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -311,6 +313,15 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     ? Math.max(0, submittedCount - passedCount)
     : 0
   const evaluatedProcessCount = forms.filter((item) => Number(item.submittedCount || item.responseCount || 0) > 0).length
+  const activeFilterCount = [
+    fromDate && fromDate !== yearStart,
+    toDate && toDate !== today,
+    !isManager && departmentId,
+    resultStatus,
+    subjectUserId,
+    submittedByUserId,
+    processId,
+  ].filter(Boolean).length
 
   const handleExport = async () => {
     setExporting(true)
@@ -346,134 +357,154 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       title={isManager ? 'Dashboard thực hành' : undefined}
     >
       <div className="checklist-quality-dashboard">
-          <section className="checklist-quality-hero">
-            <div>
-              <span className="checklist-quality-hero__eyebrow">ĐIỂM THỰC HÀNH</span>
-              <h1>Kết quả đánh giá checklist</h1>
-              <p>
-                {isManager
-                  ? 'Tổng hợp điểm thực hành từ các checklist đã đánh giá trong khoa.'
-                  : 'Tổng hợp điểm thực hành từ từng checklist và quy trình trên toàn viện hoặc theo khoa.'}
-              </p>
-            </div>
-            <div className="checklist-quality-hero__actions">
-              <div className="checklist-quality-hero__count">
-                <FileSearchOutlined />
-                <span><strong>{evaluatedProcessCount}</strong> quy trình có đánh giá</span>
-              </div>
-              {!isManager && (
+          <section className="checklist-quality-toolbar admin-control-toolbar" aria-label="Công cụ dashboard chất lượng chăm sóc">
+            <div className="admin-control-toolbar__main">
+              <div className="admin-control-toolbar__controls">
+                <div className="checklist-quality-search admin-control-toolbar__search">
+                  <SearchOutlined />
+                  <input
+                    aria-label="Tìm theo tên hoặc mã quy trình"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm theo tên hoặc mã quy trình..."
+                  />
+                </div>
                 <button
-                  className="checklist-quality-export"
-                  disabled={exporting || loading || visibleForms.length === 0}
-                  onClick={handleExport}
                   type="button"
+                  className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                  aria-controls="checklist-quality-filter-panel"
+                  aria-expanded={isFilterOpen}
+                  onClick={() => setIsFilterOpen((current) => !current)}
                 >
-                  {exporting ? <LoadingOutlined spin /> : <DownloadOutlined />}
-                  {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+                  <FilterOutlined />
+                  Bộ lọc
+                  {activeFilterCount > 0 && (
+                    <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
+                  )}
                 </button>
-              )}
-            </div>
-          </section>
+              </div>
 
-          <section className="checklist-quality-filters" aria-label="Bộ lọc dashboard quy trình">
-            <label className="checklist-quality-filter checklist-quality-filter--search">
-              <span>Tên quy trình</span>
-              <div><SearchOutlined /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm theo tên hoặc mã..." /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Từ ngày</span>
-              <div><CalendarOutlined /><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Đến ngày</span>
-              <div><CalendarOutlined /><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Khoa/phòng</span>
-              <div><ApartmentOutlined /><SearchableSelect
-                value={departmentId}
-                disabled={isManager}
-                onChange={setDepartmentId}
-                placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
-                searchPlaceholder="Gõ tên khoa/phòng..."
-                options={[
-                  ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
-                  ...departments.map((item) => ({
-                    value: item.id,
-                    label: item.name,
-                    searchText: item.code || item.departmentCode,
-                  })),
-                ]}
-              /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Kết quả</span>
-              <div><CheckCircleOutlined /><select value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
-                <option value="">Tất cả kết quả</option>
-                <option value="PASSED">Đạt</option>
-                <option value="FAILED">Chưa đạt</option>
-                <option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
-                <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
-              </select></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Người được đánh giá</span>
-              <div><TeamOutlined /><SearchableSelect
-                value={subjectUserId}
-                onChange={setSubjectUserId}
-                placeholder="Tất cả nhân viên"
-                searchPlaceholder="Gõ tên hoặc mã nhân viên..."
-                options={[
-                  { value: '', label: 'Tất cả nhân viên' },
-                  ...filterOptions.subjects.map((item) => ({
-                    value: item.id,
-                    label: item.name,
-                    description: item.employeeCode,
-                    searchText: item.employeeCode,
-                  })),
-                ]}
-              /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Người thực hiện</span>
-              <div><EditOutlined /><SearchableSelect
-                value={submittedByUserId}
-                onChange={setSubmittedByUserId}
-                placeholder="Tất cả người thực hiện"
-                searchPlaceholder="Gõ tên hoặc mã người thực hiện..."
-                options={[
-                  { value: '', label: 'Tất cả người thực hiện' },
-                  ...filterOptions.evaluators.map((item) => ({
-                    value: item.id,
-                    label: item.name,
-                    description: item.employeeCode,
-                    searchText: item.employeeCode,
-                  })),
-                ]}
-              /></div>
-            </label>
-            <label className="checklist-quality-filter">
-              <span>Quy trình</span>
-              <div><FileSearchOutlined /><SearchableSelect
-                value={processId}
-                onChange={setProcessId}
-                placeholder="Tất cả quy trình"
-                searchPlaceholder="Gõ tên hoặc mã quy trình..."
-                options={[
-                  { value: '', label: 'Tất cả quy trình' },
-                  ...filterOptions.forms.map((item) => ({
-                    value: item.id,
-                    label: item.title,
-                    description: item.code,
-                    searchText: item.code,
-                  })),
-                ]}
-              /></div>
-            </label>
+              <div className="checklist-quality-toolbar__actions">
+                <span className="checklist-quality-toolbar__count">
+                  <FileSearchOutlined />
+                  <strong>{evaluatedProcessCount}</strong> quy trình có đánh giá
+                </span>
+                {!isManager && (
+                  <button
+                    className="checklist-quality-export"
+                    disabled={exporting || loading || visibleForms.length === 0}
+                    onClick={handleExport}
+                    type="button"
+                  >
+                    {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+                    {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {isFilterOpen && (
+              <div
+                id="checklist-quality-filter-panel"
+                className="checklist-quality-filter-panel admin-control-toolbar__panel"
+              >
+                <label className="checklist-quality-filter">
+                  <span>Từ ngày</span>
+                  <div><CalendarOutlined /><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} /></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Đến ngày</span>
+                  <div><CalendarOutlined /><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} /></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Khoa/phòng</span>
+                  <div><ApartmentOutlined /><SearchableSelect
+                    value={departmentId}
+                    disabled={isManager}
+                    onChange={setDepartmentId}
+                    placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
+                    searchPlaceholder="Gõ tên khoa/phòng..."
+                    options={[
+                      ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
+                      ...departments.map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                        searchText: item.code || item.departmentCode,
+                      })),
+                    ]}
+                  /></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Kết quả</span>
+                  <div><CheckCircleOutlined /><select value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
+                    <option value="">Tất cả kết quả</option>
+                    <option value="PASSED">Đạt</option>
+                    <option value="FAILED">Chưa đạt</option>
+                    <option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
+                    <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
+                  </select></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Người được đánh giá</span>
+                  <div><TeamOutlined /><SearchableSelect
+                    value={subjectUserId}
+                    onChange={setSubjectUserId}
+                    placeholder="Tất cả nhân viên"
+                    searchPlaceholder="Gõ tên hoặc mã nhân viên..."
+                    options={[
+                      { value: '', label: 'Tất cả nhân viên' },
+                      ...filterOptions.subjects.map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                        description: item.employeeCode,
+                        searchText: item.employeeCode,
+                      })),
+                    ]}
+                  /></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Người thực hiện</span>
+                  <div><EditOutlined /><SearchableSelect
+                    value={submittedByUserId}
+                    onChange={setSubmittedByUserId}
+                    placeholder="Tất cả người thực hiện"
+                    searchPlaceholder="Gõ tên hoặc mã người thực hiện..."
+                    options={[
+                      { value: '', label: 'Tất cả người thực hiện' },
+                      ...filterOptions.evaluators.map((item) => ({
+                        value: item.id,
+                        label: item.name,
+                        description: item.employeeCode,
+                        searchText: item.employeeCode,
+                      })),
+                    ]}
+                  /></div>
+                </label>
+                <label className="checklist-quality-filter">
+                  <span>Quy trình</span>
+                  <div><FileSearchOutlined /><SearchableSelect
+                    value={processId}
+                    onChange={setProcessId}
+                    placeholder="Tất cả quy trình"
+                    searchPlaceholder="Gõ tên hoặc mã quy trình..."
+                    options={[
+                      { value: '', label: 'Tất cả quy trình' },
+                      ...filterOptions.forms.map((item) => ({
+                        value: item.id,
+                        label: item.title,
+                        description: item.code,
+                        searchText: item.code,
+                      })),
+                    ]}
+                  /></div>
+                </label>
+              </div>
+            )}
           </section>
 
           {error && <div className="checklist-quality-alert"><CloseCircleOutlined /> {error}</div>}
 
+          <div className="checklist-quality-workspace">
           <section className="checklist-quality-processes">
             <div className="checklist-quality-section-heading">
               <div><h2>Các quy trình đã được đánh giá</h2><p>Chọn một thẻ để xem riêng kết quả của quy trình đó.</p></div>
@@ -542,6 +573,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               </div>
             </section>
           )}
+          </div>
       </div>
     </AppShell>
   )

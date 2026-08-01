@@ -104,13 +104,6 @@ function ManagerEmployeeDetailPage() {
         { label: 'Chi tiết nhân sự' }
       ]}
     >
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết nhân sự</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          Thông tin hồ sơ và hoạt động kiểm tra chuyên môn
-        </p>
-      </div>
-
       <div className="mgr-card">
         {/* Detail Head */}
         <div className="mgr-detail-header">

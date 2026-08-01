@@ -3,6 +3,12 @@ import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 
+const NOTIFICATION_SYNC_EVENT = 'carehub:notification-state-changed'
+
+export function publishNotificationStateChange(detail = {}) {
+  window.dispatchEvent(new CustomEvent(NOTIFICATION_SYNC_EVENT, { detail }))
+}
+
 function authHeaders() {
   const token = tokenStorage.getAccessToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
@@ -69,6 +75,40 @@ export function useNotifications() {
   useEffect(() => {
     const timer = window.setTimeout(() => load(), 0)
     return () => window.clearTimeout(timer)
+  }, [load])
+
+  useEffect(() => {
+    const handleNotificationStateChange = (event) => {
+      const detail = event.detail || {}
+
+      if (detail.refresh) {
+        load()
+        return
+      }
+
+      if (detail.markAllRead) {
+        setNotifications((current) => current.map((item) => ({
+          ...item,
+          read: true,
+          isRead: true,
+        })))
+      } else if (detail.readId != null) {
+        setNotifications((current) => current.map((item) => (
+          item.id === detail.readId
+            ? { ...item, read: true, isRead: true }
+            : item
+        )))
+      }
+
+      if (Number.isFinite(detail.unreadCount)) {
+        setUnreadCount(Math.max(0, detail.unreadCount))
+      } else if (Number.isFinite(detail.decrementUnreadBy)) {
+        setUnreadCount((current) => Math.max(0, current - detail.decrementUnreadBy))
+      }
+    }
+
+    window.addEventListener(NOTIFICATION_SYNC_EVENT, handleNotificationStateChange)
+    return () => window.removeEventListener(NOTIFICATION_SYNC_EVENT, handleNotificationStateChange)
   }, [load])
 
   const markAllAsRead = async () => {
