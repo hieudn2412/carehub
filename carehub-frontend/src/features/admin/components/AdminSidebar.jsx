@@ -36,7 +36,7 @@ const navSections = [
   {
     label: 'TỔNG QUAN',
     items: [
-      { icon: <DashboardOutlined />, label: 'Tổng quan', path: '/admin/dashboard' },
+      { icon: <DashboardOutlined />, label: 'Dashboard', path: '/admin/dashboard' },
     ],
   },
   {
@@ -102,7 +102,7 @@ const navSections = [
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Quản lý năng lực chuyên môn',
+        label: 'Năng lực chuyên môn',
         path: '/admin/evaluation/exam-management',
         requiredPermissions: [
           EVALUATION_PERMISSION.examConfigManager,
@@ -125,15 +125,15 @@ const navSections = [
     ],
   },
   {
-    label: 'BÁO CÁO & THỐNG KÊ',
+    label: 'DASHBOARD & BÁO CÁO THỐNG KÊ',
     items: [
-      { icon: <BarChartOutlined />, label: 'Dashboard đào tạo', path: '/admin/reports/training-dashboard' },
+      { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/admin/reports/training-dashboard' },
       { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Chất lượng chăm sóc', path: '/admin/reports/checklist-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/admin/reports/checklist-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
-        label: 'Dashboard năng lực',
+        label: 'Năng lực chuyên môn tổng hợp',
         path: '/admin/reports/competency-dashboard',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
