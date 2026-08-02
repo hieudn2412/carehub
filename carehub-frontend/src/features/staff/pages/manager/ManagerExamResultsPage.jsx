@@ -5,6 +5,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
 import { trainingApi } from '../../../training/api/trainingApi'
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
+import AdminFilterDisclosure from '../../../../shared/components/AdminFilterDisclosure.jsx'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultsPage() {
@@ -46,15 +47,7 @@ function ManagerExamResultsPage() {
 
   return (
     <AppShell title="Kết quả thi nhân sự">
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Kết quả thi nhân sự</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          Theo dõi kết quả các kỳ thi năng lực của điều dưỡng trong khoa
-        </p>
-      </div>
-
-      {/* Search toolbar */}
-      <div className="mgr-toolbar">
+      <div className="mgr-toolbar mgr-toolbar--standard">
         <div className="mgr-search-box">
           <input
             type="text"
@@ -64,19 +57,22 @@ function ManagerExamResultsPage() {
           />
           <SearchOutlined />
         </div>
-        <div className="mgr-field-filter">
-          <SearchableSelect
-            value={professionalFieldId}
-            onChange={setProfessionalFieldId}
-            options={[
-              { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
-              ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-            ]}
-            placeholder="Tất cả lĩnh vực chuyên môn"
-            searchPlaceholder="Tìm tên lĩnh vực..."
-            ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-          />
-        </div>
+        <AdminFilterDisclosure activeCount={professionalFieldId ? 1 : 0}>
+          <label className="admin-control-toolbar__field mgr-field-filter">
+            <span>Lĩnh vực chuyên môn</span>
+            <SearchableSelect
+              value={professionalFieldId}
+              onChange={setProfessionalFieldId}
+              options={[
+                { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+                ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+              ]}
+              placeholder="Tất cả lĩnh vực chuyên môn"
+              searchPlaceholder="Tìm tên lĩnh vực..."
+              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+            />
+          </label>
+        </AdminFilterDisclosure>
       </div>
 
       {/* Loading */}
@@ -118,21 +114,11 @@ function ManagerExamResultsPage() {
                 <td data-label="Hạn nộp" style={{ color: '#475569' }}>
                   {item.dueAt ? new Date(item.dueAt).toLocaleDateString('vi-VN') : '--'}
                 </td>
-                <td style={{ textAlign: 'center' }}>
+                <td className="mgr-table-action-cell">
                   <button
                     onClick={() => navigate(`/manager/exam-results/detail/${item.id}`)}
-                    style={{
-                      border: '1px solid #e2e8f0',
-                      background: '#fff',
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      color: '#475569',
-                      transition: 'all 0.15s'
-                    }}
                     title="Xem kết quả"
-                    onMouseOver={e => { e.currentTarget.style.borderColor = '#1e293b'; e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#fff'; }}
-                    onMouseOut={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#475569'; }}
+                    className="mgr-view-btn admin-table-action admin-table-action--icon admin-table-action--primary"
                   >
                     <EyeOutlined />
                   </button>

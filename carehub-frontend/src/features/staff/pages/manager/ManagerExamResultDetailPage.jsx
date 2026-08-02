@@ -9,19 +9,14 @@ import '../../styles/ManagerPages.css'
 function ManagerExamResultDetailPage() {
   const { id } = useParams()
 
-  const [assignment, setAssignment] = useState(null)
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setLoading(true)
-      Promise.all([
-        examAssignmentApi.getManagerAssignment(id),
-        examAssignmentApi.getManagerAssignmentResults(id)
-      ])
-        .then(([assignmentRes, resultsRes]) => {
-          setAssignment(assignmentRes.data?.data || null)
+      examAssignmentApi.getManagerAssignmentResults(id)
+        .then((resultsRes) => {
           const data = resultsRes.data?.data || {}
           setResults(Array.isArray(data) ? data : (data.rows || []))
         })
@@ -60,17 +55,6 @@ function ManagerExamResultDetailPage() {
         { label: 'Chi tiết kết quả' }
       ]}
     >
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: 0 }}>Chi tiết kết quả kỳ thi</h1>
-        <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>
-          {assignment?.name || `Kỳ thi #${id}`}
-          {assignment?.professionalFieldName ? ` · ${assignment.professionalFieldName}` : ''}
-        </p>
-        <p style={{ fontSize: 12, color: '#94a3b8', margin: '4px 0 0' }}>
-          Điểm hiển thị là điểm cao nhất trong các lượt thi (thang 0–10), giống điểm nhân viên nhìn thấy.
-        </p>
-      </div>
-
       {loading ? (
         <div className="mgr-card" style={{ textAlign: 'center', padding: 40 }}>
           <LoadingOutlined style={{ fontSize: 24, color: '#6b7280' }} />

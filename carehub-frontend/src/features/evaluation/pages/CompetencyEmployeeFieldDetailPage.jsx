@@ -72,23 +72,19 @@ function CompetencyEmployeeFieldDetailPage() {
       title={isManager ? `Năng lực: ${data?.employeeName || '...'}` : undefined}
     >
             <div className="evd-page">
-              <section className="evd-title-card">
-                <div>
-                  <h1>Chi tiết năng lực: {data?.employeeName || '...'}</h1>
-                  <p>Mã NV: {data?.employeeCode || '—'}</p>
+              <section className="evd-detail-summary">
+                <div className="evd-detail-summary__identity">
+                  <strong>{data?.employeeName || 'Đang tải...'}</strong>
+                  <span>Mã NV: {data?.employeeCode || '—'}</span>
+                </div>
+                <div className="evd-detail-summary__metrics">
+                  <span>Điểm trung bình <strong>{overallAvg}</strong></span>
+                  <span>{data?.items?.length || 0} lĩnh vực có dữ liệu</span>
                 </div>
                 <button className="evd-btn" onClick={loadData} disabled={loading}>
-                  <ReloadOutlined /> Tải lại
+                  <ReloadOutlined aria-hidden="true" /> Tải lại
                 </button>
               </section>
-
-              {data && data.items && data.items.length > 0 && (
-                <section className="evd-panel" style={{ padding: 16, marginBottom: 16 }}>
-                  <div style={{ fontSize: 14, color: '#374151' }}>
-                    Điểm TB tổng: <strong>{overallAvg}</strong> — Dữ liệu từ {data.fromDate} đến {data.toDate}
-                  </div>
-                </section>
-              )}
 
               <div className="evd-card evd-x-table-card">
                 <table className="evd-table">

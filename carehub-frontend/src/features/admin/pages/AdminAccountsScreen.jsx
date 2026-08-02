@@ -7,7 +7,6 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   SearchOutlined,
-  DownloadOutlined,
   EyeOutlined,
   LeftOutlined,
   RightOutlined,
@@ -18,7 +17,9 @@ import {
   LockOutlined,
   UnlockOutlined,
   DeleteOutlined,
-  KeyOutlined
+  KeyOutlined,
+  FilterOutlined,
+  DownloadOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/AdminAccountsScreen.css'
@@ -71,6 +72,7 @@ function AdminAccountsScreen() {
   const [deptFilter, setDeptFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   // Selected User Detail Modal State
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -615,81 +617,114 @@ function AdminAccountsScreen() {
 
               {/* Filters Block */}
               <div className="am-filter-bar">
-                <div className="am-search">
-                  <span className="am-search-icon">
-                    <SearchOutlined />
-                  </span>
-                  <input
-                    type="text"
-                    className="am-search-input"
-                    placeholder="Tìm theo tên hoặc ID..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
+                <div className="am-toolbar-main">
+                  <div className="am-search-filter-group">
+                    <div className="am-search">
+                      <span className="am-search-icon">
+                        <SearchOutlined />
+                      </span>
+                      <input
+                        type="text"
+                        className="am-search-input"
+                        placeholder="Tìm theo tên hoặc ID..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`am-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-expanded={isFilterOpen}
+                      aria-controls="account-filter-panel"
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length > 0 && (
+                        <span className="am-filter-count">
+                          {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="am-toolbar-actions">
+                    <span className="am-results-count">{totalElements} kết quả</span>
+                    <button className="am-btn-primary" onClick={handleOpenCreateModal}>
+                      <PlusOutlined /> Thêm tài khoản
+                    </button>
+                    <button
+                      className="am-export-btn"
+                      onClick={() => { setIsImportModalOpen(true); setImportFile(null); setImportResult(null); }}
+                      title="Import Excel"
+                      aria-label="Import Excel"
+                    >
+                      <DownloadOutlined />
+                    </button>
+                    <button
+                      className="am-export-btn"
+                      onClick={handleExport}
+                      title="Xuất CSV"
+                      aria-label="Xuất CSV"
+                    >
+                      <UploadOutlined />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="am-filter-department">
-                  <SearchableSelect
-                    id="account-department-filter"
-                    value={deptFilter}
-                    onChange={(value) => {
-                      setDeptFilter(value || 'all')
-                      setPage(1)
-                    }}
-                    disabled={departmentLoading}
-                    options={[
-                      { value: 'all', label: 'Tất cả phòng ban' },
-                      ...departments.map((department) => ({
-                        value: String(department.id),
-                        label: department.name,
-                      })),
-                    ]}
-                    placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tất cả phòng ban'}
-                    searchPlaceholder="Tìm tên phòng ban..."
-                    emptyMessage="Không tìm thấy phòng ban phù hợp"
-                    ariaLabel="Tìm và chọn phòng ban"
-                  />
-                </div>
-
-                {/* Role dropdown */}
-                <select
-                  className="am-filter-select"
-                  value={roleFilter}
-                  onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
-                >
-                  <option value="all">Tất cả vai trò</option>
-                  {roles.map(r => {
-                    const roleLabel = r.name || r.code
-                    return <option key={r.id} value={r.id}>{roleLabel}</option>
-                  })}
-                </select>
-
-                {/* Status dropdown */}
-                <select
-                  className="am-filter-select"
-                  value={statusFilter}
-                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-                >
-                  <option value="all">Tất cả trạng thái</option>
-                  <option value="ACTIVE">Hoạt động</option>
-                  <option value="INACTIVE">Ngưng hoạt động</option>
-                  <option value="LOCKED">Đã khoá</option>
-                </select>
-
-                {/* Results Count & Export */}
-                <span className="am-results-count">{totalElements} kết quả</span>
-
-                <button className="am-btn-primary" onClick={handleOpenCreateModal}>
-                  <PlusOutlined /> Thêm tài khoản
-                </button>
-
-                <button className="am-btn-secondary" onClick={() => { setIsImportModalOpen(true); setImportFile(null); setImportResult(null); }}>
-                  <UploadOutlined /> Import Excel
-                </button>
-
-                <button className="am-export-btn" onClick={handleExport} title="Xuất CSV">
-                  <DownloadOutlined />
-                </button>
+                {isFilterOpen && (
+                  <div className="am-filter-panel" id="account-filter-panel">
+                    <div className="am-filter-department">
+                      <span className="am-filter-label">Phòng ban</span>
+                      <SearchableSelect
+                        id="account-department-filter"
+                        value={deptFilter}
+                        onChange={(value) => {
+                          setDeptFilter(value || 'all')
+                          setPage(1)
+                        }}
+                        disabled={departmentLoading}
+                        options={[
+                          { value: 'all', label: 'Tất cả phòng ban' },
+                          ...departments.map((department) => ({
+                            value: String(department.id),
+                            label: department.name,
+                          })),
+                        ]}
+                        placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tất cả phòng ban'}
+                        searchPlaceholder="Tìm tên phòng ban..."
+                        emptyMessage="Không tìm thấy phòng ban phù hợp"
+                        ariaLabel="Tìm và chọn phòng ban"
+                      />
+                    </div>
+                    <label className="am-filter-field">
+                      <span className="am-filter-label">Vai trò</span>
+                      <select
+                        className="am-filter-select"
+                        value={roleFilter}
+                        onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
+                      >
+                        <option value="all">Tất cả vai trò</option>
+                        {roles.map(r => {
+                          const roleLabel = r.name || r.code
+                          return <option key={r.id} value={r.id}>{roleLabel}</option>
+                        })}
+                      </select>
+                    </label>
+                    <label className="am-filter-field">
+                      <span className="am-filter-label">Trạng thái</span>
+                      <select
+                        className="am-filter-select"
+                        value={statusFilter}
+                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+                      >
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="ACTIVE">Hoạt động</option>
+                        <option value="INACTIVE">Ngưng hoạt động</option>
+                        <option value="LOCKED">Đã khoá</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Table Card */}
@@ -1140,7 +1175,7 @@ function AdminAccountsScreen() {
                 </p>
 
                 <div className="am-import-dropzone" onClick={() => document.getElementById('excel-file-input').click()}>
-                  <UploadOutlined className="am-import-icon" />
+                  <DownloadOutlined className="am-import-icon" />
                   <div className="am-import-text">
                     {importFile ? <strong>{importFile.name}</strong> : 'Nhấn để chọn tệp Excel (.xlsx, .xls)'}
                   </div>

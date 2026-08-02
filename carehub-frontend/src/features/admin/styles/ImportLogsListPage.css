@@ -34,9 +34,21 @@
   padding: 16px 20px;
   display: flex;
   gap: 16px;
-  align-items: flex-end;
+  align-items: flex-start;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   flex-wrap: wrap;
+}
+
+.il-filter-bar > .admin-filter-disclosure {
+  flex: 1 1 680px;
+  width: auto;
+  min-width: 0;
+}
+
+.il-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) repeat(3, minmax(180px, 1fr));
+  align-items: end;
 }
 
 .il-filter-field {
@@ -91,7 +103,7 @@
   margin-left: auto;
   align-self: center;
   white-space: nowrap;
-  padding-top: 14px;
+  padding-top: 0;
 }
 
 /* Table Card */
@@ -650,6 +662,18 @@
 
 /* bp-sm */
 @media (max-width: 768px) {
+  .il-filter-bar > .admin-filter-disclosure {
+    flex-basis: 100%;
+  }
+
+  .il-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+    grid-template-columns: 1fr;
+  }
+
+  .il-results-count {
+    margin-left: 0;
+  }
+
   .il-title-card {
     padding: 20px;
   }

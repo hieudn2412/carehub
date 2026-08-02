@@ -4,6 +4,18 @@
   gap: 18px;
 }
 
+.exp-management-card {
+  display: flex;
+  height: calc(100vh - 176px);
+  min-height: 520px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
 .exp-title-card,
 .exp-form-card,
 .exp-table-card,
@@ -49,38 +61,51 @@
 }
 
 .exp-view-switch {
-  display: inline-flex;
-  align-self: flex-start;
-  gap: 4px;
-  padding: 4px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  display: flex;
+  width: 100%;
+  align-self: stretch;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 0;
   background: #f1f5f9;
 }
 
 .exp-view-switch button {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 8px 16px;
+  justify-content: center;
+  min-height: 56px;
+  padding: 12px 24px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 0;
   background: transparent;
   color: #64748b;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .exp-view-switch button:hover {
-  color: #0069d9;
+  color: #0f172a;
 }
 
 .exp-view-switch button.is-active {
   background: #fff;
-  color: #0069d9;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  color: #0d9488;
+  box-shadow: none;
+}
+
+.exp-view-switch button.is-active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: #0d9488;
+  content: "";
 }
 
 .exp-btn-primary,
@@ -133,7 +158,8 @@
 
 .exp-filter-bar {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 12px;
   background: #fff;
   border: 1px solid #cbd5e1;
@@ -141,8 +167,25 @@
   padding: 14px;
 }
 
+.exp-management-card > .exp-filter-bar {
+  border: 0 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-radius: 0 !important;
+  padding: 16px 24px !important;
+  box-shadow: none !important;
+}
+
+.exp-management-card .exp-title-actions {
+  flex: 0 0 auto;
+}
+
 .exp-search {
   display: flex;
+  width: min(680px, 100%);
+  max-width: 680px;
+  flex: 1 1 680px;
+  min-height: 44px;
+  box-sizing: border-box;
   align-items: center;
   gap: 8px;
   min-width: 320px;
@@ -150,6 +193,21 @@
   border-radius: 8px;
   padding: 0 12px;
   color: #64748b;
+}
+
+.exp-filter-bar > .admin-filter-disclosure {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.exp-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+  width: 240px;
+  align-items: stretch;
+}
+
+.exp-filter-bar > .admin-filter-disclosure select {
+  width: 100%;
+  min-width: 0;
 }
 
 .exp-search input,
@@ -197,10 +255,19 @@
 
 /* Shared administrator table alignment for exam papers and assignments. */
 .exp-table-card {
+  flex: 1;
+  min-height: 0;
   overflow-x: auto;
   border-color: #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.exp-management-card > .exp-table-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: auto;
 }
 
 .exp-table th {
@@ -445,6 +512,12 @@
 
 /* bp-md */
 @media (max-width: 1024px) {
+  .exp-management-card {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
   .exp-title-card,
   .exp-filter-bar {
     flex-direction: column;
@@ -452,7 +525,14 @@
   }
 
   .exp-search {
+    width: 100%;
+    max-width: none;
     min-width: 0;
+  }
+
+  .exp-filter-bar > .admin-filter-disclosure,
+  .exp-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+    width: 100%;
   }
 
   .exp-view-switch {
@@ -461,6 +541,18 @@
 
   .exp-view-switch button {
     flex: 1;
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+
+  .exp-management-card .admin-control-toolbar__main,
+  .exp-management-card .exp-title-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .exp-management-card .exp-title-actions button {
+    width: 100%;
   }
 
   .exp-form-grid {

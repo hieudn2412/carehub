@@ -62,6 +62,44 @@ public class DuplicateCheckService {
         return check(stem, null, excludedQuestionIds, excludedCandidateIds);
     }
 
+    /**
+     * So sánh một câu với các câu đứng trước trong cùng response bằng đúng vector E5 đã batch.
+     * Chỉ so với phần tử trước để kết quả ổn định và câu đầu tiên thắng khi hai câu trùng nhau.
+     */
+    public DuplicateCheckResult checkWithinBatch(
+            List<String> stems,
+            double[][] vectors,
+            int candidateIndex
+    ) {
+        if (candidateIndex <= 0 || vectors == null || candidateIndex >= vectors.length
+                || vectors[candidateIndex] == null) {
+            return new DuplicateCheckResult(0, null, null, false, false, null, "e5-batch");
+        }
+        double best = 0;
+        String matchedStem = null;
+        for (int index = 0; index < candidateIndex && index < vectors.length; index++) {
+            if (vectors[index] == null) {
+                continue;
+            }
+            double similarity = CosineUtil.cosine(vectors[candidateIndex], vectors[index]);
+            if (similarity > best) {
+                best = similarity;
+                matchedStem = stems.get(index);
+            }
+        }
+        return new DuplicateCheckResult(
+                best,
+                null,
+                matchedStem,
+                best >= properties.getDuplicate().getStrongMin(),
+                best >= properties.getDuplicate().getReviewMin(),
+                best >= properties.getDuplicate().getReviewMin()
+                        ? "Có khả năng trùng với câu khác trong cùng response"
+                        : null,
+                "e5-batch"
+        );
+    }
+
     public List<DuplicateMatchResult> findPotentialMatches(
             String stem,
             Set<Long> excludedQuestionIds,

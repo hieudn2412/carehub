@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, FilterOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons'
+import { EyeOutlined, FilterOutlined, HistoryOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -41,6 +41,7 @@ function EvaluationAuditLogPage() {
   const [selectedLog, setSelectedLog] = useState(null)
   const [filters, setFilters] = useState({ q: '', action: '', entityType: '', actor: '' })
   const [isLoading, setIsLoading] = useState(true)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   const loadLogs = useCallback(async () => {
     setIsLoading(true)
@@ -71,65 +72,83 @@ function EvaluationAuditLogPage() {
         <div className="dashboard-root">
           <main className="dashboard-body">
             <div className="eal-page">
-              <section className="eal-header">
-                <div>
-                  <h1>Audit đánh giá</h1>
-                  <p>Theo dõi thao tác tạo câu hỏi, review, publish đề và phân công kiểm tra</p>
+              <section className="eal-toolbar admin-control-toolbar" aria-label="Công cụ audit đánh giá">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="eal-toolbar__search admin-control-toolbar__search">
+                      <SearchOutlined />
+                      <input
+                        aria-label="Tìm audit đánh giá"
+                        value={filters.q}
+                        onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
+                        placeholder="Tìm hành động, người thao tác hoặc mô tả..."
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      aria-controls="evaluation-audit-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                    >
+                      <FilterOutlined />
+                      Bộ lọc
+                      {[filters.action, filters.entityType, filters.actor].filter(Boolean).length > 0 && (
+                        <span className="admin-control-toolbar__filter-count">
+                          {[filters.action, filters.entityType, filters.actor].filter(Boolean).length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="eal-toolbar__actions">
+                    <span>{logs.length} bản ghi</span>
+                    <button
+                      type="button"
+                      className="eal-toolbar__reload"
+                      onClick={loadLogs}
+                      disabled={isLoading}
+                      aria-label="Tải lại audit đánh giá"
+                      title="Tải lại"
+                    >
+                      <ReloadOutlined spin={isLoading} />
+                    </button>
+                  </div>
                 </div>
-                <button type="button" className="eal-btn" onClick={loadLogs} disabled={isLoading}>
-                  <ReloadOutlined />
-                  <span>Tải lại</span>
-                </button>
-              </section>
 
-              <section className="eal-filter">
-                <label>
-                  <span>Từ khóa</span>
-                  <input
-                    value={filters.q}
-                    onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
-                    placeholder="Tìm hành động, người thao tác, mô tả"
-                  />
-                </label>
-                <label>
-                  <span>Hành động</span>
-                  <select
-                    value={filters.action}
-                    onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}
-                  >
-                    {ACTION_OPTIONS.map((option) => (
-                      <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Đối tượng</span>
-                  <select
-                    value={filters.entityType}
-                    onChange={(event) => setFilters((current) => ({ ...current, entityType: event.target.value }))}
-                  >
-                    {ENTITY_OPTIONS.map((option) => (
-                      <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>Người thao tác</span>
-                  <input
-                    value={filters.actor}
-                    onChange={(event) => setFilters((current) => ({ ...current, actor: event.target.value }))}
-                    placeholder="Tên đăng nhập"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="eal-btn eal-btn--primary"
-                  onClick={loadLogs}
-                  disabled={isLoading}
-                >
-                  <FilterOutlined />
-                  <span>Lọc</span>
-                </button>
+                {isFilterOpen && (
+                  <div id="evaluation-audit-filter-panel" className="eal-filter-panel admin-control-toolbar__panel">
+                  <label>
+                    <span>Hành động</span>
+                    <select
+                      value={filters.action}
+                      onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}
+                    >
+                      {ACTION_OPTIONS.map((option) => (
+                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Đối tượng</span>
+                    <select
+                      value={filters.entityType}
+                      onChange={(event) => setFilters((current) => ({ ...current, entityType: event.target.value }))}
+                    >
+                      {ENTITY_OPTIONS.map((option) => (
+                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Người thao tác</span>
+                    <input
+                      value={filters.actor}
+                      onChange={(event) => setFilters((current) => ({ ...current, actor: event.target.value }))}
+                      placeholder="Tên đăng nhập"
+                    />
+                  </label>
+                  </div>
+                )}
               </section>
 
               <section className="eal-content">

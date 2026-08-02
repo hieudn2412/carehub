@@ -16,6 +16,8 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationGrade;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationSource;
 
 @Entity
 @Getter
@@ -70,6 +72,15 @@ public class DocumentQuestionCandidate extends BaseEntity {
     @Column(name = "knowledge_point_key", length = 64)
     private String knowledgePointKey;
 
+    @Column(name = "question_type", length = 48)
+    private String questionType;
+
+    @Column(name = "answer_evidence", columnDefinition = "text")
+    private String answerEvidence;
+
+    @Column(name = "distractor_rationales", columnDefinition = "text")
+    private String distractorRationales;
+
     @Column(name = "generation_key", length = 128)
     private String generationKey;
 
@@ -81,6 +92,23 @@ public class DocumentQuestionCandidate extends BaseEntity {
 
     @Column(name = "llm_validation", columnDefinition = "text")
     private String llmValidation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "validation_grade", length = 16)
+    private CandidateValidationGrade validationGrade;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "validation_source", length = 32)
+    private CandidateValidationSource validationSource;
+
+    @Column(name = "validation_issues", columnDefinition = "text")
+    private String validationIssues;
+
+    @Column(name = "evidence_status", length = 32)
+    private String evidenceStatus;
+
+    @Column(name = "critic_status", length = 32)
+    private String criticStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)

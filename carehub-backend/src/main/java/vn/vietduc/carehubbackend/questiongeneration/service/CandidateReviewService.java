@@ -248,7 +248,10 @@ public class CandidateReviewService {
                 candidate.getSourceExcerpt(),
                 candidate.getKnowledgePointKey(),
                 candidate.getRawJson(),
-                candidate.getLlmValidation()
+                candidate.getLlmValidation(),
+                candidate.getQuestionType(),
+                candidate.getAnswerEvidence(),
+                candidate.getDistractorRationales()
         );
         CandidateValidationResult validation = validationService.validate(generated, candidate.getChunk().getText());
         DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem());
@@ -274,6 +277,17 @@ public class CandidateReviewService {
             candidate.setLabel(CandidateLabel.GOOD);
         }
         candidate.setQualityScore(validation.qualityScore());
+        candidate.setValidationGrade(
+                vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationGrade
+                        .valueOf(validation.validationGrade())
+        );
+        candidate.setValidationSource(
+                vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationSource
+                        .valueOf(validation.validationSource())
+        );
+        candidate.setValidationIssues(toJson(validation.warnings()));
+        candidate.setEvidenceStatus(validation.evidenceStatus());
+        candidate.setCriticStatus(validation.criticStatus());
         candidate.setWarnings(toJson(warnings));
         candidate.setDuplicateMaxSimilarity(duplicate.maxSimilarity());
         candidate.setDuplicateQuestionId(duplicate.matchedQuestionId());

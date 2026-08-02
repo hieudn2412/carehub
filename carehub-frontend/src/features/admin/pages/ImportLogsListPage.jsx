@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { adminApi } from '../api/adminApi'
 import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
@@ -411,7 +412,15 @@ function ImportLogsListPage() {
 
               {/* Filters Block */}
               <div className="il-filter-bar">
-                <div className="il-filter-field">
+                <AdminFilterDisclosure
+                  activeCount={[
+                    fileFilter !== 'all',
+                    statusFilter !== 'all',
+                    Boolean(dateFrom),
+                    Boolean(dateTo),
+                  ].filter(Boolean).length}
+                >
+                  <div className="il-filter-field">
                   <span className="il-filter-label">Loại dữ liệu nhập</span>
                   <select
                     className="il-filter-select"
@@ -458,6 +467,7 @@ function ImportLogsListPage() {
                   />
                 </div>
 
+                </AdminFilterDisclosure>
                 <span className="il-results-count">{totalElements} kết quả</span>
               </div>
 

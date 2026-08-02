@@ -42,7 +42,7 @@ function normalizeSearchText(value) {
    (AppShell dùng nó; khi user là admin nó render AdminSidebar). Bước hợp nhất
    vật lý AdminSidebar + Sidebar thành một AppSidebar nhận config menu theo
    role vẫn còn nợ — làm khi có điều kiện test đủ 3 role trên trình duyệt. */
-function Sidebar() {
+function Sidebar({ alertSummary = {} }) {
   const navigate = useNavigate()
   const location = useLocation()
   const currentPath = location.pathname
@@ -62,6 +62,8 @@ function Sidebar() {
   })
   const hasAssignedChecklist = assignedChecklistAccess.accessToken === accessToken
     && assignedChecklistAccess.hasAssignment
+  const unreadCount = Number(alertSummary.unreadCount) || 0
+  const pendingExamCount = Number(alertSummary.pendingExamCount) || 0
 
   useEffect(() => {
     let active = true
@@ -99,6 +101,10 @@ function Sidebar() {
   }, [isAdmin, isManager, accessToken])
 
   const isLinkActive = (itemPath) => {
+    if (itemPath === '/staff/professional-competency') {
+      return currentPath.startsWith('/staff/professional-competency')
+        || currentPath.startsWith('/staff/exam/take')
+    }
     if (
       itemPath === '/admin/dashboard' ||
       itemPath === '/manager/dashboard' ||
@@ -259,7 +265,28 @@ function Sidebar() {
     }
   }
 
-  const mobileMenuGroups = [
+  const examMenuItem = {
+    icon: <FileDoneOutlined />,
+    label: 'Năng lực chuyên môn',
+    route: '/staff/professional-competency',
+    alertCount: pendingExamCount,
+  }
+  const notificationMenuItem = {
+    icon: <BellOutlined />,
+    label: 'Thông báo',
+    route: '/staff/notifications',
+    alertCount: unreadCount,
+  }
+  const priorityItems = [
+    ...(pendingExamCount > 0 ? [examMenuItem] : []),
+    ...(unreadCount > 0 ? [notificationMenuItem] : []),
+  ]
+
+  const mobileOnlyMenuGroups = [
+    ...(priorityItems.length > 0 ? [{
+      title: 'Cần xử lý',
+      items: priorityItems,
+    }] : []),
     {
       title: 'Trang chủ',
       items: [
@@ -295,22 +322,18 @@ function Sidebar() {
         },
       ],
     },
+    {
+      title: 'Bài kiểm tra',
+      items: [
+        ...(pendingExamCount > 0 ? [] : [examMenuItem]),
+        {
+          icon: <HistoryOutlined />,
+          label: 'Lịch sử bài kiểm tra',
+          route: '/staff/exam/history',
+        },
+      ],
+    },
     ...(!isManager ? [
-      {
-        title: 'Bài kiểm tra',
-        items: [
-          {
-            icon: <FileDoneOutlined />,
-            label: 'Làm bài kiểm tra',
-            route: '/staff/exam/take',
-          },
-          {
-            icon: <HistoryOutlined />,
-            label: 'Lịch sử bài kiểm tra',
-            route: '/staff/exam/history',
-          },
-        ],
-      },
       {
         title: 'Tuân thủ',
         items: [
@@ -388,14 +411,49 @@ function Sidebar() {
           label: 'Hồ sơ cá nhân',
           route: '/staff/profile',
         },
-        {
-          icon: <BellOutlined />,
-          label: 'Thông báo',
-          route: '/staff/notifications',
-        },
+        ...(unreadCount > 0 ? [] : [notificationMenuItem]),
       ],
     },
   ].filter((group) => group.items.length > 0)
+
+  const mobileAlertCountByRoute = new Map(
+    mobileOnlyMenuGroups
+      .flatMap((group) => group.items)
+      .filter((item) => item.alertCount > 0)
+      .map((item) => [item.route, item.alertCount])
+  )
+  const desktopAlignedMobileGroups = navSections.map((section) => ({
+    title: section.label,
+    items: section.items.map((item) => ({
+      icon: item.icon,
+      label: item.label,
+      route: item.path,
+      alertCount: item.path === '/staff/professional-competency'
+        ? pendingExamCount
+        : mobileAlertCountByRoute.get(item.path) || 0,
+    })),
+  }))
+  const mobileMenuGroups = isManager
+    ? desktopAlignedMobileGroups
+    : [
+        ...(unreadCount > 0 ? [{
+          title: 'Cần xử lý',
+          items: [notificationMenuItem],
+        }] : []),
+        ...desktopAlignedMobileGroups.map((group) => {
+          const groupWithMobileUtilities = group.title === 'Tài khoản'
+            ? {
+                ...group,
+                items: [
+                  ...group.items,
+                  ...(unreadCount > 0 ? [] : [notificationMenuItem]),
+                ],
+              }
+            : group
+
+          return groupWithMobileUtilities
+        }),
+      ]
 
   const normalizedSearchKeyword = normalizeSearchText(searchKeyword.trim())
   const isSearching = normalizedSearchKeyword.length > 0
@@ -467,7 +525,12 @@ function Sidebar() {
                             closeStaffMobileMenu(item.route)
                           }}
                         >
-                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">
+                            {item.icon}
+                            {item.alertCount > 0 && (
+                              <span className="staff-mobile-menu__item-alert-dot" />
+                            )}
+                          </span>
                           <span>{item.label}</span>
                         </NavLink>
                       )
@@ -492,7 +555,12 @@ function Sidebar() {
                             closeStaffMobileMenu(item.route)
                           }}
                         >
-                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">{item.icon}</span>
+                          <span className="staff-mobile-menu__item-icon" aria-hidden="true">
+                            {item.icon}
+                            {item.alertCount > 0 && (
+                              <span className="staff-mobile-menu__item-alert-dot" />
+                            )}
+                          </span>
                           <span>{item.label}</span>
                         </NavLink>
                       )
@@ -533,7 +601,6 @@ function Sidebar() {
           {navSections.map((section) => {
             const isExpanded = expandedSectionLabel === section.label
             const containsActiveItem = section.items.some((item) => isLinkActive(item.path))
-            const directItem = section.items.length === 1 ? section.items[0] : null
 
             return (
               <div
@@ -542,50 +609,37 @@ function Sidebar() {
                   containsActiveItem ? 'sidebar__section--active' : ''
                 }`}
               >
-                {directItem ? (
-                  <NavLink
-                    to={directItem.path}
-                    className="sidebar__section-trigger sidebar__section-trigger--link"
-                    onClick={() => setIsMobileOpen(false)}
-                  >
-                    <span className="sidebar__item-icon">{directItem.icon}</span>
-                    <span>{section.label}</span>
-                  </NavLink>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      className="sidebar__section-trigger"
-                      aria-expanded={isExpanded}
-                      onClick={() => handleSectionToggle(section.label)}
-                    >
-                      <span>{section.label}</span>
-                      <DownOutlined className="sidebar__section-chevron" />
-                    </button>
+                <button
+                  type="button"
+                  className="sidebar__section-trigger"
+                  aria-expanded={isExpanded}
+                  onClick={() => handleSectionToggle(section.label)}
+                >
+                  <span>{section.label}</span>
+                  <DownOutlined className="sidebar__section-chevron" />
+                </button>
 
-                    <div
-                      className={`sidebar__section-items ${
-                        isExpanded ? 'sidebar__section-items--open' : ''
-                      }`}
-                    >
-                      <div className="sidebar__section-items-inner">
-                        {section.items.map((item) => (
-                          <NavLink
-                            key={item.path}
-                            to={item.path}
-                            className={() =>
-                              `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
-                            }
-                            onClick={() => setIsMobileOpen(false)}
-                          >
-                            <span className="sidebar__item-icon">{item.icon}</span>
-                            <span>{item.label}</span>
-                          </NavLink>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+                <div
+                  className={`sidebar__section-items ${
+                    isExpanded ? 'sidebar__section-items--open' : ''
+                  }`}
+                >
+                  <div className="sidebar__section-items-inner">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={() =>
+                          `sidebar__item ${isLinkActive(item.path) ? 'sidebar__item--active' : ''}`
+                        }
+                        onClick={() => setIsMobileOpen(false)}
+                      >
+                        <span className="sidebar__item-icon">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
               </div>
             )
           })}

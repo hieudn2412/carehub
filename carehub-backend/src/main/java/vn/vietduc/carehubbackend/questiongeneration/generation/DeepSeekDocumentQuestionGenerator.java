@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -24,11 +27,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 @Component
 @Slf4j
@@ -38,6 +43,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
 
     private final AiGenerationProperties properties;
     private final ObjectMapper objectMapper;
+    private final GroundedV4PromptCatalog promptCatalog;
+    private final MeterRegistry meterRegistry;
     /* package */ final AtomicReference<CircuitState> circuitState = new AtomicReference<>(CircuitState.CLOSED);
     private final AtomicInteger failureCount = new AtomicInteger();
     private final AtomicInteger halfOpenProbeCount = new AtomicInteger();
@@ -52,9 +59,29 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         AUTHENTICATION, RATE_LIMIT, SERVER_ERROR, TIMEOUT, PARSE_ERROR, UNKNOWN
     }
 
-    public DeepSeekDocumentQuestionGenerator(AiGenerationProperties properties, ObjectMapper objectMapper) {
+    @Autowired
+    public DeepSeekDocumentQuestionGenerator(
+            AiGenerationProperties properties,
+            ObjectMapper objectMapper,
+            GroundedV4PromptCatalog promptCatalog,
+            MeterRegistry meterRegistry
+    ) {
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.promptCatalog = promptCatalog;
+        this.meterRegistry = meterRegistry;
+    }
+
+    public DeepSeekDocumentQuestionGenerator(
+            AiGenerationProperties properties,
+            ObjectMapper objectMapper,
+            GroundedV4PromptCatalog promptCatalog
+    ) {
+        this(properties, objectMapper, promptCatalog, null);
+    }
+
+    public DeepSeekDocumentQuestionGenerator(AiGenerationProperties properties, ObjectMapper objectMapper) {
+        this(properties, objectMapper, new GroundedV4PromptCatalog(), null);
     }
 
     @Override
@@ -104,10 +131,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         RestClient client = restClient();
 
         try {
-            if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
-                return generateSingleCallWithModel(client, input, properties.getModel());
-            }
-            return generateMultiStageWithModel(client, input, properties.getModel());
+            return generateWithModel(client, input, properties.getModel());
         } catch (RuntimeException ex) {
             String fallbackModel = properties.getFallbackModel();
             if (fallbackModel == null || fallbackModel.isBlank()
@@ -117,10 +141,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             log.warn("Primary model {} failed, trying fallback model {}: {}",
                     properties.getModel(), fallbackModel, ex.getMessage());
             try {
-                if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
-                    return generateSingleCallWithModel(client, input, fallbackModel);
-                }
-                return generateMultiStageWithModel(client, input, fallbackModel);
+                return generateWithModel(client, input, fallbackModel);
             } catch (RuntimeException fallbackEx) {
                 throw new IllegalStateException(
                         "Cả primary model " + properties.getModel()
@@ -129,13 +150,37 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         }
     }
 
+    private GeneratedChunkResult generateWithModel(RestClient client, GenerationInput input, String model) {
+        if ("GROUNDED_V4".equalsIgnoreCase(input.pipelineVersion())) {
+            return generateGroundedV4WithModel(client, input, model);
+        }
+        if (PIPELINE_SINGLE_CALL.equalsIgnoreCase(properties.getPipelineMode())) {
+            return generateSingleCallWithModel(client, input, model);
+        }
+        return generateMultiStageWithModel(client, input, model);
+    }
+
     private GeneratedChunkResult generateSingleCallWithModel(RestClient client, GenerationInput input, String model) {
-        DeepSeekCall call = callDeepSeek("single_call", client, singleCallMessages(input), model);
+        DeepSeekCall call = callDeepSeek(
+                "single_call",
+                client,
+                singleCallMessages(input),
+                model,
+                properties.getTemperature(),
+                properties.getMaxOutputTokens()
+        );
         return parseSingleCallResult(call.content(), call.usage(), model);
     }
 
     private GeneratedChunkResult generateMultiStageWithModel(RestClient client, GenerationInput input, String model) {
-        DeepSeekCall knowledgeCall = callDeepSeek("knowledge", client, knowledgeMessages(input), model);
+        DeepSeekCall knowledgeCall = callDeepSeek(
+                "knowledge",
+                client,
+                knowledgeMessages(input),
+                model,
+                properties.getTemperature(),
+                properties.getMaxOutputTokens()
+        );
         List<GeneratedKnowledgePoint> knowledgePoints = parseKnowledgePoints(knowledgeCall.content());
         // Ở đây danh sách rỗng dừng sớm là ĐÚNG: chưa gọi lượt sinh câu hỏi nào nên không mất gì,
         // và không có knowledge point thì lượt sau cũng không có gì để bám vào.
@@ -151,14 +196,28 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             );
         }
 
-        DeepSeekCall questionCall = callDeepSeek("questions", client, questionMessages(input, knowledgePoints), model);
+        DeepSeekCall questionCall = callDeepSeek(
+                "questions",
+                client,
+                questionMessages(input, knowledgePoints),
+                model,
+                properties.getTemperature(),
+                properties.getMaxOutputTokens()
+        );
         List<GeneratedQuestion> questions = parseQuestions(questionCall.content());
         LlmUsage usage = knowledgeCall.usage().plus(questionCall.usage());
 
         if (properties.isLlmValidationEnabled()) {
             List<GeneratedQuestion> validated = new ArrayList<>();
             for (GeneratedQuestion question : questions) {
-                DeepSeekCall validationCall = callDeepSeek("validation", client, validationMessages(input, question), model);
+                DeepSeekCall validationCall = callDeepSeek(
+                        "validation",
+                        client,
+                        validationMessages(input, question),
+                        model,
+                        properties.getTemperature(),
+                        properties.getMaxOutputTokens()
+                );
                 usage = usage.plus(validationCall.usage());
                 validated.add(withValidation(question, validationCall.content()));
             }
@@ -173,6 +232,431 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 knowledgePoints,
                 questions
         );
+    }
+
+    private GeneratedChunkResult generateGroundedV4WithModel(
+            RestClient client,
+            GenerationInput input,
+            String model
+    ) {
+        ParsedStage<List<GeneratedKnowledgePoint>> knowledgeStage = callJsonStage(
+                "v4_knowledge",
+                client,
+                groundedKnowledgeMessages(input),
+                model,
+                properties.getKnowledgeTemperature(),
+                properties.getKnowledgeMaxOutputTokens(),
+                promptCatalog.knowledgePrompt(),
+                this::parseKnowledgePointsStrict
+        );
+        List<GeneratedKnowledgePoint> groundedPoints = knowledgeStage.value().stream()
+                .filter(GeneratedKnowledgePoint::generationEligible)
+                .filter(point -> !isBlank(point.statement()))
+                .filter(point -> containsExactExcerpt(input.chunkText(), point.sourceExcerpt()))
+                .toList();
+        if (groundedPoints.isEmpty()) {
+            return new GeneratedChunkResult(
+                    provider(),
+                    model,
+                    promptCatalog.versionWithHash(),
+                    knowledgeStage.usage(),
+                    List.of(),
+                    List.of(),
+                    0,
+                    knowledgeStage.repairCallCount()
+            );
+        }
+
+        ParsedStage<List<GeneratedQuestion>> questionStage = callJsonStage(
+                "v4_questions",
+                client,
+                groundedQuestionMessages(input, groundedPoints),
+                model,
+                properties.getQuestionTemperature(),
+                properties.getQuestionMaxOutputTokens(),
+                promptCatalog.questionPrompt(),
+                this::parseQuestionsStrict
+        );
+        LlmUsage usage = knowledgeStage.usage().plus(questionStage.usage());
+        int repairCalls = knowledgeStage.repairCallCount() + questionStage.repairCallCount();
+        int criticCalls = 0;
+        List<GeneratedQuestion> questions = new ArrayList<>();
+
+        for (GeneratedQuestion question : questionStage.value().stream()
+                .limit(Math.max(0, input.questionsPerChunk()))
+                .toList()) {
+            if (!shouldRunCritic(input, question, groundedPoints)) {
+                questions.add(question);
+                continue;
+            }
+            ParsedStage<String> criticStage = callJsonStage(
+                    "v4_critic",
+                    client,
+                    groundedCriticMessages(input, question),
+                    model,
+                    properties.getCriticTemperature(),
+                    properties.getCriticMaxOutputTokens(),
+                    promptCatalog.criticPrompt(),
+                    this::validateCriticJson
+            );
+            usage = usage.plus(criticStage.usage());
+            repairCalls += criticStage.repairCallCount();
+            criticCalls++;
+            questions.add(withValidation(question, criticStage.value()));
+        }
+
+        return new GeneratedChunkResult(
+                provider(),
+                model,
+                promptCatalog.versionWithHash(),
+                usage,
+                groundedPoints,
+                questions,
+                criticCalls,
+                repairCalls
+        );
+    }
+
+    private <T> ParsedStage<T> callJsonStage(
+            String stage,
+            RestClient client,
+            List<Map<String, String>> messages,
+            String model,
+            double temperature,
+            int maxOutputTokens,
+            String schemaPrompt,
+            Function<String, T> parser
+    ) {
+        DeepSeekCall initial = callDeepSeek(
+                stage,
+                client,
+                messages,
+                model,
+                temperature,
+                maxOutputTokens
+        );
+        try {
+            return new ParsedStage<>(parser.apply(initial.content()), initial.usage(), 0);
+        } catch (RuntimeException parseError) {
+            log.warn("Grounded v4 schema validation failed stage={}, attempting one repair: {}",
+                    stage, parseError.getMessage());
+            DeepSeekCall repair = callDeepSeek(
+                    stage + "_repair",
+                    client,
+                    repairMessages(schemaPrompt, initial.content()),
+                    model,
+                    0.0,
+                    maxOutputTokens
+            );
+            try {
+                return new ParsedStage<>(
+                        parser.apply(repair.content()),
+                        initial.usage().plus(repair.usage()),
+                        1
+                );
+            } catch (RuntimeException repairError) {
+                throw new IllegalStateException(
+                        "INVALID_MODEL_OUTPUT: JSON không đúng schema sau một lần repair, stage=" + stage,
+                        repairError
+                );
+            }
+        }
+    }
+
+    private List<Map<String, String>> groundedKnowledgeMessages(GenerationInput input) {
+        return List.of(
+                Map.of("role", "system", "content", promptCatalog.knowledgePrompt()),
+                Map.of(
+                        "role",
+                        "user",
+                        "content",
+                        """
+                                Tài liệu: %s
+                                Section: %s
+                                Trang: %s-%s
+
+                                Chunk:
+                                %s
+
+                                Trích xuất tối đa 8 knowledge point theo schema bắt buộc.
+                                """.formatted(
+                                nullToFallback(input.documentName(), "Không rõ"),
+                                nullToFallback(input.sectionPath(), "Không rõ"),
+                                input.pageStart() == null ? "?" : input.pageStart(),
+                                input.pageEnd() == null ? "?" : input.pageEnd(),
+                                input.chunkText()
+                        )
+                )
+        );
+    }
+
+    private List<Map<String, String>> groundedQuestionMessages(
+            GenerationInput input,
+            List<GeneratedKnowledgePoint> knowledgePoints
+    ) {
+        return List.of(
+                Map.of("role", "system", "content", promptCatalog.questionPrompt()),
+                Map.of(
+                        "role",
+                        "user",
+                        "content",
+                        """
+                                Tài liệu: %s
+                                Section: %s
+                                Trang: %s-%s
+                                Danh mục: %s
+                                Mô tả danh mục: %s
+                                Độ khó mục tiêu: %s
+
+                                Chunk:
+                                %s
+
+                                Knowledge points đã kiểm tra grounding:
+                                %s
+
+                                Tạo tối đa %d câu hỏi. questionsPerChunk là giới hạn trên, không phải số lượng bắt buộc.
+                                """.formatted(
+                                nullToFallback(input.documentName(), "Không rõ"),
+                                nullToFallback(input.sectionPath(), "Không rõ"),
+                                input.pageStart() == null ? "?" : input.pageStart(),
+                                input.pageEnd() == null ? "?" : input.pageEnd(),
+                                nullToFallback(input.categoryName(), "Tự động theo nguồn"),
+                                nullToFallback(input.categoryDescription(), "Không có"),
+                                nullToFallback(input.targetDifficulty(), "AUTO"),
+                                input.chunkText(),
+                                toJson(knowledgePoints),
+                                input.questionsPerChunk()
+                        )
+                )
+        );
+    }
+
+    private List<Map<String, String>> groundedCriticMessages(
+            GenerationInput input,
+            GeneratedQuestion question
+    ) {
+        return List.of(
+                Map.of("role", "system", "content", promptCatalog.criticPrompt()),
+                Map.of(
+                        "role",
+                        "user",
+                        "content",
+                        """
+                                Chunk nguồn:
+                                %s
+
+                                Candidate:
+                                %s
+                                """.formatted(input.chunkText(), toJson(question))
+                )
+        );
+    }
+
+    private List<Map<String, String>> repairMessages(String schemaPrompt, String invalidJson) {
+        return List.of(
+                Map.of(
+                        "role",
+                        "system",
+                        "content",
+                        """
+                                Sửa JSON để đúng schema bên dưới. Không thêm hoặc thay đổi dữ kiện.
+                                Nếu dữ liệu không đủ, dùng mảng rỗng theo schema.
+                                Chỉ trả JSON object hợp lệ.
+
+                                %s
+                                """.formatted(schemaPrompt)
+                ),
+                Map.of("role", "user", "content", invalidJson == null ? "{}" : invalidJson)
+        );
+    }
+
+    List<GeneratedKnowledgePoint> parseKnowledgePointsStrict(String json) {
+        JsonNode root = readObject(json, "knowledgePoints");
+        JsonNode array = root.path("knowledgePoints");
+        if (!array.isArray()) {
+            throw new IllegalStateException("JSON thiếu mảng knowledgePoints");
+        }
+        List<GeneratedKnowledgePoint> points = parseKnowledgePoints(json);
+        for (GeneratedKnowledgePoint point : points) {
+            if (isBlank(point.id()) || isBlank(point.statement()) || isBlank(point.sourceExcerpt())) {
+                throw new IllegalStateException("Knowledge point thiếu id, statement hoặc sourceExcerpt");
+            }
+        }
+        return points;
+    }
+
+    List<GeneratedQuestion> parseQuestionsStrict(String json) {
+        JsonNode root = readObject(json, "questions");
+        JsonNode array = root.path("questions");
+        if (!array.isArray()) {
+            throw new IllegalStateException("JSON thiếu mảng questions");
+        }
+        for (JsonNode node : array) {
+            requireText(node, "questionType");
+            requireText(node, "stem");
+            requireText(node, "optionA");
+            requireText(node, "optionB");
+            requireText(node, "optionC");
+            requireText(node, "optionD");
+            requireText(node, "correctAnswer");
+            requireText(node, "explanation");
+            requireText(node, "difficulty");
+            requireText(node, "sourceExcerpt");
+            requireText(node, "answerEvidence");
+            requireText(node, "knowledgePointId");
+            if (!Set.of("recall", "application", "procedure", "warning", "comparison")
+                    .contains(node.path("questionType").asText().toLowerCase(java.util.Locale.ROOT))) {
+                throw new IllegalStateException("Question có questionType không hợp lệ");
+            }
+            if (!Set.of("easy", "medium", "hard")
+                    .contains(node.path("difficulty").asText().toLowerCase(java.util.Locale.ROOT))) {
+                throw new IllegalStateException("Question có difficulty không hợp lệ");
+            }
+            if (!node.path("correctAnswer").asText().matches("[ABCD]")) {
+                throw new IllegalStateException("Question có correctAnswer không hợp lệ");
+            }
+            JsonNode rationales = node.path("distractorRationales");
+            if (!rationales.isObject()) {
+                throw new IllegalStateException("Question thiếu distractorRationales object");
+            }
+            String correctAnswer = node.path("correctAnswer").asText();
+            for (String option : List.of("A", "B", "C", "D")) {
+                if (!option.equals(correctAnswer)
+                        && (!rationales.has(option) || rationales.path(option).asText("").isBlank())) {
+                    throw new IllegalStateException("Question thiếu rationale cho distractor " + option);
+                }
+            }
+        }
+        return parseQuestions(json);
+    }
+
+    String validateCriticJson(String json) {
+        JsonNode root = readObject(json, "critic");
+        for (String field : List.of(
+                "answerable",
+                "singleBestAnswer",
+                "correctAnswerSupported",
+                "distractorsInvalid",
+                "surfaceCueFree",
+                "distractorsPlausible",
+                "requiresDomainReasoning"
+        )) {
+            if (!root.has(field) || !root.path(field).isBoolean()) {
+                throw new IllegalStateException("Critic thiếu boolean " + field);
+            }
+        }
+        if (!root.has("qualityScore") || !root.path("qualityScore").isNumber()) {
+            throw new IllegalStateException("Critic thiếu qualityScore");
+        }
+        if (!root.path("issues").isArray()) {
+            throw new IllegalStateException("Critic thiếu issues array");
+        }
+        return sanitizeJson(json);
+    }
+
+    private JsonNode readObject(String json, String stage) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            if (root == null || !root.isObject()) {
+                throw new IllegalStateException("JSON stage " + stage + " không phải object");
+            }
+            return root;
+        } catch (Exception ex) {
+            throw new IllegalStateException("JSON stage " + stage + " không hợp lệ", ex);
+        }
+    }
+
+    private void requireText(JsonNode node, String field) {
+        if (!node.has(field) || !node.path(field).isTextual() || node.path(field).asText().isBlank()) {
+            throw new IllegalStateException("Question thiếu field " + field);
+        }
+    }
+
+    boolean shouldRunCritic(
+            GenerationInput input,
+            GeneratedQuestion question,
+            List<GeneratedKnowledgePoint> knowledgePoints
+    ) {
+        boolean mappedKnowledgePoint = knowledgePoints.stream()
+                .anyMatch(point -> point.id().equals(question.knowledgePointId()));
+        if (!mappedKnowledgePoint
+                || !containsExactExcerpt(input.chunkText(), question.sourceExcerpt())
+                || !containsExactExcerpt(input.chunkText(), question.answerEvidence())) {
+            return false;
+        }
+        String normalized = normalizeForRisk(question.stem() + " "
+                + question.optionA() + " " + question.optionB() + " "
+                + question.optionC() + " " + question.optionD());
+        return isBlank(question.distractorRationales())
+                || Set.of("medium", "hard").contains(
+                        nullToFallback(question.difficulty(), "").toLowerCase(java.util.Locale.ROOT))
+                || hasObviousSurfaceCue(question)
+                || normalized.matches(".*\\b(khong|sai|ngoai tru)\\b.*")
+                || normalized.matches(".*\\b(benh nhan|nguoi benh|lam sang|chan doan|xu tri)\\b.*")
+                || normalized.matches(".*\\b(thuoc|lieu|mg|ml|truyen|tiem|thu thuat|phau thuat)\\b.*")
+                || normalized.matches(".*\\b(truoc|sau|buoc|quy trinh|trinh tu)\\b.*");
+    }
+
+    private boolean hasObviousSurfaceCue(GeneratedQuestion question) {
+        List<String> options = List.of(
+                nullToFallback(question.optionA(), ""),
+                nullToFallback(question.optionB(), ""),
+                nullToFallback(question.optionC(), ""),
+                nullToFallback(question.optionD(), "")
+        );
+        String correct = switch (nullToFallback(question.correctAnswer(), "")) {
+            case "A" -> options.get(0);
+            case "B" -> options.get(1);
+            case "C" -> options.get(2);
+            case "D" -> options.get(3);
+            default -> "";
+        };
+        double distractorAverage = options.stream()
+                .filter(option -> !option.equals(correct))
+                .mapToInt(this::wordCount)
+                .average()
+                .orElse(0);
+        boolean correctLengthCue = wordCount(correct) >= distractorAverage * 1.65
+                && wordCount(correct) - distractorAverage >= 4;
+        return correctLengthCue || options.stream().anyMatch(this::containsAbsoluteCue);
+    }
+
+    private int wordCount(String value) {
+        String normalized = normalizeWhitespace(value);
+        return normalized.isBlank() ? 0 : normalized.split("\\s+").length;
+    }
+
+    private boolean containsAbsoluteCue(String value) {
+        String normalized = normalizeForRisk(value);
+        return normalized.matches(".*\\b(luon luon|khong bao gio|hoan toan|chi can|duy nhat)\\b.*");
+    }
+
+    private boolean containsExactExcerpt(String source, String excerpt) {
+        if (isBlank(source) || isBlank(excerpt)) {
+            return false;
+        }
+        return source.contains(excerpt.trim());
+    }
+
+    private String normalizeWhitespace(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", " ").trim();
+    }
+
+    private String normalizeForRisk(String value) {
+        return java.text.Normalizer.normalize(value == null ? "" : value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private String nullToFallback(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     GeneratedChunkResult parseSingleCallResult(String json, LlmUsage usage) {
@@ -380,8 +864,14 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         );
     }
 
-    private DeepSeekCall callDeepSeek(String stage, RestClient client,
-                                        List<Map<String, String>> messages, String model) {
+    private DeepSeekCall callDeepSeek(
+            String stage,
+            RestClient client,
+            List<Map<String, String>> messages,
+            String model,
+            double temperature,
+            int maxOutputTokens
+    ) {
         checkCircuitBreaker();
         Semaphore semaphore = callSemaphore();
         acquirePermit(semaphore, stage);
@@ -400,9 +890,9 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             .body(Map.of(
                                     "model", model,
                                     "messages", messages,
-                                    "temperature", properties.getTemperature(),
+                                    "temperature", temperature,
                                     "top_p", properties.getTopP(),
-                                    "max_tokens", properties.getMaxOutputTokens(),
+                                    "max_tokens", maxOutputTokens,
                                     "thinking", Map.of("type", "disabled"),
                                     "response_format", Map.of("type", "json_object")
                             ))
@@ -415,6 +905,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                     String content = response.choices().get(0).message().content();
                     Usage usage = response.usage();
                     recordSuccess();
+                    recordCallMetrics(model, stage, "success", latencyMs, usage);
                     log.info(
                             "DeepSeek call completed model={} stage={} attempt={} latencyMs={} promptTokens={} completionTokens={} totalTokens={}",
                             model,
@@ -438,6 +929,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 } catch (RuntimeException ex) {
                     long latencyMs = Duration.between(started, Instant.now()).toMillis();
                     lastErrorType = classifyError(ex);
+                    recordCallMetrics(model, stage, lastErrorType.name().toLowerCase(), latencyMs, null);
                     log.warn(
                             "DeepSeek call failed model={} stage={} attempt={} latencyMs={} errorType={} message={}",
                             model, stage, attempt + 1, latencyMs, lastErrorType, ex.getMessage()
@@ -689,7 +1181,12 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             text(node, "sourceExcerpt", "source_excerpt"),
                             text(node, "knowledgePointId", "knowledge_point_id"),
                             toJson(node),
-                            null
+                            null,
+                            text(node, "questionType", "question_type"),
+                            text(node, "answerEvidence", "answer_evidence"),
+                            node.path("distractorRationales").isObject()
+                                    ? toJson(node.path("distractorRationales"))
+                                    : null
                     ));
                 }
             }
@@ -717,7 +1214,10 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 question.sourceExcerpt(),
                 question.knowledgePointId(),
                 question.rawJson(),
-                validationJson
+                validationJson,
+                question.questionType(),
+                question.answerEvidence(),
+                question.distractorRationales()
         );
     }
 
@@ -781,6 +1281,37 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     }
 
     private record DeepSeekCall(String content, LlmUsage usage) {
+    }
+
+    private void recordCallMetrics(
+            String model,
+            String stage,
+            String outcome,
+            long latencyMs,
+            Usage usage
+    ) {
+        if (meterRegistry == null) {
+            return;
+        }
+        Tags tags = Tags.of(
+                "pipeline", stage.startsWith("v4_") ? "GROUNDED_V4" : "LEGACY_V3",
+                "provider", provider(),
+                "model", model,
+                "stage", stage,
+                "outcome", outcome
+        );
+        meterRegistry.counter("carehub.question_generation.calls", tags).increment();
+        meterRegistry.timer("carehub.question_generation.latency", tags)
+                .record(Duration.ofMillis(Math.max(0, latencyMs)));
+        if (usage != null) {
+            meterRegistry.counter("carehub.question_generation.prompt_tokens", tags)
+                    .increment(valueOrZero(usage.promptTokens()));
+            meterRegistry.counter("carehub.question_generation.completion_tokens", tags)
+                    .increment(valueOrZero(usage.completionTokens()));
+        }
+    }
+
+    private record ParsedStage<T>(T value, LlmUsage usage, int repairCallCount) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

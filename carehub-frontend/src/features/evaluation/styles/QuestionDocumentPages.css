@@ -3,7 +3,6 @@
   flex-direction: column;
   gap: 20px;
 }
-
 .qdoc-title-card,
 .qdoc-panel,
 .qdoc-filter-bar,
@@ -17,7 +16,6 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035);
 }
-
 .qdoc-title-card,
 .qdoc-detail-hero {
   padding: 24px;
@@ -59,6 +57,32 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.qdoc-filter-bar {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.qdoc-filter-bar > .qdoc-search {
+  width: min(680px, 100%);
+  max-width: 680px;
+  flex: 1 1 680px;
+}
+
+.qdoc-filter-bar > .admin-filter-disclosure {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.qdoc-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+  width: 260px;
+  align-items: stretch;
+}
+
+.qdoc-filter-bar > .admin-filter-disclosure .qdoc-select {
+  width: 100%;
+  max-width: none;
 }
 
 .qdoc-filter-bar--compact {
@@ -207,6 +231,7 @@
 }
 
 .qdoc-search input {
+  min-height: 44px;
   padding: 10px 12px 10px 38px;
 }
 
@@ -356,6 +381,13 @@
 .qdoc-mini-badge--info {
   color: #1d4ed8;
   background: #dbeafe;
+}
+
+.qdoc-cell-note {
+  color: #64748b;
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
 }
 
 .qdoc-job-link {
@@ -761,6 +793,62 @@
   font-size: 13px;
 }
 
+.qdoc-grounding-panel {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.qdoc-grounding-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.qdoc-grounding-heading span {
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.qdoc-grounding-panel p,
+.qdoc-grounding-panel blockquote {
+  color: #334155;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.qdoc-grounding-panel blockquote {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+}
+
+.qdoc-grounding-panel details {
+  margin-top: 8px;
+}
+
+.qdoc-grounding-panel summary {
+  color: #0f766e;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.qdoc-grounding-panel pre {
+  background: #0f172a;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  overflow-x: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
 .qdoc-saved-box {
   align-items: center;
   background: #e8f7ef;
@@ -958,7 +1046,6 @@
     align-items: center;
   }
 }
-
 .qdoc-evidence-box {
   min-height: 120px;
   padding: 12px;
@@ -1289,6 +1376,11 @@
     max-width: none;
   }
 
+  .qdoc-filter-bar > .admin-filter-disclosure,
+  .qdoc-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
+    width: 100%;
+  }
+
   .qdoc-metric-grid,
   .qdoc-metric-grid--wide,
   .qdoc-overview-grid,
@@ -1309,148 +1401,3 @@
   }
 }
 
-/* ── StaffQuestionReviewPage (.sqr-) — chỉ thêm cuối file, không sửa rule sẵn có ── */
-
-.sqr-title-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.sqr-batch-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.sqr-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sqr-card {
-  border: 1px solid #f0f0f0;
-  border-radius: 10px;
-  padding: 16px;
-  background: #fff;
-}
-
-.sqr-card--approved {
-  background: #f6ffed;
-}
-
-.sqr-card--rejected {
-  background: #fff2f0;
-}
-
-.sqr-stem {
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.sqr-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.sqr-opt {
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  background: #f5f5f5;
-  color: #333;
-}
-
-.sqr-opt--correct {
-  background: #1677ff;
-  color: #fff;
-  font-weight: 600;
-}
-
-.sqr-card-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.sqr-card-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.sqr-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: none;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.sqr-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.sqr-btn--approve {
-  border: 1px solid #52c41a;
-  background: #f6ffed;
-  color: #52c41a;
-}
-
-.sqr-btn--reject {
-  border: 1px solid #ff4d4f;
-  background: #fff2f0;
-  color: #ff4d4f;
-}
-
-.sqr-btn--save {
-  background: #1677ff;
-  color: #fff;
-}
-
-/* bp-sm */
-@media (max-width: 768px) {
-  .sqr-batch-actions {
-    width: 100%;
-  }
-
-  .sqr-batch-actions .qdoc-primary-btn,
-  .sqr-batch-actions .qdoc-secondary-btn {
-    flex: 1;
-  }
-}
-
-/* bp-xs */
-@media (max-width: 560px) {
-  .sqr-batch-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .sqr-batch-actions .qdoc-primary-btn,
-  .sqr-batch-actions .qdoc-secondary-btn {
-    min-height: 44px;
-  }
-
-  .sqr-card-foot {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .sqr-card-actions .sqr-btn {
-    flex: 1;
-    min-height: 44px;
-  }
-}

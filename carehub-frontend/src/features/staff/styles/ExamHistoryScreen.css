@@ -105,6 +105,32 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+.eh-filter-bar .admin-control-toolbar__main {
+  align-items: center;
+}
+
+.eh-filter-bar .eh-search {
+  min-width: 0;
+}
+
+.eh-filter-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+}
+
+.eh-filter-panel input[type='date'] {
+  min-height: 42px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 11px;
+}
+
+.eh-filter-panel .searchable-select > input {
+  padding-right: 34px;
+  padding-left: 34px;
+}
+
 .eh-search {
   position: relative;
   flex: 1;
@@ -832,7 +858,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .eh-filter-bar,
   .eh-detail-header,
   .eh-exam-toolbar__right {
     align-items: stretch;
@@ -843,10 +868,7 @@
     width: 100%;
   }
 
-  .eh-field-filter,
-  .eh-date-range {
-    width: 100%;
-  }
+  .eh-filter-panel { grid-template-columns: 1fr; }
 
   .eh-date-filter {
     flex: 1;
@@ -1026,22 +1048,26 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 
 /* Thẻ thống kê của màn Bài kiểm tra (ExamTakeListScreen) — tách tên khỏi
    .eh-summary-card của màn Lịch sử thi vì hai layout xung đột (cột vs hàng) */
 .eh-take-summary-card {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 16px;
+  min-height: 72px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 8px;
   background: #fff;
 }
 
-.eh-take-summary-card strong { font-size: 24px; color: #1f2937; }
+.eh-take-summary-card span { color: #64748b; font-size: 13px; }
+.eh-take-summary-card strong { font-size: 21px; color: #1f2937; }
 .eh-take-summary-card--success strong { color: #15803d; }
 .eh-take-summary-card--danger strong { color: #b91c1c; }
 .eh-row--danger td { background: #fff1f2; }

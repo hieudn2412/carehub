@@ -10,6 +10,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -298,14 +299,16 @@ function AdminQualityHistoryPage() {
                   <h2>{selectedForm?.title || 'Quy trình'}</h2>
                   <p>{versions.length} phiên bản có lịch sử</p>
                 </div>
-                <label>
-                  <span className="sr-only">Lọc trạng thái phiên bản</span>
-                  <select value={versionFilter} onChange={(event) => setVersionFilter(event.target.value)}>
-                    {VERSION_OPTIONS.map((option) => (
-                      <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
+                <AdminFilterDisclosure activeCount={versionFilter ? 1 : 0}>
+                  <label>
+                    <span className="aqh-version-filter-label">Trạng thái phiên bản</span>
+                    <select value={versionFilter} onChange={(event) => setVersionFilter(event.target.value)}>
+                      {VERSION_OPTIONS.map((option) => (
+                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </AdminFilterDisclosure>
               </section>
 
               {filteredVersions.length === 0 ? (

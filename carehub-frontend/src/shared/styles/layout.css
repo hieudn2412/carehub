@@ -49,6 +49,538 @@
   overflow-y: auto;
 }
 
+/*
+ * Admin desktop pages already expose their page name in AdminHeader.
+ * Remove the repeated title/hero surface in the body while preserving
+ * controls, counters, filters and workflow steps that share that surface.
+ */
+@media (min-width: 769px) {
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout > .dashboard-layout__content .dashboard-body,
+    .dashboard-layout > .dashboard-layout__content > main
+  ) :is(
+    .am-title-card,
+    .aqh-search-hero,
+    .admin-quality-history__detail-hero,
+    .atl-title-card,
+    .checklist-quality-hero,
+    .crl-title-card,
+    .eal-header,
+    .etf-title-card,
+    .etl-title-card,
+    .evd-title-card,
+    .exam-dashboard__hero,
+    .exp-title-card,
+    .fam-hero,
+    .fiw-hero,
+    .flp-header-card,
+    .il-title-card,
+    .ns-title-card,
+    .pfm-heading,
+    .qbl-title-card,
+    .qcl-title-card,
+    .qdoc-detail-hero,
+    .qdoc-title-card,
+    .qsl-title-card,
+    .qscl-title-card,
+    .rdl-title-card,
+    .red-title-card,
+    .rel-title-card,
+    .sfp-heading,
+    .tcf-title-card,
+    .ted-title-card,
+    .tes-title-card,
+    .training-dashboard__hero
+  ) {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout > .dashboard-layout__content .dashboard-body,
+    .dashboard-layout > .dashboard-layout__content > main
+  ) :is(
+    .am-title-card,
+    .aqh-search-hero,
+    .admin-quality-history__detail-hero,
+    .atl-title-card,
+    .checklist-quality-hero,
+    .crl-title-card,
+    .eal-header,
+    .etf-title-card,
+    .etl-title-card,
+    .evd-title-card,
+    .exam-dashboard__hero,
+    .exp-title-card,
+    .fam-hero,
+    .fiw-hero,
+    .flp-header-card,
+    .il-title-card,
+    .ns-title-card,
+    .pfm-heading,
+    .qbl-title-card,
+    .qcl-title-card,
+    .qdoc-detail-hero,
+    .qdoc-title-card,
+    .qsl-title-card,
+    .qscl-title-card,
+    .rdl-title-card,
+    .red-title-card,
+    .rel-title-card,
+    .sfp-heading,
+    .tcf-title-card,
+    .ted-title-card,
+    .tes-title-card,
+    .training-dashboard__hero
+  ) :is(h1, p) {
+    display: none !important;
+  }
+
+  .app-shell--admin .aqh-search-hero__copy,
+  .app-shell--admin .checklist-quality-hero > div:first-child,
+  .app-shell--admin .exam-dashboard__hero > div:first-child,
+  .app-shell--admin .fam-hero > div:first-child,
+  .app-shell--admin .fiw-hero-top,
+  .app-shell--admin .fiw-hero-main > div:first-child,
+  .app-shell--admin .flp-header-info,
+  .app-shell--admin .training-dashboard__hero > div:first-child,
+  .dashboard-layout .eal-header > div:first-child,
+  .dashboard-layout .exp-title-card > div:first-child,
+  .dashboard-layout .pfm-heading > div:first-child,
+  .dashboard-layout .qbl-title-card > div:first-child,
+  .dashboard-layout .qdoc-detail-heading,
+  .dashboard-layout .qdoc-title-card > div:first-child,
+  .dashboard-layout .sfp-heading > div:first-child {
+    display: none !important;
+  }
+
+  .dashboard-layout .qdoc-title-icon {
+    display: none !important;
+  }
+
+  .app-shell--admin .fiw-hero::before {
+    display: none !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout > .dashboard-layout__content .dashboard-body,
+    .dashboard-layout > .dashboard-layout__content > main
+  ) :is(
+    .am-title-card,
+    .crl-title-card,
+    .etf-title-card,
+    .etl-title-card,
+    .il-title-card,
+    .ns-title-card,
+    .qcl-title-card,
+    .qdoc-title-card,
+    .qsl-title-card,
+    .qscl-title-card,
+    .rdl-title-card,
+    .red-title-card,
+    .rel-title-card,
+    .tcf-title-card,
+    .ted-title-card,
+    .tes-title-card
+  ):not(:has(button, a, input, select, textarea)) {
+    display: none !important;
+  }
+}
+
+/*
+ * Manager and staff pages also expose their title in the fixed header.
+ * Keep body actions and live metrics, but remove the duplicated desktop
+ * intro/title treatment. Mobile layouts retain their purpose-built headers.
+ */
+@media (min-width: 769px) {
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    > div:first-child:has(> h1) {
+    display: none !important;
+  }
+
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    > div:first-child:has(> div:first-child > h1) {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    > div:first-child:has(> div:first-child > h1)
+    > div:first-child {
+    display: none !important;
+  }
+
+  :where(.app-shell--manager, .app-shell--staff) .app-shell__body :is(
+    .cfs-header,
+    .check-eval-header,
+    .check-eval-subject-step > header,
+    .checklist-quality-hero,
+    .evd-title-card,
+    .exam-dashboard__hero,
+    .overview-heading,
+    .qdoc-title-card,
+    .sc-header,
+    .th-detail-header,
+    .th-page-heading,
+    .training-dashboard__hero,
+    .ts-heading
+  ) {
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    > .eh-page
+    > .eh-header:not(.eh-exam-toolbar),
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .th-page-heading,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .check-eval-subject-step
+    > header {
+    display: none !important;
+  }
+
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    :is(.evd-title-card, .qdoc-title-card, .th-detail-header)
+    :is(h1, p),
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .cfs-header
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .check-eval-header
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .checklist-quality-hero
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .exam-dashboard__hero
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .overview-heading
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .qdoc-title-card
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .sc-header__title-row,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .sc-header__desc,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .training-dashboard__hero
+    > div:first-child,
+  :where(.app-shell--manager, .app-shell--staff)
+    .app-shell__body
+    .ts-heading
+    > div:first-child {
+    display: none !important;
+  }
+}
+
+/*
+ * Admin desktop control system.
+ * Question Bank is the visual reference for search, filters and page actions.
+ */
+@media (min-width: 769px) {
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .il-filter-bar,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
+  ) {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    gap: 12px !important;
+    padding: 16px 20px !important;
+    border: 1px solid #dbe3ee !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-main-search,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .evd-toolbar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .fpp-search-wrapper,
+    .il-filter-bar,
+    .mgr-search-box,
+    .pfm-search-box,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
+  ) :is(
+    input[type='text'],
+    input[type='search'],
+    input[type='date'],
+    select,
+    .searchable-select > input,
+    .searchable-select__control
+  ) {
+    box-sizing: border-box !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    background-color: #fff !important;
+    color: #334155 !important;
+    font: inherit !important;
+    font-size: 13.5px !important;
+    outline: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-main-search,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .evd-toolbar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .fpp-search-wrapper,
+    .il-filter-bar,
+    .mgr-search-box,
+    .pfm-search-box,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
+  ) :is(
+    input[type='text'],
+    input[type='search'],
+    input[type='date'],
+    select,
+    .searchable-select > input,
+    .searchable-select__control
+  ):focus,
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) .searchable-select--open .searchable-select__control {
+    border-color: var(--focus, #2563eb) !important;
+    box-shadow: 0 0 0 2px rgb(37 99 235 / 15%) !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .evd-toolbar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .il-filter-bar,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
+  ) button,
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .checklist-quality-hero__actions,
+    .exp-title-actions,
+    .flp-header-actions,
+    .pfm-heading-actions,
+    .qbl-toolbar-actions,
+    .qdoc-title-actions,
+    .training-dashboard__hero
+  ) :is(button, a) {
+    display: inline-flex !important;
+    min-height: 44px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 9px 16px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    color: #334155 !important;
+    font: inherit !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
+    cursor: pointer;
+    box-shadow: none !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    [class*='btn-add'],
+    [class*='btn-primary'],
+    [class*='btn-create'],
+    [class*='create-btn'],
+    [class*='primary-btn'],
+    .checklist-quality-export,
+    .overview-export,
+    .training-dashboard__hero > button
+  ) {
+    border-color: #0f766e !important;
+    background: #0f766e !important;
+    color: #fff !important;
+    box-shadow: 0 2px 6px rgb(15 118 110 / 20%) !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    [class*='btn-add'],
+    [class*='btn-primary'],
+    [class*='btn-create'],
+    [class*='create-btn'],
+    [class*='primary-btn'],
+    .checklist-quality-export,
+    .overview-export,
+    .training-dashboard__hero > button
+  ):hover:not(:disabled) {
+    border-color: #115e59 !important;
+    background: #115e59 !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(button, a):disabled {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+  }
+}
+
 /* bp-md */
 @media (max-width: 1024px) {
   .app-shell__body,

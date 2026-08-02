@@ -18,6 +18,7 @@ import EmptyState from '../../../shared/components/EmptyState.jsx'
 import { httpClient } from '../../../shared/api/httpClient.js'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { publishNotificationStateChange } from '../hooks/useNotifications.js'
 import '../styles/NotificationsStaffScreen.css'
 
 function NotificationsStaffScreen() {
@@ -125,6 +126,7 @@ function NotificationsStaffScreen() {
   // Đánh dấu đã đọc một thông báo
   const handleMarkAsRead = async (id, silent = false) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    publishNotificationStateChange({ readId: id, decrementUnreadBy: 1 })
 
     try {
       const token = tokenStorage.getAccessToken()
@@ -136,12 +138,17 @@ function NotificationsStaffScreen() {
     } catch (err) {
       console.error("Lỗi khi đánh dấu đã đọc:", err)
       fetchNotifications()
+      publishNotificationStateChange({ refresh: true })
     }
   }
 
   // Xóa một thông báo (gắn API DELETE /api/v1/me/notifications/{id})
   const handleDelete = async (id) => {
+    const target = notifications.find(n => n.id === id)
     setNotifications(prev => prev.filter(n => n.id !== id))
+    if (target && !target.read) {
+      publishNotificationStateChange({ readId: id, decrementUnreadBy: 1 })
+    }
 
     try {
       const token = tokenStorage.getAccessToken()
@@ -153,6 +160,7 @@ function NotificationsStaffScreen() {
       console.error("Lỗi khi xóa thông báo:", err)
       showToast("Không thể xóa thông báo.", "error")
       fetchNotifications()
+      publishNotificationStateChange({ refresh: true })
     }
   }
 
@@ -162,6 +170,7 @@ function NotificationsStaffScreen() {
     if (unread.length === 0) return
 
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    publishNotificationStateChange({ markAllRead: true, unreadCount: 0 })
 
     try {
       const token = tokenStorage.getAccessToken()
@@ -171,6 +180,7 @@ function NotificationsStaffScreen() {
     } catch (err) {
       console.error("Lỗi khi đánh dấu tất cả đã đọc:", err)
       fetchNotifications()
+      publishNotificationStateChange({ refresh: true })
     }
   }
 

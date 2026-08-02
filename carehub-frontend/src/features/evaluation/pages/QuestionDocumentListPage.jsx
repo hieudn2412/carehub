@@ -5,6 +5,7 @@ import {
   CloseOutlined,
   FileAddOutlined,
   FileSearchOutlined,
+  FilterOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   PlusOutlined,
@@ -40,6 +41,7 @@ function QuestionDocumentListPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [jobModalDocument, setJobModalDocument] = useState(null)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
@@ -231,32 +233,53 @@ function QuestionDocumentListPage() {
                 </div>
               </section>
 
-              <section className="qdoc-filter-bar">
-                <div className="qdoc-search">
-                  <SearchOutlined className="qdoc-search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Tìm theo tên tài liệu..."
-                    value={keyword}
-                    onChange={(event) => {
-                      setKeyword(event.target.value)
-                      setPage(0)
-                    }}
-                  />
+              <section className="qdoc-filter-bar admin-control-toolbar">
+                <div className="admin-control-toolbar__main">
+                  <div className="admin-control-toolbar__controls">
+                    <div className="qdoc-search admin-control-toolbar__search">
+                      <SearchOutlined className="qdoc-search-icon" />
+                      <input
+                        type="text"
+                        placeholder="Tìm theo tên tài liệu..."
+                        value={keyword}
+                        onChange={(event) => {
+                          setKeyword(event.target.value)
+                          setPage(0)
+                        }}
+                      />
+                    </div>
+                    <button
+                      aria-controls="question-document-filter-panel"
+                      aria-expanded={isFilterOpen}
+                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                      onClick={() => setIsFilterOpen((current) => !current)}
+                      type="button"
+                    >
+                      <FilterOutlined /> Bộ lọc
+                      {statusFilter && <span className="admin-control-toolbar__filter-count">1</span>}
+                    </button>
+                  </div>
                 </div>
-                <select
-                  className="qdoc-select"
-                  value={statusFilter}
-                  onChange={(event) => {
-                    setStatusFilter(event.target.value)
-                    setPage(0)
-                  }}
-                >
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="READY">Sẵn sàng</option>
-                  <option value="OCR_REQUIRED">Cần OCR</option>
-                  <option value="FAILED">Thất bại</option>
-                </select>
+                {isFilterOpen && (
+                  <div className="admin-control-toolbar__panel" id="question-document-filter-panel">
+                    <label className="admin-control-toolbar__field">
+                      <span>Trạng thái</span>
+                      <select
+                        className="qdoc-select"
+                        value={statusFilter}
+                        onChange={(event) => {
+                          setStatusFilter(event.target.value)
+                          setPage(0)
+                        }}
+                      >
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="READY">Sẵn sàng</option>
+                        <option value="OCR_REQUIRED">Cần OCR</option>
+                        <option value="FAILED">Thất bại</option>
+                      </select>
+                    </label>
+                  </div>
+                )}
               </section>
 
               <section className="qdoc-table-card">

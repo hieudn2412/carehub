@@ -92,53 +92,28 @@ function ComplianceEmployeeTechniqueDetailPage() {
             <div className="evd-page">
 
               {!loading && data && (
-                <section className="evd-title-card" style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 16,
-                  padding: 20,
-                }}>
-                  <div style={{
-                    width: 56, height: 56, borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                    color: '#fff', fontSize: 22, fontWeight: 700,
-                    display: 'grid', placeItems: 'center', flexShrink: 0,
-                  }}>
+                <section className="evd-detail-summary">
+                  <div className="evd-detail-summary__avatar">
                     {avatarLetter}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#111827' }}>
-                      {data.employeeName || '—'}
-                    </h1>
-                    <p style={{ margin: '4px 0 8px 0', fontSize: 13, color: '#6b7280' }}>
+                  <div className="evd-detail-summary__identity">
+                    <strong>{data.employeeName || '—'}</strong>
+                    <span>
                       Mã NV: {data.employeeCode || '—'}
                       {data.departmentName ? ` · ${data.departmentName}` : ''}
-                    </p>
-                    <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center', fontSize: 14 }}>
-                      <div>
-                        <span style={{ color: '#6b7280' }}>Điểm TB kỹ năng: </span>
-                        <strong style={{ color: '#111827' }}>
-                          {overallAvg != null ? formatNumber(overallAvg) : '—'}
-                        </strong>
-                      </div>
-                      <div>
-                        <span style={{ color: '#6b7280' }}>Mục tiêu khoa: </span>
-                        <strong style={{ color: '#2563eb' }}>{complianceTarget}%</strong>
-                      </div>
-                      {totalItems > 0 && belowTargetItems > 0 && (
-                        <div>
-                          <span style={{
-                            color: '#dc2626', fontSize: 13, fontWeight: 600,
-                            background: '#fef2f2', padding: '4px 10px', borderRadius: 6,
-                          }}>
-                            <ExclamationCircleFilled style={{ marginRight: 4 }} />
-                            {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    </span>
                   </div>
-                  <button className="evd-btn" onClick={loadData} disabled={loading} style={{ flexShrink: 0 }}>
+                  <div className="evd-detail-summary__metrics">
+                    <span>Điểm TB kỹ năng <strong>{overallAvg != null ? formatNumber(overallAvg) : '—'}</strong></span>
+                    <span>Mục tiêu khoa <strong>{complianceTarget}%</strong></span>
+                    {totalItems > 0 && belowTargetItems > 0 && (
+                      <span className="is-danger">
+                        <ExclamationCircleFilled aria-hidden="true" />
+                        {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
+                      </span>
+                    )}
+                  </div>
+                  <button className="evd-btn" onClick={loadData} disabled={loading}>
                     <ReloadOutlined /> Tải lại
                   </button>
                 </section>
