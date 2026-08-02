@@ -781,37 +781,41 @@ export function CandidateCard({
         </div>
       )}
 
-      {(candidate.sourceExcerpt || candidate.answerEvidence || candidate.knowledgePointKey) && (
-        <div className="qdoc-grounding-panel">
-          <div className="qdoc-grounding-heading">
-            <strong>Grounding và kiểm định</strong>
-            <span>
-              Trang {candidate.pageStart ?? '—'}{candidate.pageEnd && candidate.pageEnd !== candidate.pageStart ? `–${candidate.pageEnd}` : ''}
-              {candidate.sectionPath ? ` · ${candidate.sectionPath}` : ''}
-            </span>
-          </div>
-          {candidate.knowledgePointKey && <p><b>Knowledge point:</b> {candidate.knowledgePointKey}</p>}
-          {candidate.questionType && <p><b>Loại câu:</b> {candidate.questionType}</p>}
-          {candidate.sourceExcerpt && <blockquote>{candidate.sourceExcerpt}</blockquote>}
-          {candidate.answerEvidence && <p><b>Bằng chứng đáp án:</b> {candidate.answerEvidence}</p>}
-          <p>
-            <b>Evidence:</b> {candidate.evidenceStatus || 'UNKNOWN'}
-            {' · '}<b>Critic:</b> {candidate.criticStatus || 'NOT_RUN'}
-          </p>
-          {candidate.validationIssues && candidate.validationIssues !== '[]' && (
-            <details>
-              <summary>Validation / critic issues</summary>
-              <pre>{candidate.validationIssues}</pre>
-            </details>
-          )}
-          {candidate.distractorRationales && (
-            <details>
-              <summary>Rationale các distractor</summary>
-              <pre>{candidate.distractorRationales}</pre>
-            </details>
-          )}
+      <div className="qdoc-grounding-panel">
+        <div className="qdoc-grounding-heading">
+          <strong>Grounding và kiểm định</strong>
+          <span>
+            Trang {candidate.pageStart ?? '—'}{candidate.pageEnd && candidate.pageEnd !== candidate.pageStart ? `–${candidate.pageEnd}` : ''}
+            {candidate.sectionPath ? ` · ${candidate.sectionPath}` : ''}
+          </span>
         </div>
-      )}
+        <p>
+          <b>Validation:</b> {candidate.validationGrade || '—'}
+          {' · '}<b>Nguồn:</b> {candidate.validationSource || '—'}
+          {' · '}<b>Evidence:</b> {candidate.evidenceStatus || '—'}
+          {' · '}<b>Critic:</b> {candidate.criticStatus || '—'}
+        </p>
+        {candidate.knowledgePointKey && <p><b>Knowledge point:</b> {candidate.knowledgePointKey}</p>}
+        {candidate.questionType && <p><b>Loại câu:</b> {candidate.questionType}</p>}
+        {candidate.sourceExcerpt
+          ? <blockquote>{candidate.sourceExcerpt}</blockquote>
+          : <p className="qdoc-grounding-empty"><b>Đoạn nguồn:</b> Chưa có dữ liệu grounding cho candidate này.</p>}
+        {candidate.answerEvidence
+          ? <p><b>Bằng chứng đáp án:</b> {candidate.answerEvidence}</p>
+          : <p className="qdoc-grounding-empty"><b>Bằng chứng đáp án:</b> Chưa có dữ liệu.</p>}
+        {candidate.validationIssues && candidate.validationIssues !== '[]' && (
+          <details>
+            <summary>Validation / critic issues</summary>
+            <pre>{candidate.validationIssues}</pre>
+          </details>
+        )}
+        {candidate.distractorRationales && (
+          <details>
+            <summary>Rationale các distractor</summary>
+            <pre>{candidate.distractorRationales}</pre>
+          </details>
+        )}
+      </div>
 
       {isPotentialDuplicate && (
         <div className={`qdoc-duplicate-alert ${isStrongDuplicate ? 'qdoc-duplicate-alert--strong' : ''}`}>

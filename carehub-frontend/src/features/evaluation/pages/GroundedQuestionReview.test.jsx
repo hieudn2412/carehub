@@ -82,4 +82,44 @@ describe('Grounded question generation UI', () => {
     ))).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Duyệt/ })).toBeDisabled()
   })
+
+  it('keeps the grounding panel visible for legacy candidates without enrichment fields', () => {
+    const noop = vi.fn()
+    render(
+      <MemoryRouter>
+        <CandidateCard
+          candidate={{
+            id: 2,
+            status: 'GENERATED',
+            stem: 'Dấu hiệu nào cần theo dõi?',
+            optionA: 'Mạch nhanh',
+            optionB: 'Ăn ngon',
+            optionC: 'Ngủ sâu',
+            optionD: 'Da ấm',
+            correctAnswer: 'A',
+            difficulty: 'easy',
+          }}
+          isSelected
+          isChecked={false}
+          isBusy={false}
+          onSelect={noop}
+          onToggleSelection={noop}
+          onEdit={noop}
+          onApprove={noop}
+          onReject={noop}
+          onSave={noop}
+          onViewDuplicates={noop}
+          onOpenSavedQuestion={noop}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Grounding và kiểm định')).toBeInTheDocument()
+    expect(screen.getByText((_, element) => (
+      element?.tagName === 'P' && element.textContent.includes('Đoạn nguồn: Chưa có dữ liệu grounding')
+    ))).toBeInTheDocument()
+    expect(screen.getByText((_, element) => (
+      element?.tagName === 'P' && element.textContent.includes('Bằng chứng đáp án: Chưa có dữ liệu')
+    ))).toBeInTheDocument()
+  })
 })
