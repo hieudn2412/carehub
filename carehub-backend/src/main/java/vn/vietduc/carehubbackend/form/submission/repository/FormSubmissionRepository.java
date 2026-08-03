@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse;
+import vn.vietduc.carehubbackend.questiongeneration.repository.projection.MyComplianceYearProjection;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.math.BigDecimal;
@@ -126,6 +127,22 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             @Param("employeeCode") String employeeCode,
             @Param("fromDate") Instant fromDate,
             @Param("toDate") Instant toDate
+    );
+
+    @Query(value = """
+            select distinct extract(year from s.submitted_at)::int as year
+            from form_submissions s
+            join form_submission_contexts context on context.submission_id = s.id
+            where s.status = 'SUBMITTED'
+              and s.scoring_status = 'CALCULATED'
+              and s.submitted_at is not null
+              and (context.subject_user_id = :userId
+                   or (context.subject_user_id is null and lower(context.employee_code) = lower(:employeeCode)))
+            order by year desc
+            """, nativeQuery = true)
+    List<MyComplianceYearProjection> findScoredEvaluationYearsForSubject(
+            @Param("userId") Long userId,
+            @Param("employeeCode") String employeeCode
     );
 
     @EntityGraph(attributePaths = {

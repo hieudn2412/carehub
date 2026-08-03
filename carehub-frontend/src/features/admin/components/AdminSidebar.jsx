@@ -53,7 +53,7 @@ const navSections = [
     ],
   },
   {
-    label: 'ĐÀO TẠO',
+    label: 'ĐÀO TẠO LIÊN TỤC',
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo liên tục', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
@@ -62,7 +62,7 @@ const navSections = [
     ],
   },
   {
-    label: 'CHẤT LƯỢNG',
+    label: 'TUÂN THỦ QUY TRÌNH, QUY ĐỊNH',
     items: [
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
@@ -70,7 +70,7 @@ const navSections = [
     ],
   },
   {
-    label: 'ĐÁNH GIÁ',
+    label: 'NĂNG LỰC CHUYÊN MÔN',
     items: [
       {
         icon: <FileAddOutlined />,
@@ -133,7 +133,7 @@ const navSections = [
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
-        label: 'Năng lực chuyên môn tổng hợp',
+        label: 'Chất lượng chăm sóc',
         path: '/admin/reports/competency-dashboard',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },

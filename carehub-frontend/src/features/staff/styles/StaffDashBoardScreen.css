@@ -1115,10 +1115,6 @@
     justify-content: center;
   }
 
-  .dashboard-header--staff .dashboard-header__exam-notify,
-  .dashboard-header--staff .dashboard-header__notify-container {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) and (hover: hover) and (pointer: fine) {

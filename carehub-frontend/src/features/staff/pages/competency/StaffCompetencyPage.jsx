@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, WarningFilled } from '@ant-design/icons'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
@@ -34,14 +34,22 @@ const convertToTenPointScale = (value, totalMaxScore) => {
 
 export default function StaffCompetencyPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { showToast } = useToast()
   const today = localToday()
-  const [fromDate, setFromDate] = useState(`${new Date().getFullYear()}-01-01`)
-  const [toDate, setToDate] = useState(today)
+  const fromDate = searchParams.get('dateFrom') || `${new Date().getFullYear()}-01-01`
+  const toDate = searchParams.get('dateTo') || today
+  const query = (searchParams.get('q') || '').trim()
+  const [draftFilters, setDraftFilters] = useState({ q: query, dateFrom: fromDate, dateTo: toDate })
+  const [dateError, setDateError] = useState('')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  useEffect(() => {
+    setDraftFilters({ q: query, dateFrom: fromDate, dateTo: toDate })
+  }, [fromDate, query, toDate])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -66,6 +74,62 @@ export default function StaffCompetencyPage() {
     return { evaluated, passed, rate: evaluated ? passed * 100 / evaluated : 0 }
   }, [data])
 
+  const visibleItems = useMemo(() => {
+    if (!query) return data?.items || []
+    return (data?.items || []).filter(item => String(item.formName || '').toLowerCase().includes(query.toLowerCase()))
+  }, [data, query])
+
+  const applyFilters = () => {
+    if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
+      setDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+      return false
+    }
+    setDateError('')
+    const params = new URLSearchParams()
+    if (draftFilters.q.trim()) params.set('q', draftFilters.q.trim())
+    if (draftFilters.dateFrom) params.set('dateFrom', draftFilters.dateFrom)
+    if (draftFilters.dateTo) params.set('dateTo', draftFilters.dateTo)
+    setSearchParams(params)
+    return true
+  }
+
+  const clearFilters = () => {
+    setDraftFilters({ q: '', dateFrom: `${new Date().getFullYear()}-01-01`, dateTo: today })
+    setDateError('')
+    setSearchParams({ dateFrom: `${new Date().getFullYear()}-01-01`, dateTo: today })
+  }
+
+  const mobileSearchContent = ({ close }) => (
+    <div className="sc-mobile-search-form">
+      <label>
+        <span>Tên bảng kiểm</span>
+        <div className="sc-search-input">
+          <SearchOutlined aria-hidden="true" />
+          <input
+            data-mobile-search-autofocus="true"
+            value={draftFilters.q}
+            onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))}
+            onKeyDown={event => {
+              if (event.key === 'Enter') {
+                const valid = applyFilters()
+                if (valid) close()
+              }
+            }}
+            placeholder="Tìm tên bảng kiểm..."
+            aria-label="Tìm tên bảng kiểm"
+          />
+        </div>
+      </label>
+      <label><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
+      <label><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
+      {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
+      <div className="sc-mobile-search-actions">
+        <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
+        <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
+      </div>
+    </div>
+  )
+
   const openDetail = async (submissionId) => {
     setDetailLoading(true)
     setDetail({})
@@ -80,20 +144,36 @@ export default function StaffCompetencyPage() {
   }
 
   return (
-    <AppShell breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định' }]}>
+    <AppShell
+      title="Danh sách bảng kiểm đã chấm"
+      back={{ to: '/staff/competency', label: 'Tuân thủ quy trình, quy định' }}
+      breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định', link: '/staff/competency' }, { label: 'Danh sách bảng kiểm' }]}
+      mobileSearch={{
+        title: 'Tìm kiếm bảng kiểm',
+        ariaLabel: 'Mở tìm kiếm bảng kiểm',
+        activeCount: Number(Boolean(query))
+          + Number(Boolean(fromDate && fromDate !== `${new Date().getFullYear()}-01-01`))
+          + Number(Boolean(toDate && toDate !== today)),
+        renderContent: mobileSearchContent,
+      }}
+    >
       <div className="sc-page">
         <section className="sc-toolbar admin-control-toolbar" aria-label="Bộ lọc tuân thủ cá nhân">
           <div className="admin-control-toolbar__main">
+            <div className="sc-search-input"><SearchOutlined aria-hidden="true" /><input value={draftFilters.q} onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))} onKeyDown={event => event.key === 'Enter' && applyFilters()} placeholder="Tìm tên bảng kiểm..." aria-label="Tìm tên bảng kiểm" /></div>
             <AdminFilterDisclosure activeCount={Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
-                <input type="date" value={fromDate} max={toDate || today} onChange={event => setFromDate(event.target.value)} />
+                <input type="date" value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} />
               </label>
               <label className="admin-control-toolbar__field">
                 <span>Đến ngày</span>
-                <input type="date" value={toDate} min={fromDate || undefined} max={today} onChange={event => setToDate(event.target.value)} />
+                <input type="date" value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} />
               </label>
+              {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
             </AdminFilterDisclosure>
+            <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={applyFilters}>Áp dụng</button>
+            <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>
             <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => navigate('/staff/checklists')}>
               Thực hiện đánh giá được giao
             </button>
@@ -105,7 +185,7 @@ export default function StaffCompetencyPage() {
           <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tổng lượt được chấm</span><strong>{totals.evaluated}</strong></div></article>
         </section>
         <div className="sc-content">
-          {loading ? <LoadingState /> : !(data?.items?.length) ? <EmptyState>Chưa có lượt đánh giá trong khoảng thời gian này.</EmptyState> : (
+          {loading ? <LoadingState /> : !(visibleItems.length) ? <EmptyState>{query ? 'Không có bảng kiểm phù hợp.' : 'Chưa có lượt đánh giá trong khoảng thời gian này.'}</EmptyState> : (
             <div className="sc-table-wrapper"><table className="sc-table admin-table-uppercase">
               <colgroup>
                 <col className="sc-table__process-col" />
@@ -114,7 +194,7 @@ export default function StaffCompetencyPage() {
                 <col className="sc-table__action-col" />
               </colgroup>
               <thead><tr><th>Quy trình</th><th>Số lượt đạt/tổng lượt</th><th>Tỷ lệ tuân thủ</th><th>Hành động</th></tr></thead><tbody>
-              {data.items.map(item => <tr key={item.formId}>
+              {visibleItems.map(item => <tr key={item.formId}>
                 <td><strong className="sc-table__process-name">{item.formName}</strong></td>
                 <td><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
                 <td><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>

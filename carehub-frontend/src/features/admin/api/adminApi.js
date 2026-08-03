@@ -259,6 +259,12 @@ export const adminApi = {
     })
   },
 
+  updateFormComplianceTarget(id, targetPercent) {
+    return httpClient.put(`/forms/${id}/compliance-target`, { targetPercent }, {
+      headers: authHeaders(),
+    })
+  },
+
   updateForm(id, data) {
     return httpClient.put(`/forms/${id}`, data, {
       headers: authHeaders(),

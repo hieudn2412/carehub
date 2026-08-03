@@ -247,6 +247,28 @@
   opacity: 0.55;
 }
 
+.fam-compliance-target-card {
+  display: grid;
+  gap: 16px;
+}
+
+.fam-compliance-target-card__fields {
+  grid-template-columns: minmax(180px, 260px) auto auto;
+  align-items: end;
+}
+
+.fam-submit-button--secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+@media (max-width: 768px) {
+  .fam-compliance-target-card__fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .fam-status-filter {
   display: grid;
   gap: 7px;

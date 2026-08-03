@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
@@ -17,6 +18,8 @@ import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSear
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse;
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingStatusSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
+import vn.vietduc.carehubbackend.training.dto.response.ProfessionalFieldHoursItemResponse;
+import vn.vietduc.carehubbackend.training.dto.response.ProfessionalFieldHoursResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusActivityTypeHoursResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusRecordSummaryResponse;
@@ -27,8 +30,8 @@ import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
 import vn.vietduc.carehubbackend.training.service.TrainingComplianceCalculator;
-import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordValidity;
+import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -36,7 +39,9 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DateTimeException;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -44,6 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 
 @Service
@@ -51,6 +57,7 @@ import java.util.function.Function;
 public class TrainingStatusServiceImpl implements TrainingStatusService {
     private static final Logger log = LoggerFactory.getLogger(TrainingStatusServiceImpl.class);
     private static final int MAX_PAGE_SIZE = 100;
+    private static final String UNASSIGNED_PROFESSIONAL_FIELD = "Chưa xác định";
 
     private static final List<TrainingRecordStatus> LEDGER_STATUSES = List.of(
             TrainingRecordStatus.SUBMITTED,
@@ -68,6 +75,48 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     @Transactional(readOnly = true)
     public PersonalTrainingStatusResponse getMyStatus(Long professionalFieldId, LocalDate asOf) {
         return statusFor(accessPolicy.currentActor(), professionalFieldId, asOf);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProfessionalFieldHoursResponse getMyProfessionalFieldHours(Integer year) {
+        User actor = accessPolicy.currentActor();
+        Year selectedYear = resolveYear(year);
+
+        List<ProfessionalFieldHoursItemResponse> fields = recordRepository
+                .summarizeSubmittedHoursByProfessionalField(
+                        actor.getId(),
+                        selectedYear.atDay(1),
+                        selectedYear.atMonth(12).atEndOfMonth()
+                )
+                .stream()
+                .map(row -> new ProfessionalFieldHoursItemResponse(
+                        row.getProfessionalFieldId(),
+                        row.getProfessionalFieldName() == null
+                                ? UNASSIGNED_PROFESSIONAL_FIELD
+                                : row.getProfessionalFieldName(),
+                        safe(row.getSubmittedHours())
+                ))
+                .sorted(Comparator
+                        .comparing(
+                                ProfessionalFieldHoursItemResponse::submittedHours,
+                                Comparator.reverseOrder()
+                        )
+                        .thenComparing(
+                                ProfessionalFieldHoursItemResponse::professionalFieldName,
+                                String.CASE_INSENSITIVE_ORDER
+                        ))
+                .toList();
+
+        TreeSet<Integer> availableYears = new TreeSet<>(Comparator.reverseOrder());
+        availableYears.add(Year.now().getValue());
+        availableYears.addAll(recordRepository.findSubmittedTrainingYears(actor.getId()));
+
+        return new ProfessionalFieldHoursResponse(
+                selectedYear.getValue(),
+                List.copyOf(availableYears),
+                fields
+        );
     }
 
     @Override
@@ -597,6 +646,15 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 ? Comparator.nullsLast(Comparator.naturalOrder())
                 : Comparator.nullsLast(Comparator.reverseOrder());
         return Comparator.comparing(extractor, valueComparator);
+    }
+
+    private Year resolveYear(Integer year) {
+        int selectedYear = year == null ? Year.now().getValue() : year;
+        try {
+            return Year.of(selectedYear);
+        } catch (DateTimeException exception) {
+            throw new BadRequestException("Năm đào tạo không hợp lệ: " + selectedYear);
+        }
     }
 
     private String normalizeKeywordPattern(String keyword) {

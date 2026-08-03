@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   FlagFilled,
   FlagOutlined,
@@ -18,6 +18,10 @@ import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 
 const AUTOSAVE_DEBOUNCE_MS = 1200
 const AUTOSAVE_INTERVAL_MS = 15000
+const REVIEW_SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+})
 
 function cacheKey(attemptId) {
   return `carehub-exam-draft:${attemptId}`
@@ -87,6 +91,12 @@ function toAnswerPayload(answers) {
   }))
 }
 
+function formatReviewScore(value) {
+  if (value === null || value === undefined || value === '') return '—'
+  const score = Number(value)
+  return Number.isFinite(score) ? REVIEW_SCORE_FORMATTER.format(score) : '—'
+}
+
 function answersEqual(left, right) {
   const leftKeys = Object.keys(left)
   const rightKeys = Object.keys(right)
@@ -97,6 +107,7 @@ function answersEqual(left, right) {
 function ExamTakeScreen() {
   const { attemptId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
   const [attempt, setAttempt] = useState(null)
   const [answers, setAnswers] = useState({})
@@ -178,6 +189,10 @@ function ExamTakeScreen() {
   }, [attemptId, showToast, updateAttempt])
 
   const questions = attempt?.questions || []
+  const reviewMode = Boolean(attempt && attempt.status !== 'IN_PROGRESS')
+  const reviewAnswers = useMemo(() => new Map(
+    (attempt?.answers || []).map(answer => [Number(answer.paperQuestionId), answer]),
+  ), [attempt?.answers])
   const answeredCount = Object.keys(answers).length
   const unansweredCount = Math.max(0, questions.length - answeredCount)
   const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
@@ -384,10 +399,10 @@ function ExamTakeScreen() {
   }
 
   function leaveExam() {
-    if (dirtyRef.current) {
+    if (dirtyRef.current && !reviewMode) {
       saveAnswers(true, true)
     }
-    navigate('/staff/exam/take')
+    navigate(location.state?.from || '/staff/exam/take')
   }
 
   function scrollToQuestion(questionId) {
@@ -413,7 +428,7 @@ function ExamTakeScreen() {
   return (
     <AppShell
       back={{ onClick: leaveExam, label: 'Quay lại' }}
-      title="Làm bài thi"
+      title={reviewMode ? 'Xem lại bài kiểm tra' : 'Làm bài thi'}
       hideSidebar={isNavbarHidden}
     >
       <div className="eh-page eh-exam-page">
@@ -426,13 +441,13 @@ function ExamTakeScreen() {
             <div className="eh-header eh-detail-header eh-exam-toolbar">
               <div>
                 <h2 className="eh-page-title">{attempt?.assignmentName || attempt?.examPaperName || 'Bài kiểm tra'}</h2>
-                <p className="eh-page-sub">Hạn lượt làm: {formatDateTime(attempt?.expiresAt)}</p>
+                <p className="eh-page-sub">{reviewMode ? `Đã hoàn tất: ${formatDateTime(attempt?.submittedAt)}` : `Hạn lượt làm: ${formatDateTime(attempt?.expiresAt)}`}</p>
                 <p className="eh-page-sub eh-save-indicator">
                   {saveLabel}
                   {lastSavedAt ? ` lúc ${lastSavedAt.toLocaleTimeString('vi-VN')}` : ''}
                 </p>
               </div>
-              <div className="eh-exam-toolbar__right">
+                <div className="eh-exam-toolbar__right">
                 <button
                   type="button"
                   className="eh-btn eh-btn--view eh-navbar-toggle"
@@ -443,10 +458,17 @@ function ExamTakeScreen() {
                   {isNavbarHidden ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                   {isNavbarHidden ? 'Hiện navbar' : 'Ẩn navbar'}
                 </button>
-                <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
-                  <span>Thời gian còn lại</span>
-                  <strong>{formatRemaining(remainingSeconds)}</strong>
-                </div>
+                {reviewMode ? (
+                  <div className="eh-review-score" aria-label="Kết quả bài kiểm tra">
+                    <span>Điểm</span>
+                    <strong>{formatReviewScore(attempt?.score)}/10</strong>
+                  </div>
+                ) : (
+                  <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
+                    <span>Thời gian còn lại</span>
+                    <strong>{formatRemaining(remainingSeconds)}</strong>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -482,25 +504,40 @@ function ExamTakeScreen() {
                   <span><i className="is-answered" /> Đã trả lời</span>
                   <span><i className="is-flagged" /> Đã đánh dấu</span>
                 </div>
-                <div className="eh-exam-side-actions">
-                  <button className="eh-btn eh-btn--view" onClick={() => saveAnswers(false, true)} disabled={saving || autoSaving || !isWritable}>
-                    <SaveOutlined /> Lưu bài
-                  </button>
-                  <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving || !isWritable}>
-                    <SendOutlined /> Nộp bài
-                  </button>
-                </div>
+                {reviewMode ? (
+                  <div className="eh-review-summary" role="status">
+                    <strong>{attempt?.passed ? 'Đạt' : 'Chưa đạt'}</strong>
+                    <span>{attempt?.correctCount ?? 0}/{attempt?.totalQuestions ?? questions.length} câu đúng</span>
+                  </div>
+                ) : (
+                  <div className="eh-exam-side-actions">
+                    <button className="eh-btn eh-btn--view" onClick={() => saveAnswers(false, true)} disabled={saving || autoSaving || !isWritable}>
+                      <SaveOutlined /> Lưu bài
+                    </button>
+                    <button className="eh-btn eh-btn--retry" onClick={submitAttempt} disabled={saving || autoSaving || !isWritable}>
+                      <SendOutlined /> Nộp bài
+                    </button>
+                  </div>
+                )}
               </aside>
 
               <div className="eh-exam-question-list">
-                {!isWritable && attempt && (
+                {!isWritable && attempt && !reviewMode && (
                   <div className="eh-table-card">
                     <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
                   </div>
                 )}
 
+                {reviewMode && (
+                  <div className="eh-table-card eh-review-banner">
+                    <strong>Bạn đang xem lại bài làm</strong>
+                    <span>Đáp án đã khóa sau khi nộp bài. Kết quả và đáp án đúng sẽ hiển thị theo cấu hình của bài kiểm tra.</span>
+                  </div>
+                )}
+
                 {questions.map((question) => {
                   const isFlagged = flaggedQuestions.has(question.paperQuestionId)
+                  const reviewAnswer = reviewAnswers.get(Number(question.paperQuestionId))
                   return (
                     <section
                       id={`exam-question-${question.paperQuestionId}`}
@@ -525,10 +562,14 @@ function ExamTakeScreen() {
                         <span>{answers[question.paperQuestionId] ? `Đã chọn ${answers[question.paperQuestionId]}` : 'Chưa trả lời'}</span>
                       </div>
                       <p>{question.stem}</p>
-                      {['A', 'B', 'C', 'D'].map((optionKey) => (
+                      {['A', 'B', 'C', 'D'].map((optionKey) => {
+                        const isSelected = answers[question.paperQuestionId] === optionKey
+                        const isCorrect = reviewMode && reviewAnswer?.correctAnswer === optionKey
+                        const isWrongSelection = reviewMode && isSelected && reviewAnswer?.correctAnswer && reviewAnswer.correctAnswer !== optionKey
+                        return (
                         <label
                           key={optionKey}
-                          className={`eh-option-row ${answers[question.paperQuestionId] === optionKey ? 'eh-option-row--selected' : ''}`}
+                          className={`eh-option-row ${isSelected ? 'eh-option-row--selected' : ''}${isCorrect ? ' eh-option-row--correct' : ''}${isWrongSelection ? ' eh-option-row--incorrect' : ''}`}
                         >
                           <input
                             type="radio"
@@ -538,8 +579,11 @@ function ExamTakeScreen() {
                             onChange={() => selectAnswer(question.paperQuestionId, optionKey)}
                           />
                           <span><strong>{optionKey}.</strong> {question[`option${optionKey}`]}</span>
+                          {isCorrect && <small className="eh-option-review-label">Đáp án đúng</small>}
+                          {isWrongSelection && <small className="eh-option-review-label">Bạn đã chọn</small>}
                         </label>
-                      ))}
+                        )
+                      })}
                     </section>
                   )
                 })}

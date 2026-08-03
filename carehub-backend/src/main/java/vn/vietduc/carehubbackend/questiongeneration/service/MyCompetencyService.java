@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.form.entity.Form;
@@ -13,6 +14,9 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionB
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencyKnowledgeResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencySkillResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyCompetencySummaryResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyComplianceChartResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyComplianceFormMetricResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyComplianceOverviewResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
@@ -24,6 +28,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -41,6 +46,9 @@ public class MyCompetencyService {
     private final ExamAttemptRepository attemptRepository;
     private final FormSubmissionRepository formSubmissionRepository;
     private final CompetencyClassificationService classificationService;
+
+    @Value("${app.competency.compliance.default-target:80.0}")
+    private BigDecimal defaultComplianceTarget = BigDecimal.valueOf(80);
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -206,8 +214,8 @@ public class MyCompetencyService {
 
             CompetencyLevel level = classificationService.classifyOverall(avg);
             boolean isPassed = level != CompetencyLevel.NOT_COMPETENT;
-            BigDecimal departmentTarget = departmentTarget(user);
-            boolean belowTarget = departmentTarget != null && avg.compareTo(departmentTarget) <= 0;
+            BigDecimal complianceTarget = complianceTarget(form);
+            boolean belowTarget = passRate < complianceTarget.doubleValue();
 
             List<FormSubmissionBriefResponse> submissionBriefs = formSubs.stream()
                     .map(this::toFormSubmissionBrief)
@@ -225,7 +233,9 @@ public class MyCompetencyService {
                     QuestionGenerationLabels.competencyLevelColor(level),
                     isPassed,
                     belowTarget,
-                    submissionBriefs
+                    submissionBriefs,
+                    complianceTarget,
+                    form.getComplianceTargetPercent() == null ? "DEFAULT" : "FORM"
             ));
 
             totalScoreSum = totalScoreSum.add(sum);
@@ -252,31 +262,27 @@ public class MyCompetencyService {
         MyCompetencyKnowledgeResponse knowledge = getKnowledgeCompetency(user, fromDate, toDate);
         MyCompetencySkillResponse skills = getSkillCompetency(user, fromDate, toDate);
 
-        BigDecimal knowledgeAvg = knowledge.overallAverage();
-        BigDecimal skillAvg = skills.overallAverage();
+        BigDecimal knowledgeAvg = knowledge.overallAverage() == null
+                ? BigDecimal.ZERO : knowledge.overallAverage();
+        BigDecimal skillAvg = skills.overallAverage() == null
+                ? BigDecimal.ZERO : skills.overallAverage();
 
-        BigDecimal overallScore;
-        if (knowledgeAvg != null && skillAvg != null) {
-            overallScore = knowledgeAvg.add(skillAvg)
-                    .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-        } else {
-            overallScore = null;
-        }
+        BigDecimal overallScore = knowledgeAvg.add(skillAvg)
+                .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
 
-        CompetencyLevel level = overallScore != null
-                ? classificationService.classifyOverall(overallScore)
-                : null;
+        CompetencyLevel level = classificationService.classifyOverall(overallScore);
 
         BigDecimal targetScore = departmentTarget(user);
-        boolean isPassed = overallScore != null
-                && targetScore != null
-                && overallScore.compareTo(targetScore) > 0;
+        boolean isPassed = targetScore != null
+                && overallScore.compareTo(targetScore) >= 0;
 
         return new MyCompetencySummaryResponse(
                 knowledge.fromDate(),
                 knowledge.toDate(),
                 knowledgeAvg,
                 skillAvg,
+                knowledge.totalAttempts(),
+                skills.totalEvaluations(),
                 overallScore,
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
                 user.getDepartment() == null ? null : user.getDepartment().getName(),
@@ -356,6 +362,92 @@ public class MyCompetencyService {
             return target.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
         }
         return target;
+    }
+
+    @Transactional(readOnly = true)
+    public MyComplianceOverviewResponse getComplianceOverview(User user, LocalDate fromDate, LocalDate toDate) {
+        MyCompetencySkillResponse skills = getSkillCompetency(user, fromDate, toDate);
+        int totalEvaluations = skills.items().stream()
+                .mapToInt(item -> item.evaluationCount() == null ? 0 : item.evaluationCount())
+                .sum();
+        int passCount = skills.items().stream()
+                .mapToInt(item -> item.passCount() == null ? 0 : item.passCount())
+                .sum();
+        BigDecimal complianceRate = totalEvaluations == 0
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(passCount * 100.0 / totalEvaluations)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        SkillCompetencyItemResponse latestItem = skills.items().stream()
+                .filter(item -> item.attempts() != null && !item.attempts().isEmpty())
+                .max(Comparator.comparing(item -> item.attempts().stream()
+                        .map(FormSubmissionBriefResponse::evaluatedAt)
+                        .filter(java.util.Objects::nonNull)
+                        .max(Comparator.naturalOrder())
+                        .orElse(LocalDateTime.MIN)))
+                .orElse(null);
+
+        return new MyComplianceOverviewResponse(
+                skills.fromDate(),
+                skills.toDate(),
+                totalEvaluations,
+                passCount,
+                complianceRate,
+                toComplianceMetric(latestItem)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public MyComplianceChartResponse getComplianceChart(User user, Integer year) {
+        int selectedYear = year == null ? LocalDate.now().getYear() : year;
+        LocalDate currentDate = LocalDate.now();
+        LocalDate from = LocalDate.of(selectedYear, 1, 1);
+        LocalDate to = selectedYear == currentDate.getYear()
+                ? currentDate
+                : LocalDate.of(selectedYear, 12, 31);
+        MyCompetencySkillResponse skills = getSkillCompetency(user, from, to);
+        List<Integer> availableYears = formSubmissionRepository
+                .findScoredEvaluationYearsForSubject(user.getId(), user.getEmployeeCode())
+                .stream()
+                .map(vn.vietduc.carehubbackend.questiongeneration.repository.projection.MyComplianceYearProjection::getYear)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .collect(Collectors.toCollection(ArrayList::new));
+        if (!availableYears.contains(currentDate.getYear())) {
+            availableYears.add(0, currentDate.getYear());
+        }
+        return new MyComplianceChartResponse(
+                selectedYear,
+                availableYears,
+                skills.items().stream().map(this::toComplianceMetric).toList()
+        );
+    }
+
+    private MyComplianceFormMetricResponse toComplianceMetric(SkillCompetencyItemResponse item) {
+        if (item == null) return null;
+        FormSubmissionBriefResponse latest = item.attempts() == null ? null : item.attempts().stream()
+                .filter(attempt -> attempt.evaluatedAt() != null)
+                .max(Comparator.comparing(FormSubmissionBriefResponse::evaluatedAt))
+                .orElse(null);
+        Instant latestAt = latest == null ? null : latest.evaluatedAt().atZone(ZoneId.systemDefault()).toInstant();
+        return new MyComplianceFormMetricResponse(
+                item.formId(),
+                item.formName(),
+                item.evaluationCount(),
+                item.passCount(),
+                item.passRate() == null ? BigDecimal.ZERO : BigDecimal.valueOf(item.passRate()),
+                item.complianceTargetPercent(),
+                item.targetSource(),
+                latestAt,
+                latest == null ? null : latest.submissionId()
+        );
+    }
+
+    private BigDecimal complianceTarget(Form form) {
+        return form != null && form.getComplianceTargetPercent() != null
+                ? form.getComplianceTargetPercent()
+                : defaultComplianceTarget;
     }
 
     private String getCategoryName(ExamAttempt attempt) {

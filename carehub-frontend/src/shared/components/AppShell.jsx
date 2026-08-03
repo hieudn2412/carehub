@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Sidebar from '../../features/staff/components/sidebar'
 import Header from '../../features/staff/components/Header'
 import AdminHeader from '../../features/admin/components/AdminHeader'
+import MobileBackBar from './MobileBackBar.jsx'
+import './MobileSearchSheet.css'
 import { tokenStorage } from '../../features/auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../features/auth/utils/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../features/auth/utils/authNavigation.js'
@@ -14,11 +16,12 @@ import { AUTH_ROLE, hasAnyRole } from '../../features/auth/utils/authNavigation.
  *   ...nội dung trang...
  * </AppShell>
  */
-function AppShell({ title, breadcrumbs, back, className, hideSidebar = false, children }) {
+function AppShell({ title, breadcrumbs, back, mobileSearch, className, hideSidebar = false, children }) {
   const [staffAlertSummary, setStaffAlertSummary] = useState({
     unreadCount: 0,
     pendingExamCount: 0,
   })
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())
   const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
@@ -28,6 +31,20 @@ function AppShell({ title, breadcrumbs, back, className, hideSidebar = false, ch
       ? 'app-shell--manager'
       : 'app-shell--staff'
 
+  const mobileSearchConfig = mobileSearch
+    ? {
+        ...mobileSearch,
+        isOpen: mobileSearchOpen,
+        onToggle: () => {
+          if (!mobileSearchOpen) mobileSearch.onOpen?.()
+          setMobileSearchOpen(current => !current)
+        },
+        onClose: () => {
+          setMobileSearchOpen(false)
+        },
+      }
+    : null
+
   return (
     <div
       className={`app-shell ${roleClassName}${className ? ` ${className}` : ''}`}
@@ -36,16 +53,20 @@ function AppShell({ title, breadcrumbs, back, className, hideSidebar = false, ch
       {!hideSidebar && <Sidebar alertSummary={staffAlertSummary} />}
       <div className="app-shell__content">
         {isAdmin ? (
-          <AdminHeader title={title} breadcrumbs={breadcrumbs} back={back} />
+          <AdminHeader title={title} breadcrumbs={breadcrumbs} back={back} mobileSearch={mobileSearchConfig} />
         ) : (
           <Header
             title={title}
             breadcrumbs={breadcrumbs}
             back={back}
+            mobileSearch={mobileSearchConfig}
             onAlertSummaryChange={setStaffAlertSummary}
           />
         )}
-        <main className="app-shell__body dashboard-body">{children}</main>
+        <main className="app-shell__body dashboard-body">
+          {back && <MobileBackBar {...back} />}
+          {children}
+        </main>
       </div>
     </div>
   )
