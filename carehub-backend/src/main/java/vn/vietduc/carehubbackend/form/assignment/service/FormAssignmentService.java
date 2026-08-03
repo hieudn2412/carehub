@@ -165,6 +165,7 @@ public class FormAssignmentService {
         FormAssignment assignment = item.getAssignment();
         return AssignedFormResponse.builder().assignmentItemId(item.getId())
                 .formId(item.getForm().getId()).formCode(item.getForm().getCode()).title(item.getFormVersion().getTitle())
+                .complianceTargetPercent(item.getForm().getComplianceTargetPercent())
                 .validFrom(assignment.getEffectiveFrom()).validUntil(assignment.getEffectiveTo())
                 .version(detail ? formMapper.toResponse(item.getFormVersion()) : null).build();
     }

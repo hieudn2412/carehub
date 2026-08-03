@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   FormOutlined,
   MenuOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../hooks/useNotifications'
 import { staffApi } from '../api/staffApi'
@@ -14,6 +15,7 @@ import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
+import MobileSearchSheet from '../../../shared/components/MobileSearchSheet.jsx'
 import '../../admin/styles/AdminHeader.css'
 
 function getFallbackLink(label, roles = []) {
@@ -75,6 +77,7 @@ function Header({
   roleName = '',
   breadcrumbs,
   back,
+  mobileSearch,
   onAlertSummaryChange,
 }) {
   const [profile, setProfile] = useState(null)
@@ -188,17 +191,10 @@ function Header({
         <button
           type="button"
           className="dashboard-header__menu-button"
-          aria-label={`Mở menu điều hướng${
-            unreadCount + pendingExamCount > 0
-              ? `, ${unreadCount + pendingExamCount} mục cần chú ý`
-              : ''
-          }`}
+          aria-label="Mở menu điều hướng"
           onClick={() => window.dispatchEvent(new CustomEvent(isAdmin ? 'admin-sidebar-toggle' : 'staff-sidebar-toggle'))}
         >
           <MenuOutlined />
-          {unreadCount + pendingExamCount > 0 && (
-            <span className="dashboard-header__menu-alert-dot" aria-hidden="true" />
-          )}
         </button>
         <div
           className={`dashboard-header__navigation${
@@ -239,6 +235,23 @@ function Header({
       </div>
 
       <div className="dashboard-header__right">
+        {mobileSearch && (
+          <button
+            type="button"
+            className="dashboard-header__search-button"
+            aria-label={`${mobileSearch.ariaLabel || 'Mở tìm kiếm và bộ lọc'}${mobileSearch.activeCount ? `, ${mobileSearch.activeCount} điều kiện đang chọn` : ''}`}
+            aria-haspopup="dialog"
+            aria-expanded={mobileSearch.isOpen}
+            onClick={mobileSearch.onToggle}
+          >
+            <SearchOutlined aria-hidden="true" />
+            {mobileSearch.activeCount > 0 && (
+              <span className="dashboard-header__search-badge" aria-hidden="true">
+                {mobileSearch.activeCount > 99 ? '99+' : mobileSearch.activeCount}
+              </span>
+            )}
+          </button>
+        )}
         <Link
           to="/staff/exam/take"
           className="dashboard-header__exam-notify"
@@ -293,6 +306,15 @@ function Header({
           profilePath="/staff/profile"
         />
       </div>
+      {mobileSearch?.isOpen && (
+        <MobileSearchSheet
+          open
+          title={mobileSearch.title}
+          onClose={mobileSearch.onClose}
+        >
+          {mobileSearch.renderContent?.({ close: mobileSearch.onClose })}
+        </MobileSearchSheet>
+      )}
     </header>
   )
 }

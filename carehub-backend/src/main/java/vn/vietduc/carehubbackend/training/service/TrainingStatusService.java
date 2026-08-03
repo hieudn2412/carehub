@@ -6,6 +6,7 @@ import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSear
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse;
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingStatusSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
+import vn.vietduc.carehubbackend.training.dto.response.ProfessionalFieldHoursResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryResponse;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 
@@ -13,6 +14,8 @@ import java.time.LocalDate;
 
 public interface TrainingStatusService {
     PersonalTrainingStatusResponse getMyStatus(Long professionalFieldId, LocalDate asOf);
+
+    ProfessionalFieldHoursResponse getMyProfessionalFieldHours(Integer year);
 
     PersonalTrainingStatusResponse getEmployeeStatus(Long employeeId, Long professionalFieldId, LocalDate asOf);
 

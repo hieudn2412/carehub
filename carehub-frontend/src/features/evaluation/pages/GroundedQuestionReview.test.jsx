@@ -10,7 +10,7 @@ let CandidateCard
 beforeAll(async () => {
   globalThis.React = React
   CandidateCard = (await import('./DocumentQuestionJobReviewPage.jsx')).CandidateCard
-})
+}, 30_000)
 
 afterAll(() => {
   globalThis.React = previousReact

@@ -216,6 +216,9 @@ function ManagerChecklistListPage() {
                         Sàn: {Number(checklist.version.passingScore).toFixed(1)}/10
                       </span>
                     )}
+                    <span className="mgr-badge" style={{ fontSize: 11, background: '#fff7ed', color: '#b45309', border: '1px solid #fed7aa' }}>
+                      Mục tiêu: {Number(checklist.complianceTargetPercent ?? 80).toLocaleString('vi-VN')}%
+                    </span>
                   </div>
                   <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
                 </div>
