@@ -20,6 +20,14 @@ import java.util.List;
 public interface FormAssignmentItemRepository extends JpaRepository<FormAssignmentItem, Long> {
     @Query("""
             select (count(i) > 0) from FormAssignmentItem i
+            where i.assignment.manager.id = :managerId
+              and i.form.id = :formId
+            """)
+    boolean existsEverAssignedToManager(@Param("managerId") Long managerId,
+                                         @Param("formId") Long formId);
+
+    @Query("""
+            select (count(i) > 0) from FormAssignmentItem i
             where i.assignment.manager.id = :assigneeId and i.formVersion.id = :versionId
               and i.status = :active and i.assignment.status = :active
               and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)

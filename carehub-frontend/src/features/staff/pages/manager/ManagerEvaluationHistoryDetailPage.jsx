@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { PrinterOutlined, LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { staffApi } from '../../api/staffApi.js'
@@ -19,12 +19,34 @@ function formatScore(value) {
   })
 }
 
+function formatAnswer(answer) {
+  const value = answer?.value || {}
+  if (Array.isArray(value.labels) && value.labels.length > 0) return value.labels.join(', ')
+  if (value.label) return String(value.label)
+  if (value.textValue) return String(value.textValue)
+  if (value.numberValue !== undefined && value.numberValue !== null) return String(value.numberValue)
+  if (value.dateValue) return String(value.dateValue)
+  if (value.timeValue) return String(value.timeValue)
+  if (Array.isArray(value.values) && value.values.length > 0) return value.values.join(', ')
+  if (value.value !== undefined && value.value !== null) return String(value.value)
+  return 'Chưa trả lời'
+}
+
 function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/history' }) {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
 
   const [evaluation, setEvaluation] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const requestedReturnTo = searchParams.get('returnTo') || ''
+  const safeReturnTo = requestedReturnTo.startsWith(`${historyPath}/`) || requestedReturnTo === historyPath
+    ? requestedReturnTo
+    : ''
+  const fallbackVersionPath = evaluation?.formId && evaluation?.formVersionId
+    ? `${historyPath}/forms/${evaluation.formId}/versions/${evaluation.formVersionId}`
+    : historyPath
+  const returnPath = safeReturnTo || fallbackVersionPath
 
   useEffect(() => {
     staffApi.getFormSubmission(id)
@@ -41,7 +63,7 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
 
   if (loading) {
     return (
-      <AppShell back={{ to: historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá">
+      <AppShell back={{ to: safeReturnTo || historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá">
         <div style={{ textAlign: 'center', padding: 100 }}>
           <LoadingOutlined style={{ fontSize: 32, color: '#2563eb' }} />
           <p style={{ marginTop: 12, color: '#6b7280' }}>Đang tải chi tiết kết quả đánh giá...</p>
@@ -52,7 +74,7 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
 
   if (error || !evaluation) {
     return (
-      <AppShell back={{ to: historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá">
+      <AppShell back={{ to: safeReturnTo || historyPath, label: 'Quay lại' }} title="Lịch sử đánh giá">
         <div style={{ textAlign: 'center', padding: 100 }}>
           <p style={{ color: '#ef4444', fontWeight: 600 }}>{error || 'Không tìm thấy chi tiết kết quả đánh giá.'}</p>
         </div>
@@ -66,7 +88,7 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
 
   return (
     <AppShell
-      back={{ to: historyPath, label: 'Quay lại' }}
+      back={{ to: returnPath, label: 'Quay lại' }}
       breadcrumbs={[
         { label: 'Lịch sử đánh giá', link: historyPath },
         { label: 'Chi tiết kết quả' }
@@ -111,6 +133,9 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
 
           {(evaluation.scoreBreakdown || []).map((ans) => {
             const answeredOk = ans.weightedScore > 0
+            const selectedAnswer = (evaluation.answers || []).find(
+              (item) => String(item.questionKey) === String(ans.questionKey),
+            )
             return (
               <div key={ans.questionKey} style={{
                 display: 'flex',
@@ -130,6 +155,9 @@ function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/hi
                         Trọng tâm
                       </span>
                     )}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#64748b' }}>
+                    Kết quả: <strong style={{ color: '#334155' }}>{formatAnswer(selectedAnswer)}</strong>
                   </div>
                 </div>
 

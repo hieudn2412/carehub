@@ -454,8 +454,15 @@ export const adminApi = {
     })
   },
 
-  getFormHistoryVersions(formId) {
+  getFormHistoryVersions(formId, params) {
     return httpClient.get(`/forms/${formId}/history/versions`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormHistoryVersionById(formId, versionId) {
+    return httpClient.get(`/forms/${formId}/history/versions/${versionId}`, {
       headers: authHeaders(),
     })
   },
