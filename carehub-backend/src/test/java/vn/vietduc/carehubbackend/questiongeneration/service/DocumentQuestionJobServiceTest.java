@@ -15,10 +15,12 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
 import vn.vietduc.carehubbackend.questiongeneration.generation.DocumentQuestionGeneratorRouter;
+import vn.vietduc.carehubbackend.questiongeneration.generation.GroundedV4PromptCatalog;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentChunkRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentKnowledgePointRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionChunkResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 
 import java.util.List;
@@ -35,6 +37,7 @@ class DocumentQuestionJobServiceTest {
     private final DocumentQuestionJobRepository jobRepository = mock(DocumentQuestionJobRepository.class);
     private final DocumentKnowledgePointRepository knowledgePointRepository = mock(DocumentKnowledgePointRepository.class);
     private final DocumentQuestionCandidateRepository candidateRepository = mock(DocumentQuestionCandidateRepository.class);
+    private final DocumentQuestionChunkResultRepository chunkResultRepository = mock(DocumentQuestionChunkResultRepository.class);
     private final DocumentQuestionGeneratorRouter generatorRouter = mock(DocumentQuestionGeneratorRouter.class);
     private final QuestionCandidateValidationService validationService = mock(QuestionCandidateValidationService.class);
     private final DuplicateCheckService duplicateCheckService = mock(DuplicateCheckService.class);
@@ -52,6 +55,7 @@ class DocumentQuestionJobServiceTest {
                 jobRepository,
                 knowledgePointRepository,
                 candidateRepository,
+                chunkResultRepository,
                 generatorRouter,
                 validationService,
                 duplicateCheckService,
@@ -62,7 +66,8 @@ class DocumentQuestionJobServiceTest {
                 new DocumentProcessingProperties(),
                 new ObjectMapper(),
                 eventPublisher,
-                new SimpleAsyncTaskExecutor()
+                new SimpleAsyncTaskExecutor(),
+                new GroundedV4PromptCatalog()
         );
         QuestionDocument document = QuestionDocument.builder()
                 .id(10L)

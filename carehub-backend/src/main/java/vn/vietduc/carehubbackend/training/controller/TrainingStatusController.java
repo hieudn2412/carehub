@@ -17,6 +17,7 @@ import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSear
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingRecordLedgerResponse;
 import vn.vietduc.carehubbackend.training.dto.response.EmployeeTrainingStatusSummaryResponse;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
+import vn.vietduc.carehubbackend.training.dto.response.ProfessionalFieldHoursResponse;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
@@ -73,6 +74,16 @@ public class TrainingStatusController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Get training status successfully",
                 statusService.getMyStatus(professionalFieldId, asOf)
+        ));
+    }
+
+    @GetMapping("/status/me/professional-field-hours")
+    public ResponseEntity<ApiResponse<ProfessionalFieldHoursResponse>> getMyProfessionalFieldHours(
+            @RequestParam(required = false) Integer year
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Get professional field training hours successfully",
+                statusService.getMyProfessionalFieldHours(year)
         ));
     }
 

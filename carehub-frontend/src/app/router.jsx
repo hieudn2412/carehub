@@ -52,13 +52,16 @@ import { AUTH_ROUTES } from '../features/auth/constants/authRoutes.js'
 import ProfileStaffScreen from '../features/staff/pages/ProfileStaffScreen.jsx'
 import NotificationsStaffScreen from '../features/staff/pages/NotificationsStaffScreen.jsx'
 import ChecklistFormScreen from '../features/staff/pages/ChecklistFormScreen.jsx'
-import TrainingHoursListScreen from '../features/staff/pages/training/TrainingHoursListScreen.jsx'
+import TrainingHoursOverviewScreen from '../features/staff/pages/training/TrainingHoursOverviewScreen.jsx'
+import TrainingHoursAllScreen from '../features/staff/pages/training/TrainingHoursAllScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
 import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
 import TrainingHoursEvidencesListScreen from '../features/staff/pages/training/TrainingHoursEvidencesListScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
 import StaffCompetencyPage from '../features/staff/pages/competency/StaffCompetencyPage.jsx'
+import StaffComplianceDashboardPage from '../features/staff/pages/competency/StaffComplianceDashboardPage.jsx'
+import ProfessionalCompetencyDashboard from '../features/staff/pages/competency/ProfessionalCompetencyDashboard.jsx'
 import ExamHistoryScreen from '../features/staff/pages/ExamHistoryScreen.jsx'
 import ExamTakeListScreen from '../features/staff/pages/ExamTakeListScreen.jsx'
 import ExamTakeScreen from '../features/staff/pages/ExamTakeScreen.jsx'
@@ -301,14 +304,16 @@ function AppRouter() {
       <Route path="/manager/competency-summary" element={managerOrAdminElement(<CompetencySummaryPage />)} />
 
       {/* Staff Training Hours routes */}
-      <Route path="/staff/training" element={protectedElement(<TrainingHoursListScreen />)} />
+      <Route path="/staff/training" element={protectedElement(<TrainingHoursOverviewScreen />)} />
+      <Route path="/staff/training/all" element={protectedElement(<TrainingHoursAllScreen />)} />
       <Route path="/staff/training/new" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id" element={protectedElement(<TrainingHoursDetailScreen />)} />
       <Route path="/staff/training/:id/edit" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
       <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
-      <Route path="/staff/competency" element={protectedElement(<StaffCompetencyPage />)} />
+      <Route path="/staff/competency/all" element={protectedElement(<StaffCompetencyPage />)} />
+      <Route path="/staff/competency" element={protectedElement(<StaffComplianceDashboardPage />)} />
       <Route
         path="/staff/reports/checklist-dashboard"
         element={protectedElement(<ChecklistQualityDashboardPage role="user" />)}
@@ -329,7 +334,8 @@ function AppRouter() {
         )}
       />
       <Route path="/staff/exam/take" element={protectedElement(<ExamTakeListScreen />)} />
-      <Route path="/staff/professional-competency" element={protectedElement(<ExamTakeListScreen />)} />
+      <Route path="/staff/professional-competency/all" element={protectedElement(<ExamTakeListScreen />)} />
+      <Route path="/staff/professional-competency" element={protectedElement(<ProfessionalCompetencyDashboard />)} />
       <Route path="/staff/exam/take/:attemptId" element={protectedElement(<ExamTakeScreen />)} />
       <Route path="/staff/exam/history" element={protectedElement(<ExamHistoryScreen />)} />
 

@@ -58,6 +58,7 @@ public class FormMapper {
                 .status(form.getStatus())
                 .ownerDepartment(department)
                 .currentPublishedVersion(publishedVersion)
+                .complianceTargetPercent(form.getComplianceTargetPercent())
                 .createdAt(form.getCreatedAt())
                 .updatedAt(form.getUpdatedAt())
                 .build();

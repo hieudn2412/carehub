@@ -1,27 +1,29 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   SearchOutlined,
   FilterOutlined,
   PlusOutlined,
-  PaperClipOutlined,
   LeftOutlined,
   RightOutlined,
-  EyeOutlined,
   ReloadOutlined,
-  SendOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  CheckOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
-import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
-import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
 import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
+import TrainingRecordTable from './components/TrainingRecordTable.jsx'
+import TrainingSearchFilters from './components/TrainingSearchFilters.jsx'
+import {
+  countActiveFilterGroups,
+  createEmptyTrainingFilters,
+  isDateRangeValid,
+  parseTrainingQuery,
+  serializeTrainingQuery,
+  toTrainingListApiParams,
+} from './utils/trainingRecordQuery.js'
 import '../../styles/TrainingHours.css'
 
 const STATUS_FILTER_OPTIONS = [
@@ -33,46 +35,63 @@ const STATUS_FILTER_OPTIONS = [
 
 function TrainingHoursListScreen() {
   const navigate = useNavigate()
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams()
+  const urlQuery = urlSearchParams.toString()
+  const queryFilters = useMemo(() => parseTrainingQuery(urlQuery), [urlQuery])
   const { showToast } = useToast()
-  const accessToken = tokenStorage.getAccessToken()
-  const roles = getRolesFromAccessToken(accessToken)
-  const isAdmin = roles.some(r => String(r).toUpperCase().includes('ADMIN'))
-  const isManager = roles.some(r => String(r).toUpperCase().includes('MANAGER'))
-  const dashboardPath = isAdmin ? '/admin/dashboard' : isManager ? '/manager/dashboard' : '/staff/dashboard'
   const [search, setSearch] = useState('')
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [activeFilterPanel, setActiveFilterPanel] = useState(null)
   const filterControlRef = useRef(null)
   const loadingMoreRef = useRef(false)
+  const listBaseKeyRef = useRef('')
+  const pageRecordIdsRef = useRef(new Map())
   const [records, setRecords] = useState([])
   const [loading, setLoading] = useState(false)
   const [listError, setListError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const [status, setStatus] = useState('')
-  const [submittingId, setSubmittingId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [totalElements, setTotalElements] = useState(0)
-  const [page, setPage] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
   const [requiredHours, setRequiredHours] = useState(120)
   const [cmeConfigured, setCmeConfigured] = useState(false)
   const [myEmployeeId, setMyEmployeeId] = useState(null)
+  const [profileResolved, setProfileResolved] = useState(false)
+  const [profileReloadKey, setProfileReloadKey] = useState(0)
   const [isMobileViewport, setIsMobileViewport] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches,
   )
+  const [filterDraft, setFilterDraft] = useState(createEmptyTrainingFilters)
+  const [filterOptions, setFilterOptions] = useState({ activityTypes: [], professionalFields: [] })
+  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false)
+  const [filterOptionsError, setFilterOptionsError] = useState('')
+  const [filterDateError, setFilterDateError] = useState('')
   const size = 10
 
+  const page = queryFilters.page - 1
+
   useEffect(() => {
+    setSearch(queryFilters.q)
+    setFilterDraft(queryFilters)
+  }, [urlQuery, queryFilters])
+
+  useEffect(() => {
+    setProfileResolved(false)
     staffApi.getProfile()
       .then(res => {
         const profile = res.data?.data
         if (profile?.id) {
           setMyEmployeeId(profile.id)
+        } else {
+          setListError('Không thể xác định hồ sơ nhân viên. Vui lòng thử lại.')
         }
       })
-      .catch(err => console.error("Error fetching profile", err))
+      .catch(err => {
+        console.error("Error fetching profile", err)
+        setListError('Không thể xác định hồ sơ nhân viên. Vui lòng thử lại.')
+      })
+      .finally(() => setProfileResolved(true))
 
     trainingApi.getMyTrainingStatus()
       .then(res => {
@@ -85,13 +104,12 @@ function TrainingHoursListScreen() {
         }
       })
       .catch(err => console.error("Error fetching training status", err))
-  }, [])
+  }, [profileReloadKey])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 768px)')
     const syncViewport = event => {
       setIsMobileViewport(event.matches)
-      setPage(0)
     }
 
     setIsMobileViewport(mediaQuery.matches)
@@ -105,13 +123,13 @@ function TrainingHoursListScreen() {
     const handlePointerDown = (event) => {
       if (!filterControlRef.current?.contains(event.target)) {
         setIsFilterOpen(false)
-        setActiveFilterPanel(null)
+        setFilterDateError('')
       }
     }
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
         setIsFilterOpen(false)
-        setActiveFilterPanel(null)
+        setFilterDateError('')
       }
     }
 
@@ -124,22 +142,31 @@ function TrainingHoursListScreen() {
   }, [isFilterOpen])
 
   useEffect(() => {
+    if (!profileResolved || myEmployeeId == null) return undefined
+
     const timer = setTimeout(() => {
       setLoading(true)
       setListError('')
-      const params = {
-        page,
-        size,
-        titleKeyword: search || undefined,
-        workflowStatus: status || undefined,
-        ...(myEmployeeId != null && { employeeId: myEmployeeId }),
-      }
+      const baseQueryKey = JSON.stringify({
+        q: queryFilters.q,
+        status: queryFilters.status,
+        dateFrom: queryFilters.dateFrom,
+        dateTo: queryFilters.dateTo,
+        professionalFieldId: queryFilters.professionalFieldId,
+        activityTypeId: queryFilters.activityTypeId,
+      })
+      const append = isMobileViewport
+        && queryFilters.page > 1
+        && listBaseKeyRef.current === baseQueryKey
+      if (!append) listBaseKeyRef.current = baseQueryKey
+      const params = toTrainingListApiParams(queryFilters, myEmployeeId, size)
       trainingApi.listRecords(params)
         .then(res => {
           const data = res.data?.data || {}
           const nextRecords = data.content || []
+          pageRecordIdsRef.current.set(queryFilters.page, nextRecords.map(record => record.id))
           setRecords(currentRecords => {
-            if (!isMobileViewport || page === 0) return nextRecords
+            if (!append) return nextRecords
 
             const currentIds = new Set(currentRecords.map(record => record.id))
             return [
@@ -151,10 +178,6 @@ function TrainingHoursListScreen() {
         })
         .catch(err => {
           console.error("Error fetching training records", err)
-          if (!isMobileViewport || page === 0) {
-            setRecords([])
-            setTotalElements(0)
-          }
           setListError('Không thể tải danh sách giờ đào tạo. Vui lòng thử lại.')
         })
         .finally(() => {
@@ -163,27 +186,7 @@ function TrainingHoursListScreen() {
         })
     }, 300)
     return () => clearTimeout(timer)
-  }, [page, search, status, myEmployeeId, reloadKey, isMobileViewport])
-
-  const getStatusLabel = (workflowStatus) => ({
-    DRAFT: 'Bản nháp',
-    SUBMITTED: 'Đã nộp',
-    CANCELLED: 'Đã hủy',
-  }[workflowStatus] || workflowStatus || '-')
-
-  const handleDirectSubmit = async (recordId, version) => {
-    setSubmittingId(recordId)
-    setListError('')
-    try {
-      await trainingApi.submitRecord(recordId, { version })
-      setPage(0)
-      setReloadKey((value) => value + 1)
-    } catch {
-      setListError('Không thể nộp hồ sơ đào tạo. Vui lòng kiểm tra minh chứng và thử lại.')
-    } finally {
-      setSubmittingId(null)
-    }
-  }
+  }, [queryFilters, myEmployeeId, profileResolved, reloadKey, isMobileViewport])
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -192,6 +195,10 @@ function TrainingHoursListScreen() {
       await trainingApi.deleteRecord(deleteTarget.id, deleteTarget.version)
       showToast("Đã xóa hồ sơ đào tạo.", "success")
       setDeleteTarget(null)
+      const currentPageRecordIds = pageRecordIdsRef.current.get(queryFilters.page) || []
+      if (currentPageRecordIds.length === 1 && queryFilters.page > 1) {
+        setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, page: queryFilters.page - 1 }))
+      }
       setReloadKey(value => value + 1)
     } catch (error) {
       showToast(getApiErrorMessage(error, "Không thể xóa hồ sơ đào tạo."), "error")
@@ -200,18 +207,16 @@ function TrainingHoursListScreen() {
     }
   }
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-'
-    const d = new Date(dateStr)
-    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-  }
-
   const totalPages = Math.ceil(totalElements / size) || 1
-  const selectedStatusLabel = STATUS_FILTER_OPTIONS.find(option => option.value === status)?.label
-    || STATUS_FILTER_OPTIONS[0].label
-
   const isCompliant = totalSubmittedHours >= requiredHours
   const progressPct = requiredHours > 0 ? Math.min(Math.round((totalSubmittedHours / requiredHours) * 100), 100) : 0
+
+  const handleListRetry = () => {
+    setReloadKey(value => value + 1)
+    if (myEmployeeId == null) {
+      setProfileReloadKey(value => value + 1)
+    }
+  }
 
   const handleMobileRecordsScroll = (event) => {
     if (!isMobileViewport || loading || loadingMoreRef.current || page >= totalPages - 1) return
@@ -223,16 +228,105 @@ function TrainingHoursListScreen() {
 
     if (remainingDistance <= 48) {
       loadingMoreRef.current = true
-      setPage(currentPage => Math.min(currentPage + 1, totalPages - 1))
+      setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, page: Math.min(queryFilters.page + 1, totalPages) }))
     }
+  }
+
+  const loadFilterOptions = useCallback(async () => {
+    setFilterOptionsLoading(true)
+    setFilterOptionsError('')
+    try {
+      const response = await trainingApi.getRecordOptions()
+      const data = response.data?.data || {}
+      setFilterOptions({
+        activityTypes: Array.isArray(data.activityTypes) ? data.activityTypes : [],
+        professionalFields: Array.isArray(data.professionalFields) ? data.professionalFields : [],
+      })
+    } catch {
+      setFilterOptionsError('Không thể tải danh sách bộ lọc.')
+    } finally {
+      setFilterOptionsLoading(false)
+    }
+  }, [])
+
+  const handleFilterToggle = () => {
+    const nextOpen = !isFilterOpen
+    setIsFilterOpen(nextOpen)
+    if (nextOpen && !filterOptionsLoading && !filterOptionsError && !filterOptions.activityTypes.length && !filterOptions.professionalFields.length) {
+      loadFilterOptions()
+    }
+    if (!nextOpen) setFilterDateError('')
+  }
+
+  const handleApplyFilters = () => {
+    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
+      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+      return
+    }
+    setUrlSearchParams(serializeTrainingQuery({ ...filterDraft, page: 1 }))
+    setFilterDateError('')
+    setIsFilterOpen(false)
+  }
+
+  const handleClearFilters = () => {
+    setFilterDraft(createEmptyTrainingFilters())
+    setFilterDateError('')
+  }
+
+  const handleMobileApplyFilters = (close) => {
+    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
+      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+      return
+    }
+
+    setUrlSearchParams(serializeTrainingQuery({ ...filterDraft, q: search.trim(), page: 1 }))
+    setFilterDateError('')
+    close()
+  }
+
+  const renderMobileSearch = ({ close }) => (
+    <TrainingSearchFilters
+      searchValue={search}
+      onSearchChange={setSearch}
+      onSearchKeyDown={event => {
+        if (event.key === 'Enter') handleMobileApplyFilters(close)
+      }}
+      filters={filterDraft}
+      onFilterChange={setFilterDraft}
+      filterOptions={filterOptions}
+      filterOptionsLoading={filterOptionsLoading}
+      filterOptionsError={filterOptionsError}
+      onRetryOptions={loadFilterOptions}
+      dateError={filterDateError}
+      onClear={handleClearFilters}
+      onApply={() => handleMobileApplyFilters(close)}
+    />
+  )
+
+  const mobileSearchActiveCount = (search.trim() ? 1 : 0) + countActiveFilterGroups(filterDraft)
+
+  const handleSearchKeyDown = event => {
+    if (event.key !== 'Enter') return
+    setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, q: search.trim(), page: 1 }))
   }
 
   return (
     <AppShell
       className="training-hours-list-shell"
+      mobileSearch={{
+        title: 'Tìm kiếm giờ đào tạo',
+        ariaLabel: 'Mở tìm kiếm và bộ lọc giờ đào tạo',
+        activeCount: mobileSearchActiveCount,
+        onOpen: () => {
+          if (!filterOptionsLoading && !filterOptionsError && !filterOptions.activityTypes.length && !filterOptions.professionalFields.length) {
+            loadFilterOptions()
+          }
+        },
+        renderContent: renderMobileSearch,
+      }}
       breadcrumbs={[
-        { label: 'Tổng quan', link: dashboardPath },
-        { label: 'Giờ đào tạo liên tục' }
+        { label: 'Giờ đào tạo liên tục', link: '/staff/training' },
+        { label: 'Danh sách tất cả' }
       ]}
     >
       <div className="training-page training-page--list">
@@ -283,7 +377,7 @@ function TrainingHoursListScreen() {
             </div>
 
             {/* Filters + Add */}
-            <div className="th-filter-bar">
+            <div className="th-filter-bar" ref={filterControlRef}>
               <div className={`th-search-box${isSearchExpanded || search ? ' th-search-box--expanded' : ''}`}>
                 <SearchOutlined className="th-search-icon" />
                 <input
@@ -291,7 +385,6 @@ function TrainingHoursListScreen() {
                   onChange={e => {
                     setSearch(e.target.value)
                     setIsSearchExpanded(true)
-                    setPage(0)
                   }}
                   onFocus={() => setIsSearchExpanded(true)}
                   onBlur={() => {
@@ -300,86 +393,22 @@ function TrainingHoursListScreen() {
                   placeholder="Tìm theo nội dung đào tạo..."
                   className="th-search-input"
                   aria-label="Tìm theo tên khóa đào tạo"
+                  onKeyDown={handleSearchKeyDown}
                 />
               </div>
-              <div
-                className={`th-filter-control${status ? ' th-filter-control--active' : ''}`}
-                title="Lọc theo trạng thái hồ sơ"
-                ref={filterControlRef}
-              >
+              <div className={`th-filter-control${countActiveFilterGroups(filterDraft) ? ' th-filter-control--active' : ''}`} title="Lọc hồ sơ">
                 <button
                   type="button"
                   className="th-filter-control__trigger"
                   aria-label="Mở bộ lọc"
                   aria-haspopup="menu"
                   aria-expanded={isFilterOpen}
-                  onClick={() => {
-                    setIsFilterOpen(open => !open)
-                    setActiveFilterPanel(null)
-                  }}
+                  onClick={handleFilterToggle}
                 >
                   <FilterOutlined aria-hidden="true" />
                   <span className="th-filter-trigger-label">Bộ lọc</span>
-                  {status && <span className="th-filter-active-count">1</span>}
+                  {countActiveFilterGroups(filterDraft) > 0 && <span className="th-filter-active-count">{countActiveFilterGroups(filterDraft)}</span>}
                 </button>
-                <select
-                  value={status}
-                  onChange={e => { setStatus(e.target.value); setPage(0) }}
-                  className="th-filter-select"
-                  aria-label="Lọc theo trạng thái hồ sơ"
-                >
-                  {STATUS_FILTER_OPTIONS.map(option => (
-                    <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-                {isFilterOpen && (
-                  <div className="th-filter-menu" role="menu" aria-label="Bộ lọc giờ đào tạo">
-                    {activeFilterPanel === 'status' ? (
-                      <>
-                        <button
-                          type="button"
-                          className="th-filter-menu__back"
-                          onClick={() => setActiveFilterPanel(null)}
-                        >
-                          <LeftOutlined /> Trạng thái hồ sơ
-                        </button>
-                        <div className="th-filter-menu__options">
-                          {STATUS_FILTER_OPTIONS.map(option => (
-                            <button
-                              key={option.value || 'all'}
-                              type="button"
-                              role="menuitemradio"
-                              aria-checked={status === option.value}
-                              className={status === option.value ? 'is-selected' : ''}
-                              onClick={() => {
-                                setStatus(option.value)
-                                setPage(0)
-                                setIsFilterOpen(false)
-                                setActiveFilterPanel(null)
-                              }}
-                            >
-                              <span>{option.label}</span>
-                              {status === option.value && <CheckOutlined aria-hidden="true" />}
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="th-filter-menu__group"
-                        onClick={() => setActiveFilterPanel('status')}
-                      >
-                        <span>
-                          <strong>Trạng thái hồ sơ</strong>
-                          <small>{selectedStatusLabel}</small>
-                        </span>
-                        <RightOutlined aria-hidden="true" />
-                      </button>
-                    )}
-                  </div>
-                )}
               </div>
               <button
                 className="th-btn-primary th-btn-primary--fab"
@@ -390,36 +419,67 @@ function TrainingHoursListScreen() {
                 <span>Cập nhật giờ đào tạo</span>
               </button>
               {isFilterOpen && (
-                <div className="th-desktop-filter-panel">
-                  <label>
-                    <span>Trạng thái hồ sơ</span>
-                    <select
-                      value={status}
-                      onChange={e => {
-                        setStatus(e.target.value)
-                        setPage(0)
-                        setIsFilterOpen(false)
-                      }}
-                      className="th-filter-select th-filter-select--panel"
-                      aria-label="Lọc theo trạng thái hồ sơ"
-                    >
-                      {STATUS_FILTER_OPTIONS.map(option => (
-                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                <div className="th-desktop-filter-panel th-list-filter-panel" role="dialog" aria-label="Bộ lọc giờ đào tạo">
+                  <div className="th-list-filter-panel__header">
+                    <strong>Bộ lọc giờ đào tạo</strong>
+                    <span>{countActiveFilterGroups(filterDraft)} điều kiện đang chọn</span>
+                  </div>
+                  {filterOptionsLoading ? (
+                    <div className="th-list-filter-panel__state" role="status">Đang tải tùy chọn lọc...</div>
+                  ) : filterOptionsError ? (
+                    <div className="th-list-filter-panel__state th-list-filter-panel__state--error" role="alert">
+                      <span>{filterOptionsError}</span>
+                      <button type="button" className="th-retry-btn" onClick={loadFilterOptions}>Thử lại</button>
+                    </div>
+                  ) : (
+                    <div className="th-list-filter-panel__grid">
+                      <label>
+                        <span>Trạng thái hồ sơ</span>
+                        <select value={filterDraft.status} onChange={event => setFilterDraft(current => ({ ...current, status: event.target.value }))} aria-label="Lọc theo trạng thái hồ sơ">
+                          {STATUS_FILTER_OPTIONS.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Từ ngày</span>
+                        <input type="date" value={filterDraft.dateFrom} onChange={event => setFilterDraft(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Lọc từ ngày" />
+                      </label>
+                      <label>
+                        <span>Đến ngày</span>
+                        <input type="date" value={filterDraft.dateTo} onChange={event => setFilterDraft(current => ({ ...current, dateTo: event.target.value }))} aria-label="Lọc đến ngày" />
+                      </label>
+                      <label>
+                        <span>Lĩnh vực chuyên môn</span>
+                        <select value={filterDraft.professionalFieldId} onChange={event => setFilterDraft(current => ({ ...current, professionalFieldId: event.target.value }))} aria-label="Lọc theo lĩnh vực chuyên môn">
+                          <option value="">Tất cả lĩnh vực</option>
+                          {filterOptions.professionalFields.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Hình thức đào tạo</span>
+                        <select value={filterDraft.activityTypeId} onChange={event => setFilterDraft(current => ({ ...current, activityTypeId: event.target.value }))} aria-label="Lọc theo hình thức đào tạo">
+                          <option value="">Tất cả hình thức</option>
+                          {filterOptions.activityTypes.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                  {filterDateError && <p className="th-list-filter-panel__error" role="alert">{filterDateError}</p>}
+                  <div className="th-list-filter-panel__actions">
+                    <button type="button" className="th-overview-filter-panel__clear" onClick={handleClearFilters}>Xóa bộ lọc</button>
+                    <button type="button" className="th-btn-primary" onClick={handleApplyFilters}>Áp dụng</button>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Table */}
             <div className="th-table-card">
-              {loading && records.length === 0 ? (
+              {(loading || !profileResolved) && records.length === 0 ? (
                 <div className="th-table-state">Đang tải danh sách...</div>
               ) : listError && records.length === 0 ? (
                 <div className="th-table-state th-table-state--error" role="alert">
                   <p>{listError}</p>
-                  <button className="th-retry-btn" onClick={() => setReloadKey(value => value + 1)}>
+                  <button className="th-retry-btn" onClick={handleListRetry}>
                     <ReloadOutlined /> Thử lại
                   </button>
                 </div>
@@ -432,112 +492,17 @@ function TrainingHoursListScreen() {
                 </div>
               ) : (
                 <>
-                  <table className="th-table admin-table-uppercase">
-                    <thead>
-                      <tr>
-                        <th>Ngày đào tạo liên tục</th>
-                        <th>Nội dung đào tạo</th>
-                        <th className="th-col-num">Số giờ đào tạo</th>
-                        <th className="th-col-submitted">Ngày nộp</th>
-                        <th className="th-col-center">Minh chứng</th>
-                        <th className="th-col-actions">Hành động</th>
-                      </tr>
-                    </thead>
-                    <tbody onScroll={handleMobileRecordsScroll}>
-                      {records.map(r => (
-                        <tr key={r.id} onClick={() => navigate(`/staff/training/${r.id}`)} className="th-clickable-row">
-                          <td data-label="Ngày bắt đầu">
-                            <span className="th-training-date">{formatDate(r.startDate)}</span>
-                            {r.expired && (
-                              <span className="th-expired-tag" title={`Hết hạn từ ${formatDate(r.validUntil)}`}>
-                                Hết hạn
-                              </span>
-                            )}
-                          </td>
-                          <td data-label="Khóa đào tạo">
-                            <span className="th-record-title">{r.title}</span>
-                            {r.professionalFieldName && <span className="th-record-provider">{r.professionalFieldName}</span>}
-                          </td>
-                          <td className="th-col-num" data-label="Số giờ"><strong>{r.declaredHours}h</strong></td>
-                          <td className="th-col-submitted" data-label="Ngày nộp">
-                            {r.workflowStatus === 'SUBMITTED' ? (
-                              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>
-                                {formatDate(r.submittedAt)}
-                              </span>
-                            ) : (
-                              <span className={`th-badge th-badge--${
-                                r.workflowStatus === 'CANCELLED' ? 'danger' : 'warning'
-                              }`}>
-                                {getStatusLabel(r.workflowStatus)}
-                              </span>
-                            )}
-                          </td>
-                          <td className="th-col-center" data-label="Minh chứng">
-
-                            {r.evidenceCount > 0 ? (
-                              <span className="th-evidence-count">
-                                <PaperClipOutlined /> {r.evidenceCount}
-                              </span>
-                            ) : (
-                              <span className="th-evidence-none">-</span>
-                            )}
-                          </td>
-                          <td className="th-col-actions" data-label="Hành động">
-                            <div className="th-actions admin-table-actions" onClick={e => e.stopPropagation()}>
-                              {r.workflowStatus === 'DRAFT' && (
-                                <button
-                                  className="th-action-btn th-action-btn--submit admin-table-action admin-table-action--icon admin-table-action--success"
-                                  onClick={() => handleDirectSubmit(r.id, r.version)}
-                                  disabled={submittingId === r.id}
-                                  title="Nộp hồ sơ"
-                                  aria-label={`Nộp hồ sơ ${r.title}`}
-                                >
-                                  <SendOutlined />
-                                </button>
-                              )}
-                              <button
-                                className="th-action-btn th-action-btn--view admin-table-action admin-table-action--icon admin-table-action--primary"
-                                onClick={() => navigate(`/staff/training/${r.id}`)}
-                                title="Xem chi tiết"
-                                aria-label={`Xem chi tiết ${r.title}`}
-                              >
-                                <EyeOutlined />
-                              </button>
-                              {r.workflowStatus === 'DRAFT' && (
-                                <>
-                                  <button
-                                    className="th-action-btn th-action-btn--edit admin-table-action admin-table-action--icon"
-                                    onClick={() => navigate(`/staff/training/${r.id}/edit`)}
-                                    title="Chỉnh sửa"
-                                    aria-label={`Chỉnh sửa ${r.title}`}
-                                  >
-                                    <EditOutlined />
-                                  </button>
-                                  <button
-                                    className="th-action-btn admin-table-action admin-table-action--icon admin-table-action--danger"
-                                    onClick={() => setDeleteTarget(r)}
-                                    disabled={deletingId === r.id}
-                                    title="Xóa hồ sơ"
-                                    aria-label={`Xóa hồ sơ ${r.title}`}
-                                  >
-                                    <DeleteOutlined />
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                className="th-action-btn th-action-btn--evidence admin-table-action admin-table-action--icon"
-                                onClick={() => navigate(`/staff/training/${r.id}/evidence`)}
-                                title="Minh chứng"
-                                aria-label={`Quản lý minh chứng ${r.title}`}
-                              >
-                                <PaperClipOutlined />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <TrainingRecordTable
+                    records={records}
+                    columns={['date', 'title', 'hours', 'submitted', 'actions']}
+                    onBodyScroll={handleMobileRecordsScroll}
+                    onRowClick={record => navigate(`/staff/training/${record.id}`)}
+                    actions={['view', 'edit', 'delete']}
+                    onView={record => navigate(`/staff/training/${record.id}`)}
+                    onEdit={record => navigate(`/staff/training/${record.id}/edit`)}
+                    onDelete={record => setDeleteTarget(record)}
+                    deletingId={deletingId}
+                  />
 
                   {loading && records.length > 0 && (
                     <div className="th-infinite-loading" role="status">Đang tải thêm...</div>
@@ -546,7 +511,7 @@ function TrainingHoursListScreen() {
                     <button
                       type="button"
                       className="th-infinite-loading th-infinite-loading--error"
-                      onClick={() => setReloadKey(value => value + 1)}
+                      onClick={handleListRetry}
                     >
                       Tải thêm thất bại · Thử lại
                     </button>
@@ -557,7 +522,7 @@ function TrainingHoursListScreen() {
                       Hiển thị {records.length} / {totalElements} kết quả
                     </span>
                     <div className="th-pagination-pages">
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} aria-label="Trang trước">
+                      <button className="th-page-btn" onClick={() => setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, page: Math.max(1, queryFilters.page - 1) }))} disabled={page === 0} aria-label="Trang trước">
                         <LeftOutlined />
                       </button>
                       {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => {
@@ -566,7 +531,7 @@ function TrainingHoursListScreen() {
                           <button
                             key={pageNum}
                             className={`th-page-btn ${page === pageNum ? 'th-page-btn--active' : ''}`}
-                            onClick={() => setPage(pageNum)}
+                            onClick={() => setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, page: pageNum + 1 }))}
                             aria-label={`Trang ${pageNum + 1}`}
                             aria-current={page === pageNum ? 'page' : undefined}
                           >
@@ -574,7 +539,7 @@ function TrainingHoursListScreen() {
                           </button>
                         )
                       })}
-                      <button className="th-page-btn" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} aria-label="Trang sau">
+                      <button className="th-page-btn" onClick={() => setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, page: Math.min(totalPages, queryFilters.page + 1) }))} disabled={page >= totalPages - 1} aria-label="Trang sau">
                         <RightOutlined />
                       </button>
                     </div>

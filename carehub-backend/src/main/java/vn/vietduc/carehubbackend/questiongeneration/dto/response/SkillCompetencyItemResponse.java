@@ -15,6 +15,8 @@ public record SkillCompetencyItemResponse(
         String colorHex,
         boolean isPassed,
         boolean belowTarget,
-        List<FormSubmissionBriefResponse> attempts
+        List<FormSubmissionBriefResponse> attempts,
+        BigDecimal complianceTargetPercent,
+        String targetSource
 ) {
 }

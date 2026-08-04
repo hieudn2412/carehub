@@ -10,12 +10,16 @@ import org.springframework.web.client.ResourceAccessException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
 import vn.vietduc.carehubbackend.questiongeneration.generation.DeepSeekDocumentQuestionGenerator.DeepSeekErrorType;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedKnowledgePoint;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
 
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DeepSeekDocumentQuestionGeneratorTest {
 
@@ -234,6 +238,85 @@ class DeepSeekDocumentQuestionGeneratorTest {
         assertThat(generator.classifyError(
                 new IllegalStateException("DeepSeek trả về câu hỏi JSON không hợp lệ")))
                 .isEqualTo(DeepSeekErrorType.PARSE_ERROR);
+    }
+
+    @Test
+    void strictV4QuestionSchemaRejectsMissingDistractorRationales() {
+        assertThatThrownBy(() -> generator.parseQuestionsStrict("""
+                {"questions":[{
+                  "questionType":"recall","stem":"Dấu hiệu nào cần theo dõi?",
+                  "optionA":"A","optionB":"B","optionC":"C","optionD":"D",
+                  "correctAnswer":"A","explanation":"Bám nguồn","difficulty":"easy",
+                  "sourceExcerpt":"dấu hiệu","answerEvidence":"dấu hiệu","knowledgePointId":"KP1"
+                }]}
+                """))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("distractorRationales");
+    }
+
+    @Test
+    void criticIsTriggeredForMedicationRiskWhenGroundingIsExact() {
+        String chunk = "Adrenalin được tiêm bắp trong xử trí phản vệ.";
+        GeneratedQuestion question = new GeneratedQuestion(
+                "Thuốc nào được dùng trong xử trí phản vệ?",
+                "Adrenalin", "Paracetamol", "Vitamin C", "Kháng sinh",
+                "A", "Đáp án A bám nguồn.", "medium", "Phản vệ",
+                "Adrenalin được tiêm bắp", "KP1", "{}", null,
+                "FACT", "Adrenalin được tiêm bắp",
+                "{\"B\":\"không được nguồn hỗ trợ\",\"C\":\"không được nguồn hỗ trợ\",\"D\":\"không được nguồn hỗ trợ\"}"
+        );
+        GenerationInput input = new GenerationInput(
+                1L, 2L, 3L, chunk, "Phản vệ", 1, "vi",
+                "guide.pdf", 1, 1, "Cấp cứu", null, "AUTO", "GROUNDED_V4"
+        );
+        GeneratedKnowledgePoint point = new GeneratedKnowledgePoint(
+                "KP1", "Adrenalin được tiêm bắp.", "medication", "high",
+                "Adrenalin được tiêm bắp", true, "{}"
+        );
+
+        assertThat(generator.shouldRunCritic(input, question, java.util.List.of(point))).isTrue();
+    }
+
+    @Test
+    void criticIsTriggeredForMediumQuestionsEvenWithoutMedicalRiskKeywords() {
+        String chunk = "Bước một là xác nhận thông tin. Bước hai là đối chiếu hồ sơ.";
+        GeneratedQuestion question = new GeneratedQuestion(
+                "Trình tự nào phù hợp?",
+                "Xác nhận thông tin rồi đối chiếu hồ sơ",
+                "Đối chiếu hồ sơ rồi xác nhận thông tin",
+                "Chỉ xác nhận thông tin",
+                "Chỉ đối chiếu hồ sơ",
+                "A", "Đáp án A đúng trình tự.", "medium", "Quy trình",
+                "Bước một là xác nhận thông tin", "KP1", "{}", null,
+                "procedure", "Bước hai là đối chiếu hồ sơ",
+                "{\"B\":\"đảo thứ tự\",\"C\":\"thiếu bước hai\",\"D\":\"thiếu bước một\"}"
+        );
+        GenerationInput input = new GenerationInput(
+                1L, 2L, 3L, chunk, "Quy trình", 1, "vi",
+                "guide.pdf", 1, 1, null, null, "MEDIUM", "GROUNDED_V4"
+        );
+        GeneratedKnowledgePoint point = new GeneratedKnowledgePoint(
+                "KP1", "Quy trình gồm hai bước.", "procedure", "high",
+                "Bước một là xác nhận thông tin", true, "{}"
+        );
+
+        assertThat(generator.shouldRunCritic(input, question, java.util.List.of(point))).isTrue();
+    }
+
+    @Test
+    void strictCriticSchemaRequiresAntiGuessingSignals() {
+        assertThatThrownBy(() -> generator.validateCriticJson("""
+                {
+                  "answerable":true,
+                  "singleBestAnswer":true,
+                  "correctAnswerSupported":true,
+                  "distractorsInvalid":true,
+                  "qualityScore":0.9,
+                  "issues":[]
+                }
+                """))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("surfaceCueFree");
     }
 
     private static HttpClientErrorException unauthorized(HttpStatus status) {

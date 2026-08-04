@@ -4,6 +4,7 @@ import lombok.Builder;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionResponse;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 
 @Builder
 public record AssignedFormResponse(
@@ -11,6 +12,7 @@ public record AssignedFormResponse(
         Long formId,
         String formCode,
         String title,
+        BigDecimal complianceTargetPercent,
         Instant validFrom,
         Instant validUntil,
         FormVersionResponse version

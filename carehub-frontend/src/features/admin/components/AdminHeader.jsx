@@ -6,6 +6,8 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   MenuOutlined,
+  FormOutlined,
+  SearchOutlined,
 } from '@ant-design/icons'
 import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
@@ -14,6 +16,7 @@ import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import EvaluationWorkflow from '../../evaluation/components/EvaluationWorkflow.jsx'
 import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
+import MobileSearchSheet from '../../../shared/components/MobileSearchSheet.jsx'
 import '../styles/AdminHeader.css'
 
 function getFallbackLink(label, roles = []) {
@@ -72,7 +75,7 @@ function getFallbackLink(label, roles = []) {
   return null
 }
 
-function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs, back }) {
+function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs, back, mobileSearch }) {
   const [profile, setProfile] = useState(null)
   const location = useLocation()
 
@@ -97,6 +100,7 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
   const {
     notifications,
     unreadCount,
+    pendingExamCount,
     markAllAsRead,
     markAsRead,
   } = useNotifications()
@@ -219,6 +223,32 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
       </div>
 
       <div className="dashboard-header__right">
+        {mobileSearch && (
+          <button
+            type="button"
+            className="dashboard-header__search-button"
+            aria-label={`${mobileSearch.ariaLabel || 'Mở tìm kiếm và bộ lọc'}${mobileSearch.activeCount ? `, ${mobileSearch.activeCount} điều kiện đang chọn` : ''}`}
+            aria-haspopup="dialog"
+            aria-expanded={mobileSearch.isOpen}
+            onClick={mobileSearch.onToggle}
+          >
+            <SearchOutlined aria-hidden="true" />
+            {mobileSearch.activeCount > 0 && (
+              <span className="dashboard-header__search-badge" aria-hidden="true">
+                {mobileSearch.activeCount > 99 ? '99+' : mobileSearch.activeCount}
+              </span>
+            )}
+          </button>
+        )}
+        <Link
+          to="/staff/exam/take"
+          className="dashboard-header__exam-notify"
+          title={`${pendingExamCount} bài kiểm tra chưa làm`}
+          aria-label={`${pendingExamCount} bài kiểm tra chưa làm`}
+        >
+          <FormOutlined />
+          {pendingExamCount > 0 && <span className="dashboard-header__exam-badge">{pendingExamCount > 99 ? '99+' : pendingExamCount}</span>}
+        </Link>
         <div className="dashboard-header__notify-container">
           <button
             type="button"
@@ -264,6 +294,15 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
           profilePath="/admin/profile"
         />
       </div>
+      {mobileSearch?.isOpen && (
+        <MobileSearchSheet
+          open
+          title={mobileSearch.title}
+          onClose={mobileSearch.onClose}
+        >
+          {mobileSearch.renderContent?.({ close: mobileSearch.onClose })}
+        </MobileSearchSheet>
+      )}
     </header>
   )
 }

@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.form.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,7 @@ import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.form.dto.request.CreateFormRequest;
 import vn.vietduc.carehubbackend.form.dto.request.UpdateFormRequest;
 import vn.vietduc.carehubbackend.form.dto.response.FormResponse;
+import vn.vietduc.carehubbackend.form.dto.response.FormComplianceTargetResponse;
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
@@ -32,6 +34,9 @@ public class FormServiceImpl implements FormService {
     private final FormRepository formRepository;
     private final DepartmentRepository departmentRepository;
     private final FormMapper mapper;
+
+    @Value("${app.competency.compliance.default-target:80.0}")
+    private java.math.BigDecimal defaultComplianceTarget = java.math.BigDecimal.valueOf(80);
 
     @Override
     @Transactional(readOnly = true)
@@ -86,6 +91,20 @@ public class FormServiceImpl implements FormService {
         form.setSubjectType(request.subjectType());
         form.setOwnerDepartment(resolveDepartment(request.ownerDepartmentId()));
         return mapper.toResponse(formRepository.save(form));
+    }
+
+    @Override
+    @Transactional
+    public FormComplianceTargetResponse updateComplianceTarget(Long id, java.math.BigDecimal targetPercent) {
+        Form form = findActive(id);
+        form.setComplianceTargetPercent(targetPercent == null ? null : targetPercent.setScale(2, java.math.RoundingMode.HALF_UP));
+        Form saved = formRepository.save(form);
+        java.math.BigDecimal effective = saved.getComplianceTargetPercent() == null
+                ? defaultComplianceTarget : saved.getComplianceTargetPercent();
+        return new FormComplianceTargetResponse(
+                saved.getId(), saved.getTitle(), saved.getComplianceTargetPercent(), effective,
+                saved.getComplianceTargetPercent() == null ? "DEFAULT" : "FORM"
+        );
     }
 
     @Override

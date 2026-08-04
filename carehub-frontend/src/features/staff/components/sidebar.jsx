@@ -142,14 +142,14 @@ function Sidebar({ alertSummary = {} }) {
   // Manager specific features
   if (isManager) {
     navSections.push({
-      label: 'Quản lý khoa',
+      label: 'Dashboard & báo cáo thống kê',
       items: [
-        { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
-        { icon: <TrophyOutlined />, label: 'Dashboard năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/reports/checklist-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/compliance-by-technique' },
-        { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
-        { icon: <TeamOutlined />, label: 'Nhân sự & Giờ đào tạo', path: '/manager/employees' },
+        { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+        { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
+        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
+        { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
+        { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
         { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
         { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
@@ -295,7 +295,7 @@ function Sidebar({ alertSummary = {} }) {
       items: [
         {
           icon: <DashboardOutlined />,
-          label: 'Dashboard tổng quan',
+          label: 'Dashboard',
           route: isManager ? '/manager/dashboard' : '/staff/dashboard',
         },
       ],
@@ -356,31 +356,31 @@ function Sidebar({ alertSummary = {} }) {
       },
     ] : [
       {
-        title: 'Quản lý khoa',
+        title: 'Dashboard & báo cáo thống kê',
         items: [
           {
             icon: <BarChartOutlined />,
-            label: 'Dashboard giờ đào tạo',
+            label: 'Giờ đào tạo liên tục',
             route: '/manager/reports/training-dashboard',
           },
           {
             icon: <TrophyOutlined />,
-            label: 'Dashboard năng lực chuyên môn',
+            label: 'Năng lực chuyên môn',
             route: '/manager/reports/quality-dashboard',
           },
           {
             icon: <CheckSquareOutlined />,
-            label: 'Chất lượng chăm sóc',
+            label: 'Tuân thủ quy trình, quy định',
             route: '/manager/reports/checklist-dashboard',
           },
           {
             icon: <CheckSquareOutlined />,
-            label: 'Tuân thủ theo kỹ thuật',
+            label: 'Tuân thủ quy trình, quy định theo kỹ thuật',
             route: '/manager/compliance-by-technique',
           },
           {
             icon: <BarChartOutlined />,
-            label: 'Dashboard năng lực',
+            label: 'Chất lượng chăm sóc',
             route: '/manager/competency-summary',
           },
           {

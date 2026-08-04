@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentChunkResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionChunkResultResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionJobSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentResponse;
@@ -14,6 +15,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.UsageResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentChunk;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentKnowledgePoint;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionCandidate;
+import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentSection;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
@@ -66,7 +68,12 @@ public class DocumentQuestionMapper {
                 QuestionGenerationLabels.jobStatus(job.getStatus()),
                 job.getProvider().name(),
                 job.getModel(),
+                job.getPipelineVersion() == null ? null : job.getPipelineVersion().name(),
+                job.getPromptVersion(),
                 job.getCandidateCount(),
+                job.getReviewableCandidateCount(),
+                job.getRejectedCandidateCount(),
+                job.getProblemChunkCount(),
                 job.getChunkCount(),
                 job.getCompletedChunkCount(),
                 job.getFailedChunkCount(),
@@ -80,12 +87,24 @@ public class DocumentQuestionMapper {
             List<DocumentKnowledgePoint> knowledgePoints,
             List<DocumentQuestionCandidate> candidates
     ) {
+        return toJobResponse(job, knowledgePoints, candidates, List.of());
+    }
+
+    public DocumentQuestionJobResponse toJobResponse(
+            DocumentQuestionJob job,
+            List<DocumentKnowledgePoint> knowledgePoints,
+            List<DocumentQuestionCandidate> candidates,
+            List<DocumentQuestionChunkResult> chunkResults
+    ) {
         return new DocumentQuestionJobResponse(
                 job.getId(),
                 job.getDocument().getId(),
                 job.getProvider().name(),
                 job.getModel(),
                 job.getPromptVersion(),
+                job.getPromptHash(),
+                job.getPipelineVersion() == null ? null : job.getPipelineVersion().name(),
+                job.getTargetDifficulty() == null ? null : job.getTargetDifficulty().name(),
                 job.getStatus().name(),
                 QuestionGenerationLabels.jobStatus(job.getStatus()),
                 job.getQuestionsPerChunk(),
@@ -93,6 +112,12 @@ public class DocumentQuestionMapper {
                 job.getCompletedChunkCount(),
                 job.getFailedChunkCount(),
                 job.getCandidateCount(),
+                job.getEligibleChunkCount(),
+                job.getSkippedChunkCount(),
+                job.getProblemChunkCount(),
+                job.getReviewableCandidateCount(),
+                job.getRejectedCandidateCount(),
+                job.getCriticCallCount(),
                 job.getChunkErrors(),
                 new UsageResponse(
                         job.getLlmCallCount(),
@@ -105,6 +130,7 @@ public class DocumentQuestionMapper {
                 job.getErrorMessage(),
                 knowledgePoints.stream().map(this::toKnowledgePointResponse).toList(),
                 candidates.stream().map(this::toCandidateResponse).toList(),
+                chunkResults.stream().map(this::toChunkResultResponse).toList(),
                 job.getCreatedAt(),
                 job.getUpdatedAt()
         );
@@ -127,8 +153,19 @@ public class DocumentQuestionMapper {
                 candidate.getDifficulty(),
                 candidate.getSourceExcerpt(),
                 candidate.getKnowledgePointKey(),
+                candidate.getQuestionType(),
+                candidate.getAnswerEvidence(),
+                candidate.getDistractorRationales(),
+                candidate.getChunk().getPageStart(),
+                candidate.getChunk().getPageEnd(),
+                candidate.getChunk().getSectionPath(),
                 candidate.getQualityScore(),
                 candidate.getLlmValidation(),
+                candidate.getValidationGrade() == null ? null : candidate.getValidationGrade().name(),
+                candidate.getValidationSource() == null ? null : candidate.getValidationSource().name(),
+                candidate.getValidationIssues(),
+                candidate.getEvidenceStatus(),
+                candidate.getCriticStatus(),
                 candidate.getLabel() == null ? null : candidate.getLabel().name(),
                 QuestionGenerationLabels.candidateLabel(candidate.getLabel()),
                 candidate.getWarnings(),
@@ -143,6 +180,30 @@ public class DocumentQuestionMapper {
                 candidate.getDuplicateQuestionStemSnapshot(),
                 candidate.getReviewerNotes(),
                 candidate.getSavedQuestionId()
+        );
+    }
+
+    private DocumentQuestionChunkResultResponse toChunkResultResponse(DocumentQuestionChunkResult result) {
+        return new DocumentQuestionChunkResultResponse(
+                result.getId(),
+                result.getChunk().getId(),
+                result.getChunk().getChunkIndex(),
+                result.getAttemptNo(),
+                result.getStatus().name(),
+                result.getKnowledgePointCount(),
+                result.getRawQuestionCount(),
+                result.getReviewableCount(),
+                result.getRejectedCount(),
+                result.getCriticCallCount(),
+                result.getRepairCallCount(),
+                result.getLlmCallCount(),
+                result.getPromptTokens(),
+                result.getCompletionTokens(),
+                result.getTotalTokens(),
+                result.getLatencyMs(),
+                result.getErrorCode(),
+                result.getErrorMessage(),
+                Boolean.TRUE.equals(result.getRetryable())
         );
     }
 

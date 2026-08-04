@@ -1,6 +1,8 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import vn.vietduc.carehubbackend.questiongeneration.entity.DocumentQuestionJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
@@ -22,4 +24,8 @@ public interface DocumentQuestionJobRepository extends JpaRepository<DocumentQue
             WHERE job.id = :jobId
             """)
     JobStatus findStatusByIdOrNull(Long jobId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT job FROM DocumentQuestionJob job WHERE job.id = :jobId")
+    Optional<DocumentQuestionJob> findByIdForUpdate(Long jobId);
 }

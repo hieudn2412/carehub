@@ -25,6 +25,7 @@ import {
   jobStatusText,
   statusTone,
 } from '../utils/documentQuestionUi.js'
+import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
 function QuestionDocumentDetailPage() {
@@ -38,6 +39,8 @@ function QuestionDocumentDetailPage() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [categoryId, setCategoryId] = useState('')
+  const [pipelineVersion, setPipelineVersion] = useState('LEGACY_V3')
+  const [targetDifficulty, setTargetDifficulty] = useState('AUTO')
   const [categories, setCategories] = useState([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -77,13 +80,14 @@ function QuestionDocumentDetailPage() {
   }, [questionJobs, jobStatusFilter])
 
   async function createJob() {
-    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
     setIsCreatingJob(true)
     try {
-      const response = await documentQuestionApi.createQuestionJob(documentDetail.id, {
-        questionsPerChunk: normalizedCount,
-        categoryId: categoryId ? Number(categoryId) : null,
-      })
+      const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
+        questionsPerChunk,
+        categoryId,
+        pipelineVersion,
+        targetDifficulty,
+      }))
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
       navigate(`/admin/evaluation/document-question-jobs/${job.id}`)
@@ -252,6 +256,7 @@ function QuestionDocumentDetailPage() {
                             <tr>
                               <th>Phiên</th>
                               <th>Trạng thái</th>
+                              <th>Pipeline / prompt</th>
                               <th>Câu hỏi</th>
                               <th>Tiến độ xử lý</th>
                               <th>Ngày tạo</th>
@@ -261,7 +266,7 @@ function QuestionDocumentDetailPage() {
                           <tbody>
                             {filteredQuestionJobs.length === 0 ? (
                               <tr>
-                                <td colSpan="6" className="qdoc-empty-cell">Không có phiên tạo câu hỏi phù hợp.</td>
+                                <td colSpan="7" className="qdoc-empty-cell">Không có phiên tạo câu hỏi phù hợp.</td>
                               </tr>
                             ) : (
                               filteredQuestionJobs.map((job) => (
@@ -271,6 +276,10 @@ function QuestionDocumentDetailPage() {
                                     <span className={`qdoc-badge qdoc-badge--${statusTone(job.status)}`}>
                                       {jobStatusText(job)}
                                     </span>
+                                  </td>
+                                  <td>
+                                    <span className="qdoc-mini-badge">{job.pipelineVersion || 'LEGACY_V3'}</span>
+                                    <small className="qdoc-cell-note">{job.promptVersion || '---'}</small>
                                   </td>
                                   <td>{formatNumber(job.candidateCount)}</td>
                                   <td>
@@ -319,7 +328,7 @@ function QuestionDocumentDetailPage() {
               <InfoRow label="Bỏ qua" value={formatNumber(skippedChunkCount)} />
             </div>
             <label className="qdoc-field">
-              <span>Số câu mỗi đoạn nội dung</span>
+              <span>Tối đa câu hỏi mỗi đoạn</span>
               <input
                 type="number"
                 min="1"
@@ -327,6 +336,31 @@ function QuestionDocumentDetailPage() {
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
               />
+            </label>
+            <label className="qdoc-field">
+              <span>Pipeline</span>
+              <select
+                value={pipelineVersion}
+                onChange={(event) => setPipelineVersion(event.target.value)}
+                disabled={isCreatingJob}
+              >
+                <option value="LEGACY_V3">Legacy v3 (đối chứng)</option>
+                <option value="GROUNDED_V4">Grounded v4 (pilot)</option>
+              </select>
+              <small className="qdoc-field-help">Grounded v4 trích knowledge point và bằng chứng trước khi sinh câu hỏi.</small>
+            </label>
+            <label className="qdoc-field">
+              <span>Độ khó mục tiêu</span>
+              <select
+                value={targetDifficulty}
+                onChange={(event) => setTargetDifficulty(event.target.value)}
+                disabled={isCreatingJob}
+              >
+                <option value="AUTO">Tự động theo nguồn</option>
+                <option value="EASY">Dễ</option>
+                <option value="MEDIUM">Trung bình</option>
+                <option value="HARD">Khó</option>
+              </select>
             </label>
             <div className="qdoc-field">
               <span>Danh mục câu hỏi (không bắt buộc)</span>

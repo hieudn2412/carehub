@@ -155,6 +155,13 @@ export const trainingApi = {
     })
   },
 
+  getMyProfessionalFieldHours(params) {
+    return httpClient.get('/training/status/me/professional-field-hours', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getEmployeeTrainingStatus(employeeId, params) {
     return httpClient.get(`/training/employees/${employeeId}/status`, {
       headers: authHeaders(),

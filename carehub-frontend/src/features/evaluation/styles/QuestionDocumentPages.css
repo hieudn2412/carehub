@@ -3,7 +3,6 @@
   flex-direction: column;
   gap: 20px;
 }
-
 .qdoc-title-card,
 .qdoc-panel,
 .qdoc-filter-bar,
@@ -17,7 +16,6 @@
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035);
 }
-
 .qdoc-title-card,
 .qdoc-detail-hero {
   padding: 24px;
@@ -383,6 +381,13 @@
 .qdoc-mini-badge--info {
   color: #1d4ed8;
   background: #dbeafe;
+}
+
+.qdoc-cell-note {
+  color: #64748b;
+  display: block;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
 }
 
 .qdoc-job-link {
@@ -788,6 +793,67 @@
   font-size: 13px;
 }
 
+.qdoc-grounding-panel {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid #0f766e;
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.qdoc-grounding-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.qdoc-grounding-heading span {
+  color: #64748b;
+  font-size: 12px;
+  text-align: right;
+}
+
+.qdoc-grounding-panel p,
+.qdoc-grounding-panel blockquote {
+  color: #334155;
+  line-height: 1.5;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.qdoc-grounding-panel blockquote {
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+}
+
+.qdoc-grounding-empty {
+  color: #64748b !important;
+  font-style: italic;
+}
+
+.qdoc-grounding-panel details {
+  margin-top: 8px;
+}
+
+.qdoc-grounding-panel summary {
+  color: #0f766e;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.qdoc-grounding-panel pre {
+  background: #0f172a;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  overflow-x: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
 .qdoc-saved-box {
   align-items: center;
   background: #e8f7ef;
@@ -985,7 +1051,6 @@
     align-items: center;
   }
 }
-
 .qdoc-evidence-box {
   min-height: 120px;
   padding: 12px;

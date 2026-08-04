@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: CareHub Training API
+  version: 1.0.0
+  description: API phục vụ tổng quan giờ đào tạo cá nhân.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+tags:
+  - name: Training status
+paths:
+  /training/status/me/professional-field-hours:
+    get:
+      tags: [Training status]
+      summary: Tổng giờ đào tạo đã nộp theo lĩnh vực và năm
+      description: >-
+        Chỉ tổng hợp hồ sơ SUBMITTED của người dùng trong access token. Năm được
+        xác định theo startDate; nếu không truyền year thì dùng năm hiện tại.
+      parameters:
+        - name: year
+          in: query
+          required: false
+          description: Năm của ngày đào tạo cần tổng hợp.
+          schema:
+            type: integer
+            format: int32
+          example: 2026
+      responses:
+        '200':
+          description: Tổng hợp thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfessionalFieldHoursEnvelope'
+              example:
+                success: true
+                message: Get professional field training hours successfully
+                data:
+                  year: 2026
+                  availableYears: [2026, 2025, 2024]
+                  fields:
+                    - professionalFieldId: 12
+                      professionalFieldName: Hồi sức cấp cứu
+                      submittedHours: 24.5
+                    - professionalFieldId: null
+                      professionalFieldName: Chưa xác định
+                      submittedHours: 2
+        '400':
+          description: Năm nằm ngoài phạm vi được hỗ trợ
+        '401':
+          description: Chưa xác thực
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ProfessionalFieldHoursEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/ProfessionalFieldHours'
+    ProfessionalFieldHours:
+      type: object
+      required: [year, availableYears, fields]
+      properties:
+        year:
+          type: integer
+          format: int32
+        availableYears:
+          type: array
+          items:
+            type: integer
+            format: int32
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfessionalFieldHoursItem'
+    ProfessionalFieldHoursItem:
+      type: object
+      required: [professionalFieldName, submittedHours]
+      properties:
+        professionalFieldId:
+          type: [integer, 'null']
+          format: int64
+        professionalFieldName:
+          type: string
+        submittedHours:
+          type: number

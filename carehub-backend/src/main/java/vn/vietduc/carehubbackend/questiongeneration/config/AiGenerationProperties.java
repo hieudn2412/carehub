@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.config;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 
 @Getter
 @Setter
@@ -15,6 +16,8 @@ public class AiGenerationProperties {
     private String fallbackModel = "deepseek-v4-pro";
     private String promptVersion = "docgen-mvp-flash-v2";
     private String pipelineMode = "single_call";
+    private GenerationPipelineVersion defaultPipeline = GenerationPipelineVersion.LEGACY_V3;
+    private boolean groundedV4Enabled = true;
     private int timeoutSeconds = 60;
     private int connectTimeoutSeconds = 10;
     private int maxConnections = 10;
@@ -32,6 +35,12 @@ public class AiGenerationProperties {
     private double outputPricePerMillion = 0.56;
     private double fallbackInputPricePerMillion = 0.55;
     private double fallbackOutputPricePerMillion = 2.20;
+    private double knowledgeTemperature = 0.1;
+    private double questionTemperature = 0.3;
+    private double criticTemperature = 0.0;
+    private int knowledgeMaxOutputTokens = 1200;
+    private int questionMaxOutputTokens = 1800;
+    private int criticMaxOutputTokens = 900;
 
     public boolean isApiProvider() {
         return "api".equalsIgnoreCase(provider);

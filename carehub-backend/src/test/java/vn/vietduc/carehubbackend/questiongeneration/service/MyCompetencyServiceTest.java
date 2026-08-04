@@ -11,6 +11,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.projection.MyComplianceYearProjection;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -98,16 +99,61 @@ class MyCompetencyServiceTest {
         assertThat(skills.items().get(0).attempts()).hasSize(1);
         assertThat(summary.overallScore()).isEqualByComparingTo("8.50");
         assertThat(summary.targetScore()).isEqualByComparingTo("8.40");
+        assertThat(summary.knowledgeAttemptCount()).isEqualTo(1);
+        assertThat(summary.skillEvaluationCount()).isEqualTo(1);
         assertThat(summary.isPassed()).isTrue();
     }
 
     @Test
-    void totalMustBeStrictlyGreaterThanDepartmentTarget() {
+    void scoreEqualToDepartmentTargetIsPassed() {
         user.getDepartment().setCompetencyTargetScore(new BigDecimal("8.50"));
 
         var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
 
         assertThat(summary.overallScore()).isEqualByComparingTo("8.50");
+        assertThat(summary.isPassed()).isTrue();
+    }
+
+    @Test
+    void missingComponentIsTreatedAsZeroAndNoTargetIsUnconfigured() {
+        when(attemptRepository.findScoredAttemptsByUserAndDateRange(any(), any(), any()))
+                .thenReturn(List.of());
+        user.getDepartment().setCompetencyTargetScore(null);
+
+        var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
+
+        assertThat(summary.knowledgeAverage()).isEqualByComparingTo("0");
+        assertThat(summary.skillAverage()).isEqualByComparingTo("9.00");
+        assertThat(summary.overallScore()).isEqualByComparingTo("4.50");
+        assertThat(summary.knowledgeAttemptCount()).isZero();
+        assertThat(summary.skillEvaluationCount()).isEqualTo(1);
+        assertThat(summary.targetScore()).isNull();
         assertThat(summary.isPassed()).isFalse();
+    }
+
+    @Test
+    void complianceOverviewAggregatesEvaluationAndUsesDefaultTarget() {
+        var overview = service.getComplianceOverview(user, LocalDate.now().withDayOfYear(1), LocalDate.now());
+
+        assertThat(overview.totalEvaluations()).isEqualTo(1);
+        assertThat(overview.passCount()).isEqualTo(1);
+        assertThat(overview.complianceRate()).isEqualByComparingTo("100.00");
+        assertThat(overview.latest().targetPercent()).isEqualByComparingTo("80.0");
+        assertThat(overview.latest().targetSource()).isEqualTo("DEFAULT");
+    }
+
+    @Test
+    void complianceChartAddsCurrentYearAndMapsFormMetric() {
+        MyComplianceYearProjection previous = mock(MyComplianceYearProjection.class);
+        when(previous.getYear()).thenReturn(LocalDate.now().getYear() - 1);
+        when(submissionRepository.findScoredEvaluationYearsForSubject(anyLong(), anyString()))
+                .thenReturn(List.of(previous));
+
+        var chart = service.getComplianceChart(user, LocalDate.now().getYear());
+
+        assertThat(chart.availableYears()).containsExactly(LocalDate.now().getYear(), LocalDate.now().getYear() - 1);
+        assertThat(chart.items()).hasSize(1);
+        assertThat(chart.items().get(0).evaluationCount()).isEqualTo(1);
+        assertThat(chart.items().get(0).complianceRate()).isEqualByComparingTo("100.0");
     }
 }

@@ -42,6 +42,8 @@ export async function apiClient(account) {
       unwrap(await context.put(path, authorised({ data })), what),
     patch: async (path, data, what = `PATCH ${path}`) =>
       unwrap(await context.patch(path, authorised({ data })), what),
+    delete: async (path, what = `DELETE ${path}`) =>
+      unwrap(await context.delete(path, authorised()), what),
     dispose: () => context.dispose(),
   }
 }
@@ -72,15 +74,24 @@ export async function seedProfessionalField(admin) {
 }
 
 /** A submitted-ready draft training record owned by `employeeId`. */
-export async function seedTrainingRecord(client, { activityTypeId, employeeId, hours = 2, title }) {
+export async function seedTrainingRecord(client, {
+  activityTypeId,
+  employeeId,
+  professionalFieldId,
+  hours = 2,
+  title,
+  startDate = '2026-06-01',
+  endDate = startDate,
+}) {
   return client.post('/training/records', {
     employeeId,
     activityTypeId,
+    ...(professionalFieldId != null ? { professionalFieldId } : {}),
     title: title ?? `E2E hồ sơ ${stamp()}`,
     provider: 'Bệnh viện Việt Đức',
     description: 'Tạo bởi bộ test E2E L4',
-    startDate: '2026-06-01',
-    endDate: '2026-06-01',
+    startDate,
+    endDate,
     durationValue: hours,
     durationUnit: 'HOUR',
     declaredHours: hours,
