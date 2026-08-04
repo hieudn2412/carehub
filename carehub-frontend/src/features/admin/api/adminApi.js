@@ -521,4 +521,50 @@ export const adminApi = {
       params,
     })
   },
+
+  getQualityChecklistDashboard(params) {
+    return httpClient.get('/dashboard/quality/checklists', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getQualityChecklistFilterOptions(params) {
+    return httpClient.get('/dashboard/quality/checklists/filter-options', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getQualityChecklistTrend(params) {
+    return httpClient.get('/dashboard/quality/checklists/trend', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getComplianceTargets(formId) {
+    return httpClient.get(`/quality/compliance-targets/forms/${formId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateHospitalComplianceTarget(formId, payload) {
+    return httpClient.put(`/quality/compliance-targets/forms/${formId}/hospital`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateDepartmentComplianceTarget(formId, departmentId, payload) {
+    return httpClient.put(`/quality/compliance-targets/forms/${formId}/departments/${departmentId}`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteDepartmentComplianceTarget(formId, departmentId, lockVersion) {
+    return httpClient.delete(`/quality/compliance-targets/forms/${formId}/departments/${departmentId}`, {
+      headers: authHeaders(),
+      params: lockVersion === null || lockVersion === undefined ? undefined : { lockVersion },
+    })
+  },
 }

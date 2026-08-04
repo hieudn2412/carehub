@@ -310,6 +310,10 @@ function AppRouter() {
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/competency" element={protectedElement(<StaffCompetencyPage />)} />
       <Route
+        path="/staff/reports/checklist-dashboard"
+        element={protectedElement(<ChecklistQualityDashboardPage role="user" />)}
+      />
+      <Route
         path="/staff/quality/history"
         element={protectedElement(
           <ManagerEvaluationHistoryPage

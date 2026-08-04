@@ -129,6 +129,9 @@ function Sidebar({ alertSummary = {} }) {
         { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo liên tục', path: '/staff/training' },
         { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/staff/competency' },
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
+        ...(!isManager ? [
+          { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
+        ] : []),
         ...(!isManager && hasAssignedChecklist ? [
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
         ] : []),
