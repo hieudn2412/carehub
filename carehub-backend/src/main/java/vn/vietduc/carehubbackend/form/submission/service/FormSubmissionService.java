@@ -50,6 +50,7 @@ public class FormSubmissionService {
     private final Clock clock;
     private final NotificationEventPublisher notificationEventPublisher;
     private final NotificationVariableFormatter notificationVariableFormatter;
+    private final FormHistoryAccessPolicy historyAccessPolicy;
 
     @Transactional
     public FormSubmissionResponse create(CreateFormSubmissionRequest request) {
@@ -216,8 +217,16 @@ public class FormSubmissionService {
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
 
+        if (historyAccessPolicy.isManager()) {
+            historyAccessPolicy.requireFormAccess(formId);
+            if (status != FormSubmissionStatus.SUBMITTED) {
+                throw new ForbiddenException("Manager chỉ được xem kết quả đánh giá đã nộp");
+            }
+        }
+        Long scopedDepartmentId = historyAccessPolicy.resolveDepartmentScope(departmentId);
+
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
-                keyword, submittedByUserId, departmentId, result, dateFrom, dateTo);
+                keyword, submittedByUserId, scopedDepartmentId, result, dateFrom, dateTo);
         if (status != FormSubmissionStatus.SUBMITTED) {
             FormSubmissionResult exactResult = criteria.filterResults() && criteria.results().size() == 1
                     ? criteria.results().get(0)
@@ -258,8 +267,13 @@ public class FormSubmissionService {
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
 
+        if (historyAccessPolicy.isManager()) {
+            historyAccessPolicy.requireFormAccess(formId);
+        }
+        Long scopedDepartmentId = historyAccessPolicy.resolveDepartmentScope(departmentId);
+
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
-                keyword, submittedByUserId, departmentId, result, dateFrom, dateTo);
+                keyword, submittedByUserId, scopedDepartmentId, result, dateFrom, dateTo);
         var summary = submissionRepository.summarizeHistoryByFormVersion(
                 formId,
                 versionId,
@@ -288,7 +302,8 @@ public class FormSubmissionService {
     public FormSubmissionResponse get(Long id) {
         FormSubmission submission = submissionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Form submission not found"));
-        if (!isAdmin() && !submission.getSubmittedBy().getId().equals(securityUtils.getCurrentUserId())) {
+        boolean ownsSubmission = submission.getSubmittedBy().getId().equals(securityUtils.getCurrentUserId());
+        if (!isAdmin() && !ownsSubmission && !historyAccessPolicy.managerCanRead(submission)) {
             throw new ResourceNotFoundException("Form submission not found");
         }
         return toResponse(submission, true);

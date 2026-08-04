@@ -295,8 +295,12 @@ function AppRouter() {
       <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
       <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
       <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
-      <Route path="/manager/quality/history" element={managerOrAdminElement(<ManagerEvaluationHistoryPage />)} />
-      <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage />)} />
+      <Route path="/manager/quality/history" element={managerOrAdminElement(<AdminQualityHistoryPage role="manager" />)} />
+      <Route
+        path="/manager/quality/history/forms/:formId/versions/:versionId"
+        element={managerOrAdminElement(<AdminQualityHistoryVersionPage role="manager" />)}
+      />
+      <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<AdminQualityHistoryDetailPage role="manager" />)} />
       <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />
       <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/manager/compliance-by-technique" element={managerOrAdminElement(<ComplianceByTechniquePage />)} />
@@ -314,6 +318,10 @@ function AppRouter() {
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/competency/all" element={protectedElement(<StaffCompetencyPage />)} />
       <Route path="/staff/competency" element={protectedElement(<StaffComplianceDashboardPage />)} />
+      <Route
+        path="/staff/reports/checklist-dashboard"
+        element={protectedElement(<ChecklistQualityDashboardPage role="user" />)}
+      />
       <Route
         path="/staff/quality/history"
         element={protectedElement(

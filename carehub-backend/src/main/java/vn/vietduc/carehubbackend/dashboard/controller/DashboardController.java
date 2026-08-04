@@ -26,8 +26,11 @@ import vn.vietduc.carehubbackend.dashboard.dto.DashboardRecentActivityResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardTrendBucket;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardUserSummaryResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardUsersByDepartmentResponse;
+import vn.vietduc.carehubbackend.dashboard.dto.QualityChecklistPerformanceResponse;
+import vn.vietduc.carehubbackend.dashboard.dto.QualityChecklistView;
 import vn.vietduc.carehubbackend.dashboard.service.DashboardAccessPolicy;
 import vn.vietduc.carehubbackend.dashboard.service.DashboardService;
+import vn.vietduc.carehubbackend.dashboard.service.QualityChecklistDashboardService;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
 import java.time.LocalDate;
@@ -39,6 +42,56 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final DashboardAccessPolicy dashboardAccessPolicy;
     private final SecurityUtils securityUtils;
+    private final QualityChecklistDashboardService qualityChecklistDashboardService;
+
+    @GetMapping("/quality/checklists")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<ApiResponse<PageResponse<QualityChecklistPerformanceResponse>>> qualityChecklists(
+            @RequestParam(defaultValue = "LATEST") QualityChecklistView view,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long formId,
+            @RequestParam(required = false) Long subjectUserId,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) DashboardFormResultFilter resultStatus,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        DashboardFormFilter filter = new DashboardFormFilter(fromDate, toDate, departmentId, formId,
+                subjectUserId, submittedByUserId, resultStatus);
+        return ResponseEntity.ok(ApiResponse.success("Lấy dashboard chất lượng chăm sóc thành công",
+                PageResponse.from(qualityChecklistDashboardService.performance(view, keyword, filter, pageable))));
+    }
+
+    @GetMapping("/quality/checklists/filter-options")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<ApiResponse<DashboardFormFilterOptionsResponse>> qualityChecklistFilterOptions(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long departmentId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("Lấy bộ lọc chất lượng chăm sóc thành công",
+                qualityChecklistDashboardService.filterOptions(fromDate, toDate, departmentId)));
+    }
+
+    @GetMapping("/quality/checklists/trend")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    public ResponseEntity<ApiResponse<DashboardFormTrendResponse>> qualityChecklistTrend(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) DashboardTrendBucket bucket,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam Long formId,
+            @RequestParam(required = false) Long subjectUserId,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) DashboardFormResultFilter resultStatus
+    ) {
+        DashboardFormFilter filter = new DashboardFormFilter(fromDate, toDate, departmentId, formId,
+                subjectUserId, submittedByUserId, resultStatus);
+        return ResponseEntity.ok(ApiResponse.success("Lấy xu hướng chất lượng chăm sóc thành công",
+                qualityChecklistDashboardService.trend(filter, bucket)));
+    }
 
     @GetMapping("/overview")
     @PreAuthorize("hasRole('ADMIN')")

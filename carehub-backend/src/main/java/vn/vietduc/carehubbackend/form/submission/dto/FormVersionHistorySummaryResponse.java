@@ -17,6 +17,8 @@ public record FormVersionHistorySummaryResponse(
         long total,
         long passed,
         long failed,
-        BigDecimal averageConvertedScore
+        BigDecimal averageConvertedScore,
+        BigDecimal complianceRate,
+        Instant lastSubmittedAt
 ) {
 }

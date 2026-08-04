@@ -30,8 +30,16 @@ const RESULT_OPTIONS = [
   { value: 'FAILED_CRITICAL', label: 'Không đạt câu trọng yếu' },
 ]
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
-const UNBOUNDED_DATE_FROM = '1900-01-01'
-const UNBOUNDED_DATE_TO = '2099-12-31'
+
+function getDefaultDateRange() {
+  const today = new Date()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return {
+    dateFrom: `${today.getFullYear()}-01-01`,
+    dateTo: `${today.getFullYear()}-${month}-${day}`,
+  }
+}
 
 function getPageContent(response) {
   const data = response?.data?.data
@@ -148,21 +156,24 @@ function getPaginationItems(currentPage, totalPages) {
   ))
 }
 
-function AdminQualityHistoryVersionPage() {
+function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { formId, versionId } = useParams()
+  const isManager = role === 'manager'
+  const basePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
+  const defaultDateRange = useMemo(() => getDefaultDateRange(), [])
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parsePage(searchParams.get('page'))
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(searchParams.get('size')))
     ? Number(searchParams.get('size'))
     : 10
   const keyword = searchParams.get('keyword') || ''
-  const submittedByUserId = searchParams.get('submittedByUserId') || ''
-  const departmentId = searchParams.get('departmentId') || ''
+  const submittedByUserId = isManager ? '' : searchParams.get('submittedByUserId') || ''
+  const departmentId = isManager ? '' : searchParams.get('departmentId') || ''
   const result = searchParams.get('result') || ''
-  const dateFrom = searchParams.get('dateFrom') || ''
-  const dateTo = searchParams.get('dateTo') || ''
+  const dateFrom = searchParams.get('dateFrom') || defaultDateRange.dateFrom
+  const dateTo = searchParams.get('dateTo') || defaultDateRange.dateTo
 
   const [keywordInput, setKeywordInput] = useState(keyword)
   const [form, setForm] = useState(null)
@@ -228,22 +239,44 @@ function AdminQualityHistoryVersionPage() {
 
   useEffect(() => {
     let alive = true
-    Promise.all([
-      adminApi.getFormById(formId),
-      adminApi.getFormVersionById(formId, versionId),
-      adminApi.getDepartments(),
-      fetchAllPages((params) => adminApi.getFormAssignmentsByForm(formId, params), { status: 'ACTIVE' }),
-    ])
-      .then(([formResponse, versionResponse, departmentResponse, nextAssignments]) => {
-        if (!alive) return
-        setForm(formResponse.data?.data || null)
-        setVersion(versionResponse.data?.data || null)
-        setDepartments(normalizeDepartments(departmentResponse))
-        setAssignments(nextAssignments.filter((item) => (
+    const loadMetadata = async () => {
+      if (isManager) {
+        const [formResponse, versionsResponse] = await Promise.all([
+          adminApi.getFormHistoryById(formId),
+          adminApi.getFormHistoryVersions(formId, { dateFrom, dateTo }),
+        ])
+        const versionHistory = Array.isArray(versionsResponse?.data?.data) ? versionsResponse.data.data : []
+        return {
+          form: formResponse?.data?.data || null,
+          version: versionHistory.find((item) => String(item.versionId) === String(versionId)) || null,
+          departments: [],
+          assignments: [],
+        }
+      }
+      const [formResponse, versionResponse, departmentResponse, nextAssignments] = await Promise.all([
+        adminApi.getFormById(formId),
+        adminApi.getFormVersionById(formId, versionId),
+        adminApi.getDepartments(),
+        fetchAllPages((params) => adminApi.getFormAssignmentsByForm(formId, params), { status: 'ACTIVE' }),
+      ])
+      return {
+        form: formResponse.data?.data || null,
+        version: versionResponse.data?.data || null,
+        departments: normalizeDepartments(departmentResponse),
+        assignments: nextAssignments.filter((item) => (
           String(item.formVersionId) === String(versionId)
           && item.effectiveStatus === 'ACTIVE'
           && item.itemStatus === 'ACTIVE'
-        )))
+        )),
+      }
+    }
+    loadMetadata()
+      .then((metadata) => {
+        if (!alive) return
+        setForm(metadata.form)
+        setVersion(metadata.version)
+        setDepartments(metadata.departments)
+        setAssignments(metadata.assignments)
         setMetadataError('')
       })
       .catch((error) => {
@@ -256,19 +289,19 @@ function AdminQualityHistoryVersionPage() {
     return () => {
       alive = false
     }
-  }, [formId, refreshKey, versionId])
+  }, [dateFrom, dateTo, formId, isManager, refreshKey, versionId])
 
   const requestParams = useMemo(() => ({
     status: 'SUBMITTED',
     keyword: keyword || undefined,
-    submittedByUserId: submittedByUserId || undefined,
-    departmentId: departmentId || undefined,
+    submittedByUserId: isManager ? undefined : submittedByUserId || undefined,
+    departmentId: isManager ? undefined : departmentId || undefined,
     result: result || undefined,
     // Always send typed date values. PostgreSQL cannot infer a timestamp type
     // from a null optional parameter in the shared history predicates.
-    dateFrom: dateFrom || UNBOUNDED_DATE_FROM,
-    dateTo: dateTo || UNBOUNDED_DATE_TO,
-  }), [dateFrom, dateTo, departmentId, keyword, result, submittedByUserId])
+    dateFrom,
+    dateTo,
+  }), [dateFrom, dateTo, departmentId, isManager, keyword, result, submittedByUserId])
 
   useEffect(() => {
     let alive = true
@@ -306,6 +339,7 @@ function AdminQualityHistoryVersionPage() {
   }, [formId, page, pageSize, refreshKey, requestParams, updateQuery, versionId])
 
   useEffect(() => {
+    if (isManager) return undefined
     const requestId = evaluatorRequestId.current + 1
     evaluatorRequestId.current = requestId
     const timer = window.setTimeout(() => {
@@ -328,18 +362,20 @@ function AdminQualityHistoryVersionPage() {
         })
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [evaluatorQuery])
+  }, [evaluatorQuery, isManager])
 
   useEffect(() => {
+    if (isManager) return
     if (!submittedByUserId) return
     const existing = evaluatorOptions.find((user) => String(user.id) === String(submittedByUserId))
     if (existing) return
     adminApi.getUserById(submittedByUserId)
       .then((response) => setSelectedEvaluatorFallback(response?.data?.data || null))
       .catch(() => setSelectedEvaluatorFallback(null))
-  }, [evaluatorOptions, submittedByUserId])
+  }, [evaluatorOptions, isManager, submittedByUserId])
 
   useEffect(() => {
+    if (isManager) return undefined
     if (!managerModalOpen) return undefined
     const previousOverflow = document.body.style.overflow
     const closeOnEscape = (event) => {
@@ -351,7 +387,7 @@ function AdminQualityHistoryVersionPage() {
       document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [confirmRevoke, managerModalOpen])
+  }, [confirmRevoke, isManager, managerModalOpen])
 
   const managers = assignments
   const assignedManagerIds = useMemo(() => new Set(managers.map((item) => String(item.manager?.id))), [managers])
@@ -449,7 +485,8 @@ function AdminQualityHistoryVersionPage() {
     }
   }
 
-  const hasFilters = Boolean(keyword || submittedByUserId || departmentId || result || dateFrom || dateTo)
+  const hasFilters = Boolean(keyword || result || (!isManager && (submittedByUserId || departmentId))
+    || dateFrom !== defaultDateRange.dateFrom || dateTo !== defaultDateRange.dateTo)
   const evaluatorSelectOptions = [
     { value: '', label: 'Tất cả người chấm' },
     ...evaluatorOptions.map((user) => ({
@@ -482,10 +519,10 @@ function AdminQualityHistoryVersionPage() {
   return (
     <AppShell
       className="admin-quality-history-page"
-      back={{ to: `/admin/quality/history?formId=${encodeURIComponent(formId)}`, label: 'Quay lại' }}
+      back={{ to: `${basePath}?formId=${encodeURIComponent(formId)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`, label: 'Quay lại' }}
       breadcrumbs={[
         { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
+        { label: 'Lịch sử đánh giá', link: basePath },
         { label: `Phiên bản v${version?.versionNumber || ''}` },
       ]}
     >
@@ -515,24 +552,28 @@ function AdminQualityHistoryVersionPage() {
                   <article><span>Tổng lượt</span><strong>{resultsLoading ? '…' : summary.total}</strong><small>Theo bộ lọc hiện tại</small></article>
                   <article><span>Đạt</span><strong>{resultsLoading ? '…' : summary.passed}</strong><small>Chưa đạt: {summary.failed}</small></article>
                   <article><span>Điểm trung bình</span><strong>{resultsLoading ? '…' : formatScore(summary.averageConvertedScore)}</strong><small>Thang điểm 10</small></article>
-                  <button className="aqh-summary-manager" onClick={openManagerModal} type="button">
-                    <span><UserSwitchOutlined /> Người được giao</span><strong>{managers.length}</strong><small>Nhấn để quản lý</small>
-                  </button>
+                  {!isManager && (
+                    <button className="aqh-summary-manager" onClick={openManagerModal} type="button">
+                      <span><UserSwitchOutlined /> Người được giao</span><strong>{managers.length}</strong><small>Nhấn để quản lý</small>
+                    </button>
+                  )}
                 </div>
               </section>
 
               <section className="aqh-response-panel aqh-response-panel--full">
                 <div className="aqh-panel-heading aqh-panel-heading--results">
                   <div><h3>Kết quả đánh giá</h3><p>{resultsLoading ? 'Đang cập nhật...' : `${submissionData.totalElements} kết quả phù hợp`}</p></div>
-                  <button
-                    className="aqh-export-button"
-                    disabled={exporting || resultsLoading || submissionData.totalElements === 0}
-                    onClick={exportResponses}
-                    type="button"
-                  >
-                    {exporting ? <LoadingOutlined spin /> : <FileExcelOutlined />}
-                    {exporting ? 'Đang xuất...' : 'Xuất Excel'}
-                  </button>
+                  {!isManager && (
+                    <button
+                      className="aqh-export-button"
+                      disabled={exporting || resultsLoading || submissionData.totalElements === 0}
+                      onClick={exportResponses}
+                      type="button"
+                    >
+                      {exporting ? <LoadingOutlined spin /> : <FileExcelOutlined />}
+                      {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                    </button>
+                  )}
                 </div>
 
                 <div className="aqh-history-filters">
@@ -555,16 +596,20 @@ function AdminQualityHistoryVersionPage() {
                       type="button"
                     >
                       <FilterOutlined /> Bộ lọc
-                      {[submittedByUserId, departmentId, result, dateFrom, dateTo].filter(Boolean).length > 0 && (
+                      {[isManager ? '' : submittedByUserId, isManager ? '' : departmentId, result,
+                        dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
+                        dateTo !== defaultDateRange.dateTo ? dateTo : ''].filter(Boolean).length > 0 && (
                         <span className="aqh-history-filter-count">
-                          {[submittedByUserId, departmentId, result, dateFrom, dateTo].filter(Boolean).length}
+                          {[isManager ? '' : submittedByUserId, isManager ? '' : departmentId, result,
+                            dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
+                            dateTo !== defaultDateRange.dateTo ? dateTo : ''].filter(Boolean).length}
                         </span>
                       )}
                     </button>
                   </div>
                   {isFilterOpen && (
                     <div className="aqh-history-filter-panel" id="quality-history-filter-panel">
-                    <label className="aqh-filter-field">
+                    {!isManager && <label className="aqh-filter-field">
                       <span>Người thực hiện chấm</span>
                       <SearchableSelect
                         ariaLabel="Lọc theo người thực hiện chấm"
@@ -577,8 +622,8 @@ function AdminQualityHistoryVersionPage() {
                         selectedOption={selectedEvaluatorOption}
                         value={submittedByUserId}
                       />
-                    </label>
-                    <label className="aqh-filter-field">
+                    </label>}
+                    {!isManager && <label className="aqh-filter-field">
                       <span>Khoa/phòng</span>
                       <SearchableSelect
                         ariaLabel="Lọc theo khoa phòng"
@@ -588,7 +633,7 @@ function AdminQualityHistoryVersionPage() {
                         searchPlaceholder="Tìm khoa/phòng..."
                         value={departmentId}
                       />
-                    </label>
+                    </label>}
                     <label className="aqh-filter-field">
                       <span>Kết quả</span>
                       <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
@@ -597,7 +642,7 @@ function AdminQualityHistoryVersionPage() {
                     </label>
                     <label className="aqh-filter-field"><span>Từ ngày</span><input type="date" value={dateFrom} onChange={(event) => updateQuery({ dateFrom: event.target.value })} /></label>
                     <label className="aqh-filter-field"><span>Đến ngày</span><input type="date" value={dateTo} onChange={(event) => updateQuery({ dateTo: event.target.value })} /></label>
-                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize) }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
+                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize), dateFrom: defaultDateRange.dateFrom, dateTo: defaultDateRange.dateTo }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
                     </div>
                   )}
                 </div>
@@ -658,7 +703,7 @@ function AdminQualityHistoryVersionPage() {
                                   <button
                                     aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
                                     className="admin-table-action admin-table-action--icon admin-table-action--primary"
-                                    onClick={() => navigate(`/admin/quality/history/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
+                                    onClick={() => navigate(`${basePath}/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
                                     title="Xem chi tiết"
                                     type="button"
                                   ><EyeOutlined /></button>
@@ -690,7 +735,7 @@ function AdminQualityHistoryVersionPage() {
           )}
         </div>
 
-      {managerModalOpen && (
+      {!isManager && managerModalOpen && (
         <div className="aqh-manager-modal-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget && !confirmRevoke) setManagerModalOpen(false) }} role="presentation">
           <section aria-labelledby="aqh-manager-modal-title" aria-modal="true" className="aqh-manager-modal" onMouseDown={(event) => event.stopPropagation()} role="dialog">
             <header className="aqh-manager-modal__header">
@@ -745,14 +790,14 @@ function AdminQualityHistoryVersionPage() {
         </div>
       )}
 
-      <ConfirmModal
+      {!isManager && <ConfirmModal
         danger
         isOpen={Boolean(confirmRevoke)}
         message={confirmRevoke ? `Thu hồi quyền thực hiện quy trình của ${getManagerName(confirmRevoke.manager)}?` : ''}
         onCancel={() => setConfirmRevoke(null)}
         onConfirm={revokeAssignment}
         title="Thu hồi phân quyền"
-      />
+      />}
     </AppShell>
   )
 }
