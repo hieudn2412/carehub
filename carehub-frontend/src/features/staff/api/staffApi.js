@@ -97,4 +97,18 @@ export const staffApi = {
       params,
     })
   },
+
+  getQualityChecklistDashboard(params) {
+    return httpClient.get('/dashboard/quality/checklists', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getQualityChecklistTrend(params) {
+    return httpClient.get('/dashboard/quality/checklists/trend', {
+      headers: authHeaders(),
+      params,
+    })
+  },
 }

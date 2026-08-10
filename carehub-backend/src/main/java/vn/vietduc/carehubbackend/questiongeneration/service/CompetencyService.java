@@ -538,7 +538,7 @@ public class CompetencyService {
                     level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
                     overallScore != null
                             && employeeTargetScore != null
-                            && overallScore.compareTo(employeeTargetScore) > 0
+                            && overallScore.compareTo(employeeTargetScore) >= 0
             ));
         }
 

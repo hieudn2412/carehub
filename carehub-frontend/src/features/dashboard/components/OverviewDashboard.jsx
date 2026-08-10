@@ -1,16 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   AlertOutlined,
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
   BookOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   DownloadOutlined,
   ExperimentOutlined,
   FilterOutlined,
+  LoadingOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import './OverviewDashboard.css'
 
 const DOMAIN_META = {
@@ -127,6 +143,252 @@ function DomainCard({ type, data, onOpen }) {
   )
 }
 
+function formatScore(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
+}
+
+function ManagementKpiCard({ type, data, onOpen }) {
+  const total = Number(data?.total) || 0
+  const passed = Number(data?.passed) || 0
+  const rate = Number(data?.rate) || 0
+  const available = data?.available !== false
+  const labels = {
+    training: 'Đào tạo liên tục',
+    quality: 'Tuân thủ chung',
+    exams: 'Đạt năng lực chuyên môn',
+  }
+  const primaryValue = type === 'training'
+    ? '≥ 120h'
+    : type === 'exams'
+      ? `TB ${formatScore(data?.overallAverage)}/10`
+      : `${formatNumber(passed)}/${formatNumber(total)}`
+  const detail = type === 'training'
+    ? 'Chuẩn đào tạo liên tục'
+    : type === 'quality'
+      ? 'Theo điểm sàn và điểm liệt'
+      : `Từ 01/01 đến hôm nay · Lý thuyết ${formatScore(data?.knowledgeAverage)} · Kỹ năng ${formatScore(data?.skillAverage)}${data?.targetScore == null ? ' · Theo ngưỡng từng khoa' : ` · Ngưỡng ${formatScore(data.targetScore)}`}`
+
+  return (
+    <button
+      className={`overview-management-kpi overview-management-kpi--${type}`}
+      disabled={!onOpen}
+      onClick={onOpen}
+      type="button"
+    >
+      <span className="overview-management-kpi__label">{labels[type]}</span>
+      {available ? (
+        <span className="overview-management-kpi__metrics">
+          <strong>{primaryValue}</strong>
+          <b>{formatPercent(rate)}</b>
+        </span>
+      ) : (
+        <span className="overview-management-kpi__empty">Chưa có dữ liệu</span>
+      )}
+      <small>{detail}</small>
+    </button>
+  )
+}
+
+function ComplianceTargetChart({ items = [], loading, onDetails }) {
+  if (loading) {
+    return <section className="overview-compliance-chart"><LoadingBlock /></section>
+  }
+
+  if (!items.length) {
+    return (
+      <section className="overview-compliance-chart overview-compliance-chart--empty">
+        <ExperimentOutlined />
+        <strong>Chưa có dữ liệu bảng kiểm trong phạm vi này</strong>
+        <span>Biểu đồ sẽ xuất hiện khi hệ thống ghi nhận kết quả đánh giá.</span>
+      </section>
+    )
+  }
+
+  return (
+    <section className="overview-compliance-chart" aria-label="So sánh mục tiêu và thực tế theo bảng kiểm">
+      <header>
+        <div>
+          <h2>Mức độ tuân thủ theo bảng kiểm</h2>
+          <p>So sánh mục tiêu đang áp dụng với tỷ lệ thực tế đạt được.</p>
+        </div>
+        <div className="overview-compliance-chart__actions">
+          <span>{items.length} bảng kiểm</span>
+          <button type="button" onClick={onDetails}>Xem chi tiết <ArrowRightOutlined /></button>
+        </div>
+      </header>
+      <div className="overview-compliance-chart__canvas">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={items} margin={{ top: 16, right: 18, left: 0, bottom: 74 }} barGap={4}>
+            <CartesianGrid stroke="#e7edf2" strokeDasharray="4 4" vertical={false} />
+            <XAxis
+              dataKey="name"
+              angle={-32}
+              height={88}
+              interval={0}
+              textAnchor="end"
+              tick={{ fill: '#556274', fontSize: 11 }}
+              tickLine={false}
+            />
+            <YAxis
+              domain={[0, 100]}
+              tickFormatter={(value) => `${value}%`}
+              tick={{ fill: '#667085', fontSize: 11 }}
+              tickLine={false}
+              width={44}
+            />
+            <Tooltip
+              formatter={(value, name) => [formatPercent(value), name]}
+              labelFormatter={(label) => label}
+              contentStyle={{ border: '1px solid #dce5ec', borderRadius: 8 }}
+            />
+            <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: 12 }} />
+            <Bar dataKey="target" name="Mục tiêu" fill="#d4d9df" radius={[4, 4, 0, 0]} maxBarSize={34} />
+            <Bar dataKey="actual" name="Thực tế đạt được" fill="#0d8a78" radius={[4, 4, 0, 0]} maxBarSize={34} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
+  )
+}
+
+function complianceTrend(items = []) {
+  const resultsByPeriod = new Map(items.map((item) => [item.period, {
+    total: Number(item.submittedCount) || 0,
+    passed: Number(item.passedCount) || 0,
+  }]))
+  const today = new Date()
+  const year = today.getFullYear()
+  const cursor = new Date(year, 0, 1)
+  const timeline = []
+  let cumulativeTotal = 0
+  let cumulativePassed = 0
+  while (cursor <= today) {
+    const month = String(cursor.getMonth() + 1).padStart(2, '0')
+    const day = String(cursor.getDate()).padStart(2, '0')
+    const period = `${year}-${month}-${day}`
+    const result = resultsByPeriod.get(period)
+    cumulativeTotal += result?.total || 0
+    cumulativePassed += result?.passed || 0
+    timeline.push({
+      period,
+      rate: cumulativeTotal ? cumulativePassed * 100 / cumulativeTotal : null,
+    })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return timeline
+}
+
+function monthTicks() {
+  const today = new Date()
+  const year = today.getFullYear()
+  return Array.from({ length: today.getMonth() + 1 }, (_, index) => (
+    `${year}-${String(index + 1).padStart(2, '0')}-01`
+  ))
+}
+
+function monthLabel(value) {
+  return `T${Number(String(value).slice(5, 7))}`
+}
+
+function dateLabel(value) {
+  const [year, month, day] = String(value).split('-')
+  return `${day}/${month}/${year}`
+}
+
+function ComplianceDetailCard({ item, trend, loading }) {
+  const hasTimeline = trend.length > 0
+  return (
+    <article className="overview-checklist-card">
+      <h3 title={item.name}>{item.name}</h3>
+      <div className="overview-checklist-card__metrics">
+        <span><strong>{formatPercent(item.actual)}</strong><small>Tỷ lệ tuân thủ</small></span>
+        <span><strong>{formatNumber(item.passed)}/{formatNumber(item.total)}</strong><small>Đạt / Tổng lượt</small></span>
+        <span><strong>{formatPercent(item.target)}</strong><small>Tỷ lệ mục tiêu</small></span>
+      </div>
+      <div className="overview-checklist-card__sparkline" aria-label={`Xu hướng tuân thủ của ${item.name}`}>
+        {loading ? <LoadingOutlined spin /> : hasTimeline ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={trend} margin={{ top: 12, right: 10, bottom: 4, left: -12 }}>
+              <CartesianGrid stroke="#edf1f4" strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="period"
+                axisLine={{ stroke: '#aab4c0' }}
+                tick={{ fill: '#667085', fontSize: 9 }}
+                tickLine={false}
+                ticks={monthTicks()}
+                tickFormatter={monthLabel}
+                interval={0}
+                height={26}
+              />
+              <YAxis
+                domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                tickFormatter={(value) => `${value}%`}
+                axisLine={{ stroke: '#aab4c0' }}
+                tick={{ fill: '#667085', fontSize: 9 }}
+                tickLine={false}
+                width={42}
+              />
+              <Tooltip
+                formatter={(value) => [formatPercent(value), 'Tỷ lệ tuân thủ']}
+                labelFormatter={(label) => `Ngày ${dateLabel(label)}`}
+                contentStyle={{ border: '1px solid #dce5ec', borderRadius: 8, fontSize: 11 }}
+              />
+              <ReferenceLine
+                y={item.target}
+                stroke="#d97706"
+                strokeDasharray="5 4"
+                strokeWidth={1.5}
+              />
+              <Line
+                type="monotone"
+                dataKey="rate"
+                stroke="#0d8a78"
+                strokeWidth={2}
+                dot={(props) => (props.payload.rate == null ? null : (
+                  <circle cx={props.cx} cy={props.cy} r="2.5" fill="#0d8a78" />
+                ))}
+                activeDot={{ r: 4 }}
+                connectNulls
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : <span>Chưa đủ dữ liệu để hiển thị xu hướng</span>}
+      </div>
+      <div className="overview-checklist-card__legend" aria-hidden="true">
+        <span><i className="is-actual" />Tuân thủ thực tế</span>
+        <span><i className="is-target" />Mục tiêu</span>
+      </div>
+    </article>
+  )
+}
+
+function ComplianceDetails({ items, trends, loading, onBack }) {
+  return (
+    <section className="overview-checklist-details">
+      <header>
+        <button type="button" onClick={onBack}><ArrowLeftOutlined /> Quay lại biểu đồ</button>
+        <div>
+          <h2>Chi tiết tuân thủ theo bảng kiểm</h2>
+          <p>Số liệu tính từ đầu năm đến thời điểm truy cập trong phạm vi đang chọn.</p>
+        </div>
+      </header>
+      <div className="overview-checklist-details__grid">
+        {items.map((item) => (
+          <ComplianceDetailCard
+            key={item.id}
+            item={item}
+            trend={trends[item.id] || []}
+            loading={loading}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 export default function OverviewDashboard({
   role,
   profile,
@@ -134,24 +396,44 @@ export default function OverviewDashboard({
   error,
   filters,
   departments = [],
-  professionalFields = [],
   onFilterChange,
   onExport,
   onNavigate,
   onSummaryOpen,
   summary,
   domains,
-  warnings = [],
+  complianceChart = [],
+  onLoadComplianceTrend,
   visibleDomains = ['training', 'exams', 'quality'],
 }) {
   const isStaff = role === 'staff'
   const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [showComplianceDetails, setShowComplianceDetails] = useState(false)
+  const [complianceTrends, setComplianceTrends] = useState({})
+  const [complianceTrendsLoading, setComplianceTrendsLoading] = useState(false)
   const activeFilterCount = [
     role === 'admin' && filters.departmentId,
-    filters.period && filters.period !== '30d',
-    filters.professionalFieldId,
   ].filter(Boolean).length
+
+  useEffect(() => {
+    setShowComplianceDetails(false)
+    setComplianceTrends({})
+  }, [complianceChart])
+
+  const openComplianceDetails = async () => {
+    setShowComplianceDetails(true)
+    if (!onLoadComplianceTrend || !complianceChart.length) return
+    setComplianceTrendsLoading(true)
+    const results = await Promise.allSettled(
+      complianceChart.map((item) => onLoadComplianceTrend(item.id)),
+    )
+    setComplianceTrends(Object.fromEntries(results.map((result, index) => [
+      complianceChart[index].id,
+      result.status === 'fulfilled' ? complianceTrend(result.value) : [],
+    ])))
+    setComplianceTrendsLoading(false)
+  }
 
   return (
     <div className={`overview-dashboard overview-dashboard--${role}`}>
@@ -180,7 +462,7 @@ export default function OverviewDashboard({
           </div>
 
           {isFilterOpen && (
-            <div className="overview-filters overview-filter-panel" id="overview-dashboard-filter-panel">
+            <div className="overview-filters overview-filters--scope overview-filter-panel" id="overview-dashboard-filter-panel">
               <label>
                 <span>Khoa/Phòng</span>
                 {role === 'admin' ? (
@@ -203,33 +485,6 @@ export default function OverviewDashboard({
                   <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
                 )}
               </label>
-              <label>
-                <span>Thời gian</span>
-                <select value={filters.period} onChange={(event) => onFilterChange('period', event.target.value)}>
-                  <option value="30d">30 ngày gần nhất</option>
-                  <option value="90d">90 ngày gần nhất</option>
-                  <option value="year">Năm hiện tại</option>
-                  <option value="all">Toàn bộ thời gian</option>
-                </select>
-              </label>
-              <label>
-                <span>Lĩnh vực chuyên môn</span>
-                <SearchableSelect
-                  value={filters.professionalFieldId}
-                  onChange={(value) => onFilterChange('professionalFieldId', value)}
-                  ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-                  placeholder="Tất cả lĩnh vực"
-                  searchPlaceholder="Gõ tên lĩnh vực..."
-                  options={[
-                    { value: '', label: 'Tất cả lĩnh vực' },
-                    ...professionalFields.map((field) => ({
-                      value: field.id,
-                      label: field.name,
-                      searchText: field.code,
-                    })),
-                  ]}
-                />
-              </label>
             </div>
           )}
         </section>
@@ -238,8 +493,8 @@ export default function OverviewDashboard({
       {error && <div className="overview-error" role="alert"><AlertOutlined /> {error}</div>}
 
       {loading ? (
-        <section className="overview-summary overview-summary--loading"><LoadingBlock /></section>
-      ) : (
+        isStaff && <section className="overview-summary overview-summary--loading"><LoadingBlock /></section>
+      ) : isStaff ? (
         <section className="overview-summary">
           <SummaryCard
             icon={<TeamOutlined />}
@@ -274,43 +529,48 @@ export default function OverviewDashboard({
             onOpen={onSummaryOpen ? () => onSummaryOpen('rate') : undefined}
           />
         </section>
-      )}
+      ) : null}
 
-      <section
-        className="overview-domain-grid"
-        aria-label={isStaff ? 'Các dashboard năng lực' : undefined}
-      >
-        {visibleTypes.map((type) => (
-          <DomainCard
-            key={type}
-            type={type}
-            data={{ ...domains[type], loading }}
-            onOpen={domains[type].path ? () => onNavigate(domains[type].path) : undefined}
-          />
-        ))}
-      </section>
-
-      {!isStaff && (
-        <section className="overview-warning-panel">
-          <header>
-            <div><AlertOutlined /><span><strong>Cảnh báo cần chú ý</strong><small>Ưu tiên xử lý theo phạm vi đang lọc</small></span></div>
-            <span>{warnings.length} cảnh báo</span>
-          </header>
-          {warnings.length === 0 ? (
-            <div className="overview-warning-panel__empty"><CheckCircleOutlined /> Chưa có cảnh báo nổi bật.</div>
-          ) : (
-            <div className="overview-warning-list">
-              {warnings.map((warning) => (
-                <button key={warning.id} type="button" onClick={() => warning.path && onNavigate(warning.path)}>
-                  <span className={`overview-warning-list__dot is-${warning.tone || 'warning'}`} />
-                  <span><strong>{warning.title}</strong><small>{warning.detail}</small></span>
-                  <b>{warning.value}</b>
-                </button>
-              ))}
-            </div>
-          )}
+      {isStaff ? (
+        <section className="overview-domain-grid" aria-label="Các dashboard năng lực">
+          {visibleTypes.map((type) => (
+            <DomainCard
+              key={type}
+              type={type}
+              data={{ ...domains[type], loading }}
+              onOpen={domains[type].path ? () => onNavigate(domains[type].path) : undefined}
+            />
+          ))}
         </section>
+      ) : (
+        <>
+          <section className="overview-management-kpis" aria-label="Chỉ số tổng quan">
+            {['training', 'quality', 'exams'].map((type) => (
+              <ManagementKpiCard
+                key={type}
+                type={type}
+                data={domains[type]}
+                onOpen={domains[type]?.path ? () => onNavigate(domains[type].path) : undefined}
+              />
+            ))}
+          </section>
+          {showComplianceDetails ? (
+            <ComplianceDetails
+              items={complianceChart}
+              trends={complianceTrends}
+              loading={complianceTrendsLoading}
+              onBack={() => setShowComplianceDetails(false)}
+            />
+          ) : (
+            <ComplianceTargetChart
+              items={complianceChart}
+              loading={loading}
+              onDetails={openComplianceDetails}
+            />
+          )}
+        </>
       )}
+
     </div>
   )
 }
