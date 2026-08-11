@@ -8,13 +8,18 @@ import { useEffect, useRef } from 'react'
  */
 function Modal({ title, onClose, footer, size, children }) {
   const panelRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     const previouslyFocused = document.activeElement
     panelRef.current?.focus()
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.()
+      if (event.key === 'Escape') onCloseRef.current?.()
     }
     document.addEventListener('keydown', handleKeyDown)
     const previousOverflow = document.body.style.overflow
@@ -27,7 +32,7 @@ function Modal({ title, onClose, footer, size, children }) {
         previouslyFocused.focus()
       }
     }
-  }, [onClose])
+  }, [])
 
   return (
     <div className="ch-modal-backdrop" onClick={onClose}>

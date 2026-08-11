@@ -22,6 +22,7 @@ import vn.vietduc.carehubbackend.common.response.PageResponse;
 import vn.vietduc.carehubbackend.form.dto.request.CreateFormRequest;
 import vn.vietduc.carehubbackend.form.dto.request.CreateFormVersionRequest;
 import vn.vietduc.carehubbackend.form.dto.request.UpdateFormRequest;
+import vn.vietduc.carehubbackend.form.dto.request.UpdateFormComplianceTargetRequest;
 import vn.vietduc.carehubbackend.form.dto.response.FormResponse;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionResponse;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionSummaryResponse;
@@ -85,6 +86,17 @@ public class FormBuilderController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Update form successfully",
                 formService.update(formId, request)
+        ));
+    }
+
+    @PutMapping("/{formId}/compliance-target")
+    public ResponseEntity<ApiResponse<vn.vietduc.carehubbackend.form.dto.response.FormComplianceTargetResponse>> updateComplianceTarget(
+            @PathVariable Long formId,
+            @Valid @RequestBody UpdateFormComplianceTargetRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Cập nhật mục tiêu tuân thủ thành công",
+                formService.updateComplianceTarget(formId, request.targetPercent())
         ));
     }
 

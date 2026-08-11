@@ -19,11 +19,12 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("${app.api-prefix}/forms")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 public class FormResponseController {
     private final FormSubmissionService service;
 
     @GetMapping("/{formId}/responses")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<FormSubmissionResponse>> listByForm(
             @PathVariable Long formId,
             @RequestParam(required = false) FormSubmissionStatus status,

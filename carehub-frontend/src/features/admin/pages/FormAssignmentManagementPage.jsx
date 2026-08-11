@@ -96,6 +96,9 @@ function FormAssignmentManagementPage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [confirmRevoke, setConfirmRevoke] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [targetInput, setTargetInput] = useState('')
+  const [targetSaving, setTargetSaving] = useState(false)
+  const [targetError, setTargetError] = useState('')
 
   const publishedVersion = form?.currentPublishedVersion
 
@@ -136,6 +139,7 @@ function FormAssignmentManagementPage() {
 
       const nextForm = formResponse.data?.data || null
       setForm(nextForm)
+      setTargetInput(nextForm?.complianceTargetPercent == null ? '' : String(nextForm.complianceTargetPercent))
       setAssignments(getPageContent(assignmentsResponse))
       setActiveAssignments(getPageContent(activeAssignmentsResponse))
       setTotalAssignments(getPageTotalElements(assignmentsResponse))
@@ -236,6 +240,35 @@ function FormAssignmentManagementPage() {
     }
   }
 
+  const persistComplianceTarget = async (value) => {
+    if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) {
+      setTargetError('Mục tiêu phải nằm trong khoảng 0–100%.')
+      return false
+    }
+    try {
+      setTargetSaving(true)
+      setTargetError('')
+      const response = await adminApi.updateFormComplianceTarget(id, value)
+      const saved = response.data?.data
+      setForm(current => current ? { ...current, complianceTargetPercent: saved?.configuredTargetPercent ?? null } : current)
+      setTargetInput(saved?.configuredTargetPercent == null ? '' : String(saved.configuredTargetPercent))
+      return true
+    } catch (error) {
+      setTargetError(error?.response?.data?.message || 'Không thể lưu mục tiêu tuân thủ.')
+      return false
+    } finally {
+      setTargetSaving(false)
+    }
+  }
+
+  const saveComplianceTarget = async (event) => {
+    event.preventDefault()
+    const value = targetInput.trim() === '' ? null : Number(targetInput)
+    await persistComplianceTarget(value)
+  }
+
+  const resetComplianceTarget = () => persistComplianceTarget(null)
+
   const breadcrumbs = [
     { label: 'Quản lý chất lượng' },
     { label: 'Danh sách checklist', link: '/admin/quality/checklists' },
@@ -259,6 +292,25 @@ function FormAssignmentManagementPage() {
                   <strong>{publishedVersion ? `v${publishedVersion.versionNumber}` : 'Chưa công bố'}</strong>
                 </div>
               </section>
+
+              <form className="fam-card fam-compliance-target-card" onSubmit={saveComplianceTarget}>
+                <div className="fam-card__header">
+                  <div>
+                    <h2>Mục tiêu tuân thủ bảng kiểm</h2>
+                    <p>Áp dụng chung cho tất cả khoa/phòng sử dụng bảng kiểm này. Để trống để dùng mức mặc định 80%.</p>
+                  </div>
+                  <strong style={{ color: '#b45309', fontSize: 22 }}>{targetInput === '' ? '80%' : `${targetInput}%`}</strong>
+                </div>
+                <div className="fam-form-fields fam-compliance-target-card__fields">
+                  <label className="fam-field">
+                    <span>Tỷ lệ mục tiêu (%)</span>
+                    <input type="number" min="0" max="100" step="0.01" value={targetInput} onChange={event => setTargetInput(event.target.value)} placeholder="80" disabled={targetSaving} />
+                  </label>
+                  <button className="fam-submit-button" type="submit" disabled={targetSaving}>{targetSaving ? 'Đang lưu...' : 'Lưu mục tiêu'}</button>
+                  <button className="fam-submit-button fam-submit-button--secondary" type="button" disabled={targetSaving || targetInput === ''} onClick={resetComplianceTarget}>Dùng mặc định 80%</button>
+                </div>
+                {targetError && <div className="fam-feedback fam-feedback--error" role="alert">{targetError}</div>}
+              </form>
 
               {errorMessage && (
                 <div className="fam-feedback fam-feedback--error" role="alert">

@@ -259,6 +259,12 @@ export const adminApi = {
     })
   },
 
+  updateFormComplianceTarget(id, targetPercent) {
+    return httpClient.put(`/forms/${id}/compliance-target`, { targetPercent }, {
+      headers: authHeaders(),
+    })
+  },
+
   updateForm(id, data) {
     return httpClient.put(`/forms/${id}`, data, {
       headers: authHeaders(),
@@ -448,8 +454,15 @@ export const adminApi = {
     })
   },
 
-  getFormHistoryVersions(formId) {
+  getFormHistoryVersions(formId, params) {
     return httpClient.get(`/forms/${formId}/history/versions`, {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormHistoryVersionById(formId, versionId) {
+    return httpClient.get(`/forms/${formId}/history/versions/${versionId}`, {
       headers: authHeaders(),
     })
   },
@@ -519,6 +532,52 @@ export const adminApi = {
     return httpClient.get('/dashboard/forms/filter-options', {
       headers: authHeaders(),
       params,
+    })
+  },
+
+  getQualityChecklistDashboard(params) {
+    return httpClient.get('/dashboard/quality/checklists', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getQualityChecklistFilterOptions(params) {
+    return httpClient.get('/dashboard/quality/checklists/filter-options', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getQualityChecklistTrend(params) {
+    return httpClient.get('/dashboard/quality/checklists/trend', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getComplianceTargets(formId) {
+    return httpClient.get(`/quality/compliance-targets/forms/${formId}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateHospitalComplianceTarget(formId, payload) {
+    return httpClient.put(`/quality/compliance-targets/forms/${formId}/hospital`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateDepartmentComplianceTarget(formId, departmentId, payload) {
+    return httpClient.put(`/quality/compliance-targets/forms/${formId}/departments/${departmentId}`, payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  deleteDepartmentComplianceTarget(formId, departmentId, lockVersion) {
+    return httpClient.delete(`/quality/compliance-targets/forms/${formId}/departments/${departmentId}`, {
+      headers: authHeaders(),
+      params: lockVersion === null || lockVersion === undefined ? undefined : { lockVersion },
     })
   },
 }

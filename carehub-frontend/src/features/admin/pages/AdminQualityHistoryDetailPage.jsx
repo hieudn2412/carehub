@@ -76,14 +76,14 @@ function getAnswerDisplay(answer, question) {
   return 'Chưa trả lời'
 }
 
-function getBackTarget(submission, returnTo) {
-  if (!submission) return '/admin/quality/history'
-  const expectedPath = `/admin/quality/history/forms/${submission.formId}/versions/${submission.formVersionId}`
+function getBackTarget(submission, returnTo, basePath) {
+  if (!submission) return basePath
+  const expectedPath = `${basePath}/forms/${submission.formId}/versions/${submission.formVersionId}`
   if (returnTo === expectedPath || returnTo?.startsWith(`${expectedPath}?`)) return returnTo
   return expectedPath
 }
 
-function AdminQualityHistoryDetailPage() {
+function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   const navigate = useNavigate()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
@@ -93,6 +93,8 @@ function AdminQualityHistoryDetailPage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [expandedSections, setExpandedSections] = useState(new Set())
+  const isManager = role === 'manager'
+  const basePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
 
   useEffect(() => {
     let alive = true
@@ -101,10 +103,9 @@ function AdminQualityHistoryDetailPage() {
       .then(async (response) => {
         const submissionData = unwrapData(response)
         if (!submissionData) throw new Error('Không tìm thấy kết quả đánh giá.')
-        const versionResponse = await adminApi.getFormVersionById(
-          submissionData.formId,
-          submissionData.formVersionId,
-        )
+        const versionResponse = isManager
+          ? await adminApi.getFormHistoryVersionById(submissionData.formId, submissionData.formVersionId)
+          : await adminApi.getFormVersionById(submissionData.formId, submissionData.formVersionId)
         if (!alive) return
         const versionData = unwrapData(versionResponse)
         setSubmission(submissionData)
@@ -125,7 +126,7 @@ function AdminQualityHistoryDetailPage() {
     return () => {
       alive = false
     }
-  }, [id, refreshKey])
+  }, [id, isManager, refreshKey])
 
   const answersByQuestion = useMemo(() => new Map(
     (submission?.answers || []).map((answer) => [String(answer.questionKey), answer]),
@@ -140,7 +141,7 @@ function AdminQualityHistoryDetailPage() {
     total + getQuestionItems(section).filter((item) => item.question).length
   ), 0), [sections])
   const returnTo = searchParams.get('returnTo') || ''
-  const backTarget = getBackTarget(submission, returnTo)
+  const backTarget = getBackTarget(submission, returnTo, basePath)
   const allExpanded = sections.length > 0 && expandedSections.size === sections.length
 
   const toggleSection = (sectionKey) => {
@@ -158,7 +159,7 @@ function AdminQualityHistoryDetailPage() {
       back={{ label: 'Quay lại', onClick: () => navigate(backTarget) }}
       breadcrumbs={[
         { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: '/admin/quality/history' },
+        { label: 'Lịch sử đánh giá', link: basePath },
         { label: 'Chi tiết kết quả' },
       ]}
     >

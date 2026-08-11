@@ -270,6 +270,7 @@ public class CompetencyService {
                 ));
 
         List<CompetencyByTechniqueItemResponse> items = new ArrayList<>();
+        Form selectedForm = formId == null ? null : foundById(formId);
         for (User subject : users) {
             List<FormSubmission> subs = grouped.getOrDefault(subject.getId(), List.of());
             if (subs.isEmpty()) {
@@ -288,7 +289,8 @@ public class CompetencyService {
             BigDecimal avg = sum.divide(BigDecimal.valueOf(subs.size()), 2, RoundingMode.HALF_UP);
             double passRate = subs.size() > 0
                     ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
-            boolean belowTarget = passRate < defaultComplianceTarget;
+            BigDecimal complianceTarget = complianceTarget(selectedForm);
+            boolean belowTarget = passRate < complianceTarget.doubleValue();
 
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
@@ -304,11 +306,7 @@ public class CompetencyService {
 
         items.sort(Comparator.comparing(CompetencyByTechniqueItemResponse::employeeName));
 
-        String formName = null;
-        if (formId != null) {
-            var form = foundById(formId);
-            formName = form != null ? form.getTitle() : null;
-        }
+        String formName = selectedForm != null ? selectedForm.getTitle() : null;
 
         return new CompetencyByTechniqueResponse(
                 departmentId, scopeName(department),
@@ -356,7 +354,8 @@ public class CompetencyService {
             BigDecimal avg = sum.divide(BigDecimal.valueOf(subs.size()), 2, RoundingMode.HALF_UP);
             double passRate = subs.size() > 0
                     ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
-            boolean belowTarget = passRate < defaultComplianceTarget;
+            BigDecimal complianceTarget = complianceTarget(form);
+            boolean belowTarget = passRate < complianceTarget.doubleValue();
             CompetencyLevel level = classificationService.classifyOverall(avg);
 
             List<FormSubmissionBriefResponse> submissionBriefs = subs.stream()
@@ -388,7 +387,9 @@ public class CompetencyService {
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
                     level != CompetencyLevel.NOT_COMPETENT, belowTarget,
-                    submissionBriefs
+                    submissionBriefs,
+                    complianceTarget,
+                    form.getComplianceTargetPercent() == null ? "DEFAULT" : "FORM"
             ));
         }
         items.sort(Comparator.comparing(vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse::formName));
@@ -537,7 +538,7 @@ public class CompetencyService {
                     level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
                     overallScore != null
                             && employeeTargetScore != null
-                            && overallScore.compareTo(employeeTargetScore) > 0
+                            && overallScore.compareTo(employeeTargetScore) >= 0
             ));
         }
 
@@ -575,6 +576,12 @@ public class CompetencyService {
             return targetScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
         }
         return targetScore;
+    }
+
+    private BigDecimal complianceTarget(Form form) {
+        return form != null && form.getComplianceTargetPercent() != null
+                ? form.getComplianceTargetPercent()
+                : BigDecimal.valueOf(defaultComplianceTarget);
     }
 
     private Map<Long, List<ExamAttempt>> groupAttemptsByUser(List<ExamAttempt> attempts) {

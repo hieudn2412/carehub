@@ -829,6 +829,11 @@
   padding: 8px 10px;
 }
 
+.qdoc-grounding-empty {
+  color: #64748b !important;
+  font-style: italic;
+}
+
 .qdoc-grounding-panel details {
   margin-top: 8px;
 }

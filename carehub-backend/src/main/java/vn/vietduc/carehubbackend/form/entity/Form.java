@@ -45,6 +45,9 @@ public class Form extends BaseEntity {
     @JoinColumn(name = "current_published_version_id")
     private FormVersion currentPublishedVersion;
 
+    @Column(name = "compliance_target_percent", precision = 5, scale = 2)
+    private java.math.BigDecimal complianceTargetPercent;
+
     @Builder.Default
     @Column(name = "current_version_no", nullable = false)
     private Integer currentVersionNumber = 0;

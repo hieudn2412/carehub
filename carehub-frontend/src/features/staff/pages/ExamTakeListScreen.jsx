@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleOutlined, SearchOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
@@ -10,6 +10,7 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 
 export default function ExamTakeListScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
   const [assignments, setAssignments] = useState([])
   const [search, setSearch] = useState('')
@@ -49,7 +50,9 @@ export default function ExamTakeListScreen() {
   }), [filtered])
   const activeFilterCount = Number(Boolean(fieldId)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))
 
-  const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`)
+  const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`, {
+    state: { from: `${location.pathname}${location.search}` },
+  })
 
   // Nút hành động chính. Thứ tự bám theo dữ liệu backend trả về:
   // 1. currentAttemptId → còn lượt đang làm dở, vào thẳng lượt đó (ExamAttemptService.start
@@ -93,7 +96,16 @@ export default function ExamTakeListScreen() {
     return item.availabilityText || 'Bài kiểm tra hiện không khả dụng'
   }
 
-  return <AppShell title="Năng lực chuyên môn"><div className="eh-page">
+  const isProfessionalList = location.pathname.startsWith('/staff/professional-competency')
+
+  return <AppShell
+    title={isProfessionalList ? 'Danh sách bài kiểm tra' : 'Bài kiểm tra'}
+    back={isProfessionalList ? { label: 'Năng lực chuyên môn', to: '/staff/professional-competency' } : undefined}
+    breadcrumbs={isProfessionalList ? [
+      { label: 'Năng lực chuyên môn', link: '/staff/professional-competency' },
+      { label: 'Danh sách bài kiểm tra' },
+    ] : [{ label: 'Bài kiểm tra' }]}
+  ><div className="eh-page">
       <div className="eh-summary-grid">
         <div className="eh-take-summary-card"><span>Tổng</span><strong>{stats.total}</strong></div>
         <div className="eh-take-summary-card eh-take-summary-card--success"><span>Đạt</span><strong>{stats.passed}</strong></div>

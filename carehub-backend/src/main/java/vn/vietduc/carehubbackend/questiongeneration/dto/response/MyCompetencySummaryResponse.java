@@ -7,6 +7,8 @@ public record MyCompetencySummaryResponse(
         String toDate,
         BigDecimal knowledgeAverage,
         BigDecimal skillAverage,
+        Integer knowledgeAttemptCount,
+        Integer skillEvaluationCount,
         BigDecimal overallScore,
         Long departmentId,
         String departmentName,

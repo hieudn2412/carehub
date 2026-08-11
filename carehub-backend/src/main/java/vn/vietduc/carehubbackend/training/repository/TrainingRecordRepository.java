@@ -11,6 +11,7 @@ import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
+import vn.vietduc.carehubbackend.training.repository.projection.ProfessionalFieldHoursProjection;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +30,34 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     long countByActivityType_Id(Long activityTypeId);
 
     Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
+
+    @Query("""
+            SELECT professionalField.id AS professionalFieldId,
+                   professionalField.name AS professionalFieldName,
+                   SUM(r.declaredHours) AS submittedHours
+            FROM TrainingRecord r
+            LEFT JOIN r.professionalField professionalField
+            WHERE r.employee.id = :employeeId
+              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
+              AND r.startDate >= :dateFrom
+              AND r.startDate <= :dateTo
+            GROUP BY professionalField.id, professionalField.name
+            ORDER BY SUM(r.declaredHours) DESC, professionalField.name ASC
+            """)
+    List<ProfessionalFieldHoursProjection> summarizeSubmittedHoursByProfessionalField(
+            @Param("employeeId") Long employeeId,
+            @Param("dateFrom") LocalDate dateFrom,
+            @Param("dateTo") LocalDate dateTo
+    );
+
+    @Query("""
+            SELECT DISTINCT YEAR(r.startDate)
+            FROM TrainingRecord r
+            WHERE r.employee.id = :employeeId
+              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
+            ORDER BY YEAR(r.startDate) DESC
+            """)
+    List<Integer> findSubmittedTrainingYears(@Param("employeeId") Long employeeId);
 
     @Query("""
             SELECT r

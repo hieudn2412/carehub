@@ -14,10 +14,12 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Role;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
+import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.RoleRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
@@ -29,6 +31,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.blankOrNullString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -57,6 +60,9 @@ class FormSubmissionControllerIntegrationTest {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
     private User admin;
     private User manager;
     private User subject;
@@ -65,6 +71,10 @@ class FormSubmissionControllerIntegrationTest {
     void setUp() {
         Role adminRole = roleRepository.save(Role.builder().code("ADMIN").name("Administrator").build());
         Role managerRole = roleRepository.save(Role.builder().code("MANAGER").name("Manager").build());
+        Department department = departmentRepository.save(Department.builder()
+                .departmentCode("FORM_SUB_DEPT")
+                .name("Khoa kiểm thử biểu mẫu")
+                .build());
         admin = userRepository.save(User.builder()
                 .employeeCode("FORM_SUB_ADMIN")
                 .email("form-sub-admin@example.com")
@@ -77,6 +87,7 @@ class FormSubmissionControllerIntegrationTest {
                 .email("form-sub-manager@example.com")
                 .name("Form Submission Manager")
                 .password("encoded")
+                .department(department)
                 .status(UserStatus.ACTIVE)
                 .build());
         subject = userRepository.save(User.builder()
@@ -84,6 +95,7 @@ class FormSubmissionControllerIntegrationTest {
                 .email("form-sub-subject@example.com")
                 .name("Form Submission Subject")
                 .password("encoded")
+                .department(department)
                 .status(UserStatus.ACTIVE)
                 .build());
         userRoleRepository.save(UserRole.builder().user(admin).role(adminRole).build());
@@ -183,6 +195,58 @@ class FormSubmissionControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content.length()", is(1)))
                 .andExpect(jsonPath("$.data.content[0].answers.length()", is(1)));
+
+        mockMvc.perform(get("/api/v1/forms/history")
+                        .with(managerJwt())
+                        .param("dateFrom", "2020-01-01")
+                        .param("dateTo", "2030-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)))
+                .andExpect(jsonPath("$.data.content[0].formId", is(fixture.formId().intValue())))
+                .andExpect(jsonPath("$.data.content[0].monitoringCount", is(1)))
+                .andExpect(jsonPath("$.data.content[0].passedCount", is(1)));
+
+        mockMvc.perform(get("/api/v1/forms/{formId}/history/versions", fixture.formId())
+                        .with(managerJwt())
+                        .param("dateFrom", "2020-01-01")
+                        .param("dateTo", "2030-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()", is(1)))
+                .andExpect(jsonPath("$.data[0].total", is(1)))
+                .andExpect(jsonPath("$.data[0].passed", is(1)));
+
+        mockMvc.perform(get("/api/v1/forms/{formId}/versions/{versionId}/responses",
+                        fixture.formId(), fixture.versionId())
+                        .with(managerJwt())
+                        .param("status", "SUBMITTED")
+                        .param("dateFrom", "2020-01-01")
+                        .param("dateTo", "2030-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)));
+
+        mockMvc.perform(get("/api/v1/form-submissions/{id}", submissionId.longValue())
+                        .with(managerJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(submissionId.intValue())));
+
+        mockMvc.perform(delete("/api/v1/form-assignment-items/{id}", fixture.assignmentItemId())
+                        .with(adminJwt()))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/v1/forms/history")
+                        .with(managerJwt())
+                        .param("dateFrom", "2020-01-01")
+                        .param("dateTo", "2030-12-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(1)))
+                .andExpect(jsonPath("$.data.content[0].monitoringCount", is(1)));
+
+        mockMvc.perform(get("/api/v1/forms/{formId}/history/versions/{versionId}",
+                        fixture.formId(), fixture.versionId())
+                        .with(managerJwt()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id", is(fixture.versionId().intValue())))
+                .andExpect(jsonPath("$.data.sections.length()", is(1)));
     }
 
     @DisplayName("L2-SCR-02 | Constraint Violation: second draft for the same assignment+subject → 409; missing required answer → 422; foreign assignment → 404")

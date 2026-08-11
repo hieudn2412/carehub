@@ -26,4 +26,12 @@ export const myCompetencyApi = {
   getSkillEvaluation(submissionId) {
     return httpClient.get(`/me/competency/skills/${submissionId}`, { headers: authHeaders() })
   },
+
+  getComplianceOverview(params) {
+    return httpClient.get('/me/compliance/overview', { headers: authHeaders(), params })
+  },
+
+  getComplianceChart(params) {
+    return httpClient.get('/me/compliance/chart', { headers: authHeaders(), params })
+  },
 }
