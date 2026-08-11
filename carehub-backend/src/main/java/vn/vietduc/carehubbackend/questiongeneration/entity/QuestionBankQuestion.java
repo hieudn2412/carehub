@@ -29,6 +29,11 @@ public class QuestionBankQuestion extends BaseEntity {
     @Column(nullable = false, columnDefinition = "text")
     private String stem;
 
+    /** Canonical taxonomy link. The legacy topic column is retained only for transition. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private QuestionCategory category;
+
     @Column(name = "option_a", nullable = false, columnDefinition = "text")
     private String optionA;
 

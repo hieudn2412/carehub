@@ -50,8 +50,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
+import java.time.Instant;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -78,6 +81,8 @@ public class ExamAssignmentService {
     private final TrainingGroupRepository trainingGroupRepository;
     private final ProfessionalFieldRepository professionalFieldRepository;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final Clock clock;
+    private final ZoneId examBusinessZone;
 
     @Transactional(readOnly = true)
     public List<ExamAssignmentResponse> list(String query, String status, Long professionalFieldId) {
@@ -419,7 +424,7 @@ public class ExamAssignmentService {
             throw new BadRequestException("Danh sách nhân viên phân công không hợp lệ");
         }
         ExamAssignmentStatus status = parseCreateStatus(request.status());
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         ExamAssignment assignment = assignmentRepository.save(ExamAssignment.builder()
                 .name(name)
                 .description(trimToNull(request.description()))
@@ -464,7 +469,7 @@ public class ExamAssignmentService {
             throw new BadRequestException("Bộ đề của phân công chưa được phát hành");
         }
         assignment.setStatus(ExamAssignmentStatus.OPEN);
-        assignment.setOpenedAt(assignment.getOpenedAt() == null ? LocalDateTime.now() : assignment.getOpenedAt());
+        assignment.setOpenedAt(assignment.getOpenedAt() == null ? now() : assignment.getOpenedAt());
         assignment.setClosedAt(null);
         ExamAssignment saved = assignmentRepository.save(assignment);
         if (!wasOpen) {
@@ -502,7 +507,7 @@ public class ExamAssignmentService {
             throw new BadRequestException("Phân công đã lưu trữ");
         }
         assignment.setStatus(ExamAssignmentStatus.CLOSED);
-        assignment.setClosedAt(LocalDateTime.now());
+        assignment.setClosedAt(now());
         return toResponse(assignmentRepository.save(assignment), true);
     }
 
@@ -510,7 +515,7 @@ public class ExamAssignmentService {
     public ExamAssignmentResponse archive(Long assignmentId) {
         ExamAssignment assignment = find(assignmentId);
         assignment.setStatus(ExamAssignmentStatus.ARCHIVED);
-        assignment.setClosedAt(assignment.getClosedAt() == null ? LocalDateTime.now() : assignment.getClosedAt());
+        assignment.setClosedAt(assignment.getClosedAt() == null ? now() : assignment.getClosedAt());
         return toResponse(assignmentRepository.save(assignment), false);
     }
 
@@ -565,7 +570,8 @@ public class ExamAssignmentService {
             ExamAssignment assignment,
             List<ExamAttempt> attempts
     ) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant serverNow = Instant.now(clock);
+        LocalDateTime now = LocalDateTime.ofInstant(serverNow, examBusinessZone);
         ExamAttempt currentAttempt = attempts.stream()
                 .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.IN_PROGRESS)
                 .filter(attempt -> attempt.getExpiresAt() == null || !now.isAfter(attempt.getExpiresAt()))
@@ -656,7 +662,13 @@ public class ExamAssignmentService {
                 currentAttempt == null
                         ? (latestAttempt == null ? "Chưa làm" : QuestionGenerationLabels.examAttemptStatus(latestAttempt.getStatus()))
                         : QuestionGenerationLabels.examAttemptStatus(currentAttempt.getStatus()),
-                currentAttempt == null ? null : currentAttempt.getExpiresAt(),
+                currentAttempt == null ? null : toInstant(currentAttempt.getExpiresAt()),
+                currentAttempt == null || currentAttempt.getExpiresAt() == null
+                        ? null
+                        : Math.max(0L, java.time.Duration.between(
+                                serverNow,
+                                toInstant(currentAttempt.getExpiresAt())
+                        ).getSeconds()),
                 availabilityStatus,
                 availabilityText,
                 actionLabel,
@@ -678,6 +690,14 @@ public class ExamAssignmentService {
                 user.getName(),
                 user.getDepartment() == null ? null : user.getDepartment().getName()
         );
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(examBusinessZone));
+    }
+
+    private Instant toInstant(LocalDateTime value) {
+        return value == null ? null : value.atZone(examBusinessZone).toInstant();
     }
 
     private ExamAssignmentResultRowResponse toResultRow(ExamAssignmentTarget target, List<ExamAttempt> attempts) {

@@ -68,6 +68,7 @@ async function installSessionAndTrainingApi(page, {
   competencyAttempt = null,
 } = {}) {
   const requestedChartYears = []
+  const submitRequests = []
   await page.addInitScript((token) => {
     window.sessionStorage.setItem('carehub.accessToken', token)
     window.sessionStorage.setItem('carehub.refreshToken', 'visual-refresh-token')
@@ -146,6 +147,19 @@ async function installSessionAndTrainingApi(page, {
         answers: [{ paperQuestionId: 5001, position: 1, selectedAnswer: 'A', correct: true, correctAnswer: 'A', explanation: 'Đúng' }],
       }))
     }
+    if (request.method() === 'POST' && path.match(/^\/me\/exam-attempts\/\d+\/submit$/)) {
+      submitRequests.push(path)
+      return fulfill(apiEnvelope({
+        id: Number(path.split('/').at(-2)),
+        status: 'GRADED',
+        statusText: 'Đã chấm',
+        submittedAt: `${currentYear}-08-12T08:00:01Z`,
+        score: 8,
+        passed: true,
+        questions: [],
+        answers: [],
+      }))
+    }
     if (request.method() === 'POST' && path.match(/^\/me\/exam-assignments\/\d+\/start$/)) {
       const id = Number(path.split('/')[3])
       return fulfill(apiEnvelope({ id: id + 1000 }))
@@ -202,7 +216,7 @@ async function installSessionAndTrainingApi(page, {
     return fulfill(apiEnvelope([]))
   })
 
-  return { requestedChartYears }
+  return { requestedChartYears, submitRequests }
 }
 
 async function hasDocumentOverflow(page) {
@@ -210,6 +224,89 @@ async function hasDocumentOverflow(page) {
 }
 
 test.describe('Training overview deterministic browser QA', () => {
+  test('release smoke: desktop sidebar changes route and content without a reload', async ({ page }) => {
+    await installSessionAndTrainingApi(page)
+    await page.goto('/staff/training')
+
+    await page.getByRole('button', { name: 'Trang chủ' }).click()
+    const dashboardLink = page.locator('a.sidebar__item[href="/staff/dashboard"]')
+    await expect(dashboardLink).toBeVisible()
+    await dashboardLink.click()
+    await page.waitForURL(url => url.pathname === '/staff/dashboard')
+    await expect(page.getByRole('heading', { name: 'Năng lực của tôi' })).toBeVisible()
+  })
+
+  test('release smoke: mobile drawer navigates to professional competency', async ({ page }) => {
+    await installSessionAndTrainingApi(page)
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto('/staff/training')
+
+    await page.getByRole('button', { name: 'Mở menu điều hướng' }).click()
+    const competencyLink = page.locator('.staff-mobile-menu__item[href="/staff/professional-competency"]')
+    await expect(competencyLink).toBeVisible()
+    await competencyLink.click()
+    await page.waitForURL(url => url.pathname === '/staff/professional-competency')
+    await expect(page.getByRole('heading', { name: 'Kiến thức' })).toBeVisible()
+  })
+
+  test('release smoke: duration timer auto-submits once', async ({ page }) => {
+    const api = await installSessionAndTrainingApi(page, {
+      competencyAttempt: {
+        id: 901,
+        assignmentId: 11,
+        assignmentName: 'Bài kiểm tra duration smoke',
+        examPaperName: 'Bộ đề duration smoke',
+        status: 'IN_PROGRESS',
+        remainingSeconds: 1,
+        serverNow: `${currentYear}-08-12T08:00:00Z`,
+        expiresAt: `${currentYear}-08-12T08:00:01Z`,
+        totalQuestions: 1,
+        questions: [{
+          paperQuestionId: 5001,
+          position: 1,
+          stem: 'Câu hỏi smoke timer',
+          optionA: 'Thao tác A',
+          optionB: 'Thao tác B',
+          optionC: 'Thao tác C',
+          optionD: 'Thao tác D',
+        }],
+        answers: [],
+      },
+    })
+    await page.goto('/staff/exam/take/901')
+    await expect(page.getByText('00:01')).toBeVisible()
+    await page.waitForURL(url => url.pathname === '/staff/exam/history', { timeout: 10_000 })
+    expect(api.submitRequests).toEqual(['/me/exam-attempts/901/submit'])
+  })
+
+  test('release smoke: duration is stable in UTC and Asia/Bangkok contexts', async ({ browser }) => {
+    for (const timezoneId of ['UTC', 'Asia/Bangkok']) {
+      const context = await browser.newContext({ timezoneId })
+      const page = await context.newPage()
+      try {
+        await installSessionAndTrainingApi(page, {
+          competencyAttempt: {
+            id: 902,
+            assignmentId: 12,
+            assignmentName: `Timezone smoke ${timezoneId}`,
+            examPaperName: 'Bộ đề timezone smoke',
+            status: 'IN_PROGRESS',
+            remainingSeconds: 30,
+            serverNow: `${currentYear}-08-12T08:00:00Z`,
+            expiresAt: `${currentYear}-08-12T08:00:30Z`,
+            totalQuestions: 0,
+            questions: [],
+            answers: [],
+          },
+        })
+        await page.goto('/staff/exam/take/902')
+        await expect(page.getByText('00:30')).toBeVisible()
+      } finally {
+        await context.close()
+      }
+    }
+  })
+
   test('layout order, chart year, search, filters and action visibility', async ({ page }) => {
     const api = await installSessionAndTrainingApi(page)
     await page.setViewportSize({ width: 1440, height: 1000 })

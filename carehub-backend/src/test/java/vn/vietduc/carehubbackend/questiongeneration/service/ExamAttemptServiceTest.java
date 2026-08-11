@@ -30,7 +30,11 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestion
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -57,6 +61,8 @@ class ExamAttemptServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final CompetencyClassificationService classificationService = mock(CompetencyClassificationService.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    private final Clock clock = Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneOffset.UTC);
+    private final ZoneId examBusinessZone = ZoneId.of("Asia/Ho_Chi_Minh");
     private final AtomicLong ids = new AtomicLong(500);
     private final List<ExamAttemptAnswer> savedAnswers = new ArrayList<>();
     private final List<ExamAttemptQuestion> savedSelections = new ArrayList<>();
@@ -80,7 +86,9 @@ class ExamAttemptServiceTest {
                 snapshotRepository,
                 userRepository,
                 classificationService,
-                eventPublisher
+                eventPublisher,
+                clock,
+                examBusinessZone
         );
         user = User.builder()
                 .id(10L)
@@ -133,8 +141,8 @@ class ExamAttemptServiceTest {
                 .user(user)
                 .attemptNumber(1)
                 .status(ExamAttemptStatus.IN_PROGRESS)
-                .startedAt(LocalDateTime.now().minusMinutes(5))
-                .expiresAt(LocalDateTime.now().plusMinutes(25))
+                .startedAt(now().minusMinutes(5))
+                .expiresAt(now().plusMinutes(25))
                 .totalQuestions(2)
                 .build();
         savedAnswers.clear();
@@ -211,6 +219,42 @@ class ExamAttemptServiceTest {
     }
 
     @Test
+    void exposesTimezoneAwareDeadlineAtApiBoundary() {
+        var response = service.getForUser(attempt.getId(), user.getId());
+
+        assertThat(response.expiresAt()).isNotNull();
+        assertThat(response.expiresAt().toString())
+                .matches(".*(?:Z|[+-]\\d{2}:\\d{2})$");
+        assertThat(response.remainingSeconds()).isEqualTo(1_500L);
+        assertThat(response.serverNow()).isEqualTo(Instant.parse("2026-08-12T08:00:00Z"));
+    }
+
+    @Test
+    void deadlineCalculationIsIndependentOfServerClockZone() {
+        ExamAttemptService clockInAnotherZone = new ExamAttemptService(
+                assignmentService,
+                attemptRepository,
+                answerRepository,
+                attemptQuestionRepository,
+                targetRepository,
+                paperQuestionRepository,
+                snapshotRepository,
+                userRepository,
+                classificationService,
+                eventPublisher,
+                Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneId.of("America/Los_Angeles")),
+                examBusinessZone
+        );
+
+        var utcResponse = service.getForUser(attempt.getId(), user.getId());
+        var otherZoneResponse = clockInAnotherZone.getForUser(attempt.getId(), user.getId());
+
+        assertThat(otherZoneResponse.expiresAt()).isEqualTo(utcResponse.expiresAt());
+        assertThat(otherZoneResponse.remainingSeconds()).isEqualTo(utcResponse.remainingSeconds());
+        assertThat(otherZoneResponse.serverNow()).isEqualTo(utcResponse.serverNow());
+    }
+
+    @Test
     void submitHidesAnswerKeyWhenAssignmentUsesScoreOnlyPolicy() {
         var request = new SaveExamAttemptAnswersRequest(List.of(
                 new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
@@ -228,7 +272,7 @@ class ExamAttemptServiceTest {
     void scoreAndAnswersPolicyWaitsUntilAssignmentEnds() {
         ExamAssignment assignment = attempt.getAssignment();
         assignment.setResultVisibility(ExamResultVisibility.SCORE_AND_ANSWERS);
-        assignment.setDueAt(LocalDateTime.now().plusHours(1));
+        assignment.setDueAt(now().plusHours(1));
 
         var submitted = service.submit(attempt.getId(), user.getId(), new SaveExamAttemptAnswersRequest(List.of(
                 new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
@@ -262,8 +306,8 @@ class ExamAttemptServiceTest {
                 .user(user)
                 .attemptNumber(2)
                 .status(ExamAttemptStatus.IN_PROGRESS)
-                .startedAt(LocalDateTime.now())
-                .expiresAt(LocalDateTime.now().plusMinutes(20))
+                .startedAt(now())
+                .expiresAt(now().plusMinutes(20))
                 .totalQuestions(2)
                 .build();
         when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user))
@@ -277,19 +321,19 @@ class ExamAttemptServiceTest {
 
     @Test
     void getForUserAutoGradesAttemptWhenDeadlinePassed() {
-        attempt.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+        attempt.setExpiresAt(now().minusMinutes(1));
 
         var response = service.getForUser(attempt.getId(), user.getId());
 
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.GRADED.name());
         assertThat(response.score()).isEqualByComparingTo("0.00");
-        assertThat(response.submittedAt()).isEqualTo(attempt.getExpiresAt());
+        assertThat(response.submittedAt()).isEqualTo(attempt.getExpiresAt().atZone(examBusinessZone).toInstant());
         verify(attemptRepository).save(attempt);
     }
 
     @Test
     void saveAfterDeadlineAutoGradesAndDiscardsLateAnswers() {
-        attempt.setExpiresAt(LocalDateTime.now().minusSeconds(1));
+        attempt.setExpiresAt(now().minusSeconds(1));
         var request = new SaveExamAttemptAnswersRequest(List.of(
                 new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
         ));
@@ -306,7 +350,7 @@ class ExamAttemptServiceTest {
     @Test
     void startCapsAttemptExpiryAtAssignmentDueDate() {
         ExamAssignment assignment = attempt.getAssignment();
-        LocalDateTime dueAt = LocalDateTime.now().plusMinutes(5);
+        LocalDateTime dueAt = now().plusMinutes(5);
         assignment.setDueAt(dueAt);
         assignment.setMaxAttempts(2);
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
@@ -322,15 +366,15 @@ class ExamAttemptServiceTest {
 
         var response = service.start(assignment.getId(), user.getId());
 
-        assertThat(response.expiresAt()).isEqualTo(dueAt);
+        assertThat(response.expiresAt()).isEqualTo(dueAt.atZone(examBusinessZone).toInstant());
         assertThat(response.status()).isEqualTo(ExamAttemptStatus.IN_PROGRESS.name());
     }
 
     @Test
     void startRejectsAssignmentBeforeAvailableFrom() {
         ExamAssignment assignment = attempt.getAssignment();
-        assignment.setAvailableFrom(LocalDateTime.now().plusHours(1));
-        assignment.setDueAt(LocalDateTime.now().plusDays(1));
+        assignment.setAvailableFrom(now().plusHours(1));
+        assignment.setDueAt(now().plusDays(1));
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         when(assignmentService.find(assignment.getId())).thenReturn(assignment);
 
@@ -385,7 +429,7 @@ class ExamAttemptServiceTest {
     void hiddenUntilEndSuppressesScoreThenRevealsItAfterDeadline() {
         ExamAssignment assignment = attempt.getAssignment();
         assignment.setResultVisibility(ExamResultVisibility.HIDDEN_UNTIL_END);
-        assignment.setDueAt(LocalDateTime.now().plusHours(1));
+        assignment.setDueAt(now().plusHours(1));
 
         var submitted = service.submit(attempt.getId(), user.getId(), new SaveExamAttemptAnswersRequest(List.of(
                 new SaveExamAttemptAnswersRequest.Answer(questionOne.getId(), "A")
@@ -397,7 +441,7 @@ class ExamAttemptServiceTest {
         assertThat(submitted.questions()).isEmpty();
         assertThat(submitted.answers()).isEmpty();
 
-        assignment.setDueAt(LocalDateTime.now().minusSeconds(1));
+        assignment.setDueAt(now().minusSeconds(1));
         var revealed = service.getForUser(attempt.getId(), user.getId());
 
         assertThat(revealed.score()).isEqualByComparingTo("5.00");
@@ -452,6 +496,10 @@ class ExamAttemptServiceTest {
                         .toList());
     }
 
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(examBusinessZone));
+    }
+
     private ExamPaperQuestion paperQuestion(Long id, ExamPaper paper, int position) {
         return ExamPaperQuestion.builder()
                 .id(id)
@@ -471,7 +519,7 @@ class ExamAttemptServiceTest {
                 .optionC("C")
                 .optionD("D")
                 .correctAnswer(correctAnswer)
-                .snapshotAt(LocalDateTime.now())
+                .snapshotAt(now())
                 .build();
     }
 
