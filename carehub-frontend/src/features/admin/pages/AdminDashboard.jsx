@@ -34,11 +34,17 @@ const emptyDomain = (message) => ({
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState({ departmentId: '' })
+  const [filters, setFilters] = useState(() => ({
+    departmentId: '',
+    employeeCode: '',
+    content: 'all',
+    ...currentYearRange(),
+  }))
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [complianceChart, setComplianceChart] = useState([])
+  const [filteredEmployeeId, setFilteredEmployeeId] = useState()
   const [dashboard, setDashboard] = useState({
     training: emptyDomain('Chưa có dữ liệu giờ đào tạo.'),
     exams: emptyDomain('Chưa có dữ liệu bài kiểm tra.'),
@@ -57,20 +63,33 @@ export default function AdminDashboard() {
   const loadDashboard = useCallback(async () => {
     setLoading(true)
     setError('')
-    const dateParams = currentYearRange()
+    const defaultDates = currentYearRange()
+    const dateParams = {
+      fromDate: filters.fromDate || defaultDates.fromDate,
+      toDate: filters.toDate || defaultDates.toDate,
+    }
     const scopedParams = {
       ...dateParams,
       departmentId: filters.departmentId || undefined,
+      keyword: filters.employeeCode.trim() || undefined,
     }
+    const [competencyResult] = await Promise.allSettled([
+      loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+    ])
+    const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
+    const employeeFilterActive = Boolean(filters.employeeCode.trim())
+    const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+    setFilteredEmployeeId(subjectUserId)
+    const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
     const trainingScope = {
       departmentId: filters.departmentId || undefined,
+      keyword: filters.employeeCode.trim() || undefined,
       asOf: dateParams.toDate,
     }
-    const [trainingResult, qualityResult, checklistResult, competencyResult] = await Promise.allSettled([
+    const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
       trainingApi.getTrainingDashboardSummary(trainingScope),
-      adminApi.getDashboardFormSummary(scopedParams),
-      adminApi.getQualityChecklistDashboard({ ...scopedParams, view: 'FILTERED', page: 0, size: 8 }),
-      loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+      adminApi.getDashboardFormSummary(qualityParams),
+      adminApi.getQualityChecklistDashboard({ ...qualityParams, view: 'FILTERED', page: 0, size: 8 }),
     ])
 
     const trainingTotals = trainingResult.status === 'fulfilled'
@@ -81,7 +100,6 @@ export default function AdminDashboard() {
     const trainingFailed = (Number(trainingTotals.nonCompliantCount) || 0)
       + (Number(trainingTotals.atRiskCount) || 0)
       + (Number(trainingTotals.notConfiguredCount) || 0)
-    const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
     const submittedQuality = Number(quality?.submitted) || 0
     const qualityRate = Number(quality?.passRate) || 0
@@ -137,10 +155,10 @@ export default function AdminDashboard() {
       setError('Không thể tải dashboard. Vui lòng kiểm tra kết nối đến máy chủ rồi thử lại.')
     }
     setLoading(false)
-  }, [filters.departmentId])
+  }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
 
   useEffect(() => {
-    const timer = window.setTimeout(loadDashboard, 0)
+    const timer = window.setTimeout(loadDashboard, 350)
     return () => window.clearTimeout(timer)
   }, [loadDashboard])
 
@@ -151,14 +169,17 @@ export default function AdminDashboard() {
   }
 
   const loadComplianceTrend = useCallback(async (formId) => {
+    const defaultDates = currentYearRange()
     const response = await adminApi.getQualityChecklistTrend({
-      ...currentYearRange(),
+      fromDate: filters.fromDate || defaultDates.fromDate,
+      toDate: filters.toDate || defaultDates.toDate,
       departmentId: filters.departmentId || undefined,
+      subjectUserId: filteredEmployeeId,
       formId,
       bucket: 'DAY',
     })
     return payload(response)?.items || []
-  }, [filters.departmentId])
+  }, [filteredEmployeeId, filters.departmentId, filters.fromDate, filters.toDate])
 
   return (
     <div className="dashboard-layout">

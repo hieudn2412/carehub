@@ -105,6 +105,13 @@ export const staffApi = {
     })
   },
 
+  getDashboardFormSummary(params) {
+    return httpClient.get('/dashboard/forms/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getQualityChecklistTrend(params) {
     return httpClient.get('/dashboard/quality/checklists/trend', {
       headers: authHeaders(),

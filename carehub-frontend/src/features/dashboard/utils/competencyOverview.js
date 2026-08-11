@@ -38,6 +38,15 @@ export async function loadCompetencyOverview(requestPage, params) {
 
   const total = Number(firstData.totalElements) || items.length
   const passed = items.filter((item) => item.isPassed).length
+  const classificationCounts = items.reduce((counts, item) => {
+    const label = item.levelLabel || item.level || 'Chưa phân loại'
+    counts[label] = (counts[label] || 0) + 1
+    return counts
+  }, {})
+  const normalizedEmployeeCode = String(params.keyword || '').trim().toLocaleLowerCase('vi')
+  const matchedEmployee = normalizedEmployeeCode
+    ? items.find((item) => String(item.employeeCode || '').trim().toLocaleLowerCase('vi') === normalizedEmployeeCode)
+    : null
 
   return {
     total,
@@ -49,6 +58,8 @@ export async function loadCompetencyOverview(requestPage, params) {
     skillAverage: average(items.map((item) => item.skillAverage)),
     overallAverage: average(items.map((item) => item.overallScore)),
     targetScore: firstData.targetScore == null ? null : Number(firstData.targetScore),
+    classificationCounts,
+    matchedEmployeeId: matchedEmployee?.employeeId ?? null,
     fromDate: firstData.fromDate || params.fromDate,
     toDate: firstData.toDate || params.toDate,
   }

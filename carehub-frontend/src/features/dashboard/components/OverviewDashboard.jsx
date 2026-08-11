@@ -148,7 +148,7 @@ function formatScore(value) {
   return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
 }
 
-function ManagementKpiCard({ type, data, onOpen }) {
+function ManagementKpiCard({ type, data, content, onOpen }) {
   const total = Number(data?.total) || 0
   const passed = Number(data?.passed) || 0
   const rate = Number(data?.rate) || 0
@@ -158,7 +158,16 @@ function ManagementKpiCard({ type, data, onOpen }) {
     quality: 'Tuân thủ chung',
     exams: 'Đạt năng lực chuyên môn',
   }
-  const primaryValue = type === 'training'
+  if (type === 'exams' && content === 'knowledge') labels.exams = 'Trung bình điểm kiểm tra kiến thức'
+  if (type === 'exams' && content === 'skill') labels.exams = 'Trung bình điểm kiểm tra kỹ năng'
+  if (type === 'exams' && content === 'classification') labels.exams = 'Phân loại năng lực'
+  const primaryValue = type === 'exams' && content === 'knowledge'
+    ? `TB ${formatScore(data?.knowledgeAverage)}/10`
+    : type === 'exams' && content === 'skill'
+      ? `TB ${formatScore(data?.skillAverage)}/10`
+      : type === 'exams' && content === 'classification'
+        ? `${formatNumber(passed)}/${formatNumber(total)} đạt`
+        : type === 'training'
     ? '≥ 120h'
     : type === 'exams'
       ? `TB ${formatScore(data?.overallAverage)}/10`
@@ -167,7 +176,9 @@ function ManagementKpiCard({ type, data, onOpen }) {
     ? 'Chuẩn đào tạo liên tục'
     : type === 'quality'
       ? 'Theo điểm sàn và điểm liệt'
-      : `Từ 01/01 đến hôm nay · Lý thuyết ${formatScore(data?.knowledgeAverage)} · Kỹ năng ${formatScore(data?.skillAverage)}${data?.targetScore == null ? ' · Theo ngưỡng từng khoa' : ` · Ngưỡng ${formatScore(data.targetScore)}`}`
+      : content === 'classification'
+        ? Object.entries(data?.classificationCounts || {}).map(([label, count]) => `${label}: ${count}`).join(' · ') || 'Chưa có dữ liệu phân loại'
+        : `${data?.fromDate || '01/01'} → ${data?.toDate || 'hôm nay'} · Lý thuyết ${formatScore(data?.knowledgeAverage)} · Kỹ năng ${formatScore(data?.skillAverage)}${data?.targetScore == null ? ' · Theo ngưỡng từng khoa' : ` · Ngưỡng ${formatScore(data.targetScore)}`}`
 
   return (
     <button
@@ -252,18 +263,24 @@ function ComplianceTargetChart({ items = [], loading, onDetails }) {
   )
 }
 
-function complianceTrend(items = []) {
+function localDate(value, fallback) {
+  const [year, month, day] = String(value || '').split('-').map(Number)
+  return year && month && day ? new Date(year, month - 1, day) : fallback
+}
+
+function complianceTrend(items = [], fromDate, toDate) {
   const resultsByPeriod = new Map(items.map((item) => [item.period, {
     total: Number(item.submittedCount) || 0,
     passed: Number(item.passedCount) || 0,
   }]))
   const today = new Date()
-  const year = today.getFullYear()
-  const cursor = new Date(year, 0, 1)
+  const cursor = localDate(fromDate, new Date(today.getFullYear(), 0, 1))
+  const endDate = localDate(toDate, today)
   const timeline = []
   let cumulativeTotal = 0
   let cumulativePassed = 0
-  while (cursor <= today) {
+  while (cursor <= endDate) {
+    const year = cursor.getFullYear()
     const month = String(cursor.getMonth() + 1).padStart(2, '0')
     const day = String(cursor.getDate()).padStart(2, '0')
     const period = `${year}-${month}-${day}`
@@ -279,12 +296,18 @@ function complianceTrend(items = []) {
   return timeline
 }
 
-function monthTicks() {
+function monthTicks(fromDate, toDate) {
   const today = new Date()
-  const year = today.getFullYear()
-  return Array.from({ length: today.getMonth() + 1 }, (_, index) => (
-    `${year}-${String(index + 1).padStart(2, '0')}-01`
-  ))
+  const startDate = localDate(fromDate, new Date(today.getFullYear(), 0, 1))
+  const endDate = localDate(toDate, today)
+  const format = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const ticks = [format(startDate)]
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1)
+  while (cursor <= endDate) {
+    ticks.push(format(cursor))
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return ticks
 }
 
 function monthLabel(value) {
@@ -296,7 +319,7 @@ function dateLabel(value) {
   return `${day}/${month}/${year}`
 }
 
-function ComplianceDetailCard({ item, trend, loading }) {
+function ComplianceDetailCard({ item, trend, loading, fromDate, toDate }) {
   const hasTimeline = trend.length > 0
   return (
     <article className="overview-checklist-card">
@@ -316,7 +339,7 @@ function ComplianceDetailCard({ item, trend, loading }) {
                 axisLine={{ stroke: '#aab4c0' }}
                 tick={{ fill: '#667085', fontSize: 9 }}
                 tickLine={false}
-                ticks={monthTicks()}
+                ticks={monthTicks(fromDate, toDate)}
                 tickFormatter={monthLabel}
                 interval={0}
                 height={26}
@@ -365,7 +388,7 @@ function ComplianceDetailCard({ item, trend, loading }) {
   )
 }
 
-function ComplianceDetails({ items, trends, loading, onBack }) {
+function ComplianceDetails({ items, trends, loading, fromDate, toDate, onBack }) {
   return (
     <section className="overview-checklist-details">
       <header>
@@ -382,6 +405,8 @@ function ComplianceDetails({ items, trends, loading, onBack }) {
             item={item}
             trend={trends[item.id] || []}
             loading={loading}
+            fromDate={fromDate}
+            toDate={toDate}
           />
         ))}
       </div>
@@ -414,7 +439,17 @@ export default function OverviewDashboard({
   const [complianceTrendsLoading, setComplianceTrendsLoading] = useState(false)
   const activeFilterCount = [
     role === 'admin' && filters.departmentId,
+    filters.employeeCode,
+    filters.content && filters.content !== 'all',
   ].filter(Boolean).length
+  const managementTypes = filters.content === 'training'
+    ? ['training']
+    : filters.content === 'compliance'
+      ? ['quality']
+      : ['knowledge', 'skill', 'classification'].includes(filters.content)
+        ? ['exams']
+        : ['training', 'quality', 'exams']
+  const showComplianceSection = filters.content === 'all' || filters.content === 'compliance'
 
   useEffect(() => {
     setShowComplianceDetails(false)
@@ -430,7 +465,9 @@ export default function OverviewDashboard({
     )
     setComplianceTrends(Object.fromEntries(results.map((result, index) => [
       complianceChart[index].id,
-      result.status === 'fulfilled' ? complianceTrend(result.value) : [],
+      result.status === 'fulfilled'
+        ? complianceTrend(result.value, filters.fromDate, filters.toDate)
+        : [],
     ])))
     setComplianceTrendsLoading(false)
   }
@@ -484,6 +521,44 @@ export default function OverviewDashboard({
                 ) : (
                   <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
                 )}
+              </label>
+              <label>
+                <span>Từ ngày</span>
+                <input
+                  type="date"
+                  value={filters.fromDate}
+                  max={filters.toDate}
+                  onChange={(event) => onFilterChange('fromDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Đến ngày</span>
+                <input
+                  type="date"
+                  value={filters.toDate}
+                  min={filters.fromDate}
+                  onChange={(event) => onFilterChange('toDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Mã nhân viên</span>
+                <input
+                  type="search"
+                  value={filters.employeeCode}
+                  placeholder="Nhập mã nhân viên..."
+                  onChange={(event) => onFilterChange('employeeCode', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Nội dung</span>
+                <select value={filters.content} onChange={(event) => onFilterChange('content', event.target.value)}>
+                  <option value="all">Tất cả nội dung</option>
+                  <option value="training">Giờ đào tạo liên tục</option>
+                  <option value="compliance">Tỷ lệ tuân thủ chung</option>
+                  <option value="knowledge">Trung bình điểm kiểm tra kiến thức</option>
+                  <option value="skill">Trung bình điểm kiểm tra kỹ năng</option>
+                  <option value="classification">Phân loại năng lực</option>
+                </select>
               </label>
             </div>
           )}
@@ -545,20 +620,23 @@ export default function OverviewDashboard({
       ) : (
         <>
           <section className="overview-management-kpis" aria-label="Chỉ số tổng quan">
-            {['training', 'quality', 'exams'].map((type) => (
+            {managementTypes.map((type) => (
               <ManagementKpiCard
                 key={type}
                 type={type}
                 data={domains[type]}
+                content={filters.content}
                 onOpen={domains[type]?.path ? () => onNavigate(domains[type].path) : undefined}
               />
             ))}
           </section>
-          {showComplianceDetails ? (
+          {showComplianceSection && (showComplianceDetails ? (
             <ComplianceDetails
               items={complianceChart}
               trends={complianceTrends}
               loading={complianceTrendsLoading}
+              fromDate={filters.fromDate}
+              toDate={filters.toDate}
               onBack={() => setShowComplianceDetails(false)}
             />
           ) : (
@@ -567,7 +645,7 @@ export default function OverviewDashboard({
               loading={loading}
               onDetails={openComplianceDetails}
             />
-          )}
+          ))}
         </>
       )}
 

@@ -83,6 +83,7 @@
 
 .overview-filters label { display: grid; gap: 7px; color: #475467; font-size: 12px; font-weight: 600; }
 .overview-filters select,
+.overview-filters input,
 .overview-filter-static {
   width: 100%;
   min-height: 42px;
@@ -169,7 +170,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
-.overview-filters--scope { grid-template-columns: minmax(240px, 460px); }
+.overview-filters--scope { grid-template-columns: repeat(5, minmax(160px, 1fr)); }
 
 .overview-management-kpi {
   display: grid;
@@ -468,6 +469,7 @@
 @media (max-width: 1280px) {
   .overview-domain-grid { grid-template-columns: 1fr; }
   .overview-management-kpis { gap: 14px; }
+  .overview-filters--scope { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
   .overview-checklist-details__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -477,6 +479,7 @@
   .overview-heading h1 { font-size: 24px; }
   .overview-export { width: 100%; justify-content: center; }
   .overview-filters, .overview-summary { grid-template-columns: 1fr 1fr; }
+  .overview-filters--scope { grid-template-columns: 1fr; }
   .overview-management-kpis { grid-template-columns: 1fr; gap: 10px; }
   .overview-management-kpi { min-height: 104px; gap: 14px; padding: 16px 18px; }
   .overview-management-kpi__label { font-size: 16px; }
