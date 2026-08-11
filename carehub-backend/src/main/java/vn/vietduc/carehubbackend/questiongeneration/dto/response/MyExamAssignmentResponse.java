@@ -1,7 +1,8 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
-import java.time.LocalDateTime;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
 
 public record MyExamAssignmentResponse(
         Long id,
@@ -24,7 +25,8 @@ public record MyExamAssignmentResponse(
         Long currentAttemptId,
         String currentAttemptStatus,
         String currentAttemptStatusText,
-        LocalDateTime currentAttemptExpiresAt,
+        Instant currentAttemptExpiresAt,
+        Long currentAttemptRemainingSeconds,
         String availabilityStatus,
         String availabilityText,
         String actionLabel,

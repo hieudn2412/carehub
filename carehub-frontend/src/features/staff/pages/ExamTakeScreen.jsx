@@ -15,6 +15,12 @@ import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
+import {
+  EXAM_TIMER_CONTRACT_ERROR,
+  createMonotonicDeadline,
+  secondsUntil,
+  resolveRemainingSeconds,
+} from '../utils/examTimer.js'
 
 const AUTOSAVE_DEBOUNCE_MS = 1200
 const AUTOSAVE_INTERVAL_MS = 15000
@@ -115,6 +121,7 @@ function ExamTakeScreen() {
   const [saving, setSaving] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
   const [remainingSeconds, setRemainingSeconds] = useState(null)
+  const [timerContractError, setTimerContractError] = useState('')
   const [lastSavedAt, setLastSavedAt] = useState(null)
   const [saveStatus, setSaveStatus] = useState('')
   const [loadError, setLoadError] = useState('')
@@ -128,12 +135,35 @@ function ExamTakeScreen() {
   const saveInFlightRef = useRef(false)
   const pendingSaveRef = useRef(false)
   const autoSubmitStartedRef = useRef(false)
+  const timerDeadlineRef = useRef(null)
   const submitCurrentAttemptRef = useRef(null)
   const saveAnswersRef = useRef(null)
 
   const updateAttempt = useCallback((nextAttempt) => {
     attemptRef.current = nextAttempt
     setAttempt(nextAttempt)
+  }, [])
+
+  const syncTimer = useCallback((nextAttempt) => {
+    if (!nextAttempt || nextAttempt.status !== 'IN_PROGRESS') {
+      timerDeadlineRef.current = null
+      setRemainingSeconds(null)
+      setTimerContractError('')
+      return true
+    }
+
+    try {
+      const nextRemainingSeconds = resolveRemainingSeconds(nextAttempt)
+      timerDeadlineRef.current = createMonotonicDeadline(nextRemainingSeconds, performance.now())
+      setRemainingSeconds(secondsUntil(timerDeadlineRef.current, performance.now()))
+      setTimerContractError('')
+      return true
+    } catch {
+      timerDeadlineRef.current = null
+      setRemainingSeconds(null)
+      setTimerContractError(EXAM_TIMER_CONTRACT_ERROR)
+      return false
+    }
   }, [])
 
   useEffect(() => {
@@ -168,7 +198,7 @@ function ExamTakeScreen() {
         dirtyRef.current = recoveredDraft
         setAnswers(mergedAnswers)
         setFlaggedQuestions(cachedFlags)
-        setRemainingSeconds(null)
+        syncTimer(data)
         setSaveStatus(recoveredDraft ? 'Đã khôi phục đáp án chưa đồng bộ' : '')
         if (data?.status !== 'IN_PROGRESS') {
           clearCachedAnswers(attemptId)
@@ -186,7 +216,7 @@ function ExamTakeScreen() {
     return () => {
       active = false
     }
-  }, [attemptId, showToast, updateAttempt])
+  }, [attemptId, showToast, syncTimer, updateAttempt])
 
   const questions = attempt?.questions || []
   const reviewMode = Boolean(attempt && attempt.status !== 'IN_PROGRESS')
@@ -196,7 +226,10 @@ function ExamTakeScreen() {
   const answeredCount = Object.keys(answers).length
   const unansweredCount = Math.max(0, questions.length - answeredCount)
   const progressPercent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0
-  const isWritable = attempt?.status === 'IN_PROGRESS' && (remainingSeconds === null || remainingSeconds > 0)
+  const isWritable = attempt?.status === 'IN_PROGRESS'
+    && !timerContractError
+    && remainingSeconds !== null
+    && remainingSeconds > 0
 
   const finalizeResponse = useCallback((nextAttempt, message) => {
     updateAttempt(nextAttempt)
@@ -226,12 +259,8 @@ function ExamTakeScreen() {
       )
     } catch (error) {
       if (automatic) {
-        setSaveStatus('Chưa thể tự nộp, hệ thống sẽ thử lại...')
-        window.setTimeout(() => {
-          autoSubmitStartedRef.current = false
-        }, 5000)
+        setSaveStatus('Chưa thể tự nộp bài. Vui lòng kiểm tra kết nối và tải lại.')
       } else {
-        autoSubmitStartedRef.current = false
         setSaveStatus('Nộp bài chưa thành công')
         showToast(apiErrorMessage(error), 'error')
       }
@@ -246,10 +275,12 @@ function ExamTakeScreen() {
   }, [submitCurrentAttempt])
 
   useEffect(() => {
-    if (!attempt?.expiresAt || attempt.status !== 'IN_PROGRESS') return undefined
+    if (attempt?.status !== 'IN_PROGRESS' || timerContractError || timerDeadlineRef.current === null) {
+      return undefined
+    }
 
     function tick() {
-      const seconds = Math.max(0, Math.ceil((new Date(attempt.expiresAt).getTime() - Date.now()) / 1000))
+      const seconds = secondsUntil(timerDeadlineRef.current, performance.now())
       setRemainingSeconds(seconds)
       if (seconds === 0 && !autoSubmitStartedRef.current) {
         autoSubmitStartedRef.current = true
@@ -263,7 +294,7 @@ function ExamTakeScreen() {
       window.clearTimeout(initialTimer)
       window.clearInterval(interval)
     }
-  }, [attempt?.expiresAt, attempt?.status, submitCurrentAttempt])
+  }, [attempt?.status, submitCurrentAttempt, timerContractError])
 
   const saveAnswers = useCallback(async (silent = false, force = false) => {
     const currentAttempt = attemptRef.current
@@ -290,6 +321,7 @@ function ExamTakeScreen() {
       const response = await myExamApi.saveAnswers(attemptId, toAnswerPayload(snapshot))
       const nextAttempt = apiData(response, currentAttempt)
       updateAttempt(nextAttempt)
+      syncTimer(nextAttempt)
       setLastSavedAt(new Date())
 
       if (nextAttempt?.status !== 'IN_PROGRESS') {
@@ -321,7 +353,7 @@ function ExamTakeScreen() {
         window.setTimeout(() => saveAnswersRef.current?.(true), 0)
       }
     }
-  }, [attemptId, finalizeResponse, showToast, updateAttempt])
+  }, [attemptId, finalizeResponse, showToast, syncTimer, updateAttempt])
 
   useEffect(() => {
     saveAnswersRef.current = saveAnswers
@@ -465,8 +497,8 @@ function ExamTakeScreen() {
                   </div>
                 ) : (
                   <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
-                    <span>Thời gian còn lại</span>
-                    <strong>{formatRemaining(remainingSeconds)}</strong>
+                    <span>{timerContractError ? 'Lỗi đồng bộ thời gian' : 'Thời gian còn lại'}</span>
+                    <strong>{timerContractError ? '--:--' : formatRemaining(remainingSeconds)}</strong>
                   </div>
                 )}
               </div>
@@ -524,7 +556,11 @@ function ExamTakeScreen() {
               <div className="eh-exam-question-list">
                 {!isWritable && attempt && !reviewMode && (
                   <div className="eh-table-card">
-                    <div className="eh-answer-line">Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.</div>
+                    <div className="eh-answer-line">
+                      {timerContractError || (remainingSeconds === null
+                        ? 'Đang đồng bộ thời gian bài thi...'
+                        : 'Lượt làm bài đã kết thúc, bạn không thể sửa hoặc nộp thêm đáp án.')}
+                    </div>
                   </div>
                 )}
 

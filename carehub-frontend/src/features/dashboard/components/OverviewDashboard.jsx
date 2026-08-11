@@ -51,6 +51,7 @@ const DOMAIN_META = {
 }
 
 const numberFormatter = new Intl.NumberFormat('vi-VN')
+const EMPTY_COMPLIANCE_CHART = []
 
 function formatNumber(value) {
   return numberFormatter.format(Number(value) || 0)
@@ -427,7 +428,7 @@ export default function OverviewDashboard({
   onSummaryOpen,
   summary,
   domains,
-  complianceChart = [],
+  complianceChart = EMPTY_COMPLIANCE_CHART,
   onLoadComplianceTrend,
   visibleDomains = ['training', 'exams', 'quality'],
 }) {
@@ -452,9 +453,10 @@ export default function OverviewDashboard({
   const showComplianceSection = filters.content === 'all' || filters.content === 'compliance'
 
   useEffect(() => {
+    if (isStaff) return
     setShowComplianceDetails(false)
     setComplianceTrends({})
-  }, [complianceChart])
+  }, [complianceChart, isStaff])
 
   const openComplianceDetails = async () => {
     setShowComplianceDetails(true)

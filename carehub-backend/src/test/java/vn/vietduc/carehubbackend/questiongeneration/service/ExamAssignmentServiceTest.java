@@ -31,7 +31,11 @@ import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublish
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +59,8 @@ class ExamAssignmentServiceTest {
     private final TrainingGroupRepository trainingGroupRepository = mock(TrainingGroupRepository.class);
     private final ProfessionalFieldRepository professionalFieldRepository = mock(ProfessionalFieldRepository.class);
     private final NotificationEventPublisher notificationEventPublisher = mock(NotificationEventPublisher.class);
+    private final Clock clock = Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneOffset.UTC);
+    private final ZoneId examBusinessZone = ZoneId.of("Asia/Ho_Chi_Minh");
     private ExamAssignmentService service;
 
     @BeforeEach
@@ -69,7 +75,9 @@ class ExamAssignmentServiceTest {
                 positionRepository,
                 trainingGroupRepository,
                 professionalFieldRepository,
-                notificationEventPublisher
+                notificationEventPublisher,
+                clock,
+                examBusinessZone
         );
     }
 
@@ -236,7 +244,7 @@ class ExamAssignmentServiceTest {
                 .examPaper(paper)
                 .status(ExamAssignmentStatus.OPEN)
                 .maxAttempts(2)
-                .dueAt(LocalDateTime.now().plusDays(1))
+                .dueAt(now().plusDays(1))
                 .build();
         User employee = user(40L, "NV001", "Nguyễn Văn A", null);
         ExamAttempt currentAttempt = ExamAttempt.builder()
@@ -246,8 +254,8 @@ class ExamAssignmentServiceTest {
                 .user(employee)
                 .attemptNumber(1)
                 .status(ExamAttemptStatus.IN_PROGRESS)
-                .startedAt(LocalDateTime.now().minusMinutes(5))
-                .expiresAt(LocalDateTime.now().plusMinutes(25))
+                .startedAt(now().minusMinutes(5))
+                .expiresAt(now().plusMinutes(25))
                 .build();
         when(userRepository.findById(employee.getId())).thenReturn(Optional.of(employee));
         when(targetRepository.findByUserOrderByAssignmentUpdatedAtDesc(employee))
@@ -283,8 +291,8 @@ class ExamAssignmentServiceTest {
                 .name("Đợt kiểm tra sắp mở")
                 .examPaper(paper)
                 .status(ExamAssignmentStatus.OPEN)
-                .availableFrom(LocalDateTime.now().plusHours(2))
-                .dueAt(LocalDateTime.now().plusDays(1))
+                .availableFrom(now().plusHours(2))
+                .dueAt(now().plusDays(1))
                 .maxAttempts(2)
                 .resultVisibility(ExamResultVisibility.HIDDEN_UNTIL_END)
                 .build();
@@ -296,8 +304,8 @@ class ExamAssignmentServiceTest {
                 .user(employee)
                 .attemptNumber(1)
                 .status(ExamAttemptStatus.GRADED)
-                .startedAt(LocalDateTime.now().minusDays(1))
-                .submittedAt(LocalDateTime.now().minusDays(1))
+                .startedAt(now().minusDays(1))
+                .submittedAt(now().minusDays(1))
                 .score(new BigDecimal("8.00"))
                 .passed(true)
                 .build();
@@ -319,7 +327,7 @@ class ExamAssignmentServiceTest {
 
     @Test
     void createRejectsAvailableFromAtOrAfterDueDate() {
-        LocalDateTime dueAt = LocalDateTime.now().plusHours(1);
+        LocalDateTime dueAt = now().plusHours(1);
 
         assertThatThrownBy(() -> service.create(new CreateExamAssignmentRequest(
                 "Đợt kiểm tra",
@@ -408,6 +416,10 @@ class ExamAssignmentServiceTest {
 
         assertThat(savedAssignments).isNotEmpty();
         assertThat(savedAssignments.get(0).getMaxAttempts()).isEqualTo(expected);
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(examBusinessZone));
     }
 
     private ExamAssignmentTarget target(ExamAssignment assignment, User user) {

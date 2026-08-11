@@ -8,6 +8,9 @@ app:
     scan-cron: ${APP_NOTIFICATION_SCAN_CRON:0 0 7 * * *}
     zone: ${APP_NOTIFICATION_ZONE:Asia/Bangkok}
 
+  exam:
+    business-zone: ${APP_EXAM_BUSINESS_ZONE:Asia/Ho_Chi_Minh}
+
   form-import:
     max-batch-size: 25
     google-public:

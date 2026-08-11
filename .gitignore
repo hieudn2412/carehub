@@ -69,6 +69,9 @@ replay_pid*
 *.tmp
 *.temp
 
+# Local planning and verification notes
+developer_docs/
+
 # Local storage
 storage/
 models/

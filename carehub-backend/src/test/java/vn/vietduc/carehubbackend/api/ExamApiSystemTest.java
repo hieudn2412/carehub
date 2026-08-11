@@ -235,8 +235,27 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         JsonNode attempt = data(started);
         assertThat(attempt.get("status").asText()).isEqualTo("IN_PROGRESS");
         assertThat(attempt.get("attemptNumber").asInt()).isEqualTo(1);
-        assertThat(attempt.get("expiresAt").isNull()).isFalse();
+        assertOffsetTimestamp(attempt.get("expiresAt"));
+        assertOffsetTimestamp(attempt.get("serverNow"));
+        assertThat(attempt.get("remainingSeconds").asLong()).isBetween(0L, 1_800L);
         assertThat(attempt.get("questions")).hasSize(1);
+
+        JsonNode mineAfterStart = data(get(API + "/me/exam-assignments", employeeToken));
+        JsonNode currentAssignment = null;
+        for (JsonNode item : mineAfterStart) {
+            if (item.get("id").asLong() == assignmentId) {
+                currentAssignment = item;
+                break;
+            }
+        }
+        assertThat(currentAssignment).isNotNull();
+        assertOffsetTimestamp(currentAssignment.get("currentAttemptExpiresAt"));
+        assertThat(currentAssignment.get("currentAttemptRemainingSeconds").asLong()).isBetween(0L, 1_800L);
+    }
+
+    private void assertOffsetTimestamp(JsonNode value) {
+        assertThat(value).isNotNull().isNotEqualTo(com.fasterxml.jackson.databind.node.NullNode.getInstance());
+        assertThat(value.asText()).matches(".*(?:Z|[+-]\\d{2}:\\d{2})$");
     }
 
     @DisplayName("L3-EXM-14 | Input-Domain-Happy: saving answers then submitting → GRADED with a score on the 0–10 scale")

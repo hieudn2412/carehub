@@ -17,6 +17,7 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.time.LocalDateTime;
 
@@ -31,6 +32,11 @@ import java.time.LocalDateTime;
         uniqueConstraints = @UniqueConstraint(name = "uq_exam_papers_code", columnNames = "code")
 )
 public class ExamPaper extends BaseEntity {
+
+    /** Copied from the source set so assignments cannot retarget a paper to another field. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
 
     @Column(nullable = false, length = 80)
     private String code;
