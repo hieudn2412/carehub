@@ -5,6 +5,7 @@ import Header from '../../components/Header.jsx'
 import OverviewDashboard from '../../../dashboard/components/OverviewDashboard.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
+import { trainingApi } from '../../../training/api/trainingApi.js'
 import { loadCompetencyOverview } from '../../../dashboard/utils/competencyOverview.js'
 
 function payload(response) {
@@ -30,10 +31,16 @@ function currentYearRange() {
 export default function ManagerDashboard() {
   const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
-  const [filters, setFilters] = useState({ departmentId: '' })
+  const [filters, setFilters] = useState(() => ({
+    departmentId: '',
+    employeeCode: '',
+    content: 'all',
+    ...currentYearRange(),
+  }))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [complianceChart, setComplianceChart] = useState([])
+  const [filteredEmployeeId, setFilteredEmployeeId] = useState()
   const [domains, setDomains] = useState({
     training: unavailable('Chưa có dữ liệu giờ đào tạo trong khoa.'),
     exams: unavailable('Chưa có kết quả bài kiểm tra trong khoa.'),
@@ -65,46 +72,62 @@ export default function ManagerDashboard() {
     setLoading(true)
     setError('')
     try {
-      const dateRange = currentYearRange()
-      const scopedParams = { ...dateRange, departmentId: filters.departmentId }
-      const [overviewResult, checklistResult, competencyResult] = await Promise.allSettled([
-        staffApi.getManagerDashboardOverview({
-          ...dateRange,
+      const defaultDates = currentYearRange()
+      const dateRange = {
+        fromDate: filters.fromDate || defaultDates.fromDate,
+        toDate: filters.toDate || defaultDates.toDate,
+      }
+      const scopedParams = {
+        ...dateRange,
+        departmentId: filters.departmentId,
+        keyword: filters.employeeCode.trim() || undefined,
+      }
+      const [competencyResult] = await Promise.allSettled([
+        loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+      ])
+      const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
+      const employeeFilterActive = Boolean(filters.employeeCode.trim())
+      const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+      setFilteredEmployeeId(subjectUserId)
+      const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
+      const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
+        trainingApi.getTrainingDashboardSummary({
+          departmentId: filters.departmentId,
+          keyword: filters.employeeCode.trim() || undefined,
+          asOf: filters.toDate,
         }),
+        staffApi.getDashboardFormSummary(qualityParams),
         staffApi.getQualityChecklistDashboard({
-          ...scopedParams,
+          ...qualityParams,
           view: 'FILTERED',
           page: 0,
           size: 8,
         }),
-        loadCompetencyOverview(competencyApi.getSummary, scopedParams),
       ])
-      if (overviewResult.status === 'rejected') throw overviewResult.reason
-      const overview = payload(overviewResult.value)
+      if ([trainingResult, qualityResult, checklistResult, competencyResult]
+        .every((result) => result.status === 'rejected')) throw trainingResult.reason
       const checklistPage = checklistResult.status === 'fulfilled'
         ? payload(checklistResult.value)
         : null
       const checklistItems = Array.isArray(checklistPage)
         ? checklistPage
         : checklistPage?.content || checklistPage?.items || []
-      const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
-      const training = overview.training || {}
-      const quality = overview.quality || {}
-
-      if (overview.scope?.departmentId) {
-        setProfile((current) => current || {
-          departmentId: overview.scope.departmentId,
-          departmentName: overview.scope.departmentName,
-        })
-      }
+      const training = trainingResult.status === 'fulfilled'
+        ? payload(trainingResult.value)?.totals || {}
+        : {}
+      const quality = qualityResult.status === 'fulfilled'
+        ? payload(qualityResult.value)?.responses || {}
+        : null
 
       setDomains({
         training: {
           total: Number(training.employeeCount) || 0,
           passed: Number(training.compliantCount) || 0,
-          failed: Number(training.needsAttentionCount) || 0,
-          rate: Number(training.overallComplianceRate) || 0,
-          available: true,
+          failed: (Number(training.nonCompliantCount) || 0)
+            + (Number(training.atRiskCount) || 0)
+            + (Number(training.notConfiguredCount) || 0),
+          rate: Number(training.complianceRate) || 0,
+          available: trainingResult.status === 'fulfilled',
           emptyMessage: 'Chưa có nhân viên trong phạm vi đào tạo của khoa.',
           note: `${Number(training.notConfiguredCount) || 0} nhân viên chưa được cấu hình chuẩn đào tạo.`,
           path: '/manager/reports/training-dashboard',
@@ -118,16 +141,16 @@ export default function ManagerDashboard() {
               path: '/manager/reports/quality-dashboard',
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
-        quality: {
-          total: Number(quality.submittedCount) || 0,
-          passed: Number(quality.passedCount) || 0,
-          failed: Number(quality.failedCount) || 0,
+        quality: quality ? {
+          total: Number(quality.submitted) || 0,
+          passed: Number(quality.passed) || 0,
+          failed: (Number(quality.failedScore) || 0) + (Number(quality.failedCritical) || 0),
           rate: Number(quality.passRate) || 0,
-          available: true,
+          available: qualityResult.status === 'fulfilled',
           emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
           note: `Điểm trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}/10; kết quả đạt đã áp dụng điểm sàn và điểm liệt.`,
           path: '/manager/reports/checklist-dashboard',
-        },
+        } : unavailable('Không thể tải dữ liệu checklist trong khoa.'),
       })
       setComplianceChart(checklistItems.map((item) => ({
         id: item.formId,
@@ -148,22 +171,25 @@ export default function ManagerDashboard() {
     } finally {
       setLoading(false)
     }
-  }, [filters.departmentId])
+  }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
 
   useEffect(() => {
-    const timer = window.setTimeout(loadDashboard, 0)
+    const timer = window.setTimeout(loadDashboard, 350)
     return () => window.clearTimeout(timer)
   }, [loadDashboard])
 
   const loadComplianceTrend = useCallback(async (formId) => {
+    const defaultDates = currentYearRange()
     const response = await staffApi.getQualityChecklistTrend({
-      ...currentYearRange(),
+      fromDate: filters.fromDate || defaultDates.fromDate,
+      toDate: filters.toDate || defaultDates.toDate,
       departmentId: filters.departmentId,
+      subjectUserId: filteredEmployeeId,
       formId,
       bucket: 'DAY',
     })
     return payload(response)?.items || []
-  }, [filters.departmentId])
+  }, [filteredEmployeeId, filters.departmentId, filters.fromDate, filters.toDate])
 
   return (
     <div className="dashboard-layout">
