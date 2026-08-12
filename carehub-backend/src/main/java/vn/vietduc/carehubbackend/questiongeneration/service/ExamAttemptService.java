@@ -33,8 +33,11 @@ import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -62,6 +65,8 @@ public class ExamAttemptService {
     private final UserRepository userRepository;
     private final CompetencyClassificationService classificationService;
     private final ApplicationEventPublisher eventPublisher;
+    private final Clock clock;
+    private final ZoneId examBusinessZone;
 
     @Transactional
     public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status, Long professionalFieldId) {
@@ -130,7 +135,7 @@ public class ExamAttemptService {
             throw new BadRequestException("Bạn đã dùng hết số lượt làm bài");
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         LocalDateTime expiresAt = now.plusMinutes(assignment.getExamPaper().getTimeLimitMinutes());
         if (assignment.getDueAt() != null && assignment.getDueAt().isBefore(expiresAt)) {
             expiresAt = assignment.getDueAt();
@@ -171,7 +176,7 @@ public class ExamAttemptService {
         requireOwner(attempt, userId);
         ensureInProgress(attempt);
         boolean expired = isExpired(attempt);
-        LocalDateTime submittedAt = expired ? effectiveExpiry(attempt) : LocalDateTime.now();
+        LocalDateTime submittedAt = expired ? effectiveExpiry(attempt) : now();
         // Quá hạn thì chỉ chấm phần đã lưu trước hạn — đáp án gửi kèm lần nộp muộn bị bỏ qua.
         ExamAttempt saved = gradeAttempt(attempt, expired ? null : request, submittedAt);
         return toResponse(saved, canRevealQuestionReview(saved), canRevealAnswers(saved), canRevealScore(saved));
@@ -267,6 +272,11 @@ public class ExamAttemptService {
             boolean revealAnswers,
             boolean revealScore
     ) {
+        Instant serverNow = Instant.now(clock);
+        Instant expiresAt = toInstant(attempt.getExpiresAt());
+        Long remainingSeconds = expiresAt == null
+                ? null
+                : Math.max(0L, Duration.between(serverNow, expiresAt).getSeconds());
         Map<Long, ExamAttemptAnswer> answersByQuestionId = includeQuestions || revealAnswers
                 ? answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity(), (left, right) -> left, LinkedHashMap::new))
@@ -296,9 +306,11 @@ public class ExamAttemptService {
                 attempt.getAttemptNumber(),
                 attempt.getStatus().name(),
                 QuestionGenerationLabels.examAttemptStatus(attempt.getStatus()),
-                attempt.getStartedAt(),
-                attempt.getSubmittedAt(),
-                attempt.getExpiresAt(),
+                toInstant(attempt.getStartedAt()),
+                toInstant(attempt.getSubmittedAt()),
+                expiresAt,
+                remainingSeconds,
+                serverNow,
                 revealScore ? attempt.getScore() : null,
                 revealScore ? attempt.getCorrectCount() : null,
                 attempt.getTotalQuestions(),
@@ -522,7 +534,7 @@ public class ExamAttemptService {
     }
 
     private void validateStartableAssignment(ExamAssignment assignment, User user) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
             throw new BadRequestException("Phân công kiểm tra chưa mở");
         }
@@ -546,7 +558,7 @@ public class ExamAttemptService {
     }
 
     private boolean isExpired(ExamAttempt attempt) {
-        return attempt.getExpiresAt() != null && LocalDateTime.now().isAfter(attempt.getExpiresAt());
+        return attempt.getExpiresAt() != null && now().isAfter(attempt.getExpiresAt());
     }
 
     private void expireIfNeeded(ExamAttempt attempt) {
@@ -556,7 +568,7 @@ public class ExamAttemptService {
     }
 
     private LocalDateTime effectiveExpiry(ExamAttempt attempt) {
-        return attempt.getExpiresAt() == null ? LocalDateTime.now() : attempt.getExpiresAt();
+        return attempt.getExpiresAt() == null ? now() : attempt.getExpiresAt();
     }
 
     private boolean canRevealAnswers(ExamAttempt attempt) {
@@ -566,12 +578,12 @@ public class ExamAttemptService {
         if (attempt.getStatus() != ExamAttemptStatus.SUBMITTED && attempt.getStatus() != ExamAttemptStatus.GRADED) {
             return false;
         }
-        return assignmentService.isAssignmentEnded(attempt.getAssignment(), LocalDateTime.now());
+        return assignmentService.isAssignmentEnded(attempt.getAssignment(), now());
     }
 
     private boolean canRevealScore(ExamAttempt attempt) {
         return resultVisibility(attempt) == ExamResultVisibility.SCORE_ONLY
-                || assignmentService.isAssignmentEnded(attempt.getAssignment(), LocalDateTime.now());
+                || assignmentService.isAssignmentEnded(attempt.getAssignment(), now());
     }
 
     private boolean canRevealQuestionReview(ExamAttempt attempt) {
@@ -600,6 +612,14 @@ public class ExamAttemptService {
     private User findUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên"));
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(examBusinessZone));
+    }
+
+    private Instant toInstant(LocalDateTime value) {
+        return value == null ? null : value.atZone(examBusinessZone).toInstant();
     }
 
     private ExamAttemptStatus parseStatusOrNull(String status) {

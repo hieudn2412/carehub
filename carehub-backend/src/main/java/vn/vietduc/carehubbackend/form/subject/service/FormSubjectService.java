@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.form.subject.dto.FormSubjectUserResponse;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
@@ -25,8 +26,13 @@ public class FormSubjectService {
     @Transactional(readOnly = true)
     public FormSubjectUserResponse findByEmployeeCode(Long assignmentItemId, String employeeCode) {
         requireSearchAccess(assignmentItemId);
+        long actorId = securityUtils.getCurrentUserId();
+        Long departmentId = evaluatorDepartmentId(actorId);
         User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
                 .filter(user -> user.getStatus() == vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE)
+                .filter(user -> !user.getId().equals(actorId))
+                .filter(user -> departmentId == null || (user.getDepartment() != null
+                        && departmentId.equals(user.getDepartment().getId())))
                 .orElseThrow(this::notFound);
         return FormSubjectUserResponse.builder()
                 .userId(target.getId())
@@ -38,10 +44,12 @@ public class FormSubjectService {
     @Transactional(readOnly = true)
     public Page<FormSubjectUserResponse> search(Long assignmentItemId, String keyword, Pageable pageable) {
         requireSearchAccess(assignmentItemId);
+        long actorId = securityUtils.getCurrentUserId();
+        Long departmentId = evaluatorDepartmentId(actorId);
         String normalizedKeyword = keyword == null || keyword.isBlank()
                 ? null
                 : "%" + keyword.trim().toLowerCase() + "%";
-        return userRepository.searchActiveFormSubjects(normalizedKeyword, pageable)
+        return userRepository.searchActiveFormSubjects(normalizedKeyword, actorId, departmentId, pageable)
                 .map(this::toResponse);
     }
 
@@ -67,6 +75,16 @@ public class FormSubjectService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private Long evaluatorDepartmentId(long actorId) {
+        if (isAdmin()) return null;
+        User actor = userRepository.findByIdAndIsDeletedFalse(actorId)
+                .orElseThrow(() -> new ForbiddenException("Không tìm thấy tài khoản người đánh giá hiện tại"));
+        if (actor.getDepartment() == null) {
+            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
+        }
+        return actor.getDepartment().getId();
     }
 
     private ResourceNotFoundException notFound() {

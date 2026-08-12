@@ -51,6 +51,7 @@ const DOMAIN_META = {
 }
 
 const numberFormatter = new Intl.NumberFormat('vi-VN')
+const EMPTY_COMPLIANCE_CHART = []
 
 function formatNumber(value) {
   return numberFormatter.format(Number(value) || 0)
@@ -175,7 +176,7 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
   const detail = type === 'training'
     ? 'Chuẩn đào tạo liên tục'
     : type === 'quality'
-      ? 'Theo điểm sàn và điểm liệt'
+      ? data?.detail || 'Theo điểm sàn và điểm liệt'
       : content === 'classification'
         ? Object.entries(data?.classificationCounts || {}).map(([label, count]) => `${label}: ${count}`).join(' · ') || 'Chưa có dữ liệu phân loại'
         : `${data?.fromDate || '01/01'} → ${data?.toDate || 'hôm nay'} · Lý thuyết ${formatScore(data?.knowledgeAverage)} · Kỹ năng ${formatScore(data?.skillAverage)}${data?.targetScore == null ? ' · Theo ngưỡng từng khoa' : ` · Ngưỡng ${formatScore(data.targetScore)}`}`
@@ -427,7 +428,7 @@ export default function OverviewDashboard({
   onSummaryOpen,
   summary,
   domains,
-  complianceChart = [],
+  complianceChart = EMPTY_COMPLIANCE_CHART,
   onLoadComplianceTrend,
   visibleDomains = ['training', 'exams', 'quality'],
 }) {
@@ -452,9 +453,10 @@ export default function OverviewDashboard({
   const showComplianceSection = filters.content === 'all' || filters.content === 'compliance'
 
   useEffect(() => {
+    if (isStaff) return
     setShowComplianceDetails(false)
     setComplianceTrends({})
-  }, [complianceChart])
+  }, [complianceChart, isStaff])
 
   const openComplianceDetails = async () => {
     setShowComplianceDetails(true)

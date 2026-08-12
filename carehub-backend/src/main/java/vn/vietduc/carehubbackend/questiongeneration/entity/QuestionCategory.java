@@ -4,6 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -12,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 
 @Entity
@@ -25,6 +29,11 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategor
         uniqueConstraints = @UniqueConstraint(name = "uq_question_categories_code", columnNames = "code")
 )
 public class QuestionCategory extends BaseEntity {
+
+    /** The professional competency domain that owns this knowledge category. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
 
     @Column(nullable = false, length = 80)
     private String code;

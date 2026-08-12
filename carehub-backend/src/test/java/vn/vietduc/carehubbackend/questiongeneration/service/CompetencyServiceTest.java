@@ -203,6 +203,23 @@ class CompetencyServiceTest {
     }
 
     @Test
+    void summaryUsesDefaultTargetSixWhenDepartmentHasNoStoredTarget() {
+        department.setCompetencyTargetScore(null);
+        when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        var response = service.getSummary(
+                10L,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 8, 10),
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(response.targetScore()).isEqualByComparingTo("6.00");
+    }
+
+    @Test
     void groupsTechniqueResultsBySubjectAndAppliesFormFilter() {
         User evaluator = User.builder()
                 .id(90L)
