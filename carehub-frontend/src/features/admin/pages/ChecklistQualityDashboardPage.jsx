@@ -380,7 +380,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
 
         <section className="checklist-quality-processes">
           <div className="checklist-quality-section-heading">
-            <div><h2>{view === 'LATEST' ? 'Bảng kiểm được chấm gần nhất' : 'Danh sách bảng kiểm phù hợp'}</h2>
+            <div><h2>{view === 'LATEST' ? 'Bảng kiểm đã chấm gần nhất' : 'Danh sách bảng kiểm phù hợp'}</h2>
               <p>{view === 'LATEST' ? 'Tính từ đầu năm đến hiện tại.' : 'Số liệu cập nhật theo toàn bộ bộ lọc đang chọn.'}</p></div>
             <span>{pageInfo.totalElements} quy trình</span>
           </div>
