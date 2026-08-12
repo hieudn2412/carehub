@@ -115,7 +115,7 @@ class MyCompetencyServiceTest {
     }
 
     @Test
-    void missingComponentIsTreatedAsZeroAndNoTargetIsUnconfigured() {
+    void missingComponentIsTreatedAsZeroAndMissingTargetUsesDefaultSix() {
         when(attemptRepository.findScoredAttemptsByUserAndDateRange(any(), any(), any()))
                 .thenReturn(List.of());
         user.getDepartment().setCompetencyTargetScore(null);
@@ -127,7 +127,7 @@ class MyCompetencyServiceTest {
         assertThat(summary.overallScore()).isEqualByComparingTo("4.50");
         assertThat(summary.knowledgeAttemptCount()).isZero();
         assertThat(summary.skillEvaluationCount()).isEqualTo(1);
-        assertThat(summary.targetScore()).isNull();
+        assertThat(summary.targetScore()).isEqualByComparingTo("6.00");
         assertThat(summary.isPassed()).isFalse();
     }
 

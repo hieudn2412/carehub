@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -47,10 +47,15 @@ function Sidebar({ alertSummary = {} }) {
   const location = useLocation()
   const currentPath = location.pathname
   const navRef = useRef(null)
+  const pendingRouteRef = useRef(null)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobileClosing, setIsMobileClosing] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [pendingRoute, setPendingRoute] = useState(null)
+
+  useLayoutEffect(() => {
+    pendingRouteRef.current = pendingRoute
+  }, [pendingRoute])
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -260,17 +265,11 @@ function Sidebar({ alertSummary = {} }) {
     setIsMobileOpen(false)
   }
 
-  const handleSidebarTransitionEnd = (event) => {
-    if (
-      event.target !== event.currentTarget ||
-      event.propertyName !== 'transform' ||
-      isMobileOpen ||
-      !isMobileClosing
-    ) {
-      return
-    }
+  const finishStaffMobileMenuClose = () => {
+    if (!isMobileClosing) return
 
-    const route = pendingRoute
+    const route = pendingRouteRef.current ?? pendingRoute
+    pendingRouteRef.current = null
     setSearchKeyword('')
     setPendingRoute(null)
     setIsMobileClosing(false)
@@ -278,6 +277,23 @@ function Sidebar({ alertSummary = {} }) {
     if (route && route !== currentPath) {
       navigate(route)
     }
+  }
+
+  const handleSidebarTransitionEnd = (event) => {
+    if (
+      event.target !== event.currentTarget ||
+      event.propertyName !== 'transform' ||
+      isMobileOpen
+    ) {
+      return
+    }
+
+    finishStaffMobileMenuClose()
+  }
+
+  const handleSidebarTransitionCancel = (event) => {
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform') return
+    finishStaffMobileMenuClose()
   }
 
   const examMenuItem = {
@@ -441,6 +457,7 @@ function Sidebar({ alertSummary = {} }) {
         className={`sidebar sidebar--staff-user${isMobileOpen ? ' sidebar--mobile-open' : ''}`}
         aria-label="Điều hướng chính"
         onTransitionEnd={handleSidebarTransitionEnd}
+        onTransitionCancel={handleSidebarTransitionCancel}
       >
         <div className="staff-mobile-menu" aria-hidden={!isMobileOpen}>
             <div className="staff-mobile-menu__topbar">

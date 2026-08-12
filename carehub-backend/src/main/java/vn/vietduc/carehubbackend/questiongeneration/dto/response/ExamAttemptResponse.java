@@ -1,7 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 public record ExamAttemptResponse(
@@ -20,9 +20,11 @@ public record ExamAttemptResponse(
         Integer attemptNumber,
         String status,
         String statusText,
-        LocalDateTime startedAt,
-        LocalDateTime submittedAt,
-        LocalDateTime expiresAt,
+        Instant startedAt,
+        Instant submittedAt,
+        Instant expiresAt,
+        Long remainingSeconds,
+        Instant serverNow,
         BigDecimal score,
         Integer correctCount,
         Integer totalQuestions,

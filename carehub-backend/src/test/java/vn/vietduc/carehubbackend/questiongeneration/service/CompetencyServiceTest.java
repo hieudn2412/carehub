@@ -12,6 +12,8 @@ import vn.vietduc.carehubbackend.form.submission.entity.FormSubmission;
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionContext;
 import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
@@ -159,6 +161,62 @@ class CompetencyServiceTest {
                 any(),
                 any()
         );
+    }
+
+    @Test
+    void summaryTreatsScoreEqualToDepartmentTargetAsPassed() {
+        department.setCompetencyTargetScore(new BigDecimal("7.00"));
+        User employee = User.builder()
+                .id(20L)
+                .employeeCode("NV020")
+                .name("Nguyễn An")
+                .department(department)
+                .build();
+        when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), any()))
+                .thenReturn(new PageImpl<>(List.of(employee), PageRequest.of(0, 10), 1));
+        when(attemptRepository.findScoredAttemptsByUserIdsAndDateRange(any(), any(), any()))
+                .thenReturn(List.of(ExamAttempt.builder()
+                        .id(30L)
+                        .user(employee)
+                        .status(ExamAttemptStatus.GRADED)
+                        .score(new BigDecimal("7.00"))
+                        .build()));
+        Form form = Form.builder().id(50L).title("Bảng kiểm truyền dịch").build();
+        FormSubmission skillSubmission = submission(
+                100L, employee, employee, form, "7.00", FormSubmissionResult.PASSED);
+        skillSubmission.setConvertedScore(new BigDecimal("7.00"));
+        when(submissionRepository.findScoredEvaluationsForCandidateUsers(any(), any(), any(), any()))
+                .thenReturn(List.of(skillSubmission));
+
+        var response = service.getSummary(
+                10L,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 8, 10),
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.overallScore()).isEqualByComparingTo("7.00");
+            assertThat(item.isPassed()).isTrue();
+        });
+    }
+
+    @Test
+    void summaryUsesDefaultTargetSixWhenDepartmentHasNoStoredTarget() {
+        department.setCompetencyTargetScore(null);
+        when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        var response = service.getSummary(
+                10L,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 8, 10),
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(response.targetScore()).isEqualByComparingTo("6.00");
     }
 
     @Test

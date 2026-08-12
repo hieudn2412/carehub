@@ -340,6 +340,18 @@ class FormSubmissionControllerIntegrationTest {
     @Test
     void subjectSearchRequiresAssignmentForNonAdminAndReturnsActiveUsers() throws Exception {
         Fixture fixture = publishedAssignedForm();
+        Department otherDepartment = departmentRepository.save(Department.builder()
+                .departmentCode("FORM_SUB_OTHER_DEPT")
+                .name("Khoa khác")
+                .build());
+        User foreignSubject = userRepository.save(User.builder()
+                .employeeCode("FORM_SUB_FOREIGN")
+                .email("form-sub-foreign@example.com")
+                .name("Nhân viên khoa khác")
+                .password("encoded")
+                .department(otherDepartment)
+                .status(UserStatus.ACTIVE)
+                .build());
 
         mockMvc.perform(get("/api/v1/form-subjects/users/search")
                         .with(managerJwt())
@@ -350,6 +362,32 @@ class FormSubmissionControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content.length()", is(1)))
                 .andExpect(jsonPath("$.data.content[0].userId", is(subject.getId().intValue())))
                 .andExpect(jsonPath("$.data.content[0].employeeCode", is(subject.getEmployeeCode())));
+
+        mockMvc.perform(get("/api/v1/form-subjects/users/search")
+                        .with(managerJwt())
+                        .param("assignmentItemId", fixture.assignmentItemId().toString())
+                        .param("keyword", "FOREIGN")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()", is(0)));
+
+        mockMvc.perform(get("/api/v1/form-subjects/users")
+                        .with(managerJwt())
+                        .param("assignmentItemId", fixture.assignmentItemId().toString())
+                        .param("employeeCode", foreignSubject.getEmployeeCode()))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/v1/form-submissions")
+                        .with(managerJwt())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "assignmentItemId": %d,
+                                  "subject": {"type": "USER", "userId": %d}
+                                }
+                                """.formatted(fixture.assignmentItemId(), foreignSubject.getId())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code", is("AUTH_002")));
 
         mockMvc.perform(get("/api/v1/form-subjects/users/search")
                         .with(managerJwt())
