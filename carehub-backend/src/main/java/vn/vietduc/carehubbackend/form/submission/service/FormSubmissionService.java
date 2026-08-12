@@ -75,6 +75,9 @@ public class FormSubmissionService {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
         User subject = resolveSubjectUser(request.subject().userId(), request.subject().employeeCode());
+        if (subject.getId().equals(actorId)) {
+            throw ValidationException.field("subject.userId", "Người đánh giá không thể tự đánh giá chính mình");
+        }
         boolean draftExists = item != null
                 ? submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                         item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)

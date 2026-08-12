@@ -146,20 +146,27 @@ function Sidebar({ alertSummary = {} }) {
 
   // Manager specific features
   if (isManager) {
-    navSections.push({
-      label: 'Dashboard & báo cáo thống kê',
-      items: [
-        { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
-        { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
-        { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
-        { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
-        { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
-        { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
-        { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
-      ],
-    })
+    navSections.push(
+      {
+        label: 'Dashboard & báo cáo thống kê',
+        items: [
+          { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+          { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
+          { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
+        ],
+      },
+      {
+        label: 'Quản lý khoa',
+        items: [
+          { icon: <FileDoneOutlined />, label: 'Checklist được giao', path: '/manager/quality/checklists' },
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
+          { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
+          { icon: <TrophyOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
+        ],
+      },
+    )
   }
 
   navSections.push(
@@ -399,25 +406,30 @@ function Sidebar({ alertSummary = {} }) {
             label: 'Chất lượng chăm sóc',
             route: '/manager/competency-summary',
           },
-          {
-            icon: <TeamOutlined />,
-            label: 'Nhân sự và giờ đào tạo',
-            route: '/manager/employees',
-          },
+        ],
+      },
+      {
+        title: 'Quản lý khoa',
+        items: [
           {
             icon: <FileDoneOutlined />,
-            label: 'Kết quả năng lực chuyên môn',
-            route: '/manager/exam-results',
-          },
-          {
-            icon: <CheckSquareOutlined />,
-            label: 'Thực hiện đánh giá',
+            label: 'Checklist được giao',
             route: '/manager/quality/checklists',
           },
           {
             icon: <HistoryOutlined />,
             label: 'Lịch sử đánh giá',
             route: '/manager/quality/history',
+          },
+          {
+            icon: <TeamOutlined />,
+            label: 'Nhân sự và giờ đào tạo',
+            route: '/manager/employees',
+          },
+          {
+            icon: <TrophyOutlined />,
+            label: 'Kết quả năng lực chuyên môn',
+            route: '/manager/exam-results',
           },
         ],
       },

@@ -59,18 +59,20 @@ class FormSubjectServiceTest {
     @Test
     void adminCanLookupWithoutAssignment() {
         authenticate("ROLE_ADMIN");
-        User target = User.builder().employeeCode("NV02").name("User").status(UserStatus.ACTIVE).build();
+        User target = User.builder().id(102L).employeeCode("NV02").name("User").status(UserStatus.ACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV02"))
                 .thenReturn(Optional.of(target));
 
         assertEquals("NV02", service.findByEmployeeCode(null, "NV02").employeeCode());
-        verifyNoInteractions(assignmentAccessService, securityUtils);
+        verifyNoInteractions(assignmentAccessService);
     }
 
     @Test
     void cannotLookupInactiveEmployee() {
         authenticate("ROLE_ADMIN");
-        User target = User.builder().employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
+        User target = User.builder().id(103L).employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV03"))
                 .thenReturn(Optional.of(target));
 
@@ -83,7 +85,8 @@ class FormSubjectServiceTest {
         User target = User.builder().id(104L).employeeCode("NV04").name("Nguyễn Văn B")
                 .status(UserStatus.ACTIVE).build();
         var pageable = PageRequest.of(0, 20);
-        when(userRepository.searchActiveFormSubjects("%nv04%", pageable))
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
+        when(userRepository.searchActiveFormSubjects("%nv04%", 1L, pageable))
                 .thenReturn(new PageImpl<>(List.of(target), pageable, 1));
 
         var result = service.search(null, " NV04 ", pageable);
@@ -91,7 +94,7 @@ class FormSubjectServiceTest {
         assertEquals(1, result.getTotalElements());
         assertEquals(104L, result.getContent().get(0).userId());
         assertEquals("NV04", result.getContent().get(0).employeeCode());
-        verifyNoInteractions(assignmentAccessService, securityUtils);
+        verifyNoInteractions(assignmentAccessService);
     }
 
     @Test
@@ -102,11 +105,24 @@ class FormSubjectServiceTest {
                 .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
         when(securityUtils.getCurrentUserId()).thenReturn(8L);
         when(assignmentAccessService.requireActiveOwnedItem(12L, 8L)).thenReturn(item);
-        when(userRepository.searchActiveFormSubjects(null, pageable))
+        when(userRepository.searchActiveFormSubjects(null, 8L, pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         assertTrue(service.search(12L, " ", pageable).isEmpty());
         verify(assignmentAccessService).requireActiveOwnedItem(12L, 8L);
+    }
+
+    @Test
+    void evaluatorCannotLookupSelfByEmployeeCode() {
+        authenticate("ROLE_ADMIN");
+        User actor = User.builder().id(7L).employeeCode("SELF01").name("Self")
+                .status(UserStatus.ACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(7L);
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("SELF01"))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.findByEmployeeCode(null, "SELF01"));
     }
 
     private void authenticate(String role) {
