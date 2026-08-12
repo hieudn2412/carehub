@@ -25,8 +25,10 @@ public class FormSubjectService {
     @Transactional(readOnly = true)
     public FormSubjectUserResponse findByEmployeeCode(Long assignmentItemId, String employeeCode) {
         requireSearchAccess(assignmentItemId);
+        long actorId = securityUtils.getCurrentUserId();
         User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
                 .filter(user -> user.getStatus() == vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE)
+                .filter(user -> !user.getId().equals(actorId))
                 .orElseThrow(this::notFound);
         return FormSubjectUserResponse.builder()
                 .userId(target.getId())
@@ -38,10 +40,11 @@ public class FormSubjectService {
     @Transactional(readOnly = true)
     public Page<FormSubjectUserResponse> search(Long assignmentItemId, String keyword, Pageable pageable) {
         requireSearchAccess(assignmentItemId);
+        long actorId = securityUtils.getCurrentUserId();
         String normalizedKeyword = keyword == null || keyword.isBlank()
                 ? null
                 : "%" + keyword.trim().toLowerCase() + "%";
-        return userRepository.searchActiveFormSubjects(normalizedKeyword, pageable)
+        return userRepository.searchActiveFormSubjects(normalizedKeyword, actorId, pageable)
                 .map(this::toResponse);
     }
 

@@ -21,6 +21,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetency
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.math.BigDecimal;
@@ -357,7 +358,9 @@ public class MyCompetencyService {
     }
 
     private BigDecimal departmentTarget(User user) {
-        BigDecimal target = user.getDepartment() == null ? null : user.getDepartment().getCompetencyTargetScore();
+        BigDecimal target = user.getDepartment() == null
+                ? Department.DEFAULT_COMPETENCY_TARGET_SCORE
+                : user.getDepartment().getEffectiveCompetencyTargetScore();
         if (target != null && target.compareTo(BigDecimal.valueOf(10)) > 0) {
             return target.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
         }

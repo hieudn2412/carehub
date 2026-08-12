@@ -426,7 +426,7 @@ public class CompetencyService {
 
         Department department = findDepartment(departmentId);
         BigDecimal targetScore = department != null
-                ? normalizeTargetScore(department.getCompetencyTargetScore())
+                ? normalizeTargetScore(department.getEffectiveCompetencyTargetScore())
                 : null;
         Page<User> userPage = userRepository.findCompetencySummaryCandidates(
                 departmentId,
@@ -526,8 +526,8 @@ public class CompetencyService {
             BigDecimal employeeTargetScore = departmentId != null
                     ? targetScore
                     : normalizeTargetScore(user.getDepartment() != null
-                            ? user.getDepartment().getCompetencyTargetScore()
-                            : null);
+                            ? user.getDepartment().getEffectiveCompetencyTargetScore()
+                            : Department.DEFAULT_COMPETENCY_TARGET_SCORE);
 
             items.add(new CompetencySummaryItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),

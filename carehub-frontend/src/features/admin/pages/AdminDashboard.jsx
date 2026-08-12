@@ -86,10 +86,16 @@ export default function AdminDashboard() {
       keyword: filters.employeeCode.trim() || undefined,
       asOf: dateParams.toDate,
     }
-    const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
+    const [trainingResult, qualityResult, checklistResult, historyResult] = await Promise.allSettled([
       trainingApi.getTrainingDashboardSummary(trainingScope),
       adminApi.getDashboardFormSummary(qualityParams),
       adminApi.getQualityChecklistDashboard({ ...qualityParams, view: 'FILTERED', page: 0, size: 8 }),
+      adminApi.getFormHistory({
+        dateFrom: dateParams.fromDate,
+        dateTo: dateParams.toDate,
+        page: 0,
+        size: 100,
+      }),
     ])
 
     const trainingTotals = trainingResult.status === 'fulfilled'
@@ -101,8 +107,6 @@ export default function AdminDashboard() {
       + (Number(trainingTotals.atRiskCount) || 0)
       + (Number(trainingTotals.notConfiguredCount) || 0)
     const quality = qualityResult.status === 'fulfilled' && qualityResult.value ? payload(qualityResult.value)?.responses || {} : null
-    const submittedQuality = Number(quality?.submitted) || 0
-    const qualityRate = Number(quality?.passRate) || 0
     const qualityPassed = Number(quality?.passed) || 0
     const qualityFailed = (Number(quality?.failedScore) || 0)
       + (Number(quality?.failedCritical) || 0)
@@ -112,6 +116,15 @@ export default function AdminDashboard() {
     const checklistItems = Array.isArray(checklistPage)
       ? checklistPage
       : checklistPage?.content || checklistPage?.items || []
+    const historyPage = historyResult.status === 'fulfilled'
+      ? payload(historyResult.value)
+      : null
+    const historyItems = Array.isArray(historyPage)
+      ? historyPage
+      : historyPage?.content || historyPage?.items || []
+    const historicalMonitoringCount = historyResult.status === 'fulfilled'
+      ? historyItems.reduce((total, item) => total + (Number(item.monitoringCount) || 0), 0)
+      : 0
 
     setDashboard({
       training: trainingResult.status === 'fulfilled'
@@ -133,11 +146,12 @@ export default function AdminDashboard() {
         : emptyDomain('Không thể tải dữ liệu năng lực chuyên môn từ máy chủ.'),
       quality: quality
         ? {
-            total: submittedQuality,
+            total: historicalMonitoringCount,
             passed: qualityPassed,
             failed: qualityFailed,
-            rate: qualityRate,
-            available: true,
+            rate: historicalMonitoringCount ? qualityPassed * 100 / historicalMonitoringCount : 0,
+            available: historyResult.status === 'fulfilled',
+            detail: 'Số lượt checklist đạt / tổng lượt giám sát trong lịch sử đánh giá.',
             note: `Điểm trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}/10; kết quả đạt đã áp dụng điểm sàn và điểm liệt.`,
           }
         : emptyDomain('Không thể tải dữ liệu tuân thủ quy trình.'),
@@ -151,7 +165,7 @@ export default function AdminDashboard() {
       total: Number(item.monitoringCount) || 0,
     })))
 
-    if ([trainingResult, qualityResult, checklistResult, competencyResult].every((result) => result.status === 'rejected')) {
+    if ([trainingResult, qualityResult, checklistResult, historyResult, competencyResult].every((result) => result.status === 'rejected')) {
       setError('Không thể tải dashboard. Vui lòng kiểm tra kết nối đến máy chủ rồi thử lại.')
     }
     setLoading(false)
