@@ -57,6 +57,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             WHERE u.isDeleted = false
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND u.id <> :excludedUserId
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
                    OR LOWER(u.name) LIKE :keyword
                    OR LOWER(u.employeeCode) LIKE :keyword)
@@ -68,6 +69,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             WHERE u.isDeleted = false
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND u.id <> :excludedUserId
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
                    OR LOWER(u.name) LIKE :keyword
                    OR LOWER(u.employeeCode) LIKE :keyword)
@@ -75,6 +77,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
     Page<User> searchActiveFormSubjects(
             @Param("keyword") String keyword,
             @Param("excludedUserId") Long excludedUserId,
+            @Param("departmentId") Long departmentId,
             Pageable pageable);
 
     @Query("""
