@@ -105,6 +105,7 @@ class UserServiceImplTest {
         User savedUser = userCaptor.getValue();
         assertEquals("EMP100", savedUser.getEmployeeCode());
         assertEquals(department, savedUser.getDepartment());
+        assertEquals("0912345678", savedUser.getPhone());
         assertEquals("encoded-random-password", savedUser.getPassword());
         assertFalse(savedUser.isFirstLogin());
 
@@ -186,6 +187,7 @@ class UserServiceImplTest {
         request.setDepartmentId(3L);
         request.setEmail("emp100@example.com");
         request.setFullName("Employee One Hundred");
+        request.setPhone("0912345678");
         request.setRoleIds(List.of(5L));
         return request;
     }

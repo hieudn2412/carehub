@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UpdateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UpdateMyProfileRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UserFilterRequest;
 import vn.vietduc.carehubbackend.user.dto.response.UserDetailResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserResponse;
@@ -63,10 +64,13 @@ public class UserServiceImpl implements UserService {
         String encodedPassword = passwordEncoder.encode(randomPassword);
 
         User user = User.builder()
-                .employeeCode(request.getEmployeeCode())
-                .email(request.getEmail())
+                .employeeCode(request.getEmployeeCode().trim())
+                .email(request.getEmail().trim())
                 .password(encodedPassword)
-                .name(request.getFullName())
+                .name(request.getFullName().trim())
+                .phone(request.getPhone() == null || request.getPhone().isBlank()
+                        ? null
+                        : request.getPhone().trim())
                 .department(department)
                 .firstLogin(false)
                 .status(UserStatus.ACTIVE)
@@ -295,6 +299,25 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDetailResponse getCurrentUserProfile() {
         return toDetailResponse(findUser(securityUtils.getCurrentUserId()));
+    }
+
+    @Override
+    @Transactional
+    public UserDetailResponse updateCurrentUserProfile(UpdateMyProfileRequest request) {
+        User user = findUser(securityUtils.getCurrentUserId());
+        String email = request.email().trim();
+        if (userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
+            throw new ConflictException("Email này đã được sử dụng");
+        }
+
+        user.setName(request.fullName().trim());
+        user.setEmail(email);
+        user.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
+        user.setBirthday(request.birthday());
+        if (request.gender() != null) {
+            user.setGender(request.gender());
+        }
+        return toDetailResponse(userRepository.save(user));
     }
 
     @Override
