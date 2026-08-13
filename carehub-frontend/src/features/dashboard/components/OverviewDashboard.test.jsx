@@ -6,11 +6,11 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div>{children}</div>,
   BarChart: ({ children }) => <div>{children}</div>,
-  LineChart: ({ children }) => <div>{children}</div>,
+  AreaChart: ({ children }) => <div>{children}</div>,
+  Area: () => null,
   Bar: () => null,
   CartesianGrid: () => null,
   Legend: () => null,
-  Line: () => null,
   ReferenceLine: () => null,
   Tooltip: () => null,
   XAxis: () => null,
@@ -222,7 +222,7 @@ describe('OverviewDashboard navigation regression', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Mức độ tuân thủ theo bảng kiểm' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Chất lượng chăm sóc' })).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Chi tiết tuân thủ theo bảng kiểm' })).not.toBeInTheDocument()
     })
   })

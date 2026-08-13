@@ -111,6 +111,7 @@ class UserControllerIntegrationTest {
                   "employeeCode": "EMP_NEW",
                   "departmentId": %d,
                   "email": "emp-new@example.com",
+                  "phone": "0912345678",
                   "roleIds": [%d],
                   "fullName": "Employee New"
                 }
@@ -126,6 +127,7 @@ class UserControllerIntegrationTest {
 
         User saved = userRepository.findByEmployeeCodeAndIsDeletedFalse("EMP_NEW").orElseThrow();
         assertEquals("Employee New", saved.getName());
+        assertEquals("0912345678", saved.getPhone());
         assertTrue(userRoleRepository.existsByUser_IdAndRole_Id(saved.getId(), userRole.getId()));
 
         mockMvc.perform(post("/api/v1/users")
@@ -148,6 +150,34 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.employeeCode", is("EMP_USER")))
                 .andExpect(jsonPath("$.data.departmentName", is("Cardiology")));
+    }
+
+    @Test
+    void userCanUpdateOwnPersonalFieldsButNotAdministrativeFields() throws Exception {
+        mockMvc.perform(put("/api/v1/me")
+                        .with(jwtFor(employee, "USER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "fullName": "Employee Updated",
+                                  "email": "employee-updated@example.com",
+                                  "phone": "0912345678",
+                                  "birthday": "1995-05-20",
+                                  "gender": true,
+                                  "employeeCode": "HACKED",
+                                  "departmentId": 999
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fullName", is("Employee Updated")))
+                .andExpect(jsonPath("$.data.email", is("employee-updated@example.com")))
+                .andExpect(jsonPath("$.data.phone", is("0912345678")))
+                .andExpect(jsonPath("$.data.employeeCode", is("EMP_USER")))
+                .andExpect(jsonPath("$.data.departmentName", is("Cardiology")));
+
+        User updated = userRepository.findById(employee.getId()).orElseThrow();
+        assertEquals("EMP_USER", updated.getEmployeeCode());
+        assertEquals(department.getId(), updated.getDepartment().getId());
     }
 
     @DisplayName("L2-REF-03 | Happy Path: ACTIVE → LOCKED → ACTIVE, password reset, then soft delete → 404 on re-read")

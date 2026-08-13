@@ -230,6 +230,10 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
             requireEditable(record);
             log.info("Hồ sơ đang ở trạng thái có thể chỉnh sửa");
             requireFreshVersion(record, request == null ? null : request.version());
+            int windowYears = settingsService.trainingWindowYears();
+            if (TrainingRecordValidity.isExpired(record.getStartDate(), LocalDate.now(), windowYears)) {
+                throw new BadRequestException("Hồ sơ đào tạo quá " + windowYears + " năm không được phép nộp");
+            }
             User actor = accessPolicy.currentActor();
             log.info("Người nộp: userId={}", actor.getId());
             Map<String, Object> before = snapshot(record);
