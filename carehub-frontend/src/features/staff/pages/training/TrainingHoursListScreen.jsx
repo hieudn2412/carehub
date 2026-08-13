@@ -55,6 +55,7 @@ function TrainingHoursListScreen() {
   const [totalElements, setTotalElements] = useState(0)
   const [totalSubmittedHours, setTotalSubmittedHours] = useState(0)
   const [requiredHours, setRequiredHours] = useState(120)
+  const [trainingWindowYears, setTrainingWindowYears] = useState(5)
   const [cmeConfigured, setCmeConfigured] = useState(false)
   const [myEmployeeId, setMyEmployeeId] = useState(null)
   const [profileResolved, setProfileResolved] = useState(false)
@@ -101,6 +102,7 @@ function TrainingHoursListScreen() {
           setCmeConfigured(configured)
           setTotalSubmittedHours(statusData.submittedHours || 0)
           setRequiredHours(configured ? (statusData.requiredHours ?? 0) : 0)
+          setTrainingWindowYears(Number(statusData.cycleYears) || 5)
         }
       })
       .catch(err => console.error("Error fetching training status", err))
@@ -339,7 +341,9 @@ function TrainingHoursListScreen() {
             }`}>
               <div className="th-compliance-banner__left">
                 <h1 className="th-page-title">Giờ đào tạo liên tục</h1>
-                <p className="th-page-subtitle">Theo dõi mục tiêu 120 giờ trong 5 năm liên tục</p>
+                <p className="th-page-subtitle">
+                  Theo dõi mục tiêu {requiredHours} giờ trong {trainingWindowYears} năm liên tục
+                </p>
               </div>
               <div className="th-compliance-banner__right">
                 {cmeConfigured ? (

@@ -162,7 +162,7 @@
   color: #64748b;
 }
 
-.ss-hours-input {
+.ss-value-input {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -190,12 +190,12 @@
   }
 
   .ss-row,
-  .ss-hours-input {
+  .ss-value-input {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .ss-hours-input {
+  .ss-value-input {
     width: 100%;
   }
 

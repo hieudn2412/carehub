@@ -192,6 +192,7 @@ class ConcurrencyIntegrationTest {
                     systemSettingRepository.saveAndFlush(SystemSetting.builder()
                             .scopeKey(SystemSetting.GLOBAL_SCOPE)
                             .globalTrainingHours(SystemSetting.DEFAULT_TRAINING_HOURS)
+                            .trainingWindowYears(SystemSetting.DEFAULT_TRAINING_WINDOW_YEARS)
                             .lockVersion(0L)
                             .build());
                 }
