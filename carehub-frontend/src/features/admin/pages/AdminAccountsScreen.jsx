@@ -382,6 +382,7 @@ function AdminAccountsScreen() {
           employeeCode: empCode,
           fullName: fullName,
           email: email,
+          phone: phone || undefined,
           departmentId: parseInt(formDeptId),
           roleIds: formRoleIds.map(id => parseInt(id))
         }

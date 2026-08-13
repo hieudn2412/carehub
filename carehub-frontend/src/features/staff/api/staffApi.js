@@ -19,6 +19,12 @@ export const staffApi = {
     })
   },
 
+  updateProfile(data) {
+    return httpClient.put('/me', data, {
+      headers: authHeaders(),
+    })
+  },
+
   getAssignedForms(params) {
     return httpClient.get('/assigned-forms', {
       headers: authHeaders(),
