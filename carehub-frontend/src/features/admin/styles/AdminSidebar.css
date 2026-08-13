@@ -215,6 +215,13 @@
   transition: background 0.15s;
 }
 
+.admin-sidebar__item > span:last-child {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.4;
+}
+
 .admin-sidebar__item:hover {
   background: #eef5f2;
 }
