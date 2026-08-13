@@ -280,7 +280,7 @@ public class CompetencyService {
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
             for (FormSubmission s : subs) {
-                BigDecimal score = s.getTotalScore() != null ? s.getTotalScore() : BigDecimal.ZERO;
+                BigDecimal score = practicalScore(s);
                 sum = sum.add(score);
                 if (s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED) {
                     passCount++;
@@ -346,7 +346,7 @@ public class CompetencyService {
             BigDecimal sum = BigDecimal.ZERO;
             int passCount = 0;
             for (FormSubmission s : subs) {
-                sum = sum.add(s.getTotalScore() != null ? s.getTotalScore() : BigDecimal.ZERO);
+                sum = sum.add(practicalScore(s));
                 if (s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED) {
                     passCount++;
                 }
@@ -364,8 +364,8 @@ public class CompetencyService {
                         return i != null ? i : java.time.Instant.EPOCH;
                     }, Comparator.reverseOrder()))
                     .map(s -> {
-                        CompetencyLevel sLevel = classificationService.classifyOverall(
-                                s.getTotalScore() != null ? s.getTotalScore() : BigDecimal.ZERO);
+                        BigDecimal score = practicalScore(s);
+                        CompetencyLevel sLevel = classificationService.classifyOverall(score);
                         return new FormSubmissionBriefResponse(
                                 s.getId(),
                                 form.getTitle(),
@@ -373,7 +373,7 @@ public class CompetencyService {
                                         ? LocalDateTime.ofInstant(s.getSubmittedAt(), java.time.ZoneId.systemDefault())
                                         : null,
                                 s.getSubmittedBy().getName(),
-                                s.getTotalScore(),
+                                score,
                                 s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED,
                                 sLevel.name(),
                                 QuestionGenerationLabels.competencyLevel(sLevel),
@@ -655,6 +655,11 @@ public class CompetencyService {
             return submission.getTotalScore()
                     .multiply(BigDecimal.valueOf(10))
                     .divide(submission.getMaxScore(), 2, RoundingMode.HALF_UP);
+        }
+        // Legacy submissions may only contain the already-normalized total score.
+        // Preserve that value instead of turning historical results into zero.
+        if (submission.getTotalScore() != null) {
+            return submission.getTotalScore().setScale(2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
