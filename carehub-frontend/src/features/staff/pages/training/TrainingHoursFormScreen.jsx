@@ -258,6 +258,7 @@ function TrainingHoursFormScreen() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [recordVersion, setRecordVersion] = useState(null)
+  const [trainingWindowYears, setTrainingWindowYears] = useState(null)
   const [mobileStep, setMobileStep] = useState(0)
 
   // Evidence states
@@ -350,6 +351,15 @@ function TrainingHoursFormScreen() {
       })
   }, [isEditMode])
 
+  useEffect(() => {
+    trainingApi.getMyTrainingStatus()
+      .then(res => {
+        const years = Number(res.data?.data?.cycleYears)
+        setTrainingWindowYears(Number.isInteger(years) && years > 0 ? years : null)
+      })
+      .catch(() => setTrainingWindowYears(null))
+  }, [])
+
   // Fetch record detail if in edit mode
   useEffect(() => {
     if (isEditMode) {
@@ -408,14 +418,14 @@ function TrainingHoursFormScreen() {
       }
     }
 
-    if (shouldSubmit && form.date) {
+    if (shouldSubmit && form.date && trainingWindowYears) {
       const recordDate = new Date(form.date)
-      const fiveYearsAgo = new Date()
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
-      fiveYearsAgo.setHours(0, 0, 0, 0)
+      const windowStart = new Date()
+      windowStart.setFullYear(windowStart.getFullYear() - trainingWindowYears)
+      windowStart.setHours(0, 0, 0, 0)
       recordDate.setHours(0, 0, 0, 0)
-      if (recordDate < fiveYearsAgo) {
-        e.date = 'Hồ sơ đào tạo quá 5 năm không được phép nộp.'
+      if (recordDate < windowStart) {
+        e.date = `Hồ sơ đào tạo quá ${trainingWindowYears} năm không được phép nộp.`
       }
     }
 

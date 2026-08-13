@@ -37,6 +37,7 @@ function TrainingHoursDetailScreen() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [mobileTab, setMobileTab] = useState('info')
+  const [trainingWindowYears, setTrainingWindowYears] = useState(null)
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -50,6 +51,15 @@ function TrainingHoursDetailScreen() {
     const timer = window.setTimeout(fetchRecord, 0)
     return () => window.clearTimeout(timer)
   }, [fetchRecord])
+
+  useEffect(() => {
+    trainingApi.getMyTrainingStatus()
+      .then(res => {
+        const years = Number(res.data?.data?.cycleYears)
+        setTrainingWindowYears(Number.isInteger(years) && years > 0 ? years : null)
+      })
+      .catch(() => setTrainingWindowYears(null))
+  }, [])
 
   const requestEvidencePreview = useCallback(async (evidenceId) => {
     const response = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
@@ -92,14 +102,14 @@ function TrainingHoursDetailScreen() {
 
   const handleSubmit = () => {
     if (!record) return
-    if (record.startDate) {
+    if (record.startDate && trainingWindowYears) {
       const recordDate = new Date(record.startDate)
-      const fiveYearsAgo = new Date()
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
-      fiveYearsAgo.setHours(0, 0, 0, 0)
+      const windowStart = new Date()
+      windowStart.setFullYear(windowStart.getFullYear() - trainingWindowYears)
+      windowStart.setHours(0, 0, 0, 0)
       recordDate.setHours(0, 0, 0, 0)
-      if (recordDate < fiveYearsAgo) {
-        showToast("Hồ sơ đào tạo quá 5 năm không được phép nộp.", "error")
+      if (recordDate < windowStart) {
+        showToast(`Hồ sơ đào tạo quá ${trainingWindowYears} năm không được phép nộp.`, "error")
         return
       }
     }
