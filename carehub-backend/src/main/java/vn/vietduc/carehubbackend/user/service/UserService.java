@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UpdateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UpdateMyProfileRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UserFilterRequest;
 import vn.vietduc.carehubbackend.user.dto.response.UserDetailResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserResponse;
@@ -23,6 +24,7 @@ public interface UserService {
     UserDetailResponse removeRole(Long userId, Long roleId);
     void changePassword(ChangePasswordRequest request);
     UserDetailResponse getCurrentUserProfile();
+    UserDetailResponse updateCurrentUserProfile(UpdateMyProfileRequest request);
     Page<UserSummaryResponse> getUsers(Pageable pageable, UserFilterRequest request);
     UserDetailResponse getUserDetails(Long id);
 
