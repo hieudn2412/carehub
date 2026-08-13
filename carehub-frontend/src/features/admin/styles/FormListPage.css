@@ -750,6 +750,13 @@
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
 }
 
+.flp-assignment-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 24px;
+}
+
 .flp-assignment-modal__header {
   display: flex;
   align-items: flex-start;
@@ -1233,6 +1240,9 @@
   }
   .flp-assignment-modal {
     max-height: calc(100vh - 24px);
+  }
+  .flp-assignment-modal__body {
+    padding-bottom: 16px;
   }
   .flp-assignment-modal__header,
   .flp-assignment-actions {

@@ -833,7 +833,7 @@ function AdminAccountsScreen() {
               </button>
             </div>
 
-            <div className="am-modal-body">
+            <div className="am-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               {modalLoading ? (
                 <LoadingState label="Đang tải thông tin nhân viên..." />
               ) : selectedUserDetail ? (
@@ -1170,7 +1170,7 @@ function AdminAccountsScreen() {
             </div>
 
             <form onSubmit={handleImportUsers}>
-              <div className="am-modal-body">
+              <div className="am-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 <p style={{ fontSize: '13.5px', color: '#475569', margin: 0 }}>
                   Chọn file Excel chứa danh sách tài khoản nhân viên gốc để import hàng loạt vào hệ thống.
                 </p>
