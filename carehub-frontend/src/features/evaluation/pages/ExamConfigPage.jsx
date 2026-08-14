@@ -225,15 +225,15 @@ export default function ExamConfigPage() {
           <section className="exp-title-card"><div><h1 className="exp-title">Tạo và giao bài kiểm tra</h1><p className="exp-subtitle">Một trang duy nhất: cấu hình ma trận đề, chọn đối tượng nhận và giao đề ngay.</p></div></section>
 
           <section className="exp-management-card">
-            <div className="exam-flow__section"><h2>1. Thông tin chung</h2><div className="exam-flow__grid">
-              <label>Tên bài kiểm tra<input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Kiểm tra điều dưỡng mới tuyển dụng" /></label>
-              <label>Tổng số câu<input type="number" min="1" value={form.totalQuestions} onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })} /></label>
-              <label>Thời gian (phút)<input type="number" min="1" value={form.timeLimitMinutes} onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })} /></label>
-              <label>Điểm đạt<input type="number" min="0" max="10" value={form.passingScore} onChange={(e) => setForm({ ...form, passingScore: e.target.value })} /></label>
+            <div className="exam-flow__section"><h2>1. Thông tin chung</h2><div className="ch-form-grid">
+              <div className="ch-field"><label>Tên bài kiểm tra</label><input className="ch-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Kiểm tra điều dưỡng mới tuyển dụng" /></div>
+              <div className="ch-field"><label>Tổng số câu</label><input className="ch-input" type="number" min="1" value={form.totalQuestions} onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })} /></div>
+              <div className="ch-field"><label>Thời gian (phút)</label><input className="ch-input" type="number" min="1" value={form.timeLimitMinutes} onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })} /></div>
+              <div className="ch-field"><label>Điểm đạt</label><input className="ch-input" type="number" min="0" max="10" value={form.passingScore} onChange={(e) => setForm({ ...form, passingScore: e.target.value })} /></div>
             </div></div>
 
             <div className="exam-flow__section"><h2>2. Lĩnh vực chuyên môn và số câu</h2><div className="ch-toolbar" style={{ flexWrap: 'wrap' }}>{fields.map((field) => <button type="button" key={field.id} className={`ch-btn ${blueprint.some((item) => item.professionalFieldId === field.id) ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => toggleField(field.id)}>{field.name}</button>)}</div>
-              {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return <div key={item.professionalFieldId} className="ch-card" style={{ marginTop: 12 }}><h3>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</h3><label>Số câu<input type="number" min="0" value={item.questionCount} onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)} /></label><table className="exp-table"><thead><tr><th>Mức nhận thức</th><th>Tỷ lệ (%)</th></tr></thead><tbody>{item.cognitive.map((cell) => <tr key={cell.cognitiveLevel}><td>{cell.label}</td><td><input type="number" min="0" max="100" value={cell.percentage} onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)} /></td></tr>)}</tbody></table><div className="ch-muted">Tổng lĩnh vực: {item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)}%</div></div> })}
+              {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return <div key={item.professionalFieldId} className="ch-card" style={{ marginTop: 12 }}><h3>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</h3><div className="ch-field" style={{ maxWidth: 200 }}><label>Số câu</label><input className="ch-input" type="number" min="0" value={item.questionCount} onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)} /></div><table className="exp-table"><thead><tr><th>Mức nhận thức</th><th>Tỷ lệ (%)</th></tr></thead><tbody>{item.cognitive.map((cell) => <tr key={cell.cognitiveLevel}><td>{cell.label}</td><td><input className="ch-input" type="number" min="0" max="100" value={cell.percentage} onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)} /></td></tr>)}</tbody></table><div className="ch-muted">Tổng lĩnh vực: {item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)}%</div></div> })}
               <p className={totalAllocated === totalQuestions ? 'ch-muted' : 'ch-alert ch-alert--warning'}>Đã phân bổ: {totalAllocated} / {totalQuestions} câu</p>
             </div>
 
@@ -252,7 +252,7 @@ export default function ExamConfigPage() {
               )}
               {audienceMode === 'USER' && (
                 <div>
-                  <input value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Nhập mã hoặc tên nhân viên" style={{ width: '100%', maxWidth: 400 }} />
+                  <input className="ch-input" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Nhập mã hoặc tên nhân viên" style={{ maxWidth: 400 }} />
                   {userSearchResults.length > 0 && <div style={{ marginTop: 8, border: '1px solid #d9d9d9', borderRadius: 4, maxWidth: 400 }}>
                     {userSearchResults.filter((u) => !selectedUsers.some((su) => su.id === u.id)).map((user) => <div key={user.id} onClick={() => addUser(user)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>{user.employeeCode || `USR-${user.id}`} — {user.fullName || user.username}</div>)}
                   </div>}
@@ -263,10 +263,10 @@ export default function ExamConfigPage() {
               )}
             </div>
 
-            <div className="exam-flow__section"><h2>4. Lịch giao đề</h2><div className="exam-flow__grid">
-              <label>Mở đề lúc<input type="datetime-local" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} /></label>
-              <label>Hạn hoàn thành<input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></label>
-              <label>Số lượt làm tối đa<input type="number" min="1" max="10" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} /></label>
+            <div className="exam-flow__section"><h2>4. Lịch giao đề</h2><div className="ch-form-grid ch-form-grid--3">
+              <div className="ch-field"><label>Mở đề lúc</label><input className="ch-input" type="datetime-local" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} /></div>
+              <div className="ch-field"><label>Hạn hoàn thành</label><input className="ch-input" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
+              <div className="ch-field"><label>Số lượt làm tối đa</label><input className="ch-input" type="number" min="1" max="10" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} /></div>
             </div></div>
 
             {preview && <div className="ch-alert ch-alert--info"><strong>Preview: {preview.distributedQuestions} / {totalQuestions} câu</strong>{preview.warnings?.length > 0 && <ul>{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}{preview.blueprintFields?.map((field) => <div key={field.professionalFieldId}>{field.professionalFieldName}: {field.requiredQuestionCount} yêu cầu / {field.availableQuestionCount} khả dụng</div>)}</div>}

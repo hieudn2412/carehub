@@ -146,11 +146,11 @@ export default function EvaluationAudiencePage() {
           <button type="button" className={`ch-btn ${mode === 'ADVANCED' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('ADVANCED')}>Nâng cao (JSON)</button>
         </div>
 
-        <label className="ch-form-field"><span>Tên đối tượng</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ví dụ: Nhân viên dưới 3 năm" /></label>
+        <div className="ch-field"><label>Tên đối tượng</label><input className="ch-input" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ví dụ: Nhân viên dưới 3 năm" /></div>
 
         {mode === 'DEPARTMENT' && (
-          <div className="ch-form-field">
-            <span>Chọn khoa phòng</span>
+          <div className="ch-field">
+            <label>Chọn khoa phòng</label>
             <DepartmentCombobox
               departments={departments}
               value=""
@@ -174,11 +174,12 @@ export default function EvaluationAudiencePage() {
         )}
 
         {mode === 'USER' && (
-          <div className="ch-form-field">
-            <span>Tìm kiếm nhân viên</span>
+          <div className="ch-field">
+            <label>Tìm kiếm nhân viên</label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
               <SearchOutlined style={{ position: 'absolute', left: 12, fontSize: 14, color: '#999' }} />
               <input
+                className="ch-input"
                 type="text"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
@@ -224,7 +225,7 @@ export default function EvaluationAudiencePage() {
               {presets.map(([label, value]) => <button key={label} type="button" className="ch-btn ch-btn--secondary" onClick={() => setRuleJson(value)}>{label}</button>)}
             </div>
             <p className="ch-muted">Với "Chưa đạt một lĩnh vực", nhập professionalFieldId, ngưỡng điểm và có thể giới hạn assignmentIds/khoảng fromDate–toDate; attemptSelection nhận LATEST, FIRST hoặc BEST.</p>
-            <label className="ch-form-field"><span>Rule JSON version 1</span><textarea rows={10} value={ruleJson} onChange={(event) => setRuleJson(event.target.value)} /></label>
+            <div className="ch-field"><label>Rule JSON version 1</label><textarea className="ch-input" rows={10} value={ruleJson} onChange={(event) => setRuleJson(event.target.value)} /></div>
           </>
         )}
 
