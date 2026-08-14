@@ -45,7 +45,7 @@ export default function EvaluationAudiencePage() {
         setDepartments(depts)
       }
     } catch (error) {
-      showToast(error?.response?.data?.message || 'Cannot load audiences', 'error')
+      showToast(error?.response?.data?.message || 'Không thể tải đối tượng thi', 'error')
     }
   }, [showToast, mode])
 
@@ -58,7 +58,7 @@ export default function EvaluationAudiencePage() {
       const users = extract(res)?.content || extract(res) || []
       setUserSearchResults(users)
     } catch (error) {
-      showToast(error?.response?.data?.message || 'Cannot search users', 'error')
+      showToast(error?.response?.data?.message || 'Không thể tìm kiếm nhân viên', 'error')
     }
   }, [showToast])
 
@@ -72,7 +72,7 @@ export default function EvaluationAudiencePage() {
 
   const runPreview = async () => {
     setLoading(true)
-    try { setPreview(extract(await evaluationAudienceApi.preview(ruleJson))) } catch (error) { setPreview(null); showToast(error?.response?.data?.message || 'Invalid rule', 'error') } finally { setLoading(false) }
+    try { setPreview(extract(await evaluationAudienceApi.preview(ruleJson))) } catch (error) { setPreview(null); showToast(error?.response?.data?.message || 'Rule không hợp lệ', 'error') } finally { setLoading(false) }
   }
 
   const updateRuleForMode = useCallback(() => {
@@ -82,8 +82,6 @@ export default function EvaluationAudiencePage() {
     } else if (mode === 'USER' && selectedUsers.length > 0) {
       const ids = selectedUsers.map(u => u.id)
       setRuleJson(JSON.stringify({ version: 1, all: [{ type: 'USER_IN', ids }] }, null, 2))
-    } else if (mode === 'ADVANCED') {
-      // advanced mode uses manual JSON
     }
   }, [mode, selectedDepartments, selectedUsers])
 
@@ -92,7 +90,7 @@ export default function EvaluationAudiencePage() {
   }, [updateRuleForMode])
 
   const save = async () => {
-    if (!name.trim()) return showToast('Please enter audience name', 'error')
+    if (!name.trim()) return showToast('Vui lòng nhập tên đối tượng thi', 'error')
     setLoading(true)
     try {
       await evaluationAudienceApi.create({ name: name.trim(), ruleJson })
@@ -102,9 +100,9 @@ export default function EvaluationAudiencePage() {
       setUserSearch('')
       setMode('DEPARTMENT')
       await load()
-      showToast('Audience saved as draft', 'success')
+      showToast('Đã lưu đối tượng thi dạng nháp', 'success')
     } catch (error) {
-      showToast(error?.response?.data?.message || 'Cannot save audience', 'error')
+      showToast(error?.response?.data?.message || 'Không thể lưu đối tượng thi', 'error')
     } finally {
       setLoading(false)
     }
@@ -134,30 +132,30 @@ export default function EvaluationAudiencePage() {
   }
 
   const presets = useMemo(() => [
-    ['All staff', ALL], ['Employment < 3 years', TENURE], ['Training group', GROUP], ['Below threshold', FIELD_SCORE],
+    ['Toàn bệnh viện', ALL], ['Thâm niên dưới 3 năm', TENURE], ['Nhóm đào tạo', GROUP], ['Chưa đạt một lĩnh vực', FIELD_SCORE],
   ], [])
 
   return (
-    <AppShell title="Evaluation Audience">
+    <AppShell title="Đối tượng thi">
       <div className="ch-card" style={{ marginBottom: 16 }}>
-        <h2 style={{ marginTop: 0 }}>Create audience criteria</h2>
-        <p className="ch-muted">Choose how to create criteria: by department/employee code (quick) or custom JSON rule (advanced).</p>
+        <h2 style={{ marginTop: 0 }}>Tạo tiêu chí đối tượng</h2>
+        <p className="ch-muted">Chọn cách tạo tiêu chí: theo khoa phòng/mã nhân viên (nhanh) hoặc rule JSON (nâng cao).</p>
         <div className="ch-toolbar" style={{ marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
-          <button type="button" className={`ch-btn ${mode === 'DEPARTMENT' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('DEPARTMENT')}>By Department</button>
-          <button type="button" className={`ch-btn ${mode === 'USER' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('USER')}>By Employee Code</button>
-          <button type="button" className={`ch-btn ${mode === 'ADVANCED' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('ADVANCED')}>Advanced (JSON)</button>
+          <button type="button" className={`ch-btn ${mode === 'DEPARTMENT' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('DEPARTMENT')}>Theo khoa phòng</button>
+          <button type="button" className={`ch-btn ${mode === 'USER' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('USER')}>Theo mã nhân viên</button>
+          <button type="button" className={`ch-btn ${mode === 'ADVANCED' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setMode('ADVANCED')}>Nâng cao (JSON)</button>
         </div>
 
-        <label className="ch-form-field"><span>Audience name</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="E.g.: Nursing staff below 3 years" /></label>
+        <label className="ch-form-field"><span>Tên đối tượng</span><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ví dụ: Nhân viên dưới 3 năm" /></label>
 
         {mode === 'DEPARTMENT' && (
           <div className="ch-form-field">
-            <span>Select departments</span>
+            <span>Chọn khoa phòng</span>
             <DepartmentCombobox
               departments={departments}
               value=""
               onChange={addDepartment}
-              placeholder="Find and select department"
+              placeholder="Tìm và chọn khoa phòng"
               emptyValue=""
             />
             {selectedDepartments.length > 0 && (
@@ -177,14 +175,14 @@ export default function EvaluationAudiencePage() {
 
         {mode === 'USER' && (
           <div className="ch-form-field">
-            <span>Search employees</span>
+            <span>Tìm kiếm nhân viên</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
               <SearchOutlined style={{ position: 'absolute', left: 12, fontSize: 14, color: '#999' }} />
               <input
                 type="text"
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Enter employee code or name"
+                placeholder="Nhập mã hoặc tên nhân viên"
                 style={{ paddingLeft: 32, flex: 1 }}
               />
             </div>
@@ -225,15 +223,15 @@ export default function EvaluationAudiencePage() {
             <div className="ch-toolbar" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
               {presets.map(([label, value]) => <button key={label} type="button" className="ch-btn ch-btn--secondary" onClick={() => setRuleJson(value)}>{label}</button>)}
             </div>
-            <p className="ch-muted">For threshold rules, provide professionalFieldId, score value, and optionally assignmentIds/date range; attemptSelection accepts LATEST, FIRST or BEST.</p>
+            <p className="ch-muted">Với "Chưa đạt một lĩnh vực", nhập professionalFieldId, ngưỡng điểm và có thể giới hạn assignmentIds/khoảng fromDate–toDate; attemptSelection nhận LATEST, FIRST hoặc BEST.</p>
             <label className="ch-form-field"><span>Rule JSON version 1</span><textarea rows={10} value={ruleJson} onChange={(event) => setRuleJson(event.target.value)} /></label>
           </>
         )}
 
-        <div className="ch-toolbar"><button className="ch-btn ch-btn--secondary" type="button" onClick={runPreview} disabled={loading}>Preview</button><button className="ch-btn ch-btn--primary" type="button" onClick={save} disabled={loading}>Save draft</button></div>
-        {preview && <div className="ch-alert ch-alert--info" style={{ marginTop: 12 }}><strong>{preview.count} matching members</strong><div>{preview.explanation}</div>{preview.missingData?.length > 0 && <div>Missing data: {preview.missingData.join('; ')}</div>}<div>Excluded: {preview.excludedCount ?? 0}</div>{preview.fieldScoreMatches?.length > 0 && <div style={{ marginTop: 8 }}><strong>Threshold matches:</strong>{preview.fieldScoreMatches.slice(0, 10).map((match) => <div key={`${match.attemptId}-${match.professionalFieldId}`}>{match.employeeCode} · {match.professionalFieldName}: {match.score} pts · {match.submittedAt} — {match.reason}</div>)}</div>}</div>}
+        <div className="ch-toolbar"><button className="ch-btn ch-btn--secondary" type="button" onClick={runPreview} disabled={loading}>Xem preview</button><button className="ch-btn ch-btn--primary" type="button" onClick={save} disabled={loading}>Lưu nháp</button></div>
+        {preview && <div className="ch-alert ch-alert--info" style={{ marginTop: 12 }}><strong>{preview.count} người phù hợp</strong><div>{preview.explanation}</div>{preview.missingData?.length > 0 && <div>Thiếu dữ liệu: {preview.missingData.join('; ')}</div>}<div>Bị loại: {preview.excludedCount ?? 0}</div>{preview.fieldScoreMatches?.length > 0 && <div style={{ marginTop: 8 }}><strong>Khớp theo kết quả lĩnh vực:</strong>{preview.fieldScoreMatches.slice(0, 10).map((match) => <div key={`${match.attemptId}-${match.professionalFieldId}`}>{match.employeeCode} · {match.professionalFieldName}: {match.score} điểm · {match.submittedAt} — {match.reason}</div>)}</div>}</div>}
       </div>
-      <div className="ch-card"><h2 style={{ marginTop: 0 }}>Saved audiences</h2>{audiences.length === 0 ? <p className="ch-muted">No audiences yet.</p> : <div className="ch-table-wrap"><table className="ch-table"><thead><tr><th>Name</th><th>Version</th><th>Status</th><th>Preview members</th><th>Rule</th></tr></thead><tbody>{audiences.map((item) => <tr key={item.id}><td>{item.name}</td><td>v{item.version}</td><td>{item.status}</td><td>{item.preview?.count ?? 0}</td><td><code>{item.ruleJson}</code></td></tr>)}</tbody></table></div>}</div>
+      <div className="ch-card"><h2 style={{ marginTop: 0 }}>Đối tượng đã lưu</h2>{audiences.length === 0 ? <p className="ch-muted">Chưa có đối tượng thi.</p> : <div className="ch-table-wrap"><table className="ch-table"><thead><tr><th>Tên</th><th>Phiên bản</th><th>Trạng thái</th><th>Số người preview</th><th>Rule</th></tr></thead><tbody>{audiences.map((item) => <tr key={item.id}><td>{item.name}</td><td>v{item.version}</td><td>{item.status}</td><td>{item.preview?.count ?? 0}</td><td><code>{item.ruleJson}</code></td></tr>)}</tbody></table></div>}</div>
     </AppShell>
   )
 }
