@@ -1,7 +1,9 @@
-import React, { Profiler } from 'react'
+import { Profiler } from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import OverviewDashboard from './OverviewDashboard.jsx'
+import Sidebar from '../../staff/components/sidebar.jsx'
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div>{children}</div>,
@@ -22,20 +24,6 @@ vi.mock('../../staff/api/staffApi.js', () => ({
     getAssignedForms: vi.fn().mockResolvedValue({ data: { data: { content: [], totalElements: 0 } } }),
   },
 }))
-
-const previousReact = globalThis.React
-let OverviewDashboard
-let Sidebar
-
-beforeAll(async () => {
-  globalThis.React = React
-  OverviewDashboard = (await import('./OverviewDashboard.jsx')).default
-  Sidebar = (await import('../../staff/components/sidebar.jsx')).default
-})
-
-afterAll(() => {
-  globalThis.React = previousReact
-})
 
 function DashboardRouteHarness({ includeComplianceChart = false }) {
   const navigate = useNavigate()
