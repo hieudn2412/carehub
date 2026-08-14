@@ -256,7 +256,7 @@ class QualityFormApiSystemTest extends AbstractApiSystemTest {
 
         ResponseEntity<String> response = post(API + "/form-submissions", managerToken, """
                 {"assignmentItemId":%d,"subject":{"type":"USER","userId":%d}}
-                """.formatted(assignmentItemId, manager.getId()));
+                """.formatted(assignmentItemId, outsider.getId()));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         JsonNode body = data(response);
@@ -372,7 +372,7 @@ class QualityFormApiSystemTest extends AbstractApiSystemTest {
         long assignmentItemId = assignmentItemFor(manager);
         ResponseEntity<String> response = post(API + "/form-submissions", managerToken, """
                 {"assignmentItemId":%d,"subject":{"type":"USER","userId":%d}}
-                """.formatted(assignmentItemId, manager.getId()));
+                """.formatted(assignmentItemId, outsider.getId()));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         JsonNode body = data(response);
         return new Submission(body.get("id").asLong(), body.get("lockVersion").asLong(),

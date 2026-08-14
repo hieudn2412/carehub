@@ -25,8 +25,10 @@ import vn.vietduc.carehubbackend.form.scoring.FormScoringRecalculationJobReposit
 import vn.vietduc.carehubbackend.form.scoring.FormScoringRecalculationJobService;
 import vn.vietduc.carehubbackend.form.scoring.FormScoringRecalculationStatus;
 import vn.vietduc.carehubbackend.notification.repository.NotificationRepository;
+import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
+import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.time.Instant;
@@ -66,6 +68,8 @@ class FormLifecycleFlowIntegrationTest {
     @Autowired
     private UserRepository userRepository;
     @Autowired
+    private DepartmentRepository departmentRepository;
+    @Autowired
     private FormVersionRepository versionRepository;
     @Autowired
     private FormAssignmentItemRepository assignmentItemRepository;
@@ -89,9 +93,13 @@ class FormLifecycleFlowIntegrationTest {
     @BeforeEach
     void setUp() {
         seq = SEQ.incrementAndGet();
-        admin = userRepository.save(user("QLTA"));
-        manager = userRepository.save(user("QLTM"));
-        subject = userRepository.save(user("QLTS"));
+        Department department = departmentRepository.save(Department.builder()
+                .departmentCode("QLTD%03d".formatted(seq))
+                .name("Khoa kiểm thử luồng %03d".formatted(seq))
+                .build());
+        admin = userRepository.save(user("QLTA", department));
+        manager = userRepository.save(user("QLTM", department));
+        subject = userRepository.save(user("QLTS", department));
         questionKey = UUID.randomUUID().toString();
         passOptionKey = UUID.randomUUID().toString();
         failOptionKey = UUID.randomUUID().toString();
@@ -296,12 +304,13 @@ class FormLifecycleFlowIntegrationTest {
         notificationConfigRepository.save(config);
     }
 
-    private User user(String prefix) {
+    private User user(String prefix, Department department) {
         return User.builder()
                 .employeeCode("%s%03d".formatted(prefix, seq))
                 .email("%s%03d@example.com".formatted(prefix.toLowerCase(), seq))
                 .name(prefix + " " + seq)
                 .password("secret")
+                .department(department)
                 .status(UserStatus.ACTIVE)
                 .build();
     }
