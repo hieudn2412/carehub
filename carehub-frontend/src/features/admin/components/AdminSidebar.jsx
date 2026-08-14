@@ -70,7 +70,7 @@ const navSections = [
     ],
   },
   {
-    label: 'NĂNG LỰC CHUYÊN MÔN',
+    label: 'QUẢN LÝ BÀI KIỂM TRA',
     items: [
       {
         icon: <FileAddOutlined />,
@@ -89,12 +89,6 @@ const navSections = [
         ],
       },
       {
-        icon: <BookOutlined />,
-        label: 'Bộ câu hỏi',
-        path: '/admin/evaluation/question-sets',
-        requiredPermissions: [EVALUATION_PERMISSION.questionSetManager],
-      },
-      {
         icon: <DatabaseOutlined />,
         label: 'Danh mục câu hỏi',
         path: '/admin/evaluation/categories',
@@ -102,13 +96,19 @@ const navSections = [
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Năng lực chuyên môn',
+        label: 'Quản lý bài kiểm tra',
         path: '/admin/evaluation/exam-management',
         requiredPermissions: [
           EVALUATION_PERMISSION.examConfigManager,
           EVALUATION_PERMISSION.examPublisher,
           EVALUATION_PERMISSION.assignmentManager,
         ],
+      },
+      {
+        icon: <TeamOutlined />,
+        label: 'Đối tượng thi',
+        path: '/admin/evaluation/audiences',
+        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
       },
       {
         icon: <CalculatorOutlined />,
