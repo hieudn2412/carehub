@@ -83,10 +83,13 @@ export default function ExamConfigPage() {
   const totalAllocated = useMemo(() => blueprint.reduce((sum, item) => sum + Number(item.questionCount || 0), 0), [blueprint])
   const totalQuestions = Number(form.totalQuestions) || 0
 
-  function toggleField(id) {
-    setBlueprint((current) => current.some((item) => item.professionalFieldId === Number(id))
-      ? current.filter((item) => item.professionalFieldId !== Number(id))
-      : [...current, emptyField(id)])
+  function addField(id) {
+    const numId = Number(id)
+    setBlueprint((current) => current.some((item) => item.professionalFieldId === numId) ? current : [...current, emptyField(numId)])
+  }
+
+  function removeField(id) {
+    setBlueprint((current) => current.filter((item) => item.professionalFieldId !== id))
   }
 
   function updateField(id, key, value) {
@@ -232,7 +235,21 @@ export default function ExamConfigPage() {
               <div className="ch-field"><label>Điểm đạt</label><input className="ch-input" type="number" min="0" max="10" value={form.passingScore} onChange={(e) => setForm({ ...form, passingScore: e.target.value })} /></div>
             </div></div>
 
-            <div className="exam-flow__section"><h2>2. Lĩnh vực chuyên môn và số câu</h2><div className="ch-toolbar" style={{ flexWrap: 'wrap' }}>{fields.map((field) => <button type="button" key={field.id} className={`ch-btn ${blueprint.some((item) => item.professionalFieldId === field.id) ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => toggleField(field.id)}>{field.name}</button>)}</div>
+            <div className="exam-flow__section"><h2>2. Lĩnh vực chuyên môn và số câu</h2>
+              <div className="ch-field">
+                <label>Chọn lĩnh vực chuyên môn</label>
+                <DepartmentCombobox departments={fields} value="" onChange={addField} placeholder="Tìm và chọn lĩnh vực chuyên môn" emptyValue="" />
+              </div>
+              {blueprint.length > 0 && (
+                <div style={{ marginTop: 4, marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return (
+                    <span key={item.professionalFieldId} className="ch-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
+                      {field?.name || `Lĩnh vực #${item.professionalFieldId}`}
+                      <button type="button" onClick={() => removeField(item.professionalFieldId)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+                    </span>
+                  ) })}
+                </div>
+              )}
               {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return <div key={item.professionalFieldId} className="ch-card" style={{ marginTop: 12 }}><h3>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</h3><div className="ch-field" style={{ maxWidth: 200 }}><label>Số câu</label><input className="ch-input" type="number" min="0" value={item.questionCount} onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)} /></div><table className="exp-table"><thead><tr><th>Mức nhận thức</th><th>Tỷ lệ (%)</th></tr></thead><tbody>{item.cognitive.map((cell) => <tr key={cell.cognitiveLevel}><td>{cell.label}</td><td><input className="ch-input" type="number" min="0" max="100" value={cell.percentage} onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)} /></td></tr>)}</tbody></table><div className="ch-muted">Tổng lĩnh vực: {item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)}%</div></div> })}
               <p className={totalAllocated === totalQuestions ? 'ch-muted' : 'ch-alert ch-alert--warning'}>Đã phân bổ: {totalAllocated} / {totalQuestions} câu</p>
             </div>
