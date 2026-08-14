@@ -401,6 +401,25 @@
   -webkit-line-clamp: 2;
 }
 
+.checklist-quality-process-card__submitted-at {
+  align-items: center;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 5px;
+  margin: 8px 0 0;
+}
+
+.checklist-quality-process-card__submitted-at > .anticon {
+  color: #0a8b74;
+}
+
+.checklist-quality-process-card__submitted-at time {
+  color: #334155;
+  font-weight: 650;
+}
+
 .checklist-quality-process-card dl {
   border-top: 1px solid #e7edf3;
   display: grid;
@@ -759,6 +778,30 @@
   .checklist-quality-chart-grid { grid-template-columns: 1fr; }
   .checklist-quality-process-grid--latest .checklist-quality-process-card dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .checklist-quality-process-grid--latest .checklist-quality-process-card dl div:nth-child(2) { border-right: 0; }
+}
+
+.checklist-quality-detail--empty {
+  align-items: center;
+  color: #8390a4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.checklist-quality-detail--empty > .anticon {
+  color: #55a995;
+  font-size: 34px;
+}
+
+.checklist-quality-detail--empty > strong {
+  color: #536176;
+  margin-top: 10px;
+}
+
+.checklist-quality-detail--empty > span {
+  font-size: 13px;
+  margin-top: 6px;
 }
 
 /* bp-xs */

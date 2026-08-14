@@ -15,6 +15,7 @@ import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
 import { formatEvidenceStorageSummary, getEvidenceFileError } from '../../../../features/training/utils/evidenceFile.js'
+import { getTrainingHoursValidationError, MAX_TRAINING_HOURS } from './utils/trainingHoursValidation.js'
 import '../../styles/TrainingHours.css'
 
 const formatCompactSize = (bytes) => {
@@ -411,12 +412,8 @@ function TrainingHoursFormScreen() {
       if (!form[k]) e[k] = true
     })
 
-    if (form.hours) {
-      const hVal = parseFloat(form.hours)
-      if (isNaN(hVal) || hVal < 0.5) {
-        e.hours = 'Số giờ phải >= 0.5'
-      }
-    }
+    const hoursError = getTrainingHoursValidationError(form.hours)
+    if (hoursError) e.hours = hoursError
 
     if (shouldSubmit && form.date && trainingWindowYears) {
       const recordDate = new Date(form.date)
@@ -451,11 +448,8 @@ function TrainingHoursFormScreen() {
     if (mobileStep === 0) {
       if (!form.name) stepErrors.name = true
       if (!form.date) stepErrors.date = true
-      if (!form.hours) stepErrors.hours = true
-      else {
-        const hours = parseFloat(form.hours)
-        if (isNaN(hours) || hours < 0.5) stepErrors.hours = 'Số giờ phải >= 0.5'
-      }
+      const hoursError = getTrainingHoursValidationError(form.hours)
+      if (hoursError) stepErrors.hours = hoursError
     }
 
     if (mobileStep === 1) {
@@ -734,19 +728,33 @@ function TrainingHoursFormScreen() {
                         type="number"
                         inputMode="decimal"
                         min="0.5"
+                        max={MAX_TRAINING_HOURS}
                         step="0.5"
                         value={form.hours}
-                        onChange={e => setForm({ ...form, hours: e.target.value })}
+                        onChange={e => {
+                          const nextHours = e.target.value
+                          setForm(current => ({ ...current, hours: nextHours }))
+                          setErrors(current => {
+                            if (!current.hours) return current
+                            const nextError = getTrainingHoursValidationError(nextHours)
+                            const nextErrors = { ...current }
+                            if (nextError) nextErrors.hours = nextError
+                            else delete nextErrors.hours
+                            return nextErrors
+                          })
+                        }}
                         placeholder="Ví dụ: 1.5, 8, 12.5"
+                        aria-invalid={Boolean(errors.hours)}
+                        aria-describedby="training-hours-help"
                         style={fieldStyle('hours')}
                       />
                       {errors.hours ? (
-                        <span style={{ color: '#ef4444', fontSize: 12 }}>
+                        <span id="training-hours-help" role="alert" style={{ color: '#ef4444', fontSize: 12 }}>
                           {typeof errors.hours === 'string' ? errors.hours : 'Bắt buộc nhập số giờ'}
                         </span>
                       ) : (
-                        <span style={{ color: '#6b7280', fontSize: 11, marginTop: 4, display: 'block' }}>
-                          Nhập số thập phân, tối thiểu 0.5 giờ
+                        <span id="training-hours-help" style={{ color: '#6b7280', fontSize: 11, marginTop: 4, display: 'block' }}>
+                          Nhập số thập phân từ 0.5 đến {MAX_TRAINING_HOURS} giờ
                         </span>
                       )}
                     </div>

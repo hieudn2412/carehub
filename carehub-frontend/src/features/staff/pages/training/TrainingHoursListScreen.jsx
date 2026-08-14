@@ -146,7 +146,9 @@ function TrainingHoursListScreen() {
   useEffect(() => {
     if (!profileResolved || myEmployeeId == null) return undefined
 
-    const timer = setTimeout(() => {
+    let active = true
+    const timer = setTimeout(async () => {
+      if (!active) return
       setLoading(true)
       setListError('')
       const baseQueryKey = JSON.stringify({
@@ -162,32 +164,38 @@ function TrainingHoursListScreen() {
         && listBaseKeyRef.current === baseQueryKey
       if (!append) listBaseKeyRef.current = baseQueryKey
       const params = toTrainingListApiParams(queryFilters, myEmployeeId, size)
-      trainingApi.listRecords(params)
-        .then(res => {
-          const data = res.data?.data || {}
-          const nextRecords = data.content || []
-          pageRecordIdsRef.current.set(queryFilters.page, nextRecords.map(record => record.id))
-          setRecords(currentRecords => {
-            if (!append) return nextRecords
+      try {
+        const res = await trainingApi.listRecords(params)
+        if (!active) return
 
-            const currentIds = new Set(currentRecords.map(record => record.id))
-            return [
-              ...currentRecords,
-              ...nextRecords.filter(record => !currentIds.has(record.id)),
-            ]
-          })
-          setTotalElements(data.totalElements || 0)
+        const data = res.data?.data || {}
+        const nextRecords = data.content || []
+        pageRecordIdsRef.current.set(queryFilters.page, nextRecords.map(record => record.id))
+        setRecords(currentRecords => {
+          if (!append) return nextRecords
+
+          const currentIds = new Set(currentRecords.map(record => record.id))
+          return [
+            ...currentRecords,
+            ...nextRecords.filter(record => !currentIds.has(record.id)),
+          ]
         })
-        .catch(err => {
-          console.error("Error fetching training records", err)
-          setListError('Không thể tải danh sách giờ đào tạo. Vui lòng thử lại.')
-        })
-        .finally(() => {
+        setTotalElements(data.totalElements || 0)
+      } catch (err) {
+        if (!active) return
+        console.error("Error fetching training records", err)
+        setListError(getApiErrorMessage(err, 'Không thể tải danh sách giờ đào tạo. Vui lòng thử lại.'))
+      } finally {
+        if (active) {
           loadingMoreRef.current = false
           setLoading(false)
-        })
+        }
+      }
     }, 300)
-    return () => clearTimeout(timer)
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
   }, [queryFilters, myEmployeeId, profileResolved, reloadKey, isMobileViewport])
 
   const handleDelete = async () => {
@@ -405,7 +413,7 @@ function TrainingHoursListScreen() {
                   type="button"
                   className="th-filter-control__trigger"
                   aria-label="Mở bộ lọc"
-                  aria-haspopup="menu"
+                  aria-controls="training-list-filter-panel"
                   aria-expanded={isFilterOpen}
                   onClick={handleFilterToggle}
                 >
@@ -423,7 +431,7 @@ function TrainingHoursListScreen() {
                 <span>Cập nhật giờ đào tạo</span>
               </button>
               {isFilterOpen && (
-                <div className="th-desktop-filter-panel th-list-filter-panel" role="dialog" aria-label="Bộ lọc giờ đào tạo">
+                <div className="th-desktop-filter-panel th-list-filter-panel" id="training-list-filter-panel" role="region" aria-label="Bộ lọc giờ đào tạo">
                   <div className="th-list-filter-panel__header">
                     <strong>Bộ lọc giờ đào tạo</strong>
                     <span>{countActiveFilterGroups(filterDraft)} điều kiện đang chọn</span>

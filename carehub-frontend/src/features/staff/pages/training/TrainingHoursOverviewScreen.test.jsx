@@ -311,17 +311,21 @@ describe('TrainingHoursOverviewScreen', () => {
       </MemoryRouter>,
     )
     fireEvent.click(screen.getAllByRole('button', { name: 'Mở bộ lọc giờ đào tạo' })[1])
-    expect(await screen.findByRole('dialog', { name: 'Bộ lọc giờ đào tạo' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Bộ lọc giờ đào tạo' })).toBeInTheDocument()
     fireEvent.change(await screen.findByRole('combobox', { name: 'Bộ lọc trạng thái' }), { target: { value: 'SUBMITTED' } })
+    fireEvent.change(screen.getByLabelText('Bộ lọc từ ngày'), { target: { value: '2026-01-01' } })
+    fireEvent.change(screen.getByLabelText('Bộ lọc đến ngày'), { target: { value: '2026-03-31' } })
     fireEvent.change(await screen.findByRole('combobox', { name: 'Bộ lọc lĩnh vực chuyên môn' }), { target: { value: '7' } })
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
-    expect(screen.getAllByTestId('current-path')[1]).toHaveTextContent('/staff/training/all')
+    expect(screen.getAllByTestId('current-path')[1]).toHaveTextContent(
+      '/staff/training/all?status=SUBMITTED&dateFrom=2026-01-01&dateTo=2026-03-31&professionalFieldId=7',
+    )
   })
 })
 
 function LocationProbe() {
   const location = useLocation()
-  return <span data-testid="current-path">{location.pathname}</span>
+  return <span data-testid="current-path">{location.pathname}{location.search}</span>
 }
 
 function deferred() {
