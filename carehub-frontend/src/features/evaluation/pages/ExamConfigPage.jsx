@@ -26,6 +26,7 @@ import { trainingApi } from '../../training/api/trainingApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
+import '../styles/ExamConfigPage.css'
 
 const COGNITIVE = [
   ['FOUNDATION', 'Kiến thức nền tảng'],
@@ -494,55 +495,53 @@ export default function ExamConfigPage() {
                         </div>
                       </div>
 
-                      <div className="exp-form-grid">
-                        <label className="exp-form-grid__wide"><span>Lọc theo khoa phòng (tùy chọn)</span></label>
-                      </div>
-                      <div className="exp-target-list exp-target-list--select">
-                        {departments.map((dept) => {
-                          const deptId = Number(dept.id)
-                          return (
-                            <label key={dept.id} className="exp-target-item exp-target-item--checkbox">
-                              <input type="checkbox" checked={filterDepartmentIds.includes(deptId)} onChange={() => toggleFilterDepartment(deptId)} />
-                              <strong>{dept.departmentCode || `PB-${dept.id}`}</strong>
-                              <span>{dept.name}</span>
-                            </label>
-                          )
-                        })}
-                        {!loading && departments.length === 0 && <div className="exp-empty">Chưa có khoa phòng để lọc.</div>}
-                      </div>
+                      <div className="exam-flow__target-columns">
+                        <div>
+                          <div className="exam-flow__target-title"><span>Lọc theo khoa phòng (tùy chọn)</span></div>
+                          <div className="exp-target-list exp-target-list--select">
+                            {departments.map((dept) => {
+                              const deptId = Number(dept.id)
+                              return (
+                                <label key={dept.id} className="exp-target-item exp-target-item--checkbox">
+                                  <input type="checkbox" checked={filterDepartmentIds.includes(deptId)} onChange={() => toggleFilterDepartment(deptId)} />
+                                  <strong>{dept.departmentCode || `PB-${dept.id}`}</strong>
+                                  <span>{dept.name}</span>
+                                </label>
+                              )
+                            })}
+                            {!loading && departments.length === 0 && <div className="exp-empty">Chưa có khoa phòng để lọc.</div>}
+                          </div>
+                        </div>
 
-                      <div className="exp-form-grid" style={{ marginTop: 16 }}>
-                        <label className="exp-form-grid__wide">
-                          <span>Tìm nhân viên theo mã, tên hoặc phòng ban</span>
+                        <div>
+                          <div className="exam-flow__target-title">
+                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
+                              <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
+                            </div>
+                          </div>
                           <input
-                            className="ch-input"
+                            className="ch-input exam-flow__employee-search"
                             value={userKeyword}
                             onChange={(e) => setUserKeyword(e.target.value)}
-                            placeholder="Nhập mã nhân viên, họ tên hoặc phòng ban..."
+                            placeholder="Tìm theo mã nhân viên, họ tên hoặc phòng ban..."
                           />
-                        </label>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
-                        <span className="ch-muted">{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
-                          <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
+                          <div className="exp-target-list exp-target-list--select">
+                            {filteredUsers.map((user) => {
+                              const userId = Number(user.id)
+                              return (
+                                <label key={user.id} className="exp-target-item exp-target-item--checkbox">
+                                  <input type="checkbox" checked={selectedUserIds.includes(userId)} onChange={() => toggleSelectedUser(userId)} />
+                                  <strong>{user.employeeCode}</strong>
+                                  <span>{user.fullName}</span>
+                                  <small>{user.departmentName || 'Chưa có phòng ban'}</small>
+                                </label>
+                              )
+                            })}
+                            {!loading && filteredUsers.length === 0 && <div className="exp-empty">Không có nhân viên phù hợp.</div>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="exp-target-list exp-target-list--select">
-                        {filteredUsers.map((user) => {
-                          const userId = Number(user.id)
-                          return (
-                            <label key={user.id} className="exp-target-item exp-target-item--checkbox">
-                              <input type="checkbox" checked={selectedUserIds.includes(userId)} onChange={() => toggleSelectedUser(userId)} />
-                              <strong>{user.employeeCode}</strong>
-                              <span>{user.fullName}</span>
-                              <small>{user.departmentName || 'Chưa có phòng ban'}</small>
-                            </label>
-                          )
-                        })}
-                        {!loading && filteredUsers.length === 0 && <div className="exp-empty">Không có nhân viên phù hợp.</div>}
                       </div>
                     </section>
 
