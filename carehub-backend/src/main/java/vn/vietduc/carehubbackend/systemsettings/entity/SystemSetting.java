@@ -24,6 +24,7 @@ public class SystemSetting extends BaseEntity {
     public static final String GLOBAL_SCOPE = "GLOBAL";
     public static final BigDecimal DEFAULT_TRAINING_HOURS = new BigDecimal("120");
     public static final int DEFAULT_TRAINING_WINDOW_YEARS = 5;
+    public static final BigDecimal DEFAULT_COMPETENCY_TARGET_SCORE = new BigDecimal("6.00");
 
     @Column(name = "scope_key", nullable = false, unique = true, updatable = false, length = 30)
     private String scopeKey;
@@ -36,6 +37,11 @@ public class SystemSetting extends BaseEntity {
     // migration backfills 5 and then enforces NOT NULL at the database level.
     @Column(name = "training_window_years")
     private Integer trainingWindowYears;
+
+    // Nullable for backward-compatible schema updates. The service always
+    // exposes the hospital default until the migration has backfilled the row.
+    @Column(name = "competency_target_score", precision = 4, scale = 2)
+    private BigDecimal competencyTargetScore;
 
     @Version
     @Column(name = "lock_version", nullable = false)

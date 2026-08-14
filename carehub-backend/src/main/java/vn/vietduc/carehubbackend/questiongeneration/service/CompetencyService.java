@@ -21,7 +21,6 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmplo
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyTechniqueOptionResponse;
-import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyTargetResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionBriefResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse;
@@ -34,6 +33,7 @@ import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -61,6 +61,7 @@ public class CompetencyService {
     private final DepartmentRepository departmentRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
     private final CompetencyClassificationService classificationService;
+    private final SystemSettingsService systemSettingsService;
 
     @Value("${competency.compliance.default-target:80.0}")
     private double defaultComplianceTarget;
@@ -425,9 +426,7 @@ public class CompetencyService {
         LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
 
         Department department = findDepartment(departmentId);
-        BigDecimal targetScore = department != null
-                ? normalizeTargetScore(department.getEffectiveCompetencyTargetScore())
-                : null;
+        BigDecimal targetScore = normalizeTargetScore(systemSettingsService.competencyTargetScore());
         Page<User> userPage = userRepository.findCompetencySummaryCandidates(
                 departmentId,
                 normalizeKeyword(keyword),
@@ -523,12 +522,6 @@ public class CompetencyService {
 
             CompetencyLevel level = overallScore != null
                     ? classificationService.classifyOverall(overallScore) : null;
-            BigDecimal employeeTargetScore = departmentId != null
-                    ? targetScore
-                    : normalizeTargetScore(user.getDepartment() != null
-                            ? user.getDepartment().getEffectiveCompetencyTargetScore()
-                            : Department.DEFAULT_COMPETENCY_TARGET_SCORE);
-
             items.add(new CompetencySummaryItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
                     departmentName(user),
@@ -537,8 +530,8 @@ public class CompetencyService {
                     level != null ? QuestionGenerationLabels.competencyLevel(level) : null,
                     level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
                     overallScore != null
-                            && employeeTargetScore != null
-                            && overallScore.compareTo(employeeTargetScore) >= 0
+                            && targetScore != null
+                            && overallScore.compareTo(targetScore) >= 0
             ));
         }
 
@@ -617,32 +610,6 @@ public class CompetencyService {
             return null;
         }
         return employeeCode.trim().toLowerCase(java.util.Locale.ROOT);
-    }
-
-    @Transactional
-    public DepartmentCompetencyTargetResponse updateDepartmentTarget(
-            Long departmentId,
-            BigDecimal targetScore,
-            User actor,
-            boolean admin
-    ) {
-        Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new vn.vietduc.carehubbackend.exception.ResourceNotFoundException(
-                        "Không tìm thấy khoa/phòng"
-                ));
-        if (!admin && (actor.getDepartment() == null
-                || !departmentId.equals(actor.getDepartment().getId()))) {
-            throw new vn.vietduc.carehubbackend.exception.ForbiddenException(
-                    "Manager chỉ được cập nhật mục tiêu của khoa mình"
-            );
-        }
-        department.setCompetencyTargetScore(targetScore.setScale(2, RoundingMode.HALF_UP));
-        Department saved = departmentRepository.save(department);
-        return new DepartmentCompetencyTargetResponse(
-                saved.getId(),
-                saved.getName(),
-                saved.getCompetencyTargetScore()
-        );
     }
 
     private BigDecimal practicalScore(FormSubmission submission) {

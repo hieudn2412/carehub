@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptReposi
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.MyComplianceYearProjection;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -32,6 +33,7 @@ class MyCompetencyServiceTest {
     private ExamAttemptRepository attemptRepository;
     private FormSubmissionRepository submissionRepository;
     private CompetencyClassificationService classificationService;
+    private SystemSettingsService systemSettingsService;
     private MyCompetencyService service;
     private User user;
 
@@ -40,12 +42,15 @@ class MyCompetencyServiceTest {
         attemptRepository = mock(ExamAttemptRepository.class);
         submissionRepository = mock(FormSubmissionRepository.class);
         classificationService = mock(CompetencyClassificationService.class);
-        service = new MyCompetencyService(attemptRepository, submissionRepository, classificationService);
+        systemSettingsService = mock(SystemSettingsService.class);
+        service = new MyCompetencyService(
+                attemptRepository, submissionRepository, classificationService, systemSettingsService);
+        when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("8.40"));
 
         Department department = Department.builder()
                 .id(10L)
                 .name("Khoa Nội")
-                .competencyTargetScore(new BigDecimal("8.40"))
+                .competencyTargetScore(new BigDecimal("9.50"))
                 .build();
         user = User.builder()
                 .id(20L)
@@ -105,8 +110,8 @@ class MyCompetencyServiceTest {
     }
 
     @Test
-    void scoreEqualToDepartmentTargetIsPassed() {
-        user.getDepartment().setCompetencyTargetScore(new BigDecimal("8.50"));
+    void scoreEqualToHospitalTargetIsPassed() {
+        when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("8.50"));
 
         var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
 
@@ -115,10 +120,10 @@ class MyCompetencyServiceTest {
     }
 
     @Test
-    void missingComponentIsTreatedAsZeroAndMissingTargetUsesDefaultSix() {
+    void missingComponentIsTreatedAsZeroAndUsesHospitalTarget() {
         when(attemptRepository.findScoredAttemptsByUserAndDateRange(any(), any(), any()))
                 .thenReturn(List.of());
-        user.getDepartment().setCompetencyTargetScore(null);
+        when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("6.00"));
 
         var summary = service.getCompetencySummary(user, LocalDate.now().minusMonths(1), LocalDate.now());
 
