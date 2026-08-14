@@ -325,6 +325,104 @@ class CompetencyServiceTest {
         );
     }
 
+    @Test
+    void techniqueUsesConvertedTenPointScoreForAverageAndClassification() {
+        User evaluator = User.builder()
+                .id(90L)
+                .employeeCode("QL090")
+                .name("Trưởng khoa")
+                .department(department)
+                .build();
+        User subject = User.builder()
+                .id(20L)
+                .employeeCode("NV020")
+                .name("Chu Văn Long")
+                .department(department)
+                .build();
+        Form form = Form.builder().id(50L).title("THỤT THÁO").build();
+        FormSubmission first = submission(100L, evaluator, subject, form, "1.50", FormSubmissionResult.PASSED);
+        first.setMaxScore(new BigDecimal("1.50"));
+        first.setConvertedScore(new BigDecimal("10.00"));
+        FormSubmission second = submission(101L, evaluator, subject, form, "1.35555556", FormSubmissionResult.PASSED);
+        second.setMaxScore(new BigDecimal("1.50"));
+        second.setConvertedScore(new BigDecimal("9.04"));
+
+        when(submissionRepository.findCompetencyTechniqueCandidates(
+                eq(10L), eq(50L), isNull(), any(), any(), any()
+        )).thenReturn(new PageImpl<>(List.of(subject), PageRequest.of(0, 10), 1));
+        when(submissionRepository.findCompetencyTechniqueOptions(eq(10L), any(), any()))
+                .thenReturn(List.of());
+        when(submissionRepository.findScoredEvaluationsForTechniqueCandidates(
+                any(), eq(50L), any(), any()
+        )).thenReturn(List.of(first, second));
+
+        var response = service.getByTechnique(
+                10L,
+                50L,
+                LocalDate.now().minusDays(30),
+                LocalDate.now(),
+                null,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.averageScore()).isEqualByComparingTo("9.52");
+            assertThat(item.passRate()).isEqualTo(100.0d);
+        });
+        verify(classificationService).classifyOverall(new BigDecimal("9.52"));
+    }
+
+    @Test
+    void employeeTechniqueUsesConvertedScoresForRowsAverageAndClassification() {
+        User evaluator = User.builder()
+                .id(90L)
+                .employeeCode("QL090")
+                .name("Trưởng khoa")
+                .department(department)
+                .build();
+        User subject = User.builder()
+                .id(338L)
+                .employeeCode("VD01011")
+                .name("Chu Văn Long")
+                .department(department)
+                .build();
+        Form form = Form.builder().id(50L).title("THỤT THÁO").build();
+        FormSubmission first = submission(100L, evaluator, subject, form, "1.50", FormSubmissionResult.PASSED);
+        first.setMaxScore(new BigDecimal("1.50"));
+        first.setConvertedScore(new BigDecimal("10.00"));
+        FormSubmission second = submission(101L, evaluator, subject, form, "1.50", FormSubmissionResult.PASSED);
+        second.setMaxScore(new BigDecimal("1.50"));
+        second.setConvertedScore(new BigDecimal("10.00"));
+        FormSubmission third = submission(102L, evaluator, subject, form, "1.35555556", FormSubmissionResult.PASSED);
+        third.setMaxScore(new BigDecimal("1.50"));
+        third.setConvertedScore(new BigDecimal("9.04"));
+
+        when(userRepository.findById(338L)).thenReturn(Optional.of(subject));
+        when(submissionRepository.findScoredEvaluationsForSubject(eq(338L), eq("VD01011"), any(), any()))
+                .thenReturn(List.of(first, second, third));
+
+        var response = service.getEmployeeByTechnique(
+                338L,
+                LocalDate.now().minusDays(30),
+                LocalDate.now()
+        );
+
+        assertThat(response.overallAverageScore()).isEqualByComparingTo("9.68");
+        assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.averageScore()).isEqualByComparingTo("9.68");
+            assertThat(item.passCount()).isEqualTo(3);
+            assertThat(item.passRate()).isEqualTo(100.0d);
+            assertThat(item.attempts()).extracting("score")
+                    .containsExactlyInAnyOrder(
+                            new BigDecimal("10.00"),
+                            new BigDecimal("10.00"),
+                            new BigDecimal("9.04")
+                    );
+        });
+        verify(classificationService).classifyOverall(new BigDecimal("9.68"));
+        verify(classificationService, never()).classifyOverall(new BigDecimal("1.45"));
+    }
+
     private FormSubmission submission(
             Long id,
             User evaluator,

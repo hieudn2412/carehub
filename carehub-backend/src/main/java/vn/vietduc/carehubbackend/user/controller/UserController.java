@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UpdateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UpdateMyProfileRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UserFilterRequest;
 import vn.vietduc.carehubbackend.user.dto.response.UserDetailResponse;
 import vn.vietduc.carehubbackend.user.dto.response.UserResponse;
@@ -39,6 +40,16 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDetailResponse>> getCurrentUserProfile() {
         return ResponseEntity.ok(ApiResponse.success("Get profile successfully", userService.getCurrentUserProfile()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<UserDetailResponse>> updateCurrentUserProfile(
+            @Valid @RequestBody UpdateMyProfileRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Cập nhật hồ sơ cá nhân thành công",
+                userService.updateCurrentUserProfile(request)
+        ));
     }
 
     @PutMapping("/users/{id}")

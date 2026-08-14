@@ -113,6 +113,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
     void checklistAssignmentAndSubmissionFlow() {
         String questionKey = UUID.randomUUID().toString();
         String highOptionKey = UUID.randomUUID().toString();
+        User subject = newUser("L3FSUB", "USER");
 
         // Step 1-2: form + draft version.
         long formId = id(post(API + "/forms", adminToken, """
@@ -125,7 +126,8 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         assertThat(data(post(API + "/forms/" + formId + "/versions/" + versionId + "/publication",
                 adminToken, null)).get("status").asText()).isEqualTo("PUBLISHED");
 
-        // Step 4: assign to the employee, who now sees it.
+        // Step 4: assign to the employee, who now sees it and evaluates another
+        // employee in the same department.
         long assignmentItemId = data(post(API + "/form-assignments", adminToken, """
                 {"managerId":%d,"formVersionIds":[%d]}
                 """.formatted(employee.getId(), versionId)))
@@ -136,7 +138,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         // Step 5-7: draft submission → answer → submit.
         ResponseEntity<String> draft = post(API + "/form-submissions", employeeToken, """
                 {"assignmentItemId":%d,"subject":{"type":"USER","userId":%d}}
-                """.formatted(assignmentItemId, employee.getId()));
+                """.formatted(assignmentItemId, subject.getId()));
         long submissionId = id(draft);
         long lockVersion = data(put(API + "/form-submissions/" + submissionId, employeeToken, """
                 {"lockVersion":%d,"answers":[{"questionKey":"%s","optionKey":"%s"}]}
@@ -149,7 +151,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
 
         // Step 8: the admin sees the response on the form.
         assertThat(get(API + "/forms/" + formId + "/versions/" + versionId + "/responses", adminToken)
-                .getBody()).contains(employee.getEmployeeCode());
+                .getBody()).contains(subject.getEmployeeCode());
     }
 
     @DisplayName("L3-FLOW-04 | Multi-step Flow: question bank → set → config → paper → assignment → the employee sits the exam and it is graded")

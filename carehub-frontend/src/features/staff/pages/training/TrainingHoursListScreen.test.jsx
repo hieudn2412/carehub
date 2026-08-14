@@ -196,6 +196,50 @@ describe('TrainingHoursListScreen query navigation', () => {
     })))
   })
 
+  it('ignores a stale request error after applying a date filter', async () => {
+    const firstRequest = deferredPromise()
+    trainingApi.listRecords
+      .mockImplementationOnce(() => firstRequest.promise)
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            content: [{
+              id: 20,
+              title: 'Hồ sơ trong khoảng ngày',
+              workflowStatus: 'SUBMITTED',
+              startDate: '2026-08-10',
+              declaredHours: 3,
+            }],
+            totalElements: 1,
+          },
+        },
+      })
+
+    render(
+      <MemoryRouter initialEntries={['/staff/training/all']}>
+        <TrainingHoursListScreen />
+      </MemoryRouter>,
+    )
+
+    await waitFor(() => expect(trainingApi.listRecords).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Mở bộ lọc' }))
+    fireEvent.change(await screen.findByLabelText('Lọc từ ngày'), { target: { value: '2026-08-06' } })
+    fireEvent.change(screen.getByLabelText('Lọc đến ngày'), { target: { value: '2026-08-12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+
+    expect(await screen.findByText('Hồ sơ trong khoảng ngày')).toBeInTheDocument()
+    firstRequest.reject(new Error('stale request failed'))
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Không thể tải danh sách giờ đào tạo/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Không thể kết nối đến máy chủ/i)).not.toBeInTheDocument()
+    })
+    expect(trainingApi.listRecords).toHaveBeenLastCalledWith(expect.objectContaining({
+      dateFrom: '2026-08-06',
+      dateTo: '2026-08-12',
+    }))
+  })
+
   it('loads the next page when the mobile table reaches its horizontal end', async () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
@@ -284,4 +328,14 @@ function HistoryControls() {
       <button type="button" onClick={() => navigate(1)}>Tiến lịch sử</button>
     </>
   )
+}
+
+function deferredPromise() {
+  let resolve
+  let reject
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, reject, resolve }
 }

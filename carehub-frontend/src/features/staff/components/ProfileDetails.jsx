@@ -1,9 +1,11 @@
 import {
   ApartmentOutlined,
+  CalendarOutlined,
   ClockCircleOutlined,
   EditOutlined,
   IdcardOutlined,
   MailOutlined,
+  ManOutlined,
   PhoneOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -14,6 +16,8 @@ const INFO_FIELDS = [
   { key: 'email', label: 'Email', icon: <MailOutlined />, color: 'blue' },
   { key: 'phone', label: 'Số điện thoại', icon: <PhoneOutlined />, color: 'purple' },
   { key: 'departmentName', label: 'Phòng ban', icon: <ApartmentOutlined />, color: 'blue' },
+  { key: 'birthday', label: 'Ngày sinh', icon: <CalendarOutlined />, color: 'amber' },
+  { key: 'gender', label: 'Giới tính', icon: <ManOutlined />, color: 'teal' },
   { key: 'lastLogin', label: 'Lần cuối đăng nhập', icon: <ClockCircleOutlined />, color: 'blue' },
 ]
 
@@ -51,6 +55,7 @@ function ProfileDetails({
   fallbackRole = 'Nhân viên',
   fallbackInitials = 'U',
   onChangePassword,
+  onEditProfile,
 }) {
   const displayName = profile?.fullName || 'Chưa cập nhật'
   const initials = getInitials(profile?.fullName, fallbackInitials)
@@ -62,6 +67,10 @@ function ProfileDetails({
 
   const getValue = (key) => {
     if (key === 'lastLogin') return formatDateTime(profile?.lastLogin)
+    if (key === 'birthday') return profile?.birthday
+      ? new Intl.DateTimeFormat('vi-VN').format(new Date(`${profile.birthday}T00:00:00`))
+      : 'Chưa cập nhật'
+    if (key === 'gender') return profile?.gender === true ? 'Nam' : profile?.gender === false ? 'Nữ' : 'Chưa cập nhật'
     return profile?.[key] || 'Chưa cập nhật'
   }
 
@@ -96,9 +105,16 @@ function ProfileDetails({
                 </div>
               </div>
 
-              <button type="button" className="profile-change-pw-btn" onClick={onChangePassword}>
-                <EditOutlined /> Đổi mật khẩu
-              </button>
+              <div className="profile-card__actions">
+                {onEditProfile && (
+                  <button type="button" className="profile-change-pw-btn" onClick={onEditProfile}>
+                    <EditOutlined /> Chỉnh sửa hồ sơ
+                  </button>
+                )}
+                <button type="button" className="profile-change-pw-btn" onClick={onChangePassword}>
+                  <EditOutlined /> Đổi mật khẩu
+                </button>
+              </div>
             </div>
 
             <div className="profile-info-grid">

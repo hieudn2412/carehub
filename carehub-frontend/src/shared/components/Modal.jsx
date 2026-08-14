@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
  *
  * <Modal title="..." onClose={fn} size="lg" footer={<>...</>}>nội dung</Modal>
  */
-function Modal({ title, onClose, footer, size, children }) {
+function Modal({ title, onClose, footer, size, className = '', children }) {
   const panelRef = useRef(null)
   const onCloseRef = useRef(onClose)
 
@@ -38,7 +38,7 @@ function Modal({ title, onClose, footer, size, children }) {
     <div className="ch-modal-backdrop" onClick={onClose}>
       <div
         ref={panelRef}
-        className={`ch-modal${size === 'lg' ? ' ch-modal--lg' : ''}`}
+        className={`ch-modal${size === 'lg' ? ' ch-modal--lg' : ''}${className ? ` ${className}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}

@@ -10,6 +10,10 @@ import {
   FolderOutlined,
   DeleteOutlined,
   LeftOutlined,
+  EyeOutlined,
+  FileImageOutlined,
+  FilePdfOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -24,6 +28,26 @@ function canPreviewEvidence(evidence) {
   return PREVIEWABLE_IMAGE_TYPES.has(evidence?.mimeType?.toLowerCase())
 }
 
+function isPdfEvidence(evidence) {
+  return evidence?.mimeType?.toLowerCase() === 'application/pdf'
+}
+
+function getEvidenceTypeLabel(evidence) {
+  const mimeType = evidence?.mimeType?.toLowerCase()
+  if (mimeType === 'application/pdf') return 'PDF'
+  if (mimeType === 'image/png') return 'PNG'
+  if (mimeType === 'image/jpeg') return 'JPG'
+  return 'Tệp đính kèm'
+}
+
+function formatEvidenceSize(sizeInBytes) {
+  const size = Number(sizeInBytes)
+  if (!Number.isFinite(size) || size <= 0) return ''
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
+
 function TrainingHoursDetailScreen() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -36,7 +60,9 @@ function TrainingHoursDetailScreen() {
   const [returnConfirmOpen, setReturnConfirmOpen] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [openingEvidenceId, setOpeningEvidenceId] = useState(null)
   const [mobileTab, setMobileTab] = useState('info')
+  const [trainingWindowYears, setTrainingWindowYears] = useState(null)
 
   const fetchRecord = useCallback(() => {
     setLoading(true)
@@ -50,6 +76,15 @@ function TrainingHoursDetailScreen() {
     const timer = window.setTimeout(fetchRecord, 0)
     return () => window.clearTimeout(timer)
   }, [fetchRecord])
+
+  useEffect(() => {
+    trainingApi.getMyTrainingStatus()
+      .then(res => {
+        const years = Number(res.data?.data?.cycleYears)
+        setTrainingWindowYears(Number.isInteger(years) && years > 0 ? years : null)
+      })
+      .catch(() => setTrainingWindowYears(null))
+  }, [])
 
   const requestEvidencePreview = useCallback(async (evidenceId) => {
     const response = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
@@ -92,14 +127,14 @@ function TrainingHoursDetailScreen() {
 
   const handleSubmit = () => {
     if (!record) return
-    if (record.startDate) {
+    if (record.startDate && trainingWindowYears) {
       const recordDate = new Date(record.startDate)
-      const fiveYearsAgo = new Date()
-      fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5)
-      fiveYearsAgo.setHours(0, 0, 0, 0)
+      const windowStart = new Date()
+      windowStart.setFullYear(windowStart.getFullYear() - trainingWindowYears)
+      windowStart.setHours(0, 0, 0, 0)
       recordDate.setHours(0, 0, 0, 0)
-      if (recordDate < fiveYearsAgo) {
-        showToast("Hồ sơ đào tạo quá 5 năm không được phép nộp.", "error")
+      if (recordDate < windowStart) {
+        showToast(`Hồ sơ đào tạo quá ${trainingWindowYears} năm không được phép nộp.`, "error")
         return
       }
     }
@@ -119,6 +154,18 @@ function TrainingHoursDetailScreen() {
       }
     } catch {
       showToast("Không thể tải minh chứng.", "error")
+    }
+  }
+
+  const handleViewEvidence = async (evidenceId) => {
+    setOpeningEvidenceId(evidenceId)
+    try {
+      const url = await requestEvidencePreview(evidenceId)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch {
+      showToast("Không thể mở minh chứng.", "error")
+    } finally {
+      setOpeningEvidenceId(null)
     }
   }
 
@@ -188,11 +235,7 @@ function TrainingHoursDetailScreen() {
     DRAFT: { label: 'Nháp', cls: 'th-badge--warning' },
     CANCELLED: { label: 'Đã hủy', cls: 'th-badge--danger' },
   }
-  const visibleEvidences = record?.evidences
-    ? (record.workflowStatus === 'DRAFT'
-        ? record.evidences
-        : record.evidences.filter(canPreviewEvidence))
-    : []
+  const visibleEvidences = record?.evidences || []
 
   return (
     <AppShell
@@ -269,7 +312,7 @@ function TrainingHoursDetailScreen() {
                       <div>
                         <span className="th-detail-section-eyebrow">Minh chứng xác thực</span>
                         <h2 className="th-detail-section-title" id="training-evidence-heading">
-                          <PaperClipOutlined /> Hình ảnh minh chứng
+                          <PaperClipOutlined /> Tệp minh chứng
                         </h2>
                       </div>
                       <span className="th-detail-section-count">
@@ -279,12 +322,14 @@ function TrainingHoursDetailScreen() {
                     <div className="th-evidence-grid th-evidence-grid--featured">
                       {visibleEvidences.map(ev => {
                         const isPreviewable = canPreviewEvidence(ev)
+                        const isPdf = isPdfEvidence(ev)
                         const preview = evidencePreviews[ev.id]
+                        const fileSize = formatEvidenceSize(ev.fileSizeBytes)
 
                         return (
                           <article
                             key={ev.id}
-                            className={`th-evidence-item${isPreviewable ? ' th-evidence-item--with-preview' : ''}`}
+                            className={`th-evidence-item${isPreviewable ? ' th-evidence-item--with-preview' : ''}${isPdf ? ' th-evidence-item--document' : ''}`}
                           >
                             {isPreviewable && (
                               <div className="th-evidence-preview">
@@ -315,10 +360,27 @@ function TrainingHoursDetailScreen() {
                               </div>
                             )}
 
+                            {isPdf && (
+                              <div className="th-evidence-document" aria-hidden="true">
+                                <span className="th-evidence-document__icon"><FilePdfOutlined /></span>
+                                <span className="th-evidence-document__type">Tài liệu PDF</span>
+                                <span className="th-evidence-document__hint">Có thể xem trực tuyến hoặc tải xuống</span>
+                              </div>
+                            )}
+
                             <div className="th-evidence-item__info">
-                              <PaperClipOutlined className="th-evidence-item__icon" />
-                              <span className="th-evidence-item__name" title={ev.originalFilename}>
-                                {ev.originalFilename}
+                              {isPdf
+                                ? <FilePdfOutlined className="th-evidence-item__icon th-evidence-item__icon--pdf" />
+                                : isPreviewable
+                                  ? <FileImageOutlined className="th-evidence-item__icon" />
+                                  : <PaperClipOutlined className="th-evidence-item__icon" />}
+                              <span className="th-evidence-item__details">
+                                <span className="th-evidence-item__name" title={ev.originalFilename}>
+                                  {ev.originalFilename}
+                                </span>
+                                <span className="th-evidence-item__meta">
+                                  {getEvidenceTypeLabel(ev)}{fileSize ? ` · ${fileSize}` : ''}
+                                </span>
                               </span>
                               <span className={`th-badge th-badge--${
                                 ev.moderationStatus === 'PASSED' ? 'success'
@@ -330,16 +392,25 @@ function TrainingHoursDetailScreen() {
                                   : ev.moderationStatus === 'ERROR' ? 'Lỗi'
                                   : 'Chờ duyệt'}
                               </span>
-                              {record.workflowStatus === 'DRAFT' && (
+                              <span className="th-evidence-item__actions">
+                                <button
+                                  type="button"
+                                  className="th-detail-btn th-evidence-item__view"
+                                  onClick={() => handleViewEvidence(ev.id)}
+                                  disabled={openingEvidenceId === ev.id}
+                                  aria-label={`Xem ${ev.originalFilename}`}
+                                >
+                                  {openingEvidenceId === ev.id ? <LoadingOutlined spin /> : <EyeOutlined />} Xem
+                                </button>
                                 <button
                                   type="button"
                                   className="th-detail-btn th-evidence-item__download"
                                   onClick={() => handleDownloadEvidence(ev.id)}
                                   aria-label={`Tải xuống ${ev.originalFilename}`}
                                 >
-                                  <DownloadOutlined /> Tải
+                                  <DownloadOutlined /> Tải xuống
                                 </button>
-                              )}
+                              </span>
                             </div>
                           </article>
                         )

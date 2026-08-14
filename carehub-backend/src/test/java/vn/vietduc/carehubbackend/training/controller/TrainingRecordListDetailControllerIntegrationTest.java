@@ -195,6 +195,23 @@ class TrainingRecordListDetailControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.content[0].expired").value(false));
     }
 
+    @DisplayName("L2-CMP-06B | Query Correctness: one-sided date filters are supported")
+    @Test
+    void listSupportsOneSidedDateFilters() throws Exception {
+        mockMvc.perform(get("/api/v1/training/records")
+                        .queryParam("dateFrom", "2026-03-02")
+                        .with(jwtFor(user, "USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].id").value(ownSubmittedWithEvidence.getId()));
+
+        mockMvc.perform(get("/api/v1/training/records")
+                        .queryParam("dateTo", "2026-03-31")
+                        .with(jwtFor(user, "USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(2));
+    }
+
     @DisplayName("L2-CMP-07 | Negative: reversed date range → 400; sort field outside the allow-list → 400")
     @Test
     void listRejectsInvalidDateRangeAndUnsupportedSort() throws Exception {
