@@ -711,10 +711,12 @@
 
 .th-overview-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   min-width: 0;
   padding: 16px 18px;
+  overflow: visible;
 }
 
 .th-overview-search {
@@ -796,16 +798,15 @@
 }
 
 .th-overview-filter-panel {
-  position: absolute;
-  z-index: 20;
-  top: calc(100% - 8px);
-  right: 18px;
-  width: min(620px, calc(100% - 36px));
+  position: static;
+  width: 100%;
+  flex: 1 0 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
   padding: 18px;
   border: 1px solid #dbe7e4;
   border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 16px 36px rgba(15, 118, 110, 0.14);
+  background: #f8fafc;
 }
 
 .th-overview-filter-panel__header,
@@ -828,7 +829,7 @@
 
 .th-overview-filter-panel__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -930,13 +931,13 @@
   }
 
   .training-page--overview .th-overview-search,
-  .training-page--overview .th-overview-filter-btn,
   .training-page--overview .th-overview-toolbar .th-overview-link {
     display: none;
   }
 
+  .training-page--overview .th-overview-filter-btn,
   .training-page--overview .th-overview-toolbar .th-btn-primary {
-    width: 100%;
+    flex: 1 1 180px;
     justify-content: center;
   }
 
@@ -1014,9 +1015,11 @@
   }
 
   .th-overview-filter-panel {
-    top: calc(100% - 6px);
-    right: 12px;
-    width: min(560px, calc(100% - 24px));
+    width: 100%;
+  }
+
+  .th-overview-filter-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .th-overview-search {
@@ -1099,10 +1102,8 @@
   }
 
   .th-overview-filter-panel {
-    position: static;
-    width: auto;
+    width: 100%;
     margin-top: 2px;
-    box-shadow: none;
   }
 
   .th-overview-filter-panel__grid {
@@ -2036,6 +2037,49 @@
   border-color: #e5e7eb;
 }
 
+.th-evidence-item--document {
+  padding: 0;
+  overflow: hidden;
+  border-color: #dce5e3;
+  background: #fff;
+}
+
+.th-evidence-document {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 24px;
+  border-bottom: 1px solid #e5ecea;
+  background: linear-gradient(145deg, #f8fafc 0%, #eef5f3 100%);
+  color: #64748b;
+  text-align: center;
+}
+
+.th-evidence-document__icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 16px;
+  background: #fff1f2;
+  color: #dc2626;
+  font-size: 28px;
+  box-shadow: 0 8px 20px rgba(153, 27, 27, 0.08);
+}
+
+.th-evidence-document__type {
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.th-evidence-document__hint {
+  font-size: 12px;
+}
+
 .th-evidence-item__info {
   display: flex;
   align-items: center;
@@ -2043,24 +2087,51 @@
   min-width: 0;
 }
 
-.th-evidence-item--with-preview .th-evidence-item__info {
+.th-evidence-item--with-preview .th-evidence-item__info,
+.th-evidence-item--document .th-evidence-item__info {
   padding: 12px 14px;
 }
 
 .th-evidence-item__icon { color: #9ca3af; font-size: 14px; flex-shrink: 0; }
-.th-evidence-item__name {
+.th-evidence-item__icon--pdf { color: #dc2626; }
+.th-evidence-item__details {
+  display: flex;
+  min-width: 0;
   flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.th-evidence-item__name {
+  display: block;
   color: #374151;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.th-evidence-item__meta {
+  color: #718096;
+  font-size: 11px;
+}
+
+.th-evidence-item__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 6px;
+}
+
+.th-evidence-item__view,
 .th-evidence-item__download {
   flex-shrink: 0;
-  margin-left: auto;
   padding: 4px 9px;
   font-size: 12px;
+}
+
+.th-evidence-item__view {
+  margin-left: auto;
+  border-color: #a7c7c0;
+  color: #0f766e;
 }
 
 .th-evidence-preview {
@@ -2693,19 +2764,30 @@
     max-height: 204px;
   }
 
+  .training-hours-detail-shell .th-evidence-document {
+    min-height: 180px;
+    padding: 18px;
+  }
+
   .training-hours-detail-shell .th-evidence-item__info {
     gap: 6px;
     padding: 9px !important;
   }
 
+  .training-hours-detail-shell .th-evidence-item__actions {
+    margin-left: auto;
+  }
+
+  .training-hours-detail-shell .th-evidence-item__view,
   .training-hours-detail-shell .th-evidence-item__download {
     width: 36px;
     min-height: 34px;
-    margin-left: auto;
+    margin-left: 0;
     padding: 0;
     font-size: 0;
   }
 
+  .training-hours-detail-shell .th-evidence-item__view .anticon,
   .training-hours-detail-shell .th-evidence-item__download .anticon {
     font-size: 13px;
   }
@@ -3870,10 +3952,18 @@
     flex-basis: calc(100% - 28px);
   }
 
+  .th-evidence-item__actions {
+    width: calc(100% - 24px);
+    margin-left: 24px;
+  }
+
+  .th-evidence-item__view,
   .th-evidence-item__download {
     width: auto;
     min-height: 36px;
-    margin-left: 24px;
+    flex: 1;
+    margin-left: 0;
+    font-size: 12px;
   }
 
   .th-evidence-preview {

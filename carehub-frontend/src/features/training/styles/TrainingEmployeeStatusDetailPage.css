@@ -107,6 +107,21 @@
   margin: 0;
 }
 
+.ted-profile-requirement {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ted-profile-workplace {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
 .ted-profile-badge {
   padding: 8px 16px;
   font-size: 13.5px;
@@ -121,6 +136,90 @@
   color: #0f6e56;
 }
 
+.ted-status-scope {
+  padding: 16px;
+  border: 1px solid #dbe5e2;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.ted-status-scope__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ted-status-scope__heading h3,
+.ted-status-scope__heading p {
+  margin: 0;
+}
+
+.ted-status-scope__heading h3 {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.ted-status-scope__heading p {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.ted-status-scope__heading button {
+  padding: 5px 9px;
+  border: 0;
+  background: transparent;
+  color: #0f766e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ted-status-scope__fields {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(180px, 1fr);
+  gap: 12px;
+  max-width: 720px;
+}
+
+.ted-status-scope__fields label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ted-status-scope__fields select,
+.ted-status-scope__fields input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #dbe5e2;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.ted-status-scope__fields select:focus,
+.ted-status-scope__fields input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
+}
+
+.ted-status-scope__error {
+  margin: 10px 0 0;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
 /* Section Header */
 .ted-section-title {
   font-size: 13px;
@@ -133,8 +232,8 @@
 /* Summary Grid */
 .ted-summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .ted-summary-card {
@@ -147,9 +246,14 @@
   border: 1px solid transparent;
 }
 
-.ted-summary-card--total {
+.ted-summary-card--non-compliant {
   background: #fff5f5;
   border-color: #ffd8d8;
+}
+
+.ted-summary-card--compliant {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
 }
 
 .ted-summary-card--approved {
@@ -160,6 +264,12 @@
 .ted-summary-card--pending {
   background: #fffaf0;
   border-color: #ffedd5;
+}
+
+.ted-summary-card--neutral,
+.ted-summary-card--progress {
+  background: #f8fafc;
+  border-color: #dbe5e2;
 }
 
 .ted-card-icon {
@@ -174,8 +284,12 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
-.ted-card-icon--total {
+.ted-card-icon--non-compliant {
   color: #ef4444;
+}
+
+.ted-card-icon--compliant {
+  color: #16a34a;
 }
 
 .ted-card-icon--approved {
@@ -186,9 +300,22 @@
   color: #f59e0b;
 }
 
+.ted-card-icon--neutral {
+  color: #475569;
+}
+
+.ted-card-icon--progress {
+  color: #2563eb;
+}
+
 .ted-card-info {
   display: flex;
   flex-direction: column;
+}
+
+.ted-card-info--progress {
+  min-width: 0;
+  flex: 1;
 }
 
 .ted-card-label {
@@ -204,8 +331,12 @@
   line-height: 1;
 }
 
-.ted-card-value--total {
+.ted-card-value--non-compliant {
   color: #ef4444;
+}
+
+.ted-card-value--compliant {
+  color: #16a34a;
 }
 
 .ted-card-value--approved {
@@ -216,7 +347,296 @@
   color: #f59e0b;
 }
 
+.ted-card-value--neutral {
+  color: #334155;
+}
+
+.ted-card-value--progress {
+  color: #2563eb;
+}
+
+.ted-progress {
+  width: 100%;
+  height: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.ted-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2563eb;
+}
+
+.ted-requirement-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.ted-requirement-card,
+.ted-breakdown-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ted-requirement-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+
+.ted-requirement-list div {
+  min-width: 0;
+}
+
+.ted-requirement-list dt {
+  margin-bottom: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ted-requirement-list dd {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.ted-requirement-list dd.is-warning {
+  color: #b45309;
+}
+
+.ted-breakdown-list {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ted-breakdown-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+}
+
+.ted-breakdown-list li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.ted-breakdown-list strong {
+  color: #0f766e;
+  white-space: nowrap;
+}
+
+.ted-breakdown-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
 /* Records Table */
+.ted-history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ted-history-heading .ted-section-title {
+  margin-bottom: 0;
+}
+
+.ted-history-heading > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ted-filter-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ted-filter-search {
+  position: relative;
+  min-width: 220px;
+  flex: 1;
+}
+
+.ted-filter-search .anticon {
+  position: absolute;
+  top: 50%;
+  left: 13px;
+  color: #94a3b8;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.ted-filter-search input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 9px 12px 9px 38px;
+  border: 1px solid #dbe5e2;
+  border-radius: 8px;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.ted-filter-search input:focus,
+.ted-filter-grid select:focus,
+.ted-filter-grid input:focus {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
+}
+
+.ted-filter-trigger {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ted-filter-trigger:hover,
+.ted-filter-trigger.is-open {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.ted-filter-count {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  place-items: center;
+  border-radius: 999px;
+  background: #0f766e;
+  color: #fff;
+  font-size: 11px;
+}
+
+.ted-filter-panel {
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.ted-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ted-filter-grid label {
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.ted-filter-grid select,
+.ted-filter-grid input {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid #dbe5e2;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.ted-filter-state,
+.ted-filter-error {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.ted-filter-state {
+  padding: 8px 0;
+}
+
+.ted-filter-state--error,
+.ted-filter-error,
+.ted-table-error {
+  color: #b91c1c;
+}
+
+.ted-filter-error {
+  margin: 10px 0 0;
+}
+
+.ted-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.ted-filter-clear,
+.ted-filter-apply {
+  min-height: 40px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ted-filter-clear {
+  border: 1px solid #dbe5e2;
+  background: #fff;
+  color: #64748b;
+}
+
+.ted-filter-apply {
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #fff;
+}
+
 .ted-table-wrap {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -226,6 +646,7 @@
 
 .ted-table {
   width: 100%;
+  min-width: 1100px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -253,6 +674,59 @@
 
 .ted-table tr:hover td {
   background: #f8fafc;
+}
+
+.ted-record-title,
+.ted-record-primary,
+.ted-record-meta,
+.ted-evidence-count,
+.ted-evidence-result {
+  display: block;
+}
+
+.ted-record-title {
+  max-width: 260px;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.ted-record-primary,
+.ted-evidence-count {
+  color: #334155;
+  font-weight: 650;
+}
+
+.ted-record-meta {
+  margin-top: 4px;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.ted-source-tag {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4f46e5;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ted-evidence-result {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ted-evidence-result--passed {
+  color: #0f766e;
+}
+
+.ted-evidence-result--failed {
+  color: #b91c1c;
 }
 
 .ted-training-date {
@@ -345,6 +819,11 @@
   color: #e65100;
 }
 
+.ted-status-badge--cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .ted-status-dot {
   width: 6px;
   height: 6px;
@@ -357,6 +836,10 @@
 
 .ted-status-dot--pending {
   background: #f59e0b;
+}
+
+.ted-status-dot--cancelled {
+  background: #94a3b8;
 }
 
 /* Evidence Icon */
@@ -390,6 +873,18 @@
   .ted-summary-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .ted-requirement-section {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ted-requirement-card {
+    grid-column: 1 / -1;
+  }
+
+  .ted-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* bp-sm */
@@ -409,6 +904,33 @@
   }
 
   .ted-table {
-    min-width: 640px;
+    min-width: 1050px;
+  }
+
+  .ted-status-scope__fields,
+  .ted-requirement-section,
+  .ted-requirement-list {
+    grid-template-columns: 1fr;
+  }
+
+  .ted-requirement-card {
+    grid-column: auto;
+  }
+
+  .ted-filter-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ted-filter-search {
+    min-width: 0;
+  }
+
+  .ted-filter-trigger {
+    width: 100%;
+  }
+
+  .ted-filter-grid {
+    grid-template-columns: 1fr;
   }
 }

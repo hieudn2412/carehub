@@ -17,6 +17,25 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ProfessionalFieldManagementPage.css'
 
 const EMPTY_FORM = { code: '', name: '', description: '', active: true, version: null }
+const EMPTY_FORM_ERRORS = { code: '', name: '' }
+
+function validateForm(form) {
+  const errors = { ...EMPTY_FORM_ERRORS }
+  const code = form.code.trim()
+  const name = form.name.trim()
+
+  if (!code) {
+    errors.code = 'Vui lòng nhập mã lĩnh vực.'
+  } else if (code.length < 2) {
+    errors.code = 'Mã lĩnh vực phải có ít nhất 2 ký tự.'
+  }
+
+  if (!name) {
+    errors.name = 'Vui lòng nhập tên lĩnh vực.'
+  }
+
+  return errors
+}
 
 function ProfessionalFieldManagementPage() {
   const { showToast } = useToast()
@@ -27,6 +46,7 @@ function ProfessionalFieldManagementPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [formErrors, setFormErrors] = useState(EMPTY_FORM_ERRORS)
   const [editingId, setEditingId] = useState(null)
   const [formModalOpen, setFormModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -90,12 +110,14 @@ function ProfessionalFieldManagementPage() {
     if (saving) return
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setFormErrors(EMPTY_FORM_ERRORS)
     setFormModalOpen(false)
   }, [saving])
 
   const createField = () => {
     setEditingId(null)
     setForm(EMPTY_FORM)
+    setFormErrors(EMPTY_FORM_ERRORS)
     setFormModalOpen(true)
   }
 
@@ -108,7 +130,15 @@ function ProfessionalFieldManagementPage() {
       active: field.active,
       version: field.version,
     })
+    setFormErrors(EMPTY_FORM_ERRORS)
     setFormModalOpen(true)
+  }
+
+  const updateFormField = (fieldName, value) => {
+    setForm(current => ({ ...current, [fieldName]: value }))
+    if (formErrors[fieldName]) {
+      setFormErrors(current => ({ ...current, [fieldName]: '' }))
+    }
   }
 
   useEffect(() => {
@@ -127,21 +157,31 @@ function ProfessionalFieldManagementPage() {
 
   const submit = async event => {
     event.preventDefault()
-    if (!form.code.trim() || !form.name.trim()) {
-      showToast('Vui lòng nhập mã và tên lĩnh vực chuyên môn', 'warning')
+    const errors = validateForm(form)
+    if (Object.values(errors).some(Boolean)) {
+      setFormErrors(errors)
       return
     }
+
+    const payload = {
+      ...form,
+      code: form.code.trim(),
+      name: form.name.trim(),
+      description: form.description.trim(),
+    }
+
     setSaving(true)
     try {
       if (editingId) {
-        await adminApi.updateProfessionalField(editingId, form)
+        await adminApi.updateProfessionalField(editingId, payload)
         showToast('Đã cập nhật lĩnh vực chuyên môn', 'success')
       } else {
-        await adminApi.createProfessionalField(form)
+        await adminApi.createProfessionalField(payload)
         showToast('Đã thêm lĩnh vực chuyên môn', 'success')
       }
       setEditingId(null)
       setForm(EMPTY_FORM)
+      setFormErrors(EMPTY_FORM_ERRORS)
       setFormModalOpen(false)
       loadFields()
       loadPendingCount()
@@ -303,6 +343,7 @@ function ProfessionalFieldManagementPage() {
               aria-labelledby="professional-field-modal-title"
               aria-modal="true"
               className="pfm-modal"
+              noValidate
               onMouseDown={event => event.stopPropagation()}
               onSubmit={submit}
               role="dialog"
@@ -327,42 +368,67 @@ function ProfessionalFieldManagementPage() {
               </header>
 
               <div className="pfm-form pfm-modal__body">
-                <label>
-                  Mã lĩnh vực
+                <label className="pfm-form-field">
+                  <span className="pfm-form-label">
+                    Mã lĩnh vực <span aria-hidden="true" className="pfm-required">*</span>
+                  </span>
                   <input
+                    aria-describedby={formErrors.code ? 'professional-field-code-error' : undefined}
+                    aria-invalid={Boolean(formErrors.code)}
                     autoFocus
+                    className={formErrors.code ? 'pfm-input--error' : undefined}
                     maxLength={50}
-                    onChange={e => setForm({ ...form, code: e.target.value })}
+                    onChange={e => updateFormField('code', e.target.value)}
                     placeholder="VD: CAP_CUU"
+                    required
                     value={form.code}
                   />
+                  {formErrors.code && (
+                    <small className="pfm-field-error" id="professional-field-code-error" role="alert">
+                      {formErrors.code}
+                    </small>
+                  )}
                 </label>
-                <label>
-                  Tên lĩnh vực
+                <label className="pfm-form-field">
+                  <span className="pfm-form-label">
+                    Tên lĩnh vực <span aria-hidden="true" className="pfm-required">*</span>
+                  </span>
                   <input
+                    aria-describedby={formErrors.name ? 'professional-field-name-error' : undefined}
+                    aria-invalid={Boolean(formErrors.name)}
+                    className={formErrors.name ? 'pfm-input--error' : undefined}
                     maxLength={255}
-                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    onChange={e => updateFormField('name', e.target.value)}
                     placeholder="VD: Chăm sóc cấp cứu"
+                    required
                     value={form.name}
                   />
+                  {formErrors.name && (
+                    <small className="pfm-field-error" id="professional-field-name-error" role="alert">
+                      {formErrors.name}
+                    </small>
+                  )}
                 </label>
-                <label>
-                  Mô tả
+                <label className="pfm-form-field pfm-form-field--wide">
+                  <span className="pfm-form-label">Mô tả</span>
                   <textarea
                     maxLength={2000}
-                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    onChange={e => updateFormField('description', e.target.value)}
                     placeholder="Mô tả ngắn về phạm vi của lĩnh vực..."
                     rows={4}
                     value={form.description}
                   />
                 </label>
-                <label className="pfm-check">
+                <label className="pfm-check pfm-form-field--wide">
                   <input
                     checked={form.active}
-                    onChange={e => setForm({ ...form, active: e.target.checked })}
+                    onChange={e => updateFormField('active', e.target.checked)}
                     type="checkbox"
                   />
-                  Đang sử dụng
+                  <span>
+                    <strong>Đang sử dụng</strong>
+                    <small>Lĩnh vực sẽ xuất hiện trong các danh sách lựa chọn.</small>
+                  </span>
                 </label>
               </div>
 

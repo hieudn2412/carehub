@@ -62,6 +62,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class TrainingRecordServiceImpl implements TrainingRecordService {
     private static final Logger log = LoggerFactory.getLogger(TrainingRecordServiceImpl.class);
+    private static final LocalDate EARLIEST_TRAINING_DATE = LocalDate.of(1900, 1, 1);
+    private static final LocalDate LATEST_TRAINING_DATE = LocalDate.of(9999, 12, 31);
 
     private final TrainingRecordRepository recordRepository;
     private final TrainingActivityTypeRepository activityTypeRepository;
@@ -110,8 +112,8 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                 scopeEmployeeId,
                 scopeDepartmentId,
                 normalizeKeywordPattern(criteria.titleKeyword() == null ? criteria.keyword() : criteria.titleKeyword()),
-                criteria.dateFrom(),
-                criteria.dateTo(),
+                criteria.dateFrom() == null ? EARLIEST_TRAINING_DATE : criteria.dateFrom(),
+                criteria.dateTo() == null ? LATEST_TRAINING_DATE : criteria.dateTo(),
                 criteria.activityTypeId(),
                 criteria.professionalFieldId(),
                 criteria.workflowStatus(),

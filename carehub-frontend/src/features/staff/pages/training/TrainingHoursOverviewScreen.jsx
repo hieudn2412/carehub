@@ -504,7 +504,7 @@ function TrainingHoursOverviewScreen() {
             className="th-overview-filter-btn"
             onClick={handleFilterToggle}
             aria-label="Mở bộ lọc giờ đào tạo"
-            aria-haspopup="dialog"
+            aria-controls="training-overview-filter-panel"
             aria-expanded={isFilterOpen}
           >
             <FilterOutlined aria-hidden="true" /> Bộ lọc
@@ -521,7 +521,7 @@ function TrainingHoursOverviewScreen() {
             Xem danh sách tất cả <ArrowRightOutlined />
           </button>
           {isFilterOpen && (
-            <div className="th-overview-filter-panel" role="dialog" aria-label="Bộ lọc giờ đào tạo">
+            <div className="th-overview-filter-panel" id="training-overview-filter-panel" role="region" aria-label="Bộ lọc giờ đào tạo">
               <div className="th-overview-filter-panel__header">
                 <strong>Bộ lọc giờ đào tạo</strong>
                 <span>{countActiveFilterGroups(filterDraft)} điều kiện đang chọn</span>
