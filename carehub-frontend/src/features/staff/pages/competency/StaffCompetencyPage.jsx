@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { CheckCircleFilled, CloseOutlined, EyeOutlined, FilterOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
@@ -32,7 +32,6 @@ const convertToTenPointScale = (value, totalMaxScore) => {
 }
 
 export default function StaffCompetencyPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { showToast } = useToast()
   const today = localToday()
@@ -191,9 +190,6 @@ export default function StaffCompetencyPage() {
                 <span className="admin-control-toolbar__filter-count">{Number(Boolean(fromDate)) + Number(Boolean(toDate))}</span>
               </button>
             </div>
-            <button type="button" className="sc-filter__btn sc-filter__btn--secondary sc-toolbar__assignment" onClick={() => navigate('/staff/checklists')}>
-              Thực hiện đánh giá được giao
-            </button>
           </div>
           {isFilterOpen && (
             <div id="staff-compliance-filter-panel" className="sc-toolbar__filter-panel admin-control-toolbar__panel">

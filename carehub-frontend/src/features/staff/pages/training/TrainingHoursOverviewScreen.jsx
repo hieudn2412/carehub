@@ -398,7 +398,7 @@ function TrainingHoursOverviewScreen() {
                 role="img"
                 aria-label={`Biểu đồ giờ đào tạo theo lĩnh vực năm ${chartYear}`}
               >
-                <ResponsiveContainer width="100%" height={isMobileViewport ? 240 : 300}>
+                <ResponsiveContainer width="100%" height={isMobileViewport ? 196 : 300}>
                   <BarChart
                     data={chartFields}
                     margin={{ top: 20, right: 20, bottom: 24, left: 4 }}
@@ -411,7 +411,7 @@ function TrainingHoursOverviewScreen() {
                       interval={0}
                       angle={isMobileViewport ? -45 : 0}
                       textAnchor={isMobileViewport ? 'end' : 'middle'}
-                      height={isMobileViewport ? 82 : 64}
+                      height={isMobileViewport ? 62 : 64}
                       tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
                       tickLine={false}
                       axisLine={{ stroke: '#dce7e4' }}

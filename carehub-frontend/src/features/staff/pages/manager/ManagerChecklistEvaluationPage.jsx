@@ -100,9 +100,10 @@ function ManagerChecklistEvaluationPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const isDirectAdminEvaluation = Boolean(versionId)
+  const isStaffEvaluation = location.pathname.startsWith('/staff/')
   const listPath = isDirectAdminEvaluation
     ? '/admin/quality/checklists'
-    : location.pathname.startsWith('/staff/')
+    : isStaffEvaluation
       ? '/staff/checklists'
       : '/manager/quality/checklists'
 
@@ -532,7 +533,7 @@ function ManagerChecklistEvaluationPage() {
   }
 
   return (
-    <AppShell className={step === 'evaluation' ? 'check-eval-shell check-eval-shell--active' : 'check-eval-shell'} back={{ to: listPath, label: 'Quay lại' }} breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định', link: listPath }, { label: 'Thực hiện đánh giá' }]}>
+    <AppShell className={step === 'evaluation' ? 'check-eval-shell check-eval-shell--active' : 'check-eval-shell'} back={{ to: listPath, label: 'Quay lại' }} breadcrumbs={[{ label: isStaffEvaluation ? 'Bảng kiểm được giao' : 'Tuân thủ quy trình, quy định', link: listPath }, { label: 'Thực hiện đánh giá' }]}>
       {loading ? <div className="mgr-card"><LoadingState label="Đang tải quy trình..." /></div> : errorMessage ? <div className="mgr-card" role="alert" style={{ color: '#b42318' }}>{errorMessage}</div> : step === 'subject' ? (
         <section className="check-eval-subject-step">
           <header><span>BƯỚC 1/2</span><h1>Chọn nhân viên được đánh giá</h1><p>{assignedForm?.title} · Phiên bản v{assignedForm?.version?.versionNumber}</p></header>

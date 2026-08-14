@@ -73,7 +73,17 @@ function DashboardMetricCard({
         <h2>{title}</h2>
       </div>
       <div className="staff-home-metric__values">
-        <strong>{primary}</strong>
+        {progress != null && (
+          <span
+            className="staff-home-metric__mobile-ring"
+            style={{ '--metric-progress': `${clampPercentage(progress) * 3.6}deg` }}
+            role="img"
+            aria-label={`Tiến độ ${Math.round(clampPercentage(progress))}%`}
+          >
+            <strong>{primary}</strong>
+          </span>
+        )}
+        <strong className="staff-home-metric__primary">{primary}</strong>
         <span>{secondary}</span>
       </div>
       {progress != null && (
