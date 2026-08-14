@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  AppstoreOutlined,
+  ArrowLeftOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ControlOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  SendOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import DepartmentCombobox from '../../admin/components/DepartmentCombobox.jsx'
@@ -10,6 +23,7 @@ import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { evaluationAudienceApi } from '../api/evaluationAudienceApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
+import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 
@@ -20,7 +34,15 @@ const COGNITIVE = [
 ]
 
 function emptyField(id) {
-  return { professionalFieldId: Number(id), questionCount: 0, cognitive: COGNITIVE.map(([level, label], index) => ({ cognitiveLevel: level, label, percentage: [30, 50, 20][index] })) }
+  return {
+    professionalFieldId: Number(id),
+    questionCount: 0,
+    cognitive: COGNITIVE.map(([level, label], index) => ({
+      cognitiveLevel: level,
+      label,
+      percentage: [30, 50, 20][index],
+    })),
+  }
 }
 
 function newIdempotencyKey() {
@@ -28,7 +50,9 @@ function newIdempotencyKey() {
   return `key-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function data(response, fallback) { return apiData(response, fallback) }
+function data(response, fallback) {
+  return apiData(response, fallback)
+}
 
 export default function ExamConfigPage() {
   const navigate = useNavigate()
@@ -41,12 +65,11 @@ export default function ExamConfigPage() {
   const [preview, setPreview] = useState(null)
 
   // Audience (đối tượng nhận đề)
-  const [audienceMode, setAudienceMode] = useState('DEPARTMENT')
   const [departments, setDepartments] = useState([])
-  const [selectedDepartments, setSelectedDepartments] = useState([])
-  const [userSearch, setUserSearch] = useState('')
-  const [userSearchResults, setUserSearchResults] = useState([])
-  const [selectedUsers, setSelectedUsers] = useState([])
+  const [allUsers, setAllUsers] = useState([])
+  const [filterDepartmentIds, setFilterDepartmentIds] = useState([])
+  const [userKeyword, setUserKeyword] = useState('')
+  const [selectedUserIds, setSelectedUserIds] = useState([])
 
   // Schedule (lịch giao đề)
   const [availableFrom, setAvailableFrom] = useState('')
@@ -58,34 +81,36 @@ export default function ExamConfigPage() {
   const [submitStep, setSubmitStep] = useState('')
 
   useEffect(() => {
-    Promise.all([trainingApi.getRecordOptions(), adminApi.getDepartments()])
-      .then(([optionsRes, deptRes]) => {
+    Promise.all([trainingApi.getRecordOptions(), adminApi.getDepartments(), adminApi.getUsers({ status: 'ACTIVE', size: 500 })])
+      .then(([optionsRes, deptRes, usersRes]) => {
         setFields(data(optionsRes, {})?.professionalFields || [])
         setDepartments(data(deptRes, []) || [])
+        const usersData = data(usersRes, {})
+        setAllUsers(usersData?.content || (Array.isArray(usersData) ? usersData : []))
       })
       .catch((error) => showToast(apiErrorMessage(error), 'error'))
       .finally(() => setLoading(false))
   }, [showToast])
 
-  useEffect(() => {
-    if (audienceMode !== 'USER' || !userSearch.trim()) { setUserSearchResults([]); return undefined }
-    const timer = setTimeout(async () => {
-      try {
-        const res = await adminApi.getUsers({ search: userSearch, size: 10 })
-        setUserSearchResults(data(res, {})?.content || data(res, []) || [])
-      } catch (error) {
-        showToast(apiErrorMessage(error), 'error')
-      }
-    }, 300)
-    return () => clearTimeout(timer)
-  }, [userSearch, audienceMode, showToast])
+  const filteredUsers = useMemo(() => {
+    const keyword = userKeyword.trim().toLowerCase()
+    return allUsers.filter((user) => {
+      const matchesDepartment = filterDepartmentIds.length === 0 || filterDepartmentIds.includes(Number(user.departmentId))
+      const matchesKeyword = !keyword
+        || (user.employeeCode || '').toLowerCase().includes(keyword)
+        || (user.fullName || '').toLowerCase().includes(keyword)
+        || (user.departmentName || '').toLowerCase().includes(keyword)
+      return matchesDepartment && matchesKeyword
+    })
+  }, [allUsers, filterDepartmentIds, userKeyword])
 
   const totalAllocated = useMemo(() => blueprint.reduce((sum, item) => sum + Number(item.questionCount || 0), 0), [blueprint])
   const totalQuestions = Number(form.totalQuestions) || 0
 
   function addField(id) {
     const numId = Number(id)
-    setBlueprint((current) => current.some((item) => item.professionalFieldId === numId) ? current : [...current, emptyField(numId)])
+    if (!numId) return
+    setBlueprint((current) => (current.some((item) => item.professionalFieldId === numId) ? current : [...current, emptyField(numId)]))
   }
 
   function removeField(id) {
@@ -94,33 +119,58 @@ export default function ExamConfigPage() {
 
   function updateField(id, key, value) {
     if (key === 'questionCount') value = Number(value) || 0
-    setBlueprint((current) => current.map((item) => item.professionalFieldId === id ? { ...item, [key]: value } : item))
+    setBlueprint((current) => current.map((item) => (item.professionalFieldId === id ? { ...item, [key]: value } : item)))
   }
 
   function updateCognitive(fieldId, level, value) {
-    setBlueprint((current) => current.map((item) => item.professionalFieldId !== fieldId ? item : { ...item, cognitive: item.cognitive.map((cell) => cell.cognitiveLevel === level ? { ...cell, percentage: value } : cell) }))
+    setBlueprint((current) =>
+      current.map((item) =>
+        item.professionalFieldId !== fieldId
+          ? item
+          : {
+              ...item,
+              cognitive: item.cognitive.map((cell) => (cell.cognitiveLevel === level ? { ...cell, percentage: Number(value) || 0 } : cell)),
+            },
+      ),
+    )
   }
 
-  function addDepartment(deptId) {
-    const dept = departments.find((d) => String(d.id) === String(deptId))
-    if (dept && !selectedDepartments.some((d) => d.id === dept.id)) setSelectedDepartments([...selectedDepartments, dept])
+  function toggleFilterDepartment(id) {
+    const numId = Number(id)
+    setFilterDepartmentIds((current) => current.includes(numId) ? current.filter((x) => x !== numId) : [...current, numId])
   }
-  function removeDepartment(deptId) { setSelectedDepartments(selectedDepartments.filter((d) => d.id !== deptId)) }
-  function addUser(user) {
-    if (!selectedUsers.some((u) => u.id === user.id)) setSelectedUsers([...selectedUsers, user])
-    setUserSearch('')
-    setUserSearchResults([])
+
+  function toggleSelectedUser(id) {
+    const numId = Number(id)
+    setSelectedUserIds((current) => current.includes(numId) ? current.filter((x) => x !== numId) : [...current, numId])
   }
-  function removeUser(userId) { setSelectedUsers(selectedUsers.filter((u) => u.id !== userId)) }
+
+  function selectAllFiltered() {
+    const ids = filteredUsers.map((u) => Number(u.id))
+    setSelectedUserIds((current) => [...new Set([...current, ...ids])])
+  }
+
+  function deselectAllFiltered() {
+    const ids = new Set(filteredUsers.map((u) => Number(u.id)))
+    setSelectedUserIds((current) => current.filter((id) => !ids.has(id)))
+  }
 
   function matrixPayload(status = 'DRAFT') {
     return {
-      name: form.name.trim(), description: form.description.trim() || null,
-      totalQuestions, timeLimitMinutes: Number(form.timeLimitMinutes), passingScore: Number(form.passingScore),
-      maxRetakes: Number(form.maxRetakes), shuffleQuestions: true, shuffleOptions: true,
-      questionSelectionMode: 'FIXED_PAPER', status,
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      totalQuestions,
+      timeLimitMinutes: Number(form.timeLimitMinutes),
+      passingScore: Number(form.passingScore),
+      maxRetakes: Number(form.maxRetakes),
+      shuffleQuestions: true,
+      shuffleOptions: true,
+      questionSelectionMode: 'FIXED_PAPER',
+      status,
       fieldBlueprints: blueprint.map((field, index) => ({
-        professionalFieldId: field.professionalFieldId, questionCount: Number(field.questionCount), displayOrder: index,
+        professionalFieldId: field.professionalFieldId,
+        questionCount: Number(field.questionCount),
+        displayOrder: index,
         cognitive: field.cognitive.map((cell) => ({ cognitiveLevel: cell.cognitiveLevel, percentage: Number(cell.percentage) })),
       })),
       sourceFilters: { includedCategoryIds: [], excludedCategoryIds: [], includedDocumentIds: [], excludedDocumentIds: [] },
@@ -129,12 +179,13 @@ export default function ExamConfigPage() {
 
   function validate() {
     if (!form.name.trim()) return 'Vui lòng nhập tên bài kiểm tra.'
-    if (!blueprint.length) return 'Vui lòng chọn ít nhất một lĩnh vực.'
+    if (!blueprint.length) return 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
     if (totalAllocated !== totalQuestions) return `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
-    if (blueprint.some((field) => Math.abs(field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0) - 100) > 0.001)) return 'Tổng tỷ lệ ba mức nhận thức trong mỗi lĩnh vực phải bằng 100%.'
+    if (blueprint.some((field) => Math.abs(field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0) - 100) > 0.001)) {
+      return 'Tổng tỷ lệ ba mức nhận thức trong mỗi lĩnh vực phải bằng 100%.'
+    }
     if (!totalQuestions || totalQuestions < 1) return 'Tổng số câu phải lớn hơn 0.'
-    if (audienceMode === 'DEPARTMENT' && selectedDepartments.length === 0) return 'Vui lòng chọn ít nhất một khoa phòng.'
-    if (audienceMode === 'USER' && selectedUsers.length === 0) return 'Vui lòng chọn ít nhất một nhân viên.'
+    if (selectedUserIds.length === 0) return 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
     if (availableFrom && dueAt && availableFrom >= dueAt) return 'Thời điểm mở đề phải sớm hơn hạn hoàn thành.'
     return ''
   }
@@ -143,7 +194,7 @@ export default function ExamConfigPage() {
     const error = validate()
     if (error) return showToast(error, 'warning')
     setSubmitting(true)
-    setSubmitStep('Đang kiểm tra nguồn câu hỏi...')
+    setSubmitStep('Đang kiểm tra khả dụng nguồn câu hỏi...')
     try {
       setPreview(data(await examConfigApi.previewExamConfig(matrixPayload()), null))
     } catch (err) {
@@ -155,10 +206,7 @@ export default function ExamConfigPage() {
   }
 
   function buildRuleJson() {
-    if (audienceMode === 'DEPARTMENT') {
-      return JSON.stringify({ version: 1, all: [{ type: 'DEPARTMENT_IN', ids: selectedDepartments.map((d) => d.id) }] })
-    }
-    return JSON.stringify({ version: 1, all: [{ type: 'USER_IN', ids: selectedUsers.map((u) => u.id) }] })
+    return JSON.stringify({ version: 1, all: [{ type: 'USER_IN', ids: selectedUserIds }] })
   }
 
   async function createAndAssign() {
@@ -166,7 +214,7 @@ export default function ExamConfigPage() {
     if (error) return showToast(error, 'warning')
     setSubmitting(true)
     try {
-      setSubmitStep('Đang kiểm tra nguồn câu hỏi...')
+      setSubmitStep('1/5. Đang kiểm tra khả dụng nguồn câu hỏi...')
       const check = data(await examConfigApi.previewExamConfig(matrixPayload()), null)
       if (check && check.valid === false) {
         showToast((check.warnings || []).join('; ') || 'Ngân hàng câu hỏi chưa đủ nguồn theo ma trận đã chọn.', 'warning')
@@ -174,24 +222,29 @@ export default function ExamConfigPage() {
         return
       }
 
-      setSubmitStep('Đang tạo ma trận đề...')
+      setSubmitStep('2/5. Đang tạo ma trận đề...')
       const config = data(await examConfigApi.createExamConfig(matrixPayload('ACTIVE')), null)
 
-      setSubmitStep('Đang sinh mã đề...')
-      const papers = data(await examPaperApi.generateExamPapers({
-        examConfigId: config.id, namePrefix: null, variantCount: 1, randomSeed: null, zeroOverlap: false,
-        idempotencyKey: newIdempotencyKey(),
-      }), [])
+      setSubmitStep('3/5. Đang sinh mã đề...')
+      const papers = data(
+        await examPaperApi.generateExamPapers({
+          examConfigId: config.id,
+          namePrefix: null,
+          variantCount: 1,
+          randomSeed: null,
+          zeroOverlap: false,
+          idempotencyKey: newIdempotencyKey(),
+        }),
+        [],
+      )
       const paper = papers[0]
 
-      setSubmitStep('Đang phát hành đề...')
+      setSubmitStep('4/5. Đang phát hành mã đề & tạo nhóm nhận đề...')
       await examPaperApi.publishExamPaper(paper.id)
-
-      setSubmitStep('Đang tạo đối tượng nhận đề...')
       const audience = data(await evaluationAudienceApi.create({ name: `${form.name.trim()} - Đối tượng thi`, ruleJson: buildRuleJson() }), null)
       await evaluationAudienceApi.activate(audience.id)
 
-      setSubmitStep('Đang giao đề...')
+      setSubmitStep('5/5. Đang giao đề kiểm tra...')
       await examAssignmentApi.createAssignment({
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -209,7 +262,7 @@ export default function ExamConfigPage() {
         idempotencyKey: newIdempotencyKey(),
       })
 
-      showToast('Đã tạo và giao bài kiểm tra thành công.', 'success')
+      showToast('Đã tạo ma trận và giao bài kiểm tra thành công.', 'success')
       navigate('/admin/evaluation/exam-management?view=assignments')
     } catch (err) {
       showToast(apiErrorMessage(err), 'error')
@@ -219,83 +272,371 @@ export default function ExamConfigPage() {
     }
   }
 
+  function handleFlowStep(step) {
+    if (step === 'papers') navigate('/admin/evaluation/exam-management?view=papers')
+    if (step === 'assignments') navigate('/admin/evaluation/exam-assignments/new')
+  }
+
   return (
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }} breadcrumbs={[{ label: 'Quản lý bài kiểm tra' }, { label: 'Tạo bài kiểm tra mới' }]} />
-        <main className="dashboard-body"><form className="exp-page" onSubmit={(event) => { event.preventDefault(); createAndAssign() }}>
-          <section className="exp-title-card"><div><h1 className="exp-title">Tạo và giao bài kiểm tra</h1><p className="exp-subtitle">Một trang duy nhất: cấu hình ma trận đề, chọn đối tượng nhận và giao đề ngay.</p></div></section>
+        <AdminHeader
+          back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
+          breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
+        />
+        <div className="dashboard-root">
+          <main className="dashboard-body">
+            <div className="exp-page">
+              <ExamDeliveryFlow
+                activeStep="matrix"
+                title="Tạo ma trận & Giao đề kiểm tra"
+                description="Cấu hình ma trận số câu theo lĩnh vực chuyên môn, chọn đối tượng nhận đề và giao đề tự động."
+                onStepChange={handleFlowStep}
+              />
 
-          <section className="exp-management-card">
-            <div className="exam-flow__section"><h2>1. Thông tin chung</h2><div className="ch-form-grid">
-              <div className="ch-field"><label>Tên bài kiểm tra</label><input className="ch-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ví dụ: Kiểm tra điều dưỡng mới tuyển dụng" /></div>
-              <div className="ch-field"><label>Tổng số câu</label><input className="ch-input" type="number" min="1" value={form.totalQuestions} onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })} /></div>
-              <div className="ch-field"><label>Thời gian (phút)</label><input className="ch-input" type="number" min="1" value={form.timeLimitMinutes} onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })} /></div>
-              <div className="ch-field"><label>Điểm đạt</label><input className="ch-input" type="number" min="0" max="10" value={form.passingScore} onChange={(e) => setForm({ ...form, passingScore: e.target.value })} /></div>
-            </div></div>
-
-            <div className="exam-flow__section"><h2>2. Lĩnh vực chuyên môn và số câu</h2>
-              <div className="ch-field">
-                <label>Chọn lĩnh vực chuyên môn</label>
-                <DepartmentCombobox departments={fields} value="" onChange={addField} placeholder="Tìm và chọn lĩnh vực chuyên môn" emptyValue="" />
-              </div>
-              {blueprint.length > 0 && (
-                <div style={{ marginTop: 4, marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return (
-                    <span key={item.professionalFieldId} className="ch-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
-                      {field?.name || `Lĩnh vực #${item.professionalFieldId}`}
-                      <button type="button" onClick={() => removeField(item.professionalFieldId)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-                    </span>
-                  ) })}
+              <section className="exp-assignment-shell">
+                <div className="exp-assignment-toolbar">
+                  <div>
+                    <span className="exp-section-kicker">BƯỚC 1 · THIẾT LẬP NHACH MA TRẬN & GIAO ĐỀ</span>
+                    <h2>Tạo mới & Giao đề kiểm tra</h2>
+                    <p>Thiết lập thông tin chung, ma trận chuyên môn, đối tượng thi và lịch phát hành trong một quy trình duy nhất.</p>
+                  </div>
+                  <button type="button" className="exp-btn-secondary" onClick={() => navigate('/admin/evaluation/exam-management')}>
+                    <ArrowLeftOutlined /> Quay lại danh sách
+                  </button>
                 </div>
-              )}
-              {blueprint.map((item) => { const field = fields.find((value) => value.id === item.professionalFieldId); return <div key={item.professionalFieldId} className="ch-card" style={{ marginTop: 12 }}><h3>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</h3><div className="ch-field" style={{ maxWidth: 200 }}><label>Số câu</label><input className="ch-input" type="number" min="0" value={item.questionCount} onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)} /></div><table className="exp-table"><thead><tr><th>Mức nhận thức</th><th>Tỷ lệ (%)</th></tr></thead><tbody>{item.cognitive.map((cell) => <tr key={cell.cognitiveLevel}><td>{cell.label}</td><td><input className="ch-input" type="number" min="0" max="100" value={cell.percentage} onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)} /></td></tr>)}</tbody></table><div className="ch-muted">Tổng lĩnh vực: {item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)}%</div></div> })}
-              <p className={totalAllocated === totalQuestions ? 'ch-muted' : 'ch-alert ch-alert--warning'}>Đã phân bổ: {totalAllocated} / {totalQuestions} câu</p>
+
+                {loading ? (
+                  <div className="exp-empty">Đang tải danh sách lĩnh vực chuyên môn và khoa phòng...</div>
+                ) : (
+                  <form
+                    className="exp-assignment-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      createAndAssign()
+                    }}
+                  >
+                    {/* Section 1 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><FileTextOutlined /></span>
+                        <div>
+                          <h3>1. Thông tin chung bài kiểm tra</h3>
+                          <p>Nhập tên bài thi, số câu hỏi, thời gian làm bài và mức điểm đạt.</p>
+                        </div>
+                      </div>
+
+                      <div className="exp-form-grid">
+                        <label className="exp-form-grid__wide">
+                          <span>Tên bài kiểm tra <b>*</b></span>
+                          <input
+                            required
+                            className="ch-input"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="Ví dụ: Kiểm tra quy trình điều dưỡng chuyên khoa - 08/2026"
+                          />
+                        </label>
+
+                        <label>
+                          <span>Tổng số câu hỏi <b>*</b></span>
+                          <input
+                            required
+                            type="number"
+                            min="1"
+                            max="200"
+                            className="ch-input"
+                            value={form.totalQuestions}
+                            onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })}
+                          />
+                        </label>
+
+                        <label>
+                          <span>Thời gian làm bài (phút) <b>*</b></span>
+                          <input
+                            required
+                            type="number"
+                            min="1"
+                            max="300"
+                            className="ch-input"
+                            value={form.timeLimitMinutes}
+                            onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })}
+                          />
+                        </label>
+
+                        <label>
+                          <span>Điểm đạt chuẩn (thang 10) <b>*</b></span>
+                          <input
+                            required
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.5"
+                            className="ch-input"
+                            value={form.passingScore}
+                            onChange={(e) => setForm({ ...form, passingScore: e.target.value })}
+                          />
+                        </label>
+                      </div>
+                    </section>
+
+                    {/* Section 2 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><AppstoreOutlined /></span>
+                        <div>
+                          <h3>2. Ma trận Lĩnh vực chuyên môn & Mức nhận thức</h3>
+                          <p>Chọn các lĩnh vực chuyên môn và phân bổ câu hỏi theo tỷ lệ nhận thức.</p>
+                        </div>
+                      </div>
+
+                      <div className="exp-form-grid">
+                        <label className="exp-form-grid__wide">
+                          <span>Chọn lĩnh vực chuyên môn để thêm vào ma trận <b>*</b></span>
+                          <DepartmentCombobox
+                            departments={fields}
+                            value=""
+                            onChange={addField}
+                            placeholder="Tìm kiếm và chọn lĩnh vực chuyên môn..."
+                            emptyValue=""
+                          />
+                        </label>
+                      </div>
+
+                      {blueprint.length > 0 && (
+                        <div className="exp-blueprint-list">
+                          {blueprint.map((item) => {
+                            const field = fields.find((v) => v.id === item.professionalFieldId)
+                            const cognitiveSum = item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)
+                            const cognitiveValid = Math.abs(cognitiveSum - 100) < 0.001
+
+                            return (
+                              <div key={item.professionalFieldId} className="exp-field-card">
+                                <div className="exp-field-card__header">
+                                  <div className="exp-field-card__title">
+                                    <AppstoreOutlined />
+                                    <strong>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</strong>
+                                  </div>
+                                  <button type="button" className="exp-field-card__remove" onClick={() => removeField(item.professionalFieldId)}>
+                                    <DeleteOutlined /> Xóa lĩnh vực
+                                  </button>
+                                </div>
+
+                                <div className="exp-field-card__body">
+                                  <label className="exp-field-card__count">
+                                    <span>Số câu hỏi lĩnh vực này:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      className="ch-input"
+                                      value={item.questionCount}
+                                      onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)}
+                                    />
+                                  </label>
+
+                                  <div className="exp-cognitive-table-wrap">
+                                    <table className="exp-cognitive-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Mức nhận thức</th>
+                                          <th style={{ width: '140px', textAlign: 'right' }}>Tỷ lệ (%)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.cognitive.map((cell) => (
+                                          <tr key={cell.cognitiveLevel}>
+                                            <td>{cell.label}</td>
+                                            <td style={{ textAlign: 'right' }}>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                className="ch-input"
+                                                style={{ width: '80px', textAlign: 'center' }}
+                                                value={cell.percentage}
+                                                onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)}
+                                              />
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+
+                                  <div className={`exp-cognitive-summary ${cognitiveValid ? 'is-valid' : 'is-invalid'}`}>
+                                    <span>Tổng tỷ lệ nhận thức: <strong>{cognitiveSum}%</strong></span>
+                                    {!cognitiveValid && <small> (Tổng tỷ lệ phải bằng 100%)</small>}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      <div className={`exp-allocation-banner ${totalAllocated === totalQuestions ? 'is-valid' : 'is-warning'}`}>
+                        {totalAllocated === totalQuestions ? (
+                          <><CheckCircleOutlined /> Đã phân bổ đủ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi cho ma trận.</>
+                        ) : (
+                          <><ExclamationCircleOutlined /> Đã phân bổ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi. Hãy điều chỉnh để khớp số lượng.</>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* Section 3 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><TeamOutlined /></span>
+                        <div>
+                          <h3>3. Đối tượng nhận đề (Nhóm thi)</h3>
+                          <p>Lọc theo khoa phòng để thu hẹp danh sách, sau đó tick chọn từng nhân viên nhận đề.</p>
+                        </div>
+                      </div>
+
+                      <div className="exp-form-grid">
+                        <label className="exp-form-grid__wide"><span>Lọc theo khoa phòng (tùy chọn)</span></label>
+                      </div>
+                      <div className="exp-target-list exp-target-list--select">
+                        {departments.map((dept) => {
+                          const deptId = Number(dept.id)
+                          return (
+                            <label key={dept.id} className="exp-target-item exp-target-item--checkbox">
+                              <input type="checkbox" checked={filterDepartmentIds.includes(deptId)} onChange={() => toggleFilterDepartment(deptId)} />
+                              <strong>{dept.departmentCode || `PB-${dept.id}`}</strong>
+                              <span>{dept.name}</span>
+                            </label>
+                          )
+                        })}
+                        {!loading && departments.length === 0 && <div className="exp-empty">Chưa có khoa phòng để lọc.</div>}
+                      </div>
+
+                      <div className="exp-form-grid" style={{ marginTop: 16 }}>
+                        <label className="exp-form-grid__wide">
+                          <span>Tìm nhân viên theo mã, tên hoặc phòng ban</span>
+                          <input
+                            className="ch-input"
+                            value={userKeyword}
+                            onChange={(e) => setUserKeyword(e.target.value)}
+                            placeholder="Nhập mã nhân viên, họ tên hoặc phòng ban..."
+                          />
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '10px 0' }}>
+                        <span className="ch-muted">{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
+                          <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
+                        </div>
+                      </div>
+                      <div className="exp-target-list exp-target-list--select">
+                        {filteredUsers.map((user) => {
+                          const userId = Number(user.id)
+                          return (
+                            <label key={user.id} className="exp-target-item exp-target-item--checkbox">
+                              <input type="checkbox" checked={selectedUserIds.includes(userId)} onChange={() => toggleSelectedUser(userId)} />
+                              <strong>{user.employeeCode}</strong>
+                              <span>{user.fullName}</span>
+                              <small>{user.departmentName || 'Chưa có phòng ban'}</small>
+                            </label>
+                          )
+                        })}
+                        {!loading && filteredUsers.length === 0 && <div className="exp-empty">Không có nhân viên phù hợp.</div>}
+                      </div>
+                    </section>
+
+                    {/* Section 4 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><CalendarOutlined /></span>
+                        <div>
+                          <h3>4. Lịch mở đề & Lượt thi</h3>
+                          <p>Thiết lập thời gian bắt đầu, hạn hoàn thành và số lần được phép làm bài.</p>
+                        </div>
+                      </div>
+
+                      <div className="exp-form-grid">
+                        <label>
+                          <span>Mở đề lúc (tùy chọn)</span>
+                          <input type="datetime-local" className="ch-input" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
+                        </label>
+
+                        <label>
+                          <span>Hạn nộp bài (tùy chọn)</span>
+                          <input type="datetime-local" className="ch-input" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+                        </label>
+
+                        <label>
+                          <span>Số lượt làm tối đa</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="10"
+                            className="ch-input"
+                            value={maxAttempts}
+                            onChange={(e) => setMaxAttempts(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                    </section>
+
+                    {/* Preview / Progress Alerts */}
+                    {preview && (
+                      <div className={`ch-alert ${preview.valid === false ? 'ch-alert--warning' : 'ch-alert--info'}`} style={{ margin: '16px 24px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>
+                          <EyeOutlined /> Đánh giá khả dụng: {preview.distributedQuestions} / {totalQuestions} câu khả dụng
+                        </div>
+                        {preview.warnings?.length > 0 && (
+                          <ul style={{ margin: '4px 0 8px 18px', padding: 0 }}>
+                            {preview.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                          {preview.blueprintFields?.map((field) => (
+                            <span key={field.professionalFieldId} style={{ fontSize: '12.5px' }}>
+                              • {field.professionalFieldName}: Yêu cầu {field.requiredQuestionCount} câu / Khả dụng {field.availableQuestionCount} câu
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {submitting && submitStep && (
+                      <div className="ch-alert ch-alert--info" style={{ margin: '16px 24px' }}>
+                        <ControlOutlined /> {submitStep}
+                      </div>
+                    )}
+
+                    {/* Submit Bar */}
+                    <div className="exp-assignment-submit">
+                      <div className="exp-assignment-submit__info">
+                        <div className="exp-status-indicator">
+                          <span className="exp-status-dot is-open"></span>
+                          <strong>Tự động sinh mã đề & Mở đợt giao đề ngay</strong>
+                        </div>
+                        <span>Quy trình tự động tạo ma trận, sinh mã đề, chụp snapshot đối tượng thi và mở giao.</span>
+                      </div>
+
+                      <div className="exp-actions-group">
+                        <button type="button" className="exp-btn-secondary" onClick={previewBlueprint} disabled={loading || submitting}>
+                          <EyeOutlined /> Kiểm tra khả dụng
+                        </button>
+                        <button type="submit" className="exp-btn-primary" disabled={loading || submitting}>
+                          {submitting ? 'Đang xử lý...' : <><SendOutlined /> Tạo ma trận & Giao đề ngay</>}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </section>
             </div>
-
-            <div className="exam-flow__section"><h2>3. Đối tượng nhận đề</h2>
-              <div className="ch-toolbar" style={{ marginBottom: 12 }}>
-                <button type="button" className={`ch-btn ${audienceMode === 'DEPARTMENT' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setAudienceMode('DEPARTMENT')}>Theo khoa phòng</button>
-                <button type="button" className={`ch-btn ${audienceMode === 'USER' ? 'ch-btn--primary' : 'ch-btn--secondary'}`} onClick={() => setAudienceMode('USER')}>Theo mã nhân viên</button>
-              </div>
-              {audienceMode === 'DEPARTMENT' && (
-                <div>
-                  <DepartmentCombobox departments={departments} value="" onChange={addDepartment} placeholder="Tìm và chọn khoa phòng" emptyValue="" />
-                  {selectedDepartments.length > 0 && <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {selectedDepartments.map((dept) => <span key={dept.id} className="ch-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>{dept.name}<button type="button" onClick={() => removeDepartment(dept.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>×</button></span>)}
-                  </div>}
-                </div>
-              )}
-              {audienceMode === 'USER' && (
-                <div>
-                  <input className="ch-input" value={userSearch} onChange={(e) => setUserSearch(e.target.value)} placeholder="Nhập mã hoặc tên nhân viên" style={{ maxWidth: 400 }} />
-                  {userSearchResults.length > 0 && <div style={{ marginTop: 8, border: '1px solid #d9d9d9', borderRadius: 4, maxWidth: 400 }}>
-                    {userSearchResults.filter((u) => !selectedUsers.some((su) => su.id === u.id)).map((user) => <div key={user.id} onClick={() => addUser(user)} style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid #f0f0f0' }}>{user.employeeCode || `USR-${user.id}`} — {user.fullName || user.username}</div>)}
-                  </div>}
-                  {selectedUsers.length > 0 && <div style={{ marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {selectedUsers.map((user) => <span key={user.id} className="ch-chip" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4 }}>{user.employeeCode || `USR-${user.id}`}<button type="button" onClick={() => removeUser(user.id)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>×</button></span>)}
-                  </div>}
-                </div>
-              )}
-            </div>
-
-            <div className="exam-flow__section"><h2>4. Lịch giao đề</h2><div className="ch-form-grid ch-form-grid--3">
-              <div className="ch-field"><label>Mở đề lúc</label><input className="ch-input" type="datetime-local" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} /></div>
-              <div className="ch-field"><label>Hạn hoàn thành</label><input className="ch-input" type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} /></div>
-              <div className="ch-field"><label>Số lượt làm tối đa</label><input className="ch-input" type="number" min="1" max="10" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} /></div>
-            </div></div>
-
-            {preview && <div className="ch-alert ch-alert--info"><strong>Preview: {preview.distributedQuestions} / {totalQuestions} câu</strong>{preview.warnings?.length > 0 && <ul>{preview.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}{preview.blueprintFields?.map((field) => <div key={field.professionalFieldId}>{field.professionalFieldName}: {field.requiredQuestionCount} yêu cầu / {field.availableQuestionCount} khả dụng</div>)}</div>}
-            {submitting && submitStep && <div className="ch-alert ch-alert--info">{submitStep}</div>}
-
-            <div className="exp-title-actions">
-              <button type="button" className="exp-btn-secondary" onClick={previewBlueprint} disabled={loading || submitting}>Xem availability</button>
-              <button type="submit" className="exp-btn-primary" disabled={loading || submitting}>{submitting ? 'Đang xử lý...' : 'Tạo và giao đề'}</button>
-            </div>
-          </section>
-        </form></main>
+          </main>
+        </div>
       </div>
     </div>
   )
 }
+
