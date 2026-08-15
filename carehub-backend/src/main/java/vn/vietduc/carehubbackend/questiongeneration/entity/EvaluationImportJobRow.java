@@ -53,4 +53,46 @@ public class EvaluationImportJobRow extends BaseEntity {
 
     @Column(name = "errors_text", columnDefinition = "text")
     private String errorsText;
+
+    @Column(name = "category_id_snapshot")
+    private Long categoryIdSnapshot;
+
+    @Column(name = "category_code_snapshot", length = 80)
+    private String categoryCodeSnapshot;
+
+    @Column(name = "category_name_snapshot")
+    private String categoryNameSnapshot;
+
+    @Column(name = "professional_field_id_snapshot")
+    private Long professionalFieldIdSnapshot;
+
+    @Column(name = "professional_field_code_snapshot", length = 80)
+    private String professionalFieldCodeSnapshot;
+
+    @Column(name = "professional_field_name_snapshot")
+    private String professionalFieldNameSnapshot;
+
+    @Column(name = "category_resolved")
+    private Boolean categoryResolved;
+
+    @Column(name = "skip_reason", columnDefinition = "text")
+    private String skipReason;
+
+    @Column(name = "cognitive_level_snapshot", length = 48)
+    private String cognitiveLevelSnapshot;
+
+    @Column(name = "cognitive_verified_at_snapshot")
+    private java.time.LocalDateTime cognitiveVerifiedAtSnapshot;
+
+    @Column(name = "cognitive_verified_by_snapshot", length = 100)
+    private String cognitiveVerifiedBySnapshot;
+
+    @Column(name = "source_document_id_snapshot")
+    private Long sourceDocumentIdSnapshot;
+
+    @Column(name = "source_document_filename_snapshot")
+    private String sourceDocumentFilenameSnapshot;
+
+    @Column(name = "source_document_content_hash_snapshot", length = 64)
+    private String sourceDocumentContentHashSnapshot;
 }

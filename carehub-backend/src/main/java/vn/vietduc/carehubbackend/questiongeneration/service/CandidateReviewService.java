@@ -20,17 +20,23 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionCandidateRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.CandidateValidationResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateMatchResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +49,18 @@ public class CandidateReviewService {
     private final DocumentQuestionMapper mapper;
     private final ObjectMapper objectMapper;
     private final QuestionClassificationRuleService classificationRuleService;
+    private QuestionCategoryRepository questionCategoryRepository;
+    private ProfessionalFieldRepository professionalFieldRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setQuestionCategoryRepository(QuestionCategoryRepository repository) {
+        this.questionCategoryRepository = repository;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setProfessionalFieldRepository(ProfessionalFieldRepository repository) {
+        this.professionalFieldRepository = repository;
+    }
 
     @Transactional(readOnly = true)
     public DocumentQuestionCandidateResponse get(Long candidateId) {
@@ -107,8 +125,19 @@ public class CandidateReviewService {
         candidate.setOptionD(request.optionD().trim());
         candidate.setCorrectAnswer(request.correctAnswer().trim().toUpperCase());
         candidate.setExplanation(trimToNull(request.explanation()));
-        candidate.setDifficulty(trimToNull(request.difficulty()));
         candidate.setTopic(trimToNull(request.topic()));
+        if (request.categoryId() != null) {
+            candidate.setCategory(resolveCategory(request.categoryId()));
+        }
+        if (request.professionalFieldId() != null) {
+            candidate.setProfessionalField(resolveProfessionalField(request.professionalFieldId()));
+        }
+        if (request.cognitiveLevel() != null) {
+            CognitiveLevel cognitiveLevel = parseCognitiveLevel(request.cognitiveLevel());
+            candidate.setCognitiveLevel(cognitiveLevel);
+            candidate.setCognitiveVerifiedAt(null);
+            candidate.setCognitiveVerifiedBy(null);
+        }
         candidate.setSourceExcerpt(request.sourceExcerpt().trim());
         candidate.setReviewerNotes(trimToNull(request.reviewerNotes()));
         revalidate(candidate);
@@ -117,12 +146,20 @@ public class CandidateReviewService {
 
     @Transactional
     public DocumentQuestionCandidateResponse approve(Long candidateId, String reviewerNotes) {
+        return approve(candidateId, reviewerNotes, "reviewer");
+    }
+
+    @Transactional
+    public DocumentQuestionCandidateResponse approve(Long candidateId, String reviewerNotes, String actor) {
         DocumentQuestionCandidate candidate = findCandidate(candidateId);
         if (candidate.getStatus() == CandidateStatus.REJECTED) {
             throw new BadRequestException("Không thể duyệt câu hỏi đã bị từ chối bởi validation");
         }
+        requireReviewedTaxonomy(candidate);
         candidate.setStatus(CandidateStatus.APPROVED);
         candidate.setLabel(CandidateLabel.GOOD);
+        candidate.setCognitiveVerifiedAt(LocalDateTime.now());
+        candidate.setCognitiveVerifiedBy(actor == null || actor.isBlank() ? "reviewer" : actor);
         if (reviewerNotes != null && !reviewerNotes.isBlank()) {
             candidate.setReviewerNotes(reviewerNotes.trim());
         }
@@ -149,6 +186,7 @@ public class CandidateReviewService {
         if (candidate.getSourceExcerpt() == null || candidate.getSourceExcerpt().isBlank()) {
             throw new BadRequestException("Câu hỏi cần có trích dẫn nguồn trước khi lưu vào ngân hàng câu hỏi");
         }
+        requireReviewedTaxonomy(candidate);
         if (isGenericDocumentReferenceStem(candidate.getStem())) {
             throw new BadRequestException("Câu hỏi cần tự đứng độc lập, không được dùng mẫu chung như 'Theo tài liệu...'");
         }
@@ -164,8 +202,13 @@ public class CandidateReviewService {
                 .optionD(candidate.getOptionD())
                 .correctAnswer(candidate.getCorrectAnswer())
                 .explanation(candidate.getExplanation())
-                .topic(resolveTopic(candidate))
-                .difficulty(candidate.getDifficulty())
+                .category(candidate.getCategory() != null
+                        ? candidate.getCategory()
+                        : (candidate.getJob() == null ? null : candidate.getJob().getCategory()))
+                .professionalField(candidate.getProfessionalField())
+                .cognitiveLevel(candidate.getCognitiveLevel())
+                .cognitiveVerifiedAt(candidate.getCognitiveVerifiedAt())
+                .cognitiveVerifiedBy(candidate.getCognitiveVerifiedBy())
                 .language("vi")
                 .sourceDocument(candidate.getDocument().getFilename())
                 .questionType(QuestionType.ORIGINAL)
@@ -184,7 +227,15 @@ public class CandidateReviewService {
     public BatchDocumentQuestionCandidateActionResponse approveBatch(
             BatchDocumentQuestionCandidateActionRequest request
     ) {
-        return runBatch(request, candidateId -> approve(candidateId, request == null ? null : request.reviewerNotes()));
+        return approveBatch(request, "reviewer");
+    }
+
+    @Transactional
+    public BatchDocumentQuestionCandidateActionResponse approveBatch(
+            BatchDocumentQuestionCandidateActionRequest request,
+            String actor
+    ) {
+        return runBatch(request, candidateId -> approve(candidateId, request == null ? null : request.reviewerNotes(), actor));
     }
 
     @Transactional
@@ -243,7 +294,7 @@ public class CandidateReviewService {
                 candidate.getOptionD(),
                 candidate.getCorrectAnswer(),
                 candidate.getExplanation(),
-                candidate.getDifficulty(),
+                candidate.getCognitiveLevel() == null ? null : candidate.getCognitiveLevel().name(),
                 candidate.getTopic(),
                 candidate.getSourceExcerpt(),
                 candidate.getKnowledgePointKey(),
@@ -253,9 +304,24 @@ public class CandidateReviewService {
                 candidate.getAnswerEvidence(),
                 candidate.getDistractorRationales()
         );
-        CandidateValidationResult validation = validationService.validate(generated, candidate.getChunk().getText());
-        DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem());
+        CandidateValidationResult validation = validationService.validate(
+                generated,
+                candidate.getChunk() == null ? null : candidate.getChunk().getText()
+        );
+        Set<Long> excludedQuestions = candidate.getSavedQuestionId() != null
+                ? Set.of(candidate.getSavedQuestionId())
+                : Set.of();
+        Set<Long> excludedCandidates = candidate.getId() != null
+                ? Set.of(candidate.getId())
+                : Set.of();
+        DuplicateCheckResult duplicate = duplicateCheckService.check(
+                candidate.getStem(),
+                excludedQuestions,
+                excludedCandidates
+        );
         List<String> warnings = new ArrayList<>(validation.warnings());
+        List<String> taxonomyWarnings = taxonomyWarnings(candidate);
+        warnings.addAll(taxonomyWarnings);
         if (duplicate.warning() != null && !duplicate.warning().isBlank()) {
             warnings.add(duplicate.warning());
         }
@@ -266,7 +332,7 @@ public class CandidateReviewService {
             candidate.setStatus(CandidateStatus.REJECTED);
             candidate.setLabel(CandidateLabel.REJECTED);
             warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có");
-        } else if (validation.needsReview() || duplicate.needsReview()) {
+        } else if (!taxonomyWarnings.isEmpty() || validation.needsReview() || duplicate.needsReview()) {
             candidate.setStatus(CandidateStatus.NEED_REVIEW);
             candidate.setLabel(CandidateLabel.NEED_REVIEW);
             if (duplicate.needsReview()) {
@@ -311,6 +377,73 @@ public class CandidateReviewService {
             return null;
         }
         return value.trim();
+    }
+
+    private QuestionCategory resolveCategory(Long categoryId) {
+        if (questionCategoryRepository == null) {
+            throw new BadRequestException("Không thể xác thực danh mục câu hỏi trong phiên hiện tại");
+        }
+        return questionCategoryRepository.findById(categoryId)
+                .filter(category -> category.getStatus() == vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ACTIVE)
+                .orElseThrow(() -> new BadRequestException("Danh mục câu hỏi không tồn tại hoặc đã ngừng hoạt động"));
+    }
+
+    private ProfessionalField resolveProfessionalField(Long fieldId) {
+        if (professionalFieldRepository == null) {
+            throw new BadRequestException("Không thể xác thực lĩnh vực chuyên môn trong phiên hiện tại");
+        }
+        return professionalFieldRepository.findById(fieldId)
+                .filter(ProfessionalField::isActive)
+                .orElseThrow(() -> new BadRequestException("Lĩnh vực chuyên môn không tồn tại hoặc đã ngừng hoạt động"));
+    }
+
+    private CognitiveLevel parseCognitiveLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return CognitiveLevel.valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Mức độ nhận thức không hợp lệ");
+        }
+    }
+
+    private void requireReviewedTaxonomy(DocumentQuestionCandidate candidate) {
+        // Direct construction tests and old jobs do not have the repositories/direct links.
+        // Spring production always wires both repositories, so the new gate remains strict there.
+        if (!strictTaxonomyEnabled()) {
+            return;
+        }
+        if (candidate.getCategory() == null) {
+            throw new BadRequestException("Câu hỏi đề xuất phải có danh mục kiến thức trước khi duyệt");
+        }
+        if (candidate.getProfessionalField() == null) {
+            throw new BadRequestException("Câu hỏi đề xuất phải có lĩnh vực chuyên môn trước khi duyệt");
+        }
+        if (candidate.getCognitiveLevel() == null) {
+            throw new BadRequestException("Câu hỏi đề xuất phải được phân loại mức độ nhận thức trước khi duyệt");
+        }
+    }
+
+    private List<String> taxonomyWarnings(DocumentQuestionCandidate candidate) {
+        if (!strictTaxonomyEnabled()) {
+            return List.of();
+        }
+        List<String> warnings = new ArrayList<>();
+        if (candidate.getCategory() == null) {
+            warnings.add("Chưa có danh mục câu hỏi; reviewer cần chọn danh mục trước khi duyệt");
+        }
+        if (candidate.getProfessionalField() == null) {
+            warnings.add("Chưa có lĩnh vực chuyên môn; reviewer cần chọn lĩnh vực trước khi duyệt");
+        }
+        if (candidate.getCognitiveLevel() == null) {
+            warnings.add("Chưa có mức độ nhận thức; reviewer cần chọn một trong 3 mức trước khi duyệt");
+        }
+        return warnings;
+    }
+
+    private boolean strictTaxonomyEnabled() {
+        return questionCategoryRepository != null && professionalFieldRepository != null;
     }
 
     private String resolveTopic(DocumentQuestionCandidate candidate) {

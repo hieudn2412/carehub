@@ -30,14 +30,15 @@ export const CANDIDATE_LABELS = {
   REJECTED: 'Đã từ chối',
 }
 
-export const DIFFICULTY_LABELS = {
-  easy: 'Dễ',
-  medium: 'Trung bình',
-  hard: 'Khó',
-  EASY: 'Dễ',
-  MEDIUM: 'Trung bình',
-  HARD: 'Khó',
-}
+export const COGNITIVE_LEVELS = [
+  { value: 'FOUNDATION', label: 'Kiến thức nền tảng' },
+  { value: 'CLINICAL_APPLICATION', label: 'Áp dụng lâm sàng' },
+  { value: 'CLINICAL_REASONING_ANALYSIS', label: 'Tư duy phân tích' },
+]
+
+export const COGNITIVE_LEVEL_LABELS = Object.fromEntries(
+  COGNITIVE_LEVELS.map((level) => [level.value, level.label]),
+)
 
 export const QUALITY_FLAG_LABELS = {
   LOW_INFORMATION_DENSITY: 'Ít thông tin',
@@ -84,8 +85,8 @@ export function shouldShowCandidateLabelBadge(candidate) {
     && candidateLabelText(candidate) !== candidateStatusText(candidate)
 }
 
-export function difficultyText(value) {
-  return DIFFICULTY_LABELS[value] || value || 'Chưa phân loại'
+export function cognitiveLevelText(value) {
+  return COGNITIVE_LEVEL_LABELS[value] || value || 'Chưa phân loại nhận thức'
 }
 
 export function statusTone(status) {
@@ -100,13 +101,14 @@ export function formatDateTime(value) {
   if (!value) return '---'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date)
+
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+
+  return `${hours}:${minutes} ${day}/${month}/${year}`
 }
 
 export function formatNumber(value) {

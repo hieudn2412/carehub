@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   CheckOutlined,
@@ -18,14 +18,10 @@ import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
+import { questionSetCategoryApi } from '../api/questionSetCategoryApi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
+import { apiData, apiErrorMessage, cognitiveLevelText, COGNITIVE_LEVELS, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetFormPage.css'
-
-const DIFFICULTY_OPTIONS = [
-  { value: 'easy', label: 'Dễ' },
-  { value: 'medium', label: 'Trung bình' },
-  { value: 'hard', label: 'Khó' },
-]
 
 function QuestionSetFormPage() {
   const navigate = useNavigate()
@@ -36,9 +32,13 @@ function QuestionSetFormPage() {
 
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
-  const [status, setStatus] = useState('ACTIVE')
+  const [status, setStatus] = useState('DRAFT')
   const [persistedStatus, setPersistedStatus] = useState(null)
   const [description, setDescription] = useState('')
+  const [professionalFieldId, setProfessionalFieldId] = useState('')
+  const [professionalFields, setProfessionalFields] = useState([])
+  const [questionSetCategoryId, setQuestionSetCategoryId] = useState('')
+  const [questionSetCategories, setQuestionSetCategories] = useState([])
   const [selectedIds, setSelectedIds] = useState([])
   const [draggedQuestionId, setDraggedQuestionId] = useState(null)
   const [dragOverQuestionId, setDragOverQuestionId] = useState(null)
@@ -55,13 +55,13 @@ function QuestionSetFormPage() {
 
   const [qKeyword, setQKeyword] = useState('')
   const [qCategory, setQCategory] = useState('')
-  const [qDifficulty, setQDifficulty] = useState('')
+  const [qCognitiveLevel, setQCognitiveLevel] = useState('')
   const [qSource, setQSource] = useState('')
   const [qType, setQType] = useState('')
   const [qPage, setQPage] = useState(0)
 
   const [previewCategory, setPreviewCategory] = useState('')
-  const [previewDifficulty, setPreviewDifficulty] = useState('')
+  const [previewCognitiveLevel, setPreviewCognitiveLevel] = useState('')
   const [previewQuestionCount, setPreviewQuestionCount] = useState(10)
   const [previewResult, setPreviewResult] = useState(null)
   const [isPreviewing, setIsPreviewing] = useState(false)
@@ -70,12 +70,16 @@ function QuestionSetFormPage() {
   const loadData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const [questionsResponse, detailResponse] = await Promise.all([
+      const [questionsResponse, detailResponse, optionsResponse, setCategoryResponse] = await Promise.all([
         questionBankApi.listQuestions({ status: 'APPROVED' }),
         isEditMode ? questionSetApi.getQuestionSet(id) : Promise.resolve(null),
+        trainingApi.getRecordOptions(),
+        questionSetCategoryApi.listCategories({ status: 'ACTIVE' }),
       ])
       const questions = apiData(questionsResponse, [])
       setQuestionsList(questions)
+      setProfessionalFields(apiData(optionsResponse, {}).professionalFields || [])
+      setQuestionSetCategories(apiData(setCategoryResponse, []))
       if (detailResponse) {
         const detail = apiData(detailResponse)
         setCode(detail.code || '')
@@ -84,6 +88,8 @@ function QuestionSetFormPage() {
         setStatus(loadedStatus)
         setPersistedStatus(loadedStatus)
         setDescription(detail.description || '')
+        setProfessionalFieldId(detail.professionalFieldId ? String(detail.professionalFieldId) : '')
+        setQuestionSetCategoryId(detail.questionSetCategoryId ? String(detail.questionSetCategoryId) : '')
         setSelectedIds((detail.items || []).map((item) => item.question?.id).filter(Boolean))
         setSnapshotInfo({
           activeVersion: detail.activeVersion || null,
@@ -105,9 +111,20 @@ function QuestionSetFormPage() {
     loadData()
   }, [loadData])
 
-  const topics = useMemo(() => {
-    return Array.from(new Set(questionsList.map((question) => question.topic).filter(Boolean))).sort()
-  }, [questionsList])
+  const scopedQuestions = useMemo(() => {
+    if (!professionalFieldId) return questionsList
+    return questionsList.filter((question) => String(question.professionalFieldId || '') === String(professionalFieldId))
+  }, [professionalFieldId, questionsList])
+
+  const categories = useMemo(() => {
+    const byId = new Map()
+    scopedQuestions.forEach((question) => {
+      if (question.categoryId && question.categoryName) {
+        byId.set(String(question.categoryId), { id: String(question.categoryId), name: question.categoryName })
+      }
+    })
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+  }, [scopedQuestions])
 
   const sources = useMemo(() => {
     return Array.from(new Set(questionsList.map((question) => question.sourceDocument).filter(Boolean))).sort()
@@ -120,18 +137,18 @@ function QuestionSetFormPage() {
 
   const filteredQuestions = useMemo(() => {
     const keyword = normalize(qKeyword)
-    return questionsList.filter((question) => {
+    return scopedQuestions.filter((question) => {
       const matchesKeyword = !keyword
         || normalize(question.stem).includes(keyword)
-        || normalize(question.topic).includes(keyword)
+        || normalize(question.categoryName).includes(keyword)
         || normalize(question.sourceDocument).includes(keyword)
-      const matchesCategory = !qCategory || question.topic === qCategory
-      const matchesDifficulty = !qDifficulty || normalize(question.difficulty) === normalize(qDifficulty)
+      const matchesCategory = !qCategory || String(question.categoryId || '') === qCategory
+      const matchesCognitiveLevel = !qCognitiveLevel || normalize(question.cognitiveLevel) === normalize(qCognitiveLevel)
       const matchesSource = !qSource || question.sourceDocument === qSource
       const matchesType = !qType || question.questionType === qType
-      return matchesKeyword && matchesCategory && matchesDifficulty && matchesSource && matchesType
+      return matchesKeyword && matchesCategory && matchesCognitiveLevel && matchesSource && matchesType
     })
-  }, [qCategory, qDifficulty, qKeyword, qSource, qType, questionsList])
+  }, [qCategory, qCognitiveLevel, qKeyword, qSource, qType, scopedQuestions])
 
   const qPageSize = 6
   const qTotalElements = filteredQuestions.length
@@ -288,6 +305,14 @@ function QuestionSetFormPage() {
       showToast('Vui lòng nhập tên bộ câu hỏi.', 'warning')
       return
     }
+    if (!professionalFieldId) {
+      showToast('Vui lòng chọn lĩnh vực chuyên môn cho bộ câu hỏi.', 'warning')
+      return
+    }
+    if (!questionSetCategoryId) {
+      showToast('Vui lòng chọn mục đích sử dụng của bộ câu hỏi.', 'warning')
+      return
+    }
     if (status === 'ACTIVE' && !selectedIds.length) {
       showToast('Vui lòng chọn ít nhất một câu hỏi cho bộ.', 'warning')
       return
@@ -297,11 +322,12 @@ function QuestionSetFormPage() {
       const payload = {
         code: code.trim() || null,
         name: name.trim(),
-        category: null,
-        difficulty: null,
+        cognitiveLevel: null,
         status,
         description: description.trim() || null,
         questionIds: selectedIds,
+        professionalFieldId: Number(professionalFieldId),
+        questionSetCategoryId: Number(questionSetCategoryId),
       }
       if (isEditMode) {
         await questionSetApi.updateQuestionSet(id, payload)
@@ -358,9 +384,9 @@ function QuestionSetFormPage() {
     setIsPreviewing(true)
     try {
       const response = await questionSetApi.previewQuestionSet({
-        category: previewCategory,
-        ...(previewDifficulty
-          ? { difficultyDistribution: { [previewDifficulty]: Number(previewQuestionCount) || 10 } }
+        categoryId: Number(previewCategory),
+        ...(previewCognitiveLevel
+          ? { cognitiveLevelDistribution: { [previewCognitiveLevel]: Number(previewQuestionCount) || 10 } }
           : { questionCount: Number(previewQuestionCount) || 10 }),
         excludeQuestionIds: selectedIds,
         randomSeed: Date.now(),
@@ -414,7 +440,7 @@ function QuestionSetFormPage() {
     { label: isEditMode ? 'Chỉnh sửa' : 'Tạo mới' },
   ]
   const paginationItems = getPaginationItems(qPage, qTotalPages)
-  const activeQuestionFilterCount = [qCategory, qDifficulty, qSource, qType].filter(Boolean).length
+  const activeQuestionFilterCount = [qCategory, qCognitiveLevel, qSource, qType].filter(Boolean).length
 
   return (
     <AppShell back={{ to: '/admin/evaluation/question-sets', label: 'Quay lại' }} breadcrumbs={breadcrumbs}>
@@ -488,6 +514,36 @@ function QuestionSetFormPage() {
               </div>
 
               <div className="qsf-form-row">
+                <div className="qsf-form-group">
+                  <label>Lĩnh vực chuyên môn <span className="qsf-required-star">*</span></label>
+                  <select
+                    className="qsf-input-red"
+                    value={professionalFieldId}
+                    onChange={(event) => {
+                      setProfessionalFieldId(event.target.value)
+                      setSelectedIds([])
+                      setQCategory('')
+                    }}
+                    disabled={isActiveLocked}
+                    required
+                  >
+                    <option value="">Chọn lĩnh vực</option>
+                    {professionalFields.map((field) => <option key={field.id} value={field.id}>{field.name}</option>)}
+                  </select>
+                </div>
+                <div className="qsf-form-group">
+                  <label>Mục đích sử dụng <span className="qsf-required-star">*</span></label>
+                  <select
+                    className="qsf-input-red"
+                    value={questionSetCategoryId}
+                    onChange={(event) => setQuestionSetCategoryId(event.target.value)}
+                    disabled={isActiveLocked}
+                    required
+                  >
+                    <option value="">Chọn mục đích</option>
+                    {questionSetCategories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </div>
                 <div className="qsf-form-group">
                   <label>Trạng thái</label>
                   <select
@@ -581,8 +637,8 @@ function QuestionSetFormPage() {
                       disabled={isActiveLocked}
                     >
                       <option value="">-- Chọn danh mục --</option>
-                      {topics.map((topic) => (
-                        <option key={topic} value={topic}>{topic}</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>{category.name}</option>
                       ))}
                     </select>
                   </div>
@@ -599,12 +655,10 @@ function QuestionSetFormPage() {
                     />
                   </div>
                   <div className="qsf-form-group">
-                    <label>Mức độ câu hỏi</label>
-                    <select className="qsf-input-red" value={previewDifficulty} onChange={(event) => setPreviewDifficulty(event.target.value)} disabled={isActiveLocked}>
-                      <option value="">Tất cả mức độ</option>
-                      <option value="hard">Khó</option>
-                      <option value="medium">Trung bình</option>
-                      <option value="easy">Dễ</option>
+                    <label>Mức độ nhận thức</label>
+                    <select className="qsf-input-red" value={previewCognitiveLevel} onChange={(event) => setPreviewCognitiveLevel(event.target.value)} disabled={isActiveLocked}>
+                      <option value="">Tất cả mức độ nhận thức</option>
+                      {COGNITIVE_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -709,11 +763,11 @@ function QuestionSetFormPage() {
                     <div className="qsf-filter-panel">
                       <select className="qsf-qfilter-select" value={qCategory} onChange={(event) => { setQCategory(event.target.value); setQPage(0) }}>
                         <option value="">Tất cả danh mục</option>
-                        {topics.map((topic) => <option key={topic} value={topic}>{topic}</option>)}
+                        {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                       </select>
-                      <select className="qsf-qfilter-select" value={qDifficulty} onChange={(event) => { setQDifficulty(event.target.value); setQPage(0) }}>
-                        <option value="">Tất cả độ khó</option>
-                        {DIFFICULTY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      <select className="qsf-qfilter-select" value={qCognitiveLevel} onChange={(event) => { setQCognitiveLevel(event.target.value); setQPage(0) }}>
+                        <option value="">Tất cả mức độ nhận thức</option>
+                        {COGNITIVE_LEVELS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                       <select className="qsf-qfilter-select" value={qSource} onChange={(event) => { setQSource(event.target.value); setQPage(0) }}>
                         <option value="">Tất cả nguồn</option>
@@ -764,9 +818,9 @@ function QuestionSetFormPage() {
                           <div className="qsf-bank-item__content">
                             <h4>{question.stem}</h4>
                             <div className="qsf-bank-item__meta">
-                              {question.topic && <span className="qsf-meta-chip">{question.topic}</span>}
-                              <span className={`qsf-diff-badge ${getDifficultyClass(question.difficulty)}`}>
-                                {difficultyText(question.difficulty)}
+                              {question.categoryName && <span className="qsf-meta-chip">{question.categoryName}</span>}
+                              <span className={`qsf-diff-badge ${getCognitiveLevelClass(question.cognitiveLevel)}`}>
+                                {cognitiveLevelText(question.cognitiveLevel)}
                               </span>
                               <span className="qsf-source-text" title={question.sourceDocument || question.questionType || ''}>
                                 {question.sourceDocument || question.questionType || 'Nguồn nội bộ'}
@@ -830,19 +884,11 @@ function QuestionSetFormPage() {
   )
 }
 
-function getDifficultyClass(value) {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'easy' || value === 'Dễ') return 'qsf-diff-badge--easy'
-  if (normalized === 'medium' || value === 'Trung bình') return 'qsf-diff-badge--medium'
-  return 'qsf-diff-badge--hard'
-}
-
-function difficultyText(value) {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized === 'easy') return 'Dễ'
-  if (normalized === 'medium') return 'Trung bình'
-  if (normalized === 'hard') return 'Khó'
-  return value || '---'
+function getCognitiveLevelClass(value) {
+  if (value === 'FOUNDATION') return 'qsf-diff-badge--easy'
+  if (value === 'CLINICAL_APPLICATION') return 'qsf-diff-badge--medium'
+  if (value === 'CLINICAL_REASONING_ANALYSIS') return 'qsf-diff-badge--hard'
+  return ''
 }
 
 function normalize(value) {

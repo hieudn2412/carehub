@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -35,7 +36,7 @@ class QuestionCategoryServiceTest {
             }
             return category;
         });
-        when(questionRepository.countByTopicIgnoreCaseAndStatus(any(), eq(QuestionBankStatus.APPROVED))).thenReturn(3L);
+        when(questionRepository.countByCategoryIdAndStatus(any(), eq(QuestionBankStatus.APPROVED))).thenReturn(3L);
     }
 
     @Test
@@ -44,15 +45,14 @@ class QuestionCategoryServiceTest {
                 null,
                 "An toàn người bệnh",
                 "Nhận diện và phòng ngừa rủi ro",
-                "ACTIVE",
-                2
+                "ACTIVE"
         ), "admin");
 
         assertThat(response.id()).isNotNull();
         assertThat(response.code()).isEqualTo("AN_TOAN_NGUOI_BENH");
         assertThat(response.statusText()).isEqualTo("Hoạt động");
         assertThat(response.questionCount()).isEqualTo(3);
-        verify(questionRepository).countByTopicIgnoreCaseAndStatus("An toàn người bệnh", QuestionBankStatus.APPROVED);
+        verify(questionRepository).countByCategoryIdAndStatus(response.id(), QuestionBankStatus.APPROVED);
     }
 
     @Test
@@ -62,7 +62,6 @@ class QuestionCategoryServiceTest {
                 .code("ATNB")
                 .name("An toàn người bệnh")
                 .status(QuestionCategoryStatus.ACTIVE)
-                .sortOrder(1)
                 .build();
         when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
 
@@ -70,5 +69,23 @@ class QuestionCategoryServiceTest {
 
         assertThat(response.status()).isEqualTo(QuestionCategoryStatus.ARCHIVED.name());
         assertThat(category.getStatus()).isEqualTo(QuestionCategoryStatus.ARCHIVED);
+    }
+
+    @Test
+    void updateAllowsRenameButRejectsChangingStableCode() {
+        QuestionCategory category = QuestionCategory.builder()
+                .id(8L).code("BAI_1").name("Tên cũ")
+                .status(QuestionCategoryStatus.ACTIVE).build();
+        when(categoryRepository.findById(8L)).thenReturn(Optional.of(category));
+
+        var renamed = service.update(8L, new UpsertQuestionCategoryRequest(
+                "BAI_1", "Tên mới", null, "ACTIVE"
+        ));
+        assertThat(renamed.name()).isEqualTo("Tên mới");
+        verify(questionRepository).countByCategoryIdAndStatus(8L, QuestionBankStatus.APPROVED);
+
+        assertThatThrownBy(() -> service.update(8L, new UpsertQuestionCategoryRequest(
+                "MA_KHAC", "Tên mới", null, "ACTIVE"
+        ))).hasMessageContaining("không thể thay đổi");
     }
 }

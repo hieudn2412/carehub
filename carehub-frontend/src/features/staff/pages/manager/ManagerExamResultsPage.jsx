@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { SearchOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
-import { trainingApi } from '../../../training/api/trainingApi'
-import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
-import AdminFilterDisclosure from '../../../../shared/components/AdminFilterDisclosure.jsx'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultsPage() {
@@ -14,8 +11,6 @@ function ManagerExamResultsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [professionalFieldId, setProfessionalFieldId] = useState('')
-  const [professionalFields, setProfessionalFields] = useState([])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 350)
@@ -25,17 +20,10 @@ function ManagerExamResultsPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setLoading(true)
-      Promise.all([
-        examAssignmentApi.listManagerAssignments({
-          q: debouncedSearch || undefined,
-          professionalFieldId: professionalFieldId || undefined,
-        }),
-        trainingApi.getRecordOptions(),
-      ])
-        .then(([res, optionRes]) => {
+      examAssignmentApi.listManagerAssignments({ q: debouncedSearch || undefined })
+        .then((res) => {
           const data = res.data?.data?.content || res.data?.data || []
           setAssignments(Array.isArray(data) ? data : [])
-          setProfessionalFields(optionRes.data?.data?.professionalFields || [])
         })
         .catch(err => {
           console.error("Error fetching exam assignments", err)
@@ -43,7 +31,7 @@ function ManagerExamResultsPage() {
         .finally(() => setLoading(false))
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [professionalFieldId, debouncedSearch])
+  }, [debouncedSearch])
 
   return (
     <AppShell title="Kết quả thi nhân sự">
@@ -57,22 +45,6 @@ function ManagerExamResultsPage() {
           />
           <SearchOutlined />
         </div>
-        <AdminFilterDisclosure activeCount={professionalFieldId ? 1 : 0}>
-          <label className="admin-control-toolbar__field mgr-field-filter">
-            <span>Lĩnh vực chuyên môn</span>
-            <SearchableSelect
-              value={professionalFieldId}
-              onChange={setProfessionalFieldId}
-              options={[
-                { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
-                ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-              ]}
-              placeholder="Tất cả lĩnh vực chuyên môn"
-              searchPlaceholder="Tìm tên lĩnh vực..."
-              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-            />
-          </label>
-        </AdminFilterDisclosure>
       </div>
 
       {/* Loading */}
@@ -91,7 +63,6 @@ function ManagerExamResultsPage() {
           <thead>
             <tr>
               <th>Tên kỳ thi</th>
-              <th>Lĩnh vực chuyên môn</th>
               <th>Ngày tạo</th>
               <th>Trạng thái</th>
               <th>Hạn nộp</th>
@@ -102,7 +73,6 @@ function ManagerExamResultsPage() {
             {assignments.map((item) => (
               <tr key={item.id}>
                 <td data-label="Tên kỳ thi" style={{ fontWeight: 600, color: '#0f172a' }}>{item.name || item.title || item.examTitle || `Kỳ thi #${item.id}`}</td>
-                <td data-label="Lĩnh vực chuyên môn">{item.professionalFieldName || '—'}</td>
                 <td data-label="Ngày tạo" style={{ color: '#475569' }}>
                   {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : '--'}
                 </td>

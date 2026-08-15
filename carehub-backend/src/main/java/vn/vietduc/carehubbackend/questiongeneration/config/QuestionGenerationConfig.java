@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Configuration;
         AiEmbeddingProperties.class,
         AiParaphraseProperties.class,
         DocumentProcessingProperties.class,
-        ValidationRulesProperties.class
+        ValidationRulesProperties.class,
+        EvaluationCutoverProperties.class
 })
 public class QuestionGenerationConfig {
 }

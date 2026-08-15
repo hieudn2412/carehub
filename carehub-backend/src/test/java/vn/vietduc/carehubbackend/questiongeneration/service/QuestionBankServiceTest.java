@@ -8,17 +8,24 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBa
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionClassificationTestResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseMapper;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -77,6 +84,55 @@ class QuestionBankServiceTest {
         assertThat(response.correctAnswer()).isEqualTo("A");
         verify(questionRepository).save(any(QuestionBankQuestion.class));
         verify(embeddingService).refreshStemEmbedding(any(QuestionBankQuestion.class));
+    }
+
+    @Test
+    void createPersistsIndependentFieldAndVerifiedCognitiveLevel() {
+        QuestionCategoryRepository categoryRepository = mock(QuestionCategoryRepository.class);
+        ProfessionalFieldRepository fieldRepository = mock(ProfessionalFieldRepository.class);
+        QuestionCategory category = QuestionCategory.builder()
+                .id(71L)
+                .code("ATNB")
+                .name("An toàn người bệnh")
+                .status(QuestionCategoryStatus.ACTIVE)
+                .build();
+        ProfessionalField field = ProfessionalField.builder()
+                .id(81L)
+                .code("HSCC")
+                .name("Hồi sức cấp cứu")
+                .active(true)
+                .build();
+        when(categoryRepository.findById(71L)).thenReturn(Optional.of(category));
+        when(fieldRepository.findById(81L)).thenReturn(Optional.of(field));
+        service.setQuestionCategoryRepository(categoryRepository);
+        service.setProfessionalFieldRepository(fieldRepository);
+
+        var response = service.create(new UpsertQuestionBankQuestionRequest(
+                "Dấu hiệu ưu tiên đánh giá sốc là gì?",
+                "A", "B", "C", "D", "A",
+                "Giải thích", "vi", "Tài liệu A", "APPROVED",
+                71L, 81L, CognitiveLevel.CLINICAL_APPLICATION.name(), null
+        ), "reviewer-01");
+
+        assertThat(response.categoryId()).isEqualTo(71L);
+        assertThat(response.professionalFieldId()).isEqualTo(81L);
+        assertThat(response.cognitiveLevel()).isEqualTo(CognitiveLevel.CLINICAL_APPLICATION.name());
+        assertThat(response.cognitiveVerifiedAt()).isNotNull();
+        assertThat(response.cognitiveVerifiedBy()).isEqualTo("reviewer-01");
+    }
+
+    @Test
+    void approveRejectsQuestionWithoutVerifiedCognitiveClassification() {
+        QuestionBankQuestion question = existingQuestion();
+        question.setProfessionalField(ProfessionalField.builder()
+                .id(81L).code("HSCC").name("Hồi sức cấp cứu").active(true).build());
+        question.setCognitiveLevel(null);
+        question.setStatus(QuestionBankStatus.DRAFT);
+        when(questionRepository.findById(question.getId())).thenReturn(Optional.of(question));
+
+        assertThatThrownBy(() -> service.approve(question.getId(), "reviewer-01"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("mức độ nhận thức");
     }
 
     @Test
@@ -174,8 +230,6 @@ class QuestionBankServiceTest {
                 "Có thể bỏ qua nếu người bệnh tỉnh.",
                 "a",
                 "Cần dùng tối thiểu hai thông tin nhận diện.",
-                "An toàn người bệnh",
-                "EASY",
                 "vi",
                 "Nhập thủ công",
                 status
@@ -192,8 +246,6 @@ class QuestionBankServiceTest {
                 .optionD("D")
                 .correctAnswer("A")
                 .explanation("Giải thích")
-                .topic("An toàn người bệnh")
-                .difficulty("EASY")
                 .language("vi")
                 .sourceDocument("Nhập thủ công")
                 .questionType(QuestionType.ORIGINAL)

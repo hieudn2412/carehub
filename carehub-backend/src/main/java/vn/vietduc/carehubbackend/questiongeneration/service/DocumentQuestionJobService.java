@@ -30,11 +30,12 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationGrade;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationSource;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ChunkGenerationStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetDifficulty;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetCognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.generation.DocumentQuestionGenerator;
 import vn.vietduc.carehubbackend.questiongeneration.generation.DocumentQuestionGeneratorRouter;
 import vn.vietduc.carehubbackend.questiongeneration.generation.GroundedV4PromptCatalog;
@@ -44,6 +45,8 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionC
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionChunkResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.CandidateValidationResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
@@ -51,6 +54,7 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedKnowl
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.ProfessionalFieldPromptOption;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -112,6 +116,12 @@ public class DocumentQuestionJobService {
     private final ApplicationEventPublisher eventPublisher;
     private final AsyncTaskExecutor documentChunkExecutor;
     private final GroundedV4PromptCatalog groundedV4Prompts;
+    private ProfessionalFieldRepository professionalFieldRepository;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setProfessionalFieldRepository(ProfessionalFieldRepository professionalFieldRepository) {
+        this.professionalFieldRepository = professionalFieldRepository;
+    }
 
     // Self-injection for @Transactional(REQUIRES_NEW) per chunk
     // Mặc định trỏ về chính nó để không NPE khi khởi tạo ngoài Spring (unit test);
@@ -131,6 +141,19 @@ public class DocumentQuestionJobService {
     private record CachedCancellation(boolean cancelled, long timestamp) {
     }
 
+    private List<ProfessionalFieldPromptOption> professionalFieldPromptOptions(DocumentQuestionJob job) {
+        if (job.getProfessionalField() != null) {
+            ProfessionalField field = job.getProfessionalField();
+            return List.of(new ProfessionalFieldPromptOption(field.getCode(), field.getName(), field.getDescription()));
+        }
+        if (professionalFieldRepository == null) {
+            return List.of();
+        }
+        return professionalFieldRepository.findByActiveTrueOrderByNameAsc().stream()
+                .map(field -> new ProfessionalFieldPromptOption(field.getCode(), field.getName(), field.getDescription()))
+                .toList();
+    }
+
     @Transactional
     public DocumentQuestionJobResponse createJob(Long documentId, CreateDocumentQuestionJobRequest request, String actor) {
         QuestionDocument document = documentService.findDocument(documentId);
@@ -143,6 +166,11 @@ public class DocumentQuestionJobService {
         List<DocumentChunk> chunks = chunkRepository.findByDocumentOrderByChunkIndexAsc(document);
         if (chunks.isEmpty()) {
             throw new BadRequestException("Tài liệu chưa có chunk để tạo câu hỏi");
+        }
+        if ((request == null || request.professionalFieldId() == null)
+                && professionalFieldRepository != null
+                && professionalFieldRepository.findByActiveTrueOrderByNameAsc().isEmpty()) {
+            throw new BadRequestException("Chưa có lĩnh vực chuyên môn đang hoạt động để AI phân loại câu hỏi");
         }
         long eligibleChunkCount = chunks.stream()
                 .filter(chunk -> DocumentChunkQualityRules.isGenerationEligible(parseQualityFlags(chunk.getQualityFlags())))
@@ -164,18 +192,25 @@ public class DocumentQuestionJobService {
                 && !generationProperties.isGroundedV4Enabled()) {
             throw new BadRequestException("Pipeline Grounded v4 chưa được bật cho môi trường này");
         }
-        TargetDifficulty targetDifficulty = request != null && request.targetDifficulty() != null
-                ? request.targetDifficulty()
-                : TargetDifficulty.AUTO;
+        TargetCognitiveLevel targetCognitiveLevel = request != null && request.targetCognitiveLevel() != null
+                ? request.targetCognitiveLevel()
+                : TargetCognitiveLevel.AUTO;
         QuestionCategory category = null;
         if (request != null && request.categoryId() != null) {
             category = questionCategoryRepository.findById(request.categoryId())
                     .orElseThrow(() -> new BadRequestException("Không tìm thấy danh mục câu hỏi"));
         }
+        ProfessionalField professionalField = null;
+        if (request != null && request.professionalFieldId() != null && professionalFieldRepository != null) {
+            professionalField = professionalFieldRepository.findById(request.professionalFieldId())
+                    .filter(ProfessionalField::isActive)
+                    .orElseThrow(() -> new BadRequestException("Không tìm thấy lĩnh vực chuyên môn đang hoạt động"));
+        }
         String traceId = java.util.UUID.randomUUID().toString().substring(0, 8);
         DocumentQuestionJob job = DocumentQuestionJob.builder()
                 .document(document)
                 .category(category)
+                .professionalField(professionalField)
                 .provider(providerEnum())
                 .model(generationProperties.getModel())
                 .promptVersion(pipelineVersion == GenerationPipelineVersion.GROUNDED_V4
@@ -185,7 +220,7 @@ public class DocumentQuestionJobService {
                         ? groundedV4Prompts.manifestHash()
                         : null)
                 .pipelineVersion(pipelineVersion)
-                .targetDifficulty(targetDifficulty)
+                .targetCognitiveLevel(targetCognitiveLevel)
                 .status(JobStatus.CREATED)
                 .questionsPerChunk(questionsPerChunk)
                 .chunkCount(chunks.size())
@@ -538,10 +573,11 @@ public class DocumentQuestionJobService {
                     chunk.getPageEnd(),
                     job.getCategory() == null ? null : job.getCategory().getName(),
                     job.getCategory() == null ? null : job.getCategory().getDescription(),
-                    job.getTargetDifficulty() == null ? TargetDifficulty.AUTO.name() : job.getTargetDifficulty().name(),
+                    job.getTargetCognitiveLevel() == null ? TargetCognitiveLevel.AUTO.name() : job.getTargetCognitiveLevel().name(),
                     job.getPipelineVersion() == null
                             ? GenerationPipelineVersion.LEGACY_V3.name()
-                            : job.getPipelineVersion().name()
+                            : job.getPipelineVersion().name(),
+                    professionalFieldPromptOptions(job)
             ));
             generatorMs = elapsedMs(generatorStarted);
             // Kiểm tra huỷ LẠI ngay trước khi ghi. Lượt kiểm tra lúc task bắt đầu là chưa đủ:
@@ -766,6 +802,8 @@ public class DocumentQuestionJobService {
                 questions.stream().map(GeneratedQuestion::stem).toList());
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
+            ProfessionalField questionProfessionalField = resolveGeneratedProfessionalField(job, question.professionalFieldCode());
+            CognitiveLevel questionCognitiveLevel = resolveGeneratedCognitiveLevel(job, question.cognitiveLevel());
             String generationKey = job.getPipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
                     ? generationKeyService.groundedCandidateKey(
                             provider,
@@ -777,7 +815,7 @@ public class DocumentQuestionJobService {
                             chunk.getTextHash(),
                             categoryId(job),
                             job.getQuestionsPerChunk(),
-                            job.getTargetDifficulty().name(),
+                            job.getTargetCognitiveLevel().name(),
                             i,
                             attemptNumber
                     )
@@ -822,6 +860,15 @@ public class DocumentQuestionJobService {
             if (duplicate.warning() != null && !duplicate.warning().isBlank()) {
                 warnings.add(duplicate.warning());
             }
+            if (questionProfessionalField == null) {
+                warnings.add("Chưa phân loại được lĩnh vực chuyên môn cho riêng câu hỏi; reviewer cần chọn lại");
+            }
+            if (questionCognitiveLevel == null) {
+                warnings.add("Chưa phân loại được mức độ nhận thức; reviewer cần chọn lại");
+            }
+            if (job.getCategory() == null) {
+                warnings.add("Chưa có danh mục câu hỏi; reviewer cần chọn danh mục trước khi duyệt");
+            }
             CandidateStatus status;
             CandidateLabel label;
             if (validation.rejected() || invalidKnowledgePointLink) {
@@ -831,7 +878,11 @@ public class DocumentQuestionJobService {
                 status = CandidateStatus.REJECTED;
                 label = CandidateLabel.REJECTED;
                 warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có");
-            } else if (validation.needsReview() || duplicate.needsReview()) {
+            } else if (questionProfessionalField == null
+                    || questionCognitiveLevel == null
+                    || job.getCategory() == null
+                    || validation.needsReview()
+                    || duplicate.needsReview()) {
                 status = CandidateStatus.NEED_REVIEW;
                 label = CandidateLabel.NEED_REVIEW;
                 if (duplicate.needsReview()) {
@@ -858,7 +909,9 @@ public class DocumentQuestionJobService {
                     .correctAnswer(normalizeAnswer(question.correctAnswer()))
                     .explanation(question.explanation())
                     .topic(categoryTopic != null ? categoryTopic : question.topic())
-                    .difficulty(question.difficulty())
+                    .category(job.getCategory())
+                    .professionalField(questionProfessionalField)
+                    .cognitiveLevel(questionCognitiveLevel)
                     .sourceExcerpt(question.sourceExcerpt())
                     .knowledgePointKey(question.knowledgePointId())
                     .questionType(question.questionType())
@@ -960,7 +1013,7 @@ public class DocumentQuestionJobService {
             job.setErrorMessage(null);
         } else if (reviewableCandidates > 0) {
             job.setStatus(JobStatus.PARTIALLY_COMPLETED);
-            job.setErrorMessage("Có câu hỏi để duyệt nhưng vẫn còn chunk lỗi hoặc không tạo được đầu ra");
+            job.setErrorMessage(null);
         } else {
             job.setStatus(JobStatus.FAILED);
             job.setErrorMessage("Phiên không tạo được candidate có thể duyệt");
@@ -1048,6 +1101,50 @@ public class DocumentQuestionJobService {
 
     private String blankToFallback(String value, String fallback) {
         return value == null || value.trim().isEmpty() ? fallback : value.trim();
+    }
+
+    private ProfessionalField resolveGeneratedProfessionalField(DocumentQuestionJob job, String code) {
+        String normalizedCode = code == null ? null : code.trim();
+        if (normalizedCode == null || normalizedCode.isBlank()) {
+            // Backward compatibility for callers that explicitly constrained a whole job
+            // to one field before per-question classification was introduced.
+            return job.getProfessionalField();
+        }
+        if (job.getProfessionalField() != null) {
+            return job.getProfessionalField().getCode().equalsIgnoreCase(normalizedCode)
+                    ? job.getProfessionalField()
+                    : null;
+        }
+        if (professionalFieldRepository == null) {
+            return null;
+        }
+        return professionalFieldRepository.findByCode(normalizedCode)
+                .filter(ProfessionalField::isActive)
+                .orElse(null);
+    }
+
+    private CognitiveLevel resolveGeneratedCognitiveLevel(DocumentQuestionJob job, String value) {
+        if (job.getTargetCognitiveLevel() != null
+                && job.getTargetCognitiveLevel() != TargetCognitiveLevel.AUTO) {
+            return CognitiveLevel.valueOf(job.getTargetCognitiveLevel().name());
+        }
+        return parseCognitiveLevel(value);
+    }
+
+    /**
+     * Mức độ nhận thức do AI đề xuất. Giá trị lạ được bỏ qua (null) để người duyệt
+     * tự phân loại, thay vì gán bừa một mức không có bằng chứng.
+     */
+    private CognitiveLevel parseCognitiveLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel
+                    .valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     private int zero(Integer value) {

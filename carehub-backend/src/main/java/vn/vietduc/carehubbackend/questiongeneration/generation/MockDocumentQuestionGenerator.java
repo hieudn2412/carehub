@@ -8,6 +8,8 @@ import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationPropertie
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedKnowledgePoint;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedTaxonomyClassification;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.ProfessionalFieldClassificationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
 
@@ -50,7 +52,10 @@ public class MockDocumentQuestionGenerator implements DocumentQuestionGenerator 
                     "Không cần người duyệt trước khi đưa vào ngân hàng câu hỏi.",
                     "A",
                     "Đáp án A bám trực tiếp vào trích dẫn nguồn của chunk.",
-                    i == 0 ? "easy" : "medium",
+                    input.targetCognitiveLevel() == null || "AUTO".equals(input.targetCognitiveLevel())
+                            ? (i % 3 == 0 ? "FOUNDATION" : i % 3 == 1 ? "CLINICAL_APPLICATION" : "CLINICAL_REASONING_ANALYSIS")
+                            : input.targetCognitiveLevel(),
+                    input.professionalFields().isEmpty() ? null : input.professionalFields().get(0).code(),
                     input.sectionPath(),
                     excerpt,
                     "KP1",
@@ -61,7 +66,10 @@ public class MockDocumentQuestionGenerator implements DocumentQuestionGenerator 
                             "correctAnswerSupported", true,
                             "qualityScore", 0.82,
                             "issues", List.of()
-                    ))
+                    )),
+                    null,
+                    null,
+                    null
             ));
         }
 
@@ -73,6 +81,14 @@ public class MockDocumentQuestionGenerator implements DocumentQuestionGenerator 
                 List.of(knowledgePoint),
                 questions
         );
+    }
+
+    @Override
+    public GeneratedTaxonomyClassification classifyTaxonomy(ProfessionalFieldClassificationInput input) {
+        String fieldCode = input.professionalFields() == null || input.professionalFields().isEmpty()
+                ? null
+                : input.professionalFields().get(0).code();
+        return new GeneratedTaxonomyClassification(fieldCode, "FOUNDATION", "{\"provider\":\"mock\"}");
     }
 
     private String firstSentence(String text) {

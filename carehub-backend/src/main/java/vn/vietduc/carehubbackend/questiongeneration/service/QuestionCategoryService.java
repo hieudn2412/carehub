@@ -37,8 +37,7 @@ public class QuestionCategoryService {
                         || normalize(category.getDescription()).contains(normalizedQuery)
                         || normalize(category.getCode()).contains(normalizedQuery))
                 .sorted(Comparator
-                        .comparing(QuestionCategory::getSortOrder, Comparator.nullsLast(Integer::compareTo))
-                        .thenComparing(QuestionCategory::getName, String.CASE_INSENSITIVE_ORDER))
+                        .comparing(QuestionCategory::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toResponse)
                 .toList();
     }
@@ -60,7 +59,6 @@ public class QuestionCategoryService {
                 .name(name)
                 .description(trimToNull(request.description()))
                 .status(parseStatus(request.status(), QuestionCategoryStatus.ACTIVE))
-                .sortOrder(request.sortOrder() == null ? 0 : request.sortOrder())
                 .createdBy(actor)
                 .build();
         return toResponse(categoryRepository.save(category));
@@ -70,17 +68,15 @@ public class QuestionCategoryService {
     public QuestionCategoryResponse update(Long categoryId, UpsertQuestionCategoryRequest request) {
         String name = required(request.name(), "Tên danh mục không được để trống");
         QuestionCategory category = find(categoryId);
-        String code = codeOrSlug(request.code(), name);
-        categoryRepository.findByCode(code)
-                .filter(existing -> !existing.getId().equals(category.getId()))
-                .ifPresent(existing -> {
-                    throw new BadRequestException("Mã danh mục đã tồn tại");
-                });
-        category.setCode(code);
+        String requestedCode = trimToNull(request.code());
+        if (requestedCode != null
+                && !requestedCode.equalsIgnoreCase(category.getCode())
+                && !codeOrSlug(requestedCode, name).equalsIgnoreCase(category.getCode())) {
+            throw new BadRequestException("Mã danh mục là định danh ổn định và không thể thay đổi");
+        }
         category.setName(name);
         category.setDescription(trimToNull(request.description()));
         category.setStatus(parseStatus(request.status(), category.getStatus()));
-        category.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
         return toResponse(categoryRepository.save(category));
     }
 
@@ -97,8 +93,8 @@ public class QuestionCategoryService {
     }
 
     private QuestionCategoryResponse toResponse(QuestionCategory category) {
-        long questionCount = questionRepository.countByTopicIgnoreCaseAndStatus(
-                category.getName(),
+        long questionCount = questionRepository.countByCategoryIdAndStatus(
+                category.getId(),
                 QuestionBankStatus.APPROVED
         );
         return new QuestionCategoryResponse(
@@ -108,7 +104,6 @@ public class QuestionCategoryService {
                 category.getDescription(),
                 category.getStatus().name(),
                 QuestionGenerationLabels.questionCategoryStatus(category.getStatus()),
-                category.getSortOrder(),
                 questionCount,
                 category.getCreatedAt(),
                 category.getUpdatedAt()

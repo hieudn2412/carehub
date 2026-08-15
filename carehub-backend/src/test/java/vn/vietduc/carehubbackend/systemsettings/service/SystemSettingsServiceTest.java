@@ -35,6 +35,7 @@ class SystemSettingsServiceTest {
                 .scopeKey(SystemSetting.GLOBAL_SCOPE)
                 .globalTrainingHours(new BigDecimal("150"))
                 .trainingWindowYears(7)
+                .competencyTargetScore(new BigDecimal("7.50"))
                 .build();
         when(repository.findByScopeKey(SystemSetting.GLOBAL_SCOPE)).thenReturn(Optional.of(setting));
 
@@ -55,6 +56,7 @@ class SystemSettingsServiceTest {
                 .scopeKey(SystemSetting.GLOBAL_SCOPE)
                 .globalTrainingHours(SystemSetting.DEFAULT_TRAINING_HOURS)
                 .trainingWindowYears(8)
+                .competencyTargetScore(SystemSetting.DEFAULT_COMPETENCY_TARGET_SCORE)
                 .build();
         when(repository.findByScopeKey(SystemSetting.GLOBAL_SCOPE)).thenReturn(Optional.of(setting));
 
@@ -67,16 +69,29 @@ class SystemSettingsServiceTest {
                 .scopeKey(SystemSetting.GLOBAL_SCOPE)
                 .globalTrainingHours(SystemSetting.DEFAULT_TRAINING_HOURS)
                 .trainingWindowYears(SystemSetting.DEFAULT_TRAINING_WINDOW_YEARS)
+                .competencyTargetScore(SystemSetting.DEFAULT_COMPETENCY_TARGET_SCORE)
                 .lockVersion(3L)
                 .build();
         when(repository.findByScopeKey(SystemSetting.GLOBAL_SCOPE)).thenReturn(Optional.of(setting));
         when(repository.saveAndFlush(any(SystemSetting.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        var response = service.update(new SystemSettingsRequest(new BigDecimal("150"), 7, 3L));
+        var response = service.update(new SystemSettingsRequest(
+                new BigDecimal("150"), 7, new BigDecimal("7.50"), 3L));
 
         assertThat(response.globalTrainingHours()).isEqualByComparingTo("150.00");
         assertThat(response.trainingWindowYears()).isEqualTo(7);
+        assertThat(response.competencyTargetScore()).isEqualByComparingTo("7.50");
         assertThat(setting.getTrainingWindowYears()).isEqualTo(7);
+        assertThat(setting.getCompetencyTargetScore()).isEqualByComparingTo("7.50");
         verify(repository).saveAndFlush(setting);
+    }
+
+    @Test
+    void competencyTargetScoreReturnsHospitalDefaultWhenSettingIsMissing() {
+        when(repository.findByScopeKey(SystemSetting.GLOBAL_SCOPE)).thenReturn(Optional.empty());
+
+        assertThat(service.competencyTargetScore())
+                .isEqualByComparingTo(SystemSetting.DEFAULT_COMPETENCY_TARGET_SCORE);
+        verify(repository, never()).saveAndFlush(any(SystemSetting.class));
     }
 }

@@ -18,15 +18,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportCommitRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankImportCommitResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankImportPreviewResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankAvailabilityResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankImportExportService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.List;
 import java.util.Map;
@@ -39,15 +42,29 @@ public class QuestionBankController {
     private final QuestionBankService questionBankService;
     private final QuestionBankImportExportService importExportService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationCutoverService cutover;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<QuestionBankQuestionResponse>>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long professionalFieldId,
+            @RequestParam(required = false) String cognitiveLevel,
+            @RequestParam(required = false) Long sourceDocumentId,
+            @RequestParam(required = false) Boolean verified
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách câu hỏi thành công",
-                questionBankService.list(q, status)
+                questionBankService.list(q, status, categoryId, professionalFieldId, cognitiveLevel, sourceDocumentId, verified)
+        ));
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<ApiResponse<List<QuestionBankAvailabilityResponse>>> availability() {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy độ phủ ngân hàng câu hỏi thành công",
+                questionBankService.availability()
         ));
     }
 
@@ -78,7 +95,7 @@ public class QuestionBankController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename("question-bank.xlsx")
+                        .filename("ngan-hang-cau-hoi.xlsx")
                         .build()
                         .toString())
                 .body(body);
@@ -99,7 +116,7 @@ public class QuestionBankController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                        .filename("question-bank-import-template.xlsx")
+                        .filename("mau-import-ngan-hang-cau-hoi.xlsx")
                         .build()
                         .toString())
                 .body(body);
@@ -111,6 +128,7 @@ public class QuestionBankController {
             @RequestParam(value = "columnMapping", required = false) String columnMapping,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         return ResponseEntity.ok(ApiResponse.success(
                 "Preview import ngân hàng câu hỏi thành công",
                 importExportService.preview(file, actor(authentication), columnMapping)
@@ -123,6 +141,7 @@ public class QuestionBankController {
             @RequestBody QuestionBankImportCommitRequest request,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankImportCommitResponse response = importExportService.commit(request, actor(authentication));
         auditLogService.record(
                 "QUESTION_IMPORT_COMMIT",
@@ -149,6 +168,7 @@ public class QuestionBankController {
             @Valid @RequestBody UpsertQuestionBankQuestionRequest request,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankQuestionResponse response = questionBankService.create(request, actor(authentication));
         auditLogService.record(
                 "QUESTION_CREATE",
@@ -156,7 +176,7 @@ public class QuestionBankController {
                 response.id(),
                 actor(authentication),
                 "Tạo câu hỏi #" + response.id(),
-                Map.of("status", response.status(), "topic", String.valueOf(response.topic()), "difficulty", String.valueOf(response.difficulty()))
+                Map.of("status", response.status(), "category", String.valueOf(response.categoryName()), "cognitiveLevel", String.valueOf(response.cognitiveLevel()))
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Tạo câu hỏi thành công",
@@ -171,6 +191,7 @@ public class QuestionBankController {
             @Valid @RequestBody UpsertQuestionBankQuestionRequest request,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankQuestionResponse response = questionBankService.update(questionId, request, actor(authentication));
         auditLogService.record(
                 "QUESTION_UPDATE",
@@ -178,7 +199,7 @@ public class QuestionBankController {
                 questionId,
                 actor(authentication),
                 "Cập nhật câu hỏi #" + questionId,
-                Map.of("status", response.status(), "topic", String.valueOf(response.topic()), "difficulty", String.valueOf(response.difficulty()))
+                Map.of("status", response.status(), "category", String.valueOf(response.categoryName()), "cognitiveLevel", String.valueOf(response.cognitiveLevel()))
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Cập nhật câu hỏi thành công",
@@ -192,6 +213,7 @@ public class QuestionBankController {
             @PathVariable Long questionId,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankQuestionResponse response = questionBankService.approve(questionId, actor(authentication));
         auditLogService.record(
                 "QUESTION_APPROVE",
@@ -213,6 +235,7 @@ public class QuestionBankController {
             @PathVariable Long questionId,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankQuestionResponse response = questionBankService.deactivate(questionId);
         auditLogService.record(
                 "QUESTION_DEACTIVATE",
@@ -234,6 +257,7 @@ public class QuestionBankController {
             @PathVariable Long questionId,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         QuestionBankQuestionResponse response = questionBankService.archive(questionId);
         auditLogService.record(
                 "QUESTION_ARCHIVE",

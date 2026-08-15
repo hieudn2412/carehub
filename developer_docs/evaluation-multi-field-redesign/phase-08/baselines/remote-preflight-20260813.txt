@@ -1,0 +1,35 @@
+Phase 08 remote preflight evidence (read-only, PostgreSQL carehub, 2026-08-13)
+
+flyway_last|13|exam attempt result aggregates|true
+questions|270
+questions_approved|270
+questions_without_field|0
+questions_without_category|0
+questions_without_verified_cognitive|270
+question_categories|11
+professional_fields|28
+question_sets|0
+question_set_items|0
+question_set_versions|0
+exam_configs|0
+exam_papers|0
+exam_assignments|0
+exam_attempts|0
+
+Category approved counts:
+BAI_1|30
+BAI_2|30
+BAI_3|30
+BAI_4|30
+BAI_5|30
+BAI_6|30
+BAI_7|30
+BAI_8|30
+BAI_9|30
+BAI_10|0
+BAI_11|0
+
+Interpretation: field/category integrity passes; cognitive review is the only
+intentional production blocker. No reset, seed or destructive contract migration
+was run. Question-set code consumers still exist, so the legacy schema remains
+read-only/guarded until a separate contract preflight proves safe to drop it.

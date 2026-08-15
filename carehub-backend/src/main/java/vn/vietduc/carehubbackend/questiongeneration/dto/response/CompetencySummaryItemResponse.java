@@ -7,6 +7,8 @@ public record CompetencySummaryItemResponse(
         String employeeCode,
         String employeeName,
         String departmentName,
+        BigDecimal examScore,
+        Integer examAttemptCount,
         BigDecimal knowledgeAverage,
         BigDecimal skillAverage,
         BigDecimal overallScore,

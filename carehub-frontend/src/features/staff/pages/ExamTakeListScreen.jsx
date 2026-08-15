@@ -6,7 +6,6 @@ import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 
 export default function ExamTakeListScreen() {
   const navigate = useNavigate()
@@ -14,7 +13,6 @@ export default function ExamTakeListScreen() {
   const { showToast } = useToast()
   const [assignments, setAssignments] = useState([])
   const [search, setSearch] = useState('')
-  const [fieldId, setFieldId] = useState('')
   // Mặc định KHÔNG lọc theo ngày: điều kiện lọc là dueAt <= toDate, nếu mặc định
   // toDate = hôm nay thì mọi bài còn hạn (dueAt trong tương lai) đều bị ẩn.
   const [fromDate, setFromDate] = useState('')
@@ -33,14 +31,12 @@ export default function ExamTakeListScreen() {
     return () => window.clearTimeout(timer)
   }, [showToast])
 
-  const fields = useMemo(() => Array.from(new Map(assignments.filter(item => item.professionalFieldId).map(item => [String(item.professionalFieldId), item.professionalFieldName])).entries()), [assignments])
   const filtered = useMemo(() => assignments.filter(item => {
     const dueDate = item.dueAt?.slice(0, 10)
     const matchesDate = (!fromDate || !dueDate || dueDate >= fromDate) && (!toDate || !dueDate || dueDate <= toDate)
     return matchesDate
-      && (!fieldId || String(item.professionalFieldId) === fieldId)
       && (!search.trim() || (item.name || '').toLowerCase().includes(search.trim().toLowerCase()))
-  }), [assignments, fieldId, fromDate, search, toDate])
+  }), [assignments, fromDate, search, toDate])
 
   const stats = useMemo(() => ({
     total: filtered.length,
@@ -48,7 +44,7 @@ export default function ExamTakeListScreen() {
     failed: filtered.filter(item => item.assessmentStatus === 'FAILED').length,
     notTaken: filtered.filter(item => item.assessmentStatus === 'NOT_TAKEN').length,
   }), [filtered])
-  const activeFilterCount = Number(Boolean(fieldId)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))
+  const activeFilterCount = Number(Boolean(fromDate)) + Number(Boolean(toDate))
 
   const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`, {
     state: { from: `${location.pathname}${location.search}` },
@@ -129,20 +125,6 @@ export default function ExamTakeListScreen() {
         </div>
         {isFilterOpen && (
           <div id="staff-exam-filter-panel" className="eh-filter-panel admin-control-toolbar__panel">
-            <label className="admin-control-toolbar__field eh-field-filter">
-              <span>Lĩnh vực chuyên môn</span>
-              <SearchableSelect
-                value={fieldId}
-                onChange={setFieldId}
-                options={[
-                  { value: '', label: 'Tất cả lĩnh vực' },
-                  ...fields.map(([id, name]) => ({ value: id, label: name })),
-                ]}
-                placeholder="Tất cả lĩnh vực"
-                searchPlaceholder="Tìm tên lĩnh vực..."
-                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-              />
-            </label>
             <label className="admin-control-toolbar__field">
               <span>Từ ngày</span>
               <input type="date" value={fromDate} max={toDate || undefined} onChange={event => setFromDate(event.target.value)} />

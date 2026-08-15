@@ -21,6 +21,7 @@ import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -43,6 +44,7 @@ class CompetencyServiceTest {
     private UserRepository userRepository;
     private DepartmentRepository departmentRepository;
     private CompetencyClassificationService classificationService;
+    private SystemSettingsService systemSettingsService;
     private CompetencyService service;
     private Department department;
 
@@ -55,6 +57,7 @@ class CompetencyServiceTest {
         departmentRepository = mock(DepartmentRepository.class);
         QuestionCategoryRepository categoryRepository = mock(QuestionCategoryRepository.class);
         classificationService = mock(CompetencyClassificationService.class);
+        systemSettingsService = mock(SystemSettingsService.class);
         service = new CompetencyService(
                 attemptRepository,
                 submissionRepository,
@@ -62,8 +65,10 @@ class CompetencyServiceTest {
                 userRepository,
                 departmentRepository,
                 categoryRepository,
-                classificationService
+                classificationService,
+                systemSettingsService
         );
+        when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("6.00"));
         ReflectionTestUtils.setField(service, "defaultComplianceTarget", 80.0d);
 
         department = Department.builder().id(10L).name("Khoa Nội").build();
@@ -103,7 +108,7 @@ class CompetencyServiceTest {
 
         assertThat(response.departmentId()).isNull();
         assertThat(response.departmentName()).isEqualTo("Toàn viện");
-        assertThat(response.targetScore()).isNull();
+        assertThat(response.targetScore()).isEqualByComparingTo("6.00");
         assertThat(response.items())
                 .extracting("employeeName", "departmentName")
                 .containsExactly(
@@ -164,8 +169,9 @@ class CompetencyServiceTest {
     }
 
     @Test
-    void summaryTreatsScoreEqualToDepartmentTargetAsPassed() {
-        department.setCompetencyTargetScore(new BigDecimal("7.00"));
+    void summaryUsesHospitalTargetInsteadOfDepartmentTarget() {
+        department.setCompetencyTargetScore(new BigDecimal("9.00"));
+        when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("7.00"));
         User employee = User.builder()
                 .id(20L)
                 .employeeCode("NV020")
@@ -197,13 +203,15 @@ class CompetencyServiceTest {
         );
 
         assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.examScore()).isEqualByComparingTo("7.00");
+            assertThat(item.examAttemptCount()).isEqualTo(1);
             assertThat(item.overallScore()).isEqualByComparingTo("7.00");
             assertThat(item.isPassed()).isTrue();
         });
     }
 
     @Test
-    void summaryUsesDefaultTargetSixWhenDepartmentHasNoStoredTarget() {
+    void summaryUsesHospitalTargetWhenDepartmentHasNoStoredTarget() {
         department.setCompetencyTargetScore(null);
         when(userRepository.findCompetencySummaryCandidates(eq(10L), isNull(), any()))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));

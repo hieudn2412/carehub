@@ -1,0 +1,101 @@
+Pager usage is off.
+Output format is unaligned.
+Field separator is "|".
+BEGIN
+SET
+SET
+[METRICS]
+categories_orphan_field|0
+categories_without_field|0
+database|carehub
+database_user|postgres
+departments|70
+exam_assignments|0
+exam_attempts|0
+exam_config_distributions|0
+exam_configs|0
+exam_papers|0
+has_employment_start_date|false
+has_flyway_history|false
+has_liquibase_history|false
+professional_fields|28
+question_categories|11
+questions|270
+questions_approved|270
+question_set_items|0
+question_sets|0
+question_set_versions|0
+questions_medium|270
+questions_orphan_category|0
+questions_without_category|0
+server_version|17.10 (Debian 17.10-1.pgdg13+1)
+training_group_members|0
+training_groups|0
+users|2613
+users_active_not_deleted|12
+users_deleted|1
+users_inactive_not_deleted|2600
+[CATEGORY_COUNTS]
+BAI_1|BÀI 1: TỔNG QUAN ĐIỀU DƯỠNG TRONG CHĂM SÓC BỆNH CẤP TÍNH|CC-12|30
+BAI_10|BÀI 10. CHĂM SÓC NGƯỜI BỆNH VIÊM TỤY CẤP|NK-14|0
+BAI_11|BÀI 11. CHĂM SÓC NGƯỜI BỆNH NHỒI MÁU CƠ TIM|NK-14|0
+BAI_2|BÀI 2. CHĂM SÓC NGƯỜI BỆNH CHẤN THƯƠNG|CC-12|30
+BAI_3|BÀI 3. QUẢN LÝ VẾT THƯƠNG VÀ KIỂM SOÁT ĐAU SAU PHẪU THUẬT|VT-11|30
+BAI_4|BÀI 4. TỔNG QUAN VỀ CHĂM SÓC NGƯỜI BỆNH PHẪU THUẬT|XK-15|30
+BAI_5|BÀI 5. CHĂM SÓC VÀ XỬ TRÍ SỐC PHẢN VỆ|CC-12|30
+BAI_6|BÀI 6. CHĂM SÓC NGƯỜI BỆNH GÃY XƯƠNG|XK-15|30
+BAI_7|BÀI 7. CHĂM SÓC NGƯỜI BỆNH TẮC RUỘT CẤP|XK-15|30
+BAI_8|BÀI 8. CHĂM SÓC NGƯỜI BỆNH VIÊM RUỘT THỪA|XK-15|30
+BAI_9|BÀI 9. CHĂM SÓC NGƯỜI BỆNH XUẤT HUYẾT TIÊU HÓA|NK-14|30
+[RELEVANT_COLUMNS]
+exam_assignments|professional_field_id|bigint|YES
+exam_configs|question_set_id|bigint|YES
+exam_papers|professional_field_id|bigint|NO
+exam_papers|question_set_id|bigint|NO
+question_categories|professional_field_id|bigint|NO
+questions|category_id|bigint|NO
+questions|difficulty|character varying|YES
+questions|source_document|character varying|YES
+questions|topic|character varying|YES
+[RELEVANT_FOREIGN_KEYS]
+exam_assignments|exam_paper_id|exam_papers|id|NO ACTION
+exam_assignments|professional_field_id|professional_fields|id|NO ACTION
+exam_attempts|assignment_id|exam_assignments|id|NO ACTION
+exam_attempts|exam_paper_id|exam_papers|id|NO ACTION
+exam_attempts|user_id|users|id|NO ACTION
+exam_config_distributions|category_id|question_categories|id|NO ACTION
+exam_config_distributions|exam_config_id|exam_configs|id|NO ACTION
+exam_configs|question_set_id|question_sets|id|NO ACTION
+exam_paper_questions|exam_paper_id|exam_papers|id|NO ACTION
+exam_paper_questions|question_id|questions|id|NO ACTION
+exam_papers|exam_config_id|exam_configs|id|NO ACTION
+exam_papers|professional_field_id|professional_fields|id|NO ACTION
+exam_papers|professional_field_id|professional_fields|id|NO ACTION
+exam_papers|question_set_id|question_sets|id|NO ACTION
+question_categories|professional_field_id|professional_fields|id|NO ACTION
+question_categories|professional_field_id|professional_fields|id|NO ACTION
+question_set_items|question_id|questions|id|NO ACTION
+question_set_items|question_set_id|question_sets|id|NO ACTION
+question_set_versions|question_set_id|question_sets|id|NO ACTION
+question_sets|professional_field_id|professional_fields|id|NO ACTION
+question_sets|professional_field_id|professional_fields|id|NO ACTION
+question_sets|question_set_category_id|question_set_categories|id|NO ACTION
+question_sets|question_set_category_id|question_set_categories|id|NO ACTION
+questions|category_id|question_categories|id|NO ACTION
+questions|category_id|question_categories|id|NO ACTION
+questions|parent_question_id|questions|id|NO ACTION
+[RELEVANT_INDEXES]
+exam_configs|exam_configs_pkey|CREATE UNIQUE INDEX exam_configs_pkey ON public.exam_configs USING btree (id)
+exam_papers|exam_papers_pkey|CREATE UNIQUE INDEX exam_papers_pkey ON public.exam_papers USING btree (id)
+exam_papers|ix_exam_papers_professional_field|CREATE INDEX ix_exam_papers_professional_field ON public.exam_papers USING btree (professional_field_id, status)
+exam_papers|uq_exam_papers_code|CREATE UNIQUE INDEX uq_exam_papers_code ON public.exam_papers USING btree (code)
+question_categories|ix_question_categories_professional_field|CREATE INDEX ix_question_categories_professional_field ON public.question_categories USING btree (professional_field_id, status)
+question_categories|question_categories_pkey|CREATE UNIQUE INDEX question_categories_pkey ON public.question_categories USING btree (id)
+question_categories|uq_question_categories_code|CREATE UNIQUE INDEX uq_question_categories_code ON public.question_categories USING btree (code)
+question_sets|ix_question_sets_category|CREATE INDEX ix_question_sets_category ON public.question_sets USING btree (question_set_category_id, status)
+question_sets|ix_question_sets_professional_field|CREATE INDEX ix_question_sets_professional_field ON public.question_sets USING btree (professional_field_id, status)
+question_sets|question_sets_pkey|CREATE UNIQUE INDEX question_sets_pkey ON public.question_sets USING btree (id)
+question_sets|uq_question_sets_code|CREATE UNIQUE INDEX uq_question_sets_code ON public.question_sets USING btree (code)
+questions|ix_questions_category_status|CREATE INDEX ix_questions_category_status ON public.questions USING btree (category_id, status)
+questions|questions_pkey|CREATE UNIQUE INDEX questions_pkey ON public.questions USING btree (id)
+COMMIT

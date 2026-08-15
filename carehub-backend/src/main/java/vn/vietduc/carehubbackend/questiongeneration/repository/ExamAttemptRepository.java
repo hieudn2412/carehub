@@ -23,7 +23,7 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
     List<ExamAttempt> findByStatusOrderByStartedAtDesc(ExamAttemptStatus status);
     @EntityGraph(attributePaths = {
             "assignment",
-            "assignment.professionalField",
+            "assignment.generationBatch",
             "examPaper",
             "user",
             "user.department"
@@ -42,9 +42,9 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
 
     @Query("""
             SELECT a FROM ExamAttempt a
-            JOIN FETCH a.examPaper ep
-            JOIN FETCH ep.examConfig ec
-            JOIN FETCH ec.questionSet qs
+            LEFT JOIN FETCH a.examPaper ep
+            LEFT JOIN FETCH ep.examConfig ec
+            LEFT JOIN FETCH ec.questionSet qs
             WHERE a.user = :user
               AND a.status IN ('SUBMITTED', 'GRADED')
               AND a.submittedAt >= :fromDate
@@ -60,9 +60,9 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             SELECT a FROM ExamAttempt a
             JOIN FETCH a.user u
             LEFT JOIN FETCH u.department
-            JOIN FETCH a.examPaper ep
-            JOIN FETCH ep.examConfig ec
-            JOIN FETCH ec.questionSet qs
+            LEFT JOIN FETCH a.examPaper ep
+            LEFT JOIN FETCH ep.examConfig ec
+            LEFT JOIN FETCH ec.questionSet qs
             WHERE a.user.id IN :userIds
               AND a.status IN ('SUBMITTED', 'GRADED')
               AND a.submittedAt >= :fromDate

@@ -15,6 +15,7 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -68,10 +69,43 @@ public class QuestionSetVersionItem extends BaseEntity {
     @Column(columnDefinition = "text")
     private String explanation;
 
-    @Column(length = 32)
-    private String difficulty;
-
     private String topic;
+
+    @Column(name = "category_id")
+    private Long categoryId;
+
+    @Column(name = "category_code")
+    private String categoryCode;
+
+    @Column(name = "category_name")
+    private String categoryName;
+
+    @Column(name = "professional_field_id")
+    private Long professionalFieldId;
+
+    @Column(name = "professional_field_code")
+    private String professionalFieldCode;
+
+    @Column(name = "professional_field_name")
+    private String professionalFieldName;
+
+    @Column(name = "cognitive_level", length = 48)
+    private String cognitiveLevel;
+
+    @Column(name = "cognitive_verified_at")
+    private LocalDateTime cognitiveVerifiedAt;
+
+    @Column(name = "cognitive_verified_by", length = 100)
+    private String cognitiveVerifiedBy;
+
+    @Column(name = "source_document_id")
+    private Long sourceDocumentId;
+
+    @Column(name = "source_document_filename")
+    private String sourceDocumentFilename;
+
+    @Column(name = "source_document_content_hash", length = 64)
+    private String sourceDocumentContentHash;
 
     @Column(name = "source_document")
     private String sourceDocument;

@@ -55,7 +55,8 @@ function getVersionNumber(checklist) {
 function ManagerChecklistListPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const evaluationBasePath = location.pathname.startsWith('/staff/')
+  const isStaffView = location.pathname.startsWith('/staff/')
+  const evaluationBasePath = isStaffView
     ? '/staff/checklists'
     : '/manager/quality/checklists'
   const [search, setSearch] = useState('')
@@ -149,7 +150,7 @@ function ManagerChecklistListPage() {
   }, [checklists, search])
 
   return (
-    <AppShell title="Quy trình chất lượng">
+    <AppShell title={isStaffView ? 'Thực hiện đánh giá được giao' : 'Quy trình chất lượng'}>
       <div className="mgr-toolbar mgr-toolbar--standard">
         <div className="mgr-search-box">
           <input

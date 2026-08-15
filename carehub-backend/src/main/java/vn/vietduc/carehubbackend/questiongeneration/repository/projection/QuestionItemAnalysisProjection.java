@@ -4,7 +4,7 @@ public interface QuestionItemAnalysisProjection {
     Long getQuestionId();
     String getStem();
     String getTopic();
-    String getDifficulty();
+    vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel getCognitiveLevel();
     Long getAttemptCount();
     Long getCorrectCount();
 }

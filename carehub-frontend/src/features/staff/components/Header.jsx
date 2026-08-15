@@ -51,7 +51,7 @@ function getFallbackLink(label, roles = []) {
     return '/admin/evaluation/classification-rules'
   }
   if (lbl.includes('bộ câu hỏi')) {
-    return '/admin/evaluation/question-sets'
+    return '/admin/evaluation/question-bank'
   }
   if (lbl.includes('danh mục câu hỏi')) {
     return '/admin/evaluation/categories'

@@ -910,11 +910,11 @@
 
 @media (max-width: 768px) {
   .training-page--overview {
-    gap: 10px;
+    gap: 7px;
   }
 
   .training-page--overview .th-overview-card--chart .th-overview-card__header {
-    padding-top: 14px;
+    padding: 10px 12px 0;
   }
 
   .training-page--overview .th-overview-card--chart .th-overview-card__description {
@@ -922,12 +922,12 @@
   }
 
   .training-page--overview .th-overview-chart-canvas {
-    height: 240px;
-    padding-inline: 6px;
+    height: 202px;
+    padding-inline: 4px;
   }
 
   .training-page--overview .th-overview-card__state--chart {
-    min-height: 156px;
+    min-height: 124px;
   }
 
   .training-page--overview .th-overview-search,
@@ -938,6 +938,7 @@
   .training-page--overview .th-overview-filter-btn,
   .training-page--overview .th-overview-toolbar .th-btn-primary {
     flex: 1 1 180px;
+    min-height: 38px;
     justify-content: center;
   }
 
@@ -952,7 +953,7 @@
 
   .th-overview-latest-mobile-link {
     display: inline-flex;
-    min-height: 38px;
+    min-height: 32px;
     padding: 0;
     font-size: 12px;
   }
@@ -963,9 +964,9 @@
 
   .th-overview-latest-card {
     display: grid;
-    gap: 14px;
-    margin: 10px 12px 14px;
-    padding: 14px;
+    gap: 8px;
+    margin: 6px 8px 8px;
+    padding: 10px;
     border: 1px solid #e3ece9;
     border-radius: 12px;
     background: #fbfdfc;
@@ -973,19 +974,19 @@
 
   .th-overview-latest-card dl {
     display: grid;
-    gap: 11px;
+    gap: 7px;
     margin: 0;
   }
 
   .th-overview-latest-card dl > div {
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .th-overview-latest-card dt {
     color: #64748b;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 650;
   }
 
@@ -994,13 +995,13 @@
     margin: 0;
     overflow-wrap: anywhere;
     color: #26332f;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 650;
   }
 
   .th-overview-latest-card__view {
     width: 100%;
-    min-height: 42px;
+    min-height: 34px;
     justify-content: center;
   }
 }
@@ -1029,11 +1030,11 @@
 
 @media (max-width: 560px) {
   .training-page--overview {
-    gap: 8px;
+    gap: 6px;
   }
 
   .training-page--overview .th-compliance-banner {
-    padding: 18px;
+    padding: 12px;
   }
 
   .training-page--overview .th-compliance-banner__left,
@@ -1043,8 +1044,8 @@
 
   .th-overview-progress {
     min-height: 0;
-    padding: 22px 18px;
-    gap: 18px;
+    padding: 12px;
+    gap: 10px;
   }
 
   .th-overview-progress .th-compliance-banner__right {
@@ -1052,22 +1053,32 @@
   }
 
   .th-overview-progress .th-page-title {
-    font-size: 21px;
+    font-size: 18px;
+  }
+
+  .th-overview-progress .th-page-subtitle {
+    margin-top: 3px;
+    font-size: 11px;
   }
 
   .th-overview-progress .th-compliance-ring,
   .th-overview-progress .th-ring-svg {
-    width: 60px;
-    height: 60px;
+    width: 52px;
+    height: 52px;
   }
 
   .th-overview-progress .th-compliance-total {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .th-overview-progress .th-compliance-status {
-    min-height: 26px;
-    padding-inline: 9px;
+    min-height: 22px;
+    padding-inline: 7px;
+    font-size: 10px;
+  }
+
+  .th-overview-progress .th-compliance-label {
+    font-size: 11px;
   }
 
   .th-overview-year-select {
@@ -1075,18 +1086,18 @@
   }
 
   .th-overview-card__header {
-    padding: 18px 16px 0;
+    padding: 11px 12px 0;
   }
 
   .th-overview-card__state {
-    min-height: 140px;
-    padding: 20px 16px;
+    min-height: 112px;
+    padding: 14px 12px;
   }
 
   .th-overview-toolbar {
     align-items: stretch;
     flex-direction: column;
-    gap: 10px;
+    gap: 7px;
   }
 
   .th-overview-toolbar .th-btn-primary,
@@ -1094,7 +1105,7 @@
   .th-overview-toolbar .th-overview-link {
     justify-content: center;
     width: 100%;
-    min-height: 44px;
+    min-height: 38px;
   }
 
   .th-overview-toolbar .th-overview-link {
@@ -1123,16 +1134,16 @@
   }
 
   .th-overview-card__state--chart {
-    min-height: 170px;
+    min-height: 124px;
   }
 
   .th-overview-card__state--latest {
-    min-height: 120px;
+    min-height: 96px;
   }
 
   .th-overview-chart-canvas {
-    height: 240px;
-    padding-inline: 8px;
+    height: 202px;
+    padding-inline: 4px;
   }
 
   .th-overview-latest-table {
@@ -1146,7 +1157,7 @@
 
   .th-overview-latest-mobile-link {
     display: inline-flex;
-    min-height: 38px;
+    min-height: 32px;
     padding: 0;
     font-size: 12px;
   }
@@ -1157,9 +1168,9 @@
 
   .th-overview-latest-card {
     display: grid;
-    gap: 14px;
-    margin: 10px 12px 14px;
-    padding: 14px;
+    gap: 8px;
+    margin: 6px 8px 8px;
+    padding: 10px;
     border: 1px solid #e3ece9;
     border-radius: 12px;
     background: #fbfdfc;
@@ -1167,19 +1178,19 @@
 
   .th-overview-latest-card dl {
     display: grid;
-    gap: 11px;
+    gap: 7px;
     margin: 0;
   }
 
   .th-overview-latest-card dl > div {
     display: grid;
-    grid-template-columns: 84px minmax(0, 1fr);
-    gap: 10px;
+    grid-template-columns: 74px minmax(0, 1fr);
+    gap: 8px;
   }
 
   .th-overview-latest-card dt {
     color: #64748b;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 650;
   }
 
@@ -1188,13 +1199,13 @@
     margin: 0;
     overflow-wrap: anywhere;
     color: #26332f;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 650;
   }
 
   .th-overview-latest-card__view {
     width: 100%;
-    min-height: 42px;
+    min-height: 34px;
     justify-content: center;
   }
 }

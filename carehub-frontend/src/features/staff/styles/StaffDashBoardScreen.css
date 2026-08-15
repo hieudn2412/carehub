@@ -77,6 +77,7 @@
   font-size: 13px;
   flex-shrink: 0;
   z-index: 120;
+  overflow: hidden;
 }
 
 .sidebar__backdrop {
@@ -118,6 +119,7 @@
   flex: 1;
   padding: 16px 12px;
   overflow-y: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -229,6 +231,13 @@
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s;
+}
+
+.sidebar__item > span:last-child {
+  flex: 1;
+  min-width: 0;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .sidebar__item:hover {
@@ -754,10 +763,85 @@
   .notify-popover {
     position: fixed;
     top: 68px;
-    right: 12px;
-    left: 12px;
-    width: auto;
-    max-height: calc(100vh - 84px);
+    right: -60px;
+    left: auto;
+    width: min(330px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: calc(100dvh - 78px);
+    margin-top: 0;
+    border-radius: 11px;
+  }
+
+  .notify-popover__header {
+    gap: 8px;
+    padding: 11px 12px;
+  }
+
+  .notify-popover__title-area {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .notify-popover__title {
+    font-size: 15px;
+  }
+
+  .notify-popover__subtitle {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notify-popover__mark-read {
+    min-height: 28px;
+    padding-inline: 8px;
+    font-size: 10px;
+  }
+
+  .notify-popover__body {
+    max-height: calc(100dvh - 142px);
+    padding-block: 3px;
+  }
+
+  .notify-item {
+    gap: 8px;
+    padding: 9px 12px;
+  }
+
+  .notify-item--unread::before {
+    top: 12px;
+    right: 9px;
+    width: 5px;
+    height: 5px;
+  }
+
+  .notify-item__icon-wrapper {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .notify-item__content {
+    gap: 2px;
+    padding-right: 7px;
+  }
+
+  .notify-item__desc {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .notify-item__footer {
+    margin-top: 1px;
+    overflow: hidden;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -773,6 +857,12 @@
 
   .dashboard-header__breadcrumbs {
     max-width: 30vw;
+  }
+
+  .notify-popover {
+    right: -58px;
+    width: min(320px, calc(100vw - 12px));
+    max-width: calc(100vw - 12px);
   }
 }
 

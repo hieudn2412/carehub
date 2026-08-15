@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
@@ -50,10 +51,9 @@ public class QuestionSet extends BaseEntity {
     @Column(columnDefinition = "text")
     private String description;
 
-    private String category;
-
-    @Column(length = 32)
-    private String difficulty;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cognitive_level", length = 48)
+    private CognitiveLevel cognitiveLevel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)

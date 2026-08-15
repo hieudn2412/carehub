@@ -4,7 +4,7 @@ public record EvaluationQuestionItemAnalysisResponse(
         Long questionId,
         String stem,
         String topic,
-        String difficulty,
+        String cognitiveLevel,
         Long attemptCount,
         Long correctCount,
         Long wrongCount,

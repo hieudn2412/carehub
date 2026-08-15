@@ -10,5 +10,7 @@ import java.util.Optional;
 public interface QuestionCategoryRepository extends JpaRepository<QuestionCategory, Long> {
     Optional<QuestionCategory> findByCode(String code);
 
-    List<QuestionCategory> findByStatusOrderBySortOrderAscNameAsc(QuestionCategoryStatus status);
+    Optional<QuestionCategory> findByCodeIgnoreCase(String code);
+
+    List<QuestionCategory> findByStatusOrderByNameAsc(QuestionCategoryStatus status);
 }

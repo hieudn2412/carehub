@@ -11,8 +11,6 @@ public record QuestionBankQuestionResponse(
         String optionD,
         String correctAnswer,
         String explanation,
-        String topic,
-        String difficulty,
         String language,
         String sourceDocument,
         String questionType,
@@ -22,6 +20,18 @@ public record QuestionBankQuestionResponse(
         QuestionDuplicateWarningResponse duplicateWarning,
         QuestionImpactWarningResponse impactWarning,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Long categoryId,
+        String categoryCode,
+        String categoryName,
+        Long professionalFieldId,
+        String professionalFieldCode,
+        String professionalFieldName,
+        String cognitiveLevel,
+        LocalDateTime cognitiveVerifiedAt,
+        String cognitiveVerifiedBy,
+        Long sourceDocumentId,
+        String sourceDocumentFilename,
+        String sourceDocumentContentHash
 ) {
 }

@@ -118,9 +118,9 @@ class EvaluationImportHistoryServiceTest {
         byte[] body = service.exportErrorFile(job.getId());
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(body))) {
-            assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo("importJobId");
+            assertThat(workbook.getSheetAt(0).getRow(0).getCell(0).getStringCellValue()).isEqualTo("Mã import");
             assertThat(workbook.getSheetAt(0).getRow(1).getCell(2).getStringCellValue()).isEqualTo("Câu hỏi lỗi");
-            assertThat(workbook.getSheetAt(0).getRow(1).getCell(5).getStringCellValue()).isEqualTo("Thiếu đáp án");
+            assertThat(workbook.getSheetAt(0).getRow(1).getCell(8).getStringCellValue()).isEqualTo("Thiếu đáp án");
         }
     }
 
@@ -135,7 +135,6 @@ class EvaluationImportHistoryServiceTest {
                 "A",
                 "Giải thích",
                 "Chủ đề",
-                "MEDIUM",
                 "vi",
                 "Nguồn",
                 "APPROVED",

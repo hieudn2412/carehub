@@ -43,11 +43,6 @@ export const competencyApi = {
     return httpClient.get('/competency/summary', { headers: authHeaders(), params })
   },
 
-  updateDepartmentTarget(departmentId, targetScore) {
-    return httpClient.put(`/competency/departments/${departmentId}/target`, { targetScore }, {
-      headers: authHeaders(),
-    })
-  },
 }
 
 export const examAssignmentApi = {
@@ -66,6 +61,19 @@ export const examAssignmentApi = {
 
   getAssignmentResults(assignmentId) {
     return httpClient.get(`/exam-assignments/${assignmentId}/results`, {
+      headers: authHeaders(),
+    })
+  },
+
+  getResultReport(assignmentId) {
+    return httpClient.get('/evaluation-results', {
+      headers: authHeaders(),
+      params: { assignmentId },
+    })
+  },
+
+  getAttemptResultBreakdown(attemptId) {
+    return httpClient.get(`/evaluation-results/attempts/${attemptId}`, {
       headers: authHeaders(),
     })
   },

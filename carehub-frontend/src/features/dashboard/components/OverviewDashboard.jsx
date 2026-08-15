@@ -145,6 +145,7 @@ function DomainCard({ type, data, onOpen }) {
 }
 
 function formatScore(value) {
+  if (value == null || value === '') return '—'
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
 }
@@ -171,7 +172,9 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
     : type === 'training'
     ? '≥ 120h'
     : type === 'exams'
-      ? `Điểm sàn ${formatScore(data?.targetScore)}/10`
+      ? data?.targetScore == null
+        ? 'Điểm sàn theo từng khoa'
+        : `Điểm sàn ≥ ${formatScore(data.targetScore)}/10`
       : `${formatNumber(passed)}/${formatNumber(total)}`
   const detail = type === 'training'
     ? 'Mục tiêu 5 năm'

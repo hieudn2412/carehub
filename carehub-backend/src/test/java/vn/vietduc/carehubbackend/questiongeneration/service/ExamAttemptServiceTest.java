@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveExamAttemptAnswersRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.RegradeExamAttemptRequest;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
@@ -46,6 +47,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +63,7 @@ class ExamAttemptServiceTest {
     private final UserRepository userRepository = mock(UserRepository.class);
     private final CompetencyClassificationService classificationService = mock(CompetencyClassificationService.class);
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+    private final ExamAttemptResultAggregationService resultAggregationService = mock(ExamAttemptResultAggregationService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneOffset.UTC);
     private final ZoneId examBusinessZone = ZoneId.of("Asia/Ho_Chi_Minh");
     private final AtomicLong ids = new AtomicLong(500);
@@ -87,6 +90,7 @@ class ExamAttemptServiceTest {
                 userRepository,
                 classificationService,
                 eventPublisher,
+                resultAggregationService,
                 clock,
                 examBusinessZone
         );
@@ -172,6 +176,13 @@ class ExamAttemptServiceTest {
                             || checked.getStatus() == ExamAssignmentStatus.ARCHIVED
                             || checked.getDueAt() != null && !now.isBefore(checked.getDueAt());
                 });
+        when(assignmentService.paperForAttempt(any(ExamAssignment.class), any(ExamAssignmentTarget.class), anyInt()))
+                .thenAnswer(invocation -> {
+                    ExamAssignmentTarget target = invocation.getArgument(1);
+                    return target.getAssignedExamPaper() == null
+                            ? invocation.<ExamAssignment>getArgument(0).getExamPaper()
+                            : target.getAssignedExamPaper();
+                });
         // Lượt đang xét đã tồn tại trong DB: mọi truy vấn đếm/liệt kê lượt phải nhìn thấy nó,
         // nếu không canRevealAnswers sẽ tưởng người dùng còn lượt chưa dùng.
         when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user))
@@ -242,6 +253,7 @@ class ExamAttemptServiceTest {
                 userRepository,
                 classificationService,
                 eventPublisher,
+                resultAggregationService,
                 Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneId.of("America/Los_Angeles")),
                 examBusinessZone
         );
@@ -450,50 +462,20 @@ class ExamAttemptServiceTest {
     }
 
     @Test
-    void balancedAttemptSelectsConfiguredDifficultyCountsAndPersistsPresentation() {
-        ExamAssignment assignment = attempt.getAssignment();
-        ExamConfig config = assignment.getExamPaper().getExamConfig();
-        config.setQuestionSelectionMode(ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED);
-        config.setEasyPercentage(30);
-        config.setMediumPercentage(50);
-        config.setHardPercentage(20);
-        config.setTotalQuestions(5);
-        assignment.getExamPaper().setTotalQuestions(5);
-        assignment.getExamPaper().setQuestionSelectionMode(ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED);
-        assignment.getExamPaper().setEasyPercentage(30);
-        assignment.getExamPaper().setMediumPercentage(50);
-        assignment.getExamPaper().setHardPercentage(20);
-        assignment.setShuffleQuestions(true);
-        assignment.setMaxAttempts(2);
+    void regradeRequiresExplicitSnapshotPolicyAndReasonWithoutRepublishingPassEvent() {
+        attempt.setStatus(ExamAttemptStatus.GRADED);
+        attempt.setSubmittedAt(now());
+        savedAnswers.add(ExamAttemptAnswer.builder().attempt(attempt).paperQuestion(questionOne).selectedAnswer("A").correct(true).build());
+        savedAnswers.add(ExamAttemptAnswer.builder().attempt(attempt).paperQuestion(questionTwo).selectedAnswer("D").correct(false).build());
 
-        List<ExamPaperQuestion> pool = new ArrayList<>();
-        addPoolQuestions(pool, assignment.getExamPaper(), "EASY", 3);
-        addPoolQuestions(pool, assignment.getExamPaper(), "MEDIUM", 5);
-        addPoolQuestions(pool, assignment.getExamPaper(), "HARD", 2);
-        when(paperQuestionRepository.findByExamPaperOrderByPositionAsc(assignment.getExamPaper())).thenReturn(pool);
-        when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-        when(assignmentService.find(assignment.getId())).thenReturn(assignment);
-        when(targetRepository.findByAssignmentAndUserForUpdate(assignment, user))
-                .thenReturn(Optional.of(ExamAssignmentTarget.builder().assignment(assignment).user(user).build()));
-        when(attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user)).thenReturn(List.of());
-        when(attemptRepository.countByAssignmentAndUser(assignment, user)).thenReturn(0L);
+        assertThatThrownBy(() -> service.regrade(attempt.getId(), new RegradeExamAttemptRequest("", "")))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("RECALCULATE_SNAPSHOT");
+        var response = service.regrade(attempt.getId(), new RegradeExamAttemptRequest("RECALCULATE_SNAPSHOT", "Sửa lỗi chấm đã được phê duyệt"));
 
-        var response = service.start(assignment.getId(), user.getId());
-
-        assertThat(response.questions()).hasSize(5);
-        assertThat(savedSelections).hasSize(5);
-        assertThat(savedSelections.stream()
-                .map(selection -> snapshotRepository.findByExamPaperQuestion(selection.getPaperQuestion()).orElseThrow().getDifficulty())
-                .collect(java.util.stream.Collectors.groupingBy(value -> value, java.util.stream.Collectors.counting())))
-                .containsEntry("EASY", 1L)
-                .containsEntry("MEDIUM", 3L)
-                .containsEntry("HARD", 1L);
-        assertThat(response.questions())
-                .extracting(question -> question.paperQuestionId())
-                .containsExactlyElementsOf(savedSelections.stream()
-                        .sorted(java.util.Comparator.comparing(ExamAttemptQuestion::getPosition))
-                        .map(selection -> selection.getPaperQuestion().getId())
-                        .toList());
+        assertThat(response.score()).isEqualByComparingTo("5.00");
+        verify(resultAggregationService).rebuildFromGrade(any(), any(), any(), any());
+        org.mockito.Mockito.verifyNoInteractions(eventPublisher);
     }
 
     private LocalDateTime now() {
@@ -523,14 +505,4 @@ class ExamAttemptServiceTest {
                 .build();
     }
 
-    private void addPoolQuestions(List<ExamPaperQuestion> pool, ExamPaper paper, String difficulty, int count) {
-        for (int index = 0; index < count; index++) {
-            long id = 1_000L + pool.size();
-            ExamPaperQuestion question = paperQuestion(id, paper, pool.size() + 1);
-            ExamPaperQuestionSnapshot questionSnapshot = snapshot(question, "A");
-            questionSnapshot.setDifficulty(difficulty);
-            pool.add(question);
-            when(snapshotRepository.findByExamPaperQuestion(question)).thenReturn(Optional.of(questionSnapshot));
-        }
-    }
 }

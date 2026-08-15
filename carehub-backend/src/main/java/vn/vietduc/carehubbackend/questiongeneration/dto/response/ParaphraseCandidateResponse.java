@@ -14,7 +14,7 @@ public record ParaphraseCandidateResponse(
         String correctAnswer,
         String explanation,
         String topic,
-        String difficulty,
+        String cognitiveLevel,
         String rawOutput,
         Double semanticSimilarityToSource,
         Double lexicalDifferenceFromSource,

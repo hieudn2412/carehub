@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuest
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationQuestionItemAnalysisResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.WrongAnswerDistributionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationDashboardService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -30,6 +31,7 @@ import java.util.List;
 public class EvaluationDashboardController {
     private final EvaluationDashboardService dashboardService;
     private final DashboardAccessPolicy dashboardAccessPolicy;
+    private final EvaluationCutoverService cutover;
 
     @GetMapping
     public ResponseEntity<ApiResponse<EvaluationDashboardResponse>> dashboard(
@@ -41,6 +43,7 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long professionalFieldId
     ) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy dashboard đánh giá thành công",
                 dashboardService.dashboard(
@@ -67,6 +70,7 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long professionalFieldId
     ) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy tổng quan kết quả kiểm tra thành công",
                 dashboardService.examResultsSummary(
@@ -87,6 +91,7 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) EvaluationResultFilter resultStatus
     ) {
+        cutover.requireFieldResults();
         Long scopedDepartmentId = dashboardAccessPolicy.resolveDepartmentScope(departmentId);
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy dashboard kết quả kiểm tra thành công",
@@ -113,6 +118,7 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long professionalFieldId
     ) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy phân tích câu hỏi thành công",
                 dashboardService.itemAnalysis(
@@ -126,6 +132,7 @@ public class EvaluationDashboardController {
             @RequestParam(required = false) Long paperId,
             @RequestParam(required = false) Long assignmentId
     ) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy chỉ số phân biệt thành công",
                 dashboardService.discriminationIndex(paperId, assignmentId)
@@ -136,6 +143,7 @@ public class EvaluationDashboardController {
     public ResponseEntity<ApiResponse<List<WrongAnswerDistributionResponse>>> wrongAnswerDistribution(
             @RequestParam(required = false) Long paperId
     ) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy phân phối đáp án sai thành công",
                 dashboardService.wrongAnswerDistribution(paperId)

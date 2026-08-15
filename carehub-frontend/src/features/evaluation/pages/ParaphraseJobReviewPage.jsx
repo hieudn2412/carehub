@@ -17,6 +17,7 @@ import {
   apiData,
   apiErrorMessage,
   candidateStatusText,
+  COGNITIVE_LEVELS,
   formatDateTime,
   jobStatusText,
   parseJsonList,
@@ -166,7 +167,7 @@ function ParaphraseJobReviewPage() {
       optionD: candidate.optionD || '',
       correctAnswer: candidate.correctAnswer || jobDetail?.sourceQuestion?.correctAnswer || 'A',
       explanation: candidate.explanation || '',
-      difficulty: candidate.difficulty || jobDetail?.sourceQuestion?.difficulty || 'medium',
+      cognitiveLevel: candidate.cognitiveLevel || jobDetail?.sourceQuestion?.cognitiveLevel || '',
       topic: candidate.topic || '',
       reviewerNotes: candidate.reviewerNotes || '',
     })
@@ -360,11 +361,12 @@ function ParaphraseJobReviewPage() {
                 <input value={editForm.correctAnswer} readOnly />
               </label>
               <label className="qdoc-field">
-                <span>Độ khó</span>
-                <select value={editForm.difficulty} onChange={(event) => setEditFormField('difficulty', event.target.value)}>
-                  <option value="easy">Dễ</option>
-                  <option value="medium">Trung bình</option>
-                  <option value="hard">Khó</option>
+                <span>Mức độ nhận thức</span>
+                <select value={editForm.cognitiveLevel} onChange={(event) => setEditFormField('cognitiveLevel', event.target.value)}>
+                  <option value="">-- Chọn mức độ --</option>
+                  {COGNITIVE_LEVELS.map((level) => (
+                    <option key={level.value} value={level.value}>{level.label}</option>
+                  ))}
                 </select>
               </label>
               <label className="qdoc-field">

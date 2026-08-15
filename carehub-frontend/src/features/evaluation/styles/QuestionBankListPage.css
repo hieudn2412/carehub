@@ -299,7 +299,29 @@
   min-width: 760px;
 }
 
+.qbl-question-table {
+  min-width: 980px;
+  table-layout: fixed;
+}
+
+.qbl-col-question {
+  width: 44%;
+}
+
+.qbl-col-category {
+  width: 15%;
+}
+
+.qbl-col-professional-field {
+  width: 19%;
+}
+
+.qbl-col-actions {
+  width: 22%;
+}
+
 .qbl-question-link {
+  display: block;
   width: 100%;
   border: 0;
   background: transparent;
@@ -310,18 +332,37 @@
   text-align: left;
   cursor: pointer;
   padding: 0;
+  overflow-wrap: anywhere;
 }
 
 .qbl-question-meta {
   display: flex;
   align-items: center;
   gap: 7px;
+  flex-wrap: wrap;
   margin-top: 8px;
 }
 
 .qbl-category-cell {
   color: #475569;
+  font-weight: 600;
   line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.qbl-professional-field-cell {
+  color: #334155;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.qbl-table td[data-label="Hành động"] {
+  white-space: nowrap;
+}
+
+.qbl-question-table tbody td:nth-child(-n + 3) {
+  vertical-align: top;
 }
 
 .qbl-question-link:hover {
@@ -820,8 +861,20 @@
     overflow-x: auto;
   }
 
-  .qbl-table {
-    min-width: 780px;
+  .qbl-question-table {
+    min-width: 980px;
+  }
+
+  .qbl-table td[data-label]::before {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    text-transform: uppercase;
   }
 
   .qbl-pagination-bar {

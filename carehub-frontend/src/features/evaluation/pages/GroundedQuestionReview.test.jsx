@@ -5,21 +5,19 @@ import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
 import { CandidateCard } from './DocumentQuestionJobReviewPage.jsx'
 
 describe('Grounded question generation UI', () => {
-  it('builds the modal payload with pipeline, difficulty and maximum count', () => {
+  it('builds the modal payload with cognitive level and maximum count', () => {
     expect(buildCreateQuestionJobPayload({
       questionsPerChunk: 9,
       categoryId: '12',
-      pipelineVersion: 'GROUNDED_V4',
-      targetDifficulty: 'HARD',
+      targetCognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
     })).toEqual({
       questionsPerChunk: 5,
       categoryId: 12,
-      pipelineVersion: 'GROUNDED_V4',
-      targetDifficulty: 'HARD',
+      targetCognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
     })
   })
 
-  it('shows evidence and critic state while preventing approval of rejected candidates', () => {
+  it('shows the page reference in the explanation box while preventing approval of rejected candidates', () => {
     const noop = vi.fn()
     render(
       <MemoryRouter>
@@ -39,7 +37,7 @@ describe('Grounded question generation UI', () => {
             optionC: 'Ngủ sâu',
             optionD: 'Da ấm',
             correctAnswer: 'A',
-            difficulty: 'medium',
+            cognitiveLevel: 'CLINICAL_APPLICATION',
             sourceExcerpt: 'Mạch nhanh là dấu hiệu cảnh báo.',
             answerEvidence: 'Mạch nhanh',
             knowledgePointKey: 'KP1',
@@ -63,15 +61,13 @@ describe('Grounded question generation UI', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Grounding và kiểm định')).toBeInTheDocument()
-    expect(screen.getByText(/Trang 2–3 · Theo dõi/)).toBeInTheDocument()
-    expect(screen.getByText((_, element) => (
-      element?.tagName === 'P' && element.textContent.includes('Critic: FAILED')
-    ))).toBeInTheDocument()
+    expect(screen.getByText('Giải thích')).toBeInTheDocument()
+    expect(screen.getByText('Trang 2–3')).toBeInTheDocument()
+    expect(screen.queryByText('Nguồn trích dẫn')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Duyệt/ })).toBeDisabled()
   })
 
-  it('keeps the grounding panel visible for legacy candidates without enrichment fields', () => {
+  it('renders cards without explanation or page reference cleanly', () => {
     const noop = vi.fn()
     render(
       <MemoryRouter>
@@ -85,7 +81,7 @@ describe('Grounded question generation UI', () => {
             optionC: 'Ngủ sâu',
             optionD: 'Da ấm',
             correctAnswer: 'A',
-            difficulty: 'easy',
+            cognitiveLevel: 'FOUNDATION',
           }}
           isSelected
           isChecked={false}
@@ -102,12 +98,8 @@ describe('Grounded question generation UI', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('Grounding và kiểm định')).toBeInTheDocument()
-    expect(screen.getByText((_, element) => (
-      element?.tagName === 'P' && element.textContent.includes('Đoạn nguồn: Chưa có dữ liệu grounding')
-    ))).toBeInTheDocument()
-    expect(screen.getByText((_, element) => (
-      element?.tagName === 'P' && element.textContent.includes('Bằng chứng đáp án: Chưa có dữ liệu')
-    ))).toBeInTheDocument()
+    expect(screen.queryByText('Giải thích')).not.toBeInTheDocument()
+    expect(screen.queryByText('Nguồn trích dẫn')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Sửa/ })).toBeInTheDocument()
   })
 })

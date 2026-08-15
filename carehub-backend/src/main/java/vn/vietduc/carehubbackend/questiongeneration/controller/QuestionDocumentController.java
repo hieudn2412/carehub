@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -72,6 +73,27 @@ public class QuestionDocumentController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Tải tài liệu và tạo chunk thành công",
                 response
+        ));
+    }
+
+    @DeleteMapping("/{documentId}")
+    @PreAuthorize("@evaluationSecurity.canAuthor(authentication)")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable Long documentId,
+            Authentication authentication
+    ) {
+        String filename = documentService.delete(documentId);
+        auditLogService.record(
+                "DOCUMENT_DELETE",
+                "QUESTION_DOCUMENT",
+                documentId,
+                actor(authentication),
+                "Xóa tài liệu #" + documentId,
+                Map.of("filename", filename)
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Xóa tài liệu thành công",
+                null
         ));
     }
 

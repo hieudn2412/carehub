@@ -1,0 +1,58 @@
+
+> carehub-frontend@0.0.0 test
+> vitest run --no-file-parallelism --maxWorkers=1 --hookTimeout=30000
+
+
+ RUN  v3.2.7 D:/ĐỒ ÁN/carehub/carehub-frontend
+
+stderr | src/features/staff/pages/training/TrainingHoursListScreen.test.jsx > TrainingHoursListScreen query navigation > keeps existing rows visible when a reload fails and exposes retry
+Error fetching training records Error: temporary failure
+    at D:\ĐỒ ÁN\carehub\carehub-frontend\src\features\staff\pages\training\TrainingHoursListScreen.test.jsx:133:51
+    at file:///D:/%C4%90%E1%BB%92%20%C3%81N/carehub/carehub-frontend/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20
+
+ ✓ src/features/staff/pages/training/TrainingHoursListScreen.test.jsx (7 tests) 4013ms
+   ✓ TrainingHoursListScreen query navigation > reads URL filters, waits for Enter and sends all filter params to API  464ms
+   ✓ TrainingHoursListScreen query navigation > returns to the previous page after deleting the only record on a later page  374ms
+   ✓ TrainingHoursListScreen query navigation > keeps existing rows visible when a reload fails and exposes retry  690ms
+   ✓ TrainingHoursListScreen query navigation > shows only view for submitted and cancelled records  342ms
+   ✓ TrainingHoursListScreen query navigation > applies all four filters together and resets the URL page  400ms
+   ✓ TrainingHoursListScreen query navigation > loads the next page when the mobile table reaches its horizontal end  672ms
+   ✓ TrainingHoursListScreen query navigation > restores the previous and next URL filters through browser history  1067ms
+ ✓ src/features/dashboard/components/OverviewDashboard.test.jsx (5 tests) 2666ms
+ ✓ src/features/evaluation/pages/GroundedQuestionReview.test.jsx (3 tests) 2222ms
+ ✓ src/features/evaluation/pages/ExamAssignmentFormPage.test.jsx (1 test) 2220ms
+   ✓ ExamAssignmentFormPage > assigns a published paper to an audience without legacy field or question-set controls  2216ms
+ ✓ src/features/staff/pages/ExamTakeScreen.test.jsx (4 tests) 2295ms
+ ✓ src/features/evaluation/pages/ExamPaperListPage.test.jsx (2 tests) 2296ms
+   ✓ ExamPaperListPage generation checkpoint > previews the saved pool and sends an idempotent direct-bank generation request  2226ms
+ ✓ src/features/staff/pages/training/TrainingHoursOverviewScreen.test.jsx (7 tests) 715ms
+ ✓ src/features/evaluation/pages/CognitiveReviewPage.test.jsx (2 tests) 181ms
+ ✓ src/features/evaluation/pages/ExamConfigPage.test.jsx (2 tests) 216ms
+ ✓ src/shared/api/httpClient.test.js (19 tests) 147ms
+ ✓ src/shared/components/MobileSearchSheet.test.jsx (2 tests) 149ms
+ ✓ src/features/staff/pages/competency/StaffComplianceDashboardPage.test.jsx (2 tests) 142ms
+ ✓ src/shared/components/Modal.test.jsx (1 test) 88ms
+ ✓ src/features/auth/hooks/useOtpExpiry.test.js (5 tests) 32ms
+ ✓ src/features/training/utils/evidenceUrl.test.js (12 tests) 18ms
+ ✓ src/features/staff/pages/training/utils/trainingRecordQuery.test.js (3 tests) 12ms
+ ✓ src/features/auth/utils/authNavigation.test.js (16 tests) 9ms
+ ✓ src/features/staff/utils/examTimer.test.js (19 tests) 8ms
+ ✓ src/features/training/utils/evidenceFile.test.js (13 tests) 8ms
+ ✓ src/features/evaluation/utils/examDifficulty.test.js (8 tests) 9ms
+ ✓ src/features/auth/services/tokenStorage.test.js (6 tests) 8ms
+ ✓ src/features/dashboard/utils/competencyOverview.test.js (1 test) 7ms
+ ✓ src/features/staff/pages/training/utils/trainingOverviewChart.test.js (3 tests) 7ms
+ ✓ src/features/staff/pages/training/utils/trainingRecordFormatters.test.js (4 tests) 6ms
+ ✓ src/features/evaluation/utils/examDateTime.test.js (5 tests) 7ms
+ ✓ src/features/evaluation/utils/duplicateQuestionUi.test.js (2 tests) 7ms
+ ✓ src/features/evaluation/utils/documentQuestionUi.test.js (2 tests) 6ms
+
+ Test Files  27 passed (27)
+      Tests  156 passed (156)
+   Start at  02:36:11
+   Duration  70.24s (transform 696ms, setup 10.20s, collect 8.17s, tests 17.49s, environment 25.54s, prepare 3.68s)
+
+JSON report written to D:/ĐỒ ÁN/carehub/carehub-frontend/vitest-report.json
+
+Lint command: npm run lint
+Lint result: exit 0 (no ESLint diagnostics).

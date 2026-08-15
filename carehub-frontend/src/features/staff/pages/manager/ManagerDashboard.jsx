@@ -90,7 +90,7 @@ export default function ManagerDashboard() {
       const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
       setFilteredEmployeeId(subjectUserId)
       const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
-      const [trainingResult, qualityResult, checklistResult, assignedFormsResult] = await Promise.allSettled([
+      const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
         trainingApi.getTrainingDashboardSummary({
           departmentId: filters.departmentId,
           keyword: filters.employeeCode.trim() || undefined,
@@ -103,7 +103,6 @@ export default function ManagerDashboard() {
           page: 0,
           size: 8,
         }),
-        staffApi.getAssignedForms({ page: 0, size: 100, sort: 'id,desc' }),
       ])
       if ([trainingResult, qualityResult, checklistResult, competencyResult]
         .every((result) => result.status === 'rejected')) throw trainingResult.reason
@@ -113,15 +112,6 @@ export default function ManagerDashboard() {
       const checklistItems = Array.isArray(checklistPage)
         ? checklistPage
         : checklistPage?.content || checklistPage?.items || []
-      const assignedFormsPage = assignedFormsResult.status === 'fulfilled'
-        ? payload(assignedFormsResult.value)
-        : null
-      const assignedFormItems = Array.isArray(assignedFormsPage)
-        ? assignedFormsPage
-        : assignedFormsPage?.content || assignedFormsPage?.items || []
-      const assignedChecklistCount = assignedFormsResult.status === 'fulfilled'
-        ? assignedFormItems.length
-        : 0
       const training = trainingResult.status === 'fulfilled'
         ? payload(trainingResult.value)?.totals || {}
         : {}
@@ -152,15 +142,13 @@ export default function ManagerDashboard() {
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
         quality: quality ? {
-          total: assignedChecklistCount,
+          total: Number(quality.submitted) || 0,
           passed: Number(quality.passed) || 0,
           failed: (Number(quality.failedScore) || 0) + (Number(quality.failedCritical) || 0),
-          rate: assignedChecklistCount
-            ? ((Number(quality.passed) || 0) * 100) / assignedChecklistCount
-            : 0,
-          available: qualityResult.status === 'fulfilled' && assignedFormsResult.status === 'fulfilled',
+          rate: Number(quality.passRate) || 0,
+          available: qualityResult.status === 'fulfilled',
           emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
-          detail: 'Số checklist đạt / tổng checklist được giao hiện tại.',
+          detail: 'Số lượt checklist đạt / tổng lượt checklist đã chấm từ đầu năm.',
           note: `Điểm trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}/10; kết quả đạt đã áp dụng điểm sàn và điểm liệt.`,
           path: '/manager/reports/checklist-dashboard',
         } : unavailable('Không thể tải dữ liệu checklist trong khoa.'),

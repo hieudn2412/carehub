@@ -11,6 +11,8 @@ public record MyExamAssignmentResponse(
         Long examPaperId,
         String examPaperCode,
         String examPaperName,
+        Integer assignedVariantIndex,
+        String retakeVariantPolicy,
         Long professionalFieldId,
         String professionalFieldName,
         String status,

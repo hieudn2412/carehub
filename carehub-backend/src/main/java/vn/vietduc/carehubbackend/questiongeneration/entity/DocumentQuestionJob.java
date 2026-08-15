@@ -18,7 +18,8 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationProvider;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.GenerationPipelineVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.JobStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetDifficulty;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetCognitiveLevel;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 @Entity
 @Getter
@@ -48,8 +49,8 @@ public class DocumentQuestionJob extends BaseEntity {
     private GenerationPipelineVersion pipelineVersion;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "target_difficulty", length = 16)
-    private TargetDifficulty targetDifficulty;
+    @Column(name = "target_cognitive_level", length = 48)
+    private TargetCognitiveLevel targetCognitiveLevel;
 
     @Column(name = "prompt_hash", length = 64)
     private String promptHash;
@@ -64,6 +65,10 @@ public class DocumentQuestionJob extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private QuestionCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
 
     @Column(name = "chunk_count", nullable = false)
     private Integer chunkCount;

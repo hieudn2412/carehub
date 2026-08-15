@@ -406,36 +406,6 @@ function ActivityTypeListPage() {
                 />
               </div>
 
-              <div className="atl-modal-row">
-                <div className="atl-modal-group">
-                  <label>Quy tắc tính giờ <span className="required-star">*</span></label>
-                  <select
-                    className="atl-input-green"
-                    required
-                    value={modalForm.defaultDurationUnit}
-                    onChange={(e) => updateModalField('defaultDurationUnit', e.target.value)}
-                  >
-                    <option value="HOUR">Tính toàn bộ số giờ</option>
-                    <option value="LESSON">Tính theo tiết học</option>
-                    <option value="CREDIT">Tính theo tín chỉ</option>
-                    <option value="DAY">Tính theo ngày</option>
-                    <option value="MONTH">Tính theo tháng</option>
-                    <option value="YEAR">Tính theo năm</option>
-                    <option value="OTHER">Khác</option>
-                  </select>
-                </div>
-                <div className="atl-modal-group">
-                  <label>Tối đa giờ / hồ sơ</label>
-                  <input
-                    type="number"
-                    className="atl-input-green"
-                    value={modalForm.maxCreditedHoursPerRecord}
-                    onChange={(e) => updateModalField('maxCreditedHoursPerRecord', e.target.value)}
-                    placeholder="Không giới hạn"
-                  />
-                </div>
-              </div>
-
               {/* Modal Actions */}
               <div className="atl-modal-actions">
                 <button type="submit" className="atl-btn-save" disabled={isSaving}>

@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 public record SystemSettingsResponse(
         BigDecimal globalTrainingHours,
         int trainingWindowYears,
+        BigDecimal competencyTargetScore,
         Long version,
         LocalDateTime updatedAt
 ) {
