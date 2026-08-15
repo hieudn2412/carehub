@@ -12,10 +12,6 @@ import '../styles/TrainingEmployeeStatusListPage.css'
 const EXPORT_PAGE_SIZE = 100
 const COMPLIANCE_STATUSES = new Set(['COMPLIANT', 'NON_COMPLIANT'])
 
-function normalizeComplianceStatus(status) {
-  return status === 'COMPLIANT' ? 'COMPLIANT' : 'NON_COMPLIANT'
-}
-
 function responseData(response) {
   return response?.data?.data || {}
 }

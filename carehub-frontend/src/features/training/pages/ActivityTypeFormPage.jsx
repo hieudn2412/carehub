@@ -7,16 +7,6 @@ import LoadingState from '../../../shared/components/LoadingState.jsx'
 import '../styles/training.css'
 import '../styles/ActivityTypeListPage.css'
 
-const DURATION_UNITS = [
-  { value: 'HOUR', label: 'Tính theo giờ' },
-  { value: 'LESSON', label: 'Tính theo tiết học' },
-  { value: 'CREDIT', label: 'Tính theo tín chỉ' },
-  { value: 'DAY', label: 'Tính theo ngày' },
-  { value: 'MONTH', label: 'Tính theo tháng' },
-  { value: 'YEAR', label: 'Tính theo năm' },
-  { value: 'OTHER', label: 'Khác' },
-]
-
 const EMPTY_FORM = {
   code: '',
   name: '',

@@ -9,7 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
@@ -40,6 +43,8 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
     private ProfessionalFieldRepository professionalFieldRepository;
     @Autowired
     private QuestionCategoryRepository questionCategoryRepository;
+    @Autowired
+    private QuestionBankQuestionRepository questionRepository;
 
     private User admin;
     private User employee;
@@ -178,8 +183,16 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         long questionId = id(post(API + "/questions", adminToken, """
                 {"stem":"Câu hỏi luồng %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không",
                  "correctAnswer":"A","categoryId":%d,"professionalFieldId":%d,
-                 "cognitiveLevel":"FOUNDATION","difficulty":"EASY","language":"vi"}
+                 "cognitiveLevel":"FOUNDATION","language":"vi","status":"APPROVED"}
                 """.formatted(nextSeq(), category.getId(), field.getId())));
+        var bankQuestion = questionRepository.findById(questionId).orElseThrow();
+        bankQuestion.setCategory(category);
+        bankQuestion.setProfessionalField(field);
+        bankQuestion.setCognitiveLevel(CognitiveLevel.FOUNDATION);
+        bankQuestion.setCognitiveVerifiedAt(java.time.LocalDateTime.now());
+        bankQuestion.setCognitiveVerifiedBy("system-test");
+        bankQuestion.setStatus(QuestionBankStatus.APPROVED);
+        questionRepository.save(bankQuestion);
 
         // Step 2-3: active question set.
         long setId = id(post(API + "/question-sets", adminToken, """
@@ -189,9 +202,17 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
 
         // Step 4-5: active exam config.
         long configId = id(post(API + "/exam-configs", adminToken, """
-                {"name":"Cấu hình luồng %d","questionSetId":%d,"totalQuestions":1,"timeLimitMinutes":30,
-                 "passingScore":5,"maxRetakes":2,"shuffleQuestions":false,"shuffleOptions":false}
-                """.formatted(nextSeq(), setId)));
+                {"name":"Cấu hình luồng %d","totalQuestions":1,"timeLimitMinutes":30,
+                 "passingScore":5,"maxRetakes":2,"shuffleQuestions":false,"shuffleOptions":false,
+                 "fieldBlueprints":[{
+                   "professionalFieldId":%d,"questionCount":1,"displayOrder":0,
+                   "cognitive":[
+                     {"cognitiveLevel":"FOUNDATION","questionCount":1},
+                     {"cognitiveLevel":"CLINICAL_APPLICATION","questionCount":0},
+                     {"cognitiveLevel":"CLINICAL_REASONING_ANALYSIS","questionCount":0}
+                   ]
+                 }]}
+                """.formatted(nextSeq(), field.getId())));
         assertOk(post(API + "/exam-configs/" + configId + "/activate", adminToken, "{}"));
 
         // Step 6-7: generated and published paper.

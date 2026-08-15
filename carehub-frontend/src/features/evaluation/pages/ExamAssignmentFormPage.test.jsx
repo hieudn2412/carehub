@@ -34,7 +34,8 @@ describe('ExamAssignmentFormPage', () => {
     const { default: ExamAssignmentFormPage } = await import('./ExamAssignmentFormPage.jsx')
     render(<MemoryRouter><ExamAssignmentFormPage /></MemoryRouter>)
 
-    await waitFor(() => expect(screen.getAllByRole('combobox')).toHaveLength(6))
+    await screen.findByRole('option', { name: /EP-041/ })
+    await screen.findByRole('option', { name: /Điều dưỡng dưới 3 năm/ })
     fireEvent.change(screen.getByRole('textbox', { name: /Tên đợt giao đề/i }), { target: { value: 'Đợt kiểm tra tháng 8' } })
     fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '41' } })
     fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: '11' } })

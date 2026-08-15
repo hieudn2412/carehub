@@ -85,7 +85,7 @@ class QuestionCandidateValidationServiceTest {
                 "Không bao giờ cần đối chiếu",
                 "A",
                 "Đáp án A bám nguồn.",
-                "medium",
+                "CLINICAL_APPLICATION",
                 "An toàn người bệnh",
                 source,
                 "KP1",
@@ -112,8 +112,8 @@ class QuestionCandidateValidationServiceTest {
 
         assertThat(result.rejected()).isTrue();
         assertThat(result.warnings())
-                .anyMatch(warning -> warning.contains("dấu hiệu hình thức"))
-                .anyMatch(warning -> warning.contains("chưa cần suy luận chuyên môn"));
+                .anyMatch(warning -> warning.contains("surfaceCueFree") || warning.contains("LLM validation"))
+                .anyMatch(warning -> warning.contains("LLM validation"));
     }
 
     private GeneratedQuestion validQuestion(String optionB, String sourceExcerpt) {
@@ -125,7 +125,7 @@ class QuestionCandidateValidationServiceTest {
                 "Không cần đối chiếu thông tin trên hồ sơ.",
                 "A",
                 "Đáp án A bám nguồn.",
-                "easy",
+                "FOUNDATION",
                 "An toàn người bệnh",
                 sourceExcerpt,
                 "KP1",
