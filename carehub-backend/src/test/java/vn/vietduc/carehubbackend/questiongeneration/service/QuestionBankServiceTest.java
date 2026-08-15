@@ -232,7 +232,11 @@ class QuestionBankServiceTest {
                 "Cần dùng tối thiểu hai thông tin nhận diện.",
                 "vi",
                 "Nhập thủ công",
-                status
+                status,
+                null,
+                null,
+                CognitiveLevel.FOUNDATION.name(),
+                null
         );
     }
 
@@ -249,6 +253,7 @@ class QuestionBankServiceTest {
                 .language("vi")
                 .sourceDocument("Nhập thủ công")
                 .questionType(QuestionType.ORIGINAL)
+                .cognitiveLevel(CognitiveLevel.FOUNDATION)
                 .status(QuestionBankStatus.APPROVED)
                 .build();
     }

@@ -435,6 +435,16 @@ class ExamAttemptFlowIntegrationTest {
                 .optionC(bankQuestion.getOptionC())
                 .optionD(bankQuestion.getOptionD())
                 .correctAnswer("A")
+                .categoryId(category.getId())
+                .categoryCode(category.getCode())
+                .categoryName(category.getName())
+                .professionalFieldId(professionalField.getId())
+                .professionalFieldCode(professionalField.getCode())
+                .professionalFieldName(professionalField.getName())
+                .cognitiveLevel(CognitiveLevel.FOUNDATION.name())
+                .cognitiveLabel("Kiến thức nền tảng")
+                .cognitiveVerifiedAt(bankQuestion.getCognitiveVerifiedAt())
+                .cognitiveVerifiedBy(bankQuestion.getCognitiveVerifiedBy())
                 .snapshotAt(now())
                 .build());
         return paperQuestion;
