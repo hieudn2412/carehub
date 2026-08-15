@@ -9,7 +9,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
@@ -42,6 +45,8 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
     private ProfessionalFieldRepository professionalFieldRepository;
     @Autowired
     private QuestionCategoryRepository questionCategoryRepository;
+    @Autowired
+    private QuestionBankQuestionRepository questionRepository;
 
     private User admin;
     private User employee;
@@ -150,9 +155,9 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         assertThat(data(response).get("status").asText()).isEqualTo("APPROVED");
     }
 
-    @DisplayName("L3-EXM-06b | Cognitive-review: reviewer may classify a bank question, author alone is rejected")
+    @DisplayName("L3-EXM-06b | Cognitive-review legacy endpoint is no longer exposed after direct-field cutover")
     @Test
-    void cognitiveReviewEndpointEnforcesReviewerPermissionAndUpdatesQuestion() {
+    void cognitiveReviewEndpointIsNotExposedAfterCutover() {
         String authorToken = tokenFor(newUserWithPermissions("L3XCRAUT",
                 EvaluationPermissions.QUESTION_AUTHOR));
         long questionId = id(post(API + "/questions", authorToken, questionBody("cognitive api")));
@@ -162,20 +167,7 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 """.formatted(questionId);
 
         assertError(post(API + "/questions/cognitive-review", authorToken, reviewBody),
-                HttpStatus.FORBIDDEN, "AUTH_002");
-
-        String reviewerToken = tokenFor(newUserWithPermissions("L3XCRREV",
-                EvaluationPermissions.QUESTION_REVIEWER));
-        ResponseEntity<String> reviewed = post(API + "/questions/cognitive-review", reviewerToken, reviewBody);
-
-        assertOk(reviewed);
-        JsonNode result = data(reviewed);
-        assertThat(result.get("totalRows").asInt()).isEqualTo(1);
-        assertThat(result.get("updatedCount").asInt()).isEqualTo(1);
-        assertThat(result.get("rows").get(0).get("questionId").asLong()).isEqualTo(questionId);
-        assertThat(result.get("rows").get(0).get("cognitiveLevel").asText())
-                .isEqualTo("CLINICAL_APPLICATION");
-        assertThat(result.get("rows").get(0).get("verifiedBy").asText()).isNotBlank();
+                HttpStatus.METHOD_NOT_ALLOWED, "REQ_001");
     }
 
     @DisplayName("L3-EXM-06c | Audience: real HTTP preview exposes validity and activation accepts only a non-empty audience")
@@ -235,26 +227,27 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 .isEqualTo("Không thể kích hoạt bộ câu hỏi rỗng");
     }
 
-    @DisplayName("L3-EXM-09 | Input-Domain-Happy: POST /exam-configs then /activate → ACTIVE and bound to the question set")
+    @DisplayName("L3-EXM-09 | Input-Domain-Happy: POST /exam-configs then /activate → ACTIVE with direct field×cognitive blueprint")
     @Test
     void examConfigGoesActive() {
-        long setId = activeQuestionSet();
+        approvedQuestion("chain");
 
-        long configId = id(post(API + "/exam-configs", adminToken, configBody(setId, "7")));
+        long configId = id(post(API + "/exam-configs", adminToken, configBody("7")));
         ResponseEntity<String> response = post(API + "/exam-configs/" + configId + "/activate", adminToken, "{}");
 
         assertOk(response);
         JsonNode body = data(response);
         assertThat(body.get("status").asText()).isEqualTo("ACTIVE");
-        assertThat(body.get("questionSetId").asLong()).isEqualTo(setId);
+        assertThat(body.hasNonNull("questionSetId")).isFalse();
+        assertThat(body.get("blueprintFields")).hasSize(1);
     }
 
     @DisplayName("L3-EXM-10 | Input-Domain-Invalid: passingScore=85 → 4xx 'Điểm đạt phải trong khoảng 0-10' (the API scale is 0–10, not 0–100)")
     @Test
     void passingScoreAboveTenIsRejected() {
-        long setId = activeQuestionSet();
+        approvedQuestion("invalid-passing-score");
 
-        ResponseEntity<String> response = post(API + "/exam-configs", adminToken, configBody(setId, "85"));
+        ResponseEntity<String> response = post(API + "/exam-configs", adminToken, configBody("85"));
 
         assertThat(response.getStatusCode().is4xxClientError())
                 .as("body was: %s", response.getBody()).isTrue();
@@ -392,40 +385,37 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 .isEqualTo("Bạn không có quyền truy cập lượt làm bài này");
     }
 
-    @DisplayName("L3-EXM-17 | Balanced random: each attempt keeps a stable 30/50/20 selection and prefers unseen questions")
+    @DisplayName("L3-EXM-17 | Blueprint generation keeps the configured cognitive mix on a fixed paper")
     @Test
     void balancedAttemptsKeepDifficultyMixAndPreferUnseenQuestions() {
         List<Long> questionIds = new ArrayList<>();
-        for (int index = 0; index < 3; index++) questionIds.add(approvedQuestion("easy-" + index, "EASY"));
-        for (int index = 0; index < 5; index++) questionIds.add(approvedQuestion("medium-" + index, "MEDIUM"));
-        for (int index = 0; index < 2; index++) questionIds.add(approvedQuestion("hard-" + index, "HARD"));
-        String joinedIds = questionIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
-        long setId = id(post(API + "/question-sets", adminToken, """
-                {"name":"Bộ cân bằng %d","questionIds":[%s]}
-                """.formatted(nextSeq(), joinedIds)));
-        assertOk(post(API + "/question-sets/" + setId + "/activate", adminToken, "{}"));
+        for (int index = 0; index < 3; index++) questionIds.add(approvedQuestion("foundation-" + index, "FOUNDATION"));
+        for (int index = 0; index < 5; index++) questionIds.add(approvedQuestion("application-" + index, "CLINICAL_APPLICATION"));
+        for (int index = 0; index < 2; index++) questionIds.add(approvedQuestion("reasoning-" + index, "CLINICAL_REASONING_ANALYSIS"));
 
         long configId = id(post(API + "/exam-configs", adminToken, """
-                {"name":"Cấu hình cân bằng %d","questionSetId":%d,"totalQuestions":5,"timeLimitMinutes":30,
+                {"name":"Cấu hình cân bằng %d","totalQuestions":5,"timeLimitMinutes":30,
                  "passingScore":5,"maxRetakes":1,"shuffleQuestions":false,"shuffleOptions":false,
-                 "questionSelectionMode":"PER_ATTEMPT_BALANCED",
-                 "difficultyPercentages":{"easy":30,"medium":50,"hard":20},"status":"ACTIVE",
-                 "distributions":[
-                   {"difficulty":"EASY","questionCount":1,"required":true},
-                   {"difficulty":"MEDIUM","questionCount":3,"required":true},
-                   {"difficulty":"HARD","questionCount":1,"required":true}
-                 ]}
-                """.formatted(nextSeq(), setId)));
+                 "questionSelectionMode":"FIXED_PAPER","status":"ACTIVE",
+                 "fieldBlueprints":[{
+                   "professionalFieldId":%d,"questionCount":5,"displayOrder":0,
+                   "cognitive":[
+                     {"cognitiveLevel":"FOUNDATION","questionCount":1},
+                     {"cognitiveLevel":"CLINICAL_APPLICATION","questionCount":3},
+                     {"cognitiveLevel":"CLINICAL_REASONING_ANALYSIS","questionCount":1}
+                   ]
+                 }]}
+                """.formatted(nextSeq(), professionalField.getId())));
         ResponseEntity<String> generated = post(API + "/exam-papers/generate", adminToken, """
                 {"examConfigId":%d,"namePrefix":"Đề cân bằng","variantCount":1,"randomSeed":99,"idempotencyKey":"l3-paper-balanced"}
                 """.formatted(configId));
         assertOk(generated);
         JsonNode paper = data(generated).get(0);
         assertThat(paper.get("totalQuestions").asInt()).isEqualTo(5);
-        assertThat(paper.get("poolQuestionCount").asInt()).isEqualTo(10);
-        Map<Long, String> difficultyByPaperQuestion = new HashMap<>();
+        assertThat(paper.get("poolQuestionCount").asInt()).isEqualTo(5);
+        Map<Long, String> cognitiveByPaperQuestion = new HashMap<>();
         paper.get("questions").forEach(question ->
-                difficultyByPaperQuestion.put(question.get("id").asLong(), question.get("difficulty").asText()));
+                cognitiveByPaperQuestion.put(question.get("id").asLong(), question.get("cognitiveLevel").asText()));
         long paperId = paper.get("id").asLong();
         assertOk(post(API + "/exam-papers/" + paperId + "/publish", adminToken, "{}"));
         long assignmentId = id(post(API + "/exam-assignments", adminToken, assignmentBody(paperId, 2)));
@@ -434,15 +424,15 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         JsonNode first = data(post(API + "/me/exam-assignments/" + assignmentId + "/start", employeeToken, "{}"));
         long firstAttemptId = first.get("id").asLong();
         Set<Long> firstIds = questionIds(first);
-        assertDifficultyCounts(firstIds, difficultyByPaperQuestion, 1, 3, 1);
+        assertCognitiveCounts(firstIds, cognitiveByPaperQuestion, 1, 3, 1);
         JsonNode reloaded = data(get(API + "/me/exam-attempts/" + firstAttemptId, employeeToken));
         assertThat(questionIds(reloaded)).containsExactlyInAnyOrderElementsOf(firstIds);
         assertOk(post(API + "/me/exam-attempts/" + firstAttemptId + "/submit", employeeToken, "{\"answers\":[]}"));
 
         JsonNode second = data(post(API + "/me/exam-assignments/" + assignmentId + "/start", employeeToken, "{}"));
         Set<Long> secondIds = questionIds(second);
-        assertDifficultyCounts(secondIds, difficultyByPaperQuestion, 1, 3, 1);
-        assertThat(secondIds).isNotEqualTo(firstIds);
+        assertCognitiveCounts(secondIds, cognitiveByPaperQuestion, 1, 3, 1);
+        assertThat(secondIds).containsExactlyInAnyOrderElementsOf(firstIds);
     }
 
     // ------------------------------------------------------------------ chain helpers
@@ -451,16 +441,16 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         return """
                 {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
                  "correctAnswer":"A","explanation":"L3 system test","categoryId":%d,
-                 "professionalFieldId":%d,"cognitiveLevel":"FOUNDATION","difficulty":"EASY","language":"vi"}
+                 "professionalFieldId":%d,"cognitiveLevel":"FOUNDATION","language":"vi","status":"APPROVED"}
                 """.formatted(label, nextSeq(), questionCategory.getId(), professionalField.getId());
     }
 
-    private String questionBody(String label, String difficulty) {
+    private String questionBody(String label, String cognitiveLevel) {
         return """
                 {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
                  "correctAnswer":"A","explanation":"L3 system test","categoryId":%d,
-                 "professionalFieldId":%d,"cognitiveLevel":"CLINICAL_APPLICATION","difficulty":"%s","language":"vi"}
-                """.formatted(label, nextSeq(), questionCategory.getId(), professionalField.getId(), difficulty);
+                 "professionalFieldId":%d,"cognitiveLevel":"%s","language":"vi","status":"APPROVED"}
+                """.formatted(label, nextSeq(), questionCategory.getId(), professionalField.getId(), cognitiveLevel);
     }
 
     /** Explicit DRAFT — without a status the service approves on create (D41). */
@@ -472,13 +462,26 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
     private long approvedQuestion(String label) {
         long questionId = id(post(API + "/questions", adminToken, questionBody(label)));
         assertOk(post(API + "/questions/" + questionId + "/approve", adminToken, "{}"));
+        ensureBlueprintQuestion(questionId, CognitiveLevel.FOUNDATION);
         return questionId;
     }
 
-    private long approvedQuestion(String label, String difficulty) {
-        long questionId = id(post(API + "/questions", adminToken, questionBody(label, difficulty)));
+    private long approvedQuestion(String label, String cognitiveLevel) {
+        long questionId = id(post(API + "/questions", adminToken, questionBody(label, cognitiveLevel)));
         assertOk(post(API + "/questions/" + questionId + "/approve", adminToken, "{}"));
+        ensureBlueprintQuestion(questionId, CognitiveLevel.valueOf(cognitiveLevel));
         return questionId;
+    }
+
+    private void ensureBlueprintQuestion(long questionId, CognitiveLevel cognitiveLevel) {
+        var question = questionRepository.findById(questionId).orElseThrow();
+        question.setCategory(questionCategory);
+        question.setProfessionalField(professionalField);
+        question.setCognitiveLevel(cognitiveLevel);
+        question.setCognitiveVerifiedAt(java.time.LocalDateTime.now());
+        question.setCognitiveVerifiedBy("system-test");
+        question.setStatus(QuestionBankStatus.APPROVED);
+        questionRepository.save(question);
     }
 
     private Set<Long> questionIds(JsonNode attempt) {
@@ -487,21 +490,21 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         return ids;
     }
 
-    private void assertDifficultyCounts(
+    private void assertCognitiveCounts(
             Set<Long> paperQuestionIds,
-            Map<Long, String> difficultyByPaperQuestion,
-            long easy,
-            long medium,
-            long hard
+            Map<Long, String> cognitiveByPaperQuestion,
+            long foundation,
+            long application,
+            long reasoning
     ) {
         Map<String, Long> counts = paperQuestionIds.stream()
                 .collect(java.util.stream.Collectors.groupingBy(
-                        difficultyByPaperQuestion::get,
+                        cognitiveByPaperQuestion::get,
                         java.util.stream.Collectors.counting()
                 ));
-        assertThat(counts.getOrDefault("EASY", 0L)).isEqualTo(easy);
-        assertThat(counts.getOrDefault("MEDIUM", 0L)).isEqualTo(medium);
-        assertThat(counts.getOrDefault("HARD", 0L)).isEqualTo(hard);
+        assertThat(counts.getOrDefault("FOUNDATION", 0L)).isEqualTo(foundation);
+        assertThat(counts.getOrDefault("CLINICAL_APPLICATION", 0L)).isEqualTo(application);
+        assertThat(counts.getOrDefault("CLINICAL_REASONING_ANALYSIS", 0L)).isEqualTo(reasoning);
     }
 
     private long activeQuestionSet() {
@@ -513,15 +516,24 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         return setId;
     }
 
-    private String configBody(long questionSetId, String passingScore) {
+    private String configBody(String passingScore) {
         return """
-                {"name":"Cấu hình L3 %d","questionSetId":%d,"totalQuestions":1,"timeLimitMinutes":30,
-                 "passingScore":%s,"maxRetakes":3,"shuffleQuestions":false,"shuffleOptions":false}
-                """.formatted(nextSeq(), questionSetId, passingScore);
+                {"name":"Cấu hình L3 %d","totalQuestions":1,"timeLimitMinutes":30,
+                 "passingScore":%s,"maxRetakes":3,"shuffleQuestions":false,"shuffleOptions":false,
+                 "fieldBlueprints":[{
+                   "professionalFieldId":%d,"questionCount":1,"displayOrder":0,
+                   "cognitive":[
+                     {"cognitiveLevel":"FOUNDATION","questionCount":1},
+                     {"cognitiveLevel":"CLINICAL_APPLICATION","questionCount":0},
+                     {"cognitiveLevel":"CLINICAL_REASONING_ANALYSIS","questionCount":0}
+                   ]
+                 }]}
+                """.formatted(nextSeq(), passingScore, professionalField.getId());
     }
 
     private long activeExamConfig() {
-        long configId = id(post(API + "/exam-configs", adminToken, configBody(activeQuestionSet(), "5")));
+        approvedQuestion("chain");
+        long configId = id(post(API + "/exam-configs", adminToken, configBody("5")));
         assertOk(post(API + "/exam-configs/" + configId + "/activate", adminToken, "{}"));
         return configId;
     }

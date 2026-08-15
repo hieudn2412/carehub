@@ -551,7 +551,8 @@ public class QuestionBankImportExportService {
             case "giaithich", "explanation" -> "explanation";
             case "chude", "danhmuc", "danhmuckienthuc", "topic", "category", "categoryreference" -> "categoryreference";
             case "linhvuc", "linhvucchuyenmon", "professionalfield", "professionalfieldreference", "field" -> "professionalfieldreference";
-            case "mucdonhanthuc", "mucdophanloai", "cognitivelevel", "cognitive" -> "cognitivelevel";
+            case "mucdonhanthuc", "mucdophanloai", "cognitivelevel", "cognitive",
+                    "dokho", "difficulty" -> "cognitivelevel";
             case "ngonngu", "language" -> "language";
             case "nguon", "nguoncauhoi", "sourcedocument", "source" -> "sourcedocument";
             case "trangthai", "status" -> "status";
@@ -597,7 +598,7 @@ public class QuestionBankImportExportService {
                 row.sourceDocument(),
                 "APPROVED",
                 category.getId(),
-                field.getId(),
+                field == null ? null : field.getId(),
                 normalizeCognitive(row.cognitiveLevel()),
                 null
         );
@@ -829,9 +830,9 @@ public class QuestionBankImportExportService {
 
     private String normalizeCognitive(String value) {
         return switch (normalizeText(value)) {
-            case "foundation", "kien thuc nen tang", "de" -> "FOUNDATION";
-            case "clinical application", "ap dung lam sang", "trung binh" -> "CLINICAL_APPLICATION";
-            case "clinical reasoning analysis", "tu duy va phan tich lam sang", "kho" -> "CLINICAL_REASONING_ANALYSIS";
+            case "foundation", "kien thuc nen tang", "de", "easy" -> "FOUNDATION";
+            case "clinical application", "ap dung lam sang", "trung binh", "medium" -> "CLINICAL_APPLICATION";
+            case "clinical reasoning analysis", "tu duy va phan tich lam sang", "kho", "hard" -> "CLINICAL_REASONING_ANALYSIS";
             default -> blank(value).trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         };
     }
@@ -954,7 +955,7 @@ public class QuestionBankImportExportService {
                 case "correct", "correctanswer", "dapandung", "dapan" -> correctAnswer = value;
                 case "giaithich", "explanation" -> explanation = value;
                 case "chude", "danhmuc", "topic", "category", "categoryreference" -> topic = value;
-                case "mucdonhanthuc", "cognitivelevel", "cognitive" -> cognitiveLevel = value;
+                case "mucdonhanthuc", "cognitivelevel", "cognitive", "dokho", "difficulty" -> cognitiveLevel = value;
                 case "ngonngu", "language" -> language = value;
                 case "nguon", "sourcedocument", "source" -> sourceDocument = value;
                 case "trangthai", "status" -> status = value;

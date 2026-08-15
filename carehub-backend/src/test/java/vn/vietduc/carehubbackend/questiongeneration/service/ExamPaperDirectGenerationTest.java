@@ -285,6 +285,12 @@ class ExamPaperDirectGenerationTest {
                 502L, cognitiveCells(surgeryField, 611L, 3)
         );
         config.setTotalQuestions(6);
+        QuestionBankQuestion emergencyApplication = question(41L, emergency, category(43L, "CC-C", "Cấp cứu nâng cao"), document(53L, "cc-nang-cao.pdf"));
+        emergencyApplication.setCognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION);
+        QuestionBankQuestion surgeryApplication = question(42L, surgery, category(44L, "NG-C", "Ngoại nâng cao"), document(54L, "ngoai-nang-cao.pdf"));
+        surgeryApplication.setCognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION);
+        pool = List.of(pool.get(0), pool.get(1), pool.get(2), pool.get(3), emergencyApplication, surgeryApplication);
+        config.setPoolChecksum(ExamGenerationDeterminism.poolChecksum(config.getBlueprintVersion(), List.of(), pool));
 
         assertThatThrownBy(() -> service.generate(request("shortage", 1, 5L, false), "publisher"))
                 .isInstanceOfSatisfying(ValidationException.class, validation -> {

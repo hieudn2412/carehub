@@ -13,6 +13,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItem;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersionItem;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseMapper;
@@ -122,7 +123,7 @@ class QuestionSetServiceTest {
                 "SET_1",
                 "Bộ kiểm soát nhiễm khuẩn",
                 "Mô tả",
-                "medium",
+                CognitiveLevel.CLINICAL_APPLICATION.name(),
                 "DRAFT",
                 List.of(1L, 2L, 3L)
         ), "admin");
@@ -138,7 +139,7 @@ class QuestionSetServiceTest {
                 null,
                 "Bộ trùng câu",
                 null,
-                "easy",
+                CognitiveLevel.FOUNDATION.name(),
                 "DRAFT",
                 List.of(1L, 1L)
         ), "admin"))
@@ -157,7 +158,7 @@ class QuestionSetServiceTest {
                 null,
                 "Bộ có câu nháp",
                 null,
-                "medium",
+                CognitiveLevel.CLINICAL_APPLICATION.name(),
                 "DRAFT",
                 List.of(1L, 2L)
         ), "admin"))
@@ -180,7 +181,7 @@ class QuestionSetServiceTest {
                 "SET_ACTIVE",
                 "Tên mới",
                 null,
-                "medium",
+                CognitiveLevel.CLINICAL_APPLICATION.name(),
                 "ACTIVE",
                 List.of(1L)
         ), "admin"))
@@ -289,7 +290,7 @@ class QuestionSetServiceTest {
         ));
         PreviewQuestionSetRequest request = new PreviewQuestionSetRequest(
                 3,
-                Map.of("medium", 3),
+                Map.of(CognitiveLevel.FOUNDATION.name(), 3),
                 List.of(),
                 false,
                 42L
@@ -419,6 +420,7 @@ class QuestionSetServiceTest {
                 .language("vi")
                 .sourceDocument("Tài liệu kiểm soát nhiễm khuẩn")
                 .questionType(QuestionType.ORIGINAL)
+                .cognitiveLevel(CognitiveLevel.FOUNDATION)
                 .status(status)
                 .build();
     }
