@@ -93,7 +93,9 @@
 .pfm-form {
   padding: 24px;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+  min-height: 0;
   max-height: 100%;
   overflow-y: auto;
 }
@@ -111,6 +113,20 @@
   font-size: 13px;
   font-weight: 600;
   color: #334155;
+}
+
+.pfm-form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.pfm-form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pfm-required {
+  color: #dc2626;
 }
 
 .pfm-form input,
@@ -136,6 +152,19 @@
   box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
+.pfm-form .pfm-input--error,
+.pfm-form .pfm-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.pfm-form .pfm-field-error {
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 .pfm-form textarea {
   resize: vertical;
 }
@@ -144,15 +173,39 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 13px 14px;
+  border: 1px solid #dbe5e2;
+  border-radius: 10px;
+  background: #f8fafc;
   cursor: pointer;
   user-select: none;
 }
 
 .pfm-form .pfm-check input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
   cursor: pointer;
   accent-color: #0d9488;
+}
+
+.pfm-form .pfm-check > span {
+  display: grid;
+  gap: 2px;
+}
+
+.pfm-form .pfm-check strong {
+  color: #334155;
+  font-size: 13px;
+}
+
+.pfm-form .pfm-check small {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .pfm-actions {
@@ -583,6 +636,7 @@
 }
 
 .pfm-modal__body {
+  min-height: 0;
   padding: 24px 26px;
   overflow-y: auto;
 }
@@ -646,6 +700,14 @@
 
   .pfm-modal__actions button {
     width: 100%;
+  }
+
+  .pfm-form {
+    grid-template-columns: 1fr;
+  }
+
+  .pfm-form-field--wide {
+    grid-column: auto;
   }
 
   .pfm-search-box {

@@ -1,8 +1,8 @@
-import React from 'react'
 import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
+import ExamTakeScreen from './ExamTakeScreen.jsx'
 
 vi.mock('../../../shared/components/AppShell.jsx', () => ({
   default: ({ children }) => <div data-testid="app-shell">{children}</div>,
@@ -25,18 +25,6 @@ vi.mock('../../evaluation/api/myExamApi.js', () => ({
     submitAttempt: vi.fn(),
   },
 }))
-
-const previousReact = globalThis.React
-let ExamTakeScreen
-
-beforeAll(async () => {
-  globalThis.React = React
-  ExamTakeScreen = (await import('./ExamTakeScreen.jsx')).default
-})
-
-afterAll(() => {
-  globalThis.React = previousReact
-})
 
 const response = (data) => ({ data: { data } })
 

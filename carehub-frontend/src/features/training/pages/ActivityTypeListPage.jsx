@@ -71,7 +71,7 @@ function ActivityTypeListPage() {
       })
       setData(response.data.data)
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không tải được danh sách loại đào tạo'))
+      setErrorMessage(getApiErrorMessage(error, 'Không tải được danh sách cách thức đào tạo'))
     } finally {
       setIsLoading(false)
     }
@@ -154,15 +154,15 @@ function ActivityTypeListPage() {
     try {
       if (modalMode === 'create') {
         await trainingApi.createActivityType(payload)
-        setSuccessMessage('Đã thêm hình thức đào tạo mới thành công!')
+        setSuccessMessage('Đã thêm cách thức đào tạo mới thành công!')
       } else {
         await trainingApi.updateActivityType(modalForm.id, payload)
-        setSuccessMessage('Đã cập nhật hình thức đào tạo thành công!')
+        setSuccessMessage('Đã cập nhật cách thức đào tạo thành công!')
       }
       handleCloseModal()
       fetchActivityTypes()
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không thể lưu hình thức đào tạo'))
+      setErrorMessage(getApiErrorMessage(error, 'Không thể lưu cách thức đào tạo'))
     } finally {
       setIsSaving(false)
     }
@@ -172,16 +172,16 @@ function ActivityTypeListPage() {
   const totalElements = data?.totalElements ?? 0
   const totalPages = data?.totalPages ?? 1
 
-  const breadcrumbs = [{ label: 'Các hình thức đào tạo' }]
+  const breadcrumbs = [{ label: 'Cách thức đào tạo' }]
 
   return (
     <AppShell breadcrumbs={breadcrumbs}>
             <div className="atl-page">
               {/* Title Card */}
               <div className="atl-title-card">
-                <h1 className="atl-title">Các hình thức đào tạo</h1>
+                <h1 className="atl-title">Cách thức đào tạo</h1>
                 <p className="atl-subtitle">
-                  Quản lý các danh mục dùng để phân loại hồ sơ đào tạo
+                  Quản lý danh mục cách thức thực hiện hoạt động đào tạo
                 </p>
               </div>
 
@@ -196,7 +196,7 @@ function ActivityTypeListPage() {
                       <input
                         type="text"
                         className="atl-search-input"
-                        placeholder="Tìm theo hình thức..."
+                        placeholder="Tìm theo cách thức..."
                         value={keyword}
                         onChange={(e) => setKeyword(e.target.value)}
                       />
@@ -217,7 +217,7 @@ function ActivityTypeListPage() {
                     className="atl-btn-add"
                     onClick={handleOpenCreateModal}
                   >
-                    <PlusCircleOutlined /> Thêm hình thức
+                    <PlusCircleOutlined /> Thêm cách thức
                   </button>
                 </div>
 
@@ -254,17 +254,17 @@ function ActivityTypeListPage() {
               {/* Table Card */}
               <div className="atl-table-card">
                 {isLoading && rows.length === 0 ? (
-                  <LoadingState label="Đang tải danh sách các hình thức đào tạo..." />
+                  <LoadingState label="Đang tải danh sách cách thức đào tạo..." />
                 ) : rows.length === 0 ? (
                   <EmptyState>
-                    {debouncedKeyword || status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có hình thức đào tạo nào.'}
+                    {debouncedKeyword || status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có cách thức đào tạo nào.'}
                   </EmptyState>
                 ) : (
                   <>
                       <table className="atl-table admin-table-uppercase">
                       <thead>
                         <tr>
-                          <th>Tên hình thức</th>
+                          <th>Tên cách thức</th>
                           <th>Mô tả</th>
                           <th>Trạng thái</th>
                           <th style={{ width: '96px' }}>Hành động</th>
@@ -287,7 +287,7 @@ function ActivityTypeListPage() {
                                   className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                   onClick={() => handleOpenEditModal(item)}
                                   title="Chỉnh sửa"
-                                  aria-label={`Chỉnh sửa loại hoạt động ${item.name}`}
+                                  aria-label={`Chỉnh sửa cách thức đào tạo ${item.name}`}
                                 >
                                   <EditOutlined />
                                 </button>
@@ -360,7 +360,7 @@ function ActivityTypeListPage() {
                   <PlusOutlined />
                 </div>
                 <h2 className="atl-modal-title">
-                  {modalMode === 'create' ? 'Tạo hình thức đào tạo' : 'Cập nhật hình thức đào tạo'}
+                  {modalMode === 'create' ? 'Tạo cách thức đào tạo' : 'Cập nhật cách thức đào tạo'}
                 </h2>
               </div>
               <button className="atl-modal-close" onClick={handleCloseModal}>
@@ -372,14 +372,14 @@ function ActivityTypeListPage() {
             <form onSubmit={handleModalSubmit} className="atl-modal-form">
               <div className="atl-modal-row">
                 <div className="atl-modal-group">
-                  <label>Tên hình thức <span className="required-star">*</span></label>
+                  <label>Tên cách thức <span className="required-star">*</span></label>
                   <input
                     type="text"
                     className="atl-input-red"
                     required
                     value={modalForm.name}
                     onChange={(e) => updateModalField('name', e.target.value)}
-                    placeholder="Nhập tên hình thức đào tạo..."
+                    placeholder="Nhập tên cách thức đào tạo..."
                   />
                 </div>
                 <div className="atl-modal-group">

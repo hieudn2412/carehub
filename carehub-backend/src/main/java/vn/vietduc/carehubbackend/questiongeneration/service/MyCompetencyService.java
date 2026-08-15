@@ -22,6 +22,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +47,7 @@ public class MyCompetencyService {
     private final ExamAttemptRepository attemptRepository;
     private final FormSubmissionRepository formSubmissionRepository;
     private final CompetencyClassificationService classificationService;
+    private final SystemSettingsService systemSettingsService;
 
     @Value("${app.competency.compliance.default-target:80.0}")
     private BigDecimal defaultComplianceTarget = BigDecimal.valueOf(80);
@@ -272,7 +274,7 @@ public class MyCompetencyService {
 
         CompetencyLevel level = classificationService.classifyOverall(overallScore);
 
-        BigDecimal targetScore = departmentTarget(user);
+        BigDecimal targetScore = systemSettingsService.competencyTargetScore();
         boolean isPassed = targetScore != null
                 && overallScore.compareTo(targetScore) >= 0;
 
@@ -354,14 +356,6 @@ public class MyCompetencyService {
                     .divide(submission.getMaxScore(), 2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
-    }
-
-    private BigDecimal departmentTarget(User user) {
-        BigDecimal target = user.getDepartment() == null ? null : user.getDepartment().getCompetencyTargetScore();
-        if (target != null && target.compareTo(BigDecimal.valueOf(10)) > 0) {
-            return target.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
-        }
-        return target;
     }
 
     @Transactional(readOnly = true)

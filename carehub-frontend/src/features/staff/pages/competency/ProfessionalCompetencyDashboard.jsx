@@ -25,6 +25,7 @@ const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 })
+const DEFAULT_COMPETENCY_TARGET_SCORE = 6
 
 function localToday() {
   const date = new Date()
@@ -232,8 +233,12 @@ function ProfessionalCompetencyDashboard() {
   const knowledgeAverage = Number(summary?.knowledgeAverage || 0)
   const skillAverage = Number(summary?.skillAverage || 0)
   const overallScore = Number(summary?.overallScore ?? ((knowledgeAverage + skillAverage) / 2))
-  const targetScore = summary?.targetScore == null ? null : Number(summary.targetScore)
-  const status = targetScore == null ? 'UNCONFIGURED' : summary?.isPassed ? 'PASSED' : 'FAILED'
+  const targetScore = summary?.targetScore == null
+    ? DEFAULT_COMPETENCY_TARGET_SCORE
+    : Number(summary.targetScore)
+  const status = summary?.targetScore == null
+    ? overallScore >= targetScore ? 'PASSED' : 'FAILED'
+    : summary?.isPassed ? 'PASSED' : 'FAILED'
 
   return (
     <AppShell
@@ -265,7 +270,7 @@ function ProfessionalCompetencyDashboard() {
         {!summaryLoading && !summaryError && <section className={`pc-overall-card pc-overall-card--${status.toLowerCase()}`} aria-label="Năng lực chuyên môn tổng hợp">
           <div className="pc-overall-card__icon"><TrophyOutlined /></div>
           <div className="pc-overall-card__content"><span className="pc-overall-card__eyebrow">Năng lực chuyên môn</span><strong>{formatScore(overallScore)}<small>/10</small></strong><span>Điểm trung bình của Kiến thức và Kỹ năng</span></div>
-          <div className="pc-overall-card__status">{status === 'PASSED' && <CheckCircleFilled />}{status === 'FAILED' && <CloseCircleFilled />}<b>{status === 'PASSED' ? 'Đạt' : status === 'FAILED' ? 'Không đạt' : 'Chưa cấu hình điểm sàn'}</b>{targetScore != null && <small>Điểm sàn hiện tại: {formatScore(targetScore)}/10</small>}</div>
+          <div className="pc-overall-card__status">{status === 'PASSED' && <CheckCircleFilled />}{status === 'FAILED' && <CloseCircleFilled />}<b>{status === 'PASSED' ? 'Đạt' : 'Không đạt'}</b><small>Điểm sàn hiện tại: {formatScore(targetScore)}/10</small></div>
         </section>}
 
         <section className="pc-exams-card" aria-labelledby="pc-exams-title">

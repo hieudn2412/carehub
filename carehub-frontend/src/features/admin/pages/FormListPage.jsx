@@ -1261,179 +1261,181 @@ function FormListPage() {
               </div>
             ) : (
               <>
-                {assignmentError && (
-                  <div className="flp-assignment-error" role="alert">
-                    <ExclamationCircleOutlined /> {assignmentError}
-                  </div>
-                )}
-
-                {assignmentMessage && (
-                  <div
-                    className={`flp-assignment-message flp-assignment-message--${assignmentMessage.type}`}
-                    role={assignmentMessage.type === 'error' ? 'alert' : 'status'}
-                  >
-                    {assignmentMessage.type === 'error' && <ExclamationCircleOutlined />}
-                    {assignmentMessage.text}
-                  </div>
-                )}
-
-                <div className="flp-assignment-field">
-                  <span>Người nhận phân quyền</span>
-                  <SearchableSelect
-                    ariaLabel="Tìm người nhận phân quyền"
-                    disabled={assignmentSubmitting}
-                    emptyMessage={recipientSearchError
-                      ? 'Không thể tải người nhận. Hãy nhập lại để thử lại.'
-                      : 'Không tìm thấy tài khoản đang hoạt động'}
-                    loading={recipientLoading}
-                    loadingMessage="Đang tìm người nhận..."
-                    onChange={(value) => {
-                      const recipient = recipientOptions.find((item) => String(item.id) === String(value))
-                      setSelectedRecipientId(value)
-                      setSelectedRecipient(recipient || null)
-                      setRecipientSearch('')
-                      setSelectedFormVersionIds([])
-                      setAssignmentMessage(null)
-                      loadRecipientAssignments(value)
-                    }}
-                    onSearch={setRecipientSearch}
-                    options={recipientOptions.map((recipient) => ({
-                      value: recipient.id,
-                      label: recipient.fullName || recipient.name || recipient.employeeCode,
-                      description: recipient.employeeCode,
-                      searchText: `${recipient.fullName || recipient.name || ''} ${recipient.employeeCode || ''}`,
-                    }))}
-                    placeholder="Chọn người nhận"
-                    searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
-                    selectedOption={selectedRecipient ? {
-                      value: selectedRecipient.id,
-                      label: selectedRecipient.fullName || selectedRecipient.name || selectedRecipient.employeeCode,
-                      description: selectedRecipient.employeeCode,
-                    } : undefined}
-                    value={selectedRecipientId}
-                  />
-                </div>
-
-                <div className="flp-assignment-validity">
-                  <label className="flp-assignment-field">
-                    <span>Hiệu lực từ</span>
-                    <input
-                      disabled={assignmentSubmitting}
-                      onChange={(event) => setAssignmentValidFrom(event.target.value)}
-                      type="datetime-local"
-                      value={assignmentValidFrom}
-                    />
-                    <small>Bỏ trống để có hiệu lực ngay.</small>
-                  </label>
-
-                  <label className="flp-assignment-field">
-                    <span>Hiệu lực đến</span>
-                    <input
-                      disabled={assignmentSubmitting}
-                      min={assignmentValidFrom || undefined}
-                      onChange={(event) => setAssignmentValidUntil(event.target.value)}
-                      type="datetime-local"
-                      value={assignmentValidUntil}
-                    />
-                    <small>Bỏ trống nếu không có ngày hết hạn.</small>
-                  </label>
-                </div>
-
-                {!selectedRecipientId ? (
-                  <div className="flp-assignment-recipient-prompt">
-                    Chọn người nhận để xem các checklist đã giao và chưa giao.
-                  </div>
-                ) : (
-                  <>
-                    <div className="flp-assignment-list-head">
-                      <div>
-                        <strong>Danh sách checklist</strong>
-                        <span>
-                          {assignedCurrentVersionCount} đã giao · {selectedFormVersionIds.length}/{unassignedVersionIds.length} đang chọn
-                        </span>
-                      </div>
-                      <button
-                        disabled={assignmentSubmitting || recipientAssignmentsLoading || unassignedVersionIds.length === 0}
-                        onClick={toggleAllAssignableForms}
-                        type="button"
-                      >
-                        {unassignedVersionIds.length > 0 && selectedFormVersionIds.length === unassignedVersionIds.length
-                          ? 'Bỏ chọn tất cả'
-                          : 'Chọn tất cả'}
-                      </button>
+                <div className="flp-assignment-modal__body">
+                  {assignmentError && (
+                    <div className="flp-assignment-error" role="alert">
+                      <ExclamationCircleOutlined /> {assignmentError}
                     </div>
+                  )}
 
-                    <div className="flp-assignment-list">
-                      {recipientAssignmentsLoading ? (
-                        <div className="flp-assignment-empty">
-                          <LoadingOutlined spin /> Đang tải trạng thái phân quyền...
-                        </div>
-                      ) : displayedAssignableForms.length === 0 ? (
-                        <div className="flp-assignment-empty">
-                          Chưa có checklist với phiên bản đang hoạt động.
-                        </div>
-                      ) : (
-                        displayedAssignableForms.map((form) => {
-                          const versionId = String(form.currentPublishedVersion.id)
-                          const currentAssignment = assignedByVersionId.get(versionId)
-                          const checked = selectedFormVersionIds.includes(versionId)
+                  {assignmentMessage && (
+                    <div
+                      className={`flp-assignment-message flp-assignment-message--${assignmentMessage.type}`}
+                      role={assignmentMessage.type === 'error' ? 'alert' : 'status'}
+                    >
+                      {assignmentMessage.type === 'error' && <ExclamationCircleOutlined />}
+                      {assignmentMessage.text}
+                    </div>
+                  )}
 
-                          if (currentAssignment) {
+                  <div className="flp-assignment-field">
+                    <span>Người nhận phân quyền</span>
+                    <SearchableSelect
+                      ariaLabel="Tìm người nhận phân quyền"
+                      disabled={assignmentSubmitting}
+                      emptyMessage={recipientSearchError
+                        ? 'Không thể tải người nhận. Hãy nhập lại để thử lại.'
+                        : 'Không tìm thấy tài khoản đang hoạt động'}
+                      loading={recipientLoading}
+                      loadingMessage="Đang tìm người nhận..."
+                      onChange={(value) => {
+                        const recipient = recipientOptions.find((item) => String(item.id) === String(value))
+                        setSelectedRecipientId(value)
+                        setSelectedRecipient(recipient || null)
+                        setRecipientSearch('')
+                        setSelectedFormVersionIds([])
+                        setAssignmentMessage(null)
+                        loadRecipientAssignments(value)
+                      }}
+                      onSearch={setRecipientSearch}
+                      options={recipientOptions.map((recipient) => ({
+                        value: recipient.id,
+                        label: recipient.fullName || recipient.name || recipient.employeeCode,
+                        description: recipient.employeeCode,
+                        searchText: `${recipient.fullName || recipient.name || ''} ${recipient.employeeCode || ''}`,
+                      }))}
+                      placeholder="Chọn người nhận"
+                      searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
+                      selectedOption={selectedRecipient ? {
+                        value: selectedRecipient.id,
+                        label: selectedRecipient.fullName || selectedRecipient.name || selectedRecipient.employeeCode,
+                        description: selectedRecipient.employeeCode,
+                      } : undefined}
+                      value={selectedRecipientId}
+                    />
+                  </div>
+
+                  <div className="flp-assignment-validity">
+                    <label className="flp-assignment-field">
+                      <span>Hiệu lực từ</span>
+                      <input
+                        disabled={assignmentSubmitting}
+                        onChange={(event) => setAssignmentValidFrom(event.target.value)}
+                        type="datetime-local"
+                        value={assignmentValidFrom}
+                      />
+                      <small>Bỏ trống để có hiệu lực ngay.</small>
+                    </label>
+
+                    <label className="flp-assignment-field">
+                      <span>Hiệu lực đến</span>
+                      <input
+                        disabled={assignmentSubmitting}
+                        min={assignmentValidFrom || undefined}
+                        onChange={(event) => setAssignmentValidUntil(event.target.value)}
+                        type="datetime-local"
+                        value={assignmentValidUntil}
+                      />
+                      <small>Bỏ trống nếu không có ngày hết hạn.</small>
+                    </label>
+                  </div>
+
+                  {!selectedRecipientId ? (
+                    <div className="flp-assignment-recipient-prompt">
+                      Chọn người nhận để xem các checklist đã giao và chưa giao.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flp-assignment-list-head">
+                        <div>
+                          <strong>Danh sách checklist</strong>
+                          <span>
+                            {assignedCurrentVersionCount} đã giao · {selectedFormVersionIds.length}/{unassignedVersionIds.length} đang chọn
+                          </span>
+                        </div>
+                        <button
+                          disabled={assignmentSubmitting || recipientAssignmentsLoading || unassignedVersionIds.length === 0}
+                          onClick={toggleAllAssignableForms}
+                          type="button"
+                        >
+                          {unassignedVersionIds.length > 0 && selectedFormVersionIds.length === unassignedVersionIds.length
+                            ? 'Bỏ chọn tất cả'
+                            : 'Chọn tất cả'}
+                        </button>
+                      </div>
+
+                      <div className="flp-assignment-list">
+                        {recipientAssignmentsLoading ? (
+                          <div className="flp-assignment-empty">
+                            <LoadingOutlined spin /> Đang tải trạng thái phân quyền...
+                          </div>
+                        ) : displayedAssignableForms.length === 0 ? (
+                          <div className="flp-assignment-empty">
+                            Chưa có checklist với phiên bản đang hoạt động.
+                          </div>
+                        ) : (
+                          displayedAssignableForms.map((form) => {
+                            const versionId = String(form.currentPublishedVersion.id)
+                            const currentAssignment = assignedByVersionId.get(versionId)
+                            const checked = selectedFormVersionIds.includes(versionId)
+
+                            if (currentAssignment) {
+                              return (
+                                <article className="flp-assignment-option flp-assignment-option--assigned" key={form.id}>
+                                  <span className="flp-assignment-option__assigned-mark" aria-hidden="true">✓</span>
+                                  <span className="flp-assignment-option__body">
+                                    <strong>{form.title}</strong>
+                                    <small>
+                                      {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
+                                    </small>
+                                  </span>
+                                  <span className="flp-assignment-option__assigned-actions">
+                                    <span className="flp-assignment-option__status">Đã giao</span>
+                                    <span className="flp-assignment-option__validity">
+                                      <ClockCircleOutlined /> {currentAssignment.validUntil
+                                        ? `Đến ${formatAssignmentDateTime(currentAssignment.validUntil)}`
+                                        : 'Không giới hạn'}
+                                    </span>
+                                    <button
+                                      disabled={assignmentSubmitting}
+                                      onClick={() => setConfirmAssignmentRevoke({
+                                        ...currentAssignment,
+                                        title: form.title,
+                                      })}
+                                      type="button"
+                                    >
+                                      <StopOutlined /> Thu hồi
+                                    </button>
+                                  </span>
+                                </article>
+                              )
+                            }
+
                             return (
-                              <article className="flp-assignment-option flp-assignment-option--assigned" key={form.id}>
-                                <span className="flp-assignment-option__assigned-mark" aria-hidden="true">✓</span>
+                              <label className="flp-assignment-option" key={form.id}>
+                                <input
+                                  checked={checked}
+                                  disabled={assignmentSubmitting}
+                                  onChange={() => toggleAssignableForm(versionId)}
+                                  type="checkbox"
+                                />
                                 <span className="flp-assignment-option__body">
                                   <strong>{form.title}</strong>
                                   <small>
                                     {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
                                   </small>
                                 </span>
-                                <span className="flp-assignment-option__assigned-actions">
-                                  <span className="flp-assignment-option__status">Đã giao</span>
-                                  <span className="flp-assignment-option__validity">
-                                    <ClockCircleOutlined /> {currentAssignment.validUntil
-                                      ? `Đến ${formatAssignmentDateTime(currentAssignment.validUntil)}`
-                                      : 'Không giới hạn'}
-                                  </span>
-                                  <button
-                                    disabled={assignmentSubmitting}
-                                    onClick={() => setConfirmAssignmentRevoke({
-                                      ...currentAssignment,
-                                      title: form.title,
-                                    })}
-                                    type="button"
-                                  >
-                                    <StopOutlined /> Thu hồi
-                                  </button>
+                                <span className="flp-assignment-option__status flp-assignment-option__status--available">
+                                  Chưa giao
                                 </span>
-                              </article>
+                              </label>
                             )
-                          }
-
-                          return (
-                            <label className="flp-assignment-option" key={form.id}>
-                              <input
-                                checked={checked}
-                                disabled={assignmentSubmitting}
-                                onChange={() => toggleAssignableForm(versionId)}
-                                type="checkbox"
-                              />
-                              <span className="flp-assignment-option__body">
-                                <strong>{form.title}</strong>
-                                <small>
-                                  {getChecklistDisplayCode(form.code)} · v{form.currentPublishedVersion.versionNumber}
-                                </small>
-                              </span>
-                              <span className="flp-assignment-option__status flp-assignment-option__status--available">
-                                Chưa giao
-                              </span>
-                            </label>
-                          )
-                        })
-                      )}
-                    </div>
-                  </>
-                )}
+                          })
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 <div className="flp-assignment-actions">
                   <button

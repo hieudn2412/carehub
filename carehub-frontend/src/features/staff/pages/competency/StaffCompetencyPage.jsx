@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
+import { useSearchParams } from 'react-router-dom'
+import { CheckCircleFilled, CloseOutlined, EyeOutlined, FilterOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
-import AdminFilterDisclosure from '../../../../shared/components/AdminFilterDisclosure.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
@@ -33,7 +32,6 @@ const convertToTenPointScale = (value, totalMaxScore) => {
 }
 
 export default function StaffCompetencyPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { showToast } = useToast()
   const today = localToday()
@@ -42,10 +40,13 @@ export default function StaffCompetencyPage() {
   const query = (searchParams.get('q') || '').trim()
   const [draftFilters, setDraftFilters] = useState({ q: query, dateFrom: fromDate, dateTo: toDate })
   const [dateError, setDateError] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailAttempts, setDetailAttempts] = useState([])
+  const [activeSubmissionId, setActiveSubmissionId] = useState(null)
 
   useEffect(() => {
     setDraftFilters({ q: query, dateFrom: fromDate, dateTo: toDate })
@@ -131,6 +132,7 @@ export default function StaffCompetencyPage() {
   )
 
   const openDetail = async (submissionId) => {
+    setActiveSubmissionId(submissionId)
     setDetailLoading(true)
     setDetail({})
     try {
@@ -141,6 +143,20 @@ export default function StaffCompetencyPage() {
     } finally {
       setDetailLoading(false)
     }
+  }
+
+  const openAttemptHistory = attempts => {
+    const sortedAttempts = [...attempts].sort((left, right) => (
+      new Date(right.evaluatedAt || 0).getTime() - new Date(left.evaluatedAt || 0).getTime()
+    ))
+    setDetailAttempts(sortedAttempts)
+    if (sortedAttempts[0]?.submissionId != null) openDetail(sortedAttempts[0].submissionId)
+  }
+
+  const closeDetail = () => {
+    setDetail(null)
+    setDetailAttempts([])
+    setActiveSubmissionId(null)
   }
 
   return (
@@ -160,8 +176,23 @@ export default function StaffCompetencyPage() {
       <div className="sc-page">
         <section className="sc-toolbar admin-control-toolbar" aria-label="Bộ lọc tuân thủ cá nhân">
           <div className="admin-control-toolbar__main">
-            <div className="sc-search-input"><SearchOutlined aria-hidden="true" /><input value={draftFilters.q} onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))} onKeyDown={event => event.key === 'Enter' && applyFilters()} placeholder="Tìm tên bảng kiểm..." aria-label="Tìm tên bảng kiểm" /></div>
-            <AdminFilterDisclosure activeCount={Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
+            <div className="admin-control-toolbar__controls">
+              <div className="sc-search-input admin-control-toolbar__search"><SearchOutlined aria-hidden="true" /><input value={draftFilters.q} onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))} onKeyDown={event => event.key === 'Enter' && applyFilters()} placeholder="Tìm tên bảng kiểm..." aria-label="Tìm tên bảng kiểm" /></div>
+              <button
+                type="button"
+                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
+                aria-controls="staff-compliance-filter-panel"
+                aria-expanded={isFilterOpen}
+                onClick={() => setIsFilterOpen(current => !current)}
+              >
+                <FilterOutlined aria-hidden="true" />
+                Bộ lọc
+                <span className="admin-control-toolbar__filter-count">{Number(Boolean(fromDate)) + Number(Boolean(toDate))}</span>
+              </button>
+            </div>
+          </div>
+          {isFilterOpen && (
+            <div id="staff-compliance-filter-panel" className="sc-toolbar__filter-panel admin-control-toolbar__panel">
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
                 <input type="date" value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} />
@@ -170,14 +201,13 @@ export default function StaffCompetencyPage() {
                 <span>Đến ngày</span>
                 <input type="date" value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} />
               </label>
+              <div className="sc-toolbar__filter-actions">
+                <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>
+                <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={applyFilters}>Áp dụng</button>
+              </div>
               {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
-            </AdminFilterDisclosure>
-            <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={applyFilters}>Áp dụng</button>
-            <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>
-            <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => navigate('/staff/checklists')}>
-              Thực hiện đánh giá được giao
-            </button>
-          </div>
+            </div>
+          )}
         </section>
         <section className="sc-personal-metrics sc-personal-metrics--compact" aria-label="Tổng quan tuân thủ">
           <article className="sc-personal-metric sc-personal-metric--primary"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tỷ lệ tuân thủ chung</span><strong>{formatNumber(totals.rate)}%</strong></div></article>
@@ -198,15 +228,16 @@ export default function StaffCompetencyPage() {
                 <td><strong className="sc-table__process-name">{item.formName}</strong></td>
                 <td><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
                 <td><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
-                <td><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).map(attempt => <button key={attempt.submissionId} type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem lượt đánh giá ngày ${new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN')}`} aria-label={`Xem lượt đánh giá ngày ${new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN')}`} onClick={() => openDetail(attempt.submissionId)}><EyeOutlined /></button>)}</div></td>
+                <td><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).length > 0 && <button type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá`} aria-label={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá ${item.formName}`} onClick={() => openAttemptHistory(item.attempts)}><EyeOutlined /></button>}</div></td>
               </tr>)}
             </tbody></table></div>
           )}
         </div>
       </div>
-      {detail !== null ? <div className="sc-detail-backdrop" role="presentation" onMouseDown={() => setDetail(null)}><section className="sc-detail-dialog" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
-        <header className="sc-detail-dialog__header"><div><span>CHI TIẾT LƯỢT ĐÁNH GIÁ</span><h3>{detail?.title || 'Tuân thủ quy trình'}</h3></div><button type="button" onClick={() => setDetail(null)} aria-label="Đóng"><CloseOutlined /></button></header>
+      {detail !== null ? <div className="sc-detail-backdrop" role="presentation" onMouseDown={closeDetail}><section className="sc-detail-dialog" role="dialog" aria-modal="true" onMouseDown={event => event.stopPropagation()}>
+        <header className="sc-detail-dialog__header"><div><span>CHI TIẾT LƯỢT ĐÁNH GIÁ</span><h3>{detail?.title || detailAttempts[0]?.formName || 'Tuân thủ quy trình'}</h3></div><button type="button" onClick={closeDetail} aria-label="Đóng"><CloseOutlined /></button></header>
         {detailLoading ? <div className="sc-detail-dialog__loading"><LoadingState label="Đang tải..." /></div> : <div className="sc-detail-dialog__body">
+          {detailAttempts.length > 1 && <section className="sc-attempt-history" aria-label="Lịch sử các lượt đánh giá"><h4>Lịch sử đánh giá ({detailAttempts.length} lượt)</h4><div>{detailAttempts.map((attempt, index) => <button key={attempt.submissionId} type="button" className={attempt.submissionId === activeSubmissionId ? 'is-active' : ''} onClick={() => openDetail(attempt.submissionId)}><span>Lượt {detailAttempts.length - index}</span><strong>{attempt.evaluatedAt ? new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN') : 'Chưa có ngày'}</strong><small>{attempt.passed ? 'Đạt' : 'Chưa đạt'} · {formatScore10(attempt.score)}/10</small></button>)}</div></section>}
           <div className="sc-detail-metrics"><article className="sc-personal-metric"><span className="sc-personal-metric__icon">{detail?.result === 'PASSED' ? <CheckCircleFilled /> : <WarningFilled />}</span><div><span>Kết quả</span><strong>{detail?.result === 'PASSED' ? 'Đạt' : 'Chưa đạt'}</strong></div></article><article className="sc-personal-metric"><div><span>Điểm</span><strong>{formatScore10(detail?.convertedScore)}/10</strong></div></article></div>
           <div className="sc-detail-breakdown"><h4>Câu trả lời và tiêu chí</h4>{(detail?.scoreBreakdown || []).map(item => {
             const score10 = convertToTenPointScale(item.weightedScore, detail?.maxScore)

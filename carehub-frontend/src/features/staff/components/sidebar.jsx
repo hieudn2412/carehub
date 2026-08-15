@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -47,10 +47,15 @@ function Sidebar({ alertSummary = {} }) {
   const location = useLocation()
   const currentPath = location.pathname
   const navRef = useRef(null)
+  const pendingRouteRef = useRef(null)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobileClosing, setIsMobileClosing] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [pendingRoute, setPendingRoute] = useState(null)
+
+  useLayoutEffect(() => {
+    pendingRouteRef.current = pendingRoute
+  }, [pendingRoute])
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -128,6 +133,9 @@ function Sidebar({ alertSummary = {} }) {
       items: [
         { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo liên tục', path: '/staff/training' },
         { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/staff/competency' },
+        ...(!isManager ? [
+          { icon: <FileDoneOutlined />, label: 'Thực hiện đánh giá được giao', path: '/staff/checklists' },
+        ] : []),
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
         ...(!isManager ? [
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
@@ -141,20 +149,32 @@ function Sidebar({ alertSummary = {} }) {
 
   // Manager specific features
   if (isManager) {
-    navSections.push({
-      label: 'Dashboard & báo cáo thống kê',
-      items: [
-        { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
-        { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
-        { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
-        { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
-        { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
-        { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
-        { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
-      ],
-    })
+    navSections.push(
+      {
+        label: 'Đào tạo liên tục',
+        items: [
+          { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+          { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
+        ],
+      },
+      {
+        label: 'Tuân thủ quy trình, quy định',
+        items: [
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
+          { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
+          { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
+        ],
+      },
+      {
+        label: 'Năng lực chuyên môn',
+        items: [
+          { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+          { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
+        ],
+      },
+    )
   }
 
   navSections.push(
@@ -248,17 +268,11 @@ function Sidebar({ alertSummary = {} }) {
     setIsMobileOpen(false)
   }
 
-  const handleSidebarTransitionEnd = (event) => {
-    if (
-      event.target !== event.currentTarget ||
-      event.propertyName !== 'transform' ||
-      isMobileOpen ||
-      !isMobileClosing
-    ) {
-      return
-    }
+  const finishStaffMobileMenuClose = () => {
+    if (!isMobileClosing) return
 
-    const route = pendingRoute
+    const route = pendingRouteRef.current ?? pendingRoute
+    pendingRouteRef.current = null
     setSearchKeyword('')
     setPendingRoute(null)
     setIsMobileClosing(false)
@@ -266,6 +280,23 @@ function Sidebar({ alertSummary = {} }) {
     if (route && route !== currentPath) {
       navigate(route)
     }
+  }
+
+  const handleSidebarTransitionEnd = (event) => {
+    if (
+      event.target !== event.currentTarget ||
+      event.propertyName !== 'transform' ||
+      isMobileOpen
+    ) {
+      return
+    }
+
+    finishStaffMobileMenuClose()
+  }
+
+  const handleSidebarTransitionCancel = (event) => {
+    if (event.target !== event.currentTarget || event.propertyName !== 'transform') return
+    finishStaffMobileMenuClose()
   }
 
   const examMenuItem = {
@@ -354,58 +385,7 @@ function Sidebar({ alertSummary = {} }) {
           ] : []),
         ],
       },
-    ] : [
-      {
-        title: 'Dashboard & báo cáo thống kê',
-        items: [
-          {
-            icon: <BarChartOutlined />,
-            label: 'Giờ đào tạo liên tục',
-            route: '/manager/reports/training-dashboard',
-          },
-          {
-            icon: <TrophyOutlined />,
-            label: 'Năng lực chuyên môn',
-            route: '/manager/reports/quality-dashboard',
-          },
-          {
-            icon: <CheckSquareOutlined />,
-            label: 'Tuân thủ quy trình, quy định',
-            route: '/manager/reports/checklist-dashboard',
-          },
-          {
-            icon: <CheckSquareOutlined />,
-            label: 'Tuân thủ quy trình, quy định theo kỹ thuật',
-            route: '/manager/compliance-by-technique',
-          },
-          {
-            icon: <BarChartOutlined />,
-            label: 'Chất lượng chăm sóc',
-            route: '/manager/competency-summary',
-          },
-          {
-            icon: <TeamOutlined />,
-            label: 'Nhân sự và giờ đào tạo',
-            route: '/manager/employees',
-          },
-          {
-            icon: <FileDoneOutlined />,
-            label: 'Kết quả năng lực chuyên môn',
-            route: '/manager/exam-results',
-          },
-          {
-            icon: <CheckSquareOutlined />,
-            label: 'Thực hiện đánh giá',
-            route: '/manager/quality/checklists',
-          },
-          {
-            icon: <HistoryOutlined />,
-            label: 'Lịch sử đánh giá',
-            route: '/manager/quality/history',
-          },
-        ],
-      },
-    ]),
+    ] : []),
     {
       title: 'Tài khoản',
       items: [
@@ -480,6 +460,7 @@ function Sidebar({ alertSummary = {} }) {
         className={`sidebar sidebar--staff-user${isMobileOpen ? ' sidebar--mobile-open' : ''}`}
         aria-label="Điều hướng chính"
         onTransitionEnd={handleSidebarTransitionEnd}
+        onTransitionCancel={handleSidebarTransitionCancel}
       >
         <div className="staff-mobile-menu" aria-hidden={!isMobileOpen}>
             <div className="staff-mobile-menu__topbar">

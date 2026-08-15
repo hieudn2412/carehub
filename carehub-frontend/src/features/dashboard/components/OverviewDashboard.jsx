@@ -15,12 +15,12 @@ import {
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -145,11 +145,12 @@ function DomainCard({ type, data, onOpen }) {
 }
 
 function formatScore(value) {
+  if (value == null || value === '') return '—'
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
 }
 
-function ManagementKpiCard({ type, data, onOpen }) {
+function ManagementKpiCard({ type, data, content, onOpen }) {
   const total = Number(data?.total) || 0
   const passed = Number(data?.passed) || 0
   const rate = Number(data?.rate) || 0
@@ -157,18 +158,31 @@ function ManagementKpiCard({ type, data, onOpen }) {
   const labels = {
     training: 'Đào tạo liên tục',
     quality: 'Tuân thủ chung',
-    exams: 'Đạt năng lực chuyên môn',
+    exams: 'Năng lực chuyên môn',
   }
-  const primaryValue = type === 'training'
+  if (type === 'exams' && content === 'knowledge') labels.exams = 'Trung bình điểm kiểm tra kiến thức'
+  if (type === 'exams' && content === 'skill') labels.exams = 'Trung bình điểm kiểm tra kỹ năng'
+  if (type === 'exams' && content === 'classification') labels.exams = 'Phân loại năng lực'
+  const primaryValue = type === 'exams' && content === 'knowledge'
+    ? `TB ${formatScore(data?.knowledgeAverage)}/10`
+    : type === 'exams' && content === 'skill'
+      ? `TB ${formatScore(data?.skillAverage)}/10`
+      : type === 'exams' && content === 'classification'
+        ? `${formatNumber(passed)}/${formatNumber(total)} đạt`
+    : type === 'training'
     ? '≥ 120h'
     : type === 'exams'
-      ? `TB ${formatScore(data?.overallAverage)}/10`
+      ? data?.targetScore == null
+        ? 'Điểm sàn theo từng khoa'
+        : `Điểm sàn ≥ ${formatScore(data.targetScore)}/10`
       : `${formatNumber(passed)}/${formatNumber(total)}`
   const detail = type === 'training'
-    ? 'Chuẩn đào tạo liên tục'
+    ? 'Mục tiêu 5 năm'
     : type === 'quality'
-      ? 'Theo điểm sàn và điểm liệt'
-      : `Từ 01/01 đến hôm nay · Lý thuyết ${formatScore(data?.knowledgeAverage)} · Kỹ năng ${formatScore(data?.skillAverage)}${data?.targetScore == null ? ' · Theo ngưỡng từng khoa' : ` · Ngưỡng ${formatScore(data.targetScore)}`}`
+      ? 'Trung bình từ đầu năm'
+      : content === 'classification'
+        ? Object.entries(data?.classificationCounts || {}).map(([label, count]) => `${label}: ${count}`).join(' · ') || 'Chưa có dữ liệu phân loại'
+        : 'Mức năng lực yêu cầu'
 
   return (
     <button
@@ -207,11 +221,11 @@ function ComplianceTargetChart({ items = [], loading, onDetails }) {
   }
 
   return (
-    <section className="overview-compliance-chart" aria-label="So sánh mục tiêu và thực tế theo bảng kiểm">
+    <section className="overview-compliance-chart" aria-label="Kết quả đạt được so với mục tiêu">
       <header>
         <div>
-          <h2>Mức độ tuân thủ theo bảng kiểm</h2>
-          <p>So sánh mục tiêu đang áp dụng với tỷ lệ thực tế đạt được.</p>
+          <h2>Chất lượng chăm sóc</h2>
+          <p>Kết quả đạt được so với mục tiêu.</p>
         </div>
         <div className="overview-compliance-chart__actions">
           <span>{items.length} bảng kiểm</span>
@@ -220,7 +234,7 @@ function ComplianceTargetChart({ items = [], loading, onDetails }) {
       </header>
       <div className="overview-compliance-chart__canvas">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={items} margin={{ top: 16, right: 18, left: 0, bottom: 74 }} barGap={4}>
+          <BarChart data={items} margin={{ top: 16, right: 18, left: 0, bottom: 74 }} barCategoryGap="55%" barGap={6}>
             <CartesianGrid stroke="#e7edf2" strokeDasharray="4 4" vertical={false} />
             <XAxis
               dataKey="name"
@@ -244,8 +258,8 @@ function ComplianceTargetChart({ items = [], loading, onDetails }) {
               contentStyle={{ border: '1px solid #dce5ec', borderRadius: 8 }}
             />
             <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: 12 }} />
-            <Bar dataKey="target" name="Mục tiêu" fill="#d4d9df" radius={[4, 4, 0, 0]} maxBarSize={34} />
-            <Bar dataKey="actual" name="Thực tế đạt được" fill="#0d8a78" radius={[4, 4, 0, 0]} maxBarSize={34} />
+            <Bar dataKey="target" name="Mục tiêu" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={34} />
+            <Bar dataKey="actual" name="Kết quả" fill="#0d8a78" radius={[4, 4, 0, 0]} maxBarSize={34} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -253,52 +267,60 @@ function ComplianceTargetChart({ items = [], loading, onDetails }) {
   )
 }
 
-function complianceTrend(items = []) {
-  const resultsByPeriod = new Map(items.map((item) => [item.period, {
-    total: Number(item.submittedCount) || 0,
-    passed: Number(item.passedCount) || 0,
-  }]))
+function localDate(value, fallback) {
+  const [year, month, day] = String(value || '').split('-').map(Number)
+  return year && month && day ? new Date(year, month - 1, day) : fallback
+}
+
+function complianceTrend(items = [], fromDate, toDate) {
   const today = new Date()
-  const year = today.getFullYear()
-  const cursor = new Date(year, 0, 1)
+  const startDate = localDate(fromDate, new Date(today.getFullYear(), 0, 1))
+  const endDate = localDate(toDate, today)
+  const resultsByMonth = items.reduce((months, item) => {
+    const month = String(item.period || '').slice(0, 7)
+    if (!month) return months
+    const current = months.get(month) || { total: 0, passed: 0 }
+    current.total += Number(item.submittedCount) || 0
+    current.passed += Number(item.passedCount) || 0
+    months.set(month, current)
+    return months
+  }, new Map())
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
   const timeline = []
-  let cumulativeTotal = 0
-  let cumulativePassed = 0
-  while (cursor <= today) {
+  while (cursor <= endDate) {
+    const year = cursor.getFullYear()
     const month = String(cursor.getMonth() + 1).padStart(2, '0')
-    const day = String(cursor.getDate()).padStart(2, '0')
-    const period = `${year}-${month}-${day}`
-    const result = resultsByPeriod.get(period)
-    cumulativeTotal += result?.total || 0
-    cumulativePassed += result?.passed || 0
+    const monthKey = `${year}-${month}`
+    const result = resultsByMonth.get(monthKey)
     timeline.push({
-      period,
-      rate: cumulativeTotal ? cumulativePassed * 100 / cumulativeTotal : null,
+      period: `${monthKey}-01`,
+      rate: result?.total ? result.passed * 100 / result.total : null,
     })
-    cursor.setDate(cursor.getDate() + 1)
+    cursor.setMonth(cursor.getMonth() + 1)
   }
   return timeline
 }
 
-function monthTicks() {
+function monthTicks(fromDate, toDate) {
   const today = new Date()
-  const year = today.getFullYear()
-  return Array.from({ length: today.getMonth() + 1 }, (_, index) => (
-    `${year}-${String(index + 1).padStart(2, '0')}-01`
-  ))
+  const startDate = localDate(fromDate, new Date(today.getFullYear(), 0, 1))
+  const endDate = localDate(toDate, today)
+  const format = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const ticks = [format(startDate)]
+  const cursor = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1)
+  while (cursor <= endDate) {
+    ticks.push(format(cursor))
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return ticks
 }
 
 function monthLabel(value) {
   return `T${Number(String(value).slice(5, 7))}`
 }
 
-function dateLabel(value) {
-  const [year, month, day] = String(value).split('-')
-  return `${day}/${month}/${year}`
-}
-
-function ComplianceDetailCard({ item, trend, loading }) {
-  const hasTimeline = trend.length > 0
+function ComplianceDetailCard({ item, trend, loading, fromDate, toDate }) {
+  const hasTimeline = trend.some((point) => point.rate != null)
   return (
     <article className="overview-checklist-card">
       <h3 title={item.name}>{item.name}</h3>
@@ -310,14 +332,20 @@ function ComplianceDetailCard({ item, trend, loading }) {
       <div className="overview-checklist-card__sparkline" aria-label={`Xu hướng tuân thủ của ${item.name}`}>
         {loading ? <LoadingOutlined spin /> : hasTimeline ? (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trend} margin={{ top: 12, right: 10, bottom: 4, left: -12 }}>
+            <AreaChart data={trend} margin={{ top: 12, right: 10, bottom: 4, left: -12 }}>
+              <defs>
+                <linearGradient id={`compliance-area-${item.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#0d8a78" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="#0d8a78" stopOpacity={0.015} />
+                </linearGradient>
+              </defs>
               <CartesianGrid stroke="#edf1f4" strokeDasharray="3 3" vertical={false} />
               <XAxis
                 dataKey="period"
                 axisLine={{ stroke: '#aab4c0' }}
                 tick={{ fill: '#667085', fontSize: 9 }}
                 tickLine={false}
-                ticks={monthTicks()}
+                ticks={monthTicks(fromDate, toDate)}
                 tickFormatter={monthLabel}
                 interval={0}
                 height={26}
@@ -332,8 +360,8 @@ function ComplianceDetailCard({ item, trend, loading }) {
                 width={42}
               />
               <Tooltip
-                formatter={(value) => [formatPercent(value), 'Tỷ lệ tuân thủ']}
-                labelFormatter={(label) => `Ngày ${dateLabel(label)}`}
+                formatter={(value) => [formatPercent(value), 'Kết quả']}
+                labelFormatter={(label) => `Tháng ${Number(String(label).slice(5, 7))}/${String(label).slice(0, 4)}`}
                 contentStyle={{ border: '1px solid #dce5ec', borderRadius: 8, fontSize: 11 }}
               />
               <ReferenceLine
@@ -342,31 +370,33 @@ function ComplianceDetailCard({ item, trend, loading }) {
                 strokeDasharray="5 4"
                 strokeWidth={1.5}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="rate"
                 stroke="#0d8a78"
-                strokeWidth={2}
+                strokeWidth={2.5}
+                fill={`url(#compliance-area-${item.id})`}
+                fillOpacity={1}
                 dot={(props) => (props.payload.rate == null ? null : (
-                  <circle cx={props.cx} cy={props.cy} r="2.5" fill="#0d8a78" />
+                  <circle cx={props.cx} cy={props.cy} r="3.5" fill="#fff" stroke="#0d8a78" strokeWidth="2.5" />
                 ))}
-                activeDot={{ r: 4 }}
+                activeDot={{ r: 5, fill: '#fff', stroke: '#0d8a78', strokeWidth: 2.5 }}
                 connectNulls
                 isAnimationActive={false}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         ) : <span>Chưa đủ dữ liệu để hiển thị xu hướng</span>}
       </div>
       <div className="overview-checklist-card__legend" aria-hidden="true">
-        <span><i className="is-actual" />Tuân thủ thực tế</span>
+        <span><i className="is-actual" />Kết quả</span>
         <span><i className="is-target" />Mục tiêu</span>
       </div>
     </article>
   )
 }
 
-function ComplianceDetails({ items, trends, loading, onBack }) {
+function ComplianceDetails({ items, trends, loading, fromDate, toDate, onBack }) {
   return (
     <section className="overview-checklist-details">
       <header>
@@ -383,6 +413,8 @@ function ComplianceDetails({ items, trends, loading, onBack }) {
             item={item}
             trend={trends[item.id] || []}
             loading={loading}
+            fromDate={fromDate}
+            toDate={toDate}
           />
         ))}
       </div>
@@ -415,7 +447,17 @@ export default function OverviewDashboard({
   const [complianceTrendsLoading, setComplianceTrendsLoading] = useState(false)
   const activeFilterCount = [
     role === 'admin' && filters.departmentId,
+    filters.employeeCode,
+    filters.content && filters.content !== 'all',
   ].filter(Boolean).length
+  const managementTypes = filters.content === 'training'
+    ? ['training']
+    : filters.content === 'compliance'
+      ? ['quality']
+      : ['knowledge', 'skill', 'classification'].includes(filters.content)
+        ? ['exams']
+        : ['training', 'quality', 'exams']
+  const showComplianceSection = !filters.content || filters.content === 'all' || filters.content === 'compliance'
 
   useEffect(() => {
     if (isStaff) return
@@ -432,7 +474,9 @@ export default function OverviewDashboard({
     )
     setComplianceTrends(Object.fromEntries(results.map((result, index) => [
       complianceChart[index].id,
-      result.status === 'fulfilled' ? complianceTrend(result.value) : [],
+      result.status === 'fulfilled'
+        ? complianceTrend(result.value, filters.fromDate, filters.toDate)
+        : [],
     ])))
     setComplianceTrendsLoading(false)
   }
@@ -486,6 +530,44 @@ export default function OverviewDashboard({
                 ) : (
                   <div className="overview-filter-static">{profile?.departmentName || 'Khoa của tôi'}</div>
                 )}
+              </label>
+              <label>
+                <span>Từ ngày</span>
+                <input
+                  type="date"
+                  value={filters.fromDate}
+                  max={filters.toDate}
+                  onChange={(event) => onFilterChange('fromDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Đến ngày</span>
+                <input
+                  type="date"
+                  value={filters.toDate}
+                  min={filters.fromDate}
+                  onChange={(event) => onFilterChange('toDate', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Mã nhân viên</span>
+                <input
+                  type="search"
+                  value={filters.employeeCode}
+                  placeholder="Nhập mã nhân viên..."
+                  onChange={(event) => onFilterChange('employeeCode', event.target.value)}
+                />
+              </label>
+              <label>
+                <span>Nội dung</span>
+                <select value={filters.content} onChange={(event) => onFilterChange('content', event.target.value)}>
+                  <option value="all">Tất cả nội dung</option>
+                  <option value="training">Giờ đào tạo liên tục</option>
+                  <option value="compliance">Tỷ lệ tuân thủ chung</option>
+                  <option value="knowledge">Trung bình điểm kiểm tra kiến thức</option>
+                  <option value="skill">Trung bình điểm kiểm tra kỹ năng</option>
+                  <option value="classification">Phân loại năng lực</option>
+                </select>
               </label>
             </div>
           )}
@@ -547,20 +629,23 @@ export default function OverviewDashboard({
       ) : (
         <>
           <section className="overview-management-kpis" aria-label="Chỉ số tổng quan">
-            {['training', 'quality', 'exams'].map((type) => (
+            {managementTypes.map((type) => (
               <ManagementKpiCard
                 key={type}
                 type={type}
                 data={domains[type]}
+                content={filters.content}
                 onOpen={domains[type]?.path ? () => onNavigate(domains[type].path) : undefined}
               />
             ))}
           </section>
-          {showComplianceDetails ? (
+          {showComplianceSection && (showComplianceDetails ? (
             <ComplianceDetails
               items={complianceChart}
               trends={complianceTrends}
               loading={complianceTrendsLoading}
+              fromDate={filters.fromDate}
+              toDate={filters.toDate}
               onBack={() => setShowComplianceDetails(false)}
             />
           ) : (
@@ -569,7 +654,7 @@ export default function OverviewDashboard({
               loading={loading}
               onDetails={openComplianceDetails}
             />
-          )}
+          ))}
         </>
       )}
 

@@ -29,6 +29,14 @@ const today = localDate()
 const yearStart = `${new Date().getFullYear()}-01-01`
 const PAGE_SIZES = [10, 20, 50]
 const EXPORT_PAGE_SIZE = 100
+const submittedAtFormatter = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  month: '2-digit',
+  timeZone: 'Asia/Bangkok',
+  year: 'numeric',
+})
 
 function pageData(response) {
   const data = apiData(response, {})
@@ -63,6 +71,12 @@ function formatScore(value) {
   return parsed === null
     ? '—'
     : parsed.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatSubmittedAt(value) {
+  if (!value) return 'Chưa cập nhật'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : submittedAtFormatter.format(date)
 }
 
 function normalizeDepartment(item) {
@@ -378,54 +392,60 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         {error && <div className="checklist-quality-alert"><CloseCircleOutlined /><span>{error}</span>
           <button type="button" onClick={() => setReloadKey((value) => value + 1)}>Thử lại</button></div>}
 
-        <section className="checklist-quality-processes">
-          <div className="checklist-quality-section-heading">
-            <div><h2>{view === 'LATEST' ? 'Bảng kiểm được chấm gần nhất' : 'Danh sách bảng kiểm phù hợp'}</h2>
-              <p>{view === 'LATEST' ? 'Tính từ đầu năm đến hiện tại.' : 'Số liệu cập nhật theo toàn bộ bộ lọc đang chọn.'}</p></div>
-            <span>{pageInfo.totalElements} quy trình</span>
-          </div>
-          {loading ? <LoadingState /> : forms.length === 0
-            ? <EmptyState isUser={isUser} filtered={view === 'FILTERED'} />
-            : <div className={`checklist-quality-process-grid${view === 'LATEST' ? ' checklist-quality-process-grid--latest' : ''}`}>
-              {forms.map((item) => <ProcessCard key={item.formId} item={item}
-                active={String(selectedForm?.formId) === String(item.formId)}
-                canConfigure={!isUser} onSelect={() => setSelectedFormId(String(item.formId))}
-                onConfigure={() => setTargetModalForm(item)} />)}
-            </div>}
-          {view === 'FILTERED' && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
-            totalElements={pageInfo.totalElements} totalPages={pageInfo.totalPages}
-            onPage={setPage} onSize={(nextSize) => { setSize(nextSize); setPage(0) }} />}
-        </section>
+        <div className="checklist-quality-workspace">
+          <section className="checklist-quality-processes">
+            <div className="checklist-quality-section-heading">
+              <div><h2>{view === 'LATEST' ? 'Bảng kiểm đã chấm gần nhất' : 'Danh sách bảng kiểm phù hợp'}</h2>
+                <p>{view === 'LATEST' ? 'Tính từ đầu năm đến hiện tại.' : 'Số liệu cập nhật theo toàn bộ bộ lọc đang chọn.'}</p></div>
+              <span>{pageInfo.totalElements} quy trình</span>
+            </div>
+            {loading ? <LoadingState /> : forms.length === 0
+              ? <EmptyState isUser={isUser} filtered={view === 'FILTERED'} />
+              : <div className={`checklist-quality-process-grid${view === 'LATEST' ? ' checklist-quality-process-grid--latest' : ''}`}>
+                {forms.map((item) => <ProcessCard key={item.formId} item={item}
+                  active={String(selectedForm?.formId) === String(item.formId)}
+                  canConfigure={!isUser} onSelect={() => setSelectedFormId(String(item.formId))}
+                  onConfigure={() => setTargetModalForm(item)} />)}
+              </div>}
+            {view === 'FILTERED' && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
+              totalElements={pageInfo.totalElements} totalPages={pageInfo.totalPages}
+              onPage={setPage} onSize={(nextSize) => { setSize(nextSize); setPage(0) }} />}
+          </section>
 
-        {selectedForm && <section className="checklist-quality-detail">
-          <header className="checklist-quality-detail__header">
-            <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{selectedForm.formTitle}</h2>
-              <p>{selectedForm.formCode} · Phiên bản v{selectedForm.versionNumber || '—'}</p></div>
-            <span className="checklist-quality-detail__rate">
-              {selectedForm.monitoringCount > 0 ? `${formatPercent(selectedForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
-            </span>
-          </header>
-          <div className="checklist-quality-metrics">
-            <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={selectedForm.monitoringCount} note="Kết quả đã nộp" />
-            <Metric icon={<CheckCircleOutlined />} label="Đạt / Tổng" value={`${selectedForm.passedCount}/${selectedForm.monitoringCount}`} note="Tỷ lệ tuân thủ" tone="success" />
-            <Metric icon={<CloseCircleOutlined />} label="Chưa đạt" value={selectedForm.failedCount} note="Điểm hoặc câu trọng yếu" tone="danger" />
-            <Metric icon={<TeamOutlined />} label="Nhân viên được đánh giá" value={selectedForm.uniqueSubjectCount} note="Nhân viên duy nhất" />
-            <Metric icon={<BarChartOutlined />} label={targetSourceLabel(selectedForm.targetSource)} value={formatPercent(selectedForm.targetPercent)} note="Mục tiêu đang áp dụng" />
-          </div>
-          <div className="checklist-quality-chart-grid">
-            <article className="checklist-quality-panel">
-              <div className="checklist-quality-panel__heading"><div><h3>Phân bố kết quả</h3><p>Đạt và chưa đạt trong phạm vi hiện tại.</p></div></div>
-              <div className="checklist-quality-result-bars">
-                <ResultBar label="Đạt" value={selectedForm.passedCount} total={selectedForm.monitoringCount} tone="success" />
-                <ResultBar label="Chưa đạt" value={selectedForm.failedCount} total={selectedForm.monitoringCount} tone="danger" />
-              </div>
-            </article>
-            <article className="checklist-quality-panel">
-              <div className="checklist-quality-panel__heading"><div><h3>Xu hướng tuân thủ</h3><p>Tổng hợp theo thời gian và bộ lọc hiện tại.</p></div></div>
-              {trendLoading ? <LoadingState compact /> : <TrendChart items={trendItems} />}
-            </article>
-          </div>
-        </section>}
+          {selectedForm ? <section className="checklist-quality-detail">
+            <header className="checklist-quality-detail__header">
+              <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{selectedForm.formTitle}</h2>
+                <p>{selectedForm.formCode} · Phiên bản v{selectedForm.versionNumber || '—'}</p></div>
+              <span className="checklist-quality-detail__rate">
+                {selectedForm.monitoringCount > 0 ? `${formatPercent(selectedForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
+              </span>
+            </header>
+            <div className="checklist-quality-metrics">
+              <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={selectedForm.monitoringCount} note="Kết quả đã nộp" />
+              <Metric icon={<CheckCircleOutlined />} label="Đạt / Tổng" value={`${selectedForm.passedCount}/${selectedForm.monitoringCount}`} note="Tỷ lệ tuân thủ" tone="success" />
+              <Metric icon={<CloseCircleOutlined />} label="Chưa đạt" value={selectedForm.failedCount} note="Điểm hoặc câu trọng yếu" tone="danger" />
+              <Metric icon={<TeamOutlined />} label="Nhân viên được đánh giá" value={selectedForm.uniqueSubjectCount} note="Nhân viên duy nhất" />
+              <Metric icon={<BarChartOutlined />} label={targetSourceLabel(selectedForm.targetSource)} value={formatPercent(selectedForm.targetPercent)} note="Mục tiêu đang áp dụng" />
+            </div>
+            <div className="checklist-quality-chart-grid">
+              <article className="checklist-quality-panel">
+                <div className="checklist-quality-panel__heading"><div><h3>Phân bố kết quả</h3><p>Đạt và chưa đạt trong phạm vi hiện tại.</p></div></div>
+                <div className="checklist-quality-result-bars">
+                  <ResultBar label="Đạt" value={selectedForm.passedCount} total={selectedForm.monitoringCount} tone="success" />
+                  <ResultBar label="Chưa đạt" value={selectedForm.failedCount} total={selectedForm.monitoringCount} tone="danger" />
+                </div>
+              </article>
+              <article className="checklist-quality-panel">
+                <div className="checklist-quality-panel__heading"><div><h3>Xu hướng tuân thủ</h3><p>Tổng hợp theo thời gian và bộ lọc hiện tại.</p></div></div>
+                {trendLoading ? <LoadingState compact /> : <TrendChart items={trendItems} />}
+              </article>
+            </div>
+          </section> : !loading && <section className="checklist-quality-detail checklist-quality-detail--empty">
+            <FileSearchOutlined />
+            <strong>Chưa có dữ liệu dashboard</strong>
+            <span>Hãy điều chỉnh bộ lọc để chọn một bảng kiểm có dữ liệu phù hợp.</span>
+          </section>}
+        </div>
       </div>
 
       {targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
@@ -468,6 +488,11 @@ function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
       </button>}
     </div>
     <strong>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
+    {hasData && <p className="checklist-quality-process-card__submitted-at">
+      <CalendarOutlined />
+      <span>Chấm gần nhất:</span>
+      <time dateTime={item.lastSubmittedAt || undefined}>{formatSubmittedAt(item.lastSubmittedAt)}</time>
+    </p>}
     <dl>
       <div><dt>Lượt giám sát</dt><dd>{item.monitoringCount}</dd></div>
       <div><dt>Đạt / Tổng</dt><dd>{item.passedCount}/{item.monitoringCount}</dd></div>

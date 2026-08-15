@@ -193,8 +193,8 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
                       AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
-                      AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
-                      AND (:dateTo IS NULL OR r.startDate <= :dateTo)
+                      AND r.startDate >= :dateFrom
+                      AND r.startDate <= :dateTo
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
                       AND (:professionalFieldId IS NULL OR professionalField.id = :professionalFieldId)
                       AND (:workflowStatus IS NULL OR r.workflowStatus = :workflowStatus)
@@ -232,8 +232,8 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                     WHERE (:scopeEmployeeId IS NULL OR employee.id = :scopeEmployeeId)
                       AND (:scopeDepartmentId IS NULL OR employeeDepartment.id = :scopeDepartmentId)
                       AND (:keyword IS NULL OR LOWER(r.title) LIKE :keyword)
-                      AND (:dateFrom IS NULL OR r.startDate >= :dateFrom)
-                      AND (:dateTo IS NULL OR r.startDate <= :dateTo)
+                      AND r.startDate >= :dateFrom
+                      AND r.startDate <= :dateTo
                       AND (:activityTypeId IS NULL OR activityType.id = :activityTypeId)
                       AND (:professionalFieldId IS NULL OR professionalField.id = :professionalFieldId)
                       AND (:workflowStatus IS NULL OR r.workflowStatus = :workflowStatus)

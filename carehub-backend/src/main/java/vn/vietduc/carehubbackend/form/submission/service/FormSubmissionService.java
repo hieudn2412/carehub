@@ -75,6 +75,10 @@ public class FormSubmissionService {
             throw ValidationException.field("subject.type", "This assigned form requires a USER subject");
         }
         User subject = resolveSubjectUser(request.subject().userId(), request.subject().employeeCode());
+        if (subject.getId().equals(actorId)) {
+            throw ValidationException.field("subject.userId", "Người đánh giá không thể tự đánh giá chính mình");
+        }
+        requireEvaluatorSubjectScope(actor, subject);
         boolean draftExists = item != null
                 ? submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                         item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)
@@ -318,6 +322,7 @@ public class FormSubmissionService {
         }
         long actorId = securityUtils.getCurrentUserId();
         User subject = resolveSubjectUser(subjectUserId, employeeCode);
+        requireEvaluatorSubjectScope(activeUser(actorId), subject);
 
         Optional<FormSubmission> draft;
         if (assignmentItemId != null) {
@@ -364,6 +369,10 @@ public class FormSubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Form submission not found"));
         if (!submission.getSubmittedBy().getId().equals(actorId)) {
             throw new ResourceNotFoundException("Form submission not found");
+        }
+        FormSubmissionContext subjectContext = submission.getSubjectContext();
+        if (subjectContext != null && subjectContext.getSubjectUser() != null) {
+            requireEvaluatorSubjectScope(activeUser(actorId), subjectContext.getSubjectUser());
         }
         FormAssignmentItem item = submission.getAssignmentItem();
         if (item == null) {
@@ -520,6 +529,17 @@ public class FormSubmissionService {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         return authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+    }
+
+    private void requireEvaluatorSubjectScope(User actor, User subject) {
+        if (isAdmin()) return;
+        if (actor.getDepartment() == null) {
+            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
+        }
+        if (subject.getDepartment() == null
+                || !actor.getDepartment().getId().equals(subject.getDepartment().getId())) {
+            throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc khoa/phòng của mình");
+        }
     }
 
     private FormSubmissionResponse toResponse(FormSubmission submission, boolean detail) {

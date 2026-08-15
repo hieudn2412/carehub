@@ -19,6 +19,12 @@ export const staffApi = {
     })
   },
 
+  updateProfile(data) {
+    return httpClient.put('/me', data, {
+      headers: authHeaders(),
+    })
+  },
+
   getAssignedForms(params) {
     return httpClient.get('/assigned-forms', {
       headers: authHeaders(),
@@ -100,6 +106,13 @@ export const staffApi = {
 
   getQualityChecklistDashboard(params) {
     return httpClient.get('/dashboard/quality/checklists', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getDashboardFormSummary(params) {
+    return httpClient.get('/dashboard/forms/summary', {
       headers: authHeaders(),
       params,
     })

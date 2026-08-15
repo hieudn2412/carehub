@@ -184,12 +184,19 @@ class AnalyticsApiSystemTest extends AbstractApiSystemTest {
         JsonNode current = data(get(API + "/admin/system-settings", adminToken));
         assertThat(current.get("globalTrainingHours").asDouble()).isPositive();
         assertThat(current.has("trainingWindowYears")).isTrue();
+        assertThat(current.get("competencyTargetScore").asDouble()).isBetween(0.0, 10.0);
 
         ResponseEntity<String> invalid = put(API + "/admin/system-settings", adminToken, """
-                {"globalTrainingHours":0.4,"version":%d}
+                {"globalTrainingHours":0.4,"trainingWindowYears":5,"competencyTargetScore":6,"version":%d}
                 """.formatted(current.get("version").asLong()));
         assertError(invalid, HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001");
         assertThat(json(invalid).get("details").toString()).contains("globalTrainingHours");
+
+        ResponseEntity<String> invalidYears = put(API + "/admin/system-settings", adminToken, """
+                {"globalTrainingHours":120,"trainingWindowYears":0,"competencyTargetScore":6,"version":%d}
+                """.formatted(current.get("version").asLong()));
+        assertError(invalidYears, HttpStatus.UNPROCESSABLE_ENTITY, "VAL_001");
+        assertThat(json(invalidYears).get("details").toString()).contains("trainingWindowYears");
 
         assertError(get(API + "/admin/system-settings", employeeToken), HttpStatus.FORBIDDEN, "AUTH_002");
     }

@@ -1,7 +1,14 @@
 import '@testing-library/jest-dom/vitest'
+import React from 'react'
 import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { server } from './msw/server.js'
+
+// Vitest transforms the project's JSX with the classic runtime. Production
+// modules intentionally use JSX without importing the React default, so expose
+// it once before test modules are evaluated instead of doing async imports in
+// individual beforeAll hooks.
+globalThis.React = React
 
 // jsdom throws "Not implemented: navigation" on window.location.replace, which
 // httpClient calls in clearSessionAndRedirectToLogin(). Swap in a minimal stub so

@@ -19,7 +19,7 @@ function ActivityTypeDetailPage() {
       const response = await trainingApi.getActivityType(id)
       setActivityType(response.data.data)
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không tải được chi tiết loại đào tạo'))
+      setErrorMessage(getApiErrorMessage(error, 'Không tải được chi tiết cách thức đào tạo'))
     } finally {
       setIsLoading(false)
     }
@@ -49,8 +49,8 @@ function ActivityTypeDetailPage() {
   }
 
   const breadcrumbs = [
-    { label: 'Các hình thức đào tạo', link: '/admin/training/activity-types' },
-    { label: 'Chi tiết hình thức đào tạo' }
+    { label: 'Cách thức đào tạo', link: '/admin/training/activity-types' },
+    { label: 'Chi tiết cách thức đào tạo' }
   ]
 
   return (
@@ -60,8 +60,8 @@ function ActivityTypeDetailPage() {
               {/* Header Panel */}
               <div className="atl-title-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h1 className="atl-title">Chi tiết hình thức đào tạo</h1>
-                  <p className="atl-subtitle">Thông tin chi tiết và lịch sử sử dụng của hình thức đào tạo</p>
+                  <h1 className="atl-title">Chi tiết cách thức đào tạo</h1>
+                  <p className="atl-subtitle">Thông tin chi tiết và lịch sử sử dụng của cách thức đào tạo</p>
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   {activityType && (
@@ -95,9 +95,9 @@ function ActivityTypeDetailPage() {
                   <article className="training-panel">
                     <h2>Thông tin chung</h2>
                     <dl className="training-definition">
-                      <dt>Mã hình thức</dt>
+                      <dt>Mã cách thức</dt>
                       <dd>{activityType.code}</dd>
-                      <dt>Tên hình thức</dt>
+                      <dt>Tên cách thức</dt>
                       <dd>{activityType.name}</dd>
                       <dt>Mô tả</dt>
                       <dd>{activityType.description || '-'}</dd>
@@ -125,7 +125,7 @@ function ActivityTypeDetailPage() {
                     <p className="training-stat" style={{ fontSize: 32, fontWeight: 700, color: '#2563eb', margin: '12px 0 4px 0' }}>
                       {activityType.usageCount}
                     </p>
-                    <p style={{ margin: 0, color: '#64748b', fontSize: 13.5 }}>hồ sơ đào tạo đang áp dụng hình thức này</p>
+                    <p style={{ margin: 0, color: '#64748b', fontSize: 13.5 }}>hồ sơ đào tạo đang áp dụng cách thức này</p>
                   </article>
 
                   <article className="training-panel">
@@ -143,7 +143,7 @@ function ActivityTypeDetailPage() {
                   <article className="training-panel training-panel--wide">
                     <h2>Các hồ sơ đào tạo gần đây</h2>
                     {activityType.recentRecords.length === 0 ? (
-                      <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có hồ sơ đào tạo nào áp dụng hình thức này.</p>
+                      <p style={{ color: '#94a3b8', margin: '12px 0 0 0' }}>Chưa có hồ sơ đào tạo nào áp dụng cách thức này.</p>
                     ) : (
                       <div className="training-table-wrap" style={{ marginTop: 12 }}>
                       <table className="training-table">

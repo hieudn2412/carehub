@@ -35,15 +35,18 @@ class FormSubjectServiceTest {
     @AfterEach void tearDown() { SecurityContextHolder.clearContext(); }
 
     @Test
-    void managerCanLookupActiveEmployeeAcrossDepartmentsWithAssignment() {
+    void managerCanLookupActiveEmployeeInOwnDepartmentWithAssignment() {
         Position position = Position.builder().name("Điều dưỡng").build();
-        Department department = Department.builder().name("Khoa Hồi sức").build();
+        Department department = Department.builder().id(20L).name("Khoa Hồi sức").build();
+        User manager = User.builder().id(5L).employeeCode("QL01").name("Manager")
+                .department(department).status(UserStatus.ACTIVE).build();
         User target = User.builder().id(101L).employeeCode("NV01").name("Nguyễn Văn A")
                 .position(position).department(department).status(UserStatus.ACTIVE).build();
         FormAssignmentItem item = FormAssignmentItem.builder()
                 .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
         authenticate("ROLE_MANAGER");
         when(securityUtils.getCurrentUserId()).thenReturn(5L);
+        when(userRepository.findByIdAndIsDeletedFalse(5L)).thenReturn(Optional.of(manager));
         when(assignmentAccessService.requireActiveOwnedItem(10L, 5L)).thenReturn(item);
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("nv01"))
                 .thenReturn(Optional.of(target));
@@ -57,20 +60,43 @@ class FormSubjectServiceTest {
     }
 
     @Test
+    void managerCannotLookupEmployeeFromAnotherDepartment() {
+        Department managerDepartment = Department.builder().id(20L).name("Khoa Nội").build();
+        Department otherDepartment = Department.builder().id(21L).name("Khoa Ngoại").build();
+        User manager = User.builder().id(5L).employeeCode("QL01").name("Manager")
+                .department(managerDepartment).status(UserStatus.ACTIVE).build();
+        User target = User.builder().id(101L).employeeCode("NV01").name("Nhân viên")
+                .department(otherDepartment).status(UserStatus.ACTIVE).build();
+        FormAssignmentItem item = FormAssignmentItem.builder()
+                .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
+        authenticate("ROLE_MANAGER");
+        when(securityUtils.getCurrentUserId()).thenReturn(5L);
+        when(assignmentAccessService.requireActiveOwnedItem(10L, 5L)).thenReturn(item);
+        when(userRepository.findByIdAndIsDeletedFalse(5L)).thenReturn(Optional.of(manager));
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV01"))
+                .thenReturn(Optional.of(target));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.findByEmployeeCode(10L, "NV01"));
+    }
+
+    @Test
     void adminCanLookupWithoutAssignment() {
         authenticate("ROLE_ADMIN");
-        User target = User.builder().employeeCode("NV02").name("User").status(UserStatus.ACTIVE).build();
+        User target = User.builder().id(102L).employeeCode("NV02").name("User").status(UserStatus.ACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV02"))
                 .thenReturn(Optional.of(target));
 
         assertEquals("NV02", service.findByEmployeeCode(null, "NV02").employeeCode());
-        verifyNoInteractions(assignmentAccessService, securityUtils);
+        verifyNoInteractions(assignmentAccessService);
     }
 
     @Test
     void cannotLookupInactiveEmployee() {
         authenticate("ROLE_ADMIN");
-        User target = User.builder().employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
+        User target = User.builder().id(103L).employeeCode("NV03").name("Inactive").status(UserStatus.INACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV03"))
                 .thenReturn(Optional.of(target));
 
@@ -83,7 +109,8 @@ class FormSubjectServiceTest {
         User target = User.builder().id(104L).employeeCode("NV04").name("Nguyễn Văn B")
                 .status(UserStatus.ACTIVE).build();
         var pageable = PageRequest.of(0, 20);
-        when(userRepository.searchActiveFormSubjects("%nv04%", pageable))
+        when(securityUtils.getCurrentUserId()).thenReturn(1L);
+        when(userRepository.searchActiveFormSubjects("%nv04%", 1L, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(target), pageable, 1));
 
         var result = service.search(null, " NV04 ", pageable);
@@ -91,22 +118,39 @@ class FormSubjectServiceTest {
         assertEquals(1, result.getTotalElements());
         assertEquals(104L, result.getContent().get(0).userId());
         assertEquals("NV04", result.getContent().get(0).employeeCode());
-        verifyNoInteractions(assignmentAccessService, securityUtils);
+        verifyNoInteractions(assignmentAccessService);
     }
 
     @Test
     void assignedUserCanSearchAfterAssignmentAccessIsValidated() {
         authenticate("ROLE_USER");
         var pageable = PageRequest.of(0, 20);
+        Department department = Department.builder().id(30L).name("Khoa Nội").build();
+        User evaluator = User.builder().id(8L).employeeCode("NV08").name("Người đánh giá")
+                .department(department).status(UserStatus.ACTIVE).build();
         FormAssignmentItem item = FormAssignmentItem.builder()
                 .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
         when(securityUtils.getCurrentUserId()).thenReturn(8L);
         when(assignmentAccessService.requireActiveOwnedItem(12L, 8L)).thenReturn(item);
-        when(userRepository.searchActiveFormSubjects(null, pageable))
+        when(userRepository.findByIdAndIsDeletedFalse(8L)).thenReturn(Optional.of(evaluator));
+        when(userRepository.searchActiveFormSubjects(null, 8L, 30L, pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         assertTrue(service.search(12L, " ", pageable).isEmpty());
         verify(assignmentAccessService).requireActiveOwnedItem(12L, 8L);
+    }
+
+    @Test
+    void evaluatorCannotLookupSelfByEmployeeCode() {
+        authenticate("ROLE_ADMIN");
+        User actor = User.builder().id(7L).employeeCode("SELF01").name("Self")
+                .status(UserStatus.ACTIVE).build();
+        when(securityUtils.getCurrentUserId()).thenReturn(7L);
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("SELF01"))
+                .thenReturn(Optional.of(actor));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.findByEmployeeCode(null, "SELF01"));
     }
 
     private void authenticate(String role) {

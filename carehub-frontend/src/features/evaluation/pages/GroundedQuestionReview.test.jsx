@@ -1,20 +1,8 @@
-import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
-
-const previousReact = globalThis.React
-let CandidateCard
-
-beforeAll(async () => {
-  globalThis.React = React
-  CandidateCard = (await import('./DocumentQuestionJobReviewPage.jsx')).CandidateCard
-}, 30_000)
-
-afterAll(() => {
-  globalThis.React = previousReact
-})
+import { CandidateCard } from './DocumentQuestionJobReviewPage.jsx'
 
 describe('Grounded question generation UI', () => {
   it('builds the modal payload with cognitive level and maximum count', () => {

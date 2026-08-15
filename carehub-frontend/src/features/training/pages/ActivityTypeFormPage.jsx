@@ -66,7 +66,7 @@ function ActivityTypeFormPage() {
       })
       .catch((error) => {
         if (!mounted) return
-        setErrorMessage(getApiErrorMessage(error, 'Không tải được loại đào tạo'))
+        setErrorMessage(getApiErrorMessage(error, 'Không tải được cách thức đào tạo'))
       })
       .finally(() => {
         if (!mounted) return
@@ -110,15 +110,15 @@ function ActivityTypeFormPage() {
         : await trainingApi.createActivityType(payload)
       navigate(`/admin/training/activity-types/${response.data.data.id}`)
     } catch (error) {
-      setErrorMessage(getApiErrorMessage(error, 'Không lưu được hình thức đào tạo'))
+      setErrorMessage(getApiErrorMessage(error, 'Không lưu được cách thức đào tạo'))
     } finally {
       setIsSaving(false)
     }
   }
 
   const breadcrumbs = [
-    { label: 'Các hình thức đào tạo', link: '/admin/training/activity-types' },
-    { label: isEdit ? 'Cập nhật hình thức' : 'Thêm hình thức đào tạo mới' }
+    { label: 'Cách thức đào tạo', link: '/admin/training/activity-types' },
+    { label: isEdit ? 'Cập nhật cách thức' : 'Thêm cách thức đào tạo mới' }
   ]
 
   return (
@@ -128,7 +128,7 @@ function ActivityTypeFormPage() {
               {/* Header Panel */}
               <div className="atl-title-card">
                 <div>
-                  <h1 className="atl-title">{isEdit ? 'Cập nhật hình thức đào tạo' : 'Thêm hình thức đào tạo mới'}</h1>
+                  <h1 className="atl-title">{isEdit ? 'Cập nhật cách thức đào tạo' : 'Thêm cách thức đào tạo mới'}</h1>
                   <p className="atl-subtitle">Thiết lập các thông số hoạt động và giới hạn tích lũy giờ</p>
                 </div>
               </div>
@@ -146,7 +146,7 @@ function ActivityTypeFormPage() {
                     )}
 
                     <div className="atf-field">
-                      <label className="atf-label">Mã hình thức *</label>
+                      <label className="atf-label">Mã cách thức *</label>
                       <input
                         type="text"
                         className="atf-input"
@@ -158,16 +158,16 @@ function ActivityTypeFormPage() {
                         required
                         value={form.code}
                       />
-                      {codeLocked && <small className="atf-hint">Hình thức này đã phát sinh dữ liệu liên kết nên không thể đổi mã.</small>}
+                      {codeLocked && <small className="atf-hint">Cách thức này đã phát sinh dữ liệu liên kết nên không thể đổi mã.</small>}
                     </div>
 
                     <div className="atf-field">
-                      <label className="atf-label">Tên hình thức đào tạo *</label>
+                      <label className="atf-label">Tên cách thức đào tạo *</label>
                       <input
                         type="text"
                         className="atf-input"
                         maxLength={255}
-                        placeholder="Nhập tên gọi hình thức..."
+                        placeholder="Nhập tên gọi cách thức..."
                         onChange={(event) => updateField('name', event.target.value)}
                         required
                         value={form.name}
@@ -180,7 +180,7 @@ function ActivityTypeFormPage() {
                         className="atf-input"
                         maxLength={2000}
                         rows={4}
-                        placeholder="Mô tả tóm tắt ý nghĩa hình thức đào tạo này..."
+                        placeholder="Mô tả tóm tắt ý nghĩa cách thức đào tạo này..."
                         onChange={(event) => updateField('description', event.target.value)}
                         value={form.description}
                       />

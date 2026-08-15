@@ -398,7 +398,7 @@ function TrainingHoursOverviewScreen() {
                 role="img"
                 aria-label={`Biểu đồ giờ đào tạo theo lĩnh vực năm ${chartYear}`}
               >
-                <ResponsiveContainer width="100%" height={isMobileViewport ? 240 : 300}>
+                <ResponsiveContainer width="100%" height={isMobileViewport ? 196 : 300}>
                   <BarChart
                     data={chartFields}
                     margin={{ top: 20, right: 20, bottom: 24, left: 4 }}
@@ -411,7 +411,7 @@ function TrainingHoursOverviewScreen() {
                       interval={0}
                       angle={isMobileViewport ? -45 : 0}
                       textAnchor={isMobileViewport ? 'end' : 'middle'}
-                      height={isMobileViewport ? 82 : 64}
+                      height={isMobileViewport ? 62 : 64}
                       tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
                       tickLine={false}
                       axisLine={{ stroke: '#dce7e4' }}
@@ -504,7 +504,7 @@ function TrainingHoursOverviewScreen() {
             className="th-overview-filter-btn"
             onClick={handleFilterToggle}
             aria-label="Mở bộ lọc giờ đào tạo"
-            aria-haspopup="dialog"
+            aria-controls="training-overview-filter-panel"
             aria-expanded={isFilterOpen}
           >
             <FilterOutlined aria-hidden="true" /> Bộ lọc
@@ -521,7 +521,7 @@ function TrainingHoursOverviewScreen() {
             Xem danh sách tất cả <ArrowRightOutlined />
           </button>
           {isFilterOpen && (
-            <div className="th-overview-filter-panel" role="dialog" aria-label="Bộ lọc giờ đào tạo">
+            <div className="th-overview-filter-panel" id="training-overview-filter-panel" role="region" aria-label="Bộ lọc giờ đào tạo">
               <div className="th-overview-filter-panel__header">
                 <strong>Bộ lọc giờ đào tạo</strong>
                 <span>{countActiveFilterGroups(filterDraft)} điều kiện đang chọn</span>

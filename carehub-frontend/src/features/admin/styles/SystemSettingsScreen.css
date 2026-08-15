@@ -141,6 +141,10 @@
   margin-bottom: 24px;
 }
 
+.ss-settings-heading--section {
+  margin-top: 28px;
+}
+
 .ss-settings-icon {
   display: grid;
   place-items: center;
@@ -153,6 +157,11 @@
   font-size: 22px;
 }
 
+.ss-settings-icon--competency {
+  color: #7c3aed;
+  background: #f3e8ff;
+}
+
 .ss-loading {
   display: flex;
   align-items: center;
@@ -162,7 +171,7 @@
   color: #64748b;
 }
 
-.ss-hours-input {
+.ss-value-input {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -190,12 +199,12 @@
   }
 
   .ss-row,
-  .ss-hours-input {
+  .ss-value-input {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .ss-hours-input {
+  .ss-value-input {
     width: 100%;
   }
 
