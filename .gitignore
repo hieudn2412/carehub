@@ -66,6 +66,7 @@ desktop.ini
 hs_err_pid*
 replay_pid*
 .attach_pid*
+*.dump
 *.tmp
 *.temp
 

@@ -32,6 +32,12 @@ export const documentQuestionApi = {
     })
   },
 
+  deleteDocument(documentId) {
+    return httpClient.delete(`/documents/${documentId}`, {
+      headers: authHeaders(),
+    })
+  },
+
   createQuestionJob(documentId, payload) {
     return httpClient.post(`/documents/${documentId}/question-jobs`, payload, {
       headers: authHeaders(),

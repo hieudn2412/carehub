@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.config.DocumentProcessingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentResponse;
@@ -21,6 +22,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentChunkRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentQuestionJobRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.DocumentSectionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionDocumentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.ChunkDraft;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.ExtractedDocument;
@@ -47,6 +49,7 @@ public class QuestionDocumentService {
     private final DocumentSectionRepository sectionRepository;
     private final DocumentChunkRepository chunkRepository;
     private final DocumentQuestionJobRepository jobRepository;
+    private final QuestionBankQuestionRepository questionRepository;
     private final DocumentTextExtractor textExtractor;
     private final DocumentTextPreprocessor textPreprocessor;
     private final DocumentSectionDetectionService sectionDetectionService;
@@ -179,6 +182,36 @@ public class QuestionDocumentService {
         return mapper.toDocumentResponse(updated, sections, chunks);
     }
 
+    @Transactional
+    public String delete(Long documentId) {
+        QuestionDocument document = findDocument(documentId);
+        if (jobRepository.countByDocument(document) > 0) {
+            throw new ConflictException("Không thể xóa tài liệu đã có phiên sinh câu hỏi");
+        }
+        if (questionRepository.countBySourceDocumentRef(document) > 0) {
+            throw new ConflictException("Không thể xóa tài liệu đã được liên kết với câu hỏi trong ngân hàng");
+        }
+
+        List<DocumentChunk> chunks = chunkRepository.findByDocumentOrderByChunkIndexAsc(document);
+        if (!chunks.isEmpty()) {
+            chunkRepository.deleteAllInBatch(chunks);
+        }
+
+        List<DocumentSection> sections = sectionRepository.findByDocumentOrderByOrderIndexDesc(document);
+        if (!sections.isEmpty()) {
+            sections.forEach(section -> section.setParent(null));
+            sectionRepository.saveAllAndFlush(sections);
+            sectionRepository.deleteAllInBatch(sections);
+        }
+
+        String storagePath = document.getStoragePath();
+        String filename = document.getFilename();
+        documentRepository.delete(document);
+        documentRepository.flush();
+        deleteStoredFile(storagePath);
+        return filename;
+    }
+
     @Transactional(readOnly = true)
     public QuestionDocument findDocument(Long documentId) {
         return documentRepository.findById(documentId)
@@ -288,6 +321,23 @@ public class QuestionDocumentService {
             return target.toString();
         } catch (IOException ex) {
             throw new BadRequestException("Không thể lưu tệp tài liệu gốc");
+        }
+    }
+
+    private void deleteStoredFile(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) {
+            return;
+        }
+        try {
+            Path storageRoot = properties.getStoragePath().toAbsolutePath().normalize();
+            Path target = Path.of(storagePath).toAbsolutePath().normalize();
+            if (!target.startsWith(storageRoot)) {
+                log.warn("Skip deleting document file outside configured storage path: {}", storagePath);
+                return;
+            }
+            Files.deleteIfExists(target);
+        } catch (IOException | RuntimeException ex) {
+            log.warn("Could not delete original document file: {}", storagePath, ex);
         }
     }
 

@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface DocumentSectionRepository extends JpaRepository<DocumentSection, Long> {
     List<DocumentSection> findByDocumentOrderByOrderIndexAsc(QuestionDocument document);
+
+    List<DocumentSection> findByDocumentOrderByOrderIndexDesc(QuestionDocument document);
 }
