@@ -87,10 +87,11 @@ public class CompetencyService {
         Department department = findDepartment(departmentId);
 
         String categoryName = null;
-        String categoryFilter = categoryId != null ? String.valueOf(categoryId) : null;
+        String categoryFilter = null;
         if (categoryId != null) {
             var cat = questionCategoryRepository.findById(categoryId).orElse(null);
             categoryName = cat != null ? cat.getName() : null;
+            categoryFilter = categoryName;
         }
 
         Page<User> userPage = userRepository.findCompetencyFieldCandidates(
@@ -117,9 +118,10 @@ public class CompetencyService {
             if (attempts.isEmpty()) continue;
 
             // Filter by category if specified
-            if (categoryFilter != null) {
+            final String selectedCategoryName = categoryFilter;
+            if (selectedCategoryName != null) {
                 attempts = attempts.stream()
-                        .filter(a -> categoryFilter.equals(getCategoryName(a)))
+                        .filter(a -> selectedCategoryName.equals(getCategoryName(a)))
                         .collect(Collectors.toList());
                 if (attempts.isEmpty()) continue;
             }
@@ -525,6 +527,7 @@ public class CompetencyService {
             items.add(new CompetencySummaryItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
                     departmentName(user),
+                    knowledgeAvg, attempts.size(),
                     knowledgeAvg, skillAvg, overallScore,
                     level != null ? level.name() : null,
                     level != null ? QuestionGenerationLabels.competencyLevel(level) : null,

@@ -238,8 +238,8 @@ function CompetencySummaryPage() {
   const getSortedSummaryItems = () => {
     const items = [...filteredItems]
     items.sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
+      const aVal = sortColumn === 'examScore' ? (a.examScore ?? a.knowledgeAverage) : a[sortColumn]
+      const bVal = sortColumn === 'examScore' ? (b.examScore ?? b.knowledgeAverage) : b[sortColumn]
       const aNum = typeof aVal === 'number' ? aVal : (parseFloat(aVal) || 0)
       const bNum = typeof bVal === 'number' ? bVal : (parseFloat(bVal) || 0)
       return sortDirection === 'asc' ? aNum - bNum : bNum - aNum
@@ -531,8 +531,8 @@ function CompetencySummaryPage() {
                           <th>Mã NV</th>
                           <th>Họ tên</th>
                           {isAdmin && <th>Khoa</th>}
-                          <th style={{ cursor: 'pointer' }} onClick={() => handleSort('knowledgeAverage')}>
-                            Điểm lý thuyết{sortIcon('knowledgeAverage')}
+                          <th style={{ cursor: 'pointer' }} onClick={() => handleSort('examScore')}>
+                            Điểm kiểm tra{sortIcon('examScore')}
                           </th>
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('skillAverage')}>
                             Điểm thực hành{sortIcon('skillAverage')}
@@ -567,7 +567,7 @@ function CompetencySummaryPage() {
                                 <td><code style={{ fontSize: 12 }}>{item.employeeCode || '—'}</code></td>
                                 <td style={{ fontWeight: 500 }}>{item.employeeName || '—'}</td>
                                 {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
-                                <td>{formatNumber(item.knowledgeAverage)}</td>
+                                <td>{formatNumber(item.examScore ?? item.knowledgeAverage)}</td>
                                 <td>{formatNumber(item.skillAverage)}</td>
                                 <td style={{ fontWeight: 700 }}>{formatNumber(item.overallScore)}</td>
                                 <td>

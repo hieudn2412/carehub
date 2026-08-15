@@ -203,6 +203,8 @@ class CompetencyServiceTest {
         );
 
         assertThat(response.items()).singleElement().satisfies(item -> {
+            assertThat(item.examScore()).isEqualByComparingTo("7.00");
+            assertThat(item.examAttemptCount()).isEqualTo(1);
             assertThat(item.overallScore()).isEqualByComparingTo("7.00");
             assertThat(item.isPassed()).isTrue();
         });

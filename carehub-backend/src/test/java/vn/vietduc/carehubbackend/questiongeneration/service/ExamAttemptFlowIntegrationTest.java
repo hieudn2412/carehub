@@ -52,7 +52,9 @@ import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -115,6 +117,10 @@ class ExamAttemptFlowIntegrationTest {
     private TrainingActivityTypeRepository activityTypeRepository;
     @Autowired
     private NotificationRepository notificationRepository;
+    @Autowired
+    private Clock clock;
+    @Autowired
+    private ZoneId examBusinessZone;
 
     private int seq;
     private User employee;
@@ -227,7 +233,7 @@ class ExamAttemptFlowIntegrationTest {
     @DisplayName("L2-EXM-07 | Query Correctness: expiresAt is min(now + timeLimit, dueAt) — a close dueAt caps the countdown")
     @Test
     void dueAtCapsTheExpiry() {
-        LocalDateTime dueAt = LocalDateTime.now().plusMinutes(10); // paper allows 30
+        LocalDateTime dueAt = now().plusMinutes(10); // paper allows 30
         ExamAssignment assignment = seedAssignment(1, dueAt);
 
         ExamAttemptResponse response = attemptService.start(assignment.getId(), employee.getId());
@@ -245,7 +251,7 @@ class ExamAttemptFlowIntegrationTest {
         ExamAttemptResponse started = attemptService.start(assignment.getId(), employee.getId());
         // withNano(0): H2 stores TIMESTAMP at microsecond precision, so a nanosecond-carrying
         // LocalDateTime would round-trip unequal.
-        LocalDateTime forcedExpiry = LocalDateTime.now().minusMinutes(5).withNano(0);
+        LocalDateTime forcedExpiry = now().minusMinutes(5).withNano(0);
         forceExpiry(started.id(), forcedExpiry);
 
         attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "A")); // both correct, but late
@@ -271,7 +277,7 @@ class ExamAttemptFlowIntegrationTest {
 
         attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "B")); // in time: 1 correct
 
-        forceExpiry(started.id(), LocalDateTime.now().minusMinutes(5).withNano(0));
+        forceExpiry(started.id(), now().minusMinutes(5).withNano(0));
         // A late attempt to "fix" the second answer must not change the outcome.
         attemptService.saveAnswers(started.id(), employee.getId(), answers("A", "A"));
 
@@ -286,7 +292,7 @@ class ExamAttemptFlowIntegrationTest {
     void listForUserGradesExpiredAttempts() {
         ExamAssignment assignment = seedAssignment(1, null);
         ExamAttemptResponse started = attemptService.start(assignment.getId(), employee.getId());
-        forceExpiry(started.id(), LocalDateTime.now().minusMinutes(1));
+        forceExpiry(started.id(), now().minusMinutes(1));
 
         attemptService.listForUser(employee.getId());
 
@@ -429,12 +435,7 @@ class ExamAttemptFlowIntegrationTest {
                 .optionC(bankQuestion.getOptionC())
                 .optionD(bankQuestion.getOptionD())
                 .correctAnswer("A")
-                .professionalFieldId(professionalField.getId())
-                .professionalFieldCode(professionalField.getCode())
-                .professionalFieldName(professionalField.getName())
-                .cognitiveLevel(CognitiveLevel.FOUNDATION.name())
-                .cognitiveLabel("Kiến thức nền tảng")
-                .snapshotAt(LocalDateTime.now())
+                .snapshotAt(now())
                 .build());
         return paperQuestion;
     }
@@ -454,6 +455,10 @@ class ExamAttemptFlowIntegrationTest {
                 .targetType(AssignmentTargetType.EMPLOYEE)
                 .build());
         return assignment;
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(examBusinessZone));
     }
 
     private SaveExamAttemptAnswersRequest answers(String first, String second) {
