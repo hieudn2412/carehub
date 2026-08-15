@@ -4,6 +4,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
@@ -42,6 +43,8 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
     long countByStatus(QuestionBankStatus status);
 
     long countByQuestionType(QuestionType questionType);
+
+    long countBySourceDocumentRef(QuestionDocument sourceDocumentRef);
 
     @Query("""
             SELECT CAST(q.status AS string) AS key, COUNT(q) AS count
