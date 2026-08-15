@@ -65,6 +65,19 @@ export const examAssignmentApi = {
     })
   },
 
+  getResultReport(assignmentId) {
+    return httpClient.get('/evaluation-results', {
+      headers: authHeaders(),
+      params: { assignmentId },
+    })
+  },
+
+  getAttemptResultBreakdown(attemptId) {
+    return httpClient.get(`/evaluation-results/attempts/${attemptId}`, {
+      headers: authHeaders(),
+    })
+  },
+
   listManagerAssignments(params) {
     return httpClient.get('/manager/exam-assignments', {
       headers: authHeaders(),

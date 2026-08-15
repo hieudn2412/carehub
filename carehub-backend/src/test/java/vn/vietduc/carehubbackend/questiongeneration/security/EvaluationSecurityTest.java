@@ -35,6 +35,7 @@ class EvaluationSecurityTest {
         assertThat(security.canAccess(authentication)).isTrue();
         assertThat(security.canPublishExam(authentication)).isTrue();
         assertThat(security.canViewAudit(authentication)).isTrue();
+        assertThat(security.isAdmin(authentication)).isTrue();
     }
 
     @Test

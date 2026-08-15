@@ -1,0 +1,9 @@
+﻿Backend Phase 08 final package/test rerun after legacy purpose-category coverage
+Timestamp: 2026-08-14T02:31:28.4880827+07:00
+Maven command: .\mvnw.cmd -q test package
+Maven process completed; Surefire aggregate is authoritative.
+Surefire reports: 129
+Tests: 859
+Failures: 0
+Errors: 0
+Skipped: 9

@@ -82,8 +82,8 @@ public class EvaluationDashboardService {
                 questionRepository.countByQuestionType(QuestionType.ORIGINAL),
                 questionRepository.countByQuestionType(QuestionType.PARAPHRASE),
                 toDistribution(questionRepository.countGroupByStatus(), TOP_DISTRIBUTION_LIMIT),
-                toDistribution(questionRepository.countGroupByDifficulty(), TOP_DISTRIBUTION_LIMIT),
-                toDistribution(questionRepository.countGroupByTopic(), TOP_DISTRIBUTION_LIMIT),
+                toDistribution(questionRepository.countGroupByCognitiveLevel(), TOP_DISTRIBUTION_LIMIT),
+                toDistribution(questionRepository.countGroupByCategory(), TOP_DISTRIBUTION_LIMIT),
                 toDistribution(questionRepository.countGroupBySourceDocument(), TOP_DISTRIBUTION_LIMIT)
         );
     }
@@ -312,7 +312,7 @@ public class EvaluationDashboardService {
             String interpretation = interpretDiscrimination(di);
 
             results.add(new DiscriminationIndexResponse(
-                    item.getQuestionId(), item.getStem(), item.getTopic(), item.getDifficulty(),
+                    item.getQuestionId(), item.getStem(), item.getTopic(), item.getCognitiveLevel() == null ? null : item.getCognitiveLevel().name(),
                     Math.round(di * 1000.0) / 1000.0, interpretation,
                     highCorrect, lowCorrect, highTotal, lowTotal));
         }
@@ -568,7 +568,7 @@ public class EvaluationDashboardService {
                 row.getQuestionId(),
                 row.getStem(),
                 row.getTopic(),
-                row.getDifficulty(),
+                row.getCognitiveLevel() == null ? null : row.getCognitiveLevel().name(),
                 attemptCount,
                 correctCount,
                 wrongCount,

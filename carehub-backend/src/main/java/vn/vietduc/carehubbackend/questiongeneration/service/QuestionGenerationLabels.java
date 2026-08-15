@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.DocumentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
@@ -150,6 +151,17 @@ public final class QuestionGenerationLabels {
             case DRAFT -> "Bản nháp";
             case PUBLISHED -> "Đã phát hành";
             case ARCHIVED -> "Đã lưu trữ";
+        };
+    }
+
+    public static String cognitiveLevel(CognitiveLevel level) {
+        if (level == null) {
+            return "";
+        }
+        return switch (level) {
+            case FOUNDATION -> "Kiến thức nền tảng";
+            case CLINICAL_APPLICATION -> "Áp dụng lâm sàng";
+            case CLINICAL_REASONING_ANALYSIS -> "Tư duy phân tích";
         };
     }
 

@@ -16,6 +16,15 @@ import vn.vietduc.carehubbackend.config.CapturingEmailProducerConfig;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintCell;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintField;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.GenerateExamPaperRequest;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
@@ -28,8 +37,16 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTar
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintFieldRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintCellRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAttemptService;
+import vn.vietduc.carehubbackend.questiongeneration.service.ExamPaperService;
+import vn.vietduc.carehubbackend.questiongeneration.service.ExamGenerationDeterminism;
+import vn.vietduc.carehubbackend.questiongeneration.service.ExamConfigService;
 import vn.vietduc.carehubbackend.systemsettings.entity.SystemSetting;
 import vn.vietduc.carehubbackend.systemsettings.repository.SystemSettingRepository;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
@@ -39,6 +56,8 @@ import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -55,6 +74,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * L2 integration tests — sheet {@code L2-Workflows}, ids L2-FLOW-01…03: true two-transaction
@@ -98,6 +118,22 @@ class ConcurrencyIntegrationTest {
     private ExamConfigRepository examConfigRepository;
     @Autowired
     private QuestionSetRepository questionSetRepository;
+    @Autowired
+    private ExamPaperService examPaperService;
+    @Autowired
+    private ExamConfigService examConfigService;
+    @Autowired
+    private ExamPaperGenerationBatchRepository generationBatchRepository;
+    @Autowired
+    private ExamBlueprintFieldRepository blueprintFieldRepository;
+    @Autowired
+    private ExamBlueprintCellRepository blueprintCellRepository;
+    @Autowired
+    private QuestionBankQuestionRepository questionRepository;
+    @Autowired
+    private QuestionCategoryRepository questionCategoryRepository;
+    @Autowired
+    private ProfessionalFieldRepository professionalFieldRepository;
 
     private int seq;
     private User user;
@@ -308,5 +344,154 @@ class ConcurrencyIntegrationTest {
                         .toList();
         assertThat(attempts).hasSize(1);
         assertThat(attempts.get(0).getAttemptNumber()).isEqualTo(1);
+    }
+
+    @DisplayName("L2-FLOW-04 | Concurrency: cùng idempotency key chỉ tạo một batch và một mã đề")
+    @Test
+    void concurrentPaperGenerationCreatesOneBatch() throws Exception {
+        ProfessionalField field = professionalFieldRepository.save(ProfessionalField.builder()
+                .code("CONC_FIELD_%03d".formatted(seq))
+                .name("Lĩnh vực concurrent " + seq)
+                .active(true)
+                .build());
+        QuestionCategory category = questionCategoryRepository.save(QuestionCategory.builder()
+                .code("CONC_CAT_%03d".formatted(seq))
+                .name("Danh mục concurrent " + seq)
+                .status(QuestionCategoryStatus.ACTIVE)
+                .createdBy("test")
+                .build());
+        QuestionBankQuestion question = questionRepository.save(QuestionBankQuestion.builder()
+                .stem("Câu hỏi concurrent " + seq)
+                .optionA("A").optionB("B").optionC("C").optionD("D")
+                .correctAnswer("A").language("vi")
+                .category(category).professionalField(field)
+                .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                .cognitiveVerifiedAt(java.time.LocalDateTime.now()).cognitiveVerifiedBy("reviewer")
+                .questionType(QuestionType.ORIGINAL).status(QuestionBankStatus.APPROVED)
+                .createdBy("test")
+                .build());
+        var config = examConfigRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig.builder()
+                .name("Direct generation config " + seq)
+                .questionSet(null)
+                .sourceScope("QUESTION_BANK")
+                .blueprintVersion(1)
+                .totalQuestions(1)
+                .timeLimitMinutes(15)
+                .passingScore(7)
+                .maxRetakes(0)
+                .shuffleQuestions(true)
+                .shuffleOptions(true)
+                .status(ExamConfigStatus.ACTIVE)
+                .build());
+        ExamBlueprintField blueprintField = blueprintFieldRepository.save(ExamBlueprintField.builder()
+                .examConfig(config).professionalField(field).percentage(BigDecimal.valueOf(100))
+                .questionCount(1).displayOrder(0).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.FOUNDATION)
+                .percentage(BigDecimal.valueOf(100)).questionCount(1).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION)
+                .percentage(BigDecimal.ZERO).questionCount(0).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.CLINICAL_REASONING_ANALYSIS)
+                .percentage(BigDecimal.ZERO).questionCount(0).build());
+        examConfigService.previewExisting(config.getId());
+
+        String key = "concurrent-paper-" + seq;
+        GenerateExamPaperRequest request = new GenerateExamPaperRequest(
+                config.getId(), "Đề concurrent", 1, 123L, key, false);
+        CyclicBarrier startTogether = new CyclicBarrier(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        AtomicReference<Throwable> failure = new AtomicReference<>();
+        try {
+            Runnable generator = () -> {
+                try {
+                    startTogether.await(10, TimeUnit.SECONDS);
+                    examPaperService.generate(request, "publisher");
+                } catch (Throwable throwable) {
+                    failure.compareAndSet(null, throwable);
+                }
+            };
+            var first = pool.submit(generator);
+            var second = pool.submit(generator);
+            first.get(30, TimeUnit.SECONDS);
+            second.get(30, TimeUnit.SECONDS);
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(failure.get()).isNull();
+        var storedBatch = generationBatchRepository.findByIdempotencyKey(key);
+        assertThat(storedBatch).isPresent();
+        assertThat(paperRepository.countByGenerationBatchId(storedBatch.orElseThrow().getId())).isEqualTo(1);
+    }
+
+    @DisplayName("L2-FLOW-05 | Atomicity: thiếu một ô blueprint rollback toàn bộ batch sinh đề")
+    @Test
+    void blueprintCellShortageRollsBackGenerationBatch() {
+        ProfessionalField field = professionalFieldRepository.save(ProfessionalField.builder()
+                .code("ROLLBACK_FIELD_%03d".formatted(seq))
+                .name("Lĩnh vực rollback " + seq)
+                .active(true)
+                .build());
+        QuestionCategory category = questionCategoryRepository.save(QuestionCategory.builder()
+                .code("ROLLBACK_CAT_%03d".formatted(seq))
+                .name("Danh mục rollback " + seq)
+                .status(QuestionCategoryStatus.ACTIVE)
+                .createdBy("test")
+                .build());
+        questionRepository.save(QuestionBankQuestion.builder()
+                .stem("Câu nền tảng rollback " + seq)
+                .optionA("A").optionB("B").optionC("C").optionD("D")
+                .correctAnswer("A").language("vi")
+                .category(category).professionalField(field)
+                .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                .cognitiveVerifiedAt(java.time.LocalDateTime.now()).cognitiveVerifiedBy("reviewer")
+                .questionType(QuestionType.ORIGINAL).status(QuestionBankStatus.APPROVED)
+                .createdBy("test")
+                .build());
+        questionRepository.save(QuestionBankQuestion.builder()
+                .stem("Câu áp dụng rollback " + seq)
+                .optionA("A").optionB("B").optionC("C").optionD("D")
+                .correctAnswer("A").language("vi")
+                .category(category).professionalField(field)
+                .cognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION)
+                .cognitiveVerifiedAt(java.time.LocalDateTime.now()).cognitiveVerifiedBy("reviewer")
+                .questionType(QuestionType.ORIGINAL).status(QuestionBankStatus.APPROVED)
+                .createdBy("test")
+                .build());
+        var config = examConfigRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig.builder()
+                .name("Rollback generation config " + seq)
+                .sourceScope("QUESTION_BANK")
+                .blueprintVersion(1)
+                .totalQuestions(2)
+                .timeLimitMinutes(15)
+                .passingScore(7)
+                .maxRetakes(0)
+                .shuffleQuestions(true)
+                .shuffleOptions(true)
+                .status(ExamConfigStatus.ACTIVE)
+                .build());
+        ExamBlueprintField blueprintField = blueprintFieldRepository.save(ExamBlueprintField.builder()
+                .examConfig(config).professionalField(field).percentage(BigDecimal.valueOf(100))
+                .questionCount(2).displayOrder(0).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.FOUNDATION)
+                .percentage(BigDecimal.valueOf(100)).questionCount(2).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION)
+                .percentage(BigDecimal.ZERO).questionCount(0).build());
+        blueprintCellRepository.save(ExamBlueprintCell.builder()
+                .blueprintField(blueprintField).cognitiveLevel(CognitiveLevel.CLINICAL_REASONING_ANALYSIS)
+                .percentage(BigDecimal.ZERO).questionCount(0).build());
+        assertThat(examConfigService.previewExisting(config.getId()).valid()).isFalse();
+
+        String key = "rollback-paper-" + seq;
+        GenerateExamPaperRequest request = new GenerateExamPaperRequest(
+                config.getId(), "Đề rollback", 1, 321L, key, false);
+
+        assertThatThrownBy(() -> examPaperService.generate(request, "publisher"))
+                .hasMessageContaining("Không đủ họ câu hỏi độc lập");
+        assertThat(generationBatchRepository.findByIdempotencyKey(key)).isEmpty();
     }
 }

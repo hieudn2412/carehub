@@ -15,6 +15,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 
 @Entity
@@ -57,8 +58,9 @@ public class ParaphraseCandidate extends BaseEntity {
 
     private String topic;
 
-    @Column(length = 32)
-    private String difficulty;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cognitive_level", length = 48)
+    private CognitiveLevel cognitiveLevel;
 
     @Column(name = "raw_output", columnDefinition = "text")
     private String rawOutput;

@@ -20,12 +20,22 @@ public record ExamPaperResponse(
         Integer timeLimitMinutes,
         Integer passingScore,
         String questionSelectionMode,
-        DifficultyPercentages difficultyPercentages,
         List<ExamPaperQuestionResponse> questions,
         LocalDateTime publishedAt,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Long professionalFieldId,
+        String professionalFieldCode,
+        String professionalFieldName,
+        Long generationBatchId,
+        Long masterSeed,
+        Integer variantIndex,
+        Integer configVersion,
+        String generationAlgorithmVersion,
+        String poolChecksum,
+        Boolean zeroOverlap,
+        Integer overlapQuestionCount,
+        java.math.BigDecimal overlapPercentage,
+        List<ExamPaperCoverageCellResponse> coverage
 ) {
-    public record DifficultyPercentages(Integer easy, Integer medium, Integer hard) {
-    }
 }

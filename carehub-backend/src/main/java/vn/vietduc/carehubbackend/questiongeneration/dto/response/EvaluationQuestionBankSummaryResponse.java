@@ -11,7 +11,7 @@ public record EvaluationQuestionBankSummaryResponse(
         Long originalQuestions,
         Long paraphraseQuestions,
         List<EvaluationDistributionItemResponse> byStatus,
-        List<EvaluationDistributionItemResponse> byDifficulty,
+        List<EvaluationDistributionItemResponse> byCognitiveLevel,
         List<EvaluationDistributionItemResponse> byTopic,
         List<EvaluationDistributionItemResponse> bySource
 ) {

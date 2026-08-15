@@ -23,6 +23,21 @@ public class ValidationRulesProperties {
     public static class Duplicate {
         private double strongMin = 0.95;
         private double reviewMin = 0.88;
+
+        /**
+         * Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ đã bỏ dấu — xem
+         * {@code DuplicateCheckService.similarity}), dùng khi provider = lexical hoặc E5 lỗi/chưa
+         * backfill. KHÔNG dùng chung với {@link #strongMin}/{@link #reviewMin} vì Jaccard và cosine
+         * là hai thang điểm khác nhau.
+         *
+         * <p>Hiệu chỉnh trên 270 câu hỏi seed (36.315 cặp, xem
+         * {@code developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md}):
+         * p50 khác bài=0,048, p99 khác bài=0,192 — thang Jaccard nén thấp hơn nhiều so với cosine E5.
+         * LƯU Ý: rút ra từ dữ liệu seed một học phần, chạy lại trên ngân hàng thật trước khi tin tưởng
+         * hoàn toàn ({@code RUN_LEXICAL_CALIBRATION=true ./mvnw.cmd test -Dtest=LexicalSimilarityCalibrationTest}).</p>
+         */
+        private double lexicalStrongMin = 0.80;
+        private double lexicalReviewMin = 0.20;
     }
 
     @Getter

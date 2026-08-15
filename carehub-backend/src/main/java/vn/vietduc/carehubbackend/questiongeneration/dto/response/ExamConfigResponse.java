@@ -1,8 +1,10 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record ExamConfigResponse(
         Long id,
         String name,
@@ -17,18 +19,15 @@ public record ExamConfigResponse(
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
         String questionSelectionMode,
-        DifficultyPercentages difficultyPercentages,
-        DifficultyQuestionCounts difficultyQuestionCounts,
         String status,
         String statusText,
-        List<ExamConfigDistributionResponse> distributions,
         List<String> warnings,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Long audienceId,
+        String sourceScope,
+        Integer blueprintVersion,
+        List<ExamBlueprintFieldPreviewResponse> blueprintFields,
+        String poolChecksum
 ) {
-    public record DifficultyPercentages(Integer easy, Integer medium, Integer hard) {
-    }
-
-    public record DifficultyQuestionCounts(Integer easy, Integer medium, Integer hard) {
-    }
 }

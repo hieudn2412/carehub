@@ -1,0 +1,13 @@
+Backend full verification — 2026-08-14 (after Phase 8 gate hardening)
+
+Command:
+  .\mvnw.cmd -q test package
+Maven result: exit 0
+Surefire aggregate parsed from target/surefire-reports:
+  tests=857
+  failures=0
+  errors=0
+  skipped=9
+
+Raw console log (PowerShell redirection):
+  backend-test-20260814-final.txt

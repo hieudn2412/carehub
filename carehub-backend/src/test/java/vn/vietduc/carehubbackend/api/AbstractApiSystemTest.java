@@ -2,6 +2,9 @@ package vn.vietduc.carehubbackend.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.util.Timeout;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,7 +19,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpResponse;
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -40,6 +43,7 @@ import vn.vietduc.carehubbackend.user.repository.RoleRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -93,7 +97,7 @@ public abstract class AbstractApiSystemTest {
      * {@code spring-boot-resttestclient}, whose autoconfiguration needs
      * {@code org.springframework.boot.restclient.RestTemplateBuilder} — and the
      * {@code spring-boot-restclient} module is not on this project's classpath. Same behaviour is
-     * reproduced here: absolute URL from {@link #port}, PATCH-capable JDK request factory, and no
+     * reproduced here: absolute URL from {@link #port}, PATCH-capable Apache request factory, and no
      * exception on 4xx/5xx so error contracts can be asserted.
      */
     protected RestTemplate rest;
@@ -118,13 +122,20 @@ public abstract class AbstractApiSystemTest {
     protected CapturingEmailProducer emailProducer;
 
     /**
-     * The JDK request factory is deliberate: {@code SimpleClientHttpRequestFactory} builds on
-     * {@code HttpURLConnection}, which cannot send PATCH — and several endpoints under test are
-     * PATCH.
+     * SimpleClientHttpRequestFactory builds on HttpURLConnection, which cannot send PATCH. The
+     * Apache factory supports PATCH and avoids JDK HttpClient loopback requests occasionally waiting
+     * indefinitely while the embedded Tomcat suite reuses its context.
      */
     @BeforeEach
     void buildClientAndResetCaptures() {
-        rest = new RestTemplate(new JdkClientHttpRequestFactory());
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(5))
+                .build();
+        HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory(
+                HttpClients.custom().setDefaultRequestConfig(requestConfig).build());
+        requestFactory.setConnectionRequestTimeout(Duration.ofSeconds(5));
+        requestFactory.setReadTimeout(Duration.ofSeconds(30));
+        rest = new RestTemplate(requestFactory);
         // Error statuses are the assertion subject here, so never turn them into exceptions.
         rest.setErrorHandler(new DefaultResponseErrorHandler() {
             @Override

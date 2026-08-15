@@ -65,7 +65,7 @@ public class EvaluationSecurity {
                 .anyMatch(permission -> authorities.contains(permission) || authorities.contains("ROLE_" + permission));
     }
 
-    private boolean isAdmin(Authentication authentication) {
+    public boolean isAdmin(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return false;
         }

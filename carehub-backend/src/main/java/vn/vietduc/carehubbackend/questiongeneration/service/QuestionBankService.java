@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -9,10 +10,14 @@ import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankAvailabilityResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionDuplicateWarningResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionImpactWarningResponse;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
@@ -20,13 +25,24 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseMapper;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionDocumentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Objects;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,17 +54,85 @@ public class QuestionBankService {
     private final QuestionClassificationRuleService classificationRuleService;
     private final QuestionSetItemRepository questionSetItemRepository;
     private final ExamPaperQuestionRepository examPaperQuestionRepository;
+    private QuestionCategoryRepository questionCategoryRepository;
+    private ProfessionalFieldRepository professionalFieldRepository;
+    private QuestionDocumentRepository questionDocumentRepository;
+
+    @Autowired
+    void setQuestionCategoryRepository(QuestionCategoryRepository questionCategoryRepository) {
+        this.questionCategoryRepository = questionCategoryRepository;
+    }
+
+    @Autowired
+    void setProfessionalFieldRepository(ProfessionalFieldRepository professionalFieldRepository) {
+        this.professionalFieldRepository = professionalFieldRepository;
+    }
+
+    @Autowired
+    void setQuestionDocumentRepository(QuestionDocumentRepository questionDocumentRepository) {
+        this.questionDocumentRepository = questionDocumentRepository;
+    }
 
     @Transactional(readOnly = true)
     public List<QuestionBankQuestionResponse> list(String query, String status) {
+        return list(query, status, null, null, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionBankQuestionResponse> list(
+            String query,
+            String status,
+            Long categoryId,
+            Long professionalFieldId,
+            String cognitiveLevel,
+            Long sourceDocumentId,
+            Boolean verified
+    ) {
         QuestionBankStatus bankStatus = parseStatus(status);
         String normalizedQuery = normalize(query);
+        CognitiveLevel cognitive = parseCognitiveLevelNullable(cognitiveLevel);
         List<QuestionBankQuestion> questions = bankStatus == null
                 ? questionRepository.findTop500ByOrderByIdDesc()
                 : questionRepository.findTop500ByStatusOrderByIdDesc(bankStatus);
         return questions.stream()
                 .filter(question -> normalizedQuery.isBlank() || matches(question, normalizedQuery))
+                .filter(question -> categoryId == null || (question.getCategory() != null && categoryId.equals(question.getCategory().getId())))
+                .filter(question -> professionalFieldId == null || (question.getProfessionalField() != null && professionalFieldId.equals(question.getProfessionalField().getId())))
+                .filter(question -> cognitive == null || cognitive == question.getCognitiveLevel())
+                .filter(question -> sourceDocumentId == null || (question.getSourceDocumentRef() != null && sourceDocumentId.equals(question.getSourceDocumentRef().getId())))
+                .filter(question -> verified == null || verified.equals(question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null))
                 .map(mapper::toQuestionResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuestionBankAvailabilityResponse> availability() {
+        List<QuestionBankQuestion> approvedQuestions = questionRepository.findByStatusOrderByIdDesc(QuestionBankStatus.APPROVED);
+        Map<String, Long> counts = approvedQuestions.stream()
+                .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ACTIVE)
+                .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
+                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .collect(Collectors.groupingBy(question -> question.getProfessionalField().getId() + ":" + question.getCognitiveLevel().name(), Collectors.counting()));
+        return approvedQuestions.stream()
+                .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ACTIVE)
+                .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
+                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .filter(question -> counts.containsKey(question.getProfessionalField().getId() + ":" + question.getCognitiveLevel().name()))
+                .map(question -> new QuestionBankAvailabilityResponse(
+                        question.getProfessionalField().getId(),
+                        question.getProfessionalField().getCode(),
+                        question.getProfessionalField().getName(),
+                        question.getCognitiveLevel().name(),
+                        counts.get(question.getProfessionalField().getId() + ":" + question.getCognitiveLevel().name())
+                ))
+                .collect(Collectors.toMap(
+                        item -> item.professionalFieldId() + ":" + item.cognitiveLevel(),
+                        item -> item,
+                        (left, right) -> left,
+                        java.util.LinkedHashMap::new
+                )).values().stream()
+                .sorted(Comparator.comparing(QuestionBankAvailabilityResponse::professionalFieldCode)
+                        .thenComparing(QuestionBankAvailabilityResponse::cognitiveLevel))
                 .toList();
     }
 
@@ -72,11 +156,13 @@ public class QuestionBankService {
                 request.optionD(),
                 request.correctAnswer(),
                 request.explanation(),
-                request.topic(),
-                request.difficulty(),
                 request.language(),
                 request.sourceDocument(),
-                "DRAFT"
+                "DRAFT",
+                request.categoryId(),
+                request.professionalFieldId(),
+                request.cognitiveLevel(),
+                request.sourceDocumentId()
         );
         return createInternal(draftRequest, actor, false);
     }
@@ -110,18 +196,28 @@ public class QuestionBankService {
             rejectStrongDuplicate(duplicate);
         }
 
+        QuestionCategory category = resolveCategory(request.categoryId(), request.stem(), request.explanation(), request.sourceDocument());
+        ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), null);
+        CognitiveLevel cognitiveLevel = parseCognitiveLevel(request.cognitiveLevel());
+        requireCognitiveForNewApprovedQuestion(status, request.professionalFieldId(), cognitiveLevel);
+        QuestionDocument sourceDocumentRef = resolveSourceDocument(request.sourceDocumentId());
         QuestionBankQuestion question = QuestionBankQuestion.builder()
                 .stem(clean(request.stem()))
+                .category(category)
+                .professionalField(professionalField)
+                .cognitiveLevel(cognitiveLevel)
+                .cognitiveVerifiedAt(status == QuestionBankStatus.APPROVED && cognitiveLevel != null
+                        ? LocalDateTime.now() : null)
+                .cognitiveVerifiedBy(status == QuestionBankStatus.APPROVED && cognitiveLevel != null ? actor : null)
                 .optionA(clean(request.optionA()))
                 .optionB(clean(request.optionB()))
                 .optionC(clean(request.optionC()))
                 .optionD(clean(request.optionD()))
                 .correctAnswer(normalizeCorrectAnswer(request.correctAnswer()))
                 .explanation(trimToNull(request.explanation()))
-                .topic(resolveTopic(request.topic(), request.stem(), request.explanation(), request.sourceDocument(), null, null))
-                .difficulty(normalizeDifficulty(request.difficulty()))
                 .language(normalizeLanguage(request.language()))
                 .sourceDocument(trimToNull(request.sourceDocument()))
+                .sourceDocumentRef(sourceDocumentRef)
                 .questionType(QuestionType.ORIGINAL)
                 .status(status)
                 .createdBy(actor)
@@ -162,13 +258,29 @@ public class QuestionBankService {
         question.setOptionD(clean(request.optionD()));
         question.setCorrectAnswer(normalizeCorrectAnswer(request.correctAnswer()));
         question.setExplanation(trimToNull(request.explanation()));
-        question.setTopic(resolveTopic(request.topic(), request.stem(), request.explanation(), request.sourceDocument(), null, null));
-        question.setDifficulty(normalizeDifficulty(request.difficulty()));
+        QuestionCategory category = resolveCategory(request.categoryId(), request.stem(), request.explanation(), request.sourceDocument());
+        question.setCategory(category);
+        question.setProfessionalField(resolveProfessionalField(
+                request.professionalFieldId(), question.getProfessionalField()));
+        question.setCognitiveLevel(parseCognitiveLevel(request.cognitiveLevel()));
+        // Any classification edit invalidates the previous review evidence.
+        question.setCognitiveVerifiedAt(null);
+        question.setCognitiveVerifiedBy(null);
         question.setLanguage(normalizeLanguage(request.language()));
         question.setSourceDocument(trimToNull(request.sourceDocument()));
+        if (request.sourceDocumentId() != null) {
+            question.setSourceDocumentRef(resolveSourceDocument(request.sourceDocumentId()));
+        }
         question.setStatus(status);
         if (status == QuestionBankStatus.APPROVED) {
+            if (question.getCognitiveLevel() == null && professionalFieldRepository != null) {
+                throw new BadRequestException("Vui lòng phân loại mức độ nhận thức trước khi duyệt câu hỏi");
+            }
             question.setReviewedBy(actor);
+            if (question.getCognitiveLevel() != null) {
+                question.setCognitiveVerifiedAt(LocalDateTime.now());
+                question.setCognitiveVerifiedBy(actor);
+            }
         }
 
         QuestionBankQuestion saved = questionRepository.save(question);
@@ -186,8 +298,16 @@ public class QuestionBankService {
         }
         DuplicateCheckResult duplicate = duplicateCheckService.check(question.getStem(), Set.of(question.getId()));
         rejectStrongDuplicate(duplicate);
+        if (question.getProfessionalField() == null) {
+            throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn trước khi duyệt câu hỏi");
+        }
+        if (question.getCognitiveLevel() == null) {
+            throw new BadRequestException("Vui lòng phân loại mức độ nhận thức trước khi duyệt câu hỏi");
+        }
         question.setStatus(QuestionBankStatus.APPROVED);
         question.setReviewedBy(actor);
+        question.setCognitiveVerifiedAt(LocalDateTime.now());
+        question.setCognitiveVerifiedBy(actor);
         QuestionBankQuestion saved = questionRepository.save(question);
         refreshEmbeddingIfApproved(saved);
         return withWarnings(saved, duplicate, true);
@@ -262,6 +382,9 @@ public class QuestionBankService {
             throw new BadRequestException("Vui lòng nhập đủ 4 phương án trả lời");
         }
         normalizeCorrectAnswer(request.correctAnswer());
+        if (isBlank(request.cognitiveLevel())) {
+            throw new BadRequestException("Vui lòng chọn mức độ nhận thức cho câu hỏi");
+        }
     }
 
     private void rejectStrongDuplicate(DuplicateCheckResult duplicate) {
@@ -302,8 +425,6 @@ public class QuestionBankService {
                 base.optionD(),
                 base.correctAnswer(),
                 base.explanation(),
-                base.topic(),
-                base.difficulty(),
                 base.language(),
                 base.sourceDocument(),
                 base.questionType(),
@@ -313,7 +434,19 @@ public class QuestionBankService {
                 warning,
                 impactWarning,
                 base.createdAt(),
-                base.updatedAt()
+                base.updatedAt(),
+                base.categoryId(),
+                base.categoryCode(),
+                base.categoryName(),
+                base.professionalFieldId(),
+                base.professionalFieldCode(),
+                base.professionalFieldName(),
+                base.cognitiveLevel(),
+                base.cognitiveVerifiedAt(),
+                base.cognitiveVerifiedBy(),
+                base.sourceDocumentId(),
+                base.sourceDocumentFilename(),
+                base.sourceDocumentContentHash()
         );
     }
 
@@ -353,37 +486,95 @@ public class QuestionBankService {
         return language == null ? "vi" : language.toLowerCase(Locale.ROOT);
     }
 
-    private String normalizeDifficulty(String value) {
-        String difficulty = trimToNull(value);
-        return difficulty == null ? "MEDIUM" : difficulty;
+    private QuestionCategory resolveCategory(Long categoryId, String stem, String explanation, String sourceDocument) {
+        if (questionCategoryRepository == null) {
+            return null;
+        }
+        if (categoryId != null) {
+            return questionCategoryRepository.findById(categoryId)
+                    .filter(category -> category.getStatus() != vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus.ARCHIVED)
+                    .orElseThrow(() -> new BadRequestException("Danh mục câu hỏi không hợp lệ hoặc đã lưu trữ"));
+        }
+        var classification = classificationRuleService.classifyQuestion(stem, explanation, sourceDocument, null, null);
+        if (classification.categoryId() == null) {
+            throw new BadRequestException("Vui lòng chọn danh mục kiến thức cho câu hỏi");
+        }
+        return questionCategoryRepository.findById(classification.categoryId())
+                .orElseThrow(() -> new BadRequestException("Danh mục câu hỏi được phân loại không còn tồn tại"));
     }
 
-    private String resolveTopic(
-            String explicitTopic,
-            String stem,
-            String explanation,
-            String sourceDocument,
-            String sectionTitle,
-            String sourceExcerpt
+    private ProfessionalField resolveProfessionalField(
+            Long professionalFieldId,
+            ProfessionalField current
     ) {
-        String topic = trimToNull(explicitTopic);
-        if (topic != null) {
-            return topic;
+        if (professionalFieldId != null) {
+            if (professionalFieldRepository == null) {
+                return current;
+            }
+            return professionalFieldRepository.findById(professionalFieldId)
+                    .filter(ProfessionalField::isActive)
+                    .orElseThrow(() -> new BadRequestException(
+                            "Lĩnh vực chuyên môn không hợp lệ hoặc đã ngừng sử dụng"));
         }
-        var classification = classificationRuleService.classifyQuestion(
-                stem,
-                explanation,
-                sourceDocument,
-                sectionTitle,
-                sourceExcerpt
-        );
-        return classification.categoryId() == null ? null : classification.categoryName();
+        if (current != null) {
+            return current;
+        }
+        if (professionalFieldRepository != null) {
+            throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn cho câu hỏi");
+        }
+        return null;
+    }
+
+    private CognitiveLevel parseCognitiveLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return CognitiveLevel.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Mức độ nhận thức không hợp lệ");
+        }
+    }
+
+    private void requireCognitiveForNewApprovedQuestion(
+            QuestionBankStatus status,
+            Long requestedFieldId,
+            CognitiveLevel cognitiveLevel
+    ) {
+        if (professionalFieldRepository != null && status == QuestionBankStatus.APPROVED && cognitiveLevel == null) {
+            throw new BadRequestException("Vui lòng phân loại mức độ nhận thức trước khi duyệt câu hỏi");
+        }
+    }
+
+    private QuestionDocument resolveSourceDocument(Long sourceDocumentId) {
+        if (sourceDocumentId == null) {
+            return null;
+        }
+        if (questionDocumentRepository == null) {
+            throw new BadRequestException("Không thể xác minh tài liệu nguồn");
+        }
+        return questionDocumentRepository.findById(sourceDocumentId)
+                .orElseThrow(() -> new BadRequestException("Tài liệu nguồn không tồn tại"));
     }
 
     private boolean matches(QuestionBankQuestion question, String normalizedQuery) {
         return normalize(question.getStem()).contains(normalizedQuery)
-                || normalize(question.getTopic()).contains(normalizedQuery)
+                || normalize(question.getCategory() == null ? null : question.getCategory().getName()).contains(normalizedQuery)
+                || normalize(question.getCategory() == null ? null : question.getCategory().getCode()).contains(normalizedQuery)
+                || normalize(question.getProfessionalField() == null ? null : question.getProfessionalField().getName()).contains(normalizedQuery)
+                || normalize(question.getProfessionalField() == null ? null : question.getProfessionalField().getCode()).contains(normalizedQuery)
                 || normalize(question.getSourceDocument()).contains(normalizedQuery);
+    }
+
+    private CognitiveLevel parseCognitiveLevelNullable(String value) {
+        if (value == null || value.isBlank() || "ALL".equalsIgnoreCase(value.trim())) {
+            return null;
+        }
+        try {
+            return CognitiveLevel.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Mức độ nhận thức không hợp lệ");
+        }
     }
 
     private String normalize(String value) {

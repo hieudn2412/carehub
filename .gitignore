@@ -70,7 +70,9 @@ replay_pid*
 *.temp
 
 # Local planning and verification notes
-developer_docs/
+developer_docs/*
+!developer_docs/evaluation-multi-field-redesign/
+!developer_docs/evaluation-multi-field-redesign/**
 
 # Local storage
 storage/

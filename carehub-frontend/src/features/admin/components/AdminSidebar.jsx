@@ -57,7 +57,7 @@ const navSections = [
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo liên tục', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
-      { icon: <SlidersOutlined />, label: 'Cách thức đào tạo', path: '/admin/training/activity-types' },
+      { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
@@ -70,7 +70,7 @@ const navSections = [
     ],
   },
   {
-    label: 'NĂNG LỰC CHUYÊN MÔN',
+    label: 'QUẢN LÝ BÀI KIỂM TRA',
     items: [
       {
         icon: <FileAddOutlined />,
@@ -89,12 +89,6 @@ const navSections = [
         ],
       },
       {
-        icon: <BookOutlined />,
-        label: 'Bộ câu hỏi',
-        path: '/admin/evaluation/question-sets',
-        requiredPermissions: [EVALUATION_PERMISSION.questionSetManager],
-      },
-      {
         icon: <DatabaseOutlined />,
         label: 'Danh mục câu hỏi',
         path: '/admin/evaluation/categories',
@@ -102,7 +96,7 @@ const navSections = [
       },
       {
         icon: <FileSearchOutlined />,
-        label: 'Năng lực chuyên môn',
+        label: 'Quản lý bài kiểm tra',
         path: '/admin/evaluation/exam-management',
         requiredPermissions: [
           EVALUATION_PERMISSION.examConfigManager,

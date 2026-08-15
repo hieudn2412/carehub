@@ -6,7 +6,9 @@ public record ExamConfigPreviewResponse(
         Integer totalQuestions,
         Integer distributedQuestions,
         Boolean valid,
-        List<ExamConfigDistributionResponse> distributions,
-        List<String> warnings
+        List<String> warnings,
+        List<ExamBlueprintFieldPreviewResponse> blueprintFields,
+        String poolChecksum,
+        Integer blueprintVersion
 ) {
 }

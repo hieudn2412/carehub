@@ -2,9 +2,26 @@ server:
   port: ${SERVER_PORT:8081}
 
 app:
+  evaluation:
+    legacy-question-set-write-enabled: ${LEGACY_QUESTION_SET_WRITE_ENABLED:false}
+    cutover:
+      direct-field: ${EVAL_QUESTION_DIRECT_FIELD:true}
+      cognitive-verified: ${EVAL_COGNITIVE_VERIFIED:false}
+      audience-rules-v1: ${EVAL_AUDIENCE_RULES_V1:false}
+      legacy-inline-audience-enabled: ${EVAL_LEGACY_INLINE_AUDIENCE_ENABLED:false}
+      multi-field-blueprint: ${EVAL_MULTI_FIELD_BLUEPRINT:true}
+      multi-field-generation: ${EVAL_MULTI_FIELD_GENERATION:false}
+      field-results: ${EVAL_FIELD_RESULTS:true}
   notification:
-    seed-enabled: ${APP_NOTIFICATION_SEED_ENABLED:true}
-    scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:true}
+    # Notification bootstrap/scanning are explicit opt-in. Keeping them off by
+    # default prevents an IntelliJ run with a missing .env.properties import
+    # from mutating the database or starting background work unexpectedly.
+    seed-enabled: ${APP_NOTIFICATION_SEED_ENABLED:false}
+    scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:false}
+    # The legacy constraint fixer performs ALTER TABLE at startup. It is only
+    # needed when the notification schema/seed worker is explicitly enabled.
+    schema-fix-enabled: ${APP_NOTIFICATION_SCHEMA_FIX_ENABLED:false}
+    rabbit-listener-enabled: ${RABBITMQ_LISTENER_ENABLED:false}
     scan-cron: ${APP_NOTIFICATION_SCAN_CRON:0 0 7 * * *}
     zone: ${APP_NOTIFICATION_ZONE:Asia/Bangkok}
 
@@ -39,14 +56,16 @@ app:
     access-token-expiration-minutes: 15
     refresh-token-expiration-days: 7
   seed:
-    enabled: ${APP_SEED_ENABLED:true}
+    # Seeding is an explicit development/bootstrap action. Never overwrite
+    # taxonomy or application data during a normal restart.
+    enabled: ${APP_SEED_ENABLED:false}
     admin:
       employee-code: ${ADMIN_EMPLOYEE_CODE}
       email: ${ADMIN_EMAIL}
       password: ${ADMIN_PASSWORD}
       name: ${ADMIN_NAME}
     question-bank:
-      enabled: ${APP_SEED_QUESTION_BANK_ENABLED:true}
+      enabled: ${APP_SEED_QUESTION_BANK_ENABLED:false}
       resource: ${APP_SEED_QUESTION_BANK_RESOURCE:classpath:question-bank/hospital-review-questions.json}
     professional-fields:
       resource: ${APP_SEED_PROFESSIONAL_FIELDS_RESOURCE:classpath:professional-fields/nursing-professional-fields.json}
@@ -100,16 +119,20 @@ ai:
     model: ${EMBEDDING_MODEL:intfloat/multilingual-e5-small}
     dimension: ${EMBEDDING_DIMENSION:384}
     model-path: ${E5_MODEL_PATH:models/intfloat/multilingual-e5-small}
-    preload: ${E5_PRELOAD:true}
-    backfill-on-startup: ${E5_BACKFILL_ON_STARTUP:true}
+    # Model native nặng; không chặn HTTP readiness khi khởi động bình thường.
+    # Bật rõ E5_PRELOAD=true ở môi trường cần warm-up trước request đầu tiên.
+    preload: ${E5_PRELOAD:false}
+    backfill-on-startup: ${E5_BACKFILL_ON_STARTUP:false}
     max-length: ${E5_MAX_LENGTH:512}
     timeout-seconds: ${E5_TIMEOUT_SECONDS:30}
     fallback-provider: ${E5_FALLBACK_PROVIDER:lexical}
     dedup-page-size: ${E5_DEDUP_PAGE_SIZE:500}
     lexical-page-size: ${E5_LEXICAL_PAGE_SIZE:500}
     cache-ttl-minutes: ${E5_CACHE_TTL_MINUTES:30}
-    cache-warmup-enabled: ${E5_CACHE_WARMUP_ENABLED:true}
-    ann-enabled: ${E5_ANN_ENABLED:true}
+    cache-warmup-enabled: ${E5_CACHE_WARMUP_ENABLED:false}
+    # Tắt mặc định: đo thực tế recall@1 chỉ 0.163, quét đầy đủ vài trăm/vài nghìn vector chỉ tốn
+    # ~0.1ms — chỉ đáng bật khi ngân hàng câu hỏi đủ lớn (~10k+ câu). Xem ai-models.md §9.3.
+    ann-enabled: ${E5_ANN_ENABLED:false}
     ann-lsh-bits: ${E5_ANN_LSH_BITS:16}
     ann-search-k: ${E5_ANN_SEARCH_K:50}
     ann-neighbor-buckets: ${E5_ANN_NEIGHBOR_BUCKETS:true}
@@ -122,7 +145,9 @@ ai:
     provider: ${PARAPHRASE_PROVIDER:vietquill}
     model: ${PARAPHRASE_MODEL:ngwgsang/vietquill-vit5-base-tsubaki}
     model-path: ${VIETQUILL_MODEL_PATH:models/ngwgsang/vietquill-vit5-base-tsubaki}
-    preload: ${VIETQUILL_PRELOAD:true}
+    # VietQuill warm-up chạy đồng bộ và có thể mất hàng chục giây.
+    # Chỉ bật ở worker/production đã chuẩn bị đủ RAM và model.
+    preload: ${VIETQUILL_PRELOAD:false}
     max-input-length: ${VIETQUILL_MAX_INPUT_LENGTH:512}
     max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:256}
     timeout-seconds: ${VIETQUILL_TIMEOUT_SECONDS:60}
@@ -134,6 +159,12 @@ ai:
     pool-size: ${VIETQUILL_POOL_SIZE:2}
     acquire-timeout-ms: ${VIETQUILL_ACQUIRE_TIMEOUT_MS:30000}
     kv-cache-enabled: ${VIETQUILL_KV_CACHE_ENABLED:false}
+    # Ngưỡng validate biến thể qua cosine(gốc, biến thể) trên E5. Hiệu chỉnh trên mẫu 15 câu/40
+    # biến thể thật (xem developer_docs/ai/benchmarks/hieu-chinh-nguong-ngu-nghia-paraphrase-vietquill.md)
+    # — mẫu còn nhỏ, nên chạy lại trên 100+ câu trước khi tin tưởng tuyệt đối.
+    low-source-semantic-similarity: ${VIETQUILL_LOW_SOURCE_SEMANTIC_SIMILARITY:0.95}
+    review-source-semantic-similarity: ${VIETQUILL_REVIEW_SOURCE_SEMANTIC_SIMILARITY:0.97}
+    low-option-semantic-similarity: ${VIETQUILL_LOW_OPTION_SEMANTIC_SIMILARITY:0.95}
 
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:storage/documents}
@@ -159,6 +190,11 @@ validation:
   duplicate:
     strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.95}   # >= : loại thẳng (~0,01% số cặp)
     review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.88}   # >= : gắn cờ xem lại (~2,4% số cặp)
+    # Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ, KHÁC thang cosine ở trên).
+    # Chỉ dùng khi provider=lexical hoặc E5 lỗi/chưa backfill xong.
+    # Hiệu chỉnh trên 270 câu seed — xem developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md
+    lexical-strong-min: ${VALIDATION_DUPLICATE_LEXICAL_STRONG_MIN:0.80}
+    lexical-review-min: ${VALIDATION_DUPLICATE_LEXICAL_REVIEW_MIN:0.20}
   quality:
     reject-min: ${VALIDATION_QUALITY_REJECT_MIN:0.55}
 
@@ -175,6 +211,11 @@ spring:
     import:
       - optional:file:.env.properties
       - optional:file:env.properties
+      # IntelliJ may use the repository root as the working directory while
+      # Maven/IDE module runs use carehub-backend/. Keep both paths optional so
+      # the same bounded remote-DB settings are loaded in either case.
+      - optional:file:carehub-backend/.env.properties
+      - optional:file:carehub-backend/env.properties
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -184,6 +225,14 @@ spring:
     virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
     ssl:
       enabled: ${RABBITMQ_SSL_ENABLED:false}
+    # Do not create RabbitAdmin or declare queues when the broker is not
+    # provisioned. This keeps local/API startup independent from RabbitMQ.
+    dynamic: ${RABBITMQ_LISTENER_ENABLED:false}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_LISTENER_ENABLED:false}
+      direct:
+        auto-startup: ${RABBITMQ_LISTENER_ENABLED:false}
     connection-timeout: 10s
     requested-heartbeat: 30s
   datasource:
@@ -191,13 +240,22 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:root123}
     hikari:
+      # Fail fast when a remote database endpoint is unavailable. Without an
+      # explicit timeout, an IntelliJ run can look frozen while the driver
+      # waits on TCP connection retries.
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:10000}
+      validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT_MS:5000}
       data-source-properties:
         TimeZone: Asia/Ho_Chi_Minh
+        connectTimeout: ${DB_CONNECT_TIMEOUT_SECONDS:10}
+        socketTimeout: ${DB_SOCKET_TIMEOUT_SECONDS:30}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # Schema changes are owned by versioned Flyway migrations. Override only
+      # for an isolated developer database that is never shared.
+      ddl-auto: ${JPA_DDL_AUTO:validate}
     show-sql: false
     properties:
       hibernate:
@@ -206,6 +264,15 @@ spring:
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    locations: classpath:db/migration
+    # The remote database predates Flyway. Baseline 5 records that legacy
+    # state once, then V6+ become the authoritative migration chain.
+    baseline-on-migrate: true
+    baseline-version: 5
+    validate-on-migrate: true
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

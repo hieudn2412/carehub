@@ -46,7 +46,7 @@ public class ParaphraseMapper {
                 candidate.getCorrectAnswer(),
                 candidate.getExplanation(),
                 candidate.getTopic(),
-                candidate.getDifficulty(),
+                candidate.getCognitiveLevel() == null ? null : candidate.getCognitiveLevel().name(),
                 candidate.getRawOutput(),
                 candidate.getSemanticSimilarityToSource(),
                 candidate.getLexicalDifferenceFromSource(),
@@ -75,8 +75,6 @@ public class ParaphraseMapper {
                 question.getOptionD(),
                 question.getCorrectAnswer(),
                 question.getExplanation(),
-                question.getTopic(),
-                question.getDifficulty(),
                 question.getLanguage(),
                 question.getSourceDocument(),
                 question.getQuestionType().name(),
@@ -86,7 +84,19 @@ public class ParaphraseMapper {
                 null,
                 null,
                 question.getCreatedAt(),
-                question.getUpdatedAt()
+                question.getUpdatedAt(),
+                question.getCategory() == null ? null : question.getCategory().getId(),
+                question.getCategory() == null ? null : question.getCategory().getCode(),
+                question.getCategory() == null ? null : question.getCategory().getName(),
+                question.getProfessionalField() == null ? null : question.getProfessionalField().getId(),
+                question.getProfessionalField() == null ? null : question.getProfessionalField().getCode(),
+                question.getProfessionalField() == null ? null : question.getProfessionalField().getName(),
+                question.getCognitiveLevel() == null ? null : question.getCognitiveLevel().name(),
+                question.getCognitiveVerifiedAt(),
+                question.getCognitiveVerifiedBy(),
+                question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getId(),
+                question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getFilename(),
+                question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getContentHash()
         );
     }
 }

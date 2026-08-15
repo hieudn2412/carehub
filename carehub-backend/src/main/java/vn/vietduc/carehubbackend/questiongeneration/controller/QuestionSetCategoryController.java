@@ -3,6 +3,8 @@ package vn.vietduc.carehubbackend.questiongeneration.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,6 +32,8 @@ import java.util.Map;
 public class QuestionSetCategoryController {
     private final QuestionSetCategoryService categoryService;
     private final EvaluationAuditLogService auditLogService;
+    @Value("${app.evaluation.legacy-question-set-write-enabled:false}")
+    private boolean legacyQuestionSetWriteEnabled;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<QuestionSetCategoryResponse>>> list(
@@ -56,6 +60,7 @@ public class QuestionSetCategoryController {
             @Valid @RequestBody UpsertQuestionSetCategoryRequest request,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetCategoryResponse response = categoryService.create(request, actor(authentication));
         auditLogService.record(
                 "QUESTION_SET_CATEGORY_CREATE",
@@ -78,6 +83,7 @@ public class QuestionSetCategoryController {
             @Valid @RequestBody UpsertQuestionSetCategoryRequest request,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetCategoryResponse response = categoryService.update(categoryId, request);
         auditLogService.record(
                 "QUESTION_SET_CATEGORY_UPDATE",
@@ -99,6 +105,7 @@ public class QuestionSetCategoryController {
             @PathVariable Long categoryId,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetCategoryResponse response = categoryService.archive(categoryId);
         auditLogService.record(
                 "QUESTION_SET_CATEGORY_ARCHIVE",
@@ -116,5 +123,14 @@ public class QuestionSetCategoryController {
 
     private String actor(Authentication authentication) {
         return authentication == null ? "system" : authentication.getName();
+    }
+
+    private void ensureLegacyWriteEnabled() {
+        if (!legacyQuestionSetWriteEnabled) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.GONE,
+                    "Danh mục bộ câu hỏi đã ngừng cho nghiệp vụ mới; không còn mục đích kiểm tra trong luồng cấu hình/giao đề"
+            );
+        }
     }
 }

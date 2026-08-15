@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,8 +19,10 @@ import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertExamConfigRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamConfigPreviewResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamConfigResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamConfigWorkflowStateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamConfigService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +34,9 @@ import java.util.Map;
 public class ExamConfigController {
     private final ExamConfigService examConfigService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationCutoverService cutover;
+    @Value("${app.evaluation.legacy-question-set-write-enabled:false}")
+    private boolean legacyQuestionSetWriteEnabled;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamConfigResponse>>> list(
@@ -51,12 +57,22 @@ public class ExamConfigController {
         ));
     }
 
+    @GetMapping("/{configId}/workflow-state")
+    public ResponseEntity<ApiResponse<ExamConfigWorkflowStateResponse>> workflowState(@PathVariable Long configId) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy trạng thái luồng tạo và giao đề thành công",
+                examConfigService.workflowState(configId)
+        ));
+    }
+
     @PostMapping
     @PreAuthorize("@evaluationSecurity.canManageExamConfig(authentication)")
     public ResponseEntity<ApiResponse<ExamConfigResponse>> create(
             @Valid @RequestBody UpsertExamConfigRequest request,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldBlueprint();
+        ensureDirectBankRequest(request);
         ExamConfigResponse response = examConfigService.create(request, actor(authentication));
         auditLogService.record(
                 "EXAM_CONFIG_CREATE",
@@ -79,6 +95,8 @@ public class ExamConfigController {
             @Valid @RequestBody UpsertExamConfigRequest request,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldBlueprint();
+        ensureDirectBankRequest(request);
         ExamConfigResponse response = examConfigService.update(configId, request, actor(authentication));
         auditLogService.record(
                 "EXAM_CONFIG_UPDATE",
@@ -100,6 +118,7 @@ public class ExamConfigController {
             @PathVariable Long configId,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldBlueprint();
         ExamConfigResponse response = examConfigService.activate(configId, actor(authentication));
         auditLogService.record(
                 "EXAM_CONFIG_ACTIVATE",
@@ -121,6 +140,7 @@ public class ExamConfigController {
             @PathVariable Long configId,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldBlueprint();
         ExamConfigResponse response = examConfigService.deactivate(configId);
         auditLogService.record(
                 "EXAM_CONFIG_DEACTIVATE",
@@ -142,6 +162,7 @@ public class ExamConfigController {
             @PathVariable Long configId,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldBlueprint();
         ExamConfigResponse response = examConfigService.archive(configId);
         auditLogService.record(
                 "EXAM_CONFIG_ARCHIVE",
@@ -159,23 +180,43 @@ public class ExamConfigController {
 
     @PostMapping("/preview")
     @PreAuthorize("@evaluationSecurity.canManageExamConfig(authentication)")
-    public ResponseEntity<ApiResponse<ExamConfigPreviewResponse>> preview(@RequestBody UpsertExamConfigRequest request) {
+    public ResponseEntity<ApiResponse<ExamConfigPreviewResponse>> preview(
+            @RequestBody UpsertExamConfigRequest request,
+            @RequestParam(defaultValue = "1") Integer variantCount,
+            @RequestParam(defaultValue = "false") Boolean zeroOverlap
+    ) {
+        cutover.requireMultiFieldBlueprint();
+        ensureDirectBankRequest(request);
         return ResponseEntity.ok(ApiResponse.success(
                 "Xem trước cấu hình đề kiểm tra thành công",
-                examConfigService.preview(request)
+                examConfigService.preview(request, variantCount, zeroOverlap)
         ));
     }
 
     @PostMapping("/{configId}/preview")
     @PreAuthorize("@evaluationSecurity.canManageExamConfig(authentication)")
-    public ResponseEntity<ApiResponse<ExamConfigPreviewResponse>> previewExisting(@PathVariable Long configId) {
+    public ResponseEntity<ApiResponse<ExamConfigPreviewResponse>> previewExisting(
+            @PathVariable Long configId,
+            @RequestParam(defaultValue = "1") Integer variantCount,
+            @RequestParam(defaultValue = "false") Boolean zeroOverlap
+    ) {
+        cutover.requireMultiFieldBlueprint();
         return ResponseEntity.ok(ApiResponse.success(
                 "Xem trước cấu hình đề kiểm tra thành công",
-                examConfigService.previewExisting(configId)
+                examConfigService.previewExisting(configId, variantCount, zeroOverlap)
         ));
     }
 
     private String actor(Authentication authentication) {
         return authentication == null ? "system" : authentication.getName();
+    }
+
+    private void ensureDirectBankRequest(UpsertExamConfigRequest request) {
+        if (request != null && request.questionSetId() != null && !legacyQuestionSetWriteEnabled) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.GONE,
+                    "Luồng bộ câu hỏi đã ngừng cho cấu hình mới; hãy cấu hình ma trận trực tiếp từ ngân hàng"
+            );
+        }
     }
 }

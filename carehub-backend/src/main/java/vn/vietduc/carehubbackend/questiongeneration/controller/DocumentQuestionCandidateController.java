@@ -14,12 +14,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchDocumentQuestionCandidateActionRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.ReclassifyDocumentQuestionCandidatesRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDocumentQuestionCandidateRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.BatchDocumentQuestionCandidateActionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DocumentQuestionCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionDuplicateMatchResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ReclassifyDocumentQuestionCandidatesResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.CandidateReviewService;
+import vn.vietduc.carehubbackend.questiongeneration.service.DocumentQuestionCandidateReclassificationService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.Map;
 import java.util.List;
@@ -30,7 +34,34 @@ import java.util.List;
 @PreAuthorize("@evaluationSecurity.canReview(authentication)")
 public class DocumentQuestionCandidateController {
     private final CandidateReviewService candidateReviewService;
+    private final DocumentQuestionCandidateReclassificationService reclassificationService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationCutoverService cutover;
+
+    @PostMapping("/reclassify-missing-taxonomy")
+    public ResponseEntity<ApiResponse<ReclassifyDocumentQuestionCandidatesResponse>> reclassifyMissingTaxonomy(
+            @Valid @RequestBody(required = false) ReclassifyDocumentQuestionCandidatesRequest request,
+            Authentication authentication
+    ) {
+        ReclassifyDocumentQuestionCandidatesResponse response = reclassificationService.reclassify(request);
+        auditLogService.record(
+                "DOCUMENT_CANDIDATE_RECLASSIFY",
+                "DOCUMENT_QUESTION_CANDIDATE",
+                null,
+                actor(authentication),
+                "Phân loại lại candidate đang thiếu lĩnh vực chuyên môn",
+                Map.of(
+                        "requestedLimit", response.requestedLimit(),
+                        "processedCount", response.processedCount(),
+                        "updatedCount", response.updatedCount(),
+                        "failedCount", response.failedCount()
+                )
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Đã chạy phân loại lại candidate thiếu taxonomy",
+                response
+        ));
+    }
 
     @GetMapping("/{candidateId}")
     public ResponseEntity<ApiResponse<DocumentQuestionCandidateResponse>> get(@PathVariable Long candidateId) {
@@ -77,7 +108,7 @@ public class DocumentQuestionCandidateController {
             @RequestBody(required = false) Map<String, String> body,
             Authentication authentication
     ) {
-        DocumentQuestionCandidateResponse response = candidateReviewService.approve(candidateId, notes(body));
+        DocumentQuestionCandidateResponse response = candidateReviewService.approve(candidateId, notes(body), actor(authentication));
         auditLogService.record(
                 "DOCUMENT_CANDIDATE_APPROVE",
                 "DOCUMENT_QUESTION_CANDIDATE",
@@ -118,6 +149,7 @@ public class DocumentQuestionCandidateController {
             @PathVariable Long candidateId,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         DocumentQuestionCandidateResponse response = candidateReviewService.saveAsQuestion(candidateId, actor(authentication));
         auditLogService.record(
                 "DOCUMENT_CANDIDATE_SAVE",
@@ -143,7 +175,7 @@ public class DocumentQuestionCandidateController {
             @RequestBody BatchDocumentQuestionCandidateActionRequest request,
             Authentication authentication
     ) {
-        BatchDocumentQuestionCandidateActionResponse response = candidateReviewService.approveBatch(request);
+        BatchDocumentQuestionCandidateActionResponse response = candidateReviewService.approveBatch(request, actor(authentication));
         auditLogService.record(
                 "DOCUMENT_CANDIDATE_BATCH_APPROVE",
                 "DOCUMENT_QUESTION_CANDIDATE",
@@ -183,6 +215,7 @@ public class DocumentQuestionCandidateController {
             @RequestBody BatchDocumentQuestionCandidateActionRequest request,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         BatchDocumentQuestionCandidateActionResponse response = candidateReviewService.saveBatch(request, actor(authentication));
         auditLogService.record(
                 "DOCUMENT_CANDIDATE_BATCH_SAVE",

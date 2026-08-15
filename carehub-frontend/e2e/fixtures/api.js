@@ -1,4 +1,4 @@
-import { expect, request as playwrightRequest } from '@playwright/test'
+﻿import { expect, request as playwrightRequest } from '@playwright/test'
 
 /**
  * Data seeding over HTTP.
@@ -159,13 +159,19 @@ export async function seedAssignedChecklist(admin, assigneeId) {
 }
 
 /**
- * The whole exam chain: question → set → config → paper → open assignment targeting `assigneeId`.
- * Mirrors the sequence pinned by L3-EXM-07…12, including the fact that generating the paper is the
- * only way to get question snapshots (grading reads them).
+ * The whole direct-bank exam chain: question(category + field + cognitive) → audience → blueprint
+ * → paper → open assignment targeting `assigneeId`. This intentionally does not create a legacy
+ * QuestionSet or send a single professionalFieldId/inline target to the assignment API.
  */
 export async function seedOpenExamAssignment(admin, assigneeId, { maxAttempts = 2 } = {}) {
   const suffix = stamp()
   const field = await seedProfessionalField(admin)
+
+  const category = await admin.post('/question-categories', {
+    code: `E2EQC${suffix}`.slice(0, 80),
+    name: `E2E danh mục ${suffix}`,
+    status: 'ACTIVE',
+  }, 'seed question category')
 
   const question = await admin.post('/questions', {
     stem: `E2E câu hỏi ${suffix}?`,
@@ -174,26 +180,45 @@ export async function seedOpenExamAssignment(admin, assigneeId, { maxAttempts = 
     optionC: 'Có thể',
     optionD: 'Không rõ',
     correctAnswer: 'A',
-    topic: 'An toàn người bệnh',
-    difficulty: 'EASY',
+    categoryId: category.id,
+    professionalFieldId: field.id,
+    cognitiveLevel: 'FOUNDATION',
     language: 'vi',
+    status: 'APPROVED',
   }, 'seed question')
 
-  const set = await admin.post('/question-sets', {
-    name: `E2E bộ câu hỏi ${suffix}`,
-    questionIds: [question.id],
-  }, 'seed question set')
-  await admin.post(`/question-sets/${set.id}/activate`, {}, 'activate question set')
+  const audience = await admin.post('/evaluation-audiences', {
+    name: `E2E đối tượng ${suffix}`,
+    ruleJson: JSON.stringify({ version: 1, all: [{ type: 'USER_IN', ids: [assigneeId] }] }),
+  }, 'seed evaluation audience')
+  await admin.post(`/evaluation-audiences/${audience.id}/activate`, {}, 'activate evaluation audience')
 
   const config = await admin.post('/exam-configs', {
     name: `E2E cấu hình ${suffix}`,
-    questionSetId: set.id,
+    audienceId: audience.id,
     totalQuestions: 1,
     timeLimitMinutes: 60,
     passingScore: 5,
     maxRetakes: maxAttempts,
     shuffleQuestions: false,
     shuffleOptions: false,
+    questionSelectionMode: 'FIXED_PAPER',
+    fieldBlueprints: [{
+      professionalFieldId: field.id,
+      percentage: 100,
+      displayOrder: 0,
+      cognitive: [
+        { cognitiveLevel: 'FOUNDATION', percentage: 100 },
+        { cognitiveLevel: 'CLINICAL_APPLICATION', percentage: 0 },
+        { cognitiveLevel: 'CLINICAL_REASONING_ANALYSIS', percentage: 0 },
+      ],
+    }],
+    sourceFilters: {
+      includedCategoryIds: [category.id],
+      excludedCategoryIds: [],
+      includedDocumentIds: [],
+      excludedDocumentIds: [],
+    },
   }, 'seed exam config')
   await admin.post(`/exam-configs/${config.id}/activate`, {}, 'activate exam config')
 
@@ -202,6 +227,7 @@ export async function seedOpenExamAssignment(admin, assigneeId, { maxAttempts = 
     namePrefix: `E2E đề ${suffix}`,
     variantCount: 1,
     randomSeed: 42,
+    idempotencyKey: `e2e-paper-${suffix}`,
   }, 'generate exam paper')
   const paperId = papers[0].id
   await admin.post(`/exam-papers/${paperId}/publish`, {}, 'publish exam paper')
@@ -210,16 +236,16 @@ export async function seedOpenExamAssignment(admin, assigneeId, { maxAttempts = 
   const assignment = await admin.post('/exam-assignments', {
     name: `E2E phân công ${suffix}`,
     examPaperId: paperId,
-    professionalFieldId: field.id,
-    userIds: [assigneeId],
+    audienceId: audience.id,
     maxAttempts,
     resultVisibility: 'SCORE_AND_ANSWERS',
     status: 'DRAFT',
     dueAt,
+    idempotencyKey: `e2e-assignment-${suffix}`,
   }, 'seed exam assignment')
   await admin.post(`/exam-assignments/${assignment.id}/open`, {}, 'open exam assignment')
 
-  return { assignmentId: assignment.id, paperId, professionalFieldId: field.id, dueAt }
+  return { assignmentId: assignment.id, paperId, questionId: question.id, professionalFieldId: field.id, audienceId: audience.id, dueAt }
 }
 
 /** The caller's own user id — needed to target assignments at the staff account. */

@@ -8,7 +8,7 @@ public enum QuestionSelectionStrategy {
 
     /**
      * Mix of mandatory (fixed) questions + random fill to reach totalQuestions.
-     * Mandatory questions are set via ExamConfigDistribution with required=true.
+     * Mandatory questions are set via the exam blueprint cells.
      */
     MIXED
 }

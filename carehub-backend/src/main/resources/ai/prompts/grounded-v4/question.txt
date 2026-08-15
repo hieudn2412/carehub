@@ -12,13 +12,14 @@ Ràng buộc:
 - Phân bố đáp án đúng giữa A/B/C/D, không mặc định đặt đáp án đúng ở A và không tạo quy luật vị trí dễ đoán trong cùng response.
 - Distractor phải là phương án gần đúng nhưng sai ở một điều kiện, đối tượng, quan hệ, thứ tự hoặc hệ quả có thể đối chiếu từ chunk. Không dùng phương án ngớ ngẩn hay từ tuyệt đối như "luôn luôn", "không bao giờ", "chỉ cần" nếu nguồn không có.
 - distractorRationales phải chứa đúng rationale cho ba phương án sai: nếu correctAnswer=A thì dùng B/C/D; nếu correctAnswer=B thì dùng A/C/D, tương tự cho C hoặc D.
-- EASY: có thể kiểm tra nhớ-hiểu, nhưng distractor vẫn phải hợp lý.
-- AUTO: ưu tiên mức MEDIUM; chỉ dùng câu recall khi chunk không hỗ trợ quan hệ, so sánh, điều kiện hoặc trình tự.
-- MEDIUM: yêu cầu phân biệt các khái niệm gần nhau hoặc áp dụng đúng điều kiện/trình tự từ nguồn.
-- HARD: yêu cầu kết hợp ít nhất hai dữ kiện, điều kiện hoặc bước có thật trong chunk. Không được thêm tình huống hay kiến thức ngoài nguồn chỉ để làm câu khó hơn.
-- Độ khó đến từ suy luận chuyên môn trên nguồn, không đến từ câu chữ mơ hồ, phủ định kép hoặc mẹo đánh đố.
+- FOUNDATION: kiểm tra kiến thức nền tảng — định nghĩa, phân loại, chỉ số/ngưỡng chuẩn, nguyên tắc chung — KHÔNG gắn với một ca bệnh cụ thể. Distractor vẫn phải hợp lý.
+- CLINICAL_APPLICATION: stem mô tả MỘT ca bệnh/tình huống cụ thể có thật trong nguồn, người làm phải áp dụng đúng protocol, quy tắc, điều kiện hoặc trình tự đã biết cho ca đó.
+- CLINICAL_REASONING_ANALYSIS: yêu cầu tổng hợp ít nhất hai dữ kiện lâm sàng trong chunk để suy luận chẩn đoán, biến chứng, tiên lượng hoặc phân tích cơ chế bệnh sinh. Không được thêm tình huống hay kiến thức ngoài nguồn chỉ để nâng mức nhận thức.
+- AUTO: chọn mức phù hợp nhất với bằng chứng; ưu tiên CLINICAL_APPLICATION, chỉ dùng FOUNDATION khi chunk không hỗ trợ tình huống, quan hệ, so sánh, điều kiện hoặc trình tự.
+- Mức độ nhận thức đến từ yêu cầu suy luận chuyên môn trên nguồn, không đến từ câu chữ mơ hồ, phủ định kép hoặc mẹo đánh đố.
+- professionalFieldCode phải là mã của đúng một lĩnh vực trong danh sách được truyền ở user prompt; đọc riêng từng câu, không gán lĩnh vực theo danh mục hoặc section.
 - Nếu nguồn không đủ tạo câu hỏi an toàn, trả questions=[].
 - Trả đúng một JSON object, không markdown và không giải thích ngoài JSON.
 
 Schema:
-{"questions":[{"questionType":"recall|application|procedure|warning|comparison","stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"trích nguyên văn","answerEvidence":"trích nguyên văn hỗ trợ đáp án","knowledgePointId":"KP1","distractorRationales":{"B":"...","C":"...","D":"..."}}]}
+{"questions":[{"questionType":"recall|application|procedure|warning|comparison","stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","cognitiveLevel":"FOUNDATION|CLINICAL_APPLICATION|CLINICAL_REASONING_ANALYSIS","professionalFieldCode":"MA_LINH_VUC","topic":"...","sourceExcerpt":"trích nguyên văn","answerEvidence":"trích nguyên văn hỗ trợ đáp án","knowledgePointId":"KP1","distractorRationales":{"B":"...","C":"...","D":"..."}}]}

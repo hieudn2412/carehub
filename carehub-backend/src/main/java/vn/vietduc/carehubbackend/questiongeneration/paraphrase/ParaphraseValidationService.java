@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.common.util.CosineUtil;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
+import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphrasedMcq;
@@ -24,9 +25,6 @@ import java.util.regex.Pattern;
 @Service
 @RequiredArgsConstructor
 public class ParaphraseValidationService {
-    private static final double LOW_SOURCE_SEMANTIC_SIMILARITY = 0.72;
-    private static final double REVIEW_SOURCE_SEMANTIC_SIMILARITY = 0.85;
-    private static final double LOW_OPTION_SEMANTIC_SIMILARITY = 0.72;
     private static final double LOW_LEXICAL_DIFFERENCE = 0.08;
     private static final List<String> BANNED_OPTION_PATTERNS = List.of(
             "tat ca deu dung",
@@ -83,6 +81,7 @@ public class ParaphraseValidationService {
     private final DuplicateCheckService duplicateCheckService;
     private final QuestionEmbeddingService embeddingService;
     private final AiEmbeddingProperties embeddingProperties;
+    private final AiParaphraseProperties paraphraseProperties;
 
     private final Map<Long, List<String>> protectedTermsCache = new ConcurrentHashMap<>();
 
@@ -150,10 +149,10 @@ public class ParaphraseValidationService {
 
         Double semanticSimilarity = sourceSemanticSimilarity(source, candidate, warnings);
         if (semanticSimilarity != null) {
-            if (semanticSimilarity < LOW_SOURCE_SEMANTIC_SIMILARITY) {
+            if (semanticSimilarity < paraphraseProperties.getLowSourceSemanticSimilarity()) {
                 warnings.add("Biến thể có nguy cơ đổi nghĩa so với câu gốc");
                 rejected = true;
-            } else if (semanticSimilarity < REVIEW_SOURCE_SEMANTIC_SIMILARITY) {
+            } else if (semanticSimilarity < paraphraseProperties.getReviewSourceSemanticSimilarity()) {
                 warnings.add("Biến thể cần xem lại vì độ tương đồng ngữ nghĩa với câu gốc chưa cao");
             }
         } else if (embeddingProperties.isE5Provider()) {
@@ -182,7 +181,7 @@ public class ParaphraseValidationService {
             if (!normalizeForCompare(sourceOption).equals(normalizeForCompare(candidateOption))
                     && embeddingProperties.isE5Provider()) {
                 Double optionSimilarity = fieldSemanticSimilarity(sourceOption, candidateOption, optionLabel, warnings);
-                if (optionSimilarity == null || optionSimilarity < LOW_OPTION_SEMANTIC_SIMILARITY) {
+                if (optionSimilarity == null || optionSimilarity < paraphraseProperties.getLowOptionSemanticSimilarity()) {
                     warnings.add("Phương án " + optionLabel + " có nguy cơ đổi nghĩa so với câu gốc");
                     rejected = true;
                 }

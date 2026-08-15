@@ -25,7 +25,10 @@ function ExamAssignmentListPage({
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [selectedAssignmentId, setSelectedAssignmentId] = useState(null)
   const [results, setResults] = useState(null)
+  const [resultReport, setResultReport] = useState(null)
+  const [selectedAttemptResult, setSelectedAttemptResult] = useState(null)
   const [isLoadingResults, setIsLoadingResults] = useState(false)
+  const [isLoadingAttemptResult, setIsLoadingAttemptResult] = useState(false)
   const [pendingArchive, setPendingArchive] = useState(null)
 
   const loadAssignments = useCallback(async () => {
@@ -60,7 +63,7 @@ function ExamAssignmentListPage({
   async function openAssignment(assignment) {
     try {
       await examAssignmentApi.openAssignment(assignment.id)
-      showToast('Đã mở phân công kiểm tra.', 'success')
+      showToast('Đã mở đợt giao đề.', 'success')
       loadAssignments()
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -70,7 +73,7 @@ function ExamAssignmentListPage({
   async function closeAssignment(assignment) {
     try {
       await examAssignmentApi.closeAssignment(assignment.id)
-      showToast('Đã đóng phân công kiểm tra.', 'success')
+      showToast('Đã đóng đợt giao đề.', 'success')
       loadAssignments()
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -87,7 +90,7 @@ function ExamAssignmentListPage({
     setPendingArchive(null)
     try {
       await examAssignmentApi.archiveAssignment(assignment.id)
-      showToast('Đã lưu trữ phân công kiểm tra.', 'success')
+      showToast('Đã lưu trữ đợt giao đề.', 'success')
       loadAssignments()
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -98,14 +101,22 @@ function ExamAssignmentListPage({
     if (selectedAssignmentId === assignment.id) {
       setSelectedAssignmentId(null)
       setResults(null)
+      setResultReport(null)
+      setSelectedAttemptResult(null)
       return
     }
     setSelectedAssignmentId(assignment.id)
     setResults(null)
+    setResultReport(null)
+    setSelectedAttemptResult(null)
     setIsLoadingResults(true)
     try {
-      const response = await examAssignmentApi.getAssignmentResults(assignment.id)
+      const [response, reportResponse] = await Promise.all([
+        examAssignmentApi.getAssignmentResults(assignment.id),
+        examAssignmentApi.getResultReport(assignment.id),
+      ])
       setResults(apiData(response, null))
+      setResultReport(apiData(reportResponse, null))
     } catch (error) {
       setSelectedAssignmentId(null)
       showToast(apiErrorMessage(error), 'error')
@@ -117,6 +128,25 @@ function ExamAssignmentListPage({
   function closeResults() {
     setSelectedAssignmentId(null)
     setResults(null)
+    setResultReport(null)
+    setSelectedAttemptResult(null)
+  }
+
+  async function viewAttemptResult(row) {
+    if (!row.latestAttemptId) return
+    if (selectedAttemptResult?.attemptId === row.latestAttemptId) {
+      setSelectedAttemptResult(null)
+      return
+    }
+    setIsLoadingAttemptResult(true)
+    try {
+      const response = await examAssignmentApi.getAttemptResultBreakdown(row.latestAttemptId)
+      setSelectedAttemptResult(apiData(response, null))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsLoadingAttemptResult(false)
+    }
   }
 
   const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
@@ -142,7 +172,7 @@ function ExamAssignmentListPage({
                   <div className="admin-control-toolbar__controls">
                     <div className="exp-search admin-control-toolbar__search">
                       <SearchOutlined />
-                      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm phân công, mã đề, tên đề" />
+                      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm đợt giao, mã đề, tên đề" />
                     </div>
                     <button
                       aria-controls="exam-assignment-filter-panel"
@@ -157,7 +187,7 @@ function ExamAssignmentListPage({
                   </div>
                   <div className="exp-title-actions">
                     <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
-                      <PlusCircleOutlined /> Tạo & giao bài
+                      <PlusCircleOutlined /> Tạo bài kiểm tra mới
                     </button>
                     <button type="button" className="exp-btn-secondary" onClick={loadAssignments} disabled={isLoading}>
                       <ReloadOutlined /> Tải lại
@@ -184,9 +214,8 @@ function ExamAssignmentListPage({
                 <table className="exp-table admin-table-uppercase">
                   <thead>
                     <tr>
-                      <th>Tên phân công</th>
+                      <th>Tên đợt giao đề</th>
                       <th>Bộ đề</th>
-                      <th>Lĩnh vực chuyên môn</th>
                       <th>Số NV</th>
                       <th>Đã nộp</th>
                       <th>Hạn nộp</th>
@@ -196,14 +225,13 @@ function ExamAssignmentListPage({
                   </thead>
                   <tbody>
                     {isLoading ? (
-                      <tr><td colSpan="8" className="exp-empty">Đang tải phân công kiểm tra...</td></tr>
+                      <tr><td colSpan="7" className="exp-empty">Đang tải các đợt giao đề...</td></tr>
                     ) : filteredAssignments.length === 0 ? (
-                      <tr><td colSpan="8" className="exp-empty">Chưa có phân công kiểm tra.</td></tr>
+                      <tr><td colSpan="7" className="exp-empty">Chưa có đợt giao đề nào.</td></tr>
                     ) : filteredAssignments.map((assignment) => (
                       <tr key={assignment.id}>
                         <td><strong>{assignment.name}</strong></td>
                         <td>{assignment.examPaperCode} - {assignment.examPaperName}</td>
-                        <td>{assignment.professionalFieldName || '—'}</td>
                         <td>{assignment.targetCount}</td>
                         <td>{assignment.submittedCount ?? 0}/{assignment.attemptCount ?? '-'}</td>
                         <td>{formatDateTime(assignment.dueAt)}</td>
@@ -235,7 +263,7 @@ function ExamAssignmentListPage({
                     <div className="exp-detail-header">
                       <div>
                         <strong>Điểm bài kiểm tra: {results?.assignmentName || assignments.find((item) => item.id === selectedAssignmentId)?.name}</strong>
-                        <span>{results?.professionalFieldName || 'Đang tải thông tin kết quả'}</span>
+                        <span>{results?.examPaperCode ? `${results.examPaperCode} · ${results.examPaperName}` : 'Đang tải thông tin kết quả'}</span>
                       </div>
                       <button type="button" className="exp-btn-secondary" onClick={closeResults}><CloseOutlined /> Đóng</button>
                     </div>
@@ -252,6 +280,45 @@ function ExamAssignmentListPage({
                           <div><span>Điểm cao nhất toàn đợt</span><strong>{results.bestScore ?? '—'}</strong></div>
                         </div>
 
+                        {resultReport && (
+                          <div className="exp-results-table-wrap" style={{ marginTop: 20 }}>
+                            <h3>Độ phủ kết quả theo lĩnh vực</h3>
+                            <table className="exp-table exp-results-table admin-table-uppercase">
+                              <thead><tr><th>Lĩnh vực</th><th>Đúng / tổng câu</th><th>Điểm TB</th><th>Đạt ngưỡng</th><th>Mẫu đánh giá</th></tr></thead>
+                              <tbody>
+                                {(resultReport.fields || []).length === 0 ? (
+                                  <tr><td colSpan="5" className="exp-empty">Chưa có lượt thi đã chấm theo lĩnh vực.</td></tr>
+                                ) : (resultReport.fields || []).map((field) => (
+                                  <tr key={field.professionalFieldId}>
+                                    <td><strong>{field.professionalFieldCode ? `${field.professionalFieldCode} · ` : ''}{field.professionalFieldName}</strong></td>
+                                    <td>{field.correctCount}/{field.totalQuestions}</td>
+                                    <td>{field.averageScore}</td>
+                                    <td>{field.passedAttempts}/{field.evaluatedAttempts}</td>
+                                    <td>{field.evaluatedAttempts} lượt</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <h3 style={{ marginTop: 20 }}>Heatmap lĩnh vực × mức nhận thức</h3>
+                            <table className="exp-table exp-results-table admin-table-uppercase">
+                              <thead><tr><th>Lĩnh vực</th><th>Mức nhận thức</th><th>Đúng / tổng câu</th><th>Số lượt</th><th>Ghi chú</th></tr></thead>
+                              <tbody>
+                                {(resultReport.cells || []).length === 0 ? (
+                                  <tr><td colSpan="5" className="exp-empty">Chưa có dữ liệu cell.</td></tr>
+                                ) : (resultReport.cells || []).map((cell) => (
+                                  <tr key={`${cell.professionalFieldId}-${cell.cognitiveLevel}`}>
+                                    <td>{cell.professionalFieldName}</td>
+                                    <td>{cell.cognitiveLabel}</td>
+                                    <td>{cell.correctCount}/{cell.totalQuestions}</td>
+                                    <td>{cell.evaluatedAttempts}</td>
+                                    <td>{cell.smallSample ? 'Mẫu nhỏ (≤ 1 câu/lượt), chỉ tham khảo' : 'Đủ mẫu'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
                         <div className="exp-results-table-wrap">
                           <table className="exp-table exp-results-table admin-table-uppercase">
                             <thead>
@@ -264,11 +331,12 @@ function ExamAssignmentListPage({
                                 <th>Kết quả (điểm cao nhất)</th>
                                 <th>Trạng thái lượt mới nhất</th>
                                 <th>Thời gian nộp</th>
+                                <th>Phân tích</th>
                               </tr>
                             </thead>
                             <tbody>
                               {(results.rows || []).length === 0 ? (
-                                <tr><td colSpan="8" className="exp-empty">Chưa có nhân viên trong bài kiểm tra này.</td></tr>
+                                <tr><td colSpan="9" className="exp-empty">Chưa có nhân viên trong bài kiểm tra này.</td></tr>
                               ) : (results.rows || []).map((row) => (
                                 <tr key={row.userId}>
                                   <td><strong>{row.employeeCode}</strong><br /><span>{row.userName}</span></td>
@@ -283,10 +351,75 @@ function ExamAssignmentListPage({
                                   </td>
                                   <td>{row.latestStatusText || 'Chưa làm'}</td>
                                   <td>{formatDateTime(row.latestSubmittedAt)}</td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="exp-btn-secondary"
+                                      disabled={!row.latestAttemptId || row.latestStatus !== 'GRADED' || isLoadingAttemptResult}
+                                      onClick={() => viewAttemptResult(row)}
+                                    >
+                                      {selectedAttemptResult?.attemptId === row.latestAttemptId ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                    </button>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
+
+                          {(isLoadingAttemptResult || selectedAttemptResult) && (
+                            <section className="exp-detail-panel" style={{ marginTop: 20 }}>
+                              <div className="exp-detail-header">
+                                <div>
+                                  <strong>Phân tích lượt làm bài</strong>
+                                  <span>Điểm theo lĩnh vực, mức nhận thức và từng câu hỏi từ snapshot của đề.</span>
+                                </div>
+                                {selectedAttemptResult && (
+                                  <button type="button" className="exp-btn-secondary" onClick={() => setSelectedAttemptResult(null)}><CloseOutlined /> Đóng</button>
+                                )}
+                              </div>
+                              {isLoadingAttemptResult ? (
+                                <div className="exp-results-loading"><LoadingOutlined spin /> Đang tải phân tích lượt làm bài...</div>
+                              ) : (
+                                <>
+                                  <div className="exp-results-table-wrap">
+                                    <table className="exp-table exp-results-table admin-table-uppercase">
+                                      <thead><tr><th>Lĩnh vực</th><th>Đúng / tổng câu</th><th>Điểm</th><th>Ngưỡng</th><th>Kết quả</th></tr></thead>
+                                      <tbody>{(selectedAttemptResult.fields || []).map((field) => (
+                                        <tr key={field.professionalFieldId}>
+                                          <td>{field.professionalFieldCode ? `${field.professionalFieldCode} · ` : ''}{field.professionalFieldName}</td>
+                                          <td>{field.correctCount}/{field.totalQuestions}</td><td>{field.score}</td><td>{field.passingThreshold}</td>
+                                          <td>{field.passed ? 'Đạt' : 'Không đạt'}</td>
+                                        </tr>
+                                      ))}</tbody>
+                                    </table>
+                                  </div>
+                                  <div className="exp-results-table-wrap" style={{ marginTop: 16 }}>
+                                    <table className="exp-table exp-results-table admin-table-uppercase">
+                                      <thead><tr><th>Lĩnh vực</th><th>Mức nhận thức</th><th>Đúng / tổng câu</th><th>Ghi chú</th></tr></thead>
+                                      <tbody>{(selectedAttemptResult.cells || []).map((cell) => (
+                                        <tr key={`${cell.professionalFieldId}-${cell.cognitiveLevel}`}>
+                                          <td>{cell.professionalFieldName}</td><td>{cell.cognitiveLabel}</td>
+                                          <td>{cell.correctCount}/{cell.totalQuestions}</td>
+                                          <td>{cell.smallSample ? 'Mẫu nhỏ (≤ 1 câu), chỉ tham khảo' : 'Đủ mẫu'}</td>
+                                        </tr>
+                                      ))}</tbody>
+                                    </table>
+                                  </div>
+                                  <div className="exp-results-table-wrap" style={{ marginTop: 16 }}>
+                                    <table className="exp-table exp-results-table admin-table-uppercase">
+                                      <thead><tr><th>Vị trí</th><th>Lĩnh vực</th><th>Mức nhận thức</th><th>Câu hỏi</th><th>Kết quả</th></tr></thead>
+                                      <tbody>{(selectedAttemptResult.questions || []).map((question) => (
+                                        <tr key={question.paperQuestionId}>
+                                          <td>{question.position}</td><td>{question.professionalFieldName}</td><td>{question.cognitiveLabel}</td>
+                                          <td>{question.stem}</td><td>{question.correct ? 'Đúng' : 'Sai'}</td>
+                                        </tr>
+                                      ))}</tbody>
+                                    </table>
+                                  </div>
+                                </>
+                              )}
+                            </section>
+                          )}
                         </div>
                       </>
                     )}
@@ -300,9 +433,9 @@ function ExamAssignmentListPage({
       </div>
       <ConfirmModal
         isOpen={Boolean(pendingArchive)}
-        title="Lưu trữ phân công?"
-        message={pendingArchive ? `Phân công “${pendingArchive.name}” sẽ không còn xuất hiện trong danh sách đang quản lý.` : ''}
-        confirmText="Lưu trữ phân công"
+        title="Lưu trữ đợt giao đề?"
+        message={pendingArchive ? `Đợt giao “${pendingArchive.name}” sẽ không còn xuất hiện trong danh sách đang quản lý.` : ''}
+        confirmText="Lưu trữ đợt giao"
         danger
         onCancel={() => setPendingArchive(null)}
         onConfirm={confirmArchiveAssignment}

@@ -21,6 +21,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentR
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAssignmentService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.List;
 import java.util.Map;
@@ -32,16 +33,16 @@ import java.util.Map;
 public class ExamAssignmentController {
     private final ExamAssignmentService assignmentService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationCutoverService cutover;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamAssignmentResponse>>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long professionalFieldId
+            @RequestParam(required = false) String status
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách phân công kiểm tra thành công",
-                assignmentService.list(q, status, professionalFieldId)
+                assignmentService.list(q, status)
         ));
     }
 
@@ -54,7 +55,9 @@ public class ExamAssignmentController {
     }
 
     @GetMapping("/{assignmentId}/results")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<ExamAssignmentResultsResponse>> results(@PathVariable Long assignmentId) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy kết quả phân công kiểm tra thành công",
                 assignmentService.results(assignmentId)
@@ -62,10 +65,12 @@ public class ExamAssignmentController {
     }
 
     @GetMapping("/{assignmentId}/export-results")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<byte[]> exportResults(
             @PathVariable Long assignmentId,
             Authentication authentication
     ) {
+        cutover.requireFieldResults();
         byte[] body = assignmentService.exportResultsXlsx(assignmentId);
         auditLogService.record(
                 "EXAM_ASSIGNMENT_RESULT_EXPORT",
@@ -89,6 +94,9 @@ public class ExamAssignmentController {
             @RequestBody CreateExamAssignmentRequest request,
             Authentication authentication
     ) {
+        cutover.requireAudienceRules();
+        cutover.requireMultiFieldGeneration();
+        cutover.requireAudienceSelection(request);
         ExamAssignmentResponse response = assignmentService.create(request, actor(authentication));
         auditLogService.record(
                 "EXAM_ASSIGNMENT_CREATE",
@@ -109,6 +117,11 @@ public class ExamAssignmentController {
             @PathVariable Long assignmentId,
             Authentication authentication
     ) {
+        // Opening is the irreversible delivery checkpoint. Keep the same
+        // audience/generation gates as create so a legacy or pre-cutover DRAFT
+        // cannot bypass the new direct-bank and audience snapshot contract.
+        cutover.requireAudienceRules();
+        cutover.requireMultiFieldGeneration();
         ExamAssignmentResponse response = assignmentService.open(assignmentId);
         auditLogService.record(
                 "EXAM_ASSIGNMENT_OPEN",

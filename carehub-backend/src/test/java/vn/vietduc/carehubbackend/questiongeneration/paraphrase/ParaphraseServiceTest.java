@@ -16,6 +16,8 @@ import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingS
 import vn.vietduc.carehubbackend.questiongeneration.entity.ParaphraseCandidate;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ParaphraseJob;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ParaphraseJobStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
@@ -29,14 +31,17 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ParaphraseJobRepo
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.DuplicateCheckService;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -69,7 +74,8 @@ class ParaphraseServiceTest {
                 new ProtectedTermService(),
                 duplicateCheckService,
                 embeddingService,
-                embeddingProperties
+                embeddingProperties,
+                paraphraseProperties
         );
         service = new ParaphraseService(
                 questionRepository,
@@ -93,9 +99,12 @@ class ParaphraseServiceTest {
                 .optionD("Bỏ qua nếu người bệnh tỉnh táo.")
                 .correctAnswer("A")
                 .explanation("Cần dùng tối thiểu hai thông tin nhận diện.")
-                .topic("An toàn người bệnh")
-                .difficulty("medium")
                 .language("vi")
+                .category(QuestionCategory.builder().id(20L).code("CAT-20").name("Chăm sóc người bệnh").build())
+                .professionalField(ProfessionalField.builder().id(30L).code("FIELD-30").name("Điều dưỡng").build())
+                .cognitiveLevel(CognitiveLevel.CLINICAL_APPLICATION)
+                .cognitiveVerifiedAt(LocalDateTime.now())
+                .cognitiveVerifiedBy("reviewer")
                 .questionType(QuestionType.ORIGINAL)
                 .status(QuestionBankStatus.APPROVED)
                 .build();
@@ -209,6 +218,22 @@ class ParaphraseServiceTest {
         assertThat(savedQuestion.getParentQuestion()).isEqualTo(sourceQuestion);
         assertThat(savedQuestion.getCorrectAnswer()).isEqualTo(sourceQuestion.getCorrectAnswer());
         verify(embeddingService).saveStemEmbedding(savedQuestion);
+    }
+
+    @Test
+    void saveRejectsParaphraseWhenSourceCognitiveReviewIsMissing() {
+        ParaphraseJobResponse response = processJob(
+                sourceQuestion.getId(),
+                new CreateParaphraseJobRequest(1, "medium"),
+                "admin"
+        );
+        Long candidateId = response.candidates().get(0).id();
+        service.approve(candidateId, "Ổn");
+        sourceQuestion.setCognitiveVerifiedAt(null);
+
+        assertThatThrownBy(() -> service.saveAsQuestion(candidateId, "admin"))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("chưa được reviewer xác nhận");
     }
 
     @Test

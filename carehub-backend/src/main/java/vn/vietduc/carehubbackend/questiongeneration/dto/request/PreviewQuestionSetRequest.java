@@ -4,12 +4,19 @@ import java.util.List;
 import java.util.Map;
 
 public record PreviewQuestionSetRequest(
-        String category,
-        String topic,
         Integer questionCount,
-        Map<String, Integer> difficultyDistribution,
+        Map<String, Integer> cognitiveLevelDistribution,
         List<Long> excludeQuestionIds,
         Boolean avoidSameSourceDocument,
-        Long randomSeed
+        Long randomSeed,
+        Long categoryId
 ) {
+    public PreviewQuestionSetRequest(
+            Integer questionCount,
+            Map<String, Integer> cognitiveLevelDistribution, List<Long> excludeQuestionIds,
+            Boolean avoidSameSourceDocument, Long randomSeed
+    ) {
+        this(questionCount, cognitiveLevelDistribution, excludeQuestionIds,
+                avoidSameSourceDocument, randomSeed, null);
+    }
 }

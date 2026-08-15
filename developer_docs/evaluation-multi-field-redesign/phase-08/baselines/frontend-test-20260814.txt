@@ -1,0 +1,34 @@
+Phase 8 frontend verification — 2026-08-14
+
+Working directory: carehub-frontend
+
+Command:
+  npm run lint
+Result: exit 0
+
+Command:
+  npm test -- --no-file-parallelism --maxWorkers=1 --hookTimeout=30000
+Result: exit 0
+  Test Files: 27 passed
+  Tests: 156 passed
+
+Command:
+  npm run build
+Result: exit 0
+
+Vite emitted only the existing chunk-size and ineffective dynamic-import warnings.
+
+Follow-up after direct-bank E2E fixture update (2026-08-14):
+  npm run lint -> exit 0
+  npm test -- --no-file-parallelism --maxWorkers=1 --hookTimeout=30000 -> exit 0
+    Test Files: 27 passed
+    Tests: 156 passed
+  npm run build -> exit 0 (see frontend-build-20260814-fixture-rerun.txt)
+  npm run build -> exit 0 (see frontend-build-20260814-rerun.txt)
+
+Follow-up after adding the required assignment idempotency key to the direct-
+bank E2E fixture (2026-08-14 01:49 +07:00):
+  npm run lint -> exit 0
+  npm test -- --no-file-parallelism --maxWorkers=1 --hookTimeout=30000 -> exit 0
+    Test Files: 27 passed
+    Tests: 156 passed

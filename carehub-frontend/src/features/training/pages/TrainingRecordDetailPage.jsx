@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ClockCircleOutlined, EditOutlined, PaperClipOutlined, RollbackOutlined } from '@ant-design/icons'
+import {
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  PaperClipOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import { trainingApi } from '../api/trainingApi.js'
@@ -20,6 +25,18 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('vi-VN').format(new Date(`${value}T00:00:00`))
 }
 
+function formatDateTime(value) {
+  if (!value) return '-'
+  const d = new Date(value)
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(d)
+}
+
 export default function TrainingRecordDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -29,7 +46,6 @@ export default function TrainingRecordDetailPage() {
   const [record, setRecord] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [returning, setReturning] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -57,20 +73,6 @@ export default function TrainingRecordDetailPage() {
 
   const goBack = () => navigate(record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees')
 
-  const returnToDraft = async () => {
-    if (!window.confirm('Bạn có chắc muốn trả hồ sơ này về nháp?')) return
-    setReturning(true)
-    try {
-      await trainingApi.returnToDraft(id)
-      showToast('Đã trả hồ sơ về bản nháp.', 'success')
-      await load()
-    } catch (requestError) {
-      showToast(getApiErrorMessage(requestError, 'Không thể trả hồ sơ về bản nháp.'), 'error')
-    } finally {
-      setReturning(false)
-    }
-  }
-
   const status = statusCfg[record?.workflowStatus] || { label: record?.workflowStatus || '-', cls: 'th-badge--warning' }
 
   return (
@@ -81,7 +83,10 @@ export default function TrainingRecordDetailPage() {
           back={{ onClick: goBack, label: 'Quay lại' }}
           breadcrumbs={[
             { label: 'Giờ đào tạo liên tục', link: '/training/employees' },
-            { label: record?.employeeName || 'Nhân viên', link: record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees' },
+            {
+              label: record?.employeeName || 'Nhân viên',
+              link: record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees',
+            },
             { label: 'Chi tiết hồ sơ' },
           ]}
         />
@@ -91,34 +96,97 @@ export default function TrainingRecordDetailPage() {
             {error ? (
               <div className="th-table-state" role="alert">
                 <p>{error}</p>
-                <button type="button" className="th-detail-btn" onClick={load}>Thử lại</button>
+                <button type="button" className="th-detail-btn" onClick={load}>
+                  Thử lại
+                </button>
               </div>
             ) : null}
             {!loading && record ? (
               <>
+                {/* Header Card */}
                 <div className="th-detail-header">
                   <div className="th-detail-header__left">
                     <h1 className="th-detail-title">{record.title}</h1>
                     <div className="th-detail-meta">
-                      <span><ClockCircleOutlined /> {formatDate(record.startDate)}</span>
+                      {record.employeeName && (
+                        <span className="th-detail-meta__field" style={{ color: '#0284c7', fontWeight: 600 }}>
+                          <UserOutlined /> {record.employeeName} {record.employeeCode ? `(${record.employeeCode})` : ''}
+                        </span>
+                      )}
+                      <span>
+                        <ClockCircleOutlined /> {formatDate(record.startDate)}
+                      </span>
                       <span className={`th-badge ${status.cls}`}>{status.label}</span>
                     </div>
                   </div>
                   <div className="th-detail-header__right">
-                    <div className="th-detail-hours-ring"><span className="th-detail-hours-value">{record.declaredHours || 0}h</span><span className="th-detail-hours-label">Giờ đào tạo</span></div>
-                    <div className="th-detail-evidence-ring"><span className="th-detail-evidence-value"><PaperClipOutlined /> {record.evidences?.length || 0}</span><span className="th-detail-evidence-label">Minh chứng</span></div>
+                    <div className="th-detail-hours-ring">
+                      <span className="th-detail-hours-value">{record.declaredHours || 0}h</span>
+                      <span className="th-detail-hours-label">Giờ đào tạo</span>
+                    </div>
+                    <div className="th-detail-evidence-ring">
+                      <span className="th-detail-evidence-value">
+                        <PaperClipOutlined /> {record.evidences?.length || 0}
+                      </span>
+                      <span className="th-detail-evidence-label">Minh chứng</span>
+                    </div>
                   </div>
                 </div>
 
-                <section id="evidence" ref={evidenceRef} className="th-detail-section">
-                  <h3 className="th-detail-section-title"><PaperClipOutlined /> Minh chứng ({record.evidences?.length || 0})</h3>
-                  <EvidenceGallery recordId={record.id} evidences={record.evidences || []} onError={message => showToast(message, 'error')} />
+                {/* Section 1: Detailed Information Grid */}
+                <section className="th-detail-section" style={{ marginBottom: '24px' }}>
+                  <h3 className="th-detail-section-title">
+                    <InfoCircleOutlined /> Thông tin chi tiết hồ sơ
+                  </h3>
+                  <div className="th-detail-grid">
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Nhân viên khai báo</label>
+                      <div className="th-detail-text" style={{ fontWeight: 600, color: '#0f172a' }}>
+                        {record.employeeName} {record.employeeCode ? `(${record.employeeCode})` : ''}
+                      </div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Tên khóa / Nội dung đào tạo</label>
+                      <div className="th-detail-text" style={{ fontWeight: 600 }}>{record.title}</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Số giờ quy đổi</label>
+                      <div className="th-detail-text th-detail-text--em">{record.declaredHours || 0} giờ</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Ngày bắt đầu</label>
+                      <div className="th-detail-text">{formatDate(record.startDate)}</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Ngày kết thúc</label>
+                      <div className="th-detail-text">{formatDate(record.endDate || record.startDate)}</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Hình thức đào tạo</label>
+                      <div className="th-detail-text">{record.activityTypeName || '-'}</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Lĩnh vực chuyên môn</label>
+                      <div className="th-detail-text">{record.professionalFieldName || '-'}</div>
+                    </div>
+                    <div className="th-detail-block">
+                      <label className="th-detail-label">Thời gian nộp hồ sơ</label>
+                      <div className="th-detail-text">{formatDateTime(record.submittedAt || record.createdAt)}</div>
+                    </div>
+                    <div className="th-detail-block th-detail-block--full">
+                      <label className="th-detail-label">Ghi chú / Mô tả chi tiết</label>
+                      <div className="th-detail-text">{record.description || 'Không có ghi chú'}</div>
+                    </div>
+                  </div>
                 </section>
 
-                <div className="th-detail-actions">
-                  {record.workflowStatus === 'DRAFT' ? <button type="button" className="th-detail-btn" onClick={() => navigate(`/training/records/${record.id}/edit`)}><EditOutlined /> Chỉnh sửa thông tin</button> : null}
-                  {record.workflowStatus === 'SUBMITTED' ? <button type="button" className="th-detail-btn" onClick={returnToDraft} disabled={returning}><RollbackOutlined /> {returning ? 'Đang xử lý...' : 'Trả về nháp'}</button> : null}
-                </div>
+                {/* Section 2: Evidences Gallery */}
+                <section id="evidence" ref={evidenceRef} className="th-detail-section">
+                  <h3 className="th-detail-section-title">
+                    <PaperClipOutlined /> Hình ảnh minh chứng ({record.evidences?.length || 0})
+                  </h3>
+                  <EvidenceGallery recordId={record.id} evidences={record.evidences || []} onError={(message) => showToast(message, 'error')} />
+                </section>
               </>
             ) : null}
           </main>

@@ -9,9 +9,7 @@ public record QuestionCategoryResponse(
         String description,
         String status,
         String statusText,
-        Integer sortOrder,
         long questionCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
-) {
-}
+) {}

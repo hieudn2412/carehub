@@ -23,7 +23,7 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
     List<ExamAttempt> findByStatusOrderByStartedAtDesc(ExamAttemptStatus status);
     @EntityGraph(attributePaths = {
             "assignment",
-            "assignment.professionalField",
+            "assignment.generationBatch",
             "examPaper",
             "user",
             "user.department"

@@ -1,0 +1,9 @@
+Backend package verification — 2026-08-14
+
+Working directory: carehub-backend
+Command:
+  .\mvnw.cmd -q -DskipTests package
+Result: exit 0
+
+The build includes the bounded JDBC/Hikari timeout configuration and the
+repository-root IntelliJ environment import paths.

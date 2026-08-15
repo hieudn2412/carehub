@@ -1,0 +1,8 @@
+Backend cutover-targeted verification — 2026-08-14
+
+Command:
+  .\mvnw.cmd -q "-Dtest=EvaluationCutoverServiceTest,ExamPaperDirectGenerationTest,EvaluationAudienceServiceTest,QuestionBankServiceTest" test
+Result: exit 0
+
+The targeted suite covers production gates, direct-bank field × cognitive
+generation, audience rules and question-bank reviewer/cognitive behavior.

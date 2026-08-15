@@ -1,0 +1,29 @@
+Phase 08 QuestionSet contract audit — 2026-08-14
+
+Decision: do not run a destructive contract/drop migration yet.
+
+Remaining read/compatibility consumers are intentionally retained:
+  - QuestionSetService and QuestionSetController support legacy read/export and
+    compatibility tests; all write/activate/update/archive/duplicate endpoints
+    are guarded by LEGACY_QUESTION_SET_WRITE_ENABLED=false in production.
+  - ExamConfigService and ExamPaperService retain a legacy branch so existing
+    historical rows can be read if a future preflight finds any non-zero data.
+  - Legacy DTO fields remain nullable and are omitted from direct-bank JSON
+    responses by NON_NULL serialization.
+
+New production writes are guarded:
+  - ExamConfigController rejects questionSetId with HTTP 410 when the legacy
+    write flag is false.
+  - QuestionSetController rejects all mutating endpoints with HTTP 410 when the
+    legacy write flag is false.
+  - QuestionSetCategoryController rejects create/update/archive of retired
+    purpose categories with HTTP 410 when the legacy write flag is false.
+  - DataSeeder does not create the six retired purpose categories unless the
+    explicit legacy compatibility flag is enabled.
+  - Direct generation reads Question APPROVED + active category/field + verified
+    cognitive level and does not use QuestionSet.
+
+Contract action: after a fresh remote read-only preflight confirms zero
+question_sets/items/versions and code consumers have been removed, create a
+separate reviewed Flyway archive/drop migration. This phase does not drop the
+legacy tables or columns.

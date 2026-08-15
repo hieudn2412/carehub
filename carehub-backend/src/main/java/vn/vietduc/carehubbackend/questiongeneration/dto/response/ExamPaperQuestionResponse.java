@@ -14,8 +14,19 @@ public record ExamPaperQuestionResponse(
         String optionD,
         String correctAnswer,
         String explanation,
-        String difficulty,
         String topic,
-        String sourceDocument
+        String sourceDocument,
+        Long categoryId,
+        String categoryCode,
+        String categoryName,
+        Long professionalFieldId,
+        String professionalFieldCode,
+        String professionalFieldName,
+        String cognitiveLevel,
+        String cognitiveLabel,
+        Long sourceDocumentId,
+        String sourceDocumentFilename,
+        String sourceDocumentContentHash,
+        Long questionFamilyId
 ) {
 }

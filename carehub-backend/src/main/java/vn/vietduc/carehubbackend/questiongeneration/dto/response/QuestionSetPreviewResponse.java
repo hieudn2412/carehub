@@ -9,7 +9,7 @@ public record QuestionSetPreviewResponse(
         List<String> warnings
 ) {
     public record Shortage(
-            String difficulty,
+            String cognitiveLevel,
             Integer requested,
             Integer available
     ) {

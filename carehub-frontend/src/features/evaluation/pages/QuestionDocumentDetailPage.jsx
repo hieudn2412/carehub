@@ -19,6 +19,7 @@ import {
   apiData,
   apiErrorMessage,
   chunkGenerationEligible,
+  COGNITIVE_LEVELS,
   documentStatusText,
   formatDateTime,
   formatNumber,
@@ -39,8 +40,7 @@ function QuestionDocumentDetailPage() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [categoryId, setCategoryId] = useState('')
-  const [pipelineVersion, setPipelineVersion] = useState('LEGACY_V3')
-  const [targetDifficulty, setTargetDifficulty] = useState('AUTO')
+  const [targetCognitiveLevel, setTargetCognitiveLevel] = useState('AUTO')
   const [categories, setCategories] = useState([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -85,8 +85,7 @@ function QuestionDocumentDetailPage() {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
         questionsPerChunk,
         categoryId,
-        pipelineVersion,
-        targetDifficulty,
+        targetCognitiveLevel,
       }))
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
@@ -132,7 +131,6 @@ function QuestionDocumentDetailPage() {
         code: categoryForm.code.trim() || null,
         description: categoryForm.description.trim() || null,
         status: 'ACTIVE',
-        sortOrder: 0,
       })
       const createdCategory = apiData(response)
       if (createdCategory) {
@@ -338,28 +336,16 @@ function QuestionDocumentDetailPage() {
               />
             </label>
             <label className="qdoc-field">
-              <span>Pipeline</span>
+              <span>Mức độ nhận thức mục tiêu</span>
               <select
-                value={pipelineVersion}
-                onChange={(event) => setPipelineVersion(event.target.value)}
-                disabled={isCreatingJob}
-              >
-                <option value="LEGACY_V3">Legacy v3 (đối chứng)</option>
-                <option value="GROUNDED_V4">Grounded v4 (pilot)</option>
-              </select>
-              <small className="qdoc-field-help">Grounded v4 trích knowledge point và bằng chứng trước khi sinh câu hỏi.</small>
-            </label>
-            <label className="qdoc-field">
-              <span>Độ khó mục tiêu</span>
-              <select
-                value={targetDifficulty}
-                onChange={(event) => setTargetDifficulty(event.target.value)}
+                value={targetCognitiveLevel}
+                onChange={(event) => setTargetCognitiveLevel(event.target.value)}
                 disabled={isCreatingJob}
               >
                 <option value="AUTO">Tự động theo nguồn</option>
-                <option value="EASY">Dễ</option>
-                <option value="MEDIUM">Trung bình</option>
-                <option value="HARD">Khó</option>
+                {COGNITIVE_LEVELS.map((level) => (
+                  <option key={level.value} value={level.value}>{level.label}</option>
+                ))}
               </select>
             </label>
             <div className="qdoc-field">
@@ -389,8 +375,9 @@ function QuestionDocumentDetailPage() {
               <small className="qdoc-field-help">Nếu chọn danh mục, các câu hỏi được duyệt từ phiên này sẽ được gắn theo chủ đề đó.</small>
             </div>
             <div className="qdoc-note">
-              Phiên sẽ xử lý từng đoạn nội dung riêng để giữ nguồn trích dẫn và có thể thử lại phần lỗi.
-              Nên bắt đầu với 1 câu mỗi đoạn để kiểm soát chất lượng và tốc độ.
+              AI sẽ đọc riêng từng câu để chọn lĩnh vực chuyên môn từ danh sách đang có trong hệ thống và gán một
+              trong 3 mức nhận thức. Reviewer vẫn cần kiểm tra, bổ sung danh mục hoặc chỉnh lại phân loại trước khi duyệt.
+              Phiên xử lý từng đoạn nội dung riêng để giữ nguồn trích dẫn và có thể thử lại phần lỗi.
             </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={closeJobModal} disabled={isCreatingJob}>

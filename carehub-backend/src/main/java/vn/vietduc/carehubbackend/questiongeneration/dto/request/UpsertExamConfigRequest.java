@@ -1,9 +1,12 @@
 package vn.vietduc.carehubbackend.questiongeneration.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.List;
+import java.math.BigDecimal;
 
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record UpsertExamConfigRequest(
         @NotBlank String name,
         String description,
@@ -15,23 +18,30 @@ public record UpsertExamConfigRequest(
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
         String questionSelectionMode,
-        DifficultyPercentages difficultyPercentages,
         String status,
-        List<Distribution> distributions
+        Long audienceId,
+        List<FieldBlueprint> fieldBlueprints,
+        SourceFilters sourceFilters
 ) {
-    public record DifficultyPercentages(
-            Integer easy,
-            Integer medium,
-            Integer hard
-    ) {
-    }
-
-    public record Distribution(
-            Long categoryId,
-            String categoryName,
-            String difficulty,
+    public record FieldBlueprint(
+            Long professionalFieldId,
+            BigDecimal percentage,
             Integer questionCount,
-            Boolean required
-    ) {
-    }
+            Integer displayOrder,
+            BigDecimal passingThreshold,
+            List<CognitiveDistribution> cognitive
+    ) { }
+
+    public record CognitiveDistribution(
+            String cognitiveLevel,
+            BigDecimal percentage,
+            Integer questionCount
+    ) { }
+
+    public record SourceFilters(
+            List<Long> includedCategoryIds,
+            List<Long> excludedCategoryIds,
+            List<Long> includedDocumentIds,
+            List<Long> excludedDocumentIds
+    ) { }
 }

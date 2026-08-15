@@ -1,0 +1,15 @@
+Backend DB fail-fast verification — 2026-08-14 00:47 +07:00
+
+The application was started on port 18083 with an unroutable RFC-5737 database
+endpoint and these safety values:
+
+  DB_POOL_CONNECTION_TIMEOUT_MS=1000
+  DB_POOL_VALIDATION_TIMEOUT_MS=1000
+  DB_CONNECT_TIMEOUT_SECONDS=2
+  DB_SOCKET_TIMEOUT_SECONDS=2
+  FLYWAY_ENABLED=false
+  RABBITMQ_LISTENER_ENABLED=false
+
+The process reached Hikari connection failure and cancelled Spring context
+initialization instead of waiting indefinitely. This is a negative-path smoke
+only; no application or remote database was modified.

@@ -186,36 +186,7 @@ function ActivityTypeFormPage() {
                       />
                     </div>
 
-                    <div className="ch-form-grid ch-form-grid--3">
-                      <div className="atf-field">
-                        <label className="atf-label">Đơn vị tính thời gian *</label>
-                        <select
-                          className="atf-input"
-                          onChange={(event) => updateField('defaultDurationUnit', event.target.value)}
-                          required
-                          value={form.defaultDurationUnit}
-                        >
-                          {DURATION_UNITS.map((unit) => (
-                            <option key={unit.value} value={unit.value}>
-                              {unit.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="atf-field">
-                        <label className="atf-label">Tối đa giờ / hồ sơ</label>
-                        <input
-                          type="number"
-                          className="atf-input"
-                          min="0.01"
-                          step="0.01"
-                          placeholder="Không giới hạn"
-                          onChange={(event) => updateField('maxCreditedHoursPerRecord', event.target.value)}
-                          value={form.maxCreditedHoursPerRecord}
-                        />
-                      </div>
-
+                    <div className="ch-form-grid ch-form-grid--1" style={{ maxWidth: 300 }}>
                       <div className="atf-field">
                         <label className="atf-label">Thứ tự hiển thị *</label>
                         <input

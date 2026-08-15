@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Phase 2 — Ngân hàng và danh mục câu hỏi</title>
+  <link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<header class="masthead"><div class="shell">
+  <div class="phase-mark">PHASE 02 · ĐÃ IMPLEMENT TRÊN CODE</div>
+  <p class="eyebrow">Question lifecycle</p>
+  <h1>Ngân hàng và danh mục câu hỏi</h1>
+  <p class="lede">Mỗi câu hỏi mang đồng thời danh mục kiến thức, lĩnh vực chuyên môn và mức độ nhận thức; bộ câu hỏi cũ không còn là bước nghiệp vụ bắt buộc.</p>
+  <div class="status"><strong>Trạng thái:</strong> Code, API, UI và migration V7–V8 đã hoàn tất trong workspace. DB remote đã ở V6; V7–V8 là phần additive còn phải chạy trước khi bật đầy đủ Phase 2.</div>
+</div></header>
+<main class="shell layout"><nav class="side">
+  <a href="index.html">← Tổng quan</a><a href="#rules">Quy tắc</a><a href="#categories">Danh mục</a><a href="#source">Nguồn</a><a href="#api">API/UI</a><a href="#sets">Gỡ bộ câu hỏi</a><a href="#evidence">Bằng chứng</a><a href="#tests">Nghiệm thu</a>
+</nav><article class="content">
+<section class="section" id="rules"><h2>Quy tắc đã triển khai</h2><ul>
+  <li>Mỗi câu có một <code>category_id</code> và một <code>professional_field_id</code> độc lập; không suy luận liên kết bằng tên hoặc <code>topic</code>.</li>
+  <li><code>cognitive_level</code> gồm <code>FOUNDATION</code>, <code>CLINICAL_APPLICATION</code> và <code>CLINICAL_REASONING_ANALYSIS</code>. Câu APPROVED phải có audit xác nhận mức nhận thức.</li>
+  <li>Availability chỉ đếm câu APPROVED, danh mục/lĩnh vực đang hoạt động và có <code>cognitive_verified_at/by</code>.</li>
+  <li>Đổi tên danh mục hoặc lĩnh vực chỉ đổi dữ liệu hiển thị; liên kết và số đếm dùng FK nên không đổi. Mã danh mục không được sửa.</li>
+  <li>Document là provenance; một bài kiểm tra về sau có thể lấy câu từ nhiều document.</li>
+  <li>270 câu legacy medium được giữ nguyên, nhưng không tự được coi là đã xác nhận mức nhận thức; cần queue phân loại ở phase sau.</li>
+</ul></section>
+<section class="section" id="categories"><h2>Danh mục câu hỏi được giữ nguyên</h2><ul>
+  <li>Giữ menu, route và CRUD <code>/admin/evaluation/categories</code>; form không còn trường sở hữu lĩnh vực.</li>
+  <li>Thống kê số câu dùng <code>questions.category_id</code> + trạng thái APPROVED; phản hồi có breakdown theo lĩnh vực.</li>
+  <li>Một danh mục có thể chứa câu thuộc nhiều lĩnh vực. Filter danh mục theo lĩnh vực bị bỏ khỏi UI/endpoint chuẩn.</li>
+  <li>Export và ngân hàng đọc mã/tên từ FK; đổi tên không làm mất map.</li>
+</ul></section>
+<section class="section" id="source"><h2>Luồng theo nguồn</h2><table class="matrix"><thead><tr><th>Nguồn</th><th>Phân loại</th><th>Trạng thái</th></tr></thead><tbody>
+  <tr><td>Nhập tay</td><td>Chọn category + field + cognitive.</td><td>APPROVED có audit người thao tác; thiếu cognitive bị chặn.</td></tr>
+  <tr><td>Excel</td><td>Mẫu tiếng Việt gồm danh mục, lĩnh vực, nội dung, A–D, đáp án, mức nhận thức, độ khó, giải thích, nguồn.</td><td>Preview/commit resolve bằng mã; dòng không nhận diện danh mục được ghi skipped và không insert.</td></tr>
+  <tr><td>Tài liệu/API</td><td>Candidate mang category + field; reviewer chọn cognitive trong màn review.</td><td>Approve/lưu vào ngân hàng bị chặn nếu thiếu taxonomy hoặc chưa có cognitive.</td></tr>
+  <tr><td>Legacy</td><td>Difficulty cũ chỉ là gợi ý, không thay thế cognitive audit.</td><td>Không tính availability cho tới khi verified.</td></tr>
+</tbody></table></section>
+<section class="section" id="api"><h2>API và UI ngân hàng</h2><ul>
+  <li>POST/PUT question nhận categoryId, professionalFieldId và cognitiveLevel; response trả ID/code/name, audit và source document.</li>
+  <li><code>GET /questions</code> hỗ trợ lọc category/field/cognitive/document/status/verified; <code>GET /questions/availability</code> trả ma trận field × cognitive.</li>
+  <li>Import tương thích header tiếng Anh cũ và header tiếng Việt mới; mapping tên chỉ dùng khi duy nhất, mã trong <code>[MÃ] Tên</code> là ưu tiên.</li>
+  <li>History lưu snapshot category/field/cognitive để tên taxonomy đổi không làm đổi lịch sử. Commit nhận toàn bộ dòng preview và trả created/skipped/failed.</li>
+  <li>Màn review candidate cho phép chọn danh mục, lĩnh vực và mức nhận thức; duyệt ghi thời gian/người xác nhận.</li>
+</ul></section>
+<section class="section" id="sets"><h2>Gỡ bộ câu hỏi khỏi nghiệp vụ mới</h2><ul>
+  <li>Đã gỡ menu và route tạo/sửa bộ câu hỏi khỏi frontend mới; wildcard legacy chỉ redirect về ngân hàng.</li>
+  <li>Write API <code>/question-sets</code> trả HTTP 410 theo mặc định; GET legacy còn giữ tạm để đọc dữ liệu cũ.</li>
+  <li>Schema và consumer legacy chưa drop trong phase này vì phase 4–8 còn cần chuyển tiếp an toàn.</li>
+</ul></section>
+<section class="section" id="evidence"><h2>Bằng chứng và triển khai DB</h2><ul>
+  <li>Migration: <code>V7__question_bank_cognitive_import_snapshots.sql</code> và <code>V8__document_candidate_taxonomy_review.sql</code>.</li>
+  <li>SQL read-only: <a href="phase-02/db-preflight.sql">phase-02/db-preflight.sql</a> và <a href="phase-02/db-verify-after-v8.sql">phase-02/db-verify-after-v8.sql</a>.</li>
+  <li>DB remote hiện đã có Flyway baseline 5 và V6 thành công: 270 câu đã có direct field, 28 lĩnh vực, cognitive verified bằng 0, set/config/paper/assignment/attempt bằng 0.</li>
+  <li>DB remote chính hiện đã chạy Flyway V6–V13 sau backup; V7–V8 đã được áp dụng và verify cùng chuỗi migration. Cognitive verified vẫn bằng 0 đúng với legacy chưa phân loại.</li>
+</ul></section>
+<section class="section" id="tests"><h2>Nghiệm thu đã kiểm tra</h2><ul>
+  <li>Backend <code>mvn test</code> và <code>mvn -DskipTests package</code>: xanh; 842 test, 0 failure/error, 9 skipped.</li>
+  <li>Frontend <code>npm run lint</code>, <code>npm test</code> (154 test) và <code>npm run build</code>: xanh.</li>
+  <li>DB clone từ backup đã chạy V6–V8 và verify: giữ 270 câu, không thiếu category/field, có đủ 4 FK mới; verified cognitive hiện bằng 0 đúng với legacy chưa phân loại.</li>
+  <li>DB remote chính đã chạy Flyway V6–V13 theo runbook sau backup; dữ liệu đánh giá hiện vẫn ở trạng thái sạch, chưa có set/config/paper/assignment/attempt.</li>
+</ul></section>
+<div class="footer-nav"><a href="phase-01-data-foundation.html">← Phase 1</a><a href="phase-03-audience.html">Phase 3 →</a></div>
+</article></main></body></html>

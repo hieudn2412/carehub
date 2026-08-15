@@ -33,13 +33,39 @@ import java.time.LocalDateTime;
 )
 public class ExamPaper extends BaseEntity {
 
-    /** Copied from the source set so assignments cannot retarget a paper to another field. */
+    /** @deprecated multi-field papers derive fields from their question snapshots. */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "professional_field_id")
     private ProfessionalField professionalField;
 
     @Column(nullable = false, length = 80)
     private String code;
+
+    @Column(name = "idempotency_key", length = 160)
+    private String idempotencyKey;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "generation_batch_id")
+    private ExamPaperGenerationBatch generationBatch;
+
+    @Column(name = "variant_index")
+    private Integer variantIndex;
+
+    @Column(name = "config_version")
+    private Integer configVersion;
+
+    @Column(name = "generation_algorithm_version", length = 48)
+    private String generationAlgorithmVersion;
+
+    @Column(name = "generation_pool_checksum", length = 128)
+    private String generationPoolChecksum;
+
+    @Column(name = "generated_by", length = 100)
+    private String generatedBy;
+
+    @Column(name = "generated_at")
+    private LocalDateTime generatedAt;
 
     @Column(nullable = false)
     private String name;
@@ -48,8 +74,10 @@ public class ExamPaper extends BaseEntity {
     @JoinColumn(name = "exam_config_id", nullable = false)
     private ExamConfig examConfig;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "question_set_id", nullable = false)
+    /** @deprecated new papers are generated from a direct blueprint. */
+    @Deprecated
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_set_id")
     private QuestionSet questionSet;
 
     @Column(nullable = false)
@@ -74,15 +102,6 @@ public class ExamPaper extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "question_selection_mode", length = 32)
     private ExamQuestionSelectionMode questionSelectionMode;
-
-    @Column(name = "easy_percentage")
-    private Integer easyPercentage;
-
-    @Column(name = "medium_percentage")
-    private Integer mediumPercentage;
-
-    @Column(name = "hard_percentage")
-    private Integer hardPercentage;
 
     @Column(name = "created_by", length = 100)
     private String createdBy;
