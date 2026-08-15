@@ -5,6 +5,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +29,7 @@ import vn.vietduc.carehubbackend.questiongeneration.service.QuestionSetService;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("${app.api-prefix}/question-sets")
@@ -36,17 +38,18 @@ import java.util.Map;
 public class QuestionSetController {
     private final QuestionSetService questionSetService;
     private final EvaluationAuditLogService auditLogService;
+    @Value("${app.evaluation.legacy-question-set-write-enabled:false}")
+    private boolean legacyQuestionSetWriteEnabled;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<QuestionSetSummaryResponse>>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String category,
-            @RequestParam(required = false) String difficulty,
+            @RequestParam(required = false) String cognitiveLevel,
             @RequestParam(required = false) String status
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách bộ câu hỏi thành công",
-                questionSetService.list(q, category, difficulty, status)
+                questionSetService.list(q, cognitiveLevel, status)
         ));
     }
 
@@ -90,6 +93,7 @@ public class QuestionSetController {
             @RequestBody CreateQuestionSetRequest request,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetDetailResponse response = questionSetService.create(request, actor(authentication));
         auditLogService.record(
                 "QUESTION_SET_CREATE",
@@ -112,6 +116,7 @@ public class QuestionSetController {
             @RequestBody UpdateQuestionSetRequest request,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetDetailResponse response = questionSetService.update(setId, request, actor(authentication));
         auditLogService.record(
                 "QUESTION_SET_UPDATE",
@@ -133,6 +138,7 @@ public class QuestionSetController {
             @PathVariable Long setId,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetDetailResponse response = questionSetService.activate(setId, actor(authentication));
         auditLogService.record(
                 "QUESTION_SET_ACTIVATE",
@@ -154,6 +160,7 @@ public class QuestionSetController {
             @PathVariable Long setId,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetDetailResponse response = questionSetService.deactivate(setId);
         auditLogService.record(
                 "QUESTION_SET_DEACTIVATE",
@@ -175,6 +182,7 @@ public class QuestionSetController {
             @PathVariable Long setId,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetSummaryResponse response = questionSetService.archive(setId);
         auditLogService.record(
                 "QUESTION_SET_ARCHIVE",
@@ -196,6 +204,7 @@ public class QuestionSetController {
             @PathVariable Long setId,
             Authentication authentication
     ) {
+        ensureLegacyWriteEnabled();
         QuestionSetDetailResponse response = questionSetService.duplicate(setId, actor(authentication));
         auditLogService.record(
                 "QUESTION_SET_DUPLICATE",
@@ -227,6 +236,15 @@ public class QuestionSetController {
 
     private String actor(Authentication authentication) {
         return authentication == null ? "system" : authentication.getName();
+    }
+
+    private void ensureLegacyWriteEnabled() {
+        if (!legacyQuestionSetWriteEnabled) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.GONE,
+                    "Luồng bộ câu hỏi đã ngừng cho nghiệp vụ mới; hãy cấu hình ma trận đề trực tiếp từ ngân hàng"
+            );
+        }
     }
 
     private String normalizeExportFormat(String format) {

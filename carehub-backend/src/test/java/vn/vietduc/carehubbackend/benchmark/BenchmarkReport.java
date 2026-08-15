@@ -14,8 +14,8 @@ import java.util.Locale;
  * Bộ thu thập số đo dùng chung cho các benchmark model local.
  *
  * <p>Ghi ra hai nơi: stdout (để thấy ngay khi chạy {@code mvnw test}) và
- * {@code docs/ai/benchmarks/<slug>.md} ở gốc repo. Định dạng markdown để dán thẳng vào
- * {@code docs/ai/ai-models.md} không cần chỉnh.</p>
+ * {@code developer_docs/ai/benchmarks/<slug>.md} ở gốc repo. Định dạng markdown để dán thẳng vào
+ * {@code developer_docs/ai/ai-models.md} không cần chỉnh.</p>
  *
  * <p>Cố ý KHÔNG ghi vào {@code target/}: thư mục đó nằm trong {@code .gitignore} và bị xoá
  * mỗi lần {@code mvn clean}, nên báo cáo biến mất ngay sau lần build kế tiếp — trong khi đây
@@ -27,7 +27,7 @@ import java.util.Locale;
  */
 public final class BenchmarkReport {
 
-    private static final Path OUTPUT_DIR = repositoryRoot().resolve("docs").resolve("ai").resolve("benchmarks");
+    private static final Path OUTPUT_DIR = repositoryRoot().resolve("developer_docs").resolve("ai").resolve("benchmarks");
 
     /**
      * Tìm gốc repo bằng cách đi ngược lên từ thư mục làm việc cho tới khi gặp {@code .git}.
@@ -107,7 +107,7 @@ public final class BenchmarkReport {
         return this;
     }
 
-    /** In ra stdout và ghi file {@code docs/ai/benchmarks/<slug>.md} ở gốc repo. */
+    /** In ra stdout và ghi file {@code developer_docs/ai/benchmarks/<slug>.md} ở gốc repo. */
     public Path write() {
         String body = String.join(System.lineSeparator(), lines) + System.lineSeparator();
         System.out.println();

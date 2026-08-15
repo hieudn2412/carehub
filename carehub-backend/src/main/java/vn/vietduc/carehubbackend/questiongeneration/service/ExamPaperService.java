@@ -1,6 +1,7 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -18,14 +19,22 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.GenerateExamPaperRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamPaperQuestionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamPaperResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamPaperCoverageCellResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig;
-import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfigDistribution;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintField;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintCell;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfigSourceFilter;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperGenerationBatch;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperGenerationBatchCell;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
@@ -37,21 +46,29 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentS
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchCellRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintFieldRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintCellRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigSourceFilterRepository;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.text.Normalizer;
@@ -64,6 +81,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
@@ -79,12 +98,32 @@ public class ExamPaperService {
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
     private final ExamConfigRepository examConfigRepository;
-    private final ExamConfigDistributionRepository distributionRepository;
     private final QuestionSetItemRepository questionSetItemRepository;
     private final QuestionSetVersionRepository questionSetVersionRepository;
     private final QuestionSetVersionItemRepository questionSetVersionItemRepository;
     private final QuestionBankQuestionRepository questionRepository;
     private final ExamAssignmentRepository examAssignmentRepository;
+    private ExamBlueprintFieldRepository blueprintFieldRepository;
+    private ExamBlueprintCellRepository blueprintCellRepository;
+    private ExamConfigSourceFilterRepository sourceFilterRepository;
+    private ExamPaperGenerationBatchRepository generationBatchRepository;
+    private ExamPaperGenerationBatchCellRepository generationBatchCellRepository;
+
+    @Autowired
+    public void setBlueprintRepositories(ExamBlueprintFieldRepository fields, ExamBlueprintCellRepository cells, ExamConfigSourceFilterRepository filters) {
+        this.blueprintFieldRepository = fields;
+        this.blueprintCellRepository = cells;
+        this.sourceFilterRepository = filters;
+    }
+
+    @Autowired
+    public void setGenerationRepositories(
+            ExamPaperGenerationBatchRepository batches,
+            ExamPaperGenerationBatchCellRepository batchCells
+    ) {
+        this.generationBatchRepository = batches;
+        this.generationBatchCellRepository = batchCells;
+    }
 
     @Transactional(readOnly = true)
     public List<ExamPaperResponse> list(String query, String status) {
@@ -98,7 +137,7 @@ public class ExamPaperService {
                         || normalize(paper.getName()).contains(normalizedQuery)
                         || normalize(paper.getCode()).contains(normalizedQuery)
                         || normalize(paper.getExamConfig().getName()).contains(normalizedQuery)
-                        || normalize(paper.getQuestionSet().getName()).contains(normalizedQuery))
+                        || normalize(paper.getQuestionSet() == null ? null : paper.getQuestionSet().getName()).contains(normalizedQuery))
                 .map(paper -> toResponse(paper, false))
                 .toList();
     }
@@ -121,40 +160,102 @@ public class ExamPaperService {
         if (request == null || request.examConfigId() == null) {
             throw new BadRequestException("Vui lòng chọn cấu hình đề kiểm tra");
         }
-        ExamConfig config = examConfigRepository.findById(request.examConfigId())
+        String idempotencyKey = trimToNull(request.idempotencyKey());
+        if (idempotencyKey == null || idempotencyKey.length() > 160) {
+            throw new BadRequestException("Idempotency key là bắt buộc và không được vượt quá 160 ký tự");
+        }
+        if (generationBatchRepository == null || generationBatchCellRepository == null) {
+            throw new IllegalStateException("Generation batch repositories are unavailable");
+        }
+        int variantCount = request.variantCount() == null ? 1 : request.variantCount();
+        if (variantCount < 1 || variantCount > 10) {
+            throw new BadRequestException("Số mã đề phải trong khoảng 1-10");
+        }
+        boolean zeroOverlap = Boolean.TRUE.equals(request.zeroOverlap());
+        String generationActor = trimToNull(actor) == null ? "system" : trimToNull(actor);
+        ExamConfig config = examConfigRepository.findByIdForUpdate(request.examConfigId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy cấu hình đề kiểm tra"));
+        var existingBatch = generationBatchRepository.findByIdempotencyKey(idempotencyKey);
+        if (existingBatch.isPresent()) {
+            ExamPaperGenerationBatch storedBatch = existingBatch.get();
+            String replayHash = ExamGenerationDeterminism.requestHash(
+                    config.getId(), storedBatch.getConfigVersion(), request.namePrefix(), variantCount,
+                    request.randomSeed(), zeroOverlap);
+            if (!Objects.equals(storedBatch.getRequestHash(), replayHash)) {
+                throw new ConflictException("Idempotency key đã được dùng với payload sinh đề khác");
+            }
+            return examPaperRepository.findByGenerationBatchOrderByVariantIndexAsc(storedBatch).stream()
+                    .map(paper -> toResponse(paper, true))
+                    .toList();
+        }
         if (config.getStatus() != ExamConfigStatus.ACTIVE) {
             throw new BadRequestException("Chỉ được sinh đề từ cấu hình đang hoạt động");
         }
+        int configVersion = config.getBlueprintVersion() == null ? 1 : config.getBlueprintVersion();
+        String requestHash = ExamGenerationDeterminism.requestHash(
+                config.getId(), configVersion, request.namePrefix(), variantCount, request.randomSeed(), zeroOverlap);
         QuestionSet questionSet = config.getQuestionSet();
-        if (questionSet == null) {
-            throw new BadRequestException("Cấu hình đề kiểm tra chưa chọn bộ câu hỏi");
-        }
-        List<PaperSourceQuestion> sourceItems = paperSourceQuestions(questionSet);
+        List<PaperSourceQuestion> sourceItems = questionSet == null
+                ? paperSourceQuestionsDirect(config)
+                : paperSourceQuestions(questionSet);
         if (sourceItems.size() < config.getTotalQuestions()) {
-            throw new BadRequestException("Bộ câu hỏi không đủ số câu để sinh đề");
+            throw new BadRequestException("Ngân hàng câu hỏi không đủ số câu để sinh đề");
         }
-        int variantCount = clamp(request.variantCount() == null ? 1 : request.variantCount(), 1, 10);
-        long baseSeed = request.randomSeed() == null ? System.currentTimeMillis() : request.randomSeed();
+        List<ExamConfigSourceFilter> sourceFilters = questionSet == null
+                ? sourceFilterRepository.findByExamConfigOrderByIdAsc(config)
+                : List.of();
+        String poolChecksum = questionSet == null
+                ? ExamGenerationDeterminism.poolChecksum(configVersion, sourceFilters,
+                sourceItems.stream().map(PaperSourceQuestion::question).toList())
+                : "LEGACY_QUESTION_SET";
+        if (questionSet == null && !Objects.equals(config.getPoolChecksum(), poolChecksum)) {
+            throw new ConflictException("Ngân hàng câu hỏi đã thay đổi sau lần preview. Vui lòng preview lại cấu hình trước khi sinh đề");
+        }
+        if (questionSet == null) {
+            validateBlueprintAvailability(config, sourceItems, variantCount, zeroOverlap);
+        } else if (zeroOverlap) {
+            throw new BadRequestException("Chế độ không lặp giữa các mã đề chỉ hỗ trợ blueprint trực tiếp từ ngân hàng");
+        }
+        long masterSeed = request.randomSeed() == null ? new java.security.SecureRandom().nextLong() : request.randomSeed();
+        LocalDateTime generatedAt = LocalDateTime.now();
+        ExamPaperGenerationBatch batch = generationBatchRepository.save(ExamPaperGenerationBatch.builder()
+                .examConfig(config)
+                .idempotencyKey(idempotencyKey)
+                .requestHash(requestHash)
+                .configVersion(configVersion)
+                .masterSeed(masterSeed)
+                .algorithmVersion(ExamGenerationDeterminism.ALGORITHM_VERSION)
+                .poolChecksum(poolChecksum)
+                .variantCount(variantCount)
+                .zeroOverlap(zeroOverlap)
+                .overlapQuestionCount(0)
+                .overlapPercentage(BigDecimal.ZERO)
+                .generatedBy(generationActor)
+                .generatedAt(generatedAt)
+                .build());
+        snapshotBlueprint(batch, config);
         List<ExamPaperResponse> responses = new ArrayList<>();
+        List<List<PaperSourceQuestion>> selections = new ArrayList<>();
+        Set<Long> batchUsedFamilies = zeroOverlap ? new HashSet<>() : null;
+        List<ExamPaper> generatedPapers = new ArrayList<>();
         for (int variant = 1; variant <= variantCount; variant++) {
-            long seed = baseSeed + variant - 1;
-            boolean perAttemptBalanced = selectionMode(config) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED;
-            if (perAttemptBalanced) {
-                validateBalancedPool(config, sourceItems);
-            }
-            List<PaperSourceQuestion> selected = perAttemptBalanced
-                    ? sourceItems
-                    : selectItems(config, sourceItems, seed);
-            ExamPaper paper = createPaper(config, request.namePrefix(), variant, seed, actor);
+            long seed = ExamGenerationDeterminism.deriveVariantSeed(masterSeed, variant);
+            List<PaperSourceQuestion> selected = selectItems(config, sourceItems, seed, batchUsedFamilies);
+            ExamPaper paper = createPaper(
+                    config, batch, request.namePrefix(), variant, seed, generationActor, idempotencyKey, generatedAt);
             persistQuestions(
                     paper,
                     selected,
-                    !perAttemptBalanced && Boolean.TRUE.equals(config.getShuffleOptions()),
-                    seed
+                    Boolean.TRUE.equals(config.getShuffleOptions()),
+                    seed,
+                    generatedAt
             );
-            responses.add(toResponse(paper, true));
+            selections.add(selected);
+            generatedPapers.add(paper);
         }
+        updateOverlap(batch, selections);
+        generationBatchRepository.save(batch);
+        generatedPapers.forEach(paper -> responses.add(toResponse(paper, true)));
         return responses;
     }
 
@@ -165,14 +266,12 @@ public class ExamPaperService {
             throw new BadRequestException("Không thể phát hành đề đã lưu trữ");
         }
         int storedQuestions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper).size();
-        boolean enoughQuestions = selectionMode(paper) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
-                ? storedQuestions >= paper.getTotalQuestions()
-                : storedQuestions == paper.getTotalQuestions();
-        if (!enoughQuestions) {
+        if (storedQuestions != paper.getTotalQuestions()) {
             throw new BadRequestException("Đề kiểm tra chưa đủ số câu");
         }
+        validateSnapshotMatrix(paper);
         paper.setStatus(ExamPaperStatus.PUBLISHED);
-        paper.setPublishedBy(actor);
+        paper.setPublishedBy(trimToNull(actor) == null ? "system" : trimToNull(actor));
         paper.setPublishedAt(LocalDateTime.now());
         return toResponse(examPaperRepository.save(paper), true);
     }
@@ -403,63 +502,136 @@ public class ExamPaperService {
         return value == null ? "" : value;
     }
 
-    private List<PaperSourceQuestion> selectItems(ExamConfig config, List<PaperSourceQuestion> sourceItems, long seed) {
+    private List<PaperSourceQuestion> selectItems(
+            ExamConfig config,
+            List<PaperSourceQuestion> sourceItems,
+            long seed,
+            Set<Long> batchUsedFamilies
+    ) {
+        if (config.getQuestionSet() == null) {
+            return selectBlueprintItems(config, sourceItems, seed, batchUsedFamilies);
+        }
+        // Cấu hình theo bộ câu hỏi là dữ liệu cũ: chỉ rút ngẫu nhiên đủ số câu,
+        // không còn phân bổ theo độ khó.
         Random random = new Random(seed);
-        List<ExamConfigDistribution> distributions = distributionRepository.findByExamConfigOrderByIdAsc(config);
         Set<Long> usedQuestionIds = new HashSet<>();
-        List<PaperSourceQuestion> selected = new ArrayList<>();
-        Map<String, List<PaperSourceQuestion>> byCategory = sourceItems.stream()
-                .collect(Collectors.groupingBy(item -> normalize(item.topic())));
-
-        for (ExamConfigDistribution distribution : distributions) {
-            String categoryKey = distribution.getCategory() == null ? "" : normalize(distribution.getCategory().getName());
-            List<PaperSourceQuestion> candidates = categoryKey.isBlank()
-                    ? sourceItems
-                    : byCategory.getOrDefault(categoryKey, List.of());
-            if (distribution.getDifficulty() != null && !distribution.getDifficulty().isBlank()) {
-                String difficulty = ExamDifficultyAllocator.normalizeDifficulty(distribution.getDifficulty());
-                candidates = candidates.stream()
-                        .filter(item -> ExamDifficultyAllocator.normalizeDifficulty(item.difficulty()).equals(difficulty))
-                        .toList();
-            }
-            List<PaperSourceQuestion> picked = pick(candidates, distribution.getQuestionCount(), usedQuestionIds, random);
-            if (picked.size() < distribution.getQuestionCount()) {
-                String categoryName = distribution.getCategory() == null ? "Tất cả danh mục" : distribution.getCategory().getName();
-                throw new BadRequestException("Không đủ câu hỏi cho danh mục " + categoryName);
-            }
-            selected.addAll(picked);
-        }
-
-        int remaining = config.getTotalQuestions() - selected.size();
-        if (remaining > 0) {
-            selected.addAll(pick(sourceItems, remaining, usedQuestionIds, random));
-        }
+        List<PaperSourceQuestion> selected = new ArrayList<>(
+                pick(sourceItems, config.getTotalQuestions(), usedQuestionIds, random));
         if (selected.size() != config.getTotalQuestions()) {
             throw new BadRequestException("Không đủ câu hỏi để sinh đề theo cấu hình");
         }
         if (Boolean.TRUE.equals(config.getShuffleQuestions())) {
             selected = new ArrayList<>(selected);
-            selected.sort(Comparator.comparing(item -> random.nextInt()));
+            ExamGenerationDeterminism.stableShuffle(selected, random);
         }
         return selected;
+    }
+
+    private List<PaperSourceQuestion> selectBlueprintItems(
+            ExamConfig config,
+            List<PaperSourceQuestion> sourceItems,
+            long seed,
+            Set<Long> batchUsedFamilies
+    ) {
+        if (blueprintFieldRepository == null || blueprintCellRepository == null) {
+            throw new BadRequestException("Blueprint repository chưa được cấu hình");
+        }
+        Random random = new Random(seed);
+        Set<Long> used = new HashSet<>();
+        Set<Long> usedFamilies = new HashSet<>();
+        List<PaperSourceQuestion> selected = new ArrayList<>();
+        for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
+            List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
+            cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            for (ExamBlueprintCell cell : cells) {
+                List<PaperSourceQuestion> candidates = sourceItems.stream()
+                        .filter(item -> item.question() != null && item.question().getProfessionalField() != null)
+                        .filter(item -> item.question().getProfessionalField().getId().equals(field.getProfessionalField().getId()))
+                        .filter(item -> item.question().getCognitiveLevel() == cell.getCognitiveLevel())
+                        .toList();
+                List<PaperSourceQuestion> picked = pickByFamily(
+                        candidates, cell.getQuestionCount(), used, usedFamilies, batchUsedFamilies, random);
+                if (picked.size() < cell.getQuestionCount()) {
+                    throw new BadRequestException("Không đủ họ câu hỏi độc lập cho "
+                            + field.getProfessionalField().getName() + " / "
+                            + QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel()));
+                }
+                selected.addAll(picked);
+            }
+        }
+        if (selected.size() != config.getTotalQuestions()) {
+            throw new BadRequestException("Tổng câu sinh ra không khớp blueprint");
+        }
+        if (Boolean.TRUE.equals(config.getShuffleQuestions())) {
+            selected = new ArrayList<>(selected);
+            ExamGenerationDeterminism.stableShuffle(selected, random);
+        }
+        return selected;
+    }
+
+    private List<PaperSourceQuestion> pickByFamily(
+            List<PaperSourceQuestion> candidates,
+            int count,
+            Set<Long> usedQuestionIds,
+            Set<Long> usedFamilies,
+            Set<Long> batchUsedFamilies,
+            Random random
+    ) {
+        List<PaperSourceQuestion> pool = candidates.stream()
+                .filter(item -> item.question() != null && item.question().getId() != null)
+                .sorted(Comparator.comparing(item -> item.question().getId()))
+                .filter(item -> !usedQuestionIds.contains(item.question().getId()))
+                .filter(item -> !usedFamilies.contains(ExamGenerationDeterminism.familyId(item.question())))
+                .filter(item -> batchUsedFamilies == null
+                        || !batchUsedFamilies.contains(ExamGenerationDeterminism.familyId(item.question())))
+                .collect(Collectors.toCollection(ArrayList::new));
+        ExamGenerationDeterminism.stableShuffle(pool, random);
+        List<PaperSourceQuestion> picked = pool.stream().limit(count).toList();
+        for (PaperSourceQuestion item : picked) {
+            long familyId = ExamGenerationDeterminism.familyId(item.question());
+            usedQuestionIds.add(item.question().getId());
+            usedFamilies.add(familyId);
+            if (batchUsedFamilies != null) {
+                batchUsedFamilies.add(familyId);
+            }
+        }
+        return picked;
     }
 
     private List<PaperSourceQuestion> pick(List<PaperSourceQuestion> candidates, int count, Set<Long> usedQuestionIds, Random random) {
         List<PaperSourceQuestion> pool = candidates.stream()
                 .filter(item -> item.question() != null)
                 .filter(item -> !usedQuestionIds.contains(item.question().getId()))
+                .sorted(Comparator.comparing(item -> item.question().getId()))
                 .collect(Collectors.toCollection(ArrayList::new));
-        pool.sort(Comparator.comparing(item -> random.nextInt()));
+        ExamGenerationDeterminism.stableShuffle(pool, random);
         List<PaperSourceQuestion> picked = pool.stream().limit(count).toList();
         picked.forEach(item -> usedQuestionIds.add(item.question().getId()));
         return picked;
     }
 
-    private ExamPaper createPaper(ExamConfig config, String namePrefix, int version, long seed, String actor) {
+    private ExamPaper createPaper(
+            ExamConfig config,
+            ExamPaperGenerationBatch batch,
+            String namePrefix,
+            int version,
+            long seed,
+            String actor,
+            String idempotencyKey,
+            LocalDateTime generatedAt
+    ) {
         String prefix = trimToNull(namePrefix) == null ? config.getName() : trimToNull(namePrefix);
         String code = uniqueCode(config.getId(), version, seed);
         ExamPaper paper = ExamPaper.builder()
                 .code(code)
+                .idempotencyKey(idempotencyKey)
+                .generationBatch(batch)
+                .variantIndex(version)
+                .configVersion(batch.getConfigVersion())
+                .generationAlgorithmVersion(batch.getAlgorithmVersion())
+                .generationPoolChecksum(batch.getPoolChecksum())
+                .generatedBy(actor)
+                .generatedAt(generatedAt)
                 .name(prefix + " - Mã đề " + version)
                 .examConfig(config)
                 .questionSet(config.getQuestionSet())
@@ -470,16 +642,19 @@ public class ExamPaperService {
                 .timeLimitMinutes(config.getTimeLimitMinutes())
                 .passingScore(config.getPassingScore())
                 .questionSelectionMode(selectionMode(config))
-                .easyPercentage(config.getEasyPercentage())
-                .mediumPercentage(config.getMediumPercentage())
-                .hardPercentage(config.getHardPercentage())
                 .createdBy(actor)
                 .build();
         return examPaperRepository.save(paper);
     }
 
-    private void persistQuestions(ExamPaper paper, List<PaperSourceQuestion> selected, boolean shuffleOptions, long seed) {
-        LocalDateTime now = LocalDateTime.now();
+    private void persistQuestions(
+            ExamPaper paper,
+            List<PaperSourceQuestion> selected,
+            boolean shuffleOptions,
+            long seed,
+            LocalDateTime generatedAt
+    ) {
+        LocalDateTime now = generatedAt;
         int position = 1;
         for (PaperSourceQuestion item : selected) {
             QuestionBankQuestion question = item.question();
@@ -492,6 +667,10 @@ public class ExamPaperService {
                     .optionOrderJson(options.optionOrderJson())
                     .build());
             snapshotRepository.save(ExamPaperQuestionSnapshot.builder()
+                    .sourceQuestionId(question.getId())
+                    .questionFamilyId(ExamGenerationDeterminism.familyId(question))
+                    .questionPosition(paperQuestion.getPosition())
+                    .optionOrderJson(options.optionOrderJson())
                     .examPaperQuestion(paperQuestion)
                     .stem(item.stem())
                     .optionA(options.optionA())
@@ -500,9 +679,28 @@ public class ExamPaperService {
                     .optionD(options.optionD())
                     .correctAnswer(options.correctAnswer())
                     .explanation(item.explanation())
-                    .difficulty(item.difficulty())
                     .topic(item.topic())
+                    .categoryId(question.getCategory() == null ? null : question.getCategory().getId())
+                    .categoryCode(question.getCategory() == null ? null : question.getCategory().getCode())
+                    .categoryName(question.getCategory() == null ? null : question.getCategory().getName())
+                    .professionalFieldId(question.getProfessionalField() == null ? null : question.getProfessionalField().getId())
+                    .professionalFieldCode(question.getProfessionalField() == null ? null : question.getProfessionalField().getCode())
+                    .professionalFieldName(question.getProfessionalField() == null ? null : question.getProfessionalField().getName())
+                    .cognitiveLevel(question.getCognitiveLevel() == null ? null : question.getCognitiveLevel().name())
+                    .cognitiveLabel(QuestionGenerationLabels.cognitiveLevel(question.getCognitiveLevel()))
+                    .cognitiveVerifiedAt(question.getCognitiveVerifiedAt())
+                    .cognitiveVerifiedBy(question.getCognitiveVerifiedBy())
+                    .sourceDocumentId(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getId())
+                    .sourceDocumentFilename(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getFilename())
+                    .sourceDocumentTitle(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getFilename())
+                    .sourceDocumentContentHash(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getContentHash())
                     .sourceDocument(item.sourceDocument())
+                    .configVersion(paper.getConfigVersion())
+                    .paperSeed(seed)
+                    .generationAlgorithmVersion(paper.getGenerationAlgorithmVersion())
+                    .generationPoolChecksum(paper.getGenerationPoolChecksum())
+                    .generatedBy(paper.getGeneratedBy())
+                    .generatedAt(generatedAt)
                     .snapshotAt(now)
                     .build());
         }
@@ -516,7 +714,7 @@ public class ExamPaperService {
                 new OptionChoice("D", question.optionD())
         ));
         if (shuffleOptions) {
-            Collections.shuffle(choices, new Random(seed + position * 9973L));
+            ExamGenerationDeterminism.stableShuffle(choices, new Random(seed + position * 9973L));
             if (isOriginalOptionOrder(choices)) {
                 Collections.rotate(choices, 1);
             }
@@ -585,12 +783,36 @@ public class ExamPaperService {
                             question.getOptionD(),
                             question.getCorrectAnswer(),
                             question.getExplanation(),
-                            question.getDifficulty(),
-                            question.getTopic(),
+                            question.getCategory() == null ? null : question.getCategory().getName(),
                             question.getSourceDocument()
                     );
                 })
                 .toList();
+    }
+
+    private List<PaperSourceQuestion> paperSourceQuestionsDirect(ExamConfig config) {
+        if (blueprintFieldRepository == null || sourceFilterRepository == null) throw new BadRequestException("Blueprint repository chưa được cấu hình");
+        Set<Long> fieldIds = blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId()).stream().map(field -> field.getProfessionalField().getId()).collect(Collectors.toSet());
+        List<ExamConfigSourceFilter> filters = sourceFilterRepository.findByExamConfigOrderByIdAsc(config);
+        Set<Long> includeCategories = filterIds(filters, ExamConfigSourceFilter.FilterType.INCLUDE_CATEGORY);
+        Set<Long> excludeCategories = filterIds(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_CATEGORY);
+        Set<Long> includeDocuments = filterIds(filters, ExamConfigSourceFilter.FilterType.INCLUDE_DOCUMENT);
+        Set<Long> excludeDocuments = filterIds(filters, ExamConfigSourceFilter.FilterType.EXCLUDE_DOCUMENT);
+        return questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus.APPROVED, fieldIds).stream()
+                .filter(question -> question.getCategory() != null && question.getCategory().getStatus() == QuestionCategoryStatus.ACTIVE)
+                .filter(question -> question.getProfessionalField() != null && question.getProfessionalField().isActive())
+                .filter(question -> question.getCognitiveLevel() != null && question.getCognitiveVerifiedAt() != null && question.getCognitiveVerifiedBy() != null)
+                .filter(question -> includeCategories.isEmpty() || question.getCategory() != null && includeCategories.contains(question.getCategory().getId()))
+                .filter(question -> question.getCategory() == null || !excludeCategories.contains(question.getCategory().getId()))
+                .filter(question -> includeDocuments.isEmpty() || question.getSourceDocumentRef() != null && includeDocuments.contains(question.getSourceDocumentRef().getId()))
+                .filter(question -> question.getSourceDocumentRef() == null || !excludeDocuments.contains(question.getSourceDocumentRef().getId()))
+                .sorted(Comparator.comparing(QuestionBankQuestion::getId))
+                .map(question -> new PaperSourceQuestion(question, null, DEFAULT_POINTS, false, question.getStem(), question.getOptionA(), question.getOptionB(), question.getOptionC(), question.getOptionD(), question.getCorrectAnswer(), question.getExplanation(), question.getCategory() == null ? null : question.getCategory().getName(), question.getSourceDocument()))
+                .toList();
+    }
+
+    private Set<Long> filterIds(List<ExamConfigSourceFilter> filters, ExamConfigSourceFilter.FilterType type) {
+        return filters.stream().filter(filter -> filter.getFilterType() == type).map(ExamConfigSourceFilter::getReferenceId).collect(Collectors.toSet());
     }
 
     private List<PaperSourceQuestion> fromVersionItems(List<QuestionSetVersionItem> versionItems) {
@@ -615,7 +837,6 @@ public class ExamPaperService {
                     item.getOptionD(),
                     item.getCorrectAnswer(),
                     item.getExplanation(),
-                    item.getDifficulty(),
                     item.getTopic(),
                     item.getSourceDocument()
             ));
@@ -634,6 +855,133 @@ public class ExamPaperService {
                 .orElse(versions.get(0));
     }
 
+    private void snapshotBlueprint(ExamPaperGenerationBatch batch, ExamConfig config) {
+        if (config.getQuestionSet() != null) {
+            return;
+        }
+        int order = 0;
+        for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
+            List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
+            cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            for (ExamBlueprintCell cell : cells) {
+                generationBatchCellRepository.save(ExamPaperGenerationBatchCell.builder()
+                        .generationBatch(batch)
+                        .professionalFieldId(field.getProfessionalField().getId())
+                        .professionalFieldCode(field.getProfessionalField().getCode())
+                        .professionalFieldName(field.getProfessionalField().getName())
+                        .cognitiveLevel(cell.getCognitiveLevel())
+                        .cognitiveLabel(QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel()))
+                        .requiredCount(cell.getQuestionCount())
+                        .displayOrder(order++)
+                        .build());
+            }
+        }
+    }
+
+    private void validateBlueprintAvailability(
+            ExamConfig config, List<PaperSourceQuestion> sourceItems, int variantCount, boolean zeroOverlap
+    ) {
+        List<ErrorResponse.FieldErrorDetail> shortages = new ArrayList<>();
+        for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
+            for (ExamBlueprintCell cell : blueprintCellRepository.findByBlueprintFieldId(field.getId())) {
+                long uniqueFamilies = sourceItems.stream()
+                        .filter(item -> item.question().getProfessionalField().getId()
+                                .equals(field.getProfessionalField().getId()))
+                        .filter(item -> item.question().getCognitiveLevel() == cell.getCognitiveLevel())
+                        .mapToLong(item -> ExamGenerationDeterminism.familyId(item.question()))
+                        .distinct()
+                        .count();
+                long required = zeroOverlap ? (long) cell.getQuestionCount() * variantCount : cell.getQuestionCount();
+                if (uniqueFamilies < required) {
+                    String fieldLabel = field.getProfessionalField().getName() + " / "
+                            + QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel());
+                    shortages.add(ErrorResponse.FieldErrorDetail.builder()
+                            .field(fieldLabel)
+                            .message(fieldLabel + ": cần " + required + " họ câu hỏi, hiện có " + uniqueFamilies
+                                    + " (thiếu " + (required - uniqueFamilies) + ")")
+                            .build());
+                }
+            }
+        }
+        if (!shortages.isEmpty()) {
+            throw new ValidationException(
+                    "Ma trận đề chưa đủ nguồn câu hỏi để sinh " + variantCount + " mã đề"
+                            + (zeroOverlap ? " không trùng lặp" : ""),
+                    shortages);
+        }
+    }
+
+    private void updateOverlap(ExamPaperGenerationBatch batch, List<List<PaperSourceQuestion>> selections) {
+        List<Long> selectedIds = selections.stream()
+                .flatMap(List::stream)
+                .map(item -> item.question().getId())
+                .toList();
+        int overlapCount = selectedIds.size() - new HashSet<>(selectedIds).size();
+        BigDecimal percentage = selectedIds.isEmpty()
+                ? BigDecimal.ZERO
+                : BigDecimal.valueOf(overlapCount)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(selectedIds.size()), 4, RoundingMode.HALF_UP);
+        batch.setOverlapQuestionCount(overlapCount);
+        batch.setOverlapPercentage(percentage);
+    }
+
+    private void validateSnapshotMatrix(ExamPaper paper) {
+        if (paper.getGenerationBatch() == null || generationBatchCellRepository == null) {
+            return;
+        }
+        List<ExamPaperCoverageCellResponse> coverage = coverage(paper);
+        List<String> mismatches = coverage.stream()
+                .filter(cell -> !Boolean.TRUE.equals(cell.matchesBlueprint()))
+                .map(cell -> cell.professionalFieldName() + " / " + cell.cognitiveLabel()
+                        + " cần " + cell.requiredCount() + " câu nhưng đề có " + cell.actualCount())
+                .toList();
+        if (!mismatches.isEmpty()) {
+            throw new BadRequestException("Ma trận đề không khớp blueprint snapshot: " + String.join("; ", mismatches));
+        }
+    }
+
+    private List<ExamPaperCoverageCellResponse> coverage(ExamPaper paper) {
+        if (paper.getGenerationBatch() == null || generationBatchCellRepository == null) {
+            return List.of();
+        }
+        Map<MatrixKey, Integer> actual = new LinkedHashMap<>();
+        for (ExamPaperQuestion paperQuestion : paperQuestionRepository.findByExamPaperOrderByPositionAsc(paper)) {
+            ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(paperQuestion)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
+            MatrixKey key = new MatrixKey(snapshot.getProfessionalFieldId(), snapshot.getCognitiveLevel());
+            actual.merge(key, 1, Integer::sum);
+        }
+        List<ExamPaperCoverageCellResponse> result = new ArrayList<>();
+        for (ExamPaperGenerationBatchCell cell : generationBatchCellRepository
+                .findByGenerationBatchOrderByDisplayOrderAscCognitiveLevelAsc(paper.getGenerationBatch())) {
+            int actualCount = actual.getOrDefault(
+                    new MatrixKey(cell.getProfessionalFieldId(), cell.getCognitiveLevel().name()), 0);
+            result.add(new ExamPaperCoverageCellResponse(
+                    cell.getProfessionalFieldId(),
+                    cell.getProfessionalFieldCode(),
+                    cell.getProfessionalFieldName(),
+                    cell.getCognitiveLevel().name(),
+                    cell.getCognitiveLabel(),
+                    cell.getRequiredCount(),
+                    actualCount,
+                    actualCount == cell.getRequiredCount()
+            ));
+        }
+        return result;
+    }
+
+    private int cognitiveOrder(CognitiveLevel level) {
+        if (level == null) {
+            return Integer.MAX_VALUE;
+        }
+        return switch (level) {
+            case FOUNDATION -> 0;
+            case CLINICAL_APPLICATION -> 1;
+            case CLINICAL_REASONING_ANALYSIS -> 2;
+        };
+    }
+
     private ExamPaperResponse toResponse(ExamPaper paper, boolean includeQuestions) {
         return toResponse(paper, includeQuestions, true);
     }
@@ -645,14 +993,15 @@ public class ExamPaperService {
                 .map(paperQuestion -> toQuestionResponse(paperQuestion, includeAnswerKey))
                 .toList()
                 : List.of();
+        ExamPaperGenerationBatch batch = paper.getGenerationBatch();
         return new ExamPaperResponse(
                 paper.getId(),
                 paper.getCode(),
                 paper.getName(),
                 paper.getExamConfig().getId(),
                 paper.getExamConfig().getName(),
-                paper.getQuestionSet().getId(),
-                paper.getQuestionSet().getName(),
+                paper.getQuestionSet() == null ? null : paper.getQuestionSet().getId(),
+                paper.getQuestionSet() == null ? null : paper.getQuestionSet().getName(),
                 paper.getVersion(),
                 paper.getRandomSeed(),
                 paper.getStatus().name(),
@@ -662,17 +1011,23 @@ public class ExamPaperService {
                 paper.getTimeLimitMinutes(),
                 paper.getPassingScore(),
                 selectionMode(paper).name(),
-                selectionMode(paper) == ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
-                        ? new ExamPaperResponse.DifficultyPercentages(
-                        paper.getEasyPercentage(),
-                        paper.getMediumPercentage(),
-                        paper.getHardPercentage()
-                )
-                        : null,
                 questions,
                 paper.getPublishedAt(),
                 paper.getCreatedAt(),
-                paper.getUpdatedAt()
+                paper.getUpdatedAt(),
+                paper.getProfessionalField() == null ? null : paper.getProfessionalField().getId(),
+                paper.getProfessionalField() == null ? null : paper.getProfessionalField().getCode(),
+                paper.getProfessionalField() == null ? null : paper.getProfessionalField().getName(),
+                batch == null ? null : batch.getId(),
+                batch == null ? null : batch.getMasterSeed(),
+                paper.getVariantIndex() == null ? paper.getVersion() : paper.getVariantIndex(),
+                paper.getConfigVersion(),
+                paper.getGenerationAlgorithmVersion(),
+                paper.getGenerationPoolChecksum(),
+                batch == null ? null : batch.getZeroOverlap(),
+                batch == null ? null : batch.getOverlapQuestionCount(),
+                batch == null ? null : batch.getOverlapPercentage(),
+                includeQuestions ? coverage(paper) : List.of()
         );
     }
 
@@ -688,40 +1043,15 @@ public class ExamPaperService {
                 : paper.getQuestionSelectionMode();
     }
 
-    private void validateBalancedPool(ExamConfig config, List<PaperSourceQuestion> sourceItems) {
-        ExamDifficultyAllocator.Percentages percentages = ExamDifficultyAllocator.percentages(
-                config.getEasyPercentage(),
-                config.getMediumPercentage(),
-                config.getHardPercentage()
-        );
-        ExamDifficultyAllocator.Counts required = ExamDifficultyAllocator.allocate(config.getTotalQuestions(), percentages);
-        Map<String, Long> available = sourceItems.stream()
-                .collect(Collectors.groupingBy(
-                        item -> ExamDifficultyAllocator.normalizeDifficulty(item.difficulty()),
-                        Collectors.counting()
-                ));
-        List<String> shortages = new ArrayList<>();
-        addPoolShortage(shortages, "Dễ", required.easy(), available.getOrDefault("EASY", 0L));
-        addPoolShortage(shortages, "Trung bình", required.medium(), available.getOrDefault("MEDIUM", 0L));
-        addPoolShortage(shortages, "Khó", required.hard(), available.getOrDefault("HARD", 0L));
-        if (!shortages.isEmpty()) {
-            throw new BadRequestException("Không thể sinh đề: " + String.join("; ", shortages));
-        }
-    }
-
-    private void addPoolShortage(List<String> shortages, String label, int required, long available) {
-        if (available < required) {
-            shortages.add("mức " + label + " cần " + required + " câu nhưng hiện có " + available);
-        }
-    }
-
     private ExamPaperQuestionResponse toQuestionResponse(ExamPaperQuestion paperQuestion, boolean includeAnswerKey) {
         ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(paperQuestion)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
         return new ExamPaperQuestionResponse(
                 paperQuestion.getId(),
-                paperQuestion.getQuestion().getId(),
-                paperQuestion.getPosition(),
+                snapshot.getSourceQuestionId() == null ? paperQuestion.getQuestion().getId() : snapshot.getSourceQuestionId(),
+                snapshot.getQuestionPosition() == null
+                        ? paperQuestion.getPosition()
+                        : snapshot.getQuestionPosition(),
                 paperQuestion.getPoints(),
                 snapshot.getStem(),
                 snapshot.getOptionA(),
@@ -730,9 +1060,20 @@ public class ExamPaperService {
                 snapshot.getOptionD(),
                 includeAnswerKey ? snapshot.getCorrectAnswer() : null,
                 includeAnswerKey ? snapshot.getExplanation() : null,
-                snapshot.getDifficulty(),
                 snapshot.getTopic(),
-                snapshot.getSourceDocument()
+                snapshot.getSourceDocument(),
+                snapshot.getCategoryId(),
+                snapshot.getCategoryCode(),
+                snapshot.getCategoryName(),
+                snapshot.getProfessionalFieldId(),
+                snapshot.getProfessionalFieldCode(),
+                snapshot.getProfessionalFieldName(),
+                snapshot.getCognitiveLevel(),
+                snapshot.getCognitiveLabel(),
+                snapshot.getSourceDocumentId(),
+                snapshot.getSourceDocumentFilename(),
+                snapshot.getSourceDocumentContentHash(),
+                snapshot.getQuestionFamilyId()
         );
     }
 
@@ -783,6 +1124,9 @@ public class ExamPaperService {
     private record OptionChoice(String label, String text) {
     }
 
+    private record MatrixKey(Long professionalFieldId, String cognitiveLevel) {
+    }
+
     private record OptionSnapshot(
             String optionA,
             String optionB,
@@ -805,7 +1149,6 @@ public class ExamPaperService {
             String optionD,
             String correctAnswer,
             String explanation,
-            String difficulty,
             String topic,
             String sourceDocument
     ) {

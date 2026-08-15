@@ -1,0 +1,17 @@
+Phase 8 full restore trial (2026-08-13, isolated temporary PostgreSQL cluster)
+
+Backup: D:\\ĐỒ ÁN\\carehub\\carehub-postdeploy-20260813.dump
+Temporary cluster: PostgreSQL 17, 127.0.0.1:55432, trust auth, temp directory only
+Command: run-restore-trial.ps1 -DbHost 127.0.0.1 -Port 55432 -ConfirmTemporaryRestore
+
+Observed:
+- pg_restore completed with --no-owner and --exit-on-error.
+- questions = 270
+- question_categories = 11
+- professional_fields = 28
+- Temporary database was dropped by the script.
+- Temporary PostgreSQL cluster was stopped afterwards.
+
+The restored post-deploy backup is readable and structurally restorable, and its
+counts match the remote verification (270/11/28). No remote database or existing
+local PostgreSQL cluster was changed.

@@ -22,8 +22,6 @@ import TrainingEmployeeStatusListPage from '../features/training/pages/TrainingE
 import TrainingLegacyImportPage from '../features/training/pages/TrainingLegacyImportPage.jsx'
 import TrainingStatusPage from '../features/training/pages/TrainingStatusPage.jsx'
 import QuestionCategoryListPage from '../features/evaluation/pages/QuestionCategoryListPage.jsx'
-import QuestionSetListPage from '../features/evaluation/pages/QuestionSetListPage.jsx'
-import QuestionSetFormPage from '../features/evaluation/pages/QuestionSetFormPage.jsx'
 import QuestionBankListPage from '../features/evaluation/pages/QuestionBankListPage.jsx'
 import QuestionFormPage from '../features/evaluation/pages/QuestionFormPage.jsx'
 import ClassificationRuleListPage from '../features/evaluation/pages/ClassificationRuleListPage.jsx'
@@ -45,6 +43,7 @@ import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceBy
 import ComplianceEmployeeTechniqueDetailPage from '../features/evaluation/pages/ComplianceEmployeeTechniqueDetailPage.jsx'
 import CompetencySummaryPage from '../features/evaluation/pages/CompetencySummaryPage.jsx'
 import TrainingGroupListPage from '../features/evaluation/pages/TrainingGroupListPage.jsx'
+import ExamAssignmentFormPage from '../features/evaluation/pages/ExamAssignmentFormPage.jsx'
 import AdminProfilePage from '../features/admin/pages/AdminProfilePage.jsx'
 import TrainingDashboardPage from '../features/admin/pages/TrainingDashboardPage.jsx'
 
@@ -120,11 +119,6 @@ function evaluationElement(element) {
     allowedRoles: ADMIN_ROLES,
     allowedPermissions: EVALUATION_PERMISSIONS,
   })
-}
-
-function QuestionSetQuestionsRedirect() {
-  const { id } = useParams()
-  return <Navigate to={`/admin/evaluation/question-sets/${id}/edit`} replace />
 }
 
 function AdminTrainingEvidenceRedirect() {
@@ -208,11 +202,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/document-question-jobs/:jobId" element={evaluationElement(<DocumentQuestionJobReviewPage />)} />
       <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={evaluationElement(<ParaphraseJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={evaluationElement(<QuestionCategoryListPage />)} />
-      <Route path="/admin/evaluation/question-sets" element={evaluationElement(<QuestionSetListPage />)} />
-      <Route path="/admin/evaluation/question-sets/new" element={evaluationElement(<QuestionSetFormPage />)} />
-      <Route path="/admin/evaluation/question-sets/:id/edit" element={evaluationElement(<QuestionSetFormPage />)} />
-      <Route path="/admin/evaluation/question-sets/:id/questions" element={evaluationElement(<QuestionSetQuestionsRedirect />)} />
-      <Route path="/admin/evaluation/question-set-categories" element={<Navigate to="/admin/evaluation/question-sets" replace />} />
+      <Route path="/admin/evaluation/question-sets/*" element={<Navigate to="/admin/evaluation/question-bank" replace />} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
@@ -224,7 +214,7 @@ function AppRouter() {
       <Route path="/admin/evaluation/configs" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
       <Route path="/admin/evaluation/exam-papers" element={<Navigate to="/admin/evaluation/exam-management" replace />} />
       <Route path="/admin/evaluation/exam-assignments" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
-      <Route path="/admin/evaluation/exam-assignments/new" element={<Navigate to="/admin/evaluation/exam-management/new" replace />} />
+      <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
       <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
       <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
@@ -237,7 +227,6 @@ function AppRouter() {
         element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
       />
       <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
-
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
 
       <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />

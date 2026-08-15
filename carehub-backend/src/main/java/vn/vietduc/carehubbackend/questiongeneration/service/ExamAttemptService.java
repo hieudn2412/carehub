@@ -8,14 +8,17 @@ import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.questiongeneration.event.ExamAttemptPassedEvent;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveExamAttemptAnswersRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.RegradeExamAttemptRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptAnswerResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptQuestionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAttemptResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
@@ -65,11 +68,12 @@ public class ExamAttemptService {
     private final UserRepository userRepository;
     private final CompetencyClassificationService classificationService;
     private final ApplicationEventPublisher eventPublisher;
+    private final ExamAttemptResultAggregationService resultAggregationService;
     private final Clock clock;
     private final ZoneId examBusinessZone;
 
     @Transactional
-    public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status, Long professionalFieldId) {
+    public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status) {
         ExamAttemptStatus statusFilter = parseStatusOrNull(status);
         List<ExamAttempt> attempts;
         if (assignmentId != null) {
@@ -83,11 +87,13 @@ public class ExamAttemptService {
         return attempts.stream()
                 .peek(this::expireIfNeeded)
                 .filter(attempt -> statusFilter == null || attempt.getStatus() == statusFilter)
-                .filter(attempt -> professionalFieldId == null
-                        || (attempt.getAssignment().getProfessionalField() != null
-                        && professionalFieldId.equals(attempt.getAssignment().getProfessionalField().getId())))
                 .map(attempt -> toResponse(attempt, false, true, true))
                 .toList();
+    }
+
+    @Deprecated
+    public List<ExamAttemptResponse> listAdmin(Long assignmentId, String status, Long ignoredProfessionalFieldId) {
+        return listAdmin(assignmentId, status);
     }
 
     @Transactional
@@ -118,7 +124,7 @@ public class ExamAttemptService {
     public ExamAttemptResponse start(Long assignmentId, Long userId) {
         User user = findUser(userId);
         ExamAssignment assignment = assignmentService.find(assignmentId);
-        validateStartableAssignment(assignment, user);
+        ExamAssignmentTarget target = validateStartableAssignment(assignment, user);
 
         List<ExamAttempt> existingAttempts = attemptRepository.findByAssignmentAndUserOrderByAttemptNumberDesc(assignment, user);
         for (ExamAttempt existingAttempt : existingAttempts) {
@@ -136,19 +142,24 @@ public class ExamAttemptService {
         }
 
         LocalDateTime now = now();
-        LocalDateTime expiresAt = now.plusMinutes(assignment.getExamPaper().getTimeLimitMinutes());
+        int attemptNumber = (int) attemptCount + 1;
+        ExamPaper paper = assignmentService.paperForAttempt(assignment, target, attemptNumber);
+        if (paper.getStatus() != ExamPaperStatus.PUBLISHED) {
+            throw new BadRequestException("Mã đề đã snapshot cho bạn chưa phát hành");
+        }
+        LocalDateTime expiresAt = now.plusMinutes(paper.getTimeLimitMinutes());
         if (assignment.getDueAt() != null && assignment.getDueAt().isBefore(expiresAt)) {
             expiresAt = assignment.getDueAt();
         }
         ExamAttempt attempt = attemptRepository.save(ExamAttempt.builder()
                 .assignment(assignment)
-                .examPaper(assignment.getExamPaper())
+                .examPaper(paper)
                 .user(user)
-                .attemptNumber((int) attemptCount + 1)
+                .attemptNumber(attemptNumber)
                 .status(ExamAttemptStatus.IN_PROGRESS)
                 .startedAt(now)
                 .expiresAt(expiresAt)
-                .totalQuestions(assignment.getExamPaper().getTotalQuestions())
+                .totalQuestions(paper.getTotalQuestions())
                 .presentationSeed(ThreadLocalRandom.current().nextLong())
                 .build());
         initializeAttemptQuestions(attempt);
@@ -182,19 +193,51 @@ public class ExamAttemptService {
         return toResponse(saved, canRevealQuestionReview(saved), canRevealAnswers(saved), canRevealScore(saved));
     }
 
+    /**
+     * Regrading is deliberately constrained to the immutable paper snapshot. It cannot accept new
+     * answers or a live taxonomy, and it never emits the first-pass workflow event again.
+     */
+    @Transactional
+    public ExamAttemptResponse regrade(Long attemptId, RegradeExamAttemptRequest request) {
+        if (request == null || !"RECALCULATE_SNAPSHOT".equalsIgnoreCase(trimToNull(request.policy()))) {
+            throw new BadRequestException("Regrade chỉ hỗ trợ policy RECALCULATE_SNAPSHOT");
+        }
+        if (trimToNull(request.reason()) == null) {
+            throw new BadRequestException("Phải ghi lý do regrade");
+        }
+        ExamAttempt attempt = find(attemptId);
+        if (attempt.getStatus() != ExamAttemptStatus.GRADED && attempt.getStatus() != ExamAttemptStatus.SUBMITTED) {
+            throw new BadRequestException("Chỉ có thể regrade lượt thi đã chấm");
+        }
+        ExamAttempt saved = gradeAttempt(attempt, null,
+                attempt.getSubmittedAt() == null ? now() : attempt.getSubmittedAt(), false);
+        return toResponse(saved, true, canRevealAnswers(saved), true);
+    }
+
     private ExamAttempt gradeAttempt(
             ExamAttempt attempt,
             SaveExamAttemptAnswersRequest request,
             LocalDateTime submittedAt
     ) {
+        return gradeAttempt(attempt, request, submittedAt, true);
+    }
+
+    private ExamAttempt gradeAttempt(
+            ExamAttempt attempt,
+            SaveExamAttemptAnswersRequest request,
+            LocalDateTime submittedAt,
+            boolean publishPassedEvent
+    ) {
         upsertAnswers(attempt, request);
         List<ExamPaperQuestion> questions = questionsForAttempt(attempt);
         Map<Long, ExamAttemptAnswer> answersByQuestionId = answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(Collectors.toMap(answer -> answer.getPaperQuestion().getId(), Function.identity()));
+        Map<Long, ExamPaperQuestionSnapshot> snapshotsByQuestionId = new LinkedHashMap<>();
         int correctCount = 0;
         for (ExamPaperQuestion question : questions) {
             ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(question)
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy snapshot câu hỏi trong đề"));
+            snapshotsByQuestionId.put(question.getId(), snapshot);
             ExamAttemptAnswer answer = answersByQuestionId.computeIfAbsent(question.getId(), ignored -> answerRepository.save(
                     ExamAttemptAnswer.builder()
                             .attempt(attempt)
@@ -230,8 +273,9 @@ public class ExamAttemptService {
         attempt.setClassification(classificationService.classifyOverall(score));
         attempt.setTimeSpentSeconds(Math.toIntExact(Math.max(0, Duration.between(attempt.getStartedAt(), submittedAt).toSeconds())));
         ExamAttempt saved = attemptRepository.save(attempt);
+        resultAggregationService.rebuildFromGrade(saved, questions, snapshotsByQuestionId, answersByQuestionId);
 
-        if (passed) {
+        if (passed && publishPassedEvent) {
             eventPublisher.publishEvent(new ExamAttemptPassedEvent(saved));
         }
 
@@ -388,75 +432,12 @@ public class ExamAttemptService {
         return questions;
     }
 
+    /**
+     * Đề thi hiện luôn là FIXED_PAPER theo ma trận mức độ nhận thức, không còn
+     * chọn câu theo tỷ lệ độ khó cho từng lượt thi.
+     */
     private void initializeAttemptQuestions(ExamAttempt attempt) {
-        if (selectionMode(attempt) != ExamQuestionSelectionMode.PER_ATTEMPT_BALANCED
-                || !attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt).isEmpty()) {
-            return;
-        }
-        List<ExamPaperQuestion> pool = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
-        ExamDifficultyAllocator.Percentages percentages = ExamDifficultyAllocator.percentages(
-                attempt.getExamPaper().getEasyPercentage(),
-                attempt.getExamPaper().getMediumPercentage(),
-                attempt.getExamPaper().getHardPercentage()
-        );
-        ExamDifficultyAllocator.Counts required = ExamDifficultyAllocator.allocate(
-                attempt.getExamPaper().getTotalQuestions(),
-                percentages
-        );
-        Set<Long> seenIds = Set.copyOf(attemptQuestionRepository.findPreviouslySeenQuestionIds(
-                attempt.getAssignment(),
-                attempt.getUser(),
-                attempt.getAttemptNumber()
-        ));
-        Map<String, List<ExamPaperQuestion>> byDifficulty = pool.stream()
-                .collect(Collectors.groupingBy(question ->
-                        ExamDifficultyAllocator.normalizeDifficulty(snapshot(question).getDifficulty())));
-        List<ExamPaperQuestion> selected = new ArrayList<>();
-        selectDifficultyBucket(selected, byDifficulty.getOrDefault("EASY", List.of()), required.easy(), seenIds,
-                mixSeed(attempt.getPresentationSeed(), 101L));
-        selectDifficultyBucket(selected, byDifficulty.getOrDefault("MEDIUM", List.of()), required.medium(), seenIds,
-                mixSeed(attempt.getPresentationSeed(), 211L));
-        selectDifficultyBucket(selected, byDifficulty.getOrDefault("HARD", List.of()), required.hard(), seenIds,
-                mixSeed(attempt.getPresentationSeed(), 307L));
-        if (selected.size() != attempt.getExamPaper().getTotalQuestions()) {
-            throw new BadRequestException("Bộ câu hỏi không còn đủ câu theo tỷ lệ độ khó đã cấu hình");
-        }
-        if (Boolean.TRUE.equals(attempt.getAssignment().getShuffleQuestions())) {
-            Collections.shuffle(selected, new Random(mixSeed(attempt.getPresentationSeed(), attempt.getExamPaper().getId())));
-        } else {
-            selected.sort(java.util.Comparator.comparing(ExamPaperQuestion::getPosition));
-        }
-        for (int index = 0; index < selected.size(); index++) {
-            attemptQuestionRepository.save(ExamAttemptQuestion.builder()
-                    .attempt(attempt)
-                    .paperQuestion(selected.get(index))
-                    .position(index + 1)
-                    .build());
-        }
-    }
-
-    private void selectDifficultyBucket(
-            List<ExamPaperQuestion> selected,
-            List<ExamPaperQuestion> candidates,
-            int required,
-            Set<Long> seenIds,
-            long seed
-    ) {
-        if (required == 0) {
-            return;
-        }
-        List<ExamPaperQuestion> unseen = candidates.stream()
-                .filter(question -> !seenIds.contains(question.getId()))
-                .collect(Collectors.toCollection(ArrayList::new));
-        List<ExamPaperQuestion> seen = candidates.stream()
-                .filter(question -> seenIds.contains(question.getId()))
-                .collect(Collectors.toCollection(ArrayList::new));
-        Collections.shuffle(unseen, new Random(seed));
-        Collections.shuffle(seen, new Random(mixSeed(seed, 401L)));
-        unseen.stream().limit(required).forEach(selected::add);
-        if (unseen.size() < required) {
-            seen.stream().limit(required - unseen.size()).forEach(selected::add);
-        }
+        // no-op
     }
 
     private List<ExamPaperQuestion> questionsForAttempt(ExamAttempt attempt) {
@@ -533,7 +514,7 @@ public class ExamAttemptService {
         return value ^ (value >>> 31);
     }
 
-    private void validateStartableAssignment(ExamAssignment assignment, User user) {
+    private ExamAssignmentTarget validateStartableAssignment(ExamAssignment assignment, User user) {
         LocalDateTime now = now();
         if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
             throw new BadRequestException("Phân công kiểm tra chưa mở");
@@ -547,7 +528,7 @@ public class ExamAttemptService {
         if (assignment.getExamPaper().getStatus() != ExamPaperStatus.PUBLISHED) {
             throw new BadRequestException("Bộ đề kiểm tra chưa phát hành");
         }
-        targetRepository.findByAssignmentAndUserForUpdate(assignment, user)
+        return targetRepository.findByAssignmentAndUserForUpdate(assignment, user)
                 .orElseThrow(() -> new BadRequestException("Bạn không nằm trong danh sách được phân công"));
     }
 
@@ -639,6 +620,12 @@ public class ExamAttemptService {
         }
         String normalized = answer.trim().toUpperCase(Locale.ROOT);
         return VALID_ANSWERS.contains(normalized) ? normalized : null;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private record OptionChoice(String sourceLabel, String text) {

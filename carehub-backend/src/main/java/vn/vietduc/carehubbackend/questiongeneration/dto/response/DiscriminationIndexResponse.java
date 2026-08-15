@@ -4,7 +4,7 @@ public record DiscriminationIndexResponse(
         Long questionId,
         String stem,
         String topic,
-        String difficulty,
+        String cognitiveLevel,
         Double discriminationIndex,
         String interpretation,
         Long highGroupCorrect,

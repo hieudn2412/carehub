@@ -1,0 +1,24 @@
+Phase 8 backend verification — 2026-08-13
+
+Working directory: carehub-backend
+JDK: OpenJDK 21.0.10 (Maven test runtime)
+Maven options: -Xmx1536m
+
+Command:
+  .\mvnw.cmd -q test package
+Result: exit 0
+
+Surefire aggregate:
+  tests=851
+  failures=0
+  errors=0
+  skipped=9
+
+The run includes the cognitive reviewer service preflight/atomicity test, the
+real-HTTP API permission/response test, the controller audit test, audience
+preview/activation fail-closed tests, and the real-HTTP audience preview/
+activation flow. The service validates every requested question before mutating
+any row; the controller records one audit event per explicit decision; the API
+rejects an author-only token and accepts a reviewer; nested audience rules
+propagate missing-data explanations and exclude branches remain valid; audience
+activation and assignment reject empty or incomplete previews.

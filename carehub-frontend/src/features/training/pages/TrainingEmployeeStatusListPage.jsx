@@ -21,16 +21,19 @@ function responseData(response) {
 }
 
 function normalizeEmployee(item) {
+  const submittedHours = Number(item.submittedHours) || 0
+  const requiredHours = Number(item.requiredHours) || 0
+  const isCompliant = item.complianceStatus === 'COMPLIANT' || (requiredHours > 0 && submittedHours >= requiredHours)
   return {
     employeeId: String(item.employeeId),
     employeeCode: item.employeeCode,
     employeeName: item.employeeName,
     departmentName: item.departmentName || 'Chưa xác định',
     jobPositionName: item.jobPositionName || 'Chưa xác định',
-    submittedHours: Number(item.submittedHours) || 0,
-    requiredHours: Number(item.requiredHours) || 0,
+    submittedHours,
+    requiredHours,
     progressPercentage: Number(item.progressPercentage) || 0,
-    complianceStatus: normalizeComplianceStatus(item.complianceStatus),
+    complianceStatus: isCompliant ? 'COMPLIANT' : 'NON_COMPLIANT',
   }
 }
 

@@ -18,6 +18,8 @@ import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationPropertie
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedKnowledgePoint;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedTaxonomyClassification;
+import vn.vietduc.carehubbackend.questiongeneration.service.model.ProfessionalFieldClassificationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInput;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
 
@@ -87,6 +89,40 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
     @Override
     public String provider() {
         return "api";
+    }
+
+    @Override
+    public GeneratedTaxonomyClassification classifyTaxonomy(ProfessionalFieldClassificationInput input) {
+        requireApiKey();
+        RestClient client = restClient();
+        try {
+            DeepSeekCall call = callDeepSeek(
+                    "taxonomy",
+                    client,
+                    taxonomyMessages(input),
+                    properties.getModel(),
+                    0.0,
+                    500
+            );
+            return parseTaxonomyClassification(call.content());
+        } catch (RuntimeException ex) {
+            String fallbackModel = properties.getFallbackModel();
+            if (fallbackModel == null || fallbackModel.isBlank()
+                    || fallbackModel.equals(properties.getModel())) {
+                throw ex;
+            }
+            log.warn("Primary model {} failed for taxonomy classification, trying fallback model {}: {}",
+                    properties.getModel(), fallbackModel, ex.getMessage());
+            DeepSeekCall fallback = callDeepSeek(
+                    "taxonomy_fallback",
+                    client,
+                    taxonomyMessages(input),
+                    fallbackModel,
+                    0.0,
+                    500
+            );
+            return parseTaxonomyClassification(fallback.content());
+        }
     }
 
     private RestClient restClient() {
@@ -363,6 +399,78 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
         }
     }
 
+    /**
+     * questionsPerChunk chỉ 1-5 trên UI hiện tại nên trần này luôn là 8, nhưng tính động để
+     * không bao giờ thấp hơn số câu hỏi mục tiêu nếu range UI mở rộng sau này.
+     */
+    private static int knowledgePointCap(int questionsPerChunk) {
+        return Math.max(8, questionsPerChunk + 3);
+    }
+
+    private List<Map<String, String>> taxonomyMessages(ProfessionalFieldClassificationInput input) {
+        return List.of(
+                Map.of(
+                        "role", "system",
+                        "content", """
+                                Bạn là bộ phân loại taxonomy cho ngân hàng câu hỏi y khoa.
+                                Chỉ phân loại dựa trên nội dung câu hỏi và bằng chứng nguồn được cung cấp.
+                                Chọn đúng một professionalFieldCode trong danh sách được phép; không tự tạo mã mới.
+                                Chọn cognitiveLevel trong đúng ba giá trị FOUNDATION, CLINICAL_APPLICATION,
+                                CLINICAL_REASONING_ANALYSIS.
+                                Chỉ trả về JSON object, không markdown và không giải thích ngoài JSON.
+                                Schema:
+                                {"professionalFieldCode":"MA_LINH_VUC","cognitiveLevel":"FOUNDATION"}
+                                """
+                ),
+                Map.of(
+                        "role", "user",
+                        "content", """
+                                Danh sách lĩnh vực được phép:
+                                %s
+
+                                Câu hỏi:
+                                %s
+
+                                A. %s
+                                B. %s
+                                C. %s
+                                D. %s
+                                Đáp án đúng: %s
+                                Giải thích: %s
+                                Chủ đề hiện tại: %s
+                                Trích dẫn nguồn: %s
+                                """.formatted(
+                                toJson(input.professionalFields()),
+                                input.stem(),
+                                input.optionA(),
+                                input.optionB(),
+                                input.optionC(),
+                                input.optionD(),
+                                input.correctAnswer(),
+                                input.explanation(),
+                                input.topic(),
+                                input.sourceExcerpt()
+                        )
+                )
+        );
+    }
+
+    private GeneratedTaxonomyClassification parseTaxonomyClassification(String json) {
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            if (root == null || !root.isObject()) {
+                throw new IllegalStateException("Taxonomy response không phải JSON object");
+            }
+            return new GeneratedTaxonomyClassification(
+                    text(root, "professionalFieldCode", "professional_field_code"),
+                    text(root, "cognitiveLevel", "cognitive_level"),
+                    sanitizeJson(json)
+            );
+        } catch (Exception ex) {
+            throw new IllegalStateException("DeepSeek trả về taxonomy JSON không hợp lệ", ex);
+        }
+    }
+
     private List<Map<String, String>> groundedKnowledgeMessages(GenerationInput input) {
         return List.of(
                 Map.of("role", "system", "content", promptCatalog.knowledgePrompt()),
@@ -378,13 +486,14 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Chunk:
                                 %s
 
-                                Trích xuất tối đa 8 knowledge point theo schema bắt buộc.
+                                Trích xuất tối đa %d knowledge point độc lập theo schema bắt buộc.
                                 """.formatted(
                                 nullToFallback(input.documentName(), "Không rõ"),
                                 nullToFallback(input.sectionPath(), "Không rõ"),
                                 input.pageStart() == null ? "?" : input.pageStart(),
                                 input.pageEnd() == null ? "?" : input.pageEnd(),
-                                input.chunkText()
+                                input.chunkText(),
+                                knowledgePointCap(input.questionsPerChunk())
                         )
                 )
         );
@@ -406,7 +515,11 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Trang: %s-%s
                                 Danh mục: %s
                                 Mô tả danh mục: %s
-                                Độ khó mục tiêu: %s
+                                Mức độ nhận thức mục tiêu: %s
+                                Lĩnh vực chuyên môn được phép: %s
+
+                                Mỗi câu phải có professionalFieldCode là mã của đúng một lĩnh vực trong danh sách trên.
+                                Không gán lĩnh vực theo danh mục hoặc section; hãy đọc riêng nội dung từng câu.
 
                                 Chunk:
                                 %s
@@ -414,7 +527,11 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Knowledge points đã kiểm tra grounding:
                                 %s
 
-                                Tạo tối đa %d câu hỏi. questionsPerChunk là giới hạn trên, không phải số lượng bắt buộc.
+                                Hãy tạo ĐÚNG %d câu hỏi nếu knowledge points ở trên đủ đa dạng, độc lập để hỗ trợ —
+                                đây là số lượng MỤC TIÊU cần đạt, không phải chỉ là giới hạn trên. Chỉ trả về ít hơn
+                                %d câu khi thực sự không còn đủ knowledge point độc lập, hợp lệ để bám nguồn; không
+                                được tự ý dừng sớm chỉ vì đã thấy "đủ". Mỗi câu hỏi phải bám một knowledge point khác
+                                nhau, không lặp ý.
                                 """.formatted(
                                 nullToFallback(input.documentName(), "Không rõ"),
                                 nullToFallback(input.sectionPath(), "Không rõ"),
@@ -422,9 +539,11 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 input.pageEnd() == null ? "?" : input.pageEnd(),
                                 nullToFallback(input.categoryName(), "Tự động theo nguồn"),
                                 nullToFallback(input.categoryDescription(), "Không có"),
-                                nullToFallback(input.targetDifficulty(), "AUTO"),
+                                nullToFallback(input.targetCognitiveLevel(), "AUTO"),
+                                toJson(input.professionalFields()),
                                 input.chunkText(),
                                 toJson(knowledgePoints),
+                                input.questionsPerChunk(),
                                 input.questionsPerChunk()
                         )
                 )
@@ -500,17 +619,12 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
             requireText(node, "optionD");
             requireText(node, "correctAnswer");
             requireText(node, "explanation");
-            requireText(node, "difficulty");
             requireText(node, "sourceExcerpt");
             requireText(node, "answerEvidence");
             requireText(node, "knowledgePointId");
             if (!Set.of("recall", "application", "procedure", "warning", "comparison")
                     .contains(node.path("questionType").asText().toLowerCase(java.util.Locale.ROOT))) {
                 throw new IllegalStateException("Question có questionType không hợp lệ");
-            }
-            if (!Set.of("easy", "medium", "hard")
-                    .contains(node.path("difficulty").asText().toLowerCase(java.util.Locale.ROOT))) {
-                throw new IllegalStateException("Question có difficulty không hợp lệ");
             }
             if (!node.path("correctAnswer").asText().matches("[ABCD]")) {
                 throw new IllegalStateException("Question có correctAnswer không hợp lệ");
@@ -588,8 +702,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 + question.optionA() + " " + question.optionB() + " "
                 + question.optionC() + " " + question.optionD());
         return isBlank(question.distractorRationales())
-                || Set.of("medium", "hard").contains(
-                        nullToFallback(question.difficulty(), "").toLowerCase(java.util.Locale.ROOT))
+                || Set.of("CLINICAL_APPLICATION", "CLINICAL_REASONING_ANALYSIS").contains(
+                        nullToFallback(question.cognitiveLevel(), "").trim().toUpperCase(java.util.Locale.ROOT))
                 || hasObviousSurfaceCue(question)
                 || normalized.matches(".*\\b(khong|sai|ngoai tru)\\b.*")
                 || normalized.matches(".*\\b(benh nhan|nguoi benh|lam sang|chan doan|xu tri)\\b.*")
@@ -719,7 +833,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 6. Biến chứng/tiên lượng
 
                                 VÍ DỤ NGẮN:
-                                {"knowledgePoints":[{"id":"KP1","statement":"Triệu chứng chính của sốt xuất huyết Dengue","type":"fact","importance":"high","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","generationEligible":true}],"questions":[{"stem":"Bệnh nhân 8 tuổi sốt cao liên tục 3 ngày, đau đầu nhiều, đau mỏi cơ toàn thân, xét nghiệm NS1 dương tính. Triệu chứng nào KHÔNG điển hình của sốt xuất huyết Dengue?","optionA":"Sốt cao đột ngột","optionB":"Đau đầu","optionC":"Ho khạc đờm vàng","optionD":"Đau cơ","correctAnswer":"C","explanation":"Ho khạc đờm vàng là triệu chứng viêm phổi/nhiễm khuẩn hô hấp, không phải triệu chứng điển hình của SXH Dengue.","difficulty":"medium","topic":"Sốt xuất huyết","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","knowledgePointId":"KP1"}]}
+                                {"knowledgePoints":[{"id":"KP1","statement":"Triệu chứng chính của sốt xuất huyết Dengue","type":"fact","importance":"high","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","generationEligible":true}],"questions":[{"stem":"Bệnh nhân 8 tuổi sốt cao liên tục 3 ngày, đau đầu nhiều, đau mỏi cơ toàn thân, xét nghiệm NS1 dương tính. Triệu chứng nào KHÔNG điển hình của sốt xuất huyết Dengue?","optionA":"Sốt cao đột ngột","optionB":"Đau đầu","optionC":"Ho khạc đờm vàng","optionD":"Đau cơ","correctAnswer":"C","explanation":"Ho khạc đờm vàng là triệu chứng viêm phổi/nhiễm khuẩn hô hấp, không phải triệu chứng điển hình của SXH Dengue.","cognitiveLevel":"CLINICAL_APPLICATION","professionalFieldCode":"MA_LINH_VUC","topic":"Sốt xuất huyết","sourceExcerpt":"Sốt cao đột ngột, đau đầu, đau cơ, phát ban","knowledgePointId":"KP1"}]}
 
                                 OUTPUT: Chỉ trả về JSON hợp lệ, không bọc markdown, không giải thích ngoài JSON.
                                 """
@@ -727,19 +841,39 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 Map.of(
                         "role", "user",
                         "content", """
+                                Danh sách lĩnh vực chuyên môn được phép: %s
+                                Mỗi câu phải có professionalFieldCode từ danh sách trên và được phân loại độc lập.
+
                                 Section path: %s
 
                                 Chunk:
                                 %s
 
-                                Trích xuất 0-8 knowledge point và tạo tối đa %d câu hỏi single-choice.
-                                Mỗi câu hỏi phong cách khác nhau.
+                                Trích xuất tối đa %d knowledge point độc lập, đa dạng từ chunk.
+                                Sau đó tạo ĐÚNG %d câu hỏi single-choice nếu knowledge point đủ đa dạng, độc lập để
+                                hỗ trợ — đây là số lượng MỤC TIÊU cần đạt, không phải chỉ là giới hạn trên. Chỉ trả
+                                về ít hơn %d câu khi chunk thực sự không đủ nội dung độc lập; không được tự ý dừng
+                                sớm khi vẫn còn khái niệm/khía cạnh hợp lệ chưa khai thác. Mỗi câu hỏi bám một khía
+                                cạnh/khái niệm khác nhau, phong cách khác nhau, không lặp ý.
                                 Trả JSON:
                                 {
                                   "knowledgePoints": [{"id":"KP1","statement":"...","type":"definition|fact|procedure|warning|principle","importance":"low|medium|high","sourceExcerpt":"trích dẫn nguyên văn ngắn từ chunk","generationEligible":true}],
-                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","difficulty":"easy|medium|hard","topic":"...","sourceExcerpt":"trích dẫn nguyên văn ngắn từ chunk","knowledgePointId":"KP1"}]
+                                  "questions": [{"stem":"...","optionA":"...","optionB":"...","optionC":"...","optionD":"...","correctAnswer":"A","explanation":"...","cognitiveLevel":"FOUNDATION|CLINICAL_APPLICATION|CLINICAL_REASONING_ANALYSIS","professionalFieldCode":"MA_LINH_VUC","topic":"...","sourceExcerpt":"trích dẫn nguyên văn ngắn từ chunk","knowledgePointId":"KP1"}]
                                 }
-                                """.formatted(input.sectionPath(), input.chunkText(), input.questionsPerChunk())
+
+                                MỨC ĐỘ NHẬN THỨC (cognitiveLevel):
+                                - FOUNDATION: kiến thức nền tảng, định nghĩa, phân loại, chỉ số chuẩn — không gắn với ca bệnh cụ thể.
+                                - CLINICAL_APPLICATION: áp dụng một protocol/quy tắc đã biết cho MỘT ca bệnh cụ thể được mô tả trong stem.
+                                - CLINICAL_REASONING_ANALYSIS: tổng hợp nhiều dữ kiện lâm sàng để suy luận chẩn đoán/biến chứng, hoặc phân tích cơ chế bệnh sinh.
+                                LĨNH VỰC CHUYÊN MÔN (professionalFieldCode): chọn đúng mã từ danh sách được cung cấp; đọc riêng từng câu, không suy ra theo danh mục hoặc section.
+                                """.formatted(
+                                toJson(input.professionalFields()),
+                                input.sectionPath(),
+                                input.chunkText(),
+                                knowledgePointCap(input.questionsPerChunk()),
+                                input.questionsPerChunk(),
+                                input.questionsPerChunk()
+                        )
                 )
         );
     }
@@ -762,7 +896,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Chunk:
                                 %s
 
-                                Hãy trích xuất 0-8 knowledge point dùng được để sinh câu hỏi một đáp án.
+                                Hãy trích xuất tối đa %d knowledge point độc lập dùng được để sinh câu hỏi một đáp án.
                                 Schema bắt buộc:
                                 {
                                   "knowledgePoints": [
@@ -776,7 +910,7 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                     }
                                   ]
                                 }
-                                """.formatted(input.sectionPath(), input.chunkText())
+                                """.formatted(input.sectionPath(), input.chunkText(), knowledgePointCap(input.questionsPerChunk()))
                 )
         );
     }
@@ -798,6 +932,9 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 Map.of(
                         "role", "user",
                         "content", """
+                                Danh sách lĩnh vực chuyên môn được phép: %s
+                                Mỗi câu phải có professionalFieldCode từ danh sách trên và được phân loại độc lập.
+
                                 Section path: %s
 
                                 Chunk:
@@ -806,7 +943,11 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                 Knowledge points:
                                 %s
 
-                                Tạo tối đa %d câu hỏi single-choice.
+                                Hãy tạo ĐÚNG %d câu hỏi single-choice nếu knowledge points ở trên đủ đa dạng, độc
+                                lập để hỗ trợ — đây là số lượng MỤC TIÊU cần đạt, không phải chỉ là giới hạn trên.
+                                Chỉ trả về ít hơn %d câu khi thực sự không còn đủ knowledge point độc lập, hợp lệ để
+                                bám nguồn; không được tự ý dừng sớm chỉ vì đã thấy "đủ". Mỗi câu hỏi phải bám một
+                                knowledge point khác nhau, không lặp ý.
                                 Schema bắt buộc:
                                 {
                                   "questions": [
@@ -818,14 +959,28 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                                       "optionD": "phương án D",
                                       "correctAnswer": "A",
                                       "explanation": "giải thích bám nguồn",
-                                      "difficulty": "easy|medium|hard",
+                                      "cognitiveLevel": "FOUNDATION|CLINICAL_APPLICATION|CLINICAL_REASONING_ANALYSIS",
+                                      "professionalFieldCode": "MA_LINH_VUC",
                                       "topic": "chủ đề",
                                       "sourceExcerpt": "trích dẫn nguyên văn ngắn từ chunk",
                                       "knowledgePointId": "KP1"
                                     }
                                   ]
                                 }
-                                """.formatted(input.sectionPath(), input.chunkText(), toJson(knowledgePoints), input.questionsPerChunk())
+
+                                MỨC ĐỘ NHẬN THỨC (cognitiveLevel):
+                                - FOUNDATION: kiến thức nền tảng, định nghĩa, phân loại, chỉ số chuẩn — không gắn với ca bệnh cụ thể.
+                                - CLINICAL_APPLICATION: áp dụng một protocol/quy tắc đã biết cho MỘT ca bệnh cụ thể được mô tả trong stem.
+                                - CLINICAL_REASONING_ANALYSIS: tổng hợp nhiều dữ kiện lâm sàng để suy luận chẩn đoán/biến chứng, hoặc phân tích cơ chế bệnh sinh.
+                                LĨNH VỰC CHUYÊN MÔN (professionalFieldCode): chọn đúng mã từ danh sách được cung cấp; không suy ra theo danh mục hoặc section.
+                                """.formatted(
+                                toJson(input.professionalFields()),
+                                input.sectionPath(),
+                                input.chunkText(),
+                                toJson(knowledgePoints),
+                                input.questionsPerChunk(),
+                                input.questionsPerChunk()
+                        )
                 )
         );
     }
@@ -1176,7 +1331,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                             text(node, "optionD", "option_d"),
                             text(node, "correctAnswer", "correct_answer"),
                             text(node, "explanation"),
-                            text(node, "difficulty"),
+                            text(node, "cognitiveLevel", "cognitive_level"),
+                            text(node, "professionalFieldCode", "professional_field_code"),
                             text(node, "topic"),
                             text(node, "sourceExcerpt", "source_excerpt"),
                             text(node, "knowledgePointId", "knowledge_point_id"),
@@ -1209,7 +1365,8 @@ public class DeepSeekDocumentQuestionGenerator implements DocumentQuestionGenera
                 question.optionD(),
                 question.correctAnswer(),
                 question.explanation(),
-                question.difficulty(),
+                question.cognitiveLevel(),
+                question.professionalFieldCode(),
                 question.topic(),
                 question.sourceExcerpt(),
                 question.knowledgePointId(),

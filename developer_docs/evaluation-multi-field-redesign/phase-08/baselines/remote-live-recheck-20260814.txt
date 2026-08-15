@@ -1,0 +1,42 @@
+Phase 8 remote live recheck — 2026-08-14 00:44:42 +07:00
+
+Purpose: read-only connectivity and cutover verification. No write/reset/seed was attempted.
+
+Command:
+  psql -X -v ON_ERROR_STOP=1 -h 116.118.6.153 -p 5432 -U postgres -d carehub -c "SELECT now(), current_database();"
+
+Result: unable to connect; TCP connection to 116.118.6.153:5432 timed out (Windows error 10060).
+
+The reproducible wrapper was also run at 01:13:54 +07:00 with
+ConnectTimeoutSeconds=5. It returned VERIFY_EXIT=2 and wrote
+remote-verify-20260814-011354.txt (SHA-256
+8fe030138c351103d221bc6c70c88cadfbcf94d65e8fd167bdcb526feba3d6e9).
+
+Interpretation: the previously captured remote-verify-rerun-20260814.txt remains historical evidence only. Current remote schema/data and production gates cannot be re-certified until the database endpoint is reachable. No remote mutation was performed.
+
+Follow-up read-only probe later in the same session used
+`PGCONNECT_TIMEOUT=5` with the same `SELECT now(), current_database()` command.
+It returned `REMOTE_PSQL_EXIT=2` (`timeout expired`).
+
+The reproducible `run-cutover-verify.ps1` wrapper was run again at 01:30:34
++07:00 with `ConnectTimeoutSeconds=5`; it wrote
+`remote-verify-20260814-013034.txt`, SHA-256
+`8fe030138c351103d221bc6c70c88cadfbcf94d65e8fd167bdcb526feba3d6e9`, and
+returned `VERIFY_EXIT=2`. No remote mutation was attempted.
+
+Another read-only probe and wrapper replay were run at 01:44:05 +07:00.
+The direct probe returned `REMOTE_PSQL_EXIT=2` after 5.47 seconds. The
+wrapper wrote `remote-verify-20260814-014405.txt` with the same SHA-256
+`8fe030138c351103d221bc6c70c88cadfbcf94d65e8fd167bdcb526feba3d6e9`, returned
+`VERIFY_EXIT=2`, and performed no remote mutation.
+
+TCP reachability was checked again at 02:00:36 +07:00 with
+`Test-NetConnection 116.118.6.153 -Port 5432`; it returned
+`REMOTE_TCP_OK=False` after 23.3 seconds. The remote endpoint is still not
+reachable, so no new SQL verification or cutover write was attempted.
+
+Follow-up TCP probe: 2026-08-14 02:22:12 +07:00 REMOTE_TCP_OK=False
+
+Wrapper replay at 02:25:25 +07:00 wrote remote-verify-20260814-022525.txt, SHA-256 8fe030138c351103d221bc6c70c88cadfbcf94d65e8fd167bdcb526feba3d6e9, VERIFY_EXIT=2 (timeout expired). No remote mutation attempted.
+
+Follow-up TCP probe: 2026-08-14 02:40:22 +07:00 REMOTE_TCP_OK=False. No remote mutation attempted.

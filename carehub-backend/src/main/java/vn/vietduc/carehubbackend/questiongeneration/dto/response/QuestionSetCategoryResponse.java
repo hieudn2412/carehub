@@ -9,7 +9,6 @@ public record QuestionSetCategoryResponse(
         String description,
         String status,
         String statusText,
-        Integer sortOrder,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

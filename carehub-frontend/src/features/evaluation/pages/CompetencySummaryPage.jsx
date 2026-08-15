@@ -39,6 +39,11 @@ const PAGE_SIZE = 10
 const today = new Date().toISOString().slice(0, 10)
 const yearStart = `${new Date().getFullYear()}-01-01`
 
+function formatScore(value) {
+  const score = Number(value)
+  return Number.isFinite(score) ? score.toFixed(1).replace('.', ',') : '—'
+}
+
 function CompetencySummaryPage() {
   const { showToast } = useToast()
   const navigate = useNavigate()
@@ -64,8 +69,6 @@ function CompetencySummaryPage() {
   // Technique specific states
   const [forms, setForms] = useState([])
   const [selectedFormId, setSelectedFormId] = useState('')
-  const [targetInput, setTargetInput] = useState('')
-  const [targetSaving, setTargetSaving] = useState(false)
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('')
@@ -142,7 +145,6 @@ function CompetencySummaryPage() {
         })
         const responseData = apiData(response, null)
         setData(responseData)
-        setTargetInput(responseData?.targetScore == null ? '' : String(responseData.targetScore))
       } else if (reportType === 'field') {
         const params = {
           departmentId: departmentId || undefined,
@@ -190,31 +192,6 @@ function CompetencySummaryPage() {
     debouncedSearchTerm, page, isAdmin, loadData,
   ])
 
-  const handleSaveTarget = async () => {
-    if (!departmentId) {
-      showToast('Vui lòng chọn một khoa/phòng để đặt điểm mục tiêu.', 'warning')
-      return
-    }
-    const targetScore = Number(targetInput)
-    if (!Number.isFinite(targetScore) || targetScore < 0 || targetScore > 10) {
-      showToast('Điểm mục tiêu phải nằm trong khoảng 0 đến 10.', 'warning')
-      return
-    }
-
-    setTargetSaving(true)
-    try {
-      const response = await competencyApi.updateDepartmentTarget(departmentId, targetScore)
-      const updated = apiData(response, null)
-      setData(current => current ? { ...current, targetScore: updated?.targetScore ?? targetScore } : current)
-      setTargetInput(String(updated?.targetScore ?? targetScore))
-      showToast('Đã cập nhật điểm mục tiêu của khoa.', 'success')
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setTargetSaving(false)
-    }
-  }
-
   const handleSort = (column) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -261,8 +238,8 @@ function CompetencySummaryPage() {
   const getSortedSummaryItems = () => {
     const items = [...filteredItems]
     items.sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
+      const aVal = sortColumn === 'examScore' ? (a.examScore ?? a.knowledgeAverage) : a[sortColumn]
+      const bVal = sortColumn === 'examScore' ? (b.examScore ?? b.knowledgeAverage) : b[sortColumn]
       const aNum = typeof aVal === 'number' ? aVal : (parseFloat(aVal) || 0)
       const bNum = typeof bVal === 'number' ? bVal : (parseFloat(bVal) || 0)
       return sortDirection === 'asc' ? aNum - bNum : bNum - aNum
@@ -507,35 +484,17 @@ function CompetencySummaryPage() {
               {reportType === 'summary' && (
                 <>
                   <div className="competency-dashboard-insights">
-                  {departmentId && <section className="evd-panel competency-dashboard-target">
+                  {data && <section className="evd-panel competency-dashboard-target">
                     <div>
                       <strong>
-                        Điểm mục tiêu của khoa
+                        Điểm sàn năng lực toàn viện
                       </strong>
                       <p>
-                        Dùng để xác định nhân viên đang đạt hoặc dưới mục tiêu năng lực tổng hợp.
+                        Do Admin cấu hình và áp dụng thống nhất cho tất cả khoa/phòng.
                       </p>
                     </div>
                     <div className="competency-dashboard-target__form">
-                      <label>
-                        <span>Điểm / 10</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="10"
-                          step="0.01"
-                          value={targetInput}
-                          onChange={(event) => setTargetInput(event.target.value)}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className="evd-btn"
-                        onClick={handleSaveTarget}
-                        disabled={targetSaving || !departmentId}
-                      >
-                        {targetSaving ? 'Đang lưu...' : 'Lưu mục tiêu'}
-                      </button>
+                      <strong>≥ {formatScore(data.targetScore)}/10</strong>
                     </div>
                   </section>}
 
@@ -572,8 +531,8 @@ function CompetencySummaryPage() {
                           <th>Mã NV</th>
                           <th>Họ tên</th>
                           {isAdmin && <th>Khoa</th>}
-                          <th style={{ cursor: 'pointer' }} onClick={() => handleSort('knowledgeAverage')}>
-                            Điểm lý thuyết{sortIcon('knowledgeAverage')}
+                          <th style={{ cursor: 'pointer' }} onClick={() => handleSort('examScore')}>
+                            Điểm kiểm tra{sortIcon('examScore')}
                           </th>
                           <th style={{ cursor: 'pointer' }} onClick={() => handleSort('skillAverage')}>
                             Điểm thực hành{sortIcon('skillAverage')}
@@ -608,7 +567,7 @@ function CompetencySummaryPage() {
                                 <td><code style={{ fontSize: 12 }}>{item.employeeCode || '—'}</code></td>
                                 <td style={{ fontWeight: 500 }}>{item.employeeName || '—'}</td>
                                 {isAdmin && <td style={{ color: '#6b7280' }}>{item.departmentName || '—'}</td>}
-                                <td>{formatNumber(item.knowledgeAverage)}</td>
+                                <td>{formatNumber(item.examScore ?? item.knowledgeAverage)}</td>
                                 <td>{formatNumber(item.skillAverage)}</td>
                                 <td style={{ fontWeight: 700 }}>{formatNumber(item.overallScore)}</td>
                                 <td>

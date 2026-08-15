@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAssignmentService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
 import java.util.List;
@@ -23,16 +24,16 @@ import java.util.List;
 public class ManagerExamResultController {
     private final ExamAssignmentService assignmentService;
     private final SecurityUtils securityUtils;
+    private final EvaluationCutoverService cutover;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamAssignmentResponse>>> list(
             @RequestParam(required = false) String q,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long professionalFieldId
+            @RequestParam(required = false) String status
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy danh sách bài kiểm tra của khoa/phòng thành công",
-                assignmentService.listForManager(securityUtils.getCurrentUserId(), q, status, professionalFieldId)
+                assignmentService.listForManager(securityUtils.getCurrentUserId(), q, status)
         ));
     }
 
@@ -46,6 +47,7 @@ public class ManagerExamResultController {
 
     @GetMapping("/{assignmentId}/results")
     public ResponseEntity<ApiResponse<ExamAssignmentResultsResponse>> results(@PathVariable Long assignmentId) {
+        cutover.requireFieldResults();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy kết quả bài kiểm tra của khoa/phòng thành công",
                 assignmentService.resultsForManager(securityUtils.getCurrentUserId(), assignmentId)

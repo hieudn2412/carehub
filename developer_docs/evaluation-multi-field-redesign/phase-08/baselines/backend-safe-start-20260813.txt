@@ -1,0 +1,18 @@
+Phase 8 backend safe-start smoke (2026-08-13, Windows/PowerShell)
+
+Command: .\\mvnw.cmd spring-boot:run
+Flags: SERVER_PORT=18082, RABBITMQ_LISTENER_ENABLED=false, APP_NOTIFICATION_SCHEDULING_ENABLED=false,
+APP_NOTIFICATION_SEED_ENABLED=false, E5_PRELOAD=false, E5_BACKFILL_ON_STARTUP=false,
+E5_CACHE_WARMUP_ENABLED=false, VIETQUILL_PRELOAD=false, APP_SEED_ENABLED=false,
+APP_NOTIFICATION_SCHEMA_FIX_ENABLED=false.
+
+Observed:
+- Flyway validated 14 migrations; schema version 13; no migration necessary.
+- Hikari connected to remote PostgreSQL carehub.
+- Tomcat started on port 18082.
+- Started CarehubBackendApplication in 24.248 seconds (Maven/IntelliJ dev run).
+- No RabbitMQ connection/reconnect log during startup.
+- No notification seed/scheduler or startup constraint-fixer DDL ran.
+- DataSeeder reported: Data seeding is disabled.
+
+The process was stopped with graceful Spring shutdown. No database reset or seed was run.

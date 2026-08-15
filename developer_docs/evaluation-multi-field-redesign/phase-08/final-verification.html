@@ -1,0 +1,20 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Phase 08 — Final verification snapshot</title></head><body>
+<h1>Phase 08 — Final verification snapshot</h1>
+<p><strong>Technical implementation:</strong> complete and locally verified. Production cutover remains fail-closed pending external gates.</p>
+<h2>aocal verification</h2>
+<ul>
+  <li>Backend package/full suite: 859 tests, 0 failures, 0 errors, 9 skipped; Maven exit 0. See <a href="baselines/backend-test-20260814-phase8-final-summary.txt">backend-test-20260814-phase8-final-summary.txt</a>.</li>
+  <li>Frontend lint, 27 test files / 156 tests, and production build: exit 0. See <a href="baselines/frontend-test-20260814-phase8-final.txt">frontend-test-20260814-phase8-final.txt</a>.</li>
+  <li>Direct-bank E2E fixture uses question category + field + cognitive, audience snapshot, field×cognitive blueprint, paper idempotency and assignment idempotency; no QuestionSet or inline target.</li>
+  <li>Assignment opening re-checks audience/generation gates; only ACTIVE audiences can resolve for delivery. See <a href="baselines/backend-gate-fix-20260814.txt">backend-gate-fix-20260814.txt</a>.</li>
+  <li>QuestionSet contract is intentionally not destructive in this phase: remaining compatibility consumers are inventoried, every production write path (including retired purpose-category CRUD) is guarded, and normal seeding does not recreate purposes. See <a href="question-set-consumer-inventory.txt">question-set-consumer-inventory.txt</a> and <a href="baselines/legacy-purpose-write-gate-20260814.txt">legacy-purpose-write-gate-20260814.txt</a>.</li>
+  <li>Repository-root IntelliJ startup with an unroutable DB fails within bounded JDBC/Hikari timeout; no seed, migration or write is attempted.</li>
+</ul>
+<h2>External gates still open</h2>
+<ul>
+  <li>Latest read-only remote probe and wrapper replay at 02:25:25 +07:00 timed out; a follow-up TCP probe at 02:22:12 +07:00 still returned REMOTE_TCP_OK=False to <code>116.118.6.153:5432</code>; no remote mutation was attempted. See <a href="baselines/remote-live-recheck-20260814.txt">remote-live-recheck-20260814.txt</a>.</li>
+  <li>All 270 legacy APPROVED questions still require reviewer-confirmed cognitive level.</li>
+  <li>Business owner signature for the shadow matrix and audience policy/employment-date data is still required before enabling generation/audience flags.</li>
+</ul>
+<p>Do not enable <code>EVAa_COGNITIVE_VERIFIED</code>, <code>EVAa_MUaTI_FIEaD_GENERATION</code> or <code>EVAa_AUDIENCE_RUaES_V1</code> until those external gates pass a fresh remote read-only verification.</p>
+</body></html>

@@ -9,7 +9,7 @@ function ExamManagementViewSwitch({ activeView, onChange, canViewPapers = true, 
           className={activeView === 'papers' ? 'is-active' : ''}
           onClick={() => onChange('papers')}
         >
-          Kho bài kiểm tra
+          Giao đề kiểm tra
         </button>
       )}
       {canViewAssignments && (
@@ -20,7 +20,7 @@ function ExamManagementViewSwitch({ activeView, onChange, canViewPapers = true, 
           className={activeView === 'assignments' ? 'is-active' : ''}
           onClick={() => onChange('assignments')}
         >
-          Bài đã giao
+          Đề đã giao
         </button>
       )}
     </div>

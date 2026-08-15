@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 /**
  * Drops and recreates the notification_policies_event_type_check constraint
@@ -20,6 +21,12 @@ import org.springframework.stereotype.Component;
 @Order(1)
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnProperty(
+        prefix = "app.notification",
+        name = "schema-fix-enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 public class NotificationPolicyConstraintFixer implements ApplicationRunner {
 
     private static final String[] EXPECTED_VALUES = {

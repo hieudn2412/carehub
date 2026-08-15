@@ -126,11 +126,13 @@ public class EvaluationAuditLogService {
             case "QUESTION_CREATE" -> "Tạo câu hỏi";
             case "QUESTION_UPDATE" -> "Cập nhật câu hỏi";
             case "QUESTION_APPROVE" -> "Duyệt câu hỏi";
+            case "QUESTION_COGNITIVE_REVIEW" -> "Xác nhận mức độ nhận thức câu hỏi";
             case "QUESTION_DEACTIVATE" -> "Tạm ngưng câu hỏi";
             case "QUESTION_ARCHIVE" -> "Lưu trữ câu hỏi";
             case "QUESTION_IMPORT_COMMIT" -> "Import ngân hàng câu hỏi";
             case "QUESTION_EXPORT" -> "Export ngân hàng câu hỏi";
             case "DOCUMENT_UPLOAD" -> "Upload tài liệu";
+            case "DOCUMENT_DELETE" -> "Xóa tài liệu";
             case "DOCUMENT_JOB_CREATE" -> "Tạo phiên sinh câu hỏi";
             case "DOCUMENT_JOB_RETRY" -> "Retry phiên sinh câu hỏi";
             case "DOCUMENT_JOB_CANCEL" -> "Hủy phiên sinh câu hỏi";

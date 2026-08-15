@@ -1,645 +1,659 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  CheckOutlined,
-  CloseOutlined,
-  EditOutlined,
+  AppstoreOutlined,
+  ArrowLeftOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ControlOutlined,
+  DeleteOutlined,
+  ExclamationCircleOutlined,
   EyeOutlined,
-  LoadingOutlined,
+  FileTextOutlined,
   SendOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import { adminApi } from '../../admin/api/adminApi.js'
-import { trainingApi } from '../../training/api/trainingApi.js'
+import DepartmentCombobox from '../../admin/components/DepartmentCombobox.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { examConfigApi } from '../api/examConfigApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
-import { questionSetApi } from '../api/questionSetApi.js'
-import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
-import { allocateDifficultyCounts, EXAM_DIFFICULTY_LEVELS } from '../utils/examDifficulty.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import { evaluationAudienceApi } from '../api/evaluationAudienceApi.js'
+import { adminApi } from '../../admin/api/adminApi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
+import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
+import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
 
-const DEFAULT_FORM = {
-  name: '',
-  questionSetId: '',
-  professionalFieldId: '',
-  totalQuestions: 30,
-  timeLimitMinutes: 45,
-  passingScore: 7,
-  availableFrom: '',
-  dueAt: '',
-  maxAttempts: 1,
-  shuffleQuestions: true,
-  shuffleOptions: true,
-  difficultyPercentages: { easy: 30, medium: 50, hard: 20 },
-  resultVisibility: 'SCORE_ONLY',
-  departmentIds: [],
-  userIds: [],
+const COGNITIVE = [
+  ['FOUNDATION', 'Kiến thức nền tảng'],
+  ['CLINICAL_APPLICATION', 'Áp dụng lâm sàng'],
+  ['CLINICAL_REASONING_ANALYSIS', 'Tư duy phân tích'],
+]
+
+function emptyField(id) {
+  return {
+    professionalFieldId: Number(id),
+    questionCount: 0,
+    cognitive: COGNITIVE.map(([level, label], index) => ({
+      cognitiveLevel: level,
+      label,
+      percentage: [30, 50, 20][index],
+    })),
+  }
 }
 
-function listData(response) {
-  const data = apiData(response, [])
-  if (Array.isArray(data)) return data
-  return Array.isArray(data?.content) ? data.content : []
+function newIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return `key-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function ExamConfigPage() {
+function data(response, fallback) {
+  return apiData(response, fallback)
+}
+
+export default function ExamConfigPage() {
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const [form, setForm] = useState(DEFAULT_FORM)
-  const [questionSets, setQuestionSets] = useState([])
-  const [professionalFields, setProfessionalFields] = useState([])
+
+  // Matrix (ma trận đề)
+  const [fields, setFields] = useState([])
+  const [form, setForm] = useState({ name: '', description: '', totalQuestions: 30, timeLimitMinutes: 45, passingScore: 7, maxRetakes: 0 })
+  const [blueprint, setBlueprint] = useState([])
+  const [preview, setPreview] = useState(null)
+
+  // Audience (đối tượng nhận đề)
   const [departments, setDepartments] = useState([])
-  const [users, setUsers] = useState([])
-  const [keyword, setKeyword] = useState('')
-  const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [progress, setProgress] = useState('')
-  const [isSetModalOpen, setIsSetModalOpen] = useState(false)
-  const [isSetDetailLoading, setIsSetDetailLoading] = useState(false)
-  const [isPreparingSetEdit, setIsPreparingSetEdit] = useState(false)
-  const [selectedSetDetail, setSelectedSetDetail] = useState(null)
+  const [allUsers, setAllUsers] = useState([])
+  const [filterDepartmentIds, setFilterDepartmentIds] = useState([])
+  const [userKeyword, setUserKeyword] = useState('')
+  const [selectedUserIds, setSelectedUserIds] = useState([])
+
+  // Schedule (lịch giao đề)
+  const [availableFrom, setAvailableFrom] = useState('')
+  const [dueAt, setDueAt] = useState('')
+  const [maxAttempts, setMaxAttempts] = useState(1)
+  const [resultVisibility, setResultVisibility] = useState('SCORE_ONLY')
+
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitStep, setSubmitStep] = useState('')
 
   useEffect(() => {
-    let active = true
-    async function loadOptions() {
-      setIsLoading(true)
-      try {
-        const [setResponse, optionResponse, departmentResponse, userResponse] = await Promise.all([
-          questionSetApi.listQuestionSets(),
-          trainingApi.getRecordOptions(),
-          adminApi.getDepartments(),
-          adminApi.getUsers({ page: 0, size: 100, status: 'ACTIVE' }),
-        ])
-        if (!active) return
-        setQuestionSets(listData(setResponse))
-        setProfessionalFields(apiData(optionResponse, {}).professionalFields || [])
-        setDepartments(listData(departmentResponse))
-        setUsers(listData(userResponse))
-      } catch (error) {
-        if (active) showToast(apiErrorMessage(error), 'error')
-      } finally {
-        if (active) setIsLoading(false)
-      }
-    }
-    loadOptions()
-    return () => { active = false }
+    Promise.all([trainingApi.getRecordOptions(), adminApi.getDepartments(), adminApi.getUsers({ status: 'ACTIVE', size: 500 })])
+      .then(([optionsRes, deptRes, usersRes]) => {
+        setFields(data(optionsRes, {})?.professionalFields || [])
+        setDepartments(data(deptRes, []) || [])
+        const usersData = data(usersRes, {})
+        setAllUsers(usersData?.content || (Array.isArray(usersData) ? usersData : []))
+      })
+      .catch((error) => showToast(apiErrorMessage(error), 'error'))
+      .finally(() => setLoading(false))
   }, [showToast])
 
-  const selectedSet = useMemo(
-    () => questionSets.find((item) => String(item.id) === String(form.questionSetId)),
-    [form.questionSetId, questionSets],
-  )
-  const difficultyCounts = useMemo(
-    () => allocateDifficultyCounts(form.totalQuestions, form.difficultyPercentages),
-    [form.difficultyPercentages, form.totalQuestions],
-  )
-
   const filteredUsers = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase()
-    return users.filter((user) => {
-      const departmentId = user.departmentId || user.department?.id
-      const matchesDepartment = !form.departmentIds.length || form.departmentIds.includes(Number(departmentId))
-      const matchesKeyword = !normalized
-        || (user.employeeCode || '').toLowerCase().includes(normalized)
-        || (user.fullName || user.name || '').toLowerCase().includes(normalized)
-        || (user.departmentName || user.department?.name || '').toLowerCase().includes(normalized)
+    const keyword = userKeyword.trim().toLowerCase()
+    return allUsers.filter((user) => {
+      const matchesDepartment = filterDepartmentIds.length === 0 || filterDepartmentIds.includes(Number(user.departmentId))
+      const matchesKeyword = !keyword
+        || (user.employeeCode || '').toLowerCase().includes(keyword)
+        || (user.fullName || '').toLowerCase().includes(keyword)
+        || (user.departmentName || '').toLowerCase().includes(keyword)
       return matchesDepartment && matchesKeyword
     })
-  }, [form.departmentIds, keyword, users])
+  }, [allUsers, filterDepartmentIds, userKeyword])
 
-  const previewQuestions = useMemo(() => {
-    if (!selectedSetDetail) return []
-    if (selectedSetDetail.activeSnapshotItems?.length) {
-      return selectedSetDetail.activeSnapshotItems
-    }
-    return (selectedSetDetail.items || []).map((item) => ({
-      ...item.question,
-      position: item.position,
-    }))
-  }, [selectedSetDetail])
+  const totalAllocated = useMemo(() => blueprint.reduce((sum, item) => sum + Number(item.questionCount || 0), 0), [blueprint])
+  const totalQuestions = Number(form.totalQuestions) || 0
 
-  useEffect(() => {
-    if (!isSetModalOpen) return undefined
-    const closeOnEscape = (event) => {
-      if (event.key === 'Escape' && !isPreparingSetEdit) {
-        setIsSetModalOpen(false)
-      }
-    }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [isPreparingSetEdit, isSetModalOpen])
-
-  function update(field, value) {
-    setForm((current) => ({ ...current, [field]: value }))
+  function addField(id) {
+    const numId = Number(id)
+    if (!numId) return
+    setBlueprint((current) => (current.some((item) => item.professionalFieldId === numId) ? current : [...current, emptyField(numId)]))
   }
 
-  function updateDifficultyPercentage(key, value) {
-    setForm((current) => ({
-      ...current,
-      difficultyPercentages: {
-        ...current.difficultyPercentages,
-        [key]: value,
-      },
-    }))
+  function removeField(id) {
+    setBlueprint((current) => current.filter((item) => item.professionalFieldId !== id))
   }
 
-  function toggleId(field, value) {
-    setForm((current) => ({
-      ...current,
-      [field]: current[field].includes(value)
-        ? current[field].filter((id) => id !== value)
-        : [...current[field], value],
-    }))
+  function updateField(id, key, value) {
+    if (key === 'questionCount') value = Number(value) || 0
+    setBlueprint((current) => current.map((item) => (item.professionalFieldId === id ? { ...item, [key]: value } : item)))
+  }
+
+  function updateCognitive(fieldId, level, value) {
+    setBlueprint((current) =>
+      current.map((item) =>
+        item.professionalFieldId !== fieldId
+          ? item
+          : {
+              ...item,
+              cognitive: item.cognitive.map((cell) => (cell.cognitiveLevel === level ? { ...cell, percentage: Number(value) || 0 } : cell)),
+            },
+      ),
+    )
+  }
+
+  function toggleFilterDepartment(id) {
+    const numId = Number(id)
+    setFilterDepartmentIds((current) => current.includes(numId) ? current.filter((x) => x !== numId) : [...current, numId])
+  }
+
+  function toggleSelectedUser(id) {
+    const numId = Number(id)
+    setSelectedUserIds((current) => current.includes(numId) ? current.filter((x) => x !== numId) : [...current, numId])
+  }
+
+  function selectAllFiltered() {
+    const ids = filteredUsers.map((u) => Number(u.id))
+    setSelectedUserIds((current) => [...new Set([...current, ...ids])])
+  }
+
+  function deselectAllFiltered() {
+    const ids = new Set(filteredUsers.map((u) => Number(u.id)))
+    setSelectedUserIds((current) => current.filter((id) => !ids.has(id)))
+  }
+
+  function matrixPayload(status = 'DRAFT') {
+    return {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      totalQuestions,
+      timeLimitMinutes: Number(form.timeLimitMinutes),
+      passingScore: Number(form.passingScore),
+      maxRetakes: Number(form.maxRetakes),
+      shuffleQuestions: true,
+      shuffleOptions: true,
+      questionSelectionMode: 'FIXED_PAPER',
+      status,
+      fieldBlueprints: blueprint.map((field, index) => ({
+        professionalFieldId: field.professionalFieldId,
+        questionCount: Number(field.questionCount),
+        displayOrder: index,
+        cognitive: field.cognitive.map((cell) => ({ cognitiveLevel: cell.cognitiveLevel, percentage: Number(cell.percentage) })),
+      })),
+      sourceFilters: { includedCategoryIds: [], excludedCategoryIds: [], includedDocumentIds: [], excludedDocumentIds: [] },
+    }
   }
 
   function validate() {
     if (!form.name.trim()) return 'Vui lòng nhập tên bài kiểm tra.'
-    if (!form.questionSetId) return 'Vui lòng chọn bộ câu hỏi.'
-    if (!form.professionalFieldId) return 'Vui lòng chọn lĩnh vực chuyên môn.'
-    if (Number(form.totalQuestions) > Number(selectedSet?.questionCount || 0)) {
-      return `Bộ câu hỏi chỉ có ${selectedSet?.questionCount || 0} câu.`
+    if (!blueprint.length) return 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
+    if (totalAllocated !== totalQuestions) return `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
+    if (blueprint.some((field) => Math.abs(field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0) - 100) > 0.001)) {
+      return 'Tổng tỷ lệ ba mức nhận thức trong mỗi lĩnh vực phải bằng 100%.'
     }
-    const difficultyTotal = Object.values(form.difficultyPercentages)
-      .reduce((sum, value) => sum + (Number(value) || 0), 0)
-    if (difficultyTotal !== 100) return 'Tổng tỷ lệ Dễ, Trung bình và Khó phải bằng 100%.'
-    // Backend lưu passingScore kiểu Integer (ExamConfig/ExamPaper) nên chỉ nhận số nguyên;
-    // gửi 8.5 sẽ bị Jackson cắt âm thầm thành 8.
-    const passingScore = Number(form.passingScore)
-    if (form.passingScore === '' || !Number.isInteger(passingScore) || passingScore < 0 || passingScore > 10) {
-      return 'Điểm đạt phải là số nguyên trong khoảng 0-10.'
-    }
-    if (form.availableFrom && form.dueAt && new Date(form.availableFrom) >= new Date(form.dueAt)) {
-      return 'Thời gian bắt đầu phải sớm hơn hạn nộp.'
-    }
-    if (!form.departmentIds.length && !form.userIds.length) return 'Vui lòng chọn khoa/phòng hoặc nhân viên nhận bài.'
+    if (!totalQuestions || totalQuestions < 1) return 'Tổng số câu phải lớn hơn 0.'
+    if (selectedUserIds.length === 0) return 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
+    if (availableFrom && dueAt && availableFrom >= dueAt) return 'Thời điểm mở đề phải sớm hơn hạn hoàn thành.'
     return ''
   }
 
-  async function openSelectedSet() {
-    if (!selectedSet?.id) {
-      showToast('Vui lòng chọn bộ câu hỏi trước khi xem.', 'warning')
-      return
-    }
-    setIsSetModalOpen(true)
-    setIsSetDetailLoading(true)
-    setSelectedSetDetail(null)
+  async function previewBlueprint() {
+    const error = validate()
+    if (error) return showToast(error, 'warning')
+    setSubmitting(true)
+    setSubmitStep('Đang kiểm tra khả dụng nguồn câu hỏi...')
     try {
-      const response = await questionSetApi.getQuestionSet(selectedSet.id)
-      setSelectedSetDetail(apiData(response))
-    } catch (error) {
-      setIsSetModalOpen(false)
-      showToast(apiErrorMessage(error), 'error')
+      setPreview(data(await examConfigApi.previewExamConfig(matrixPayload()), null))
+    } catch (err) {
+      showToast(apiErrorMessage(err), 'error')
     } finally {
-      setIsSetDetailLoading(false)
+      setSubmitting(false)
+      setSubmitStep('')
     }
   }
 
-  async function editSelectedSet() {
-    if (!selectedSetDetail?.id) return
-    setIsPreparingSetEdit(true)
+  function buildRuleJson() {
+    return JSON.stringify({ version: 1, all: [{ type: 'USER_IN', ids: selectedUserIds }] })
+  }
+
+  async function createAndAssign() {
+    const error = validate()
+    if (error) return showToast(error, 'warning')
+    setSubmitting(true)
     try {
-      let editableSetId = selectedSetDetail.id
-      if (selectedSetDetail.status === 'ACTIVE') {
-        const response = await questionSetApi.duplicateQuestionSet(selectedSetDetail.id)
-        const draft = apiData(response)
-        if (!draft?.id) throw new Error('Không nhận được bản nháp bộ câu hỏi.')
-        editableSetId = draft.id
-        showToast('Đã tạo bản nháp để chỉnh sửa, bộ đang sử dụng vẫn được giữ nguyên.', 'success')
+      setSubmitStep('1/5. Đang kiểm tra khả dụng nguồn câu hỏi...')
+      const check = data(await examConfigApi.previewExamConfig(matrixPayload()), null)
+      if (check && check.valid === false) {
+        showToast((check.warnings || []).join('; ') || 'Ngân hàng câu hỏi chưa đủ nguồn theo ma trận đã chọn.', 'warning')
+        setPreview(check)
+        return
       }
-      navigate(`/admin/evaluation/question-sets/${editableSetId}/edit`)
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setIsPreparingSetEdit(false)
-    }
-  }
 
-  async function createAndAssign(event) {
-    event.preventDefault()
-    const validationError = validate()
-    if (validationError) {
-      showToast(validationError, 'warning')
-      return
-    }
+      setSubmitStep('2/5. Đang tạo ma trận đề...')
+      const config = data(await examConfigApi.createExamConfig(matrixPayload('ACTIVE')), null)
 
-    setIsSubmitting(true)
-    try {
-      setProgress('Đang tạo cấu hình...')
-      const configResponse = await examConfigApi.createExamConfig({
-        name: form.name.trim(),
-        description: null,
-        questionSetId: Number(form.questionSetId),
-        totalQuestions: Number(form.totalQuestions),
-        timeLimitMinutes: Number(form.timeLimitMinutes),
-        passingScore: Number(form.passingScore),
-        maxRetakes: Math.max(0, Number(form.maxAttempts) - 1),
-        // Đảo theo từng lượt được áp dụng ở phân công; bộ đề gốc giữ một thứ tự ổn định.
-        shuffleQuestions: false,
-        shuffleOptions: false,
-        questionSelectionMode: 'PER_ATTEMPT_BALANCED',
-        difficultyPercentages: Object.fromEntries(
-          Object.entries(form.difficultyPercentages).map(([key, value]) => [key, Number(value) || 0]),
-        ),
-        status: 'ACTIVE',
-        distributions: EXAM_DIFFICULTY_LEVELS
-          .filter(({ key }) => difficultyCounts[key] > 0)
-          .map(({ key }) => ({
-            categoryId: null,
-            categoryName: null,
-            difficulty: key.toUpperCase(),
-            questionCount: difficultyCounts[key],
-            required: true,
-          })),
-      })
-      const config = apiData(configResponse)
+      setSubmitStep('3/5. Đang sinh mã đề...')
+      const papers = data(
+        await examPaperApi.generateExamPapers({
+          examConfigId: config.id,
+          namePrefix: null,
+          variantCount: 1,
+          randomSeed: null,
+          zeroOverlap: false,
+          idempotencyKey: newIdempotencyKey(),
+        }),
+        [],
+      )
+      const paper = papers[0]
 
-      setProgress('Đang sinh đề...')
-      const paperResponse = await examPaperApi.generateExamPapers({
-        examConfigId: Number(config.id),
-        namePrefix: form.name.trim(),
-        variantCount: 1,
-        randomSeed: null,
-      })
-      const paper = listData(paperResponse)[0]
-      if (!paper?.id) throw new Error('Không nhận được bộ đề sau khi sinh.')
-
-      setProgress('Đang phát hành đề...')
+      setSubmitStep('4/5. Đang phát hành mã đề & tạo nhóm nhận đề...')
       await examPaperApi.publishExamPaper(paper.id)
+      const audience = data(await evaluationAudienceApi.create({ name: `${form.name.trim()} - Đối tượng thi`, ruleJson: buildRuleJson() }), null)
+      await evaluationAudienceApi.activate(audience.id)
 
-      setProgress('Đang giao bài...')
+      setSubmitStep('5/5. Đang giao đề kiểm tra...')
       await examAssignmentApi.createAssignment({
         name: form.name.trim(),
-        description: null,
-        examPaperId: Number(paper.id),
-        professionalFieldId: Number(form.professionalFieldId),
-        availableFrom: form.availableFrom || null,
-        dueAt: form.dueAt || null,
-        maxAttempts: Number(form.maxAttempts),
-        shuffleQuestions: form.shuffleQuestions,
-        shuffleOptions: form.shuffleOptions,
+        description: form.description.trim() || null,
+        examPaperId: paper.id,
+        audienceId: audience.id,
+        availableFrom: availableFrom || null,
+        dueAt: dueAt || null,
+        maxAttempts: Number(maxAttempts),
+        shuffleQuestions: true,
+        shuffleOptions: true,
+        resultVisibility: 'SCORE_ONLY',
         status: 'OPEN',
-        resultVisibility: form.resultVisibility,
-        userIds: form.userIds,
-        departmentIds: form.departmentIds,
-        positionIds: [],
-        groupIds: [],
-        allEmployees: false,
+        variantPolicy: 'FIXED_PAPER',
+        retakeVariantPolicy: 'KEEP_VARIANT',
+        idempotencyKey: newIdempotencyKey(),
       })
 
-      showToast('Đã tạo đề và giao bài kiểm tra thành công.', 'success')
+      showToast('Đã tạo ma trận và giao bài kiểm tra thành công.', 'success')
       navigate('/admin/evaluation/exam-management?view=assignments')
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
+    } catch (err) {
+      showToast(apiErrorMessage(err), 'error')
     } finally {
-      setProgress('')
-      setIsSubmitting(false)
+      setSubmitting(false)
+      setSubmitStep('')
     }
   }
 
-  const breadcrumbs = [
-    { label: 'Quản lý bài kiểm tra', path: '/admin/evaluation/exam-management' },
-    { label: 'Tạo & giao bài kiểm tra' },
-  ]
+  function handleFlowStep(step) {
+    if (step === 'papers') navigate('/admin/evaluation/exam-management?view=papers')
+    if (step === 'assignments') navigate('/admin/evaluation/exam-assignments/new')
+  }
 
   return (
     <div className="dashboard-layout">
       <AdminSidebar />
       <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
+        <AdminHeader
+          back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
+          breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
+        />
         <div className="dashboard-root">
           <main className="dashboard-body">
-            <form className="exp-page exam-flow" onSubmit={createAndAssign}>
-              <section className="exp-title-card">
-                <div>
-                  <h1 className="exp-title">Tạo & giao bài kiểm tra</h1>
-                  <p className="exp-subtitle">Nhập thông tin một lần, hệ thống sẽ tự cấu hình, sinh đề, phát hành và giao bài.</p>
+            <div className="exp-page">
+              <ExamDeliveryFlow
+                activeStep="matrix"
+                title="Tạo ma trận & Giao đề kiểm tra"
+                description="Cấu hình ma trận số câu theo lĩnh vực chuyên môn, chọn đối tượng nhận đề và giao đề tự động."
+                onStepChange={handleFlowStep}
+              />
+
+              <section className="exp-assignment-shell">
+                <div className="exp-assignment-toolbar">
+                  <div>
+                    <span className="exp-section-kicker">BƯỚC 1 · THIẾT LẬP NHACH MA TRẬN & GIAO ĐỀ</span>
+                    <h2>Tạo mới & Giao đề kiểm tra</h2>
+                    <p>Thiết lập thông tin chung, ma trận chuyên môn, đối tượng thi và lịch phát hành trong một quy trình duy nhất.</p>
+                  </div>
+                  <button type="button" className="exp-btn-secondary" onClick={() => navigate('/admin/evaluation/exam-management')}>
+                    <ArrowLeftOutlined /> Quay lại danh sách
+                  </button>
                 </div>
-                <button type="submit" className="exp-btn-primary" disabled={isLoading || isSubmitting}>
-                  <SendOutlined /> {progress || 'Tạo và giao bài'}
-                </button>
-              </section>
 
-              <div className="exam-flow__steps" aria-label="Quy trình tạo bài kiểm tra">
-                {['Thông tin bài kiểm tra', 'Cài đặt tổ chức thi', 'Chọn người nhận', 'Tự động sinh và giao đề'].map((label, index) => (
-                  <div key={label}><span>{index + 1}</span><strong>{label}</strong></div>
-                ))}
-              </div>
-
-              <section className="exp-form-card exam-flow__section">
-                <header><span>1</span><div><h2>Thông tin bài kiểm tra</h2><p>Chỉ giữ lại các thông tin cần thiết khi tổ chức kiểm tra.</p></div></header>
-                <div className="exp-form-grid">
-                  <label>
-                    Tên bài kiểm tra
-                    <input value={form.name} onChange={(event) => update('name', event.target.value)} placeholder="Ví dụ: Kiểm tra an toàn người bệnh tháng 7" required />
-                  </label>
-                  <label>
-                    Lĩnh vực chuyên môn
-                    <SearchableSelect
-                      value={form.professionalFieldId}
-                      onChange={(value) => update('professionalFieldId', value)}
-                      options={[
-                        { value: '', label: 'Chọn lĩnh vực' },
-                        ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                      ]}
-                      placeholder="Chọn lĩnh vực"
-                      searchPlaceholder="Tìm tên lĩnh vực..."
-                      ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-                    />
-                  </label>
-                  <div className="exam-flow__wide exam-flow__set-field">
-                    <label>
-                      Bộ câu hỏi
-                      <select value={form.questionSetId} onChange={(event) => {
-                        const nextId = event.target.value
-                        const nextSet = questionSets.find((item) => String(item.id) === nextId)
-                        setSelectedSetDetail(null)
-                        setForm((current) => ({
-                          ...current,
-                          questionSetId: nextId,
-                          totalQuestions: nextSet?.questionCount ? Math.min(30, nextSet.questionCount) : current.totalQuestions,
-                        }))
-                      }} required>
-                        <option value="">Chọn bộ câu hỏi đang hoạt động</option>
-                        {questionSets.map((set) => (
-                          <option key={set.id} value={set.id} disabled={set.status !== 'ACTIVE'}>
-                            {set.name} ({set.questionCount || 0} câu)
-                            {set.status !== 'ACTIVE' ? ` — ${set.statusText || 'Chưa kích hoạt'}` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {selectedSet && (
-                      <div className="exam-flow__set-summary">
-                        <span>
-                          <strong>{selectedSet.name}</strong>
-                          {selectedSet.questionCount || 0} câu
-                        </span>
-                        <button type="button" className="exp-btn-secondary" onClick={openSelectedSet}>
-                          <EyeOutlined /> Xem và sửa bộ câu hỏi
-                        </button>
+                {loading ? (
+                  <div className="exp-empty">Đang tải danh sách lĩnh vực chuyên môn và khoa phòng...</div>
+                ) : (
+                  <form
+                    className="exp-assignment-form"
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      createAndAssign()
+                    }}
+                  >
+                    {/* Section 1 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><FileTextOutlined /></span>
+                        <div>
+                          <h3>1. Thông tin chung bài kiểm tra</h3>
+                          <p>Nhập tên bài thi, số câu hỏi, thời gian làm bài và mức điểm đạt.</p>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <label>
-                    Số câu
-                    <input type="number" min="1" max={selectedSet?.questionCount || undefined} value={form.totalQuestions} onChange={(event) => update('totalQuestions', event.target.value)} required />
-                  </label>
-                  <label>
-                    Thời gian làm bài (phút)
-                    <input type="number" min="1" value={form.timeLimitMinutes} onChange={(event) => update('timeLimitMinutes', event.target.value)} required />
-                  </label>
-                  <label>
-                    Điểm đạt (thang 10)
-                    <input type="number" min="0" max="10" step="1" value={form.passingScore} onChange={(event) => update('passingScore', event.target.value)} required />
-                    <small className="exam-flow__field-hint">Nhập số nguyên theo thang 10, ví dụ 7 hoặc 8.</small>
-                  </label>
-                  <label>
-                    Số lượt làm tối đa
-                    <input type="number" min="1" max="10" value={form.maxAttempts} onChange={(event) => update('maxAttempts', event.target.value)} required />
-                  </label>
-                </div>
-              </section>
 
-              <section className="exp-form-card exam-flow__section">
-                <header><span>2</span><div><h2>Cài đặt tổ chức thi</h2><p>Kiểm soát thứ tự hiển thị, thời gian truy cập và cách công bố kết quả.</p></div></header>
-                <div className="exam-flow__toggle-grid">
-                  <label className={`exam-flow__toggle-card${form.shuffleQuestions ? ' is-active' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={form.shuffleQuestions}
-                      onChange={(event) => update('shuffleQuestions', event.target.checked)}
-                    />
-                    <span>
-                      <strong>Đảo thứ tự câu hỏi</strong>
-                      <small>Mỗi lượt làm nhận một thứ tự riêng và giữ nguyên khi tải lại.</small>
-                    </span>
-                  </label>
-                  <label className={`exam-flow__toggle-card${form.shuffleOptions ? ' is-active' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={form.shuffleOptions}
-                      onChange={(event) => update('shuffleOptions', event.target.checked)}
-                    />
-                    <span>
-                      <strong>Đảo thứ tự đáp án</strong>
-                      <small>Đáp án A–D được hoán đổi riêng cho từng lượt và chấm theo đúng ánh xạ.</small>
-                    </span>
-                  </label>
-                </div>
-                <div className="exam-flow__difficulty-panel">
-                  <div className="exam-flow__difficulty-heading">
-                    <div>
-                      <strong>Phân bổ độ khó</strong>
-                      <small>Mỗi lượt làm được chọn ngẫu nhiên nhưng luôn giữ đúng cơ cấu này.</small>
-                    </div>
-                    <span className={Object.values(form.difficultyPercentages).reduce((sum, value) => sum + (Number(value) || 0), 0) === 100 ? 'is-valid' : 'is-invalid'}>
-                      Tổng {Object.values(form.difficultyPercentages).reduce((sum, value) => sum + (Number(value) || 0), 0)}%
-                    </span>
-                  </div>
-                  <div className="exam-flow__difficulty-grid">
-                    {EXAM_DIFFICULTY_LEVELS.map(({ key, label }) => (
-                      <label key={key}>
-                        <span>{label}</span>
-                        <div className="exam-flow__percentage-input">
+                      <div className="exp-form-grid">
+                        <label className="exp-form-grid__wide">
+                          <span>Tên bài kiểm tra <b>*</b></span>
                           <input
+                            required
+                            className="ch-input"
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="Ví dụ: Kiểm tra quy trình điều dưỡng chuyên khoa - 08/2026"
+                          />
+                        </label>
+
+                        <label>
+                          <span>Tổng số câu hỏi <b>*</b></span>
+                          <input
+                            required
+                            type="number"
+                            min="1"
+                            max="200"
+                            className="ch-input"
+                            value={form.totalQuestions}
+                            onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })}
+                          />
+                        </label>
+
+                        <label>
+                          <span>Thời gian làm bài (phút) <b>*</b></span>
+                          <input
+                            required
+                            type="number"
+                            min="1"
+                            max="300"
+                            className="ch-input"
+                            value={form.timeLimitMinutes}
+                            onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })}
+                          />
+                        </label>
+
+                        <label>
+                          <span>Điểm đạt chuẩn (thang 10) <b>*</b></span>
+                          <input
+                            required
                             type="number"
                             min="0"
-                            max="100"
-                            value={form.difficultyPercentages[key]}
-                            onChange={(event) => updateDifficultyPercentage(key, event.target.value)}
-                            required
+                            max="10"
+                            step="0.5"
+                            className="ch-input"
+                            value={form.passingScore}
+                            onChange={(e) => setForm({ ...form, passingScore: e.target.value })}
                           />
-                          <span>%</span>
+                        </label>
+                      </div>
+                    </section>
+
+                    {/* Section 2 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><AppstoreOutlined /></span>
+                        <div>
+                          <h3>2. Ma trận Lĩnh vực chuyên môn & Mức nhận thức</h3>
+                          <p>Chọn các lĩnh vực chuyên môn và phân bổ câu hỏi theo tỷ lệ nhận thức.</p>
                         </div>
-                        <small>{difficultyCounts[key]} câu trong mỗi lượt</small>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <div className="exp-form-grid exam-flow__schedule-grid">
-                  <label>
-                    Thời gian bắt đầu
-                    <input
-                      type="datetime-local"
-                      value={form.availableFrom}
-                      max={form.dueAt || undefined}
-                      onChange={(event) => update('availableFrom', event.target.value)}
-                    />
-                    <small className="exam-flow__field-hint">Để trống nếu nhân viên được làm ngay sau khi giao.</small>
-                  </label>
-                  <label>
-                    Hạn nộp
-                    <input
-                      type="datetime-local"
-                      value={form.dueAt}
-                      min={form.availableFrom || undefined}
-                      onChange={(event) => update('dueAt', event.target.value)}
-                    />
-                  </label>
-                  <label className="exam-flow__wide">
-                    Hiển thị kết quả
-                    <select value={form.resultVisibility} onChange={(event) => update('resultVisibility', event.target.value)}>
-                      <option value="SCORE_ONLY">Xem điểm ngay sau khi nộp</option>
-                      <option value="SCORE_AND_ANSWERS">Xem điểm và đáp án sau khi đợt thi kết thúc</option>
-                      <option value="HIDDEN_UNTIL_END">Ẩn toàn bộ kết quả đến khi đợt thi kết thúc</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="exam-flow__safety-note">
-                  Bài luôn được tự động nộp khi hết giờ và hệ thống luôn cảnh báo nếu còn câu chưa trả lời.
-                </div>
-              </section>
+                      </div>
 
-              <section className="exp-form-card exam-flow__section">
-                <header><span>3</span><div><h2>Người nhận bài</h2><p>Chọn cả khoa/phòng hoặc thêm từng nhân viên cụ thể.</p></div></header>
-                <div className="exam-flow__target-columns">
-                  <div>
-                    <div className="exam-flow__target-title"><strong>Khoa/phòng</strong><span>{form.departmentIds.length} đã chọn</span></div>
-                    <div className="exp-target-list exp-target-list--select">
-                      {departments.map((department) => {
-                        const id = Number(department.id)
-                        return (
-                          <label key={id} className="exp-target-item exp-target-item--checkbox">
-                            <input type="checkbox" checked={form.departmentIds.includes(id)} onChange={() => toggleId('departmentIds', id)} />
-                            <span>{department.name}</span>
-                            {form.departmentIds.includes(id) && <CheckOutlined />}
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="exam-flow__target-title"><strong>Nhân viên cụ thể</strong><span>{form.userIds.length} đã chọn</span></div>
-                    <input className="exam-flow__employee-search" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm mã, tên nhân viên..." />
-                    <div className="exp-target-list exp-target-list--select">
-                      {filteredUsers.map((user) => {
-                        const id = Number(user.id)
-                        return (
-                          <label key={id} className="exp-target-item exp-target-item--checkbox">
-                            <input type="checkbox" checked={form.userIds.includes(id)} onChange={() => toggleId('userIds', id)} />
-                            <strong>{user.employeeCode}</strong>
-                            <span>{user.fullName || user.name}</span>
-                            <small>{user.departmentName || user.department?.name || 'Chưa có khoa/phòng'}</small>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </section>
+                      <div className="exp-form-grid">
+                        <label className="exp-form-grid__wide">
+                          <span>Chọn lĩnh vực chuyên môn để thêm vào ma trận <b>*</b></span>
+                          <DepartmentCombobox
+                            departments={fields}
+                            value=""
+                            onChange={addField}
+                            placeholder="Tìm kiếm và chọn lĩnh vực chuyên môn..."
+                            emptyValue=""
+                          />
+                        </label>
+                      </div>
 
-              <section className="exam-flow__submit-card">
-                <div><strong>Sẵn sàng tạo bài kiểm tra</strong><span>Đề sẽ được sinh, phát hành và gửi tới người nhận ngay sau khi xác nhận.</span></div>
-                <button type="submit" className="exp-btn-primary" disabled={isLoading || isSubmitting}>
-                  <SendOutlined /> {progress || 'Tạo và giao bài'}
-                </button>
+                      {blueprint.length > 0 && (
+                        <div className="exp-blueprint-list">
+                          {blueprint.map((item) => {
+                            const field = fields.find((v) => v.id === item.professionalFieldId)
+                            const cognitiveSum = item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)
+                            const cognitiveValid = Math.abs(cognitiveSum - 100) < 0.001
+
+                            return (
+                              <div key={item.professionalFieldId} className="exp-field-card">
+                                <div className="exp-field-card__header">
+                                  <div className="exp-field-card__title">
+                                    <AppstoreOutlined />
+                                    <strong>{field?.name || `Lĩnh vực #${item.professionalFieldId}`}</strong>
+                                  </div>
+                                  <button type="button" className="exp-field-card__remove" onClick={() => removeField(item.professionalFieldId)}>
+                                    <DeleteOutlined /> Xóa lĩnh vực
+                                  </button>
+                                </div>
+
+                                <div className="exp-field-card__body">
+                                  <label className="exp-field-card__count">
+                                    <span>Số câu hỏi lĩnh vực này:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      className="ch-input"
+                                      value={item.questionCount}
+                                      onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)}
+                                    />
+                                  </label>
+
+                                  <div className="exp-cognitive-table-wrap">
+                                    <table className="exp-cognitive-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Mức nhận thức</th>
+                                          <th style={{ width: '140px', textAlign: 'right' }}>Tỷ lệ (%)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {item.cognitive.map((cell) => (
+                                          <tr key={cell.cognitiveLevel}>
+                                            <td>{cell.label}</td>
+                                            <td style={{ textAlign: 'right' }}>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                className="ch-input"
+                                                style={{ width: '80px', textAlign: 'center' }}
+                                                value={cell.percentage}
+                                                onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)}
+                                              />
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+
+                                  <div className={`exp-cognitive-summary ${cognitiveValid ? 'is-valid' : 'is-invalid'}`}>
+                                    <span>Tổng tỷ lệ nhận thức: <strong>{cognitiveSum}%</strong></span>
+                                    {!cognitiveValid && <small> (Tổng tỷ lệ phải bằng 100%)</small>}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      <div className={`exp-allocation-banner ${totalAllocated === totalQuestions ? 'is-valid' : 'is-warning'}`}>
+                        {totalAllocated === totalQuestions ? (
+                          <><CheckCircleOutlined /> Đã phân bổ đủ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi cho ma trận.</>
+                        ) : (
+                          <><ExclamationCircleOutlined /> Đã phân bổ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi. Hãy điều chỉnh để khớp số lượng.</>
+                        )}
+                      </div>
+                    </section>
+
+                    {/* Section 3 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><TeamOutlined /></span>
+                        <div>
+                          <h3>3. Đối tượng nhận đề (Nhóm thi)</h3>
+                          <p>Lọc theo khoa phòng để thu hẹp danh sách, sau đó tick chọn từng nhân viên nhận đề.</p>
+                        </div>
+                      </div>
+
+                      <div className="exam-flow__target-columns">
+                        <div>
+                          <div className="exam-flow__target-title"><span>Lọc theo khoa phòng (tùy chọn)</span></div>
+                          <div className="exp-target-list exp-target-list--select">
+                            {departments.map((dept) => {
+                              const deptId = Number(dept.id)
+                              return (
+                                <label key={dept.id} className="exp-target-item exp-target-item--checkbox">
+                                  <input type="checkbox" checked={filterDepartmentIds.includes(deptId)} onChange={() => toggleFilterDepartment(deptId)} />
+                                  <strong>{dept.departmentCode || `PB-${dept.id}`}</strong>
+                                  <span>{dept.name}</span>
+                                </label>
+                              )
+                            })}
+                            {!loading && departments.length === 0 && <div className="exp-empty">Chưa có khoa phòng để lọc.</div>}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="exam-flow__target-title">
+                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
+                              <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
+                            </div>
+                          </div>
+                          <input
+                            className="ch-input exam-flow__employee-search"
+                            value={userKeyword}
+                            onChange={(e) => setUserKeyword(e.target.value)}
+                            placeholder="Tìm theo mã nhân viên, họ tên hoặc phòng ban..."
+                          />
+                          <div className="exp-target-list exp-target-list--select">
+                            {filteredUsers.map((user) => {
+                              const userId = Number(user.id)
+                              return (
+                                <label key={user.id} className="exp-target-item exp-target-item--checkbox">
+                                  <input type="checkbox" checked={selectedUserIds.includes(userId)} onChange={() => toggleSelectedUser(userId)} />
+                                  <strong>{user.employeeCode}</strong>
+                                  <span>{user.fullName}</span>
+                                  <small>{user.departmentName || 'Chưa có phòng ban'}</small>
+                                </label>
+                              )
+                            })}
+                            {!loading && filteredUsers.length === 0 && <div className="exp-empty">Không có nhân viên phù hợp.</div>}
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Section 4 */}
+                    <section className="exp-form-section">
+                      <div className="exp-form-section__heading">
+                        <span className="exp-form-section__number"><CalendarOutlined /></span>
+                        <div>
+                          <h3>4. Lịch mở đề & Lượt thi</h3>
+                          <p>Thiết lập thời gian bắt đầu, hạn hoàn thành và số lần được phép làm bài.</p>
+                        </div>
+                      </div>
+
+                      <div className="exp-schedule-card">
+                        <div className="exp-schedule-row">
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Mở đề lúc (tùy chọn)</label>
+                            <DateTimePicker24h value={availableFrom} onChange={(val) => setAvailableFrom(val)} />
+                          </div>
+
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Hạn nộp bài (tùy chọn)</label>
+                            <DateTimePicker24h value={dueAt} onChange={(val) => setDueAt(val)} />
+                          </div>
+
+                          <div className="exp-schedule-field exp-schedule-field--compact">
+                            <label className="exp-schedule-label">Số lượt thi tối đa</label>
+                            <div className="exp-number-stepper">
+                              <input
+                                type="number"
+                                min="1"
+                                max="10"
+                                className="exp-num-input"
+                                value={maxAttempts}
+                                onChange={(e) => setMaxAttempts(e.target.value)}
+                              />
+                              <span className="exp-stepper-unit">lần</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="exp-schedule-row exp-schedule-row--bottom">
+                          <div className="exp-schedule-field exp-schedule-field--wide">
+                            <label className="exp-schedule-label">Công bố kết quả</label>
+                            <select className="ch-input" value={resultVisibility} onChange={(e) => setResultVisibility(e.target.value)}>
+                              <option value="SCORE_ONLY">Xem điểm ngay sau khi nộp</option>
+                              <option value="SCORE_AND_ANSWERS">Xem điểm và đáp án sau khi đợt thi kết thúc</option>
+                              <option value="HIDDEN_UNTIL_END">Ẩn kết quả đến khi đợt thi kết thúc</option>
+                            </select>
+                            <small className="exp-field-hint">Áp dụng cho toàn bộ nhân viên trong đợt giao đề.</small>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Preview / Progress Alerts */}
+                    {preview && (
+                      <div className={`ch-alert ${preview.valid === false ? 'ch-alert--warning' : 'ch-alert--info'}`} style={{ margin: '16px 24px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '6px' }}>
+                          <EyeOutlined /> Đánh giá khả dụng: {preview.distributedQuestions} / {totalQuestions} câu khả dụng
+                        </div>
+                        {preview.warnings?.length > 0 && (
+                          <ul style={{ margin: '4px 0 8px 18px', padding: 0 }}>
+                            {preview.warnings.map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                          </ul>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                          {preview.blueprintFields?.map((field) => (
+                            <span key={field.professionalFieldId} style={{ fontSize: '12.5px' }}>
+                              • {field.professionalFieldName}: Yêu cầu {field.requiredQuestionCount} câu / Khả dụng {field.availableQuestionCount} câu
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {submitting && submitStep && (
+                      <div className="ch-alert ch-alert--info" style={{ margin: '16px 24px' }}>
+                        <ControlOutlined /> {submitStep}
+                      </div>
+                    )}
+
+                    {/* Submit Bar */}
+                    <div className="exp-assignment-submit">
+                      <div className="exp-assignment-submit__info">
+                        <div className="exp-status-indicator">
+                          <span className="exp-status-dot is-open"></span>
+                          <strong>Tự động sinh mã đề & Mở đợt giao đề ngay</strong>
+                        </div>
+                        <span>Quy trình tự động tạo ma trận, sinh mã đề, chụp snapshot đối tượng thi và mở giao.</span>
+                      </div>
+
+                      <div className="exp-actions-group">
+                        <button type="button" className="exp-btn-secondary" onClick={previewBlueprint} disabled={loading || submitting}>
+                          <EyeOutlined /> Kiểm tra khả dụng
+                        </button>
+                        <button type="submit" className="exp-btn-primary" disabled={loading || submitting}>
+                          {submitting ? 'Đang xử lý...' : <><SendOutlined /> Tạo ma trận & Giao đề ngay</>}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
               </section>
-            </form>
+            </div>
           </main>
         </div>
       </div>
-
-      {isSetModalOpen && (
-        <div
-          className="ecfg-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !isPreparingSetEdit) {
-              setIsSetModalOpen(false)
-            }
-          }}
-        >
-          <section
-            className="ecfg-modal exam-flow__set-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="selected-question-set-title"
-          >
-            <header className="ecfg-modal-header">
-              <div>
-                <h2 id="selected-question-set-title" className="ecfg-modal-title">
-                  {selectedSetDetail?.name || selectedSet?.name || 'Bộ câu hỏi'}
-                </h2>
-                <p>
-                  {selectedSetDetail
-                    ? `${selectedSetDetail.questionCount || previewQuestions.length} câu`
-                    : 'Đang tải nội dung bộ câu hỏi'}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="ecfg-modal-close"
-                onClick={() => setIsSetModalOpen(false)}
-                disabled={isPreparingSetEdit}
-                aria-label="Đóng popup"
-              >
-                <CloseOutlined />
-              </button>
-            </header>
-
-            {isSetDetailLoading ? (
-              <div className="exam-flow__set-modal-loading">
-                <LoadingOutlined spin /> Đang tải bộ câu hỏi...
-              </div>
-            ) : (
-              <>
-                {selectedSetDetail?.status === 'ACTIVE' && (
-                  <div className="exam-flow__set-lock-note">
-                    Bộ câu hỏi đang hoạt động đã được khóa phiên bản. Khi chọn sửa, hệ thống sẽ tạo một bản nháp mới để không ảnh hưởng các bài kiểm tra đã giao.
-                  </div>
-                )}
-
-                <div className="exam-flow__set-question-list">
-                  {previewQuestions.length === 0 ? (
-                    <div className="exam-flow__set-modal-loading">Bộ câu hỏi chưa có câu nào.</div>
-                  ) : previewQuestions.map((question, index) => (
-                    <article className="exam-flow__set-question" key={question.id || question.sourceQuestionId || index}>
-                      <div>
-                        <strong>Câu {question.position || index + 1}</strong>
-                        <span>{difficultyText(question.difficulty)}</span>
-                      </div>
-                      <p>{question.stem}</p>
-                      <ol type="A">
-                        <li>{question.optionA}</li>
-                        <li>{question.optionB}</li>
-                        <li>{question.optionC}</li>
-                        <li>{question.optionD}</li>
-                      </ol>
-                    </article>
-                  ))}
-                </div>
-
-                <footer className="ecfg-modal-actions">
-                  <button
-                    type="button"
-                    className="exp-btn-secondary"
-                    onClick={() => setIsSetModalOpen(false)}
-                    disabled={isPreparingSetEdit}
-                  >
-                    Đóng
-                  </button>
-                  <button
-                    type="button"
-                    className="exp-btn-primary"
-                    onClick={editSelectedSet}
-                    disabled={isPreparingSetEdit}
-                  >
-                    {isPreparingSetEdit ? <LoadingOutlined spin /> : <EditOutlined />}
-                    {selectedSetDetail?.status === 'ACTIVE' ? 'Tạo bản nháp để sửa' : 'Sửa bộ câu hỏi'}
-                  </button>
-                </footer>
-              </>
-            )}
-          </section>
-        </div>
-      )}
     </div>
   )
 }
-
-export default ExamConfigPage

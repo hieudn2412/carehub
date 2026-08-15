@@ -50,11 +50,6 @@
   font: inherit;
 }
 
-.sc-toolbar__assignment {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
 .sc-toolbar__filter-panel.admin-control-toolbar__panel {
   grid-template-columns: repeat(2, minmax(220px, 1fr)) auto;
 }
@@ -294,7 +289,6 @@
   .sc-page { padding: 0; }
   .sc-toolbar__filter-panel.admin-control-toolbar__panel { grid-template-columns: 1fr; }
   .sc-toolbar__filter-actions { display: grid; grid-template-columns: 1fr 1fr; }
-  .sc-toolbar__assignment { width: 100%; }
   .sc-toolbar .sc-filter__btn--secondary { width: 100%; }
   .sc-personal-overview__heading { flex-direction: column; }
   .sc-personal-metrics { grid-template-columns: repeat(3, minmax(118px, 1fr)); overflow-x: auto; }

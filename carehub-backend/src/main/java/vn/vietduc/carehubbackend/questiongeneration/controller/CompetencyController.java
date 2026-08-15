@@ -18,7 +18,6 @@ import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.SaveCompetencyThresholdsRequest;
-import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateDepartmentCompetencyTargetRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByFieldResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyByTechniqueResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyClassificationResponse;
@@ -27,7 +26,6 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyEmplo
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencyLevelCountResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.CompetencySummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyResponse;
-import vn.vietduc.carehubbackend.questiongeneration.dto.response.DepartmentCompetencyTargetResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.CompetencyThresholdConfig;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
@@ -263,25 +261,6 @@ public class CompetencyController {
                 departmentId, fromDate, toDate, keyword, pageable
         );
         return ResponseEntity.ok(ApiResponse.success("Lấy tổng hợp năng lực thành công", data));
-    }
-
-    @PutMapping("/departments/{id}/target")
-    @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
-    public ResponseEntity<ApiResponse<DepartmentCompetencyTargetResponse>> updateDepartmentTarget(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateDepartmentCompetencyTargetRequest request,
-            Authentication authentication
-    ) {
-        vn.vietduc.carehubbackend.user.entity.User actor = userRepository.findById(securityUtils.getCurrentUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng"));
-        boolean admin = hasAuthority(authentication, "ROLE_ADMIN", "ADMIN");
-        DepartmentCompetencyTargetResponse data = competencyService.updateDepartmentTarget(
-                id,
-                request.targetScore(),
-                actor,
-                admin
-        );
-        return ResponseEntity.ok(ApiResponse.success("Cập nhật mục tiêu năng lực khoa thành công", data));
     }
 
     private void requireManagerDepartmentScope(Long departmentId, Authentication authentication) {

@@ -1,0 +1,16 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ADR-005 — Audience DSL</title><link rel="stylesheet" href="../plan.css"></head><body>
+<header class="masthead"><div class="shell"><p class="eyebrow">ADR-005 · Accepted · 13/08/2026</p><h1>Audience DSL phiên bản 1</h1><p class="lede">Rule chọn đối tượng có phiên bản, preview giải thích được và snapshot tại lúc giao; không chạy biểu thức tùy ý.</p></div></header>
+<main class="shell layout"><nav class="side"><a href="index.html">← Hồ sơ Phase 0</a><a href="#eligibility">Eligibility</a><a href="#operators">Operator</a><a href="#semantics">Ngữ nghĩa</a><a href="#limits">Giới hạn</a></nav><article class="content">
+<section class="section" id="eligibility"><h2>Tập nền</h2><p><code>ALL_EMPLOYEES</code> mặc định là user có <code>status='ACTIVE'</code> và <code>is_deleted=false</code>. Baseline remote cho kết quả 12, không phải toàn bộ 2.613 user.</p><div class="callout warn">Bệnh viện phải ký duyệt nếu muốn một policy khác. Không âm thầm đưa 2.600 tài khoản INACTIVE vào kỳ kiểm tra.</div></section>
+<section class="section" id="operators"><h2>Operator whitelist</h2><table class="matrix"><thead><tr><th>Nhóm</th><th>Operator</th></tr></thead><tbody><tr><td>Tổ chức</td><td>ALL_EMPLOYEES, DEPARTMENT_IN, POSITION_IN, GROUP_IN, USER_IN</td></tr><tr><td>Thâm niên</td><td>SENIORITY_MONTHS_LT, SENIORITY_MONTHS_GTE</td></tr><tr><td>Kết quả</td><td>FIELD_SCORE_LT, EXAM_RESULT_IN</td></tr><tr><td>Kết hợp</td><td>ALL, ANY, EXCLUDE</td></tr></tbody></table><pre>{
+ "version": 1,
+ "all": [
+   {"type":"DEPARTMENT_IN","ids":[12,18]},
+   {"type":"SENIORITY_MONTHS_LT","value":36}
+ ],
+ "exclude":[{"type":"USER_IN","ids":[105]}],
+ "asOfDate":"2026-08-13"
+}</pre></section>
+<section class="section" id="semantics"><h2>Ngữ nghĩa xác định</h2><ul><li>Seniority là số tháng tròn từ <code>employment_start_date</code> tới <code>asOfDate</code>; asOfDate bắt buộc và được snapshot.</li><li>Nếu rule dùng seniority mà có user eligible thiếu ngày vào làm, preview báo danh sách/count và assignment bị chặn cho tới khi sửa dữ liệu hoặc loại họ có chủ đích.</li><li>FIELD_SCORE_LT đọc attempt đã chấm mới nhất theo submittedAt, tie-break ID; field lấy từ paper question snapshot.</li><li>Không có attempt phù hợp trả 0 match và lý do, không lỗi máy chủ.</li><li>GROUP_IN khi chưa có group/member trả empty-state; operator bị disable trong UI nếu nguồn rỗng.</li><li>Preview động; lúc giao resolve lại rồi snapshot target + matched reason. Chuyển phòng ban sau đó không đổi assignment.</li></ul></section>
+<section class="section" id="limits"><h2>Validation và giới hạn</h2><ul><li>Rule version bắt buộc; operator lạ bị từ chối.</li><li>Độ sâu tối đa 5, tối đa 100 node và 10.000 ID trong một rule.</li><li>Không nhận SQL, script, regex tùy ý hoặc tên taxonomy thay cho ID.</li><li>Preview trả count, sample, breakdown, missing data và exclusion reason.</li><li>Audience đã dùng là immutable; chỉnh sửa tạo version mới.</li></ul></section>
+</article></main></body></html>

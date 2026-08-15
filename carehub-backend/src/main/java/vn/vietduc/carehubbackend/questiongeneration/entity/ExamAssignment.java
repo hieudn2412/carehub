@@ -12,9 +12,12 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.Builder;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentRetakeVariantPolicy;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentVariantPolicy;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
@@ -35,10 +38,37 @@ public class ExamAssignment extends BaseEntity {
     @Column(columnDefinition = "text")
     private String description;
 
+    @Column(name = "idempotency_key", length = 160, unique = true)
+    private String idempotencyKey;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exam_paper_id", nullable = false)
     private ExamPaper examPaper;
 
+    /** Batch is optional for legacy single-paper assignments. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "generation_batch_id")
+    private ExamPaperGenerationBatch generationBatch;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "variant_policy", nullable = false, length = 32)
+    @Builder.Default
+    private ExamAssignmentVariantPolicy variantPolicy = ExamAssignmentVariantPolicy.FIXED_PAPER;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "retake_variant_policy", nullable = false, length = 32)
+    @Builder.Default
+    private ExamAssignmentRetakeVariantPolicy retakeVariantPolicy = ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT;
+
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "audience_id")
+    private EvaluationAudience audience;
+
+    /** @deprecated derive fields from the assigned paper snapshots. */
+    @Deprecated
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "professional_field_id")
     private ProfessionalField professionalField;

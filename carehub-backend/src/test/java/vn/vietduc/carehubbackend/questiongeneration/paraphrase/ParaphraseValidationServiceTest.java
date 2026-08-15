@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.paraphrase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
+import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
 import vn.vietduc.carehubbackend.questiongeneration.embedding.QuestionEmbeddingService;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
@@ -21,6 +22,7 @@ class ParaphraseValidationServiceTest {
     private final DuplicateCheckService duplicateCheckService = mock(DuplicateCheckService.class);
     private final QuestionEmbeddingService embeddingService = mock(QuestionEmbeddingService.class);
     private final AiEmbeddingProperties embeddingProperties = new AiEmbeddingProperties();
+    private final AiParaphraseProperties paraphraseProperties = new AiParaphraseProperties();
     private ParaphraseValidationService service;
 
     @BeforeEach
@@ -30,7 +32,8 @@ class ParaphraseValidationServiceTest {
                 new ProtectedTermService(),
                 duplicateCheckService,
                 embeddingService,
-                embeddingProperties
+                embeddingProperties,
+                paraphraseProperties
         );
         when(duplicateCheckService.similarity(anyString(), anyString())).thenReturn(0.55);
         when(duplicateCheckService.check(anyString(), anySet())).thenReturn(new DuplicateCheckResult(

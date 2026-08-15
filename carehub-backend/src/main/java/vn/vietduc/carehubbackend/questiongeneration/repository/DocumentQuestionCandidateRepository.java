@@ -23,4 +23,9 @@ public interface DocumentQuestionCandidateRepository extends JpaRepository<Docum
     List<DocumentQuestionCandidate> findTop100ByStatusIn(Collection<CandidateStatus> statuses);
 
     List<DocumentQuestionCandidate> findByStatusIn(Collection<CandidateStatus> statuses, Pageable pageable);
+
+    List<DocumentQuestionCandidate> findByProfessionalFieldIsNullAndStatusInOrderByIdAsc(
+            Collection<CandidateStatus> statuses,
+            Pageable pageable
+    );
 }

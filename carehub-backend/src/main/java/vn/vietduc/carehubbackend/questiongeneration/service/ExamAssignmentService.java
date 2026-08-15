@@ -1,6 +1,5 @@
 package vn.vietduc.carehubbackend.questiongeneration.service;
 
-import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
@@ -9,6 +8,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
@@ -20,13 +20,17 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentR
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentTargetResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationResultReportResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.EvaluationAudience;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentRetakeVariantPolicy;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentVariantPolicy;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
@@ -36,7 +40,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptReposi
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.training.entity.TrainingGroup;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
-import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
@@ -55,6 +58,10 @@ import java.time.Instant;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -66,7 +73,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class ExamAssignmentService {
     private static final int DEFAULT_MAX_ATTEMPTS = 1;
     private static final ExamResultVisibility DEFAULT_RESULT_VISIBILITY = ExamResultVisibility.SCORE_ONLY;
@@ -79,22 +85,70 @@ public class ExamAssignmentService {
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
     private final TrainingGroupRepository trainingGroupRepository;
-    private final ProfessionalFieldRepository professionalFieldRepository;
     private final NotificationEventPublisher notificationEventPublisher;
     private final Clock clock;
     private final ZoneId examBusinessZone;
+    private final EvaluationAudienceService evaluationAudienceService;
+    private final EvaluationResultService evaluationResultService;
+
+    @Autowired
+    public ExamAssignmentService(
+            ExamAssignmentRepository assignmentRepository,
+            ExamAssignmentTargetRepository targetRepository,
+            ExamAttemptRepository attemptRepository,
+            ExamPaperRepository examPaperRepository,
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            PositionRepository positionRepository,
+            TrainingGroupRepository trainingGroupRepository,
+            NotificationEventPublisher notificationEventPublisher,
+            Clock clock,
+            ZoneId examBusinessZone,
+            EvaluationAudienceService evaluationAudienceService,
+            EvaluationResultService evaluationResultService
+    ) {
+        this.assignmentRepository = assignmentRepository;
+        this.targetRepository = targetRepository;
+        this.attemptRepository = attemptRepository;
+        this.examPaperRepository = examPaperRepository;
+        this.userRepository = userRepository;
+        this.departmentRepository = departmentRepository;
+        this.positionRepository = positionRepository;
+        this.trainingGroupRepository = trainingGroupRepository;
+        this.notificationEventPublisher = notificationEventPublisher;
+        this.clock = clock;
+        this.examBusinessZone = examBusinessZone;
+        this.evaluationAudienceService = evaluationAudienceService;
+        this.evaluationResultService = evaluationResultService;
+    }
+
+    /** Compatibility constructor for service-level tests and integrations created before audience v1. */
+    public ExamAssignmentService(
+            ExamAssignmentRepository assignmentRepository,
+            ExamAssignmentTargetRepository targetRepository,
+            ExamAttemptRepository attemptRepository,
+            ExamPaperRepository examPaperRepository,
+            UserRepository userRepository,
+            DepartmentRepository departmentRepository,
+            PositionRepository positionRepository,
+            TrainingGroupRepository trainingGroupRepository,
+            NotificationEventPublisher notificationEventPublisher,
+            Clock clock,
+            ZoneId examBusinessZone
+    ) {
+        this(assignmentRepository, targetRepository, attemptRepository, examPaperRepository, userRepository,
+                departmentRepository, positionRepository, trainingGroupRepository, notificationEventPublisher,
+                clock, examBusinessZone, null, null);
+    }
 
     @Transactional(readOnly = true)
-    public List<ExamAssignmentResponse> list(String query, String status, Long professionalFieldId) {
+    public List<ExamAssignmentResponse> list(String query, String status) {
         String normalizedQuery = normalize(query);
         ExamAssignmentStatus statusFilter = parseStatusOrNull(status);
         List<ExamAssignment> assignments = statusFilter == null
                 ? assignmentRepository.findByStatusNotOrderByUpdatedAtDesc(ExamAssignmentStatus.ARCHIVED)
                 : assignmentRepository.findByStatusOrderByUpdatedAtDesc(statusFilter);
         return assignments.stream()
-                .filter(assignment -> professionalFieldId == null
-                        || (assignment.getProfessionalField() != null
-                        && professionalFieldId.equals(assignment.getProfessionalField().getId())))
                 .filter(assignment -> normalizedQuery.isBlank()
                         || normalize(assignment.getName()).contains(normalizedQuery)
                         || normalize(assignment.getExamPaper().getName()).contains(normalizedQuery)
@@ -107,23 +161,26 @@ public class ExamAssignmentService {
     public List<ExamAssignmentResponse> listForManager(
             Long managerId,
             String query,
-            String status,
-            Long professionalFieldId
+            String status
     ) {
         Long departmentId = managerDepartmentId(managerId);
         String normalizedQuery = normalize(query);
         ExamAssignmentStatus statusFilter = parseStatusOrNull(status);
         return targetRepository.findAssignmentsForDepartment(departmentId, ExamAssignmentStatus.ARCHIVED).stream()
                 .filter(assignment -> statusFilter == null || assignment.getStatus() == statusFilter)
-                .filter(assignment -> professionalFieldId == null
-                        || (assignment.getProfessionalField() != null
-                        && professionalFieldId.equals(assignment.getProfessionalField().getId())))
                 .filter(assignment -> normalizedQuery.isBlank()
                         || normalize(assignment.getName()).contains(normalizedQuery)
                         || normalize(assignment.getExamPaper().getName()).contains(normalizedQuery)
                         || normalize(assignment.getExamPaper().getCode()).contains(normalizedQuery))
                 .map(assignment -> toResponse(assignment, false))
                 .toList();
+    }
+
+    @Deprecated
+    public List<ExamAssignmentResponse> listForManager(
+            Long managerId, String query, String status, Long ignoredProfessionalFieldId
+    ) {
+        return listForManager(managerId, query, status);
     }
 
     @Transactional(readOnly = true)
@@ -218,6 +275,9 @@ public class ExamAssignmentService {
     @Transactional(readOnly = true)
     public byte[] exportResultsXlsx(Long assignmentId) {
         ExamAssignmentResultsResponse results = results(assignmentId);
+        EvaluationResultReportResponse resultReport = evaluationResultService == null
+                ? null
+                : evaluationResultService.report(assignmentId);
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Kết quả");
@@ -265,6 +325,10 @@ public class ExamAssignmentService {
             for (int index = 0; index < headers.size(); index++) {
                 sheet.autoSizeColumn(index);
             }
+            if (resultReport != null) {
+                writeFieldResultSheet(workbook, headerStyle, resultReport);
+                writeFieldCognitiveResultSheet(workbook, headerStyle, resultReport);
+            }
             workbook.write(output);
             return output.toByteArray();
         } catch (IOException ex) {
@@ -284,11 +348,10 @@ public class ExamAssignmentService {
                         Collectors.toList()
                 ));
         return targetRepository.findByUserOrderByAssignmentUpdatedAtDesc(user).stream()
-                .map(ExamAssignmentTarget::getAssignment)
-                .filter(assignment -> assignment.getStatus() != ExamAssignmentStatus.ARCHIVED)
-                .map(assignment -> toMyExamResponse(
-                        assignment,
-                        attemptsByAssignmentId.getOrDefault(assignment.getId(), List.of())
+                .filter(target -> target.getAssignment().getStatus() != ExamAssignmentStatus.ARCHIVED)
+                .map(target -> toMyExamResponse(
+                        target,
+                        attemptsByAssignmentId.getOrDefault(target.getAssignment().getId(), List.of())
                 ))
                 .toList();
     }
@@ -298,6 +361,10 @@ public class ExamAssignmentService {
         if (request == null) {
             throw new BadRequestException("Dữ liệu phân công không hợp lệ");
         }
+        String idempotencyKey = trimToNull(request.idempotencyKey());
+        if (idempotencyKey == null || idempotencyKey.length() > 160) {
+            throw new BadRequestException("Idempotency key là bắt buộc và không được vượt quá 160 ký tự");
+        }
         String name = trimToNull(request.name());
         if (name == null) {
             throw new BadRequestException("Vui lòng nhập tên phân công");
@@ -305,20 +372,24 @@ public class ExamAssignmentService {
         if (request.examPaperId() == null) {
             throw new BadRequestException("Vui lòng chọn bộ đề kiểm tra");
         }
-        if (request.professionalFieldId() == null) {
-            throw new BadRequestException("Vui lòng chọn lĩnh vực chuyên môn");
-        }
         if (request.availableFrom() != null && request.dueAt() != null
                 && !request.availableFrom().isBefore(request.dueAt())) {
             throw new BadRequestException("Thời gian bắt đầu phải sớm hơn hạn nộp");
         }
-        ProfessionalField professionalField = professionalFieldRepository.findById(request.professionalFieldId())
-                .filter(ProfessionalField::isActive)
-                .orElseThrow(() -> new BadRequestException("Lĩnh vực chuyên môn không hợp lệ hoặc đã ngừng sử dụng"));
         ExamPaper examPaper = examPaperRepository.findById(request.examPaperId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bộ đề kiểm tra"));
         if (examPaper.getStatus() != ExamPaperStatus.PUBLISHED) {
             throw new BadRequestException("Chỉ được phân công bộ đề đã phát hành");
+        }
+        List<ExamPaper> publishedVariants = publishedVariants(examPaper);
+        ExamAssignmentVariantPolicy variantPolicy = parseVariantPolicy(request.variantPolicy(), publishedVariants.size());
+        ExamAssignmentRetakeVariantPolicy retakeVariantPolicy = parseRetakeVariantPolicy(request.retakeVariantPolicy());
+        EvaluationAudienceService.ResolvedAudience resolvedAudience = null;
+        if (request.audienceId() != null) {
+            if (evaluationAudienceService == null) {
+                throw new BadRequestException("Audience resolver chưa được cấu hình");
+            }
+            resolvedAudience = evaluationAudienceService.resolveForAssignment(request.audienceId());
         }
         Set<Long> uniqueUserIds = request.userIds() == null
                 ? new LinkedHashSet<>()
@@ -342,7 +413,7 @@ public class ExamAssignmentService {
                 .collect(Collectors.toCollection(LinkedHashSet::new));
         boolean allEmployees = Boolean.TRUE.equals(request.allEmployees());
 
-        if (uniqueUserIds.isEmpty() && uniqueDepartmentIds.isEmpty()
+        if (resolvedAudience == null && uniqueUserIds.isEmpty() && uniqueDepartmentIds.isEmpty()
                 && uniquePositionIds.isEmpty() && uniqueGroupIds.isEmpty() && !allEmployees) {
             throw new BadRequestException("Vui lòng chọn ít nhất một nhân viên, khoa/phòng, chức danh, nhóm hoặc toàn bệnh viện");
         }
@@ -350,6 +421,11 @@ public class ExamAssignmentService {
         // Track source type for each user
         Map<Long, AssignmentTargetType> targetTypeByUserId = new LinkedHashMap<>();
         Map<Long, Long> sourceIdByUserId = new LinkedHashMap<>();
+
+        if (resolvedAudience != null) {
+            uniqueUserIds.addAll(resolvedAudience.userIds());
+            uniqueUserIds.forEach(id -> targetTypeByUserId.put(id, AssignmentTargetType.EMPLOYEE));
+        }
 
         // ALL_EMPLOYEES: get all active users
         if (allEmployees) {
@@ -419,17 +495,32 @@ public class ExamAssignmentService {
             throw new BadRequestException("Không tìm thấy nhân viên nào để phân công");
         }
 
-        List<User> users = userRepository.findAllById(uniqueUserIds);
+        List<User> users = new ArrayList<>(userRepository.findAllById(uniqueUserIds));
         if (users.size() != uniqueUserIds.size()) {
             throw new BadRequestException("Danh sách nhân viên phân công không hợp lệ");
+        }
+        users.sort(Comparator.comparing(User::getId));
+        String requestHash = assignmentRequestHash(request, users, examPaper, variantPolicy, retakeVariantPolicy);
+        ExamAssignment existing = assignmentRepository.findByIdempotencyKey(idempotencyKey).orElse(null);
+        if (existing != null) {
+            if (!Objects.equals(existing.getRequestHash(), requestHash)) {
+                throw new vn.vietduc.carehubbackend.exception.ConflictException(
+                        "Idempotency key đã được dùng với payload giao bài khác");
+            }
+            return toResponse(existing, true);
         }
         ExamAssignmentStatus status = parseCreateStatus(request.status());
         LocalDateTime now = now();
         ExamAssignment assignment = assignmentRepository.save(ExamAssignment.builder()
                 .name(name)
                 .description(trimToNull(request.description()))
+                .idempotencyKey(idempotencyKey)
                 .examPaper(examPaper)
-                .professionalField(professionalField)
+                .generationBatch(examPaper.getGenerationBatch())
+                .variantPolicy(variantPolicy)
+                .retakeVariantPolicy(retakeVariantPolicy)
+                .requestHash(requestHash)
+                .audience(resolvedAudience == null ? null : resolvedAudience.audience())
                 .status(status)
                 .availableFrom(request.availableFrom())
                 .dueAt(request.dueAt())
@@ -444,12 +535,24 @@ public class ExamAssignmentService {
             AssignmentTargetType targetType = targetTypeByUserId.getOrDefault(user.getId(), AssignmentTargetType.EMPLOYEE);
             Long sourcePositionId = targetType == AssignmentTargetType.POSITION ? sourceIdByUserId.get(user.getId()) : null;
             Long sourceGroupId = targetType == AssignmentTargetType.GROUP ? sourceIdByUserId.get(user.getId()) : null;
+            ExamPaper assignedPaper = assignedVariant(assignment, user, publishedVariants, variantPolicy);
             targetRepository.save(ExamAssignmentTarget.builder()
                     .assignment(assignment)
                     .user(user)
+                    .assignedExamPaper(assignedPaper)
+                    .assignedVariantIndex(assignedPaper.getVariantIndex() == null ? assignedPaper.getVersion() : assignedPaper.getVariantIndex())
+                    .variantPolicy(variantPolicy)
+                    .audience(resolvedAudience == null ? null : resolvedAudience.audience())
+                    .audienceVersion(resolvedAudience == null ? null : resolvedAudience.audience().getVersion())
+                    .audienceRuleVersion(resolvedAudience == null ? null : resolvedAudience.audience().getRuleVersion())
+                    .matchedRuleJson(resolvedAudience == null ? null : resolvedAudience.ruleJson())
+                    .resolvedAt(resolvedAudience == null ? now : now)
                     .targetType(targetType)
                     .sourcePositionId(sourcePositionId)
                     .sourceGroupId(sourceGroupId)
+                    .sourceDepartmentId(user.getDepartment() == null ? null : user.getDepartment().getId())
+                    .sourceDepartmentName(user.getDepartment() == null ? null : user.getDepartment().getName())
+                    .sourcePositionName(user.getPosition() == null ? null : user.getPosition().getName())
                     .build());
         }
         if (status == ExamAssignmentStatus.OPEN) {
@@ -467,6 +570,12 @@ public class ExamAssignmentService {
         }
         if (assignment.getExamPaper().getStatus() != ExamPaperStatus.PUBLISHED) {
             throw new BadRequestException("Bộ đề của phân công chưa được phát hành");
+        }
+        boolean targetHasUnpublishedPaper = targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(assignment).stream()
+                .map(target -> target.getAssignedExamPaper() == null ? assignment.getExamPaper() : target.getAssignedExamPaper())
+                .anyMatch(paper -> paper.getStatus() != ExamPaperStatus.PUBLISHED);
+        if (targetHasUnpublishedPaper) {
+            throw new BadRequestException("Có mã đề snapshot cho nhân viên chưa được phát hành");
         }
         assignment.setStatus(ExamAssignmentStatus.OPEN);
         assignment.setOpenedAt(assignment.getOpenedAt() == null ? now() : assignment.getOpenedAt());
@@ -543,6 +652,11 @@ public class ExamAssignmentService {
                 assignment.getExamPaper().getId(),
                 assignment.getExamPaper().getCode(),
                 assignment.getExamPaper().getName(),
+                assignment.getGenerationBatch() == null ? null : assignment.getGenerationBatch().getId(),
+                (assignment.getVariantPolicy() == null ? ExamAssignmentVariantPolicy.FIXED_PAPER : assignment.getVariantPolicy()).name(),
+                (assignment.getRetakeVariantPolicy() == null ? ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT : assignment.getRetakeVariantPolicy()).name(),
+                assignment.getAudience() == null ? null : assignment.getAudience().getId(),
+                assignment.getAudience() == null ? null : assignment.getAudience().getName(),
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
@@ -567,9 +681,11 @@ public class ExamAssignmentService {
     }
 
     private MyExamAssignmentResponse toMyExamResponse(
-            ExamAssignment assignment,
+            ExamAssignmentTarget target,
             List<ExamAttempt> attempts
     ) {
+        ExamAssignment assignment = target.getAssignment();
+        ExamPaper assignedPaper = target.getAssignedExamPaper() == null ? assignment.getExamPaper() : target.getAssignedExamPaper();
         Instant serverNow = Instant.now(clock);
         LocalDateTime now = LocalDateTime.ofInstant(serverNow, examBusinessZone);
         ExamAttempt currentAttempt = attempts.stream()
@@ -641,9 +757,13 @@ public class ExamAssignmentService {
                 assignment.getId(),
                 assignment.getName(),
                 assignment.getDescription(),
-                assignment.getExamPaper().getId(),
-                assignment.getExamPaper().getCode(),
-                assignment.getExamPaper().getName(),
+                assignedPaper.getId(),
+                assignedPaper.getCode(),
+                assignedPaper.getName(),
+                target.getAssignedVariantIndex() == null ? assignedPaper.getVariantIndex() : target.getAssignedVariantIndex(),
+                (assignment.getRetakeVariantPolicy() == null
+                        ? ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT
+                        : assignment.getRetakeVariantPolicy()).name(),
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
                 assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
@@ -688,8 +808,21 @@ public class ExamAssignmentService {
                 user.getId(),
                 user.getEmployeeCode(),
                 user.getName(),
-                user.getDepartment() == null ? null : user.getDepartment().getName()
+                user.getDepartment() == null ? null : user.getDepartment().getName(),
+                target.getAssignedExamPaper() == null ? target.getAssignment().getExamPaper().getId() : target.getAssignedExamPaper().getId(),
+                target.getAssignedExamPaper() == null ? target.getAssignment().getExamPaper().getCode() : target.getAssignedExamPaper().getCode(),
+                target.getAssignedVariantIndex()
         );
+    }
+
+    /**
+     * Compatibility shim for internal callers compiled before Phase 6. A test
+     * or endpoint may still pass a field, but assignment retrieval must never
+     * filter a multi-field exam by the legacy single-field column.
+     */
+    @Deprecated
+    public List<ExamAssignmentResponse> list(String query, String status, Long ignoredProfessionalFieldId) {
+        return list(query, status);
     }
 
     private LocalDateTime now() {
@@ -762,6 +895,169 @@ public class ExamAssignmentService {
         return parsed;
     }
 
+    private List<ExamPaper> publishedVariants(ExamPaper selectedPaper) {
+        if (selectedPaper.getGenerationBatch() == null) {
+            return List.of(selectedPaper);
+        }
+        List<ExamPaper> variants = examPaperRepository
+                .findByGenerationBatchOrderByVariantIndexAsc(selectedPaper.getGenerationBatch()).stream()
+                .filter(paper -> paper.getStatus() == ExamPaperStatus.PUBLISHED)
+                .sorted(Comparator.comparing(paper -> paper.getVariantIndex() == null ? paper.getVersion() : paper.getVariantIndex()))
+                .toList();
+        if (variants.isEmpty() || variants.stream().noneMatch(paper -> Objects.equals(paper.getId(), selectedPaper.getId()))) {
+            throw new BadRequestException("Mã đề được chọn không thuộc một batch đã phát hành hợp lệ");
+        }
+        return variants;
+    }
+
+    private ExamAssignmentVariantPolicy parseVariantPolicy(String value, int variantCount) {
+        if (variantCount < 2) {
+            return ExamAssignmentVariantPolicy.FIXED_PAPER;
+        }
+        if (value == null || value.isBlank()) {
+            return ExamAssignmentVariantPolicy.STABLE_USER_HASH;
+        }
+        try {
+            return ExamAssignmentVariantPolicy.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("Chính sách phân phối mã đề không hợp lệ");
+        }
+    }
+
+    /**
+     * These worksheets deliberately use the immutable field snapshots from graded attempts,
+     * so a later taxonomy rename cannot rewrite an exported historical report.
+     */
+    private void writeFieldResultSheet(
+            Workbook workbook,
+            CellStyle headerStyle,
+            EvaluationResultReportResponse resultReport
+    ) {
+        Sheet sheet = workbook.createSheet("Theo lĩnh vực");
+        Row header = sheet.createRow(0);
+        List<String> headers = List.of(
+                "Mã lĩnh vực (snapshot)", "Lĩnh vực (snapshot)", "Đúng", "Tổng câu",
+                "Điểm trung bình", "Đạt ngưỡng", "Số lượt đánh giá"
+        );
+        for (int index = 0; index < headers.size(); index++) {
+            header.createCell(index).setCellValue(headers.get(index));
+            header.getCell(index).setCellStyle(headerStyle);
+        }
+        int rowIndex = 1;
+        for (EvaluationResultReportResponse.FieldCoverage field : resultReport.fields()) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(blank(field.professionalFieldCode()));
+            row.createCell(1).setCellValue(blank(field.professionalFieldName()));
+            row.createCell(2).setCellValue(field.correctCount());
+            row.createCell(3).setCellValue(field.totalQuestions());
+            row.createCell(4).setCellValue(field.averageScore() == null ? "" : field.averageScore().toPlainString());
+            row.createCell(5).setCellValue(field.passedAttempts() + "/" + field.evaluatedAttempts());
+            row.createCell(6).setCellValue(field.evaluatedAttempts());
+        }
+        for (int index = 0; index < headers.size(); index++) {
+            sheet.autoSizeColumn(index);
+        }
+    }
+
+    private void writeFieldCognitiveResultSheet(
+            Workbook workbook,
+            CellStyle headerStyle,
+            EvaluationResultReportResponse resultReport
+    ) {
+        Sheet sheet = workbook.createSheet("Lĩnh vực × nhận thức");
+        Row header = sheet.createRow(0);
+        List<String> headers = List.of(
+                "Mã lĩnh vực (snapshot)", "Lĩnh vực (snapshot)", "Mức nhận thức",
+                "Đúng", "Tổng câu", "Số lượt đánh giá", "Ghi chú"
+        );
+        for (int index = 0; index < headers.size(); index++) {
+            header.createCell(index).setCellValue(headers.get(index));
+            header.getCell(index).setCellStyle(headerStyle);
+        }
+        int rowIndex = 1;
+        for (EvaluationResultReportResponse.CellCoverage cell : resultReport.cells()) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(blank(cell.professionalFieldCode()));
+            row.createCell(1).setCellValue(blank(cell.professionalFieldName()));
+            row.createCell(2).setCellValue(blank(cell.cognitiveLabel()));
+            row.createCell(3).setCellValue(cell.correctCount());
+            row.createCell(4).setCellValue(cell.totalQuestions());
+            row.createCell(5).setCellValue(cell.evaluatedAttempts());
+            row.createCell(6).setCellValue(cell.smallSample()
+                    ? "Mẫu nhỏ (≤ 1 câu/lượt), chỉ tham khảo"
+                    : "Đủ mẫu");
+        }
+        for (int index = 0; index < headers.size(); index++) {
+            sheet.autoSizeColumn(index);
+        }
+    }
+
+    private ExamAssignmentRetakeVariantPolicy parseRetakeVariantPolicy(String value) {
+        if (value == null || value.isBlank()) {
+            return ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT;
+        }
+        try {
+            return ExamAssignmentRetakeVariantPolicy.valueOf(value.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("Chính sách mã đề khi thi lại không hợp lệ");
+        }
+    }
+
+    private ExamPaper assignedVariant(
+            ExamAssignment assignment,
+            User user,
+            List<ExamPaper> variants,
+            ExamAssignmentVariantPolicy policy
+    ) {
+        if (policy == ExamAssignmentVariantPolicy.FIXED_PAPER || variants.size() == 1) {
+            return assignment.getExamPaper();
+        }
+        int index = Math.floorMod(stableHash(assignment.getId(), user.getId()), variants.size());
+        return variants.get(index);
+    }
+
+    private int stableHash(Long assignmentId, Long userId) {
+        long value = (assignmentId == null ? 0L : assignmentId) * 0x9E3779B97F4A7C15L
+                ^ (userId == null ? 0L : userId) * 0xBF58476D1CE4E5B9L;
+        value ^= value >>> 30;
+        value *= 0xBF58476D1CE4E5B9L;
+        value ^= value >>> 27;
+        return (int) (value ^ (value >>> 31));
+    }
+
+    private String assignmentRequestHash(
+            CreateExamAssignmentRequest request,
+            List<User> users,
+            ExamPaper paper,
+            ExamAssignmentVariantPolicy variantPolicy,
+            ExamAssignmentRetakeVariantPolicy retakeVariantPolicy
+    ) {
+        String targets = users.stream().map(User::getId).sorted().map(String::valueOf).collect(Collectors.joining(","));
+        String canonical = String.join("|",
+                blank(trimToNull(request.name())),
+                blank(trimToNull(request.description())),
+                String.valueOf(paper.getId()),
+                String.valueOf(request.audienceId()),
+                targets,
+                String.valueOf(request.availableFrom()),
+                String.valueOf(request.dueAt()),
+                String.valueOf(request.maxAttempts()),
+                String.valueOf(request.shuffleQuestions()),
+                String.valueOf(request.shuffleOptions()),
+                blank(trimToNull(request.resultVisibility())),
+                blank(trimToNull(request.status())),
+                variantPolicy.name(),
+                retakeVariantPolicy.name());
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.getBytes(StandardCharsets.UTF_8));
+            StringBuilder value = new StringBuilder(digest.length * 2);
+            for (byte item : digest) value.append(String.format("%02x", item));
+            return value.toString();
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 is unavailable", exception);
+        }
+    }
+
     private ExamAssignmentStatus parseStatusOrNull(String status) {
         if (status == null || status.isBlank()) {
             return null;
@@ -786,6 +1082,31 @@ public class ExamAssignmentService {
             return true;
         }
         return assignment.getDueAt() != null && !now.isBefore(assignment.getDueAt());
+    }
+
+    ExamPaper paperForAttempt(ExamAssignment assignment, ExamAssignmentTarget target, int attemptNumber) {
+        ExamPaper baseline = target.getAssignedExamPaper() == null ? assignment.getExamPaper() : target.getAssignedExamPaper();
+        if (assignment.getRetakeVariantPolicy() != ExamAssignmentRetakeVariantPolicy.ROTATE_VARIANT
+                || assignment.getGenerationBatch() == null
+                || attemptNumber <= 1) {
+            return baseline;
+        }
+        List<ExamPaper> variants = examPaperRepository
+                .findByGenerationBatchOrderByVariantIndexAsc(assignment.getGenerationBatch()).stream()
+                .filter(paper -> paper.getStatus() == ExamPaperStatus.PUBLISHED)
+                .sorted(Comparator.comparing(paper -> paper.getVariantIndex() == null ? paper.getVersion() : paper.getVariantIndex()))
+                .toList();
+        if (variants.isEmpty()) {
+            throw new BadRequestException("Batch mã đề không còn mã đã phát hành để thi lại");
+        }
+        int baselineIndex = 0;
+        for (int index = 0; index < variants.size(); index++) {
+            if (Objects.equals(variants.get(index).getId(), baseline.getId())) {
+                baselineIndex = index;
+                break;
+            }
+        }
+        return variants.get((baselineIndex + attemptNumber - 1) % variants.size());
     }
 
     private ExamResultVisibility parseResultVisibility(String visibility) {

@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.config.RabbitMQConfig;
 import vn.vietduc.carehubbackend.notification.service.EmailService;
@@ -14,6 +15,11 @@ import java.io.IOException;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(
+        prefix = "app.notification",
+        name = "rabbit-listener-enabled",
+        havingValue = "true"
+)
 @RequiredArgsConstructor
 public class EmailConsumer {
     private static final int MAX_EMAIL_ATTEMPTS = 5;
@@ -21,7 +27,10 @@ public class EmailConsumer {
     private final EmailService emailService;
     private final RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queues = RabbitMQConfig.EMAIL_QUEUE)
+    @RabbitListener(
+            queues = RabbitMQConfig.EMAIL_QUEUE,
+            autoStartup = "${app.notification.rabbit-listener-enabled:false}"
+    )
     public void consume(
             EmailMessage message,
             Message amqpMessage,

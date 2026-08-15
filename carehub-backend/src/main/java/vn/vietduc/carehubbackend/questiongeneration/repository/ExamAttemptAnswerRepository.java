@@ -31,8 +31,8 @@ public interface ExamAttemptAnswerRepository extends JpaRepository<ExamAttemptAn
     @Query("""
             SELECT question.id AS questionId,
                    question.stem AS stem,
-                   question.topic AS topic,
-                   question.difficulty AS difficulty,
+                   question.category.name AS topic,
+                   question.cognitiveLevel AS cognitiveLevel,
                    COUNT(answer) AS attemptCount,
                    SUM(CASE WHEN answer.correct = true THEN 1 ELSE 0 END) AS correctCount
             FROM ExamAttemptAnswer answer
@@ -40,7 +40,7 @@ public interface ExamAttemptAnswerRepository extends JpaRepository<ExamAttemptAn
             JOIN paperQuestion.question question
             JOIN answer.attempt attempt
             WHERE attempt.status IN :statuses
-            GROUP BY question.id, question.stem, question.topic, question.difficulty
+            GROUP BY question.id, question.stem, question.category.name, question.cognitiveLevel
             ORDER BY COUNT(answer) DESC
             """)
     List<QuestionItemAnalysisProjection> analyzeQuestionItems(@Param("statuses") Collection<ExamAttemptStatus> statuses);

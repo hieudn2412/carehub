@@ -7,7 +7,8 @@ import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examPaperApi } from '../api/examPaperApi.js'
-import { apiData, apiErrorMessage, difficultyText, formatDateTime } from '../utils/documentQuestionUi.js'
+import { examConfigApi } from '../api/examConfigApi.js'
+import { apiData, apiErrorMessage, cognitiveLevelText, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 
 const EXPORT_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -21,6 +22,7 @@ function ExamPaperListPage({
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [papers, setPapers] = useState([])
+  const [activeConfigs, setActiveConfigs] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
@@ -29,18 +31,72 @@ function ExamPaperListPage({
   const [showAnswers, setShowAnswers] = useState(false)
   const [actionId, setActionId] = useState(null)
   const [pendingArchive, setPendingArchive] = useState(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationResult, setGenerationResult] = useState(null)
+  const [generation, setGeneration] = useState(() => ({
+    examConfigId: '',
+    namePrefix: '',
+    variantCount: 1,
+    randomSeed: '',
+    zeroOverlap: false,
+    idempotencyKey: newIdempotencyKey(),
+  }))
 
   const loadPapers = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await examPaperApi.listExamPapers({})
-      setPapers(apiData(response, []))
+      const [paperResponse, configResponse] = await Promise.all([
+        examPaperApi.listExamPapers({}),
+        examConfigApi.listExamConfigs({ status: 'ACTIVE' }),
+      ])
+      setPapers(apiData(paperResponse, []))
+      setActiveConfigs((apiData(configResponse, []) || []).filter((config) => config.status === 'ACTIVE' && !config.questionSetId))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsLoading(false)
     }
   }, [showToast])
+
+  function updateGeneration(key, value) {
+    setGeneration((current) => ({ ...current, [key]: value, idempotencyKey: newIdempotencyKey() }))
+    setGenerationResult(null)
+  }
+
+  async function generatePapers() {
+    if (!generation.examConfigId) {
+      showToast('Vui lòng chọn cấu hình đề đang hoạt động.', 'warning')
+      return
+    }
+    setIsGenerating(true)
+    try {
+      const preview = apiData(await examConfigApi.previewSavedExamConfig(generation.examConfigId, {
+        variantCount: Number(generation.variantCount),
+        zeroOverlap: generation.zeroOverlap,
+      }))
+      if (!preview?.valid) {
+        showToast(preview?.warnings?.join('; ') || 'Cấu hình chưa đủ nguồn câu hỏi.', 'warning')
+        return
+      }
+      const response = await examPaperApi.generateExamPapers({
+        examConfigId: Number(generation.examConfigId),
+        namePrefix: generation.namePrefix.trim() || null,
+        variantCount: Number(generation.variantCount),
+        randomSeed: generation.randomSeed === '' ? null : Number(generation.randomSeed),
+        zeroOverlap: generation.zeroOverlap,
+        idempotencyKey: generation.idempotencyKey,
+      })
+      const generated = apiData(response, [])
+      setGenerationResult(generated)
+      showToast(`Đã sinh ${generated.length} mã đề ở trạng thái bản nháp.`, 'success')
+      setGeneration((current) => ({ ...current, idempotencyKey: newIdempotencyKey() }))
+      await loadPapers()
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   useEffect(() => {
     const timer = window.setTimeout(loadPapers, 0)
@@ -152,6 +208,52 @@ function ExamPaperListPage({
                   onChange={onViewChange}
                 />
 
+                <section className="exp-generation-panel" aria-labelledby="paper-generation-title">
+                  <div className="exp-generation-panel__intro">
+                    <div>
+                      <span className="exp-section-kicker">SINH THÊM MÃ ĐỀ</span>
+                      <h2 id="paper-generation-title">Sinh thêm mã đề từ ma trận có sẵn</h2>
+                      <p>Dùng khi cần thêm biến thể đề cho một ma trận đã kích hoạt. Bài kiểm tra mới nên tạo từ nút "Tạo bài kiểm tra mới" bên dưới.</p>
+                    </div>
+                    <button type="button" className="exp-btn-primary" onClick={generatePapers} disabled={isGenerating || activeConfigs.length === 0}>
+                      {isGenerating ? 'Đang sinh mã đề...' : 'Kiểm tra nguồn và sinh mã đề'}
+                    </button>
+                  </div>
+                  <div className="exp-generation-grid">
+                    <label>
+                      <span>Cấu hình đã kích hoạt</span>
+                      <select value={generation.examConfigId} onChange={(event) => updateGeneration('examConfigId', event.target.value)}>
+                        <option value="">Chọn cấu hình</option>
+                        {activeConfigs.map((config) => <option key={config.id} value={config.id}>{config.name} · v{config.blueprintVersion}</option>)}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Tiền tố tên đề</span>
+                      <input value={generation.namePrefix} onChange={(event) => updateGeneration('namePrefix', event.target.value)} placeholder="Để trống sẽ dùng tên cấu hình" />
+                    </label>
+                    <label>
+                      <span>Số mã đề</span>
+                      <input type="number" min="1" max="10" value={generation.variantCount} onChange={(event) => updateGeneration('variantCount', event.target.value)} />
+                    </label>
+                    <label>
+                      <span>Master seed (tùy chọn)</span>
+                      <input type="number" value={generation.randomSeed} onChange={(event) => updateGeneration('randomSeed', event.target.value)} placeholder="Tự sinh nếu để trống" />
+                    </label>
+                    <label className="exp-generation-check">
+                      <input type="checkbox" checked={generation.zeroOverlap} onChange={(event) => updateGeneration('zeroOverlap', event.target.checked)} />
+                      <span>Không lặp họ câu hỏi giữa các mã đề</span>
+                    </label>
+                  </div>
+                  {activeConfigs.length === 0 && <p className="exp-generation-panel__empty">Chưa có ma trận đang hoạt động. Hãy tạo và kích hoạt ma trận trước khi sinh mã đề.</p>}
+                  {generationResult?.length > 0 && (
+                    <div className="exp-generation-result" role="status">
+                      <strong>Batch #{generationResult[0].generationBatchId}: {generationResult.length} mã đề</strong>
+                      <span>Overlap {generationResult[0].overlapQuestionCount ?? 0} lượt câu ({Number(generationResult[0].overlapPercentage || 0).toFixed(2)}%)</span>
+                      <span>Thuật toán {generationResult[0].generationAlgorithmVersion}</span>
+                    </div>
+                  )}
+                </section>
+
                 <div className="exp-filter-bar admin-control-toolbar">
                 <div className="admin-control-toolbar__main">
                   <div className="admin-control-toolbar__controls">
@@ -172,7 +274,7 @@ function ExamPaperListPage({
                   </div>
                   <div className="exp-title-actions">
                     <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
-                      <PlusCircleOutlined /> Tạo & giao bài
+                      <PlusCircleOutlined /> Tạo bài kiểm tra mới
                     </button>
                     <button type="button" className="exp-btn-secondary" onClick={loadPapers} disabled={isLoading}>
                       <ReloadOutlined /> Tải lại
@@ -228,6 +330,7 @@ function ExamPaperListPage({
                             <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, false)} title="Tải đề DOCX"><DownloadOutlined /></button>
                             <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => exportPaper(paper, true)} title="Tải đáp án DOCX"><FileTextOutlined /></button>
                             {paper.status === 'DRAFT' && <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--success" onClick={() => publishPaper(paper)} disabled={actionId === paper.id} title="Phát hành"><SendOutlined /></button>}
+                            {paper.status === 'PUBLISHED' && <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => navigate(`/admin/evaluation/exam-assignments/new?paperId=${paper.id}`)} title="Giao đề"><SendOutlined /></button>}
                             <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--danger" onClick={() => archivePaper(paper)} disabled={paper.status === 'ARCHIVED' || actionId === paper.id} title="Lưu trữ"><DeleteOutlined /></button>
                           </div>
                         </td>
@@ -266,15 +369,29 @@ function ExamPaperListPage({
                       <span>{expandedPaper._detail.timeLimitMinutes} phút</span>
                       <span>Đạt {expandedPaper._detail.passingScore}/10</span>
                       <span>{expandedPaper._detail.examConfigName}</span>
-                      <span>{expandedPaper._detail.questionSetName}</span>
+                      {expandedPaper._detail.generationBatchId && <span>Batch #{expandedPaper._detail.generationBatchId} · mã {expandedPaper._detail.variantIndex}</span>}
+                      {expandedPaper._detail.generationAlgorithmVersion && <span>{expandedPaper._detail.generationAlgorithmVersion}</span>}
                     </div>
+
+                    {expandedPaper._detail.coverage?.length > 0 && (
+                      <div className="exp-coverage" aria-label="Đối chiếu ma trận đề">
+                        <strong>Đối chiếu ma trận snapshot</strong>
+                        <div className="exp-coverage__grid">
+                          {expandedPaper._detail.coverage.map((cell) => (
+                            <span className={cell.matchesBlueprint ? 'is-valid' : 'is-invalid'} key={`${cell.professionalFieldId}-${cell.cognitiveLevel}`}>
+                              {cell.professionalFieldName} · {cell.cognitiveLabel}: {cell.actualCount}/{cell.requiredCount}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="exp-question-list">
                       {(expandedPaper._questions || []).map((question) => (
                         <div className="exp-question-card" key={question.id || question.sourceQuestionId}>
                           <div className="exp-question-head">
                             <strong>Câu {question.position}</strong>
-                            <span>{difficultyText(question.difficulty)} · {question.topic || 'Chưa phân loại'}</span>
+                            <span>{question.professionalFieldName || 'Chưa có lĩnh vực'} · {question.cognitiveLabel || cognitiveLevelText(question.cognitiveLevel)} · {question.categoryName || question.topic || 'Chưa có danh mục'}</span>
                           </div>
                           <p>{question.stem}</p>
                           <ol type="A">
@@ -324,6 +441,11 @@ function downloadBlob(filename, content, type) {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+function newIdempotencyKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  return `paper-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 export default ExamPaperListPage

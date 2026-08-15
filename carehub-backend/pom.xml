@@ -91,6 +91,14 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <dependency>
@@ -159,6 +167,24 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
+        </dependency>
+        <!-- Real HTTP API tests need PATCH and must not share JDK HttpClient's
+             loopback connection pool with the embedded Tomcat test server. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <!--
+              AWS SDK's Apache 5 S3 transport is used at runtime by R2Config.
+              Keep the HTTP client on the runtime classpath as well as the test
+              classpath; a test-scoped override causes Spring Boot to omit the
+              classes required to create S3Client when the application starts.
+            -->
+            <version>5.6.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents.core5</groupId>
+            <artifactId>httpcore5</artifactId>
+            <version>5.4.3</version>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

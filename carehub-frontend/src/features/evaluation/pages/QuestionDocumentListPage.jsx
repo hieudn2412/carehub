@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   EyeOutlined,
   CloseOutlined,
+  DeleteOutlined,
   FileAddOutlined,
   FileSearchOutlined,
   FilterOutlined,
@@ -14,6 +15,7 @@ import {
 } from '@ant-design/icons'
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -39,6 +41,7 @@ function QuestionDocumentListPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedFile, setSelectedFile] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef(null)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -51,6 +54,8 @@ function QuestionDocumentListPage() {
   const [showCategoryModal, setShowCategoryModal] = useState(false)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [categoryForm, setCategoryForm] = useState({ name: '', code: '', description: '' })
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [isDeletingDocument, setIsDeletingDocument] = useState(false)
 
   const loadDocuments = useCallback(async () => {
     setIsLoading(true)
@@ -94,6 +99,13 @@ function QuestionDocumentListPage() {
     setSelectedFile(file)
   }
 
+  function clearSelectedFile() {
+    setSelectedFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   async function handleUpload() {
     if (!selectedFile) {
       showToast('Vui lòng chọn tệp tài liệu trước khi tải lên.', 'warning')
@@ -103,7 +115,7 @@ function QuestionDocumentListPage() {
     try {
       const response = await documentQuestionApi.uploadDocument(selectedFile)
       const uploaded = apiData(response)
-      setSelectedFile(null)
+      clearSelectedFile()
       await loadDocuments()
       if (uploaded?.status === 'OCR_REQUIRED') {
         showToast('Tài liệu cần OCR trước khi tạo câu hỏi.', 'warning')
@@ -114,6 +126,22 @@ function QuestionDocumentListPage() {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsUploading(false)
+    }
+  }
+
+  async function deleteDocument() {
+    if (!deleteTarget) return
+    setIsDeletingDocument(true)
+    try {
+      await documentQuestionApi.deleteDocument(deleteTarget.id)
+      setDocuments((current) => current.filter((document) => document.id !== deleteTarget.id))
+      setPage(0)
+      setDeleteTarget(null)
+      showToast('Đã xóa tài liệu.', 'success')
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    } finally {
+      setIsDeletingDocument(false)
     }
   }
 
@@ -219,6 +247,7 @@ function QuestionDocumentListPage() {
                     <UploadOutlined />
                     <span>Chọn tệp</span>
                     <input
+                      ref={fileInputRef}
                       type="file"
                       accept=".pdf,.docx,.txt,.md"
                       onChange={handleFileChange}
@@ -230,6 +259,17 @@ function QuestionDocumentListPage() {
                     {isUploading ? <LoadingOutlined /> : <FileAddOutlined />}
                     <span>{isUploading ? 'Đang tải và phân tích tài liệu...' : 'Tải lên'}</span>
                   </button>
+                  {selectedFile && (
+                    <button
+                      type="button"
+                      className="qdoc-secondary-btn qdoc-secondary-btn--danger"
+                      onClick={clearSelectedFile}
+                      disabled={isUploading}
+                    >
+                      <CloseOutlined />
+                      <span>Bỏ chọn</span>
+                    </button>
+                  )}
                 </div>
               </section>
 
@@ -371,6 +411,17 @@ function QuestionDocumentListPage() {
                               >
                                 <PlayCircleOutlined />
                               </button>
+                              {!document.latestQuestionJob && (
+                                <button
+                                  type="button"
+                                  className="admin-table-action admin-table-action--icon admin-table-action--danger"
+                                  title="Xóa tài liệu"
+                                  aria-label={`Xóa tài liệu ${document.filename}`}
+                                  onClick={() => setDeleteTarget(document)}
+                                >
+                                  <DeleteOutlined />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -395,19 +446,26 @@ function QuestionDocumentListPage() {
       {jobModalDocument && (
         <div className="qdoc-modal-backdrop">
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="create-job-title">
-            <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
-            <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
+            <div className="qdoc-modal-heading-row">
+              <div>
+                <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
+                <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
+              </div>
+              <button type="button" className="qdoc-icon-btn" aria-label="Đóng" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>
+                <CloseOutlined />
+              </button>
+            </div>
             <div className="qdoc-field">
               <div className="qdoc-modal-heading-row">
-                <span>Danh mục câu hỏi</span>
-                <button type="button" className="qdoc-inline-add-btn" onClick={() => setShowCategoryModal(true)}>
+                <span>Danh mục câu hỏi <em>*</em></span>
+                <button type="button" className="qdoc-inline-add-btn" onClick={() => setShowCategoryModal(true)} disabled={isCreatingJob}>
                   <PlusOutlined /> Thêm mới
                 </button>
               </div>
               <select
-                className="qdoc-select"
                 value={selectedCategoryId}
                 onChange={(event) => setSelectedCategoryId(event.target.value)}
+                disabled={isCreatingJob}
               >
                 <option value="">-- Chọn danh mục --</option>
                 {categories.map((cat) => (
@@ -426,11 +484,12 @@ function QuestionDocumentListPage() {
                 max="5"
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
+                disabled={isCreatingJob}
               />
+              <small className="qdoc-field-help">
+                Tài liệu sẽ được chia thành các đoạn nội dung, mỗi đoạn sinh tối đa số câu đã chọn. Nên bắt đầu với 1 để kiểm soát chất lượng.
+              </small>
             </label>
-            <div className="qdoc-note">
-              Chọn danh mục để gom nhóm câu hỏi. Tài liệu sẽ được chia thành các đoạn nội dung để tạo câu hỏi.
-            </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>
                 Hủy
@@ -473,6 +532,19 @@ function QuestionDocumentListPage() {
             </div>
           </form>
         </div>
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Xóa tài liệu"
+          message={`Bạn có chắc muốn xóa tài liệu "${deleteTarget.filename}"? Tài liệu sẽ không thể khôi phục.`}
+          confirmLabel="Xóa tài liệu"
+          danger
+          confirming={isDeletingDocument}
+          onConfirm={deleteDocument}
+          onCancel={() => {
+            if (!isDeletingDocument) setDeleteTarget(null)
+          }}
+        />
       )}
     </div>
   )

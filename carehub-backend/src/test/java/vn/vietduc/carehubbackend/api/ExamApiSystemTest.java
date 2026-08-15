@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -37,12 +40,15 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
 
     @Autowired
     private ProfessionalFieldRepository professionalFieldRepository;
+    @Autowired
+    private QuestionCategoryRepository questionCategoryRepository;
 
     private User admin;
     private User employee;
     private String adminToken;
     private String employeeToken;
     private ProfessionalField professionalField;
+    private QuestionCategory questionCategory;
 
     @BeforeEach
     void createFixtures() {
@@ -55,12 +61,28 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                 .name("Lĩnh vực L3")
                 .active(true)
                 .build());
+        questionCategory = questionCategoryRepository.save(QuestionCategory.builder()
+                .code("L3CAT%04d".formatted(nextSeq()))
+                .name("An toàn L3")
+                .status(QuestionCategoryStatus.ACTIVE)
+                .createdBy("system-test")
+                .build());
     }
 
     @DisplayName("L3-EXM-01 | Auth-Wrong-Role: GET /questions with a plain USER token (no evaluation permission) → 403 AUTH_002")
     @Test
     void questionBankIsClosedWithoutEvaluationPermissions() {
         assertError(get(API + "/questions", employeeToken), HttpStatus.FORBIDDEN, "AUTH_002");
+    }
+
+    @DisplayName("L3-EXM-01b | Auth: result report/export surfaces are closed without RESULT_VIEWER")
+    @Test
+    void resultReportRequiresResultViewerPermission() {
+        assertError(get(API + "/evaluation-results?assignmentId=999999", employeeToken), HttpStatus.FORBIDDEN, "AUTH_002");
+
+        String viewerToken = tokenFor(newUserWithPermissions("L3XRES", EvaluationPermissions.RESULT_VIEWER));
+        ResponseEntity<String> response = get(API + "/evaluation-results?assignmentId=999999", viewerToken);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @DisplayName("L3-EXM-02 | Contract: GET /questions with QUESTION_AUTHOR → 200 and data is a bare JSON array, not a PageResponse")
@@ -128,6 +150,60 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         assertThat(data(response).get("status").asText()).isEqualTo("APPROVED");
     }
 
+    @DisplayName("L3-EXM-06b | Cognitive-review: reviewer may classify a bank question, author alone is rejected")
+    @Test
+    void cognitiveReviewEndpointEnforcesReviewerPermissionAndUpdatesQuestion() {
+        String authorToken = tokenFor(newUserWithPermissions("L3XCRAUT",
+                EvaluationPermissions.QUESTION_AUTHOR));
+        long questionId = id(post(API + "/questions", authorToken, questionBody("cognitive api")));
+        String reviewBody = """
+                {"reviews":[{"questionId":%d,"cognitiveLevel":"CLINICAL_APPLICATION",
+                 "reviewerNotes":"Đã đối chiếu ma trận nhận thức"}]}
+                """.formatted(questionId);
+
+        assertError(post(API + "/questions/cognitive-review", authorToken, reviewBody),
+                HttpStatus.FORBIDDEN, "AUTH_002");
+
+        String reviewerToken = tokenFor(newUserWithPermissions("L3XCRREV",
+                EvaluationPermissions.QUESTION_REVIEWER));
+        ResponseEntity<String> reviewed = post(API + "/questions/cognitive-review", reviewerToken, reviewBody);
+
+        assertOk(reviewed);
+        JsonNode result = data(reviewed);
+        assertThat(result.get("totalRows").asInt()).isEqualTo(1);
+        assertThat(result.get("updatedCount").asInt()).isEqualTo(1);
+        assertThat(result.get("rows").get(0).get("questionId").asLong()).isEqualTo(questionId);
+        assertThat(result.get("rows").get(0).get("cognitiveLevel").asText())
+                .isEqualTo("CLINICAL_APPLICATION");
+        assertThat(result.get("rows").get(0).get("verifiedBy").asText()).isNotBlank();
+    }
+
+    @DisplayName("L3-EXM-06c | Audience: real HTTP preview exposes validity and activation accepts only a non-empty audience")
+    @Test
+    void audiencePreviewAndActivationAreAvailableThroughTheApi() {
+        String audienceToken = tokenFor(newUserWithPermissions("L3XAUD",
+                EvaluationPermissions.ASSIGNMENT_MANAGER));
+        String allEmployeesRule = "{\"version\":1,\"all\":[{\"type\":\"ALL_EMPLOYEES\"}]}";
+        String quotedRule = "\"" + allEmployeesRule.replace("\"", "\\\"") + "\"";
+
+        ResponseEntity<String> preview = post(API + "/evaluation-audiences/preview", audienceToken,
+                "{\"ruleJson\":" + quotedRule + "}");
+        assertOk(preview);
+        assertThat(data(preview).get("valid").asBoolean()).isTrue();
+        assertThat(data(preview).get("count").asInt()).isGreaterThan(0);
+
+        ResponseEntity<String> created = post(API + "/evaluation-audiences", audienceToken,
+                "{\"name\":\"Toàn viện L3\",\"ruleJson\":" + quotedRule + "}");
+        assertOk(created);
+        long audienceId = id(created);
+
+        ResponseEntity<String> activated = post(API + "/evaluation-audiences/" + audienceId + "/activate",
+                audienceToken, "{}");
+        assertOk(activated);
+        assertThat(data(activated).get("status").asText()).isEqualTo("ACTIVE");
+        assertThat(data(activated).get("preview").get("valid").asBoolean()).isTrue();
+    }
+
     @DisplayName("L3-EXM-07 | Input-Domain-Happy: POST /question-sets then /activate → ACTIVE with the approved question counted")
     @Test
     void questionSetGoesActiveWithApprovedQuestions() {
@@ -192,7 +268,7 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         long configId = activeExamConfig();
 
         ResponseEntity<String> generated = post(API + "/exam-papers/generate", adminToken, """
-                {"examConfigId":%d,"namePrefix":"Đề L3","variantCount":1,"randomSeed":7}
+                {"examConfigId":%d,"namePrefix":"Đề L3","variantCount":1,"randomSeed":7,"idempotencyKey":"l3-paper-generate"}
                 """.formatted(configId));
         assertOk(generated);
         assertThat(data(generated).isArray()).isTrue();
@@ -341,7 +417,7 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
                  ]}
                 """.formatted(nextSeq(), setId)));
         ResponseEntity<String> generated = post(API + "/exam-papers/generate", adminToken, """
-                {"examConfigId":%d,"namePrefix":"Đề cân bằng","variantCount":1,"randomSeed":99}
+                {"examConfigId":%d,"namePrefix":"Đề cân bằng","variantCount":1,"randomSeed":99,"idempotencyKey":"l3-paper-balanced"}
                 """.formatted(configId));
         assertOk(generated);
         JsonNode paper = data(generated).get(0);
@@ -374,15 +450,17 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
     private String questionBody(String label) {
         return """
                 {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
-                 "correctAnswer":"A","explanation":"L3 system test","topic":"An toàn","difficulty":"EASY","language":"vi"}
-                """.formatted(label, nextSeq());
+                 "correctAnswer":"A","explanation":"L3 system test","categoryId":%d,
+                 "professionalFieldId":%d,"cognitiveLevel":"FOUNDATION","difficulty":"EASY","language":"vi"}
+                """.formatted(label, nextSeq(), questionCategory.getId(), professionalField.getId());
     }
 
     private String questionBody(String label, String difficulty) {
         return """
                 {"stem":"Câu hỏi L3 %s %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không rõ",
-                 "correctAnswer":"A","explanation":"L3 system test","topic":"An toàn","difficulty":"%s","language":"vi"}
-                """.formatted(label, nextSeq(), difficulty);
+                 "correctAnswer":"A","explanation":"L3 system test","categoryId":%d,
+                 "professionalFieldId":%d,"cognitiveLevel":"CLINICAL_APPLICATION","difficulty":"%s","language":"vi"}
+                """.formatted(label, nextSeq(), questionCategory.getId(), professionalField.getId(), difficulty);
     }
 
     /** Explicit DRAFT — without a status the service approves on create (D41). */
@@ -450,8 +528,8 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
 
     private long publishedPaper() {
         ResponseEntity<String> generated = post(API + "/exam-papers/generate", adminToken, """
-                {"examConfigId":%d,"namePrefix":"Đề chuỗi","variantCount":1,"randomSeed":11}
-                """.formatted(activeExamConfig()));
+                {"examConfigId":%d,"namePrefix":"Đề chuỗi","variantCount":1,"randomSeed":11,"idempotencyKey":"l3-paper-chain-%d"}
+                """.formatted(activeExamConfig(), nextSeq()));
         assertOk(generated);
         long paperId = data(generated).get(0).get("id").asLong();
         assertOk(post(API + "/exam-papers/" + paperId + "/publish", adminToken, "{}"));
@@ -460,10 +538,10 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
 
     private String assignmentBody(long paperId, int maxAttempts) {
         return """
-                {"name":"Phân công L3 %d","examPaperId":%d,"professionalFieldId":%d,"userIds":[%d],
+                {"name":"Phân công L3 %d","examPaperId":%d,"userIds":[%d],"idempotencyKey":"l3-assignment-%d",
                  "maxAttempts":%d,"shuffleQuestions":false,"shuffleOptions":false,
                  "resultVisibility":"SCORE_ONLY","status":"DRAFT"}
-                """.formatted(nextSeq(), paperId, professionalField.getId(), employee.getId(), maxAttempts);
+                """.formatted(nextSeq(), paperId, employee.getId(), nextSeq(), maxAttempts);
     }
 
     private long openAssignment(int maxAttempts) {

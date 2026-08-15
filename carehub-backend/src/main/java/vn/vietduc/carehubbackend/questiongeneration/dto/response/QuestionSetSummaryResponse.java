@@ -7,12 +7,25 @@ public record QuestionSetSummaryResponse(
         String code,
         String name,
         String description,
-        String category,
-        String difficulty,
+        String cognitiveLevel,
         String status,
         String statusText,
         Integer questionCount,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        Long professionalFieldId,
+        String professionalFieldCode,
+        String professionalFieldName,
+        Long questionSetCategoryId,
+        String questionSetCategoryCode,
+        String questionSetCategoryName
 ) {
+    public QuestionSetSummaryResponse(
+            Long id, String code, String name, String description, String cognitiveLevel,
+            String status, String statusText, Integer questionCount, LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this(id, code, name, description, cognitiveLevel, status, statusText, questionCount,
+                createdAt, updatedAt, null, null, null, null, null, null);
+    }
 }

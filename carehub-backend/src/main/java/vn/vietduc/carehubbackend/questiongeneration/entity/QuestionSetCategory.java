@@ -39,9 +39,6 @@ public class QuestionSetCategory extends BaseEntity {
     @Column(nullable = false, length = 24)
     private QuestionSetCategoryStatus status;
 
-    @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder;
-
     @Column(name = "created_by", length = 100)
     private String createdBy;
 }
