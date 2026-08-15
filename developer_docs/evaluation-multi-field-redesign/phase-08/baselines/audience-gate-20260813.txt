@@ -1,0 +1,17 @@
+Phase 8 audience gate verification — 2026-08-13
+
+Implementation:
+  - Preview returns valid=false when the resolved audience is empty.
+  - Preview returns valid=false when required data is missing (for example,
+    employment_start_date for a seniority rule).
+  - Activation rejects an invalid/empty preview.
+  - Assignment resolution re-runs preview and rejects invalid or incomplete
+    audience data before target snapshot.
+
+Remote read-only evidence:
+  - ACTIVE and not-deleted users: 12
+  - ACTIVE users with employment_start_date: 0
+  - training_groups: 0
+  - evaluation_audiences: 0
+
+Therefore EVAL_AUDIENCE_RULES_V1 remains disabled. No remote data was written.

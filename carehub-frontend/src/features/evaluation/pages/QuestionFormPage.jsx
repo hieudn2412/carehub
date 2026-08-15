@@ -1,27 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
-import { apiData, apiErrorMessage, difficultyText } from '../utils/documentQuestionUi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
+import { apiData, apiErrorMessage, COGNITIVE_LEVELS } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionFormPage.css'
 
-const CATEGORIES = ['Kiểm soát nhiễm khuẩn', 'Quy trình lâm sàng', 'Cấp cứu', 'An toàn người bệnh']
-const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
 const ANSWER_LETTERS = ['A', 'B', 'C', 'D']
 const EMPTY_OPTIONS = ['', '', '', '']
 
-function formSnapshot({ content, category, difficulty, options, correctOptionIndices }) {
-  return JSON.stringify({ content, category, difficulty, options, correctOptionIndices })
-}
-
-function difficultyValue(label) {
-  if (label === 'Dễ') return 'EASY'
-  if (label === 'Khó') return 'HARD'
-  return 'MEDIUM'
+function formSnapshot({ content, category, categoryId, professionalFieldId, cognitiveLevel, options, correctOptionIndices }) {
+  return JSON.stringify({ content, category, categoryId, professionalFieldId, cognitiveLevel, options, correctOptionIndices })
 }
 
 function QuestionFormPage() {
@@ -33,12 +27,31 @@ function QuestionFormPage() {
   // Form State
   const [content, setContent] = useState('')
   const [category, setCategory] = useState('Kiểm soát nhiễm khuẩn')
-  const [difficulty, setDifficulty] = useState('Dễ')
+  const [categoryId, setCategoryId] = useState('')
+  const [professionalFieldId, setProfessionalFieldId] = useState('')
+  const [professionalFields, setProfessionalFields] = useState([])
+  const [cognitiveLevel, setCognitiveLevel] = useState('')
   const [isLoadingQuestion, setIsLoadingQuestion] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [backendCategories, setBackendCategories] = useState([])
   const [impactWarning, setImpactWarning] = useState(null)
   const [loadError, setLoadError] = useState('')
+
+  const professionalFieldOptions = useMemo(() => [
+    ...professionalFields.map((field) => ({
+      value: String(field.id),
+      label: field.name,
+      searchText: field.code ? `${field.code} ${field.name}` : field.name,
+    })),
+  ], [professionalFields])
+
+  const categoryOptions = useMemo(() => [
+    ...backendCategories.map((item) => ({
+      value: String(item.id),
+      label: item.name,
+      searchText: item.code ? `${item.code} ${item.name}` : item.name,
+    })),
+  ], [backendCategories])
 
   // Dynamic Options State
   const [options, setOptions] = useState(EMPTY_OPTIONS)
@@ -46,7 +59,9 @@ function QuestionFormPage() {
   const [baselineSnapshot, setBaselineSnapshot] = useState(() => isEditMode ? null : formSnapshot({
     content: '',
     category: 'Kiểm soát nhiễm khuẩn',
-    difficulty: 'Dễ',
+    categoryId: '',
+    professionalFieldId: '',
+    cognitiveLevel: '',
     options: EMPTY_OPTIONS,
     correctOptionIndices: [0],
   }))
@@ -56,28 +71,28 @@ function QuestionFormPage() {
   const currentSnapshot = useMemo(() => formSnapshot({
     content,
     category,
-    difficulty,
+    categoryId,
+    professionalFieldId,
+    cognitiveLevel,
     options,
     correctOptionIndices,
-  }), [category, content, correctOptionIndices, difficulty, options])
+  }), [category, categoryId, content, cognitiveLevel, correctOptionIndices, options, professionalFieldId])
   const hasUnsavedChanges = baselineSnapshot !== null && currentSnapshot !== baselineSnapshot
-
-  const categoryOptions = useMemo(() => {
-    const names = backendCategories.length > 0 ? backendCategories.map((item) => item.name) : CATEGORIES
-    if (category && !names.includes(category)) {
-      return [category, ...names]
-    }
-    return names
-  }, [backendCategories, category])
 
   useEffect(() => {
     let ignore = false
 
     async function loadCategories() {
       try {
-        const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
+        const [response, optionsResponse] = await Promise.all([
+          questionCategoryApi.listCategories({
+            status: 'ACTIVE',
+          }),
+          trainingApi.getRecordOptions(),
+        ])
         if (!ignore) {
           setBackendCategories(apiData(response, []))
+          setProfessionalFields(apiData(optionsResponse, {}).professionalFields || [])
         }
       } catch (error) {
         if (!ignore) {
@@ -114,20 +129,23 @@ function QuestionFormPage() {
         if (ignore) return
 
         const loadedContent = question.stem || ''
-        const loadedCategory = question.topic || question.sourceDocument || 'Chưa phân loại'
-        const loadedDifficulty = difficultyText(question.difficulty)
+        const loadedCategory = question.categoryName || question.sourceDocument || 'Chưa phân loại'
         const loadedOptions = [question.optionA || '', question.optionB || '', question.optionC || '', question.optionD || '']
         const loadedCorrectIndices = [Math.max(0, ANSWER_LETTERS.indexOf(String(question.correctAnswer || 'A').toUpperCase()))]
 
         setContent(loadedContent)
         setCategory(loadedCategory)
-        setDifficulty(loadedDifficulty)
+        setCategoryId(question.categoryId ? String(question.categoryId) : '')
+        setProfessionalFieldId(question.professionalFieldId ? String(question.professionalFieldId) : '')
+        setCognitiveLevel(question.cognitiveLevel || '')
         setOptions(loadedOptions)
         setCorrectOptionIndices(loadedCorrectIndices)
         setBaselineSnapshot(formSnapshot({
           content: loadedContent,
           category: loadedCategory,
-          difficulty: loadedDifficulty,
+          categoryId: question.categoryId ? String(question.categoryId) : '',
+          professionalFieldId: question.professionalFieldId ? String(question.professionalFieldId) : '',
+          cognitiveLevel: question.cognitiveLevel || '',
           options: loadedOptions,
           correctOptionIndices: loadedCorrectIndices,
         }))
@@ -211,6 +229,16 @@ function QuestionFormPage() {
       return
     }
 
+    if (!professionalFieldId || !categoryId) {
+      showToast('Vui lòng chọn lĩnh vực chuyên môn và danh mục kiến thức.', 'warning')
+      return
+    }
+
+    if (!cognitiveLevel) {
+      showToast('Vui lòng phân loại mức độ nhận thức cho câu hỏi.', 'warning')
+      return
+    }
+
     if (options.length !== 4 || options.some(opt => !opt.trim())) {
       showToast('Vui lòng nhập đủ 4 phương án trả lời A-D.', 'warning')
       return
@@ -229,8 +257,9 @@ function QuestionFormPage() {
       optionD: options[3].trim(),
       correctAnswer: ANSWER_LETTERS[correctOptionIndices[0]],
       explanation: null,
-      topic: category,
-      difficulty: difficultyValue(difficulty),
+      categoryId: categoryId ? Number(categoryId) : null,
+      professionalFieldId: professionalFieldId ? Number(professionalFieldId) : null,
+      cognitiveLevel,
       language: 'vi',
       sourceDocument: null,
       status: 'APPROVED',
@@ -332,39 +361,50 @@ function QuestionFormPage() {
               <div className="qf-form-row">
                 <div className="qf-form-group">
                   <label>
+                    Lĩnh vực chuyên môn <span className="qf-required-star">*</span>
+                  </label>
+                  <SearchableSelect
+                    value={professionalFieldId}
+                    options={professionalFieldOptions}
+                    onChange={(val) => setProfessionalFieldId(val)}
+                    placeholder="Chọn lĩnh vực chuyên môn..."
+                    searchPlaceholder="Tìm lĩnh vực chuyên môn..."
+                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                    ariaLabel="Lĩnh vực chuyên môn"
+                  />
+                </div>
+                <div className="qf-form-group">
+                  <label>
                     Danh mục <span className="qf-required-star">*</span>
                   </label>
-                  <select
-                    className="qf-input-red"
-                    required
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                  <SearchableSelect
+                    value={categoryId}
+                    options={categoryOptions}
+                    onChange={(val) => {
+                      setCategoryId(val)
+                      const selected = backendCategories.find((item) => String(item.id) === String(val))
+                      setCategory(selected?.name || '')
+                    }}
+                    placeholder="Chọn danh mục kiến thức..."
+                    searchPlaceholder="Tìm danh mục kiến thức..."
                     disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                  >
-                    {categoryOptions.map((cat, idx) => (
-                      <option key={idx} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel="Danh mục kiến thức"
+                  />
                 </div>
 
                 <div className="qf-form-group">
                   <label>
-                    Độ khó <span className="qf-required-star">*</span>
+                    Mức độ nhận thức <span className="qf-required-star">*</span>
                   </label>
                   <select
                     className="qf-input-red"
                     required
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
+                    value={cognitiveLevel}
+                    onChange={(e) => setCognitiveLevel(e.target.value)}
                     disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                   >
-                    {DIFFICULTIES.map((diff, idx) => (
-                      <option key={idx} value={diff}>
-                        {diff}
-                      </option>
-                    ))}
+                    <option value="">Chọn mức độ nhận thức</option>
+                    {COGNITIVE_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
                   </select>
                 </div>
               </div>

@@ -34,7 +34,6 @@ class QuestionClassificationRuleServiceTest {
                 .code("ATNB")
                 .name("An toàn người bệnh")
                 .status(QuestionCategoryStatus.ACTIVE)
-                .sortOrder(1)
                 .build();
         when(categoryRepository.findById(category.getId())).thenReturn(Optional.of(category));
         when(ruleRepository.save(any(QuestionClassificationRule.class))).thenAnswer(invocation -> {

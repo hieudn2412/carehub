@@ -12,7 +12,7 @@ public record UpdateParaphraseCandidateRequest(
         @Pattern(regexp = "[ABCD]") String correctAnswer,
         String explanation,
         String topic,
-        String difficulty,
+        String cognitiveLevel,
         String reviewerNotes
 ) {
 }

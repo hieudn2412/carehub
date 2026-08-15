@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
-import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 
 @Entity
@@ -27,11 +26,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategor
 )
 public class QuestionCategory extends BaseEntity {
 
-    /** The professional competency domain that owns this knowledge category. */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "professional_field_id")
-    private ProfessionalField professionalField;
-
     @Column(nullable = false, length = 80)
     private String code;
 
@@ -44,9 +38,6 @@ public class QuestionCategory extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     private QuestionCategoryStatus status;
-
-    @Column(name = "sort_order", nullable = false)
-    private Integer sortOrder;
 
     @Column(name = "created_by", length = 100)
     private String createdBy;

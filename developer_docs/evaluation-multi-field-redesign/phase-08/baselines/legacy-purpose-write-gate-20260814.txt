@@ -1,0 +1,12 @@
+﻿Phase 8 legacy purpose-category gate evidence — 2026-08-14
+
+Command:
+  .\mvnw.cmd -q "-Dtest=QuestionSetCategoryControllerTest,EvaluationAudienceServiceTest,ExamAssignmentControllerTest" test
+
+Surefire result:
+  QuestionSetCategoryControllerTest: 2 tests, 0 failures, 0 errors
+  ExamAssignmentControllerTest: 1 test, 0 failures, 0 errors
+  EvaluationAudienceServiceTest: 10 tests, 0 failures, 0 errors
+
+Coverage added: create, update and archive of retired question-set purpose categories are rejected in production-default mode before the service or audit log is called.
+Normal seeding keeps the six retired purposes disabled unless LEGACY_QUESTION_SET_WRITE_ENABLED=true.

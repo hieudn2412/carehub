@@ -664,8 +664,8 @@ public class CompetencyService {
             return attempt.getExamPaper() != null
                     && attempt.getExamPaper().getExamConfig() != null
                     && attempt.getExamPaper().getExamConfig().getQuestionSet() != null
-                    && attempt.getExamPaper().getExamConfig().getQuestionSet().getCategory() != null
-                    ? attempt.getExamPaper().getExamConfig().getQuestionSet().getCategory()
+                    && attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory() != null
+                    ? attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory().getName()
                     : "Chung";
         } catch (Exception e) {
             return "Chung";

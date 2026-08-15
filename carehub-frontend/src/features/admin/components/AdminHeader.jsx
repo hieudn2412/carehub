@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   BellOutlined,
   WarningOutlined,
@@ -14,7 +14,6 @@ import { staffApi } from '../../staff/api/staffApi'
 import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
-import EvaluationWorkflow from '../../evaluation/components/EvaluationWorkflow.jsx'
 import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
 import MobileSearchSheet from '../../../shared/components/MobileSearchSheet.jsx'
 import '../styles/AdminHeader.css'
@@ -31,7 +30,7 @@ function getFallbackLink(label, roles = []) {
     return '/admin/evaluation/classification-rules'
   }
   if (lbl.includes('bộ câu hỏi')) {
-    return '/admin/evaluation/question-sets'
+    return '/admin/evaluation/question-bank'
   }
   if (lbl.includes('danh mục câu hỏi')) {
     return '/admin/evaluation/categories'
@@ -77,7 +76,6 @@ function getFallbackLink(label, roles = []) {
 
 function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', breadcrumbs, back, mobileSearch }) {
   const [profile, setProfile] = useState(null)
-  const location = useLocation()
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
@@ -219,7 +217,6 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
             <h1 className="dashboard-header__title">{title}</h1>
           )}
         </div>
-      {location.pathname.startsWith('/admin/evaluation/') && <EvaluationWorkflow />}
       </div>
 
       <div className="dashboard-header__right">

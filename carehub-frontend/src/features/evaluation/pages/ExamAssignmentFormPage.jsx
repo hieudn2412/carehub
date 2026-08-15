@@ -9,6 +9,7 @@ import { examPaperApi } from '../api/examPaperApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/ExamPaperPages.css'
 
 const initialForm = {
@@ -202,10 +203,24 @@ export default function ExamAssignmentFormPage() {
                         <span className="exp-form-section__number">02</span>
                         <div><h3>Thiết lập thời gian và lượt làm</h3><p>Để trống thời gian nếu đề được mở và đóng thủ công.</p></div>
                       </div>
-                      <div className="exp-form-grid">
-                        <label><span>Số lượt làm tối đa</span><input type="number" min="1" max="10" value={form.maxAttempts} onChange={(event) => update('maxAttempts', event.target.value)} /></label>
-                        <label><span>Mở đề lúc</span><input type="datetime-local" value={form.availableFrom} onChange={(event) => update('availableFrom', event.target.value)} /></label>
-                        <label><span>Hạn hoàn thành</span><input type="datetime-local" value={form.dueAt} onChange={(event) => update('dueAt', event.target.value)} /></label>
+                      <div className="exp-schedule-card">
+                        <div className="exp-schedule-row">
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Mở đề lúc (tùy chọn)</label>
+                            <DateTimePicker24h value={form.availableFrom} onChange={(val) => update('availableFrom', val)} />
+                          </div>
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Hạn nộp bài (tùy chọn)</label>
+                            <DateTimePicker24h value={form.dueAt} onChange={(val) => update('dueAt', val)} />
+                          </div>
+                          <div className="exp-schedule-field exp-schedule-field--compact">
+                            <label className="exp-schedule-label">Số lượt làm tối đa</label>
+                            <div className="exp-number-stepper">
+                              <input type="number" min="1" max="10" className="exp-num-input" value={form.maxAttempts} onChange={(event) => update('maxAttempts', event.target.value)} />
+                              <span className="exp-stepper-unit">lần</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       {scheduleInvalid && <div className="ch-alert ch-alert--error">Thời điểm mở đề phải sớm hơn hạn hoàn thành.</div>}
                     </section>

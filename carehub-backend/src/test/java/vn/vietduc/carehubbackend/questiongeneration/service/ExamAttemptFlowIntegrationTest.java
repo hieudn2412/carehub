@@ -21,24 +21,33 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCellResultRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCognitiveResultRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptFieldResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
@@ -73,6 +82,12 @@ class ExamAttemptFlowIntegrationTest {
     @Autowired
     private ExamAttemptRepository attemptRepository;
     @Autowired
+    private ExamAttemptFieldResultRepository fieldResultRepository;
+    @Autowired
+    private ExamAttemptCognitiveResultRepository cognitiveResultRepository;
+    @Autowired
+    private ExamAttemptCellResultRepository cellResultRepository;
+    @Autowired
     private ExamAssignmentRepository assignmentRepository;
     @Autowired
     private ExamAssignmentTargetRepository targetRepository;
@@ -89,6 +104,10 @@ class ExamAttemptFlowIntegrationTest {
     @Autowired
     private QuestionBankQuestionRepository questionRepository;
     @Autowired
+    private QuestionCategoryRepository categoryRepository;
+    @Autowired
+    private ProfessionalFieldRepository professionalFieldRepository;
+    @Autowired
     private UserRepository userRepository;
     @Autowired
     private TrainingRecordRepository trainingRecordRepository;
@@ -101,6 +120,8 @@ class ExamAttemptFlowIntegrationTest {
     private User employee;
     private ExamPaper paper;
     private List<ExamPaperQuestion> paperQuestions;
+    private QuestionCategory category;
+    private ProfessionalField professionalField;
 
     @BeforeEach
     void setUp() {
@@ -111,6 +132,17 @@ class ExamAttemptFlowIntegrationTest {
                 .name("Exam Taker " + seq)
                 .password("secret")
                 .status(UserStatus.ACTIVE)
+                .build());
+        professionalField = professionalFieldRepository.save(ProfessionalField.builder()
+                .code("EXM-FIELD-%03d".formatted(seq))
+                .name("Lĩnh vực kiểm tra " + seq)
+                .active(true)
+                .build());
+        category = categoryRepository.save(QuestionCategory.builder()
+                .code("EXM-CAT-%03d".formatted(seq))
+                .name("Danh mục kiểm tra " + seq)
+                .status(QuestionCategoryStatus.ACTIVE)
+                .createdBy("integration-test")
                 .build());
         vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet questionSet =
                 questionSetRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet.builder()
@@ -325,11 +357,55 @@ class ExamAttemptFlowIntegrationTest {
                 .toList()).isEmpty();
     }
 
+    @DisplayName("L2-EXM-12 | Phase 7: grading writes field/cognitive/cell aggregates from question snapshots")
+    @Test
+    void gradingWritesSnapshotBasedResultAggregates() {
+        ExamAssignment assignment = seedAssignment(1, null);
+        ExamAttemptResponse graded = attemptService.submit(
+                attemptService.start(assignment.getId(), employee.getId()).id(),
+                employee.getId(),
+                answers("A", "B")
+        );
+        ExamAttempt attempt = attemptRepository.findById(graded.id()).orElseThrow();
+
+        var fieldResults = fieldResultRepository.findByAttemptOrderByProfessionalFieldIdAsc(attempt);
+        assertThat(fieldResults).singleElement();
+        var field = fieldResults.get(0);
+        assertThat(field.getProfessionalFieldId()).isEqualTo(professionalField.getId());
+        assertThat(field.getProfessionalFieldCode()).isEqualTo(professionalField.getCode());
+        assertThat(field.getProfessionalFieldName()).isEqualTo(professionalField.getName());
+        assertThat(field.getCorrectCount()).isEqualTo(1);
+        assertThat(field.getTotalQuestions()).isEqualTo(2);
+        assertThat(field.getScore()).isEqualByComparingTo("5.00");
+        assertThat(field.getPassingThreshold()).isEqualByComparingTo("7.00");
+        assertThat(field.getPassed()).isFalse();
+
+        assertThat(cognitiveResultRepository.findByAttemptOrderByCognitiveLevelAsc(attempt))
+                .singleElement()
+                .satisfies(cognitive -> {
+                    assertThat(cognitive.getCognitiveLevel()).isEqualTo(CognitiveLevel.FOUNDATION);
+                    assertThat(cognitive.getCorrectCount()).isEqualTo(1);
+                    assertThat(cognitive.getTotalQuestions()).isEqualTo(2);
+                });
+        assertThat(cellResultRepository.findByAttemptOrderByProfessionalFieldIdAscCognitiveLevelAsc(attempt))
+                .singleElement()
+                .satisfies(cell -> {
+                    assertThat(cell.getProfessionalFieldName()).isEqualTo(professionalField.getName());
+                    assertThat(cell.getTotalQuestions()).isEqualTo(2);
+                    assertThat(cell.getSmallSample()).isFalse();
+                });
+    }
+
     // ── fixtures ──────────────────────────────────────────────────────────────
 
     private ExamPaperQuestion seedQuestion(int position) {
         QuestionBankQuestion bankQuestion = questionRepository.save(QuestionBankQuestion.builder()
                 .stem("Câu hỏi %d của đề %d".formatted(position, seq))
+                .category(category)
+                .professionalField(professionalField)
+                .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                .cognitiveVerifiedAt(java.time.LocalDateTime.now())
+                .cognitiveVerifiedBy("integration-test")
                 .optionA("Đáp án đúng")
                 .optionB("Sai 1")
                 .optionC("Sai 2")
@@ -353,6 +429,11 @@ class ExamAttemptFlowIntegrationTest {
                 .optionC(bankQuestion.getOptionC())
                 .optionD(bankQuestion.getOptionD())
                 .correctAnswer("A")
+                .professionalFieldId(professionalField.getId())
+                .professionalFieldCode(professionalField.getCode())
+                .professionalFieldName(professionalField.getName())
+                .cognitiveLevel(CognitiveLevel.FOUNDATION.name())
+                .cognitiveLabel("Kiến thức nền tảng")
                 .snapshotAt(LocalDateTime.now())
                 .build());
         return paperQuestion;

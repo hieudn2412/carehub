@@ -1,0 +1,5 @@
+﻿Phase 08 backend package verification — 2026-08-14
+
+Command: .\mvnw.cmd -q -DskipTests package
+Exit code: 0
+Artifact: target/carehub-backend-0.0.1-SNAPSHOT.jar

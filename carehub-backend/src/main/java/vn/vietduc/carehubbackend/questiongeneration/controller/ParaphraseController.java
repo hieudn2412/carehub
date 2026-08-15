@@ -23,6 +23,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ParaphraseCandi
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ParaphraseJobResponse;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import java.util.Map;
 public class ParaphraseController {
     private final ParaphraseService paraphraseService;
     private final EvaluationAuditLogService auditLogService;
+    private final EvaluationCutoverService cutover;
 
     @PostMapping("/questions/{questionId}/paraphrase-jobs")
     @PreAuthorize("@evaluationSecurity.canAuthor(authentication)")
@@ -178,6 +180,7 @@ public class ParaphraseController {
             @PathVariable Long candidateId,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         ParaphraseCandidateResponse response = paraphraseService.saveAsQuestion(candidateId, actor(authentication));
         auditLogService.record(
                 "PARAPHRASE_CANDIDATE_SAVE",
@@ -246,6 +249,7 @@ public class ParaphraseController {
             @RequestBody BatchParaphraseCandidateActionRequest request,
             Authentication authentication
     ) {
+        cutover.requireDirectField();
         BatchParaphraseCandidateActionResponse response = paraphraseService.saveBatch(request, actor(authentication));
         auditLogService.record(
                 "PARAPHRASE_CANDIDATE_BATCH_SAVE",

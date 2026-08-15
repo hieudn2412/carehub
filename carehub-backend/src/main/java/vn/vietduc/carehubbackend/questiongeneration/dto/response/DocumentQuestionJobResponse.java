@@ -11,7 +11,7 @@ public record DocumentQuestionJobResponse(
         String promptVersion,
         String promptHash,
         String pipelineVersion,
-        String targetDifficulty,
+        String targetCognitiveLevel,
         String status,
         String statusText,
         Integer questionsPerChunk,

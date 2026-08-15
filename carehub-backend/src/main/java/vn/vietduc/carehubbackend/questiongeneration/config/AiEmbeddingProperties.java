@@ -23,7 +23,10 @@ public class AiEmbeddingProperties {
     private int lexicalPageSize = 500;
     private int cacheTtlMinutes = 30;
     private boolean cacheWarmupEnabled = true;
-    private boolean annEnabled = true;
+    // Tắt mặc định: đo thực tế recall@1 chỉ 0.163 và quét đầy đủ vài trăm/vài nghìn vector chỉ
+    // tốn ~0.1ms — ANN chỉ đáng bật khi ngân hàng câu hỏi đủ lớn (~10k+ câu). Xem
+    // developer_docs/ai/ai-models.md §9.3.
+    private boolean annEnabled = false;
     private int annLshBits = 16;
     private int annSearchK = 50;
     private boolean annNeighborBuckets = true;

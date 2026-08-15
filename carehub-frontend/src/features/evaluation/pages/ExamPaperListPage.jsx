@@ -70,7 +70,10 @@ function ExamPaperListPage({
     }
     setIsGenerating(true)
     try {
-      const preview = apiData(await examConfigApi.previewSavedExamConfig(generation.examConfigId))
+      const preview = apiData(await examConfigApi.previewSavedExamConfig(generation.examConfigId, {
+        variantCount: Number(generation.variantCount),
+        zeroOverlap: generation.zeroOverlap,
+      }))
       if (!preview?.valid) {
         showToast(preview?.warnings?.join('; ') || 'Cấu hình chưa đủ nguồn câu hỏi.', 'warning')
         return

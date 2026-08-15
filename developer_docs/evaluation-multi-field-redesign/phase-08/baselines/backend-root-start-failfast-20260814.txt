@@ -1,0 +1,15 @@
+Backend root-working-directory startup smoke (2026-08-14, Windows/PowerShell)
+
+Command: .\carehub-backend\mvnw.cmd -f .\carehub-backend\pom.xml -q spring-boot:run
+Working directory: D:\ĐỒ ÁN\carehub
+Database endpoint: 192.0.2.1:5432 (TEST-NET-1, intentionally unroutable)
+Overrides: DB_CONNECT_TIMEOUT_SECONDS=2, DB_SOCKET_TIMEOUT_SECONDS=3,
+DB_POOL_CONNECTION_TIMEOUT_MS=1000, DB_POOL_VALIDATION_TIMEOUT_MS=500,
+FLYWAY_ENABLED=false, SERVER_PORT=18084, APP_SEED_ENABLED=false,
+APP_NOTIFICATION_SEED_ENABLED=false, APP_NOTIFICATION_SCHEDULING_ENABLED=false.
+
+Observed: Spring Boot reached Hikari in about 4 seconds, then failed with a bounded
+PostgreSQL connection error and stopped Tomcat; it did not wait indefinitely. The
+root-working-directory configuration path was accepted, and no migration/seed/write
+was attempted. Maven wrapper itself returned 0 after the application failure, so the
+application log is the authoritative result for this negative-path smoke.

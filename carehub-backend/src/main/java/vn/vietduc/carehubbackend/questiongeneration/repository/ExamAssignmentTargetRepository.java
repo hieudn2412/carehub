@@ -20,7 +20,8 @@ public interface ExamAssignmentTargetRepository extends JpaRepository<ExamAssign
     @EntityGraph(attributePaths = {
             "assignment",
             "assignment.examPaper",
-            "assignment.professionalField",
+            "assignment.generationBatch",
+            "assignedExamPaper",
             "user",
             "user.department"
     })

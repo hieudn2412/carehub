@@ -1,0 +1,41 @@
+Phase 8 remote recheck (read-only, PostgreSQL carehub, 2026-08-13)
+
+Command: verify-cutover.sql plus read-only field-count queries, after the initial
+post-deploy evidence was captured. No UPDATE, INSERT, DELETE, reset or seed ran.
+
+verify-cutover.sql exit=0
+questions=270
+questions_approved=270
+questions_without_category=0
+questions_without_field=0
+questions_without_verified_cognitive=270
+verified_direct_pool=0
+question_categories=11
+professional_fields_total=29
+professional_fields_active=26
+professional_fields_inactive=3
+question_sets=0
+question_set_items=0
+question_set_versions=0
+exam_configs=0
+exam_papers=0
+exam_assignments=0
+exam_attempts=0
+
+Category approved counts: BAI_1..BAI_9 = 30 each; BAI_10/BAI_11 = 0.
+FK/orphan and duplicate-code checks: all 0 failures.
+Required snapshot columns: 8/8 present.
+Required indexes: 5/5 present.
+Flyway latest: V13 exam attempt result aggregates, success=true.
+
+Field-count interpretation: the initial post-deploy evidence recorded 28 total
+fields. The latest read-only recheck finds one additional inactive custom field
+(code QL_01, name “test 13/8”) and therefore 29 total / 26 active. The active
+custom field nha khoa (CUSTOM_1785329494689) is also retained; no field was
+deleted or changed by this recheck. The 270 question links remain unchanged and
+all current questions use CC-12, VT-11, NK-14 or XK-15.
+
+Cognitive worklist: 270 approved rows remain unverified.
+Shadow matrix for CC-12/VT-11 (20 requested): available=0, shortage=20.
+Interpretation: taxonomy/FK/schema integrity passes; reviewer classification,
+business sign-off and audience policy remain explicit cutover gates.

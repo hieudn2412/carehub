@@ -1,0 +1,11 @@
+Backend cutover gate hardening — 2026-08-14
+
+Changes verified:
+  - Draft/archived audiences cannot be resolved for assignment; only ACTIVE
+    audience snapshots may be delivered.
+  - Opening an existing assignment re-checks the audience and generation gates,
+    preventing a legacy/pre-cutover DRAFT from bypassing production fail-closed.
+
+Command:
+  .\mvnw.cmd -q "-Dtest=ExamAssignmentControllerTest,EvaluationAudienceServiceTest" test
+Result: exit 0

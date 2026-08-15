@@ -34,8 +34,7 @@ public class QuestionSetCategoryService {
                         || normalize(category.getDescription()).contains(normalizedQuery)
                         || normalize(category.getCode()).contains(normalizedQuery))
                 .sorted(Comparator
-                        .comparing(QuestionSetCategory::getSortOrder, Comparator.nullsLast(Integer::compareTo))
-                        .thenComparing(QuestionSetCategory::getName, String.CASE_INSENSITIVE_ORDER))
+                        .comparing(QuestionSetCategory::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toResponse)
                 .toList();
     }
@@ -57,7 +56,6 @@ public class QuestionSetCategoryService {
                 .name(name)
                 .description(trimToNull(request.description()))
                 .status(parseStatus(request.status(), QuestionSetCategoryStatus.ACTIVE))
-                .sortOrder(request.sortOrder() == null ? 0 : request.sortOrder())
                 .createdBy(actor)
                 .build();
         return toResponse(categoryRepository.save(category));
@@ -77,7 +75,6 @@ public class QuestionSetCategoryService {
         category.setName(name);
         category.setDescription(trimToNull(request.description()));
         category.setStatus(parseStatus(request.status(), category.getStatus()));
-        category.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
         return toResponse(categoryRepository.save(category));
     }
 
@@ -101,7 +98,6 @@ public class QuestionSetCategoryService {
                 category.getDescription(),
                 category.getStatus().name(),
                 QuestionGenerationLabels.questionSetCategoryStatus(category.getStatus()),
-                category.getSortOrder(),
                 category.getCreatedAt(),
                 category.getUpdatedAt()
         );

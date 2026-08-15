@@ -287,7 +287,6 @@ class CandidateReviewServiceTest {
                 .correctAnswer("A")
                 .explanation("Đáp án A bám nguồn.")
                 .topic("An toàn người bệnh")
-                .difficulty("easy")
                 .sourceExcerpt("Người bệnh cần được xác định bằng tối thiểu hai thông tin")
                 .rawJson("{}")
                 .qualityScore(0.9)

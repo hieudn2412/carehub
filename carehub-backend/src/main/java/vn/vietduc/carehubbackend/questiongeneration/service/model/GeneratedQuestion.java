@@ -8,7 +8,8 @@ public record GeneratedQuestion(
         String optionD,
         String correctAnswer,
         String explanation,
-        String difficulty,
+        String cognitiveLevel,
+        String professionalFieldCode,
         String topic,
         String sourceExcerpt,
         String knowledgePointId,
@@ -26,7 +27,7 @@ public record GeneratedQuestion(
             String optionD,
             String correctAnswer,
             String explanation,
-            String difficulty,
+            String cognitiveLevel,
             String topic,
             String sourceExcerpt,
             String knowledgePointId,
@@ -41,7 +42,8 @@ public record GeneratedQuestion(
                 optionD,
                 correctAnswer,
                 explanation,
-                difficulty,
+                cognitiveLevel,
+                null,
                 topic,
                 sourceExcerpt,
                 knowledgePointId,
@@ -50,6 +52,46 @@ public record GeneratedQuestion(
                 null,
                 null,
                 null
+        );
+    }
+
+    /** Backward-compatible constructor for callers that predate field classification. */
+    public GeneratedQuestion(
+            String stem,
+            String optionA,
+            String optionB,
+            String optionC,
+            String optionD,
+            String correctAnswer,
+            String explanation,
+            String cognitiveLevel,
+            String topic,
+            String sourceExcerpt,
+            String knowledgePointId,
+            String rawJson,
+            String llmValidationJson,
+            String questionType,
+            String answerEvidence,
+            String distractorRationales
+    ) {
+        this(
+                stem,
+                optionA,
+                optionB,
+                optionC,
+                optionD,
+                correctAnswer,
+                explanation,
+                cognitiveLevel,
+                null,
+                topic,
+                sourceExcerpt,
+                knowledgePointId,
+                rawJson,
+                llmValidationJson,
+                questionType,
+                answerEvidence,
+                distractorRationales
         );
     }
 }

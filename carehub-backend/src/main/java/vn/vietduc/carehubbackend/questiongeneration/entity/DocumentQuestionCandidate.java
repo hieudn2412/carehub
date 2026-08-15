@@ -18,6 +18,9 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateLabel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationGrade;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CandidateValidationSource;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -63,8 +66,24 @@ public class DocumentQuestionCandidate extends BaseEntity {
 
     private String topic;
 
-    @Column(length = 32)
-    private String difficulty;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private QuestionCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "professional_field_id")
+    private ProfessionalField professionalField;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cognitive_level", length = 48)
+    private CognitiveLevel cognitiveLevel;
+
+    @Column(name = "cognitive_verified_at")
+    private LocalDateTime cognitiveVerifiedAt;
+
+    @Column(name = "cognitive_verified_by", length = 100)
+    private String cognitiveVerifiedBy;
+
 
     @Column(name = "source_excerpt", columnDefinition = "text")
     private String sourceExcerpt;

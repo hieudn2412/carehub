@@ -21,6 +21,7 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamPaperRespon
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationSecurity;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamPaperService;
+import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
 
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,7 @@ public class ExamPaperController {
     private final ExamPaperService examPaperService;
     private final EvaluationAuditLogService auditLogService;
     private final EvaluationSecurity evaluationSecurity;
+    private final EvaluationCutoverService cutover;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<ExamPaperResponse>>> list(
@@ -79,6 +81,7 @@ public class ExamPaperController {
             @RequestBody GenerateExamPaperRequest request,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldGeneration();
         List<ExamPaperResponse> response = examPaperService.generate(request, actor(authentication));
         auditLogService.record(
                 "EXAM_PAPER_GENERATE",
@@ -89,7 +92,11 @@ public class ExamPaperController {
                 Map.of(
                         "generatedCount", response.size(),
                         "paperIds", response.stream().map(ExamPaperResponse::id).toList(),
-                        "examConfigId", String.valueOf(request == null ? null : request.examConfigId())
+                        "examConfigId", String.valueOf(request == null ? null : request.examConfigId()),
+                        "generationBatchId", response.isEmpty() ? "" : String.valueOf(response.get(0).generationBatchId()),
+                        "configVersion", response.isEmpty() ? "" : String.valueOf(response.get(0).configVersion()),
+                        "algorithmVersion", response.isEmpty() ? "" : String.valueOf(response.get(0).generationAlgorithmVersion()),
+                        "poolChecksum", response.isEmpty() ? "" : String.valueOf(response.get(0).poolChecksum())
                 )
         );
         return ResponseEntity.ok(ApiResponse.success(
@@ -104,6 +111,7 @@ public class ExamPaperController {
             @PathVariable Long paperId,
             Authentication authentication
     ) {
+        cutover.requireMultiFieldGeneration();
         ExamPaperResponse response = examPaperService.publish(paperId, actor(authentication));
         auditLogService.record(
                 "EXAM_PAPER_PUBLISH",
@@ -111,7 +119,15 @@ public class ExamPaperController {
                 paperId,
                 actor(authentication),
                 "Phát hành bộ đề kiểm tra #" + paperId,
-                Map.of("code", response.code(), "status", response.status(), "totalQuestions", response.totalQuestions())
+                Map.of(
+                        "code", response.code(),
+                        "status", response.status(),
+                        "totalQuestions", response.totalQuestions(),
+                        "generationBatchId", String.valueOf(response.generationBatchId()),
+                        "configVersion", String.valueOf(response.configVersion()),
+                        "algorithmVersion", String.valueOf(response.generationAlgorithmVersion()),
+                        "poolChecksum", String.valueOf(response.poolChecksum())
+                )
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Phát hành bộ đề kiểm tra thành công",

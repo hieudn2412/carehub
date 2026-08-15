@@ -13,6 +13,7 @@
       "optionC": "Luôn dẫn đến tử vong nếu không được can thiệp y tế.",
       "optionD": "Chỉ xảy ra ở những người có bệnh nền sẵn có.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -25,6 +26,7 @@
       "optionC": "Xử trí nhanh các tình trạng đe dọa tính mạng (ABC).",
       "optionD": "Hỗ trợ sự sống chuyên sâu như thở máy và thuốc vận mạch.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -37,6 +39,7 @@
       "optionC": "Người phối hợp đa ngành.",
       "optionD": "Người chăm sóc trực tiếp.",
       "correctAnswer": "D",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -49,6 +52,7 @@
       "optionC": "Khả năng vận động của các chi.",
       "optionD": "Tình trạng bài tiết và tiêu hóa.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -61,6 +65,7 @@
       "optionC": "Đảm bảo sự liên tục, nhất quán và giảm nguy cơ sai sót y khoa.",
       "optionD": "Tăng cường sự hài lòng của gia đình người bệnh.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -73,6 +78,7 @@
       "optionC": "Duy trì tính liên tục, minh bạch và là bằng chứng pháp lý.",
       "optionD": "Giúp người bệnh biết mình đã uống thuốc gì.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -85,6 +91,7 @@
       "optionC": "Giảm lo âu cho gia đình người bệnh.",
       "optionD": "Phân loại bệnh nhân để chuyển khoa nhanh chóng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -97,6 +104,7 @@
       "optionC": "Cả dữ liệu khách quan và chủ quan thông qua phỏng vấn, quan sát, thăm khám.",
       "optionD": "Các xét nghiệm cận lâm sàng đã có kết quả.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -109,6 +117,7 @@
       "optionC": "Nhập viện thường ưu tiên xử trí ABCDE ngay tại cổng tiếp đón.",
       "optionD": "Nhập viện cấp cứu yêu cầu thẻ bảo hiểm y tế ngay khi tiếp nhận.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -121,6 +130,7 @@
       "optionC": "Giải thích nhanh về thủ thuật, quy trình và hướng dẫn gia đình hỗ trợ khẩn cấp.",
       "optionD": "Tư vấn cách phòng ngừa các bệnh mạn tính sau khi ra viện.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -133,6 +143,7 @@
       "optionC": "Hỗ trợ thở oxy để đảm bảo hô hấp.",
       "optionD": "Lấy mẫu máu xét nghiệm theo chỉ định của bác sĩ.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -145,6 +156,7 @@
       "optionC": "Số lượng máy móc hỗ trợ trong một ca trực.",
       "optionD": "Thời gian nghỉ phép năm của nhân viên y tế.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -157,6 +169,7 @@
       "optionC": "Lập kế hoạch (Planning).",
       "optionD": "Thực hiện (Implementation).",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -169,6 +182,7 @@
       "optionC": "Chăm sóc tại cộng đồng sau khi ra viện.",
       "optionD": "Chăm sóc tích cực cho bệnh nhân cần máy thở liên tục.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -181,6 +195,7 @@
       "optionC": "Quyết định thay cho bệnh nhân các phương án điều trị tốt nhất.",
       "optionD": "Chỉ cho phép người nhà vào thăm khi bệnh nhân yêu cầu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -193,6 +208,7 @@
       "optionC": "Giúp duy trì tính liên tục của thông tin giữa các ca trực và các bộ phận.",
       "optionD": "Để tính toán chi phí thuốc men hàng ngày.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -205,6 +221,7 @@
       "optionC": "Việc đánh giá và can thiệp ngay lập tức ảnh hưởng trực tiếp đến kết quả điều trị.",
       "optionD": "Điều dưỡng cần ghi lại chính xác thời gian bệnh nhân nhập viện.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -217,6 +234,7 @@
       "optionC": "Đánh giá mức độ đạt được mục tiêu sau điều trị.",
       "optionD": "Thu thập thêm các thông tin chủ quan từ người nhà.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -229,6 +247,7 @@
       "optionC": "Thực hiện các thủ thuật xâm lấn nhanh chóng.",
       "optionD": "Đánh giá nhanh tình trạng theo bảng phân loại cấp cứu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -241,6 +260,7 @@
       "optionC": "Đảm bảo an toàn cho người bệnh.",
       "optionD": "Ghi chép và báo cáo kịp thời.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -253,6 +273,7 @@
       "optionC": "Không được phép báo cáo các sai sót y khoa của đồng nghiệp.",
       "optionD": "Ưu tiên điều trị cho những bệnh nhân có bảo hiểm chi trả cao.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -265,6 +286,7 @@
       "optionC": "Khám -> Hướng dẫn -> Hành chính -> Chăm sóc.",
       "optionD": "Ghi nhận thông tin -> Đóng viện phí -> Xử trí cấp cứu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -277,6 +299,7 @@
       "optionC": "Báo cáo bác sĩ khi thấy huyết áp bệnh nhân tăng cao.",
       "optionD": "Kiểm tra 6 đúng trước khi cho bệnh nhân uống thuốc.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -289,6 +312,7 @@
       "optionC": "Bệnh nhân có tình trạng cấp tính nhưng chưa đe dọa tính mạng.",
       "optionD": "Bệnh nhân nhập viện để thực hiện các xét nghiệm tầm soát.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -301,6 +325,7 @@
       "optionC": "Vì điều dưỡng phải lặp lại các thủ thuật mỗi ngày.",
       "optionD": "Vì nó giúp tiết kiệm thời gian ghi chép hồ sơ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -313,6 +338,7 @@
       "optionC": "Chỉ thực hiện những gì bác sĩ yêu cầu bằng văn bản.",
       "optionD": "Ưu tiên sử dụng các thiết bị công nghệ đắt tiền nhất.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -325,6 +351,7 @@
       "optionC": "Để người bệnh tự thực hiện các thủ thuật y tế.",
       "optionD": "Để bệnh nhân không hỏi thêm thông tin trong khi làm việc.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -337,6 +364,7 @@
       "optionC": "Chỉ làm việc độc lập để tránh gây nhầm lẫn thông tin.",
       "optionD": "Để gia đình tự quyết định các xét nghiệm cần thiết cho bệnh nhân.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -349,6 +377,7 @@
       "optionC": "Chẩn đoán.",
       "optionD": "Đánh giá (sau khi đã can thiệp).",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -361,6 +390,7 @@
       "optionC": "Đều thực hiện các thủ tục hành chính khắt khe trước khi khám.",
       "optionD": "Đều chỉ chú trọng vào việc cứu sống người bệnh.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -373,6 +403,7 @@
       "optionC": "Có nhiều tổn thương do tác động cơ học và nguy cơ tử vong cao.",
       "optionD": "Có tổn thương ở ít nhất 2 vùng cơ thể khác nhau.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -385,6 +416,7 @@
       "optionC": "Huyết áp tâm trương < 60 mmHg.",
       "optionD": "Tình trạng đông máu với INR > 1.4.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -397,6 +429,7 @@
       "optionC": "Mang tính khái niệm, nhấn mạnh việc nhận diện và can thiệp càng sớm càng tốt.",
       "optionD": "Chỉ áp dụng cho các chấn thương nội tạng nghiêm trọng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -409,6 +442,7 @@
       "optionC": "Nguy cơ tử vong nhanh chóng nếu không can thiệp cấp cứu ngay lập tức.",
       "optionD": "Cần huy động toàn bộ trauma team nhưng có thể chờ sau 15 phút.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -421,6 +455,7 @@
       "optionC": "Khai thác tiền sử AMPLE để hỗ trợ chẩn đoán.",
       "optionD": "Thực hiện các xét nghiệm cận lâm sàng chuyên sâu để phân loại bệnh.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -433,6 +468,7 @@
       "optionC": "Áp lực nội sọ trong giới hạn bình thường.",
       "optionD": "Phổi đang được thông khí hiệu quả 100%.",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -445,6 +481,7 @@
       "optionC": "Khiến bệnh nhân bị tắc nghẽn đường thở cơ học.",
       "optionD": "Làm mất các mốc giải phẫu khi cần đặt nội khí quản.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -457,6 +494,7 @@
       "optionC": "Do máu trong khoang miệng gây cản trở và nguy cơ hít sặc.",
       "optionD": "Do bệnh nhân luôn trong tình trạng kích động mạnh.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -469,6 +507,7 @@
       "optionC": "60 – 90 phút.",
       "optionD": "Cho đến khi bệnh nhân vào phòng mổ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -481,6 +520,7 @@
       "optionC": "Độ bão hòa Oxy (SpO2) giảm dưới 80%.",
       "optionD": "Hiện tượng hô hấp đảo chiều.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -493,6 +533,7 @@
       "optionC": "Liệt tủy thấp (C5-T1) khiến cơ liên sườn liệt nhưng cơ hoành còn hoạt động.",
       "optionD": "Tràn khí màng phổi áp lực gây đè bẹp cơ hoành.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -505,6 +546,7 @@
       "optionC": "> 40 hoặc < 10 lần/phút.",
       "optionD": "Luôn > 50 lần/phút.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -517,6 +559,7 @@
       "optionC": "30% thể tích máu.",
       "optionD": "40% thể tích máu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -529,6 +572,7 @@
       "optionC": "Vì đau làm giảm nhịp tim và gây tụt huyết áp đột ngột.",
       "optionD": "Để tránh tình trạng liệt ruột sau chấn thương.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -541,6 +585,7 @@
       "optionC": "Bước [D] để đánh giá cột sống và các tổn thương phía sau.",
       "optionD": "Bước [E] để cởi bỏ hoàn toàn quần áo bệnh nhân.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -553,6 +598,7 @@
       "optionC": "Thiếu oxy não, tăng áp lực nội sọ, tụt kẹt não.",
       "optionD": "Vô niệu, tăng kali máu, ngừng tim.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -565,6 +611,7 @@
       "optionC": "Sau 24 giờ kể từ khi bị chấn thương.",
       "optionD": "Khi đã có kết quả chụp CT toàn thân.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -577,6 +624,7 @@
       "optionC": "Cơ chế chấn thương (Mechanism).",
       "optionD": "Thời gian bữa ăn cuối cùng (Last meal).",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -589,6 +637,7 @@
       "optionC": "Tăng áp lực nội sọ và đe dọa thoát vị não.",
       "optionD": "Vỡ eo động mạch chủ.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -601,6 +650,7 @@
       "optionC": "Dấu hiệu Battle (bầm tím xương chũm).",
       "optionD": "Chảy máu mũi không cầm được.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -613,6 +663,7 @@
       "optionC": "Huyết áp tăng cao kèm mạch chậm, da nhợt.",
       "optionD": "Mất phản xạ cơ thắt nhưng huyết áp vẫn ổn định.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -625,6 +676,7 @@
       "optionC": "Cơ chế van một chiều làm khí tích tụ gây áp lực dương đè bẹp tĩnh mạch chủ.",
       "optionD": "Phổi bị rách khiến khí thoát ra làm mất áp lực âm khoang màng phổi.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -637,6 +689,7 @@
       "optionC": "Mạch nghịch thường, đau ngực dữ dội, khó thở.",
       "optionD": "Huyết áp tay phải > tay trái, mất mạch bẹn, đau sau lưng.",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -649,6 +702,7 @@
       "optionC": "Tắc mạch do mỡ.",
       "optionD": "Tiêu cơ vân cấp.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -661,6 +715,7 @@
       "optionC": "Đau quá mức khi căng cơ thụ động và tê bì (dị cảm).",
       "optionD": "Chi bị chấn thương tím tái và lạnh.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -673,6 +728,7 @@
       "optionC": "Toan chuyển hóa nặng.",
       "optionD": "Hạ thân nhiệt kéo dài.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -685,6 +741,7 @@
       "optionC": "Đắp chăn ấm và truyền dịch ấm 37 độ C.",
       "optionD": "Kiểm tra 5P và mạch ngoại vi mỗi giờ.",
       "correctAnswer": "A",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -697,6 +754,7 @@
       "optionC": "Đặt sonde dạ dày đường mũi.",
       "optionD": "Cố định cột sống cổ bằng nẹp cứng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -709,6 +767,7 @@
       "optionC": "Để tránh tình trạng rối loạn đông máu.",
       "optionD": "Để chuẩn bị cho cuộc phẫu thuật sắp tới.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -721,6 +780,7 @@
       "optionC": "Dùng để đánh giá hiệu quả của các can thiệp phẫu thuật.",
       "optionD": "Là bước phân loại lại bệnh nhân để chuyển tuyến.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -733,6 +793,7 @@
       "optionC": "Tính chất cấp tính (chấn thương, phẫu thuật) và mạn tính.",
       "optionD": "Tình trạng có sự hiện diện của biofilm hay không.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -745,6 +806,7 @@
       "optionC": "NPIAP (National Pressure Injury Advisory Panel).",
       "optionD": "IWII (International Wound Infection Institute).",
       "correctAnswer": "D",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -757,6 +819,7 @@
       "optionC": "Do sự kết dính của tiểu cầu tạo nút tiểu cầu.",
       "optionD": "Do collagen nội mô kích hoạt đông máu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -769,6 +832,7 @@
       "optionC": "Giai đoạn Tăng sinh.",
       "optionD": "Giai đoạn Tái tạo.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -781,6 +845,7 @@
       "optionC": "Hình thành mô hạt giàu mạch máu và tái biểu mô từ rìa.",
       "optionD": "Mạch máu thừa thoái triển và hình thành sẹo dai chắc.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -793,6 +858,7 @@
       "optionC": "Kiểm soát tình trạng viêm và phù nề tại chỗ.",
       "optionD": "Theo dõi rìa vết thương và kích thích biểu mô hóa.",
       "correctAnswer": "D",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -805,6 +871,7 @@
       "optionC": "Vòng thứ 3 (Dài hạn - tối ưu hóa yếu tố lành thương).",
       "optionD": "Vòng ngoài cùng (Toàn thân - Hành vi - Xã hội).",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -817,6 +884,7 @@
       "optionC": "Chỉ số Albumin máu cải thiện và HbA1c ổn định.",
       "optionD": "Gia đình thực hiện đúng kỹ thuật chăm sóc vết thương.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -829,6 +897,7 @@
       "optionC": "Trẻ em dưới 3 tuổi.",
       "optionD": "Người bệnh hôn mê hoặc không có khả năng giao tiếp.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -841,6 +910,7 @@
       "optionC": "Quá trình tái biểu mô hóa đang diễn ra nhanh.",
       "optionD": "Nền vết thương đang có sự tưới máu quá mức.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -853,6 +923,7 @@
       "optionC": "Do kích thích sự hình thành quá mức của mô hoại tử.",
       "optionD": "Do làm giảm khả năng co mạch trong giai đoạn cầm máu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -865,6 +936,7 @@
       "optionC": "Số lượng bạch cầu (WBC).",
       "optionD": "Nồng độ Albumin máu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -877,6 +949,7 @@
       "optionC": "Gây ra tình trạng kiểm soát đường huyết kém.",
       "optionD": "Làm suy giảm chức năng thận và tích tụ độc tố.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -889,6 +962,7 @@
       "optionC": "Đánh giá chỉ số ABI, màu sắc và nhiệt độ da.",
       "optionD": "Sử dụng gạc kháng khuẩn để loại bỏ mô hoại tử.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -901,6 +975,7 @@
       "optionC": "Băng gạc khô tẩm kháng sinh.",
       "optionD": "Gạc tẩm cồn hoặc oxy già.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -913,6 +988,7 @@
       "optionC": "Oxy già (Hydrogen peroxide).",
       "optionD": "Dung dịch làm sạch chuyên dụng không độc tế bào.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -925,6 +1001,7 @@
       "optionC": "Sát khuẩn vùng da lành xung quanh vết thương.",
       "optionD": "Thay thế nước muối sinh lý cho mọi loại vết thương hở.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -937,6 +1014,7 @@
       "optionC": "Alginate (từ tảo biển).",
       "optionD": "Silicone sheets.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -949,6 +1027,7 @@
       "optionC": "Chỉ dùng khi vết mổ có dấu hiệu nhiễm trùng rõ ràng.",
       "optionD": "Dùng để thay thế gạc vô khuẩn thấm hút truyền thống.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -961,6 +1040,7 @@
       "optionC": "Tấm silicone (Silicone sheets) hoặc băng ép.",
       "optionD": "Gạc cotton khô che chắn vết thương.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -973,6 +1053,7 @@
       "optionC": "Sử dụng như một loại \"máy phun sương\" hỗ trợ.",
       "optionD": "Vết thương có lượng dịch tiết quá nhiều.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -985,6 +1066,7 @@
       "optionC": "Chỉ dẫn lưu dựa trên trọng lực, không dùng áp lực âm.",
       "optionD": "Thay túi chứa dịch mỗi 2 giờ để đảm bảo vô khuẩn.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -997,6 +1079,7 @@
       "optionC": "Màu sắc, tính chất dịch thay đổi bất thường (máu, mủ).",
       "optionD": "Vùng da xung quanh ống dẫn lưu khô ráo.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1009,6 +1092,7 @@
       "optionC": "Đợi đến khi bệnh nhân yêu cầu mới dùng thuốc giảm đau.",
       "optionD": "Ưu tiên các biện pháp tâm lý hơn là dùng thuốc tê vùng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1021,6 +1105,7 @@
       "optionC": "Thuốc tê vùng (Epidural).",
       "optionD": "Các loại thuốc an thần liều thấp.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1033,6 +1118,7 @@
       "optionC": "Suy hô hấp, buồn nôn và táo bón.",
       "optionD": "Tăng thân nhiệt và co giật cơ học.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1045,6 +1131,7 @@
       "optionC": "Sử dụng chiết xuất lô hội như liệu pháp chính.",
       "optionD": "Đắp gạc cotton khô để tránh nhiễm trùng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1057,6 +1144,7 @@
       "optionC": "Collagen bắt đầu được tổng hợp bởi nguyên bào sợi.",
       "optionD": "Tăng tính thấm thành mạch và hình thành phù nề.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1069,6 +1157,7 @@
       "optionC": "Yếu tố Xã hội.",
       "optionD": "Yếu tố Mô học tại chỗ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1081,6 +1170,7 @@
       "optionC": "Vì nó làm tăng nguy cơ hình thành sẹo lồi và co kéo.",
       "optionD": "Vì nó gây độc cho các tế bào bạch cầu và đại thực bào.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1093,6 +1183,7 @@
       "optionC": "Phẫu thuật chương trình (Elective)",
       "optionD": "Phẫu thuật trì hoãn",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1105,6 +1196,7 @@
       "optionC": "Phẫu thuật chẩn đoán",
       "optionD": "Phẫu thuật phục hồi",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1117,6 +1209,7 @@
       "optionC": "Mổ chấn thương bụng có dịch tiêu hóa",
       "optionD": "Mổ áp xe vùng cụt",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1129,6 +1222,7 @@
       "optionC": "Gây mê toàn thân",
       "optionD": "Gây tê tại chỗ",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1141,6 +1235,7 @@
       "optionC": "Máu chảy nhiều tại diện mổ, huyết áp tụt, mạch nhanh yếu",
       "optionD": "Thiếu niệu và da tím tái",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1153,6 +1248,7 @@
       "optionC": "20 – 30%",
       "optionD": "> 50%",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1165,6 +1261,7 @@
       "optionC": "Gây tê tủy sống",
       "optionD": "Gây tê tại chỗ vùng mổ",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1177,6 +1274,7 @@
       "optionC": "Corticosteroids",
       "optionD": "Thuốc chống trầm cảm MAO",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1189,6 +1287,7 @@
       "optionC": "Tránh làm hỏng răng giả của bệnh nhân",
       "optionD": "Giúp bệnh nhân giao tiếp dễ dàng hơn",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1201,6 +1300,7 @@
       "optionC": "6 – 8 giờ.",
       "optionD": "10 – 12 giờ",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1213,6 +1313,7 @@
       "optionC": "Trước khi dùng thuốc tiền mê.",
       "optionD": "Bất cứ khi nào bác sĩ phẫu thuật có mặt",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1225,6 +1326,7 @@
       "optionC": "Tránh hạ thân nhiệt do lớp mỡ dưới da giảm.",
       "optionD": "Giảm lo âu cho bệnh nhân",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1237,6 +1339,7 @@
       "optionC": "Kiểm soát đường thở và hô hấp (ABC).",
       "optionD": "Khả năng vận động của các chi",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1249,6 +1352,7 @@
       "optionC": "Cho bệnh nhân xuất viện về nhà.",
       "optionD": "Yêu cầu bệnh nhân tập vận động chi",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1261,6 +1365,7 @@
       "optionC": "Huyết áp tâm thu.",
       "optionD": "Lượng nước tiểu mỗi giờ",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1273,6 +1378,7 @@
       "optionC": "Thông báo cho Đội phản ứng nhanh và bác sĩ nội trú.",
       "optionD": "Chỉ cần ghi chép vào hồ sơ theo dõi",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1285,6 +1391,7 @@
       "optionC": "Huyết khối tĩnh mạch sâu (DVT).",
       "optionD": "Sốc phản vệ",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1297,6 +1404,7 @@
       "optionC": "Giải thích kế hoạch chăm sóc cho bệnh nhân.",
       "optionD": "Phối hợp với chuyên gia dinh dưỡng",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1309,6 +1417,7 @@
       "optionC": "Giữ vệ sinh cho băng vết mổ.",
       "optionD": "Tăng cường oxy cho phổi",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1321,6 +1430,7 @@
       "optionC": "Giúp bác sĩ ra y lệnh nhanh hơn.",
       "optionD": "Chỉ áp dụng cho các ca mổ phức tạp",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1333,6 +1443,7 @@
       "optionC": "Mổ chấn thương bụng kín đơn thuần.",
       "optionD": "Mổ sỏi túi mật theo chương trình",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1345,6 +1456,7 @@
       "optionC": "Tăng huyết áp kịch phát.",
       "optionD": "Suy thận cấp tính",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1357,6 +1469,7 @@
       "optionC": "Tình trạng liệt ruột sau mổ.",
       "optionD": "Mức độ đau của bệnh nhân",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1369,6 +1482,7 @@
       "optionC": "Đánh giá khả năng tự chăm sóc của bệnh nhân.",
       "optionD": "Trấn an tinh thần bệnh nhân",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1381,6 +1495,7 @@
       "optionC": "Nước tiểu có mủ và mùi hôi.",
       "optionD": "Lượng nước tiểu > 2000ml/24h",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1393,6 +1508,7 @@
       "optionC": "Khôi phục hình dạng hoặc chức năng bị mất.",
       "optionD": "Dẫn lưu dịch giảm triệu chứng",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1405,6 +1521,7 @@
       "optionC": "Bệnh nhân thấy đói và muốn ăn lỏng.",
       "optionD": "Vết mổ khô, không rỉ dịch",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1417,6 +1534,7 @@
       "optionC": "Ngay sau khi ca mổ kết thúc an toàn.",
       "optionD": "Khi bệnh nhân đã tự đi lại được",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1429,6 +1547,7 @@
       "optionC": "HA tụt sâu > 50 mmHg so với trước PT.",
       "optionD": "Mạch nhanh trên 100 lần/phút",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1441,6 +1560,7 @@
       "optionC": "10–20%.",
       "optionD": "30–40%",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1453,6 +1573,7 @@
       "optionC": "Phản ứng chỉ xảy ra khi có sự kết hợp giữa IgE và dị nguyên.",
       "optionD": "Chỉ được chẩn đoán khi có tình trạng tụt huyết áp rõ rệt.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1465,6 +1586,7 @@
       "optionC": "Độ IV (Ngừng tuần hoàn).",
       "optionD": "Tùy thuộc vào tốc độ xuất hiện triệu chứng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1477,6 +1599,7 @@
       "optionC": "35 - 50%.",
       "optionD": "Trên 60%.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1489,6 +1612,7 @@
       "optionC": "Tăng áp lực keo quá mức trong lòng mạch.",
       "optionD": "Suy chức năng cơ tim do nồng độ Cytokine quá cao.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1501,6 +1625,7 @@
       "optionC": "Tăng co bóp cơ tim và nhịp tim.",
       "optionD": "Ức chế tế bào Mast giải phóng hóa chất trung gian.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1513,6 +1638,7 @@
       "optionC": "24 - 48 giờ.",
       "optionD": "Sau 72 giờ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1525,6 +1651,7 @@
       "optionC": "Có thể xảy ra ngay ở lần tiếp xúc đầu tiên với tác nhân.",
       "optionD": "Chỉ xảy ra với các tác nhân là thực phẩm.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1537,6 +1664,7 @@
       "optionC": "Độ III.",
       "optionD": "Theo dõi phản ứng có hại của thuốc.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1549,6 +1677,7 @@
       "optionC": "Tiếng rít thanh quản, khàn tiếng.",
       "optionD": "Ho khan từng cơn.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1561,6 +1690,7 @@
       "optionC": "Giúp nồng độ Adrenaline trong máu đạt đỉnh nhanh nhất.",
       "optionD": "Tránh được tác dụng phụ gây hoại tử chi.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1573,6 +1703,7 @@
       "optionC": "0,3mg tiêm dưới da.",
       "optionD": "1/4 ống 1mg.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1585,6 +1716,7 @@
       "optionC": "Sau mỗi 5 - 10 phút.",
       "optionD": "Sau mỗi 15 phút.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1597,6 +1729,7 @@
       "optionC": "Glucagon.",
       "optionD": "Salbutamol khí dung.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1609,6 +1742,7 @@
       "optionC": "Triệu chứng da niêm mạc phải xuất hiện trước.",
       "optionD": "Có kết quả xét nghiệm IgE đặc hiệu dương tính.",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1621,6 +1755,7 @@
       "optionC": "3 - 5 lít.",
       "optionD": "Tùy thuộc vào lượng nước tiểu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1633,6 +1768,7 @@
       "optionC": "Là thuốc hàng thứ hai, dùng để kiểm soát triệu chứng da và ngăn ngừa pha muộn.",
       "optionD": "Thuốc tiên quyết để đảo ngược tình trạng co thắt phế quản.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1645,6 +1781,7 @@
       "optionC": "Nằm ngửa, kê gối dưới vai.",
       "optionD": "Ngồi tư thế Fowler.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1657,6 +1794,7 @@
       "optionC": "24 giờ.",
       "optionD": "48 giờ.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1669,6 +1807,7 @@
       "optionC": "Lo âu mức độ nặng.",
       "optionD": "Thiếu hụt thể tích dịch.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1681,6 +1820,7 @@
       "optionC": "Bệnh nhân bớt lo sợ và bình tĩnh.",
       "optionD": "SpO2 đạt trên 94%.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1693,6 +1833,7 @@
       "optionC": "Chỉ các thuốc gây mê.",
       "optionD": "Chỉ các loại vaccine.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1705,6 +1846,7 @@
       "optionC": "Ức chế giải phóng các hóa chất trung gian.",
       "optionD": "Co các tiểu động mạch.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1717,6 +1859,7 @@
       "optionC": "1,0 ml/kg/giờ.",
       "optionD": "2,0 ml/kg/giờ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1729,6 +1872,7 @@
       "optionC": "Thuốc (đặc biệt là kháng sinh nhóm Beta-lactam).",
       "optionD": "Phấn hoa.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1741,6 +1885,7 @@
       "optionC": "Vì gây tụt huyết áp nặng hơn.",
       "optionD": "Vì làm tăng nguy cơ phản ứng pha hai.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1753,6 +1898,7 @@
       "optionC": "Tự thử phản ứng thuốc tại nhà trước khi uống.",
       "optionD": "Hạn chế vận động mạnh trong 1 tháng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1765,6 +1911,7 @@
       "optionC": "Viện Vệ sinh Dịch tễ Trung ương.",
       "optionD": "Cục Quản lý Dược.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1777,6 +1924,7 @@
       "optionC": "Hộp thuốc cấp cứu phản vệ.",
       "optionD": "Bình oxy.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1789,6 +1937,7 @@
       "optionC": "Chỉ gặp trong phản vệ qua trung gian IgE.",
       "optionD": "Biến mất ngay sau khi tiêm Adrenaline 1 phút.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1801,6 +1950,7 @@
       "optionC": "Phản vệ pha hai.",
       "optionD": "Tác dụng phụ của Adrenaline.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1813,6 +1963,7 @@
       "optionC": "Tổn thương khu trú tại xương và màng xương.",
       "optionD": "Sự gián đoạn cấu trúc cơ học của thân xương.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1825,6 +1976,7 @@
       "optionC": "Do máu tụ và dịch phù nề không có chỗ thoát ra ngoài.",
       "optionD": "Do gãy kín thường xảy ra ở các vùng cơ dày.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1837,6 +1989,7 @@
       "optionC": "Xương chỉ gãy một bên vỏ và uốn cong ở bên còn lại.",
       "optionD": "Đường gãy chạy xoắn ốc dọc theo thân xương.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1849,6 +2002,7 @@
       "optionC": "Tiếng lạo xạo xương khi hai đầu gãy cọ vào nhau.",
       "optionD": "Tình trạng sưng nề và bầm tím lan rộng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1861,6 +2015,7 @@
       "optionC": "Vì sẽ làm rách thêm màng xương và gây chảy máu.",
       "optionD": "Vì làm tăng nguy cơ nhiễm trùng từ bên ngoài.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -1873,6 +2028,7 @@
       "optionC": "2 tư thế, 2 loại tia, 2 vùng đối xứng.",
       "optionD": "2 lần chụp, 2 kỹ thuật, 2 phim thẳng.",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1885,6 +2041,7 @@
       "optionC": "Chụp lại sau 7-10 ngày khi có hiện tượng tiêu xương.",
       "optionD": "Chỉ định chụp CT-Scanner ngay để xác định.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -1897,6 +2054,7 @@
       "optionC": "Xử trí theo sơ đồ A-B-C-D-E (Ưu tiên tính mạng).",
       "optionD": "Giảm đau và chống sốc bằng thuốc.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1909,6 +2067,7 @@
       "optionC": "Buộc nẹp thật chặt để đảm bảo không có cử động.",
       "optionD": "Chỉ đặt nẹp khi đã loại trừ tổn thương mạch máu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1921,6 +2080,7 @@
       "optionC": "Cả trước và sau khi thực hiện bất động.",
       "optionD": "Chỉ khi bệnh nhân than tê hoặc mất cảm giác.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1933,6 +2093,7 @@
       "optionC": "Phủ gạc vô khuẩn hoặc vải sạch lên vết thương.",
       "optionD": "Băng ép nếu có tình trạng chảy máu mạch máu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1945,6 +2106,7 @@
       "optionC": "Bệnh nhân đang trong tình trạng sốc mất máu.",
       "optionD": "Cần di chuyển bệnh nhân từ cáng vào bồn tắm.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1957,6 +2119,7 @@
       "optionC": "Nguy cơ chèn ép khoang, teo cơ và cứng khớp.",
       "optionD": "Không giữ được trục xương thẳng khi kéo.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1969,6 +2132,7 @@
       "optionC": "Dùng đinh xuyên qua xương để kéo với lực mạnh, dài hạn.",
       "optionD": "BN có thể vận động sớm ngay sau khi đặt tạ kéo.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1981,6 +2145,7 @@
       "optionC": "Gãy xương gần khớp cần nắn chỉnh tuyệt đối.",
       "optionD": "Mọi trường hợp gãy xương không thể bó bột.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -1993,6 +2158,7 @@
       "optionC": "Sốc chấn thương (mất máu, sốc đau).",
       "optionD": "Viêm xương tủy mãn tính.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2005,6 +2171,7 @@
       "optionC": "1000 - 1500 ml.",
       "optionD": "Trên 2500 ml.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2017,6 +2184,7 @@
       "optionC": "Vi khuẩn xâm nhập -> Phản ứng viêm -> Hình thành Biofilm.",
       "optionD": "Mỡ giải phóng -> Tắc mạch phổi -> Suy hô hấp cấp.",
       "correctAnswer": "A",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2029,6 +2197,7 @@
       "optionC": "Đau quá mức, tăng khi vận động thụ động ngón chi.",
       "optionD": "Xuất hiện các nốt xuất huyết vùng ngực, nách.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2041,6 +2210,7 @@
       "optionC": "Sưng, Nóng, Đỏ đau tại vết thương.",
       "optionD": "Mạch nhanh, Tụt huyết áp, Da lạnh.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2053,6 +2223,7 @@
       "optionC": "Kích hoạt quá trình tăng đông máu hệ thống.",
       "optionD": "Gây tiêu xương tại vị trí đầu gãy.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2065,6 +2236,7 @@
       "optionC": "Thuyên tắc huyết khối tĩnh mạch (VTE).",
       "optionD": "Chậm liền xương và khớp giả.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2077,6 +2249,7 @@
       "optionC": "Paresthesia.",
       "optionD": "Poikilothermia.",
       "correctAnswer": "D",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2089,6 +2262,7 @@
       "optionC": "Băng ép thật chặt vùng đang sưng nề.",
       "optionD": "Cho bệnh nhân vận động mạnh để tăng tuần hoàn.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -2101,6 +2275,7 @@
       "optionC": "Mạch nhanh nhỏ, huyết áp tụt hoặc kẹt.",
       "optionD": "Lượng nước tiểu > 1ml/kg/giờ.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2113,6 +2288,7 @@
       "optionC": "Tự ý cắt bớt các mép bột để cử động dễ hơn.",
       "optionD": "Tháo bột tạm thời để tập vận động mỗi ngày.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -2125,6 +2301,7 @@
       "optionC": "Giữ ấm cho chi bị tổn thương.",
       "optionD": "Cố định vững chắc ổ gãy xương.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2137,6 +2314,7 @@
       "optionC": "Hội chứng tắc mạch mỡ.",
       "optionD": "Sốc đau tức thì.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2149,6 +2327,7 @@
       "optionC": "Hình ảnh mờ đều toàn bộ vùng thân xương.",
       "optionD": "Khoảng cách giữa các khớp thu hẹp lại.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2161,6 +2340,7 @@
       "optionC": "Các ngón chi bị tím, lạnh hoặc đau tăng đột ngột.",
       "optionD": "BN muốn thay đổi màu sắc của thạch cao.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2173,6 +2353,7 @@
       "optionC": "Một hội chứng chỉ xảy ra khi có vật cản cơ học trong lòng ống tiêu hóa.",
       "optionD": "Sự bế tắc cơ học dẫn đến rối loạn nhu động ruột khu trú.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2185,6 +2366,7 @@
       "optionC": "Vì đường kính lòng ruột non nhỏ hơn (2.5-3 cm so với 5-8 cm).",
       "optionD": "Vì hệ thống mạc treo ruột non lỏng lẻo hơn.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2197,6 +2379,7 @@
       "optionC": "Van hồi manh tràng (Van Bauhin).",
       "optionD": "Các nếp phúc mạc hậu phẫu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2209,6 +2392,7 @@
       "optionC": "Cả động mạch và tĩnh mạch bị ép cùng lúc dẫn đến hoại tử khô.",
       "optionD": "Chỉ có các mao mạch thành ruột bị vỡ do áp lực lòng ruột quá cao.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2221,6 +2405,7 @@
       "optionC": "7 - 9 lít.",
       "optionD": "Trên 10 lít.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2233,6 +2418,7 @@
       "optionC": "Do dịch thoát vào \"khoang thứ ba\" (lòng ruột) và giảm hấp thu niêm mạc.",
       "optionD": "Do đau quá mức gây ức chế thần kinh giao cảm.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2245,6 +2431,7 @@
       "optionC": "Chỉ xuất hiện trong tắc ruột cơ năng do rối loạn điện giải.",
       "optionD": "Giai đoạn khi bắt đầu có biến chứng viêm phúc mạc.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2257,6 +2444,7 @@
       "optionC": "70% do nuốt vào, 30% do vi khuẩn lên men và phản ứng hóa học.",
       "optionD": "Toàn bộ do sự ứ đọng và phân hủy thức ăn.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2269,6 +2457,7 @@
       "optionC": "Vi khuẩn Gr (+) và xoắn khuẩn.",
       "optionD": "Các loại nấm men đường ruột.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2281,6 +2470,7 @@
       "optionC": "Có dấu hiệu rắn bò và quai ruột nổi rõ dưới thành bụng.",
       "optionD": "Nôn mửa sớm và rầm rộ kèm theo sốt cao.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2293,6 +2483,7 @@
       "optionC": "Ngộ độc chì hoặc porphyria.",
       "optionD": "Xoắn ruột do dính.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2305,6 +2496,7 @@
       "optionC": "Tắc ruột do liệt (Cơ năng).",
       "optionD": "Tắc ruột ở đoạn trực tràng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2317,6 +2509,7 @@
       "optionC": "12 giờ.",
       "optionD": "24 giờ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2329,6 +2522,7 @@
       "optionC": "Toan hô hấp (Respiratory acidosis).",
       "optionD": "Kiềm hô hấp (Respiratory alkalosis).",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2341,6 +2535,7 @@
       "optionC": "Do tăng áp lực nội lòng ruột chèn ép trực tiếp vào niệu quản.",
       "optionD": "Do lạm dụng thuốc giảm đau gây độc cho thận.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2353,6 +2548,7 @@
       "optionC": "Khi hàng rào niêm mạc bị tổn thương do thiếu máu cục bộ và tăng áp lực.",
       "optionD": "Chỉ khi ruột đã bị thủng hoàn toàn vào ổ bụng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2365,6 +2561,7 @@
       "optionC": "Bí trung, đại tiện.",
       "optionD": "Bụng chướng căng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2377,6 +2574,7 @@
       "optionC": "Tắc ruột thắt nghẹt giai đoạn muộn.",
       "optionD": "Viêm phúc mạc do thủng ruột.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2389,6 +2587,7 @@
       "optionC": "Có nhiều dịch nhầy lẫn máu tươi.",
       "optionD": "Cơ thắt hậu môn bị liệt hoàn toàn.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2401,6 +2600,7 @@
       "optionC": "Liệt ruột sau mổ.",
       "optionD": "Thủng tạng rỗng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2413,6 +2613,7 @@
       "optionC": "Chụp cắt lớp vi tính (CT Scan) có tiêm thuốc cản quang.",
       "optionD": "Xét nghiệm Lactate máu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2425,6 +2626,7 @@
       "optionC": "Lactate máu.",
       "optionD": "Glucose máu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2437,6 +2639,7 @@
       "optionC": "Suy thận cấp tại thận.",
       "optionD": "Toan chuyển hóa do mất dịch kiềm.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2449,6 +2652,7 @@
       "optionC": "Để giải tỏa áp lực, giảm chướng bụng và ngăn ngừa hít sặc.",
       "optionD": "Để bơm thuốc nhuận tràng vào đoạn dưới điểm tắc.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2461,6 +2665,7 @@
       "optionC": "Tắc ruột cơ học do khối u đại tràng.",
       "optionD": "Thoát vị bẹn nghẹt.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2473,6 +2678,7 @@
       "optionC": "Bệnh nhân có dấu hiệu viêm phúc mạc rõ rệt.",
       "optionD": "Bệnh nhân lồng ruột đã có biến chứng thủng ruột.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2485,6 +2691,7 @@
       "optionC": "Bệnh nhân đã thông suốt đường tiêu hóa.",
       "optionD": "Có dịch tự do trong ổ bụng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2497,6 +2704,7 @@
       "optionC": "Thực hiện thuốc giảm đau Morphine tĩnh mạch.",
       "optionD": "Vệ sinh răng miệng bằng nước muối sinh lý.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -2509,6 +2717,7 @@
       "optionC": "Chỉ thực hiện khi bệnh nhân có biểu hiện tụt huyết áp.",
       "optionD": "Sau mỗi lần bệnh nhân nôn mửa.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2521,6 +2730,7 @@
       "optionC": "Cho bệnh nhân ăn cơm ngay sau khi tỉnh thuốc mê.",
       "optionD": "Truyền dịch tĩnh mạch tốc độ chậm.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -2533,6 +2743,7 @@
       "optionC": "Luôn tiến triển từ sung huyết sang hoại tử nếu không mổ.",
       "optionD": "Chỉ bao gồm các tình trạng viêm do tắc nghẽn lòng túi cùng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2545,6 +2756,7 @@
       "optionC": "Được cung cấp máu bởi động mạch tận.",
       "optionD": "Chứa một lượng lớn các nang bạch huyết dưới niêm mạc.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2557,6 +2769,7 @@
       "optionC": "Quá sản tổ chức bạch huyết.",
       "optionD": "Sự vặn xoắn tự nhiên của gốc ruột thừa.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2569,6 +2782,7 @@
       "optionC": "20 - 30 tuổi.",
       "optionD": "40 - 50 tuổi.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2581,6 +2795,7 @@
       "optionC": "Ngăn cản sự bài tiết dịch nhầy của niêm mạc.",
       "optionD": "Làm chết các vi khuẩn có lợi (Microbiome).",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2593,6 +2808,7 @@
       "optionC": "Sau manh tràng.",
       "optionD": "Trước hồi tràng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2605,6 +2821,7 @@
       "optionC": "Đau khắp bụng sau đó khu trú ở vùng hạ sườn phải.",
       "optionD": "Đau từ vùng thắt lưng phải lan dần ra phía trước rốn.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2617,6 +2834,7 @@
       "optionC": "Do kích thích thần kinh thực vật (tạng) chi phối lớp thanh mạc.",
       "optionD": "Do hiện tượng liệt ruột cơ năng làm chướng bụng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2629,6 +2847,7 @@
       "optionC": "Chán ăn.",
       "optionD": "Bí trung đại tiện.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2641,6 +2860,7 @@
       "optionC": "Dưới gan.",
       "optionD": "Sau hồi tràng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2653,6 +2873,7 @@
       "optionC": "Dấu hiệu Dieulafoy.",
       "optionD": "Dấu hiệu Psoas.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2665,6 +2886,7 @@
       "optionC": "Đã có biến chứng vỡ gây viêm phúc mạc toàn thể.",
       "optionD": "Có sự tăng cảm giác da do viêm nhiễm trùng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2677,6 +2899,7 @@
       "optionC": "Co cứng thành bụng (Rigidity).",
       "optionD": "Phản ứng dội (Blumberg).",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2689,6 +2912,7 @@
       "optionC": "Thể chậu hông.",
       "optionD": "Thể trước hồi tràng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2701,6 +2925,7 @@
       "optionC": "Ấn sâu vùng hạ sườn phải khi hít vào - Ruột thừa dưới gan.",
       "optionD": "Dồn khí từ đại tràng trái sang phải - Ruột thừa bình thường.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2713,6 +2938,7 @@
       "optionC": "WBC bình thường nhưng CRP tăng rất cao.",
       "optionD": "Bạch cầu Lympho tăng chiếm ưu thế.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2725,6 +2951,7 @@
       "optionC": "Áp xe ruột thừa.",
       "optionD": "Sốc nhiễm khuẩn.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2737,6 +2964,7 @@
       "optionC": "Bụng cứng như gỗ kèm sốt cao rét run và môi khô lưỡi bẩn.",
       "optionD": "Đau dữ dội vùng hố chậu phải và có phản ứng thành bụng rõ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2749,6 +2977,7 @@
       "optionC": "Chọc hút mủ dưới hướng dẫn của siêu âm.",
       "optionD": "Thăm dò ổ bụng qua nội soi.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2761,6 +2990,7 @@
       "optionC": "Thời gian cuộc mổ luôn ngắn hơn mổ mở.",
       "optionD": "Không gây trướng bụng sau mổ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2773,6 +3003,7 @@
       "optionC": "Khí CO₂ còn sót lại trong ổ bụng sau mổ.",
       "optionD": "Biến chứng viêm túi mật cấp sau mổ.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2785,6 +3016,7 @@
       "optionC": "40 - 50%.",
       "optionD": "70 - 80%.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2797,6 +3029,7 @@
       "optionC": "Nằm sấp để giảm áp lực lên ruột thừa.",
       "optionD": "Nằm đầu thấp, chân cao để tăng tưới máu não.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2809,6 +3042,7 @@
       "optionC": "Đo dấu hiệu sinh tồn thường xuyên.",
       "optionD": "Đánh giá tính chất đau bụng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2821,6 +3055,7 @@
       "optionC": "> 1.5 ml/kg/giờ.",
       "optionD": "> 2.0 ml/kg/giờ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2833,6 +3068,7 @@
       "optionC": "Kích thích nhu động ruột, phòng ngừa liệt ruột.",
       "optionD": "Giảm tình trạng buồn nôn do tác dụng của thuốc mê.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2845,6 +3081,7 @@
       "optionC": "Khi bệnh nhân đã có trung tiện.",
       "optionD": "Khi nghe thấy tiếng nhu động ruột tăng mạnh.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2857,6 +3094,7 @@
       "optionC": "Đau tức vùng vai phải và bụng chướng nhẹ.",
       "optionD": "Đi tiểu ít, sẫm màu và niêm mạc miệng khô.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2869,6 +3107,7 @@
       "optionC": "2 - 3 tháng.",
       "optionD": "6 tháng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2881,6 +3120,7 @@
       "optionC": "Sự xâm nhập đột ngột của ký sinh trùng.",
       "optionD": "Thoát vị bẹn nghẹt gây ảnh hưởng ruột thừa.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2893,6 +3133,7 @@
       "optionC": "Trạng thái cấp cứu huyết động và tính chất tái phát.",
       "optionD": "Sự mất cân bằng giữa yếu tố tấn công và bảo vệ niêm mạc.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2905,6 +3146,7 @@
       "optionC": "Là vị trí thường xuyên xảy ra các ổ loét sâu vào động mạch vị tá tràng.",
       "optionD": "Là nơi đánh dấu điểm kết thúc của hệ thống tĩnh mạch cửa.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2917,6 +3159,7 @@
       "optionC": "Do máu đóng vai trò là chất nhuận tràng làm giảm tái hấp thu nước tại thận.",
       "optionD": "Do cơ thể tăng cường chuyển hóa đường tại gan để bù đắp năng lượng.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2929,6 +3172,7 @@
       "optionC": "Tình trạng chảy máu của bệnh nhân đã tạm thời ổn định.",
       "optionD": "Bệnh nhân bị XHTH thấp nhưng máu chảy chậm.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -2941,6 +3185,7 @@
       "optionC": "Sự thiếu hụt Vitamin K làm thành mạch tĩnh mạch thực quản trở nên mỏng.",
       "optionD": "Áp lực tâm thất phải tăng cao gây ứ máu tại hệ thống tĩnh mạch thực quản.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2953,6 +3198,7 @@
       "optionC": "Các vòng cung mạch máu nối tiếp nhau rất phong phú và lưu lượng lớn.",
       "optionD": "Sự hiện diện của các yếu tố tấn công như Pepsin và Acid HCl.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2965,6 +3211,7 @@
       "optionC": "Do cơ thể kéo dịch từ khoảng kẽ vào lòng mạch làm loãng máu.",
       "optionD": "Do gan ngưng tổng hợp Protein và Hemoglobin để tiết kiệm năng lượng.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -2977,6 +3224,7 @@
       "optionC": "30% - 40% thể tích tuần hoàn.",
       "optionD": "> 40% thể tích tuần hoàn.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -2989,6 +3237,7 @@
       "optionC": "Mạch 90 lần/phút, HA tâm thu ổn định.",
       "optionD": "Mạch nhỏ khó bắt nhưng HA tâm thu vẫn đạt 100 mmHg.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3001,6 +3250,7 @@
       "optionC": "Do tình trạng hạ đường huyết đột ngột sau khi nôn máu.",
       "optionD": "Do nồng độ Urea trong máu tăng quá cao gây độc cho thần kinh.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -3013,6 +3263,7 @@
       "optionC": "Nội soi tiêu hóa (Dạ dày hoặc Đại trực tràng).",
       "optionD": "Thăm trực tràng bằng tay (DRE).",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3025,6 +3276,7 @@
       "optionC": "Co mạch tại chỗ để giảm lưu lượng máu đến ổ loét.",
       "optionD": "Tăng cường lớp nhầy Bicarbonate để bao phủ ổ loét.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3037,6 +3289,7 @@
       "optionC": "7 g/dL.",
       "optionD": "10 g/dL.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3049,6 +3302,7 @@
       "optionC": "Để làm giảm lượng NH3 do vi khuẩn ruột tạo ra.",
       "optionD": "Ngăn ngừa viêm phổi hít do nôn máu ồ ạt.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3061,6 +3315,7 @@
       "optionC": "X-quang can thiệp (Angiography).",
       "optionD": "Phẫu thuật khâu cầm máu ổ loét.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3073,6 +3328,7 @@
       "optionC": "Niêm mạc mắt nhợt và da xanh xao.",
       "optionD": "Bệnh nhân lờ đờ, chậm chạp hoặc hôn mê.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3085,6 +3341,7 @@
       "optionC": "HA tâm trương tăng > 10 mmHg khi bệnh nhân đứng dậy.",
       "optionD": "HA tâm thu không đổi nhưng mạch tăng thêm 10 lần/phút.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3097,6 +3354,7 @@
       "optionC": "Đặt bệnh nhân nằm đầu thấp, chân cao và thiết lập 2 đường truyền lớn.",
       "optionD": "Chuẩn bị dụng cụ để bác sĩ tiến hành nội soi cấp cứu.",
       "correctAnswer": "C",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -3109,6 +3367,7 @@
       "optionC": "Bệnh nhân bị phân đen đóng thành khuôn.",
       "optionD": "Bệnh nhân đang được điều trị bằng thuốc PPI liều cao.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3121,6 +3380,7 @@
       "optionC": "< 30 ml/giờ trong 24 giờ.",
       "optionD": "Khoảng 100 ml/24 giờ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3133,6 +3393,7 @@
       "optionC": "Cho bệnh nhân ăn chế độ giàu protein để bù máu.",
       "optionD": "Hướng dẫn bệnh nhân tập thở sâu và ho có hiệu quả.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_APPLICATION",
       "explanation": null
     },
     {
@@ -3145,6 +3406,7 @@
       "optionC": "24 giờ đầu sau nội soi.",
       "optionD": "Cho đến khi bệnh nhân cảm thấy đói.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3157,6 +3419,7 @@
       "optionC": "Chỉ số SpO2 đạt 95% khi thở khí trời.",
       "optionD": "Niêm mạc miệng sạch, không có vết loét.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3169,6 +3432,7 @@
       "optionC": "5 - 10 lít/phút.",
       "optionD": "Thở oxy qua mặt nạ có túi dự trữ.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3181,6 +3445,7 @@
       "optionC": "Ăn lỏng (sữa, cháo loãng), chia nhỏ 6-8 bữa/ngày.",
       "optionD": "Tiếp tục nhịn ăn hoàn toàn thêm 48 giờ nữa.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3193,6 +3458,7 @@
       "optionC": "Nằm đầu cao → Uống nước gừng → Đứng dậy.",
       "optionD": "Nằm đầu thấp → Co duỗi chân → Tự đi vệ sinh.",
       "correctAnswer": "A",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3205,6 +3471,7 @@
       "optionC": "Rối loạn giấc ngủ, run vẫy (Asterixis).",
       "optionD": "Da xanh, móng tay khum hình thìa, mệt mỏi.",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3217,6 +3484,7 @@
       "optionC": "Dung dịch Albumin 5%.",
       "optionD": "Dung dịch cao phân tử (Dextran).",
       "correctAnswer": "B",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     },
     {
@@ -3229,6 +3497,7 @@
       "optionC": "Sốc giảm thể tích giai đoạn mất bù.",
       "optionD": "Biến chứng nhồi máu cơ tim do thiếu máu.",
       "correctAnswer": "B",
+      "cognitiveLevel": "CLINICAL_REASONING_ANALYSIS",
       "explanation": null
     },
     {
@@ -3241,6 +3510,7 @@
       "optionC": "Mức độ nặng.",
       "optionD": "Chưa thể xác định nếu chưa có kết quả Hb.",
       "correctAnswer": "C",
+      "cognitiveLevel": "FOUNDATION",
       "explanation": null
     }
   ]

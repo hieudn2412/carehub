@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
-import { SearchOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined, FilterOutlined } from '@ant-design/icons'
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  FilterOutlined,
+  PlusCircleOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -13,10 +21,9 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   status: 'ACTIVE',
-  sortOrder: 0,
 }
 
-function QuestionCategoryListPage() {
+export default function QuestionCategoryListPage() {
   const { showToast } = useToast()
   const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -45,19 +52,19 @@ function QuestionCategoryListPage() {
   }, [showToast])
 
   useEffect(() => {
-    // Hydrate categories when the screen mounts.
-
     loadCategories()
   }, [loadCategories])
 
-  const filteredCategories = useMemo(() => categories.filter((item) => {
-    const matchesKeyword =
-      item.name.toLowerCase().includes(keyword.toLowerCase()) ||
-      (item.description || '').toLowerCase().includes(keyword.toLowerCase()) ||
-      (item.code || '').toLowerCase().includes(keyword.toLowerCase())
-    const matchesStatus = status === '' || item.status === status
-    return matchesKeyword && matchesStatus
-  }), [categories, keyword, status])
+  const filteredCategories = useMemo(() => {
+    return categories.filter((item) => {
+      const matchesKeyword =
+        item.name.toLowerCase().includes(keyword.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(keyword.toLowerCase()) ||
+        (item.code || '').toLowerCase().includes(keyword.toLowerCase())
+      const matchesStatus = status === '' || item.status === status
+      return matchesKeyword && matchesStatus
+    })
+  }, [categories, keyword, status])
 
   // Pagination calculations
   const pageSize = 10
@@ -80,7 +87,6 @@ function QuestionCategoryListPage() {
       name: item.name,
       description: item.description || '',
       status: item.status || 'ACTIVE',
-      sortOrder: item.sortOrder || 0,
     })
     setIsModalOpen(true)
   }
@@ -104,13 +110,11 @@ function QuestionCategoryListPage() {
       showToast('Tên danh mục không được để trống.', 'warning')
       return
     }
-
     const payload = {
       code: modalForm.code.trim() || null,
       name: modalForm.name.trim(),
       description: modalForm.description.trim(),
       status: modalForm.status,
-      sortOrder: Number(modalForm.sortOrder) || 0,
     }
 
     setIsSaving(true)
@@ -122,6 +126,8 @@ function QuestionCategoryListPage() {
       }
       showToast(modalMode === 'create' ? 'Đã tạo danh mục câu hỏi.' : 'Đã cập nhật danh mục câu hỏi.', 'success')
       handleCloseModal()
+      setPage(0)
+      setKeyword('')
       loadCategories()
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
@@ -138,7 +144,8 @@ function QuestionCategoryListPage() {
     if (!categoryToArchive) return
     const item = categoryToArchive
     setCategoryToArchive(null)
-    questionCategoryApi.archiveCategory(item.id)
+    questionCategoryApi
+      .archiveCategory(item.id)
       .then(() => {
         showToast('Đã lưu trữ danh mục câu hỏi.', 'success')
         loadCategories()
@@ -154,9 +161,7 @@ function QuestionCategoryListPage() {
         {/* Title Card */}
         <div className="qcl-title-card">
           <h1 className="qcl-title">Danh mục câu hỏi</h1>
-          <p className="qcl-subtitle">
-            Quản lý các danh mục câu hỏi theo chủ đề và mục tiêu đánh giá
-          </p>
+          <p className="qcl-subtitle">Quản lý danh mục kiến thức dùng chung cho ngân hàng câu hỏi</p>
         </div>
 
         {/* Filter Bar */}
@@ -221,7 +226,6 @@ function QuestionCategoryListPage() {
             <thead>
               <tr>
                 <th>Tên danh mục</th>
-                <th>Mô tả</th>
                 <th>Số câu hỏi</th>
                 <th>Trạng thái</th>
                 <th style={{ width: '120px' }}>Hành động</th>
@@ -230,13 +234,13 @@ function QuestionCategoryListPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                  <td colSpan="4" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                     Đang tải danh mục câu hỏi...
                   </td>
                 </tr>
               ) : displayRows.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
+                  <td colSpan="4" style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>
                     Không tìm thấy danh mục câu hỏi nào.
                   </td>
                 </tr>
@@ -244,7 +248,6 @@ function QuestionCategoryListPage() {
                 displayRows.map((item) => (
                   <tr key={item.id}>
                     <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
-                    <td style={{ color: '#475569' }}>{item.description || '-'}</td>
                     <td style={{ fontWeight: 600, color: '#334155' }}>{item.questionCount || 0}</td>
                     <td>
                       <span className={`qcl-badge ${item.status === 'ACTIVE' ? 'qcl-badge--active' : 'qcl-badge--inactive'}`}>
@@ -254,21 +257,16 @@ function QuestionCategoryListPage() {
                     <td>
                       <div className="admin-table-actions">
                         <button
-                          type="button"
-                          className="admin-table-action admin-table-action--icon admin-table-action--primary"
+                          className="admin-action-btn admin-action-btn--edit"
                           onClick={() => handleOpenEditModal(item)}
-                          title="Chỉnh sửa"
-                          aria-label={`Chỉnh sửa danh mục ${item.name}`}
+                          title="Chỉnh sửa danh mục"
                         >
                           <EditOutlined />
                         </button>
                         <button
-                          type="button"
-                          className="admin-table-action admin-table-action--icon admin-table-action--danger"
+                          className="admin-action-btn admin-action-btn--danger"
                           onClick={() => handleDeleteCategory(item)}
-                          title="Lưu trữ"
-                          aria-label={`Lưu trữ danh mục ${item.name}`}
-                          disabled={item.status === 'ARCHIVED'}
+                          title="Lưu trữ danh mục"
                         >
                           <DeleteOutlined />
                         </button>
@@ -286,11 +284,7 @@ function QuestionCategoryListPage() {
               Hiển thị {displayRows.length} trong tổng số {totalElements} kết quả
             </div>
             <div className="qcl-pagination-buttons">
-              <button
-                className="qcl-page-btn"
-                disabled={page <= 0}
-                onClick={() => setPage(page - 1)}
-              >
+              <button className="qcl-page-btn" disabled={page <= 0} onClick={() => setPage(page - 1)}>
                 &lt;
               </button>
               {(() => {
@@ -301,23 +295,35 @@ function QuestionCategoryListPage() {
                 if (end - start < maxVisible) start = Math.max(0, end - maxVisible)
                 const buttons = []
                 if (start > 0) {
-                  buttons.push(<button key={0} className={`qcl-page-btn ${page === 0 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(0)}>1</button>)
+                  buttons.push(
+                    <button key={0} className={`qcl-page-btn ${page === 0 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(0)}>
+                      1
+                    </button>,
+                  )
                   if (start > 1) buttons.push(<span key="se" className="qcl-page-ellipsis">&hellip;</span>)
                 }
                 for (let i = start; i < end; i++) {
-                  buttons.push(<button key={i} className={`qcl-page-btn ${page === i ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(i)}>{i + 1}</button>)
+                  buttons.push(
+                    <button key={i} className={`qcl-page-btn ${page === i ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(i)}>
+                      {i + 1}
+                    </button>,
+                  )
                 }
                 if (end < totalPages) {
                   if (end < totalPages - 1) buttons.push(<span key="ee" className="qcl-page-ellipsis">&hellip;</span>)
-                  buttons.push(<button key={totalPages - 1} className={`qcl-page-btn ${page === totalPages - 1 ? 'qcl-page-btn--active' : ''}`} onClick={() => setPage(totalPages - 1)}>{totalPages}</button>)
+                  buttons.push(
+                    <button
+                      key={totalPages - 1}
+                      className={`qcl-page-btn ${page === totalPages - 1 ? 'qcl-page-btn--active' : ''}`}
+                      onClick={() => setPage(totalPages - 1)}
+                    >
+                      {totalPages}
+                    </button>,
+                  )
                 }
                 return buttons
               })()}
-              <button
-                className="qcl-page-btn"
-                disabled={page + 1 >= totalPages}
-                onClick={() => setPage(page + 1)}
-              >
+              <button className="qcl-page-btn" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
                 &gt;
               </button>
             </div>
@@ -355,11 +361,14 @@ function QuestionCategoryListPage() {
                     value={modalForm.code}
                     onChange={(e) => updateModalField('code', e.target.value)}
                     placeholder="Tự sinh nếu bỏ trống"
-                    disabled={isSaving}
+                    disabled={isSaving || modalMode === 'edit'}
+                    title={modalMode === 'edit' ? 'Mã danh mục là định danh ổn định và không thể thay đổi' : undefined}
                   />
                 </div>
                 <div className="qcl-modal-group">
-                  <label>Tên danh mục <span className="required-star">*</span></label>
+                  <label>
+                    Tên danh mục <span className="required-star">*</span>
+                  </label>
                   <input
                     type="text"
                     className="qcl-input-red"
@@ -385,54 +394,45 @@ function QuestionCategoryListPage() {
                     <option value="INACTIVE">Tạm ngưng</option>
                   </select>
                 </div>
-                <div className="qcl-modal-group">
-                  <label>Thứ tự hiển thị</label>
-                  <input
-                    type="number"
-                    className="qcl-input-green"
-                    value={modalForm.sortOrder}
-                    onChange={(e) => updateModalField('sortOrder', e.target.value)}
-                    disabled={isSaving}
-                  />
-                </div>
               </div>
 
               <div className="qcl-modal-group">
-                <label>Mô tả</label>
+                <label>Mô tả chi tiết</label>
                 <textarea
-                  className="qcl-textarea-green"
-                  rows={3}
+                  rows="3"
+                  className="qcl-input-red"
                   value={modalForm.description}
                   onChange={(e) => updateModalField('description', e.target.value)}
-                  placeholder="Nhập mô tả tóm tắt..."
+                  placeholder="Mô tả danh mục kiến thức..."
                   disabled={isSaving}
                 />
               </div>
 
-              {/* Modal Actions */}
               <div className="qcl-modal-actions">
-                <button type="submit" className="qcl-btn-save" disabled={isSaving}>
-                  {isSaving ? 'Đang lưu...' : 'Lưu'}
-                </button>
                 <button type="button" className="qcl-btn-cancel" onClick={handleCloseModal} disabled={isSaving}>
                   Hủy
+                </button>
+                <button type="submit" className="qcl-btn-save" disabled={isSaving}>
+                  {isSaving ? 'Đang lưu...' : modalMode === 'create' ? 'Tạo mới' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      <ConfirmModal
-        isOpen={Boolean(categoryToArchive)}
-        title="Lưu trữ danh mục câu hỏi?"
-        message={categoryToArchive ? `Danh mục “${categoryToArchive.name}” sẽ không còn xuất hiện trong các lựa chọn mới. Bạn vẫn có thể xem lại trong danh mục đã lưu trữ.` : ''}
-        confirmText="Lưu trữ danh mục"
-        danger
-        onCancel={() => setCategoryToArchive(null)}
-        onConfirm={confirmDeleteCategory}
-      />
+
+      {/* Confirm Archive Modal */}
+      {categoryToArchive && (
+        <ConfirmModal
+          isOpen={true}
+          title="Xác nhận lưu trữ danh mục"
+          message={`Bạn có chắc chắn muốn lưu trữ danh mục "${categoryToArchive.name}"? Danh mục sau khi lưu trữ sẽ bị ẩn khỏi danh sách chính.`}
+          confirmLabel="Lưu trữ"
+          cancelLabel="Hủy"
+          onConfirm={confirmDeleteCategory}
+          onCancel={() => setCategoryToArchive(null)}
+        />
+      )}
     </AppShell>
   )
 }
-
-export default QuestionCategoryListPage

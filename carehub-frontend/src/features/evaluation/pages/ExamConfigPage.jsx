@@ -24,6 +24,7 @@ import { evaluationAudienceApi } from '../api/evaluationAudienceApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
@@ -31,7 +32,7 @@ import '../styles/ExamConfigPage.css'
 const COGNITIVE = [
   ['FOUNDATION', 'Kiến thức nền tảng'],
   ['CLINICAL_APPLICATION', 'Áp dụng lâm sàng'],
-  ['CLINICAL_REASONING_ANALYSIS', 'Tư duy và phân tích lâm sàng'],
+  ['CLINICAL_REASONING_ANALYSIS', 'Tư duy phân tích'],
 ]
 
 function emptyField(id) {
@@ -76,6 +77,7 @@ export default function ExamConfigPage() {
   const [availableFrom, setAvailableFrom] = useState('')
   const [dueAt, setDueAt] = useState('')
   const [maxAttempts, setMaxAttempts] = useState(1)
+  const [resultVisibility, setResultVisibility] = useState('SCORE_ONLY')
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -555,28 +557,45 @@ export default function ExamConfigPage() {
                         </div>
                       </div>
 
-                      <div className="exp-form-grid">
-                        <label>
-                          <span>Mở đề lúc (tùy chọn)</span>
-                          <input type="datetime-local" className="ch-input" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} />
-                        </label>
+                      <div className="exp-schedule-card">
+                        <div className="exp-schedule-row">
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Mở đề lúc (tùy chọn)</label>
+                            <DateTimePicker24h value={availableFrom} onChange={(val) => setAvailableFrom(val)} />
+                          </div>
 
-                        <label>
-                          <span>Hạn nộp bài (tùy chọn)</span>
-                          <input type="datetime-local" className="ch-input" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
-                        </label>
+                          <div className="exp-schedule-field">
+                            <label className="exp-schedule-label">Hạn nộp bài (tùy chọn)</label>
+                            <DateTimePicker24h value={dueAt} onChange={(val) => setDueAt(val)} />
+                          </div>
 
-                        <label>
-                          <span>Số lượt làm tối đa</span>
-                          <input
-                            type="number"
-                            min="1"
-                            max="10"
-                            className="ch-input"
-                            value={maxAttempts}
-                            onChange={(e) => setMaxAttempts(e.target.value)}
-                          />
-                        </label>
+                          <div className="exp-schedule-field exp-schedule-field--compact">
+                            <label className="exp-schedule-label">Số lượt thi tối đa</label>
+                            <div className="exp-number-stepper">
+                              <input
+                                type="number"
+                                min="1"
+                                max="10"
+                                className="exp-num-input"
+                                value={maxAttempts}
+                                onChange={(e) => setMaxAttempts(e.target.value)}
+                              />
+                              <span className="exp-stepper-unit">lần</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="exp-schedule-row exp-schedule-row--bottom">
+                          <div className="exp-schedule-field exp-schedule-field--wide">
+                            <label className="exp-schedule-label">Công bố kết quả</label>
+                            <select className="ch-input" value={resultVisibility} onChange={(e) => setResultVisibility(e.target.value)}>
+                              <option value="SCORE_ONLY">Xem điểm ngay sau khi nộp</option>
+                              <option value="SCORE_AND_ANSWERS">Xem điểm và đáp án sau khi đợt thi kết thúc</option>
+                              <option value="HIDDEN_UNTIL_END">Ẩn kết quả đến khi đợt thi kết thúc</option>
+                            </select>
+                            <small className="exp-field-hint">Áp dụng cho toàn bộ nhân viên trong đợt giao đề.</small>
+                          </div>
+                        </div>
                       </div>
                     </section>
 
@@ -638,4 +657,3 @@ export default function ExamConfigPage() {
     </div>
   )
 }
-

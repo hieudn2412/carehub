@@ -47,12 +47,16 @@ function TrainingEmployeeStatusDetailPage() {
         const recordsData = recordsPage?.content
 
         if (statusData) {
+          const submitted = Number(statusData.submittedHours || 0)
+          const required = Number(statusData.requiredHours ?? 120)
+          const isCompliant = statusData.status === 'COMPLIANT' || (required > 0 && submitted >= required)
+
           setEmployeeInfo({
             employeeName: statusData.employeeName || '---',
             employeeCode: statusData.employeeCode || '---',
-            submittedHours: statusData.submittedHours || 0,
-            requiredHours: statusData.requiredHours ?? 0,
-            complianceStatus: statusData.status === 'COMPLIANT' ? 'COMPLIANT' : 'NON_COMPLIANT'
+            submittedHours: submitted,
+            requiredHours: required,
+            complianceStatus: isCompliant ? 'COMPLIANT' : 'NON_COMPLIANT'
           })
         }
 
@@ -132,14 +136,14 @@ function TrainingEmployeeStatusDetailPage() {
                       <div className="ted-summary-grid">
 
                         {/* Card: Submitted Hours */}
-                        <div className="ted-summary-card ted-summary-card--total">
-                          <div className="ted-card-icon ted-card-icon--total">
+                        <div className={`ted-summary-card ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'ted-summary-card--approved' : 'ted-summary-card--total'}`}>
+                          <div className={`ted-card-icon ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'ted-card-icon--approved' : 'ted-card-icon--total'}`}>
                             <ClockCircleOutlined />
                           </div>
                           <div className="ted-card-info">
                             <span className="ted-card-label">Số giờ đã nộp</span>
-                            <span className="ted-card-value ted-card-value--total">
-                              {employeeInfo.submittedHours}h
+                            <span className={`ted-card-value ${employeeInfo.complianceStatus === 'COMPLIANT' ? 'ted-card-value--approved' : 'ted-card-value--total'}`}>
+                              {employeeInfo.submittedHours}h / {employeeInfo.requiredHours}h
                             </span>
                           </div>
                         </div>

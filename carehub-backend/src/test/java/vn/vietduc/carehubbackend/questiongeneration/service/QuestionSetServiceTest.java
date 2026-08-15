@@ -122,7 +122,6 @@ class QuestionSetServiceTest {
                 "SET_1",
                 "Bộ kiểm soát nhiễm khuẩn",
                 "Mô tả",
-                "Kiểm soát nhiễm khuẩn",
                 "medium",
                 "DRAFT",
                 List.of(1L, 2L, 3L)
@@ -138,7 +137,6 @@ class QuestionSetServiceTest {
         assertThatThrownBy(() -> service.create(new CreateQuestionSetRequest(
                 null,
                 "Bộ trùng câu",
-                null,
                 null,
                 "easy",
                 "DRAFT",
@@ -158,7 +156,6 @@ class QuestionSetServiceTest {
         assertThatThrownBy(() -> service.create(new CreateQuestionSetRequest(
                 null,
                 "Bộ có câu nháp",
-                null,
                 null,
                 "medium",
                 "DRAFT",
@@ -182,7 +179,6 @@ class QuestionSetServiceTest {
         assertThatThrownBy(() -> service.update(questionSet.getId(), new vn.vietduc.carehubbackend.questiongeneration.dto.request.UpdateQuestionSetRequest(
                 "SET_ACTIVE",
                 "Tên mới",
-                null,
                 null,
                 "medium",
                 "ACTIVE",
@@ -292,8 +288,6 @@ class QuestionSetServiceTest {
                 question(4L, "Câu 4", QuestionBankStatus.APPROVED)
         ));
         PreviewQuestionSetRequest request = new PreviewQuestionSetRequest(
-                "Kiểm soát nhiễm khuẩn",
-                null,
                 3,
                 Map.of("medium", 3),
                 List.of(),
@@ -315,8 +309,6 @@ class QuestionSetServiceTest {
                 .code("SET-SOURCE")
                 .name("Bộ nguồn")
                 .description("Mô tả")
-                .category("An toàn")
-                .difficulty("medium")
                 .status(QuestionSetStatus.ACTIVE)
                 .questionCount(2)
                 .build();
@@ -424,8 +416,6 @@ class QuestionSetServiceTest {
                 .optionC("C")
                 .optionD("D")
                 .correctAnswer("A")
-                .topic("Kiểm soát nhiễm khuẩn")
-                .difficulty("medium")
                 .language("vi")
                 .sourceDocument("Tài liệu kiểm soát nhiễm khuẩn")
                 .questionType(QuestionType.ORIGINAL)

@@ -14,16 +14,18 @@ import {
 import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
 import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
-import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
+import { trainingApi } from '../../training/api/trainingApi.js'
 import {
   apiData,
   apiErrorMessage,
   candidateLabelText,
   candidateStatusText,
-  difficultyText,
+  cognitiveLevelText,
+  COGNITIVE_LEVELS,
   formatDateTime,
   formatNumber,
   jobStatusText,
@@ -51,14 +53,15 @@ function DocumentQuestionJobReviewPage() {
   const [candidateActionId, setCandidateActionId] = useState(null)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [difficultyFilter, setDifficultyFilter] = useState('')
-  const [validationGradeFilter, setValidationGradeFilter] = useState('')
+  const [professionalFieldFilter, setProfessionalFieldFilter] = useState('')
+  const [cognitiveLevelFilter, setCognitiveLevelFilter] = useState('')
   const [editingCandidate, setEditingCandidate] = useState(null)
   const [editForm, setEditForm] = useState(null)
   const [selectedCandidateId, setSelectedCandidateId] = useState(null)
   const [selectedCandidateIds, setSelectedCandidateIds] = useState([])
   const [isBatching, setIsBatching] = useState(false)
   const [categories, setCategories] = useState([])
+  const [professionalFields, setProfessionalFields] = useState([])
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false)
   const [duplicateReview, setDuplicateReview] = useState(null)
 
@@ -87,15 +90,19 @@ function DocumentQuestionJobReviewPage() {
   }, [loadJob])
 
   useEffect(() => {
-    async function loadCategories() {
+    async function loadTaxonomy() {
       try {
-        const response = await questionCategoryApi.listCategories({ status: 'ACTIVE' })
-        setCategories(apiData(response, []))
+        const [categoryResponse, optionsResponse] = await Promise.all([
+          questionCategoryApi.listCategories({ status: 'ACTIVE' }),
+          trainingApi.getRecordOptions(),
+        ])
+        setCategories(apiData(categoryResponse, []))
+        setProfessionalFields(apiData(optionsResponse, {}).professionalFields || [])
       } catch {
         // ignore
       }
     }
-    loadCategories()
+    loadTaxonomy()
   }, [])
 
   useEffect(() => {
@@ -114,11 +121,13 @@ function DocumentQuestionJobReviewPage() {
     return candidates.filter((candidate) => {
       const matchesKeyword = !normalizedKeyword || normalizeText(candidate.stem).includes(normalizedKeyword)
       const matchesStatus = !statusFilter || candidate.status === statusFilter || candidate.label === statusFilter
-      const matchesDifficulty = !difficultyFilter || normalizeText(candidate.difficulty) === normalizeText(difficultyFilter)
-      const matchesValidationGrade = !validationGradeFilter || candidate.validationGrade === validationGradeFilter
-      return matchesKeyword && matchesStatus && matchesDifficulty && matchesValidationGrade
+      const matchesProfessionalField = !professionalFieldFilter
+        || String(candidate.professionalFieldId || '') === professionalFieldFilter
+      const matchesCognitiveLevel = !cognitiveLevelFilter
+        || normalizeText(candidate.cognitiveLevel) === normalizeText(cognitiveLevelFilter)
+      return matchesKeyword && matchesStatus && matchesProfessionalField && matchesCognitiveLevel
     })
-  }, [candidates, keyword, statusFilter, difficultyFilter, validationGradeFilter])
+  }, [candidates, keyword, statusFilter, professionalFieldFilter, cognitiveLevelFilter])
   const selectedCandidate = candidates.find((candidate) => candidate.id === selectedCandidateId) || filteredCandidates[0]
   const selectedCandidates = candidates.filter((candidate) => selectedCandidateIds.includes(candidate.id))
   const selectedApprovableIds = selectedCandidates
@@ -133,6 +142,9 @@ function DocumentQuestionJobReviewPage() {
   const canRetryNoNewQuestions = jobDetail?.status === 'PARTIALLY_COMPLETED'
     && Number(jobDetail?.candidateCount || 0) === 0
     && jobDetail?.errorMessage?.includes('không có câu hỏi mới')
+  const candidatesMissingTaxonomy = candidates.filter((candidate) => (
+    !candidate.categoryId || !candidate.professionalFieldId || !candidate.cognitiveLevel
+  ))
 
   async function retryFailedChunks() {
     setIsRetrying(true)
@@ -235,8 +247,10 @@ function DocumentQuestionJobReviewPage() {
       optionD: candidate.optionD || '',
       correctAnswer: candidate.correctAnswer || 'A',
       explanation: candidate.explanation || '',
-      difficulty: candidate.difficulty || 'easy',
       topic: candidate.topic || '',
+      categoryId: candidate.categoryId ? String(candidate.categoryId) : '',
+      professionalFieldId: candidate.professionalFieldId ? String(candidate.professionalFieldId) : '',
+      cognitiveLevel: candidate.cognitiveLevel || '',
       sourceExcerpt: candidate.sourceExcerpt || '',
       reviewerNotes: candidate.reviewerNotes || '',
     })
@@ -245,7 +259,10 @@ function DocumentQuestionJobReviewPage() {
   async function saveEdit() {
     if (!editingCandidate || !editForm) return
     const requiredFields = ['stem', 'optionA', 'optionB', 'optionC', 'optionD']
-    if (requiredFields.some((field) => !editForm[field]?.trim())) {
+    if (requiredFields.some((field) => !editForm[field]?.trim())
+      || !editForm.categoryId
+      || !editForm.professionalFieldId
+      || !editForm.cognitiveLevel) {
       showToast('Vui lòng nhập đầy đủ câu hỏi và 4 đáp án.', 'warning')
       return
     }
@@ -406,8 +423,6 @@ function DocumentQuestionJobReviewPage() {
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>
                             {jobStatusText(jobDetail)}
                           </span>
-                          <span className="qdoc-mini-badge">{jobDetail.pipelineVersion || 'LEGACY_V3'}</span>
-                          <span className="qdoc-mini-badge">{jobDetail.promptVersion || '---'}</span>
                           <span>Tạo lúc {formatDateTime(jobDetail.createdAt)}</span>
                         </div>
                       </div>
@@ -419,24 +434,13 @@ function DocumentQuestionJobReviewPage() {
                           <span>Hủy phiên</span>
                         </button>
                       )}
-                      <button type="button" className="qdoc-secondary-btn" onClick={() => loadJob()}>
-                        <ReloadOutlined />
-                        <span>Tải lại</span>
-                      </button>
                     </div>
                   </section>
 
-                  <section className="qdoc-metric-grid qdoc-metric-grid--wide">
-                    <Metric label="Có thể review" value={formatNumber(jobDetail.reviewableCandidateCount)} />
-                    <Metric label="Bị rules/critic loại" value={formatNumber(jobDetail.rejectedCandidateCount)} />
-                    <Metric label="Không có đầu ra" value={formatNumber((jobDetail.chunkResults || []).filter(item => ['NO_KNOWLEDGE', 'NO_QUESTIONS'].includes(item.status)).length)} />
-                    <Metric label="Chunk có vấn đề" value={formatNumber(jobDetail.problemChunkCount)} />
-                    <Metric label="Tỷ lệ critic" value={`${Math.round((Number(jobDetail.criticCallCount || 0) / Math.max(1, Number(jobDetail.candidateCount || 0))) * 100)}%`} />
-                    <Metric label="Token" value={formatNumber(jobDetail.usage?.totalTokens)} />
-                    <Metric label="Chi phí ước tính" value={`$${Number(jobDetail.usage?.estimatedCostUsd || 0).toFixed(4)}`} />
+                  <section className="qdoc-metric-grid">
+                    <Metric label="Chờ duyệt" value={formatNumber(candidates.filter(c => c.status === 'VALIDATED' || c.status === 'NEED_REVIEW').length)} />
                     <Metric label="Đã duyệt" value={formatNumber(candidates.filter(c => c.status === 'APPROVED' || c.status === 'SAVED').length)} />
                     <Metric label="Đã lưu vào ngân hàng" value={formatNumber(candidates.filter(c => c.status === 'SAVED').length)} />
-                    <Metric label="Chờ duyệt" value={formatNumber(candidates.filter(c => c.status === 'VALIDATED' || c.status === 'NEED_REVIEW').length)} />
                   </section>
 
                   {LIVE_JOB_STATUSES.has(jobDetail.status) && (
@@ -446,23 +450,10 @@ function DocumentQuestionJobReviewPage() {
                     </section>
                   )}
 
-                  {jobDetail.errorMessage && (
+                  {jobDetail.errorMessage && jobDetail.errorMessage !== 'Có câu hỏi để duyệt nhưng vẫn còn chunk lỗi hoặc không tạo được đầu ra' && (
                     <section className={`qdoc-alert ${jobDetail.status === 'FAILED' ? 'qdoc-alert--danger' : 'qdoc-alert--warning'}`}>
                       <WarningOutlined />
                       <span>{jobDetail.errorMessage}</span>
-                    </section>
-                  )}
-
-                  {Number(jobDetail.failedChunkCount) > 0 && (
-                    <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
-                      <div>
-                        <WarningOutlined />
-                        <span>Một số đoạn nội dung xử lý lỗi. Bạn có thể thử lại riêng các đoạn lỗi mà không chạy lại toàn bộ tài liệu.</span>
-                      </div>
-                      <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
-                        {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
-                        <span>Thử lại đoạn lỗi</span>
-                      </button>
                     </section>
                   )}
 
@@ -470,11 +461,11 @@ function DocumentQuestionJobReviewPage() {
                     <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
                       <div>
                         <WarningOutlined />
-                        <span>{formatNumber(jobDetail.problemChunkCount)} đoạn lỗi, không có knowledge/câu hỏi, hoặc toàn bộ câu bị loại.</span>
+                        <span>{formatNumber(jobDetail.problemChunkCount)} đoạn nội dung chưa tạo được câu hỏi hoặc xử lý lỗi. Bạn có thể chạy lại các đoạn này.</span>
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryProblemChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
-                        <span>Retry problem chunks</span>
+                        <span>Chạy lại</span>
                       </button>
                     </section>
                   )}
@@ -483,7 +474,7 @@ function DocumentQuestionJobReviewPage() {
                     <section className="qdoc-alert qdoc-alert--info qdoc-alert--action">
                       <div>
                         <ReloadOutlined />
-                        <span>Phiên trước chưa tạo câu hỏi mới do trùng khóa sinh. Có thể chạy lại với cấu hình/danh mục hiện tại.</span>
+                        <span>Phiên trước chưa tạo được câu hỏi mới. Bạn có thể chạy lại để thử với cấu hình hiện tại.</span>
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
@@ -492,7 +483,17 @@ function DocumentQuestionJobReviewPage() {
                     </section>
                   )}
 
-                  <section className="qdoc-filter-bar">
+                  {candidatesMissingTaxonomy.length > 0 && (
+                    <section className="qdoc-alert qdoc-alert--warning">
+                      <WarningOutlined />
+                      <span>
+                        {formatNumber(candidatesMissingTaxonomy.length)} câu chưa đủ danh mục, lĩnh vực chuyên môn hoặc mức độ nhận thức.
+                        Hãy mở từng câu để bổ sung trước khi duyệt.
+                      </span>
+                    </section>
+                  )}
+
+                  <section className="qdoc-review-toolbar">
                     <div className="qdoc-search">
                       <SearchOutlined className="qdoc-search-icon" />
                       <input
@@ -502,9 +503,7 @@ function DocumentQuestionJobReviewPage() {
                         onChange={(event) => setKeyword(event.target.value)}
                       />
                     </div>
-                    <AdminFilterDisclosure
-                      activeCount={[statusFilter, difficultyFilter, validationGradeFilter].filter(Boolean).length}
-                    >
+                    <div className="qdoc-toolbar-filters">
                       <select className="qdoc-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                         <option value="">Tất cả trạng thái</option>
                         <option value="GOOD">Đạt</option>
@@ -513,19 +512,33 @@ function DocumentQuestionJobReviewPage() {
                         <option value="APPROVED">Đã duyệt</option>
                         <option value="SAVED">Đã lưu</option>
                       </select>
-                      <select className="qdoc-select" value={difficultyFilter} onChange={(event) => setDifficultyFilter(event.target.value)}>
-                        <option value="">Tất cả độ khó</option>
-                        <option value="easy">Dễ</option>
-                        <option value="medium">Trung bình</option>
-                        <option value="hard">Khó</option>
+                      <select className="qdoc-select" value={professionalFieldFilter} onChange={(event) => setProfessionalFieldFilter(event.target.value)}>
+                        <option value="">Tất cả lĩnh vực chuyên môn</option>
+                        {professionalFields.map((field) => (
+                          <option key={field.id} value={String(field.id)}>{field.code} · {field.name}</option>
+                        ))}
                       </select>
-                      <select className="qdoc-select" value={validationGradeFilter} onChange={(event) => setValidationGradeFilter(event.target.value)}>
-                        <option value="">Tất cả validation grade</option>
-                        <option value="PASS">PASS</option>
-                        <option value="REVIEW">REVIEW</option>
-                        <option value="REJECT">REJECT</option>
+                      <select className="qdoc-select" value={cognitiveLevelFilter} onChange={(event) => setCognitiveLevelFilter(event.target.value)}>
+                        <option value="">Tất cả mức độ nhận thức</option>
+                        {COGNITIVE_LEVELS.map((level) => (
+                          <option key={level.value} value={level.value}>{level.label}</option>
+                        ))}
                       </select>
-                    </AdminFilterDisclosure>
+                      {(keyword || statusFilter || professionalFieldFilter || cognitiveLevelFilter) && (
+                        <button
+                          type="button"
+                          className="qdoc-secondary-btn"
+                          onClick={() => {
+                            setKeyword('')
+                            setStatusFilter('')
+                            setProfessionalFieldFilter('')
+                            setCognitiveLevelFilter('')
+                          }}
+                        >
+                          <span>Xóa bộ lọc</span>
+                        </button>
+                      )}
+                    </div>
                   </section>
 
                   {filteredCandidates.length > 0 && (
@@ -587,8 +600,14 @@ function DocumentQuestionJobReviewPage() {
       </div>
 
       {editingCandidate && editForm && (
-        <div className="qdoc-modal-backdrop">
-          <div className="qdoc-modal qdoc-modal--wide" role="dialog" aria-modal="true" aria-labelledby="edit-candidate-title">
+        <div className="qdoc-modal-backdrop" onClick={() => setEditingCandidate(null)}>
+          <div
+            className="qdoc-modal qdoc-modal--wide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-candidate-title"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h2 id="edit-candidate-title">Sửa câu hỏi đề xuất</h2>
             <div className="qdoc-edit-grid">
               <TextAreaField label="Câu hỏi" value={editForm.stem} onChange={(value) => setEditFormField('stem', value)} />
@@ -612,19 +631,45 @@ function DocumentQuestionJobReviewPage() {
                 </div>
               </label>
               <label className="qdoc-field">
-                <span>Độ khó</span>
-                <select value={editForm.difficulty} onChange={(event) => setEditFormField('difficulty', event.target.value)}>
-                  <option value="easy">Dễ</option>
-                  <option value="medium">Trung bình</option>
-                  <option value="hard">Khó</option>
-                </select>
+                <span>Danh mục kiến thức</span>
+                <SearchableSelect
+                  value={editForm.categoryId}
+                  onChange={(val) => setEditFormField('categoryId', val)}
+                  options={[
+                    { value: '', label: '-- Chọn danh mục --' },
+                    ...categories.map((category) => ({
+                      value: String(category.id),
+                      label: category.name,
+                      searchText: `${category.code || ''} ${category.name}`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn hoặc gõ tìm danh mục --"
+                  searchPlaceholder="Nhập mã hoặc tên danh mục..."
+                />
               </label>
               <label className="qdoc-field">
-                <span>Chủ đề</span>
-                <select value={editForm.topic} onChange={(event) => setEditFormField('topic', event.target.value)}>
-                  <option value="">-- Chọn danh mục --</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.name}>{category.name}</option>
+                <span>Lĩnh vực chuyên môn</span>
+                <SearchableSelect
+                  value={editForm.professionalFieldId}
+                  onChange={(val) => setEditFormField('professionalFieldId', val)}
+                  options={[
+                    { value: '', label: '-- Chọn lĩnh vực --' },
+                    ...professionalFields.map((field) => ({
+                      value: String(field.id),
+                      label: `[${field.code}] ${field.name}`,
+                      searchText: `${field.code} ${field.name}`,
+                    })),
+                  ]}
+                  placeholder="-- Chọn hoặc gõ tìm lĩnh vực --"
+                  searchPlaceholder="Nhập mã hoặc tên lĩnh vực..."
+                />
+              </label>
+              <label className="qdoc-field">
+                <span>Mức độ nhận thức</span>
+                <select value={editForm.cognitiveLevel} onChange={(event) => setEditFormField('cognitiveLevel', event.target.value)}>
+                  <option value="">-- Chọn mức độ --</option>
+                  {COGNITIVE_LEVELS.map((level) => (
+                    <option key={level.value} value={level.value}>{level.label}</option>
                   ))}
                 </select>
               </label>
@@ -709,6 +754,8 @@ function DocumentQuestionJobReviewPage() {
   }
 }
 
+
+
 export function CandidateCard({
   candidate,
   isSelected,
@@ -732,6 +779,17 @@ export function CandidateCard({
   const statusText = candidateStatusText(candidate)
   const labelText = candidateLabelText(candidate)
   const showLabelBadge = shouldShowCandidateLabelBadge(candidate)
+  const fieldLabel = candidate.professionalFieldCode
+    ? `${candidate.professionalFieldCode} · ${candidate.professionalFieldName || 'Lĩnh vực chuyên môn'}`
+    : 'Chưa có lĩnh vực chuyên môn'
+  const taxonomyState = ['APPROVED', 'SAVED'].includes(candidate.status)
+    ? 'Đã reviewer xác nhận'
+    : 'AI đề xuất · cần reviewer kiểm tra'
+  const pageRef = candidate.pageStart == null
+    ? null
+    : (candidate.pageEnd && candidate.pageEnd !== candidate.pageStart
+        ? `Trang ${candidate.pageStart}–${candidate.pageEnd}`
+        : `Trang ${candidate.pageStart}`)
 
   return (
     <article className={`qdoc-candidate-card ${isSelected ? 'qdoc-candidate-card--active' : ''}`} onClick={onSelect}>
@@ -744,15 +802,24 @@ export function CandidateCard({
           {showLabelBadge && (
             <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.label)}`}>{labelText}</span>
           )}
-          <span className="qdoc-mini-badge">{difficultyText(candidate.difficulty)}</span>
-          {candidate.validationGrade && (
-            <span className={`qdoc-mini-badge qdoc-mini-badge--${candidate.validationGrade === 'REJECT' ? 'danger' : candidate.validationGrade === 'REVIEW' ? 'warning' : 'success'}`}>
-              {candidate.validationGrade}
-            </span>
-          )}
-          {candidate.validationSource && <span className="qdoc-mini-badge">{candidate.validationSource}</span>}
+          <span
+            className={`qdoc-mini-badge ${candidate.professionalFieldId ? 'qdoc-mini-badge--info' : 'qdoc-mini-badge--warning'}`}
+            title={fieldLabel}
+          >
+            {candidate.professionalFieldCode || 'Chưa có lĩnh vực'}
+          </span>
+          <span className={`qdoc-mini-badge ${candidate.cognitiveLevel ? '' : 'qdoc-mini-badge--warning'}`} title={taxonomyState}>
+            {cognitiveLevelText(candidate.cognitiveLevel)}
+          </span>
         </div>
       </header>
+
+      <div className="qdoc-candidate-tags">
+        <span className={`qdoc-tag ${candidate.professionalFieldId ? 'qdoc-tag--level' : 'qdoc-tag--warning'}`}>
+          Lĩnh vực: {fieldLabel}
+        </span>
+        <span className="qdoc-tag">{taxonomyState}</span>
+      </div>
 
       <h2>{candidate.stem}</h2>
       <div className="qdoc-options">
@@ -769,53 +836,15 @@ export function CandidateCard({
         ))}
       </div>
 
-      <div className="qdoc-candidate-meta">
-        <span>Đáp án đúng: <strong>{candidate.correctAnswer}</strong></span>
-        <span>{candidate.topic || '---'}</span>
-      </div>
-
-      {candidate.explanation && (
+      {(candidate.explanation || pageRef) && (
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
-          <p>{candidate.explanation}</p>
+          <p>
+            {candidate.explanation}
+            {pageRef && (candidate.explanation ? ` (${pageRef})` : pageRef)}
+          </p>
         </div>
       )}
-
-      <div className="qdoc-grounding-panel">
-        <div className="qdoc-grounding-heading">
-          <strong>Grounding và kiểm định</strong>
-          <span>
-            Trang {candidate.pageStart ?? '—'}{candidate.pageEnd && candidate.pageEnd !== candidate.pageStart ? `–${candidate.pageEnd}` : ''}
-            {candidate.sectionPath ? ` · ${candidate.sectionPath}` : ''}
-          </span>
-        </div>
-        <p>
-          <b>Validation:</b> {candidate.validationGrade || '—'}
-          {' · '}<b>Nguồn:</b> {candidate.validationSource || '—'}
-          {' · '}<b>Evidence:</b> {candidate.evidenceStatus || '—'}
-          {' · '}<b>Critic:</b> {candidate.criticStatus || '—'}
-        </p>
-        {candidate.knowledgePointKey && <p><b>Knowledge point:</b> {candidate.knowledgePointKey}</p>}
-        {candidate.questionType && <p><b>Loại câu:</b> {candidate.questionType}</p>}
-        {candidate.sourceExcerpt
-          ? <blockquote>{candidate.sourceExcerpt}</blockquote>
-          : <p className="qdoc-grounding-empty"><b>Đoạn nguồn:</b> Chưa có dữ liệu grounding cho candidate này.</p>}
-        {candidate.answerEvidence
-          ? <p><b>Bằng chứng đáp án:</b> {candidate.answerEvidence}</p>
-          : <p className="qdoc-grounding-empty"><b>Bằng chứng đáp án:</b> Chưa có dữ liệu.</p>}
-        {candidate.validationIssues && candidate.validationIssues !== '[]' && (
-          <details>
-            <summary>Validation / critic issues</summary>
-            <pre>{candidate.validationIssues}</pre>
-          </details>
-        )}
-        {candidate.distractorRationales && (
-          <details>
-            <summary>Rationale các distractor</summary>
-            <pre>{candidate.distractorRationales}</pre>
-          </details>
-        )}
-      </div>
 
       {isPotentialDuplicate && (
         <div className={`qdoc-duplicate-alert ${isStrongDuplicate ? 'qdoc-duplicate-alert--strong' : ''}`}>

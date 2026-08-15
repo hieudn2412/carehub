@@ -126,8 +126,12 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
                     AND a.score IS NOT NULL
                     AND a.submittedAt >= :fromDate
                     AND a.submittedAt <= :toDate
-                    AND (:category IS NULL
-                         OR a.examPaper.examConfig.questionSet.category = :category)
+                    AND (:category IS NULL OR EXISTS (
+                        SELECT pq.id
+                        FROM ExamPaperQuestion pq
+                        WHERE pq.examPaper = a.examPaper
+                          AND pq.question.category.name = :category
+                    ))
               )
             ORDER BY u.name ASC, u.id ASC
             """,
@@ -147,8 +151,12 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
                     AND a.score IS NOT NULL
                     AND a.submittedAt >= :fromDate
                     AND a.submittedAt <= :toDate
-                    AND (:category IS NULL
-                         OR a.examPaper.examConfig.questionSet.category = :category)
+                    AND (:category IS NULL OR EXISTS (
+                        SELECT pq.id
+                        FROM ExamPaperQuestion pq
+                        WHERE pq.examPaper = a.examPaper
+                          AND pq.question.category.name = :category
+                    ))
               )
             """)
     Page<User> findCompetencyFieldCandidates(

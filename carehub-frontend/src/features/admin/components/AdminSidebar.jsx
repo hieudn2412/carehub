@@ -57,7 +57,7 @@ const navSections = [
     items: [
       { icon: <BookOutlined />, label: 'Giờ đào tạo liên tục', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
-      { icon: <SlidersOutlined />, label: 'Loại hoạt động đào tạo', path: '/admin/training/activity-types' },
+      { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
@@ -103,12 +103,6 @@ const navSections = [
           EVALUATION_PERMISSION.examPublisher,
           EVALUATION_PERMISSION.assignmentManager,
         ],
-      },
-      {
-        icon: <TeamOutlined />,
-        label: 'Đối tượng thi',
-        path: '/admin/evaluation/audiences',
-        requiredPermissions: [EVALUATION_PERMISSION.assignmentManager],
       },
       {
         icon: <CalculatorOutlined />,

@@ -8,6 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
@@ -35,6 +38,8 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
     private TrainingActivityTypeRepository activityTypeRepository;
     @Autowired
     private ProfessionalFieldRepository professionalFieldRepository;
+    @Autowired
+    private QuestionCategoryRepository questionCategoryRepository;
 
     private User admin;
     private User employee;
@@ -160,12 +165,19 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
                 .name("Lĩnh vực luồng")
                 .active(true)
                 .build());
+        QuestionCategory category = questionCategoryRepository.save(QuestionCategory.builder()
+                .code("L3FCAT%04d".formatted(nextSeq()))
+                .name("An toàn luồng")
+                .status(QuestionCategoryStatus.ACTIVE)
+                .createdBy("system-test")
+                .build());
 
         // Step 1: an approved question.
         long questionId = id(post(API + "/questions", adminToken, """
                 {"stem":"Câu hỏi luồng %d?","optionA":"Đúng","optionB":"Sai","optionC":"Có thể","optionD":"Không",
-                 "correctAnswer":"A","topic":"An toàn","difficulty":"EASY","language":"vi"}
-                """.formatted(nextSeq())));
+                 "correctAnswer":"A","categoryId":%d,"professionalFieldId":%d,
+                 "cognitiveLevel":"FOUNDATION","difficulty":"EASY","language":"vi"}
+                """.formatted(nextSeq(), category.getId(), field.getId())));
 
         // Step 2-3: active question set.
         long setId = id(post(API + "/question-sets", adminToken, """
@@ -182,16 +194,16 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
 
         // Step 6-7: generated and published paper.
         long paperId = data(post(API + "/exam-papers/generate", adminToken, """
-                {"examConfigId":%d,"namePrefix":"Đề luồng","variantCount":1,"randomSeed":3}
-                """.formatted(configId))).get(0).get("id").asLong();
+                {"examConfigId":%d,"namePrefix":"Đề luồng","variantCount":1,"randomSeed":3,"idempotencyKey":"api-flow-paper-%d"}
+                """.formatted(configId, nextSeq()))).get(0).get("id").asLong();
         assertOk(post(API + "/exam-papers/" + paperId + "/publish", adminToken, "{}"));
 
         // Step 8-9: open assignment targeting the employee.
         long assignmentId = id(post(API + "/exam-assignments", adminToken, """
-                {"name":"Phân công luồng %d","examPaperId":%d,"professionalFieldId":%d,"userIds":[%d],
+                {"name":"Phân công luồng %d","examPaperId":%d,"userIds":[%d],"idempotencyKey":"api-flow-assignment-%d",
                  "maxAttempts":2,"shuffleQuestions":false,"shuffleOptions":false,
                  "resultVisibility":"SCORE_ONLY","status":"DRAFT"}
-                """.formatted(nextSeq(), paperId, field.getId(), employee.getId())));
+                """.formatted(nextSeq(), paperId, employee.getId(), nextSeq())));
         assertOk(post(API + "/exam-assignments/" + assignmentId + "/open", adminToken, "{}"));
 
         // Step 10-12: the employee starts, answers and submits.

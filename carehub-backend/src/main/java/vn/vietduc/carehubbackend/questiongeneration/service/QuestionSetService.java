@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -37,6 +38,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItem;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItemSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersionItem;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
@@ -47,6 +49,9 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemSn
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetCategoryRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -62,6 +67,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -85,12 +91,23 @@ public class QuestionSetService {
     private final QuestionSetVersionItemRepository versionItemRepository;
     private final QuestionBankQuestionRepository questionRepository;
     private final ParaphraseMapper questionMapper;
+    private ProfessionalFieldRepository professionalFieldRepository;
+    private QuestionSetCategoryRepository questionSetCategoryRepository;
+
+    @Autowired
+    void setProfessionalFieldRepository(ProfessionalFieldRepository repository) {
+        this.professionalFieldRepository = repository;
+    }
+
+    @Autowired
+    void setQuestionSetCategoryRepository(QuestionSetCategoryRepository repository) {
+        this.questionSetCategoryRepository = repository;
+    }
 
     @Transactional(readOnly = true)
-    public List<QuestionSetSummaryResponse> list(String query, String category, String difficulty, String status) {
+    public List<QuestionSetSummaryResponse> list(String query, String cognitiveLevel, String status) {
         String normalizedQuery = normalize(query);
-        String normalizedCategory = normalize(category);
-        String normalizedDifficulty = normalize(difficulty);
+        String normalizedCognitiveLevel = normalize(cognitiveLevel);
         QuestionSetStatus statusFilter = parseStatusOrNull(status);
         return questionSetRepository.findAll().stream()
                 .filter(questionSet -> statusFilter == null
@@ -99,10 +116,9 @@ public class QuestionSetService {
                 .filter(questionSet -> normalizedQuery.isBlank()
                         || normalize(questionSet.getName()).contains(normalizedQuery)
                         || normalize(questionSet.getDescription()).contains(normalizedQuery))
-                .filter(questionSet -> normalizedCategory.isBlank()
-                        || normalize(questionSet.getCategory()).equals(normalizedCategory))
-                .filter(questionSet -> normalizedDifficulty.isBlank()
-                        || normalize(questionSet.getDifficulty()).equals(normalizedDifficulty))
+                .filter(questionSet -> normalizedCognitiveLevel.isBlank()
+                        || (questionSet.getCognitiveLevel() != null
+                        && normalize(questionSet.getCognitiveLevel().name()).equals(normalizedCognitiveLevel)))
                 .sorted(Comparator.comparing(
                         QuestionSet::getUpdatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())
@@ -137,8 +153,9 @@ public class QuestionSetService {
                 .code(code)
                 .name(name)
                 .description(trimToNull(request.description()))
-                .category(trimToNull(request.category()))
-                .difficulty(trimToNull(request.difficulty()))
+                .cognitiveLevel(parseCognitiveLevel(request.cognitiveLevel()))
+                .professionalField(resolveProfessionalField(request.professionalFieldId()))
+                .questionSetCategory(resolveQuestionSetCategory(request.questionSetCategoryId()))
                 .status(status)
                 .questionCount(0)
                 .createdBy(actor)
@@ -180,8 +197,9 @@ public class QuestionSetService {
         questionSet.setCode(code);
         questionSet.setName(name);
         questionSet.setDescription(trimToNull(request.description()));
-        questionSet.setCategory(trimToNull(request.category()));
-        questionSet.setDifficulty(trimToNull(request.difficulty()));
+        questionSet.setCognitiveLevel(parseCognitiveLevel(request.cognitiveLevel()));
+        questionSet.setProfessionalField(resolveProfessionalField(request.professionalFieldId()));
+        questionSet.setQuestionSetCategory(resolveQuestionSetCategory(request.questionSetCategoryId()));
         questionSet.setStatus(status);
         if (status == QuestionSetStatus.ACTIVE) {
             questionSet.setReviewedBy(actor);
@@ -241,8 +259,9 @@ public class QuestionSetService {
                 .code(uniqueCopyCode(source.getCode(), source.getId()))
                 .name("Bản sao - " + source.getName())
                 .description(source.getDescription())
-                .category(source.getCategory())
-                .difficulty(source.getDifficulty())
+                .cognitiveLevel(source.getCognitiveLevel())
+                .professionalField(source.getProfessionalField())
+                .questionSetCategory(source.getQuestionSetCategory())
                 .status(QuestionSetStatus.DRAFT)
                 .questionCount(0)
                 .createdBy(actor)
@@ -270,22 +289,20 @@ public class QuestionSetService {
             return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Yêu cầu không hợp lệ"));
         }
         
-        // Check if using simple questionCount mode (no difficulty distribution)
+        // Check if using simple questionCount mode (no cognitive-level distribution)
         boolean useSimpleMode = request.questionCount() != null && request.questionCount() > 0
-                && (request.difficultyDistribution() == null || request.difficultyDistribution().isEmpty());
+                && (request.cognitiveLevelDistribution() == null || request.cognitiveLevelDistribution().isEmpty());
         
-        if (!useSimpleMode && (request.difficultyDistribution() == null || request.difficultyDistribution().isEmpty())) {
-            return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Chưa có số lượng câu hỏi hoặc phân bổ độ khó để xem trước"));
+        if (!useSimpleMode && (request.cognitiveLevelDistribution() == null || request.cognitiveLevelDistribution().isEmpty())) {
+            return new QuestionSetPreviewResponse(List.of(), List.of(), List.of(), List.of("Chưa có số lượng câu hỏi hoặc phân bổ mức độ nhận thức để xem trước"));
         }
         
         Set<Long> excluded = new HashSet<>(request.excludeQuestionIds() == null ? List.of() : request.excludeQuestionIds());
-        String normalizedCategory = normalize(request.category());
-        String normalizedTopic = normalize(request.topic());
         long seed = request.randomSeed() == null ? 1L : request.randomSeed();
         List<QuestionBankQuestion> approved = questionRepository.findTop500ByStatusOrderByIdAsc(QuestionBankStatus.APPROVED).stream()
                 .filter(question -> !excluded.contains(question.getId()))
-                .filter(question -> normalizedCategory.isBlank() || normalize(question.getTopic()).equals(normalizedCategory))
-                .filter(question -> normalizedTopic.isBlank() || normalize(question.getTopic()).contains(normalizedTopic))
+                .filter(question -> request.categoryId() == null
+                        || (question.getCategory() != null && request.categoryId().equals(question.getCategory().getId())))
                 .toList();
 
         List<QuestionBankQuestion> selected = new ArrayList<>();
@@ -309,30 +326,31 @@ public class QuestionSetService {
                 warnings.add("Chỉ tìm thấy " + picked.size() + "/" + requested + " câu hỏi phù hợp trong danh mục");
             }
         } else {
-            // Difficulty distribution mode (legacy)
-            request.difficultyDistribution().entrySet().stream()
+            // Cognitive-level distribution mode
+            request.cognitiveLevelDistribution().entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .forEach(entry -> {
-                        String difficulty = entry.getKey();
+                        String cognitiveLevel = entry.getKey();
                         int requested = Math.max(0, entry.getValue() == null ? 0 : entry.getValue());
                         if (requested == 0) {
                             return;
                         }
                         List<QuestionBankQuestion> candidates = approved.stream()
                                 .filter(question -> !selectedIds.contains(question.getId()))
-                                .filter(question -> normalize(difficulty).isBlank()
-                                        || normalize(question.getDifficulty()).equals(normalize(difficulty)))
+                                .filter(question -> normalize(cognitiveLevel).isBlank()
+                                        || (question.getCognitiveLevel() != null
+                                        && normalize(question.getCognitiveLevel().name()).equals(normalize(cognitiveLevel))))
                                 .sorted(Comparator.comparing((QuestionBankQuestion question) ->
                                         question.getQuestionType() == QuestionType.ORIGINAL ? 0 : 1))
                                 .collect(Collectors.toCollection(ArrayList::new));
-                        java.util.Collections.shuffle(candidates, new Random(seed + difficulty.hashCode()));
+                        java.util.Collections.shuffle(candidates, new Random(seed + cognitiveLevel.hashCode()));
                         List<QuestionBankQuestion> picked = pickCandidates(candidates, requested);
                         picked.forEach(question -> {
                             selected.add(question);
                             selectedIds.add(question.getId());
                         });
                         if (picked.size() < requested) {
-                            shortage.add(new QuestionSetPreviewResponse.Shortage(difficulty, requested, candidates.size()));
+                            shortage.add(new QuestionSetPreviewResponse.Shortage(cognitiveLevel, requested, candidates.size()));
                         }
                     });
 
@@ -348,11 +366,10 @@ public class QuestionSetService {
                 warnings
         );
         log.info(
-                "Question set preview generated selectedCount={} shortageCount={} category={} topic={}",
+                "Question set preview generated selectedCount={} shortageCount={} categoryId={}",
                 response.questionIds().size(),
                 response.shortage().size(),
-                request.category(),
-                request.topic()
+                request.categoryId()
         );
         return response;
     }
@@ -394,7 +411,7 @@ public class QuestionSetService {
                             item.getOptionD(),
                             item.getCorrectAnswer(),
                             item.getExplanation(),
-                            item.getDifficulty(),
+                            item.getCognitiveLevel(),
                             item.getTopic(),
                             item.getSourceDocument()
                     ))
@@ -415,8 +432,8 @@ public class QuestionSetService {
                             question.getOptionD(),
                             question.getCorrectAnswer(),
                             question.getExplanation(),
-                            question.getDifficulty(),
-                            question.getTopic(),
+                            question.getCognitiveLevel() == null ? null : question.getCognitiveLevel().name(),
+                            question.getCategory() == null ? null : question.getCategory().getName(),
                             question.getSourceDocument()
                     );
                 })
@@ -425,7 +442,7 @@ public class QuestionSetService {
 
     private byte[] exportCsv(QuestionSet questionSet, List<ExportQuestionSetItem> rows) {
         StringBuilder builder = new StringBuilder("\uFEFF");
-        builder.append("position,sourceQuestionId,stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,difficulty,topic,sourceDocument")
+        builder.append("position,sourceQuestionId,stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,cognitiveLevel,topic,sourceDocument")
                 .append(System.lineSeparator());
         for (ExportQuestionSetItem item : rows) {
             builder.append(csv(item.position()))
@@ -437,7 +454,7 @@ public class QuestionSetService {
                     .append(",").append(csv(item.optionD()))
                     .append(",").append(csv(item.correctAnswer()))
                     .append(",").append(csv(item.explanation()))
-                    .append(",").append(csv(item.difficulty()))
+                    .append(",").append(csv(item.cognitiveLevel()))
                     .append(",").append(csv(item.topic()))
                     .append(",").append(csv(item.sourceDocument()))
                     .append(System.lineSeparator());
@@ -462,7 +479,7 @@ public class QuestionSetService {
             rowIndex++;
 
             Row header = sheet.createRow(rowIndex++);
-            List<String> headers = List.of("STT", "Question ID", "Câu hỏi", "A", "B", "C", "D", "Đáp án", "Giải thích", "Độ khó", "Chủ đề", "Nguồn");
+            List<String> headers = List.of("STT", "Question ID", "Câu hỏi", "A", "B", "C", "D", "Đáp án", "Giải thích", "Mức độ nhận thức", "Chủ đề", "Nguồn");
             for (int index = 0; index < headers.size(); index++) {
                 header.createCell(index).setCellValue(headers.get(index));
                 header.getCell(index).setCellStyle(headerStyle);
@@ -478,7 +495,7 @@ public class QuestionSetService {
                 row.createCell(6).setCellValue(blank(item.optionD()));
                 row.createCell(7).setCellValue(blank(item.correctAnswer()));
                 row.createCell(8).setCellValue(blank(item.explanation()));
-                row.createCell(9).setCellValue(blank(item.difficulty()));
+                row.createCell(9).setCellValue(blank(item.cognitiveLevel()));
                 row.createCell(10).setCellValue(blank(item.topic()));
                 row.createCell(11).setCellValue(blank(item.sourceDocument()));
             }
@@ -587,6 +604,7 @@ public class QuestionSetService {
 
     private void replaceItems(QuestionSet questionSet, List<Long> questionIds) {
         List<QuestionBankQuestion> questions = resolveApprovedQuestions(questionIds);
+        validateFieldScope(questionSet, questions);
         List<QuestionSetItem> existingItems = itemRepository.findByQuestionSetOrderByPositionAsc(questionSet);
         if (!existingItems.isEmpty()) {
             snapshotRepository.deleteByQuestionSetItemIn(existingItems);
@@ -606,6 +624,33 @@ public class QuestionSetService {
         }
         questionSet.setQuestionCount(questions.size());
         questionSetRepository.save(questionSet);
+    }
+
+    private void validateFieldScope(QuestionSet questionSet, List<QuestionBankQuestion> questions) {
+        ProfessionalField field = questionSet.getProfessionalField();
+        if (field == null) return;
+        questions.stream()
+                .map(QuestionBankQuestion::getProfessionalField)
+                .filter(Objects::nonNull)
+                .filter(questionField -> !Objects.equals(questionField.getId(), field.getId()))
+                .findFirst()
+                .ifPresent(questionField -> {
+                    throw new BadRequestException("Câu hỏi không thuộc lĩnh vực chuyên môn của bộ câu hỏi");
+                });
+    }
+
+    private ProfessionalField resolveProfessionalField(Long id) {
+        if (id == null || professionalFieldRepository == null) return null;
+        return professionalFieldRepository.findById(id)
+                .filter(ProfessionalField::isActive)
+                .orElseThrow(() -> new BadRequestException("Lĩnh vực chuyên môn không hợp lệ hoặc đã ngừng sử dụng"));
+    }
+
+    private QuestionSetCategory resolveQuestionSetCategory(Long id) {
+        if (id == null || questionSetCategoryRepository == null) return null;
+        return questionSetCategoryRepository.findById(id)
+                .filter(category -> category.getStatus() != vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetCategoryStatus.ARCHIVED)
+                .orElseThrow(() -> new BadRequestException("Mục đích bộ câu hỏi không hợp lệ hoặc đã lưu trữ"));
     }
 
     private List<QuestionBankQuestion> resolveApprovedQuestions(List<Long> questionIds) {
@@ -725,8 +770,19 @@ public class QuestionSetService {
                     .optionD(question.getOptionD())
                     .correctAnswer(question.getCorrectAnswer())
                     .explanation(question.getExplanation())
-                    .difficulty(question.getDifficulty())
-                    .topic(question.getTopic())
+                    .topic(question.getCategory() == null ? null : question.getCategory().getName())
+                    .categoryId(question.getCategory() == null ? null : question.getCategory().getId())
+                    .categoryCode(question.getCategory() == null ? null : question.getCategory().getCode())
+                    .categoryName(question.getCategory() == null ? null : question.getCategory().getName())
+                    .professionalFieldId(question.getProfessionalField() == null ? null : question.getProfessionalField().getId())
+                    .professionalFieldCode(question.getProfessionalField() == null ? null : question.getProfessionalField().getCode())
+                    .professionalFieldName(question.getProfessionalField() == null ? null : question.getProfessionalField().getName())
+                    .cognitiveLevel(question.getCognitiveLevel() == null ? null : question.getCognitiveLevel().name())
+                    .cognitiveVerifiedAt(question.getCognitiveVerifiedAt())
+                    .cognitiveVerifiedBy(question.getCognitiveVerifiedBy())
+                    .sourceDocumentId(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getId())
+                    .sourceDocumentFilename(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getFilename())
+                    .sourceDocumentContentHash(question.getSourceDocumentRef() == null ? null : question.getSourceDocumentRef().getContentHash())
                     .sourceDocument(question.getSourceDocument())
                     .build());
         }
@@ -777,13 +833,25 @@ public class QuestionSetService {
                         questionMapper.toQuestionResponse(item.getQuestion())
                 ))
                 .toList();
+        Map<String, Integer> categoryCoverage = new LinkedHashMap<>();
+        Map<String, Integer> cognitiveLevelCoverage = new LinkedHashMap<>();
+        itemRepository.findByQuestionSetOrderByPositionAsc(questionSet).forEach(item -> {
+            QuestionBankQuestion question = item.getQuestion();
+            String categoryKey = question == null || question.getCategory() == null
+                    ? "Chưa phân loại"
+                    : question.getCategory().getName();
+            categoryCoverage.merge(categoryKey, 1, Integer::sum);
+            String cognitiveKey = question == null || question.getCognitiveLevel() == null
+                    ? "Chưa xác định"
+                    : question.getCognitiveLevel().name();
+            cognitiveLevelCoverage.merge(cognitiveKey, 1, Integer::sum);
+        });
         return new QuestionSetDetailResponse(
                 questionSet.getId(),
                 questionSet.getCode(),
                 questionSet.getName(),
                 questionSet.getDescription(),
-                questionSet.getCategory(),
-                questionSet.getDifficulty(),
+                questionSet.getCognitiveLevel() == null ? null : questionSet.getCognitiveLevel().name(),
                 questionSet.getStatus().name(),
                 QuestionGenerationLabels.questionSetStatus(questionSet.getStatus()),
                 questionSet.getQuestionCount(),
@@ -793,7 +861,15 @@ public class QuestionSetService {
                 versions.stream().map(this::toVersionSummaryResponse).toList(),
                 activeSnapshotItems,
                 questionSet.getCreatedAt(),
-                questionSet.getUpdatedAt()
+                questionSet.getUpdatedAt(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getId(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getCode(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getName(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getId(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getCode(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getName(),
+                categoryCoverage,
+                cognitiveLevelCoverage
         );
     }
 
@@ -821,7 +897,7 @@ public class QuestionSetService {
                 item.getOptionD(),
                 item.getCorrectAnswer(),
                 item.getExplanation(),
-                item.getDifficulty(),
+                item.getCognitiveLevel(),
                 item.getTopic(),
                 item.getSourceDocument()
         );
@@ -833,13 +909,18 @@ public class QuestionSetService {
                 questionSet.getCode(),
                 questionSet.getName(),
                 questionSet.getDescription(),
-                questionSet.getCategory(),
-                questionSet.getDifficulty(),
+                questionSet.getCognitiveLevel() == null ? null : questionSet.getCognitiveLevel().name(),
                 questionSet.getStatus().name(),
                 QuestionGenerationLabels.questionSetStatus(questionSet.getStatus()),
                 questionSet.getQuestionCount(),
                 questionSet.getCreatedAt(),
-                questionSet.getUpdatedAt()
+                questionSet.getUpdatedAt(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getId(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getCode(),
+                questionSet.getProfessionalField() == null ? null : questionSet.getProfessionalField().getName(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getId(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getCode(),
+                questionSet.getQuestionSetCategory() == null ? null : questionSet.getQuestionSetCategory().getName()
         );
     }
 
@@ -956,6 +1037,18 @@ public class QuestionSetService {
         return trimmed;
     }
 
+    private vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel parseCognitiveLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel
+                    .valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Mức độ nhận thức không hợp lệ");
+        }
+    }
+
     private String trimToNull(String value) {
         if (value == null || value.trim().isEmpty()) {
             return null;
@@ -1013,7 +1106,7 @@ public class QuestionSetService {
             String optionD,
             String correctAnswer,
             String explanation,
-            String difficulty,
+            String cognitiveLevel,
             String topic,
             String sourceDocument
     ) {

@@ -13,6 +13,7 @@ import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class RabbitMQConfig {
@@ -48,12 +49,16 @@ public class RabbitMQConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            MessageConverter messageConverter
+            MessageConverter messageConverter,
+            @Value("${app.notification.rabbit-listener-enabled:false}") boolean listenerEnabled
     ) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(messageConverter);
         factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        // A missing broker must not hold application startup hostage. Enable the
+        // consumer explicitly in environments where RabbitMQ is provisioned.
+        factory.setAutoStartup(listenerEnabled);
         return factory;
     }
 

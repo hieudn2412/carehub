@@ -6,7 +6,6 @@ public record UpsertQuestionSetCategoryRequest(
         String code,
         @NotBlank String name,
         String description,
-        String status,
-        Integer sortOrder
+        String status
 ) {
 }

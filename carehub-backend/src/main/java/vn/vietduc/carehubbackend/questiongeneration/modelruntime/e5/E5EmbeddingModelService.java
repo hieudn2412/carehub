@@ -132,6 +132,11 @@ public class E5EmbeddingModelService implements EmbeddingModelService {
             long[][] paddedAttentionMask = new long[size][maxSeqLen];
             for (int i = 0; i < size; i++) {
                 int source = order[offset + i];
+                // Pad input_ids với id <pad> thật của tokenizer XLM-R (=1), không phải mặc định 0
+                // của Java (=<s>). attention_mask=0 ở các vị trí này nên vô hại về mặt số học
+                // (không lọt vào mean-pool), nhưng dùng đúng id vẫn đúng chuẩn hơn là dựa vào
+                // masking luôn đúng.
+                Arrays.fill(paddedInputIds[i], 1L);
                 System.arraycopy(allInputIds[source], 0, paddedInputIds[i], 0, allInputIds[source].length);
                 System.arraycopy(allAttentionMasks[source], 0, paddedAttentionMask[i], 0, allAttentionMasks[source].length);
             }

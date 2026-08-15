@@ -6,6 +6,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
@@ -54,14 +55,14 @@ class EvaluationDashboardServiceTest {
         when(questionRepository.countByQuestionType(QuestionType.ORIGINAL)).thenReturn(8L);
         when(questionRepository.countByQuestionType(QuestionType.PARAPHRASE)).thenReturn(2L);
         when(questionRepository.countGroupByStatus()).thenReturn(List.of(new CountRow("APPROVED", 6L)));
-        when(questionRepository.countGroupByDifficulty()).thenReturn(List.of(new CountRow("easy", 4L)));
-        when(questionRepository.countGroupByTopic()).thenReturn(List.of(new CountRow("An toàn", 5L)));
+        when(questionRepository.countGroupByCognitiveLevel()).thenReturn(List.of(new CountRow("FOUNDATION", 4L)));
+        when(questionRepository.countGroupByCategory()).thenReturn(List.of(new CountRow("An toàn", 5L)));
         when(questionRepository.countGroupBySourceDocument()).thenReturn(List.of(new CountRow("file.pdf", 3L)));
         when(attemptRepository.countByStatus(ExamAttemptStatus.IN_PROGRESS)).thenReturn(1L);
         when(attemptRepository.countByStatus(ExamAttemptStatus.EXPIRED)).thenReturn(1L);
         when(attemptRepository.countGroupByStatus()).thenReturn(List.of(new CountRow("GRADED", 2L)));
         when(answerRepository.analyzeQuestionItems(List.of(ExamAttemptStatus.SUBMITTED, ExamAttemptStatus.GRADED))).thenReturn(List.of(
-                new ItemRow(101L, "Câu hỏi A", "An toàn", "easy", 4L, 3L)
+                new ItemRow(101L, "Câu hỏi A", "An toàn", CognitiveLevel.FOUNDATION, 4L, 3L)
         ));
     }
 
@@ -187,7 +188,7 @@ class EvaluationDashboardServiceTest {
             Long questionId,
             String stem,
             String topic,
-            String difficulty,
+            CognitiveLevel cognitiveLevel,
             Long attemptCount,
             Long correctCount
     ) implements QuestionItemAnalysisProjection {
@@ -207,8 +208,8 @@ class EvaluationDashboardServiceTest {
         }
 
         @Override
-        public String getDifficulty() {
-            return difficulty;
+        public CognitiveLevel getCognitiveLevel() {
+            return cognitiveLevel;
         }
 
         @Override

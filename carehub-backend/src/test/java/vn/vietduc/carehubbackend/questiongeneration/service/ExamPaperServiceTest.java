@@ -7,8 +7,8 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.GenerateExamPaperRequest;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig;
-import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfigDistribution;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperGenerationBatch;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
@@ -23,11 +23,12 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankSta
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigDistributionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchCellRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionItemRepository;
@@ -54,8 +55,6 @@ class ExamPaperServiceTest {
         private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(
                         ExamPaperQuestionSnapshotRepository.class);
         private final ExamConfigRepository configRepository = mock(ExamConfigRepository.class);
-        private final ExamConfigDistributionRepository distributionRepository = mock(
-                        ExamConfigDistributionRepository.class);
         private final QuestionSetItemRepository questionSetItemRepository = mock(QuestionSetItemRepository.class);
         private final QuestionSetVersionRepository questionSetVersionRepository = mock(
                         QuestionSetVersionRepository.class);
@@ -63,6 +62,8 @@ class ExamPaperServiceTest {
                         QuestionSetVersionItemRepository.class);
         private final QuestionBankQuestionRepository questionRepository = mock(QuestionBankQuestionRepository.class);
         private final ExamAssignmentRepository examAssignmentRepository = mock(ExamAssignmentRepository.class);
+        private final ExamPaperGenerationBatchRepository generationBatchRepository = mock(ExamPaperGenerationBatchRepository.class);
+        private final ExamPaperGenerationBatchCellRepository generationBatchCellRepository = mock(ExamPaperGenerationBatchCellRepository.class);
         private final AtomicLong ids = new AtomicLong(200);
         private final List<ExamPaperQuestion> savedQuestions = new ArrayList<>();
         private final List<ExamPaperQuestionSnapshot> savedSnapshots = new ArrayList<>();
@@ -78,17 +79,16 @@ class ExamPaperServiceTest {
                                 paperQuestionRepository,
                                 snapshotRepository,
                                 configRepository,
-                                distributionRepository,
                                 questionSetItemRepository,
                                 questionSetVersionRepository,
                                 questionSetVersionItemRepository,
                                 questionRepository,
                                 examAssignmentRepository);
+                service.setGenerationRepositories(generationBatchRepository, generationBatchCellRepository);
                 category = QuestionCategory.builder()
                                 .id(10L)
                                 .name("An toàn người bệnh")
                                 .status(QuestionCategoryStatus.ACTIVE)
-                                .sortOrder(1)
                                 .build();
                 questionSet = QuestionSet.builder()
                                 .id(20L)
@@ -112,14 +112,13 @@ class ExamPaperServiceTest {
                 savedSnapshots.clear();
 
                 when(configRepository.findById(activeConfig.getId())).thenReturn(Optional.of(activeConfig));
-                when(distributionRepository.findByExamConfigOrderByIdAsc(activeConfig)).thenReturn(List.of(
-                                ExamConfigDistribution.builder()
-                                                .id(40L)
-                                                .examConfig(activeConfig)
-                                                .category(category)
-                                                .questionCount(2)
-                                                .required(true)
-                                                .build()));
+                when(configRepository.findByIdForUpdate(activeConfig.getId())).thenReturn(Optional.of(activeConfig));
+                when(generationBatchRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
+                when(generationBatchRepository.save(any(ExamPaperGenerationBatch.class))).thenAnswer(invocation -> {
+                        ExamPaperGenerationBatch batch = invocation.getArgument(0);
+                        if (batch.getId() == null) batch.setId(ids.incrementAndGet());
+                        return batch;
+                });
                 when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
                                 .thenReturn(questionSetItems(3));
                 when(questionSetVersionRepository.findByQuestionSetOrderByVersionDesc(questionSet))
@@ -159,7 +158,7 @@ class ExamPaperServiceTest {
         @Test
         void generateCreatesDraftPaperWithSnapshots() {
                 var responses = service.generate(
-                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề an toàn", 1, 123L), "admin");
+                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề an toàn", 1, 123L, "paper-create"), "admin");
 
                 assertThat(responses).hasSize(1);
                 assertThat(responses.get(0).status()).isEqualTo(ExamPaperStatus.DRAFT.name());
@@ -194,8 +193,6 @@ class ExamPaperServiceTest {
                                 .optionD("D snapshot")
                                 .correctAnswer("B")
                                 .explanation("Giải thích snapshot")
-                                .difficulty("medium")
-                                .topic(category.getName())
                                 .sourceDocument("Snapshot source")
                                 .build();
                 when(questionSetVersionRepository.findByQuestionSetOrderByVersionDesc(questionSet))
@@ -204,17 +201,8 @@ class ExamPaperServiceTest {
                                 .thenReturn(List.of(versionItem));
                 when(questionRepository.findAllById(List.of(1L))).thenReturn(List.of(
                                 question(1L, "Stem live đã đổi", QuestionBankStatus.APPROVED)));
-                when(distributionRepository.findByExamConfigOrderByIdAsc(activeConfig)).thenReturn(List.of(
-                                ExamConfigDistribution.builder()
-                                                .id(42L)
-                                                .examConfig(activeConfig)
-                                                .category(category)
-                                                .questionCount(1)
-                                                .required(true)
-                                                .build()));
-
                 var responses = service.generate(
-                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề snapshot", 1, 123L), "admin");
+                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề snapshot", 1, 123L, "paper-snapshot"), "admin");
 
                 assertThat(responses.get(0).questions()).hasSize(1);
                 assertThat(responses.get(0).questions().get(0).stem()).isEqualTo("Stem snapshot active");
@@ -235,8 +223,7 @@ class ExamPaperServiceTest {
                                 .optionD("D gốc")
                                 .correctAnswer("C")
                                 .explanation("Giải thích")
-                                .difficulty("MEDIUM")
-                                .topic(category.getName())
+                                .category(category)
                                 .sourceDocument("Tài liệu")
                                 .build();
                 QuestionSetItem item = QuestionSetItem.builder()
@@ -249,19 +236,11 @@ class ExamPaperServiceTest {
                                 .build();
                 activeConfig.setTotalQuestions(1);
                 activeConfig.setShuffleOptions(true);
-                when(distributionRepository.findByExamConfigOrderByIdAsc(activeConfig)).thenReturn(List.of(
-                                ExamConfigDistribution.builder()
-                                                .id(41L)
-                                                .examConfig(activeConfig)
-                                                .category(category)
-                                                .questionCount(1)
-                                                .required(true)
-                                                .build()));
                 when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
                                 .thenReturn(List.of(item));
 
                 var responses = service.generate(
-                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề xáo đáp án", 1, 123L), "admin");
+                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề xáo đáp án", 1, 123L, "paper-options"), "admin");
 
                 var generated = responses.get(0).questions().get(0);
                 assertThat(List.of(generated.optionA(), generated.optionB(), generated.optionC(), generated.optionD()))
@@ -276,7 +255,7 @@ class ExamPaperServiceTest {
                 activeConfig.setStatus(ExamConfigStatus.DRAFT);
 
                 assertThatThrownBy(() -> service
-                                .generate(new GenerateExamPaperRequest(activeConfig.getId(), "Đề", 1, 1L), "admin"))
+                                .generate(new GenerateExamPaperRequest(activeConfig.getId(), "Đề", 1, 1L, "paper-inactive"), "admin"))
                                 .isInstanceOf(BadRequestException.class)
                                 .hasMessageContaining("đang hoạt động");
         }
@@ -377,8 +356,7 @@ class ExamPaperServiceTest {
                                         .optionD("D" + index)
                                         .correctAnswer("A")
                                         .explanation("Giải thích " + index)
-                                        .difficulty("EASY")
-                                        .topic(category.getName())
+                                        .category(category)
                                         .sourceDocument("Tài liệu")
                                         .build();
                         items.add(QuestionSetItem.builder()
@@ -403,8 +381,7 @@ class ExamPaperServiceTest {
                                 .optionD("D")
                                 .correctAnswer("A")
                                 .explanation("Giải thích")
-                                .difficulty("EASY")
-                                .topic(category.getName())
+                                .category(category)
                                 .sourceDocument("Tài liệu")
                                 .status(status)
                                 .build();
@@ -437,8 +414,6 @@ class ExamPaperServiceTest {
                                 .optionD("D")
                                 .correctAnswer("A")
                                 .explanation("Giải thích")
-                                .difficulty("EASY")
-                                .topic(category.getName())
                                 .sourceDocument("Tài liệu")
                                 .snapshotAt(java.time.LocalDateTime.now())
                                 .build();

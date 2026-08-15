@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountB
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Collection;
 
 public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBankQuestion, Long> {
     /** @deprecated use {@link #findByStatus(QuestionBankStatus, Pageable)} with pagination instead */
@@ -22,11 +23,17 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
 
     List<QuestionBankQuestion> findTop500ByStatusOrderByIdDesc(QuestionBankStatus status);
 
+    List<QuestionBankQuestion> findByStatusOrderByIdDesc(QuestionBankStatus status);
+
     List<QuestionBankQuestion> findTop500ByOrderByIdDesc();
 
     List<QuestionBankQuestion> findByStatusOrderByIdAsc(QuestionBankStatus status);
 
-    long countByTopicIgnoreCaseAndStatus(String topic, QuestionBankStatus status);
+    List<QuestionBankQuestion> findByStatusAndProfessionalFieldIdInOrderByIdAsc(QuestionBankStatus status, Collection<Long> professionalFieldIds);
+
+    long countByCategoryIdAndStatus(Long categoryId, QuestionBankStatus status);
+
+    List<QuestionBankQuestion> findByCategoryIdAndStatus(Long categoryId, QuestionBankStatus status);
 
     boolean existsBySourceDocumentAndStem(String sourceDocument, String stem);
 
@@ -44,20 +51,20 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
     List<CountByKeyProjection> countGroupByStatus();
 
     @Query("""
-            SELECT COALESCE(q.difficulty, 'Chưa phân loại') AS key, COUNT(q) AS count
+            SELECT COALESCE(CAST(q.cognitiveLevel AS string), 'Chưa phân loại') AS key, COUNT(q) AS count
             FROM QuestionBankQuestion q
-            GROUP BY COALESCE(q.difficulty, 'Chưa phân loại')
+            GROUP BY COALESCE(CAST(q.cognitiveLevel AS string), 'Chưa phân loại')
             ORDER BY COUNT(q) DESC
             """)
-    List<CountByKeyProjection> countGroupByDifficulty();
+    List<CountByKeyProjection> countGroupByCognitiveLevel();
 
     @Query("""
-            SELECT COALESCE(q.topic, 'Chưa phân loại') AS key, COUNT(q) AS count
+            SELECT COALESCE(q.category.name, 'Chưa phân loại') AS key, COUNT(q) AS count
             FROM QuestionBankQuestion q
-            GROUP BY COALESCE(q.topic, 'Chưa phân loại')
+            GROUP BY COALESCE(q.category.name, 'Chưa phân loại')
             ORDER BY COUNT(q) DESC
             """)
-    List<CountByKeyProjection> countGroupByTopic();
+    List<CountByKeyProjection> countGroupByCategory();
 
     @Query("""
             SELECT COALESCE(q.sourceDocument, 'Không rõ nguồn') AS key, COUNT(q) AS count

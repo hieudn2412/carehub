@@ -235,7 +235,7 @@ public class ParaphraseService {
         candidate.setCorrectAnswer(source.getCorrectAnswer());
         candidate.setExplanation(trimToNull(request.explanation()));
         candidate.setTopic(trimToNull(request.topic()));
-        candidate.setDifficulty(trimToNull(request.difficulty()));
+        candidate.setCognitiveLevel(parseCognitiveLevel(request.cognitiveLevel()));
         candidate.setReviewerNotes(trimToNull(request.reviewerNotes()));
         revalidate(candidate);
         return mapper.toCandidateResponse(candidateRepository.save(candidate));
@@ -273,6 +273,12 @@ public class ParaphraseService {
             throw new BadRequestException("Chỉ có thể lưu candidate đã được duyệt vào ngân hàng câu hỏi");
         }
         QuestionBankQuestion source = candidate.getSourceQuestion();
+        if (source.getCategory() == null || source.getProfessionalField() == null) {
+            throw new BadRequestException("Câu gốc thiếu danh mục hoặc lĩnh vực chuyên môn");
+        }
+        if (source.getCognitiveLevel() == null || source.getCognitiveVerifiedAt() == null) {
+            throw new BadRequestException("Câu gốc chưa được reviewer xác nhận mức độ nhận thức");
+        }
         QuestionBankQuestion savedQuestion = questionRepository.save(QuestionBankQuestion.builder()
                 .stem(candidate.getStem())
                 .optionA(candidate.getOptionA())
@@ -281,10 +287,14 @@ public class ParaphraseService {
                 .optionD(candidate.getOptionD())
                 .correctAnswer(source.getCorrectAnswer())
                 .explanation(candidate.getExplanation())
-                .topic(candidate.getTopic())
-                .difficulty(candidate.getDifficulty())
+                .category(source.getCategory())
+                .professionalField(source.getProfessionalField())
+                .cognitiveVerifiedAt(java.time.LocalDateTime.now())
+                .cognitiveVerifiedBy(actor)
+                .cognitiveLevel(candidate.getCognitiveLevel() == null ? source.getCognitiveLevel() : candidate.getCognitiveLevel())
                 .language(source.getLanguage())
                 .sourceDocument(source.getSourceDocument())
+                .sourceDocumentRef(source.getSourceDocumentRef())
                 .questionType(QuestionType.PARAPHRASE)
                 .parentQuestion(source)
                 .status(QuestionBankStatus.APPROVED)
@@ -366,8 +376,8 @@ public class ParaphraseService {
                 .optionD(mcq.optionD().trim())
                 .correctAnswer(source.getCorrectAnswer())
                 .explanation(source.getExplanation())
-                .topic(source.getTopic())
-                .difficulty(source.getDifficulty())
+                .topic(source.getCategory() == null ? null : source.getCategory().getName())
+                .cognitiveLevel(source.getCognitiveLevel())
                 .rawOutput(mcq.rawOutput())
                 .semanticSimilarityToSource(validation.semanticSimilarity())
                 .lexicalDifferenceFromSource(validation.lexicalDifference())
@@ -440,6 +450,18 @@ public class ParaphraseService {
 
     private String trimToFallback(String value, String fallback) {
         return value == null || value.trim().isEmpty() ? fallback : value.trim();
+    }
+
+    private vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel parseCognitiveLevel(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel
+                    .valueOf(value.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new vn.vietduc.carehubbackend.exception.BadRequestException("Mức độ nhận thức không hợp lệ");
+        }
     }
 
     private String trimToNull(String value) {

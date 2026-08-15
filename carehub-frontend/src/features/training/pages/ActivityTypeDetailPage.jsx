@@ -111,14 +111,10 @@ function ActivityTypeDetailPage() {
                   </article>
 
                   <article className="training-panel">
-                    <h2>Quy tắc tính giờ & Minh chứng</h2>
+                    <h2>Cấu hình & Minh chứng</h2>
                     <dl className="training-definition">
-                      <dt>Đơn vị tính thời gian</dt>
-                      <dd>{durationUnitLabel(activityType.defaultDurationUnit)}</dd>
                       <dt>Yêu cầu minh chứng</dt>
                       <dd>{activityType.requiresEvidence ? 'Bắt buộc' : 'Không bắt buộc'}</dd>
-                      <dt>Số giờ tích lũy tối đa / hồ sơ</dt>
-                      <dd>{activityType.maxCreditedHoursPerRecord ?? 'Không giới hạn'}</dd>
                       <dt>Thứ tự hiển thị</dt>
                       <dd>{activityType.sortOrder}</dd>
                     </dl>

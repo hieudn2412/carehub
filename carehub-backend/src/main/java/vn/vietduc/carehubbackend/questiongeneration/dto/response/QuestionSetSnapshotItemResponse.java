@@ -15,7 +15,7 @@ public record QuestionSetSnapshotItemResponse(
         String optionD,
         String correctAnswer,
         String explanation,
-        String difficulty,
+        String cognitiveLevel,
         String topic,
         String sourceDocument
 ) {

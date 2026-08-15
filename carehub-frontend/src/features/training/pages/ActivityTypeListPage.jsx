@@ -266,7 +266,6 @@ function ActivityTypeListPage() {
                         <tr>
                           <th>Tên hình thức</th>
                           <th>Mô tả</th>
-                          <th>Quy tắc tính giờ</th>
                           <th>Trạng thái</th>
                           <th style={{ width: '96px' }}>Hành động</th>
                         </tr>
@@ -276,11 +275,6 @@ function ActivityTypeListPage() {
                           <tr key={item.id}>
                             <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</td>
                             <td style={{ color: '#475569' }}>{item.description || '-'}</td>
-                            <td style={{ fontWeight: 500, color: '#334155' }}>
-                              {item.maxCreditedHoursPerRecord
-                                ? `Tối đa ${item.maxCreditedHoursPerRecord} giờ`
-                                : 'Toàn bộ số giờ'}
-                            </td>
                             <td>
                               <span className={`atl-badge ${item.active ? 'atl-badge--active' : 'atl-badge--inactive'}`}>
                                 {item.active ? 'Hoạt động' : 'Ngưng'}
@@ -410,36 +404,6 @@ function ActivityTypeListPage() {
                   onChange={(e) => updateModalField('description', e.target.value)}
                   placeholder="Nhập mô tả tóm tắt..."
                 />
-              </div>
-
-              <div className="atl-modal-row">
-                <div className="atl-modal-group">
-                  <label>Quy tắc tính giờ <span className="required-star">*</span></label>
-                  <select
-                    className="atl-input-green"
-                    required
-                    value={modalForm.defaultDurationUnit}
-                    onChange={(e) => updateModalField('defaultDurationUnit', e.target.value)}
-                  >
-                    <option value="HOUR">Tính toàn bộ số giờ</option>
-                    <option value="LESSON">Tính theo tiết học</option>
-                    <option value="CREDIT">Tính theo tín chỉ</option>
-                    <option value="DAY">Tính theo ngày</option>
-                    <option value="MONTH">Tính theo tháng</option>
-                    <option value="YEAR">Tính theo năm</option>
-                    <option value="OTHER">Khác</option>
-                  </select>
-                </div>
-                <div className="atl-modal-group">
-                  <label>Tối đa giờ / hồ sơ</label>
-                  <input
-                    type="number"
-                    className="atl-input-green"
-                    value={modalForm.maxCreditedHoursPerRecord}
-                    onChange={(e) => updateModalField('maxCreditedHoursPerRecord', e.target.value)}
-                    placeholder="Không giới hạn"
-                  />
-                </div>
               </div>
 
               {/* Modal Actions */}

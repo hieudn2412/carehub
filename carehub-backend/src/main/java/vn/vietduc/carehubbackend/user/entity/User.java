@@ -34,6 +34,10 @@ public class User extends BaseEntity {
 
     private LocalDate birthday;
 
+    /** Explicit HR datum used for tenure audiences; never inferred from createdAt. */
+    @Column(name = "employment_start_date")
+    private LocalDate employmentStartDate;
+
     private String phone;
 
     @Column(name = "gender", nullable = true)

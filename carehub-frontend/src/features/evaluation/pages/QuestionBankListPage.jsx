@@ -19,7 +19,7 @@ import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
-import { apiData, apiErrorMessage, difficultyText, normalizeText } from '../utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, cognitiveLevelText, COGNITIVE_LEVELS, normalizeText } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionBankListPage.css'
 
 const INITIAL_QUESTIONS = [
@@ -27,7 +27,7 @@ const INITIAL_QUESTIONS = [
     id: 1,
     content: 'Kỹ thuật vệ sinh tay đúng trước khi tiếp xúc người bệnh là gì?',
     category: 'Kiểm soát nhiễm khuẩn',
-    difficulty: 'Dễ',
+    cognitiveLevel: 'FOUNDATION',
     options: ['5 bước', '6 bước', '7 bước', '8 bước'],
     correctOptionIndex: 1,
     backend: false,
@@ -36,35 +36,37 @@ const INITIAL_QUESTIONS = [
     id: 2,
     content: 'Các bước đảm bảo an toàn khi dùng thuốc đường tĩnh mạch là gì?',
     category: 'Quy trình lâm sàng',
-    difficulty: 'Khó',
+    cognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
     options: ['Chạm vào mọi bề mặt của găng', 'Chỉ chạm vào mặt trong của găng thứ nhất, tránh chạm mặt ngoài', 'Nhờ đồng nghiệp đeo giúp', 'Không cần đeo găng tay'],
     correctOptionIndex: 1,
     backend: false,
   },
 ]
 
-const DIFFICULTIES = ['Dễ', 'Trung bình', 'Khó']
-
 const IMPORT_MAPPING_FIELDS = [
-  { key: 'stem', label: 'Câu hỏi' },
+  { key: 'categoryReference', label: 'Danh mục kiến thức' },
+  { key: 'professionalFieldReference', label: 'Lĩnh vực chuyên môn' },
+  { key: 'stem', label: 'Nội dung câu hỏi' },
   { key: 'optionA', label: 'Phương án A' },
   { key: 'optionB', label: 'Phương án B' },
   { key: 'optionC', label: 'Phương án C' },
   { key: 'optionD', label: 'Phương án D' },
   { key: 'correctAnswer', label: 'Đáp án đúng' },
+  { key: 'cognitiveLevel', label: 'Mức độ nhận thức (bắt buộc)' },
   { key: 'explanation', label: 'Giải thích' },
-  { key: 'topic', label: 'Chủ đề' },
-  { key: 'difficulty', label: 'Độ khó' },
-  { key: 'language', label: 'Ngôn ngữ' },
-  { key: 'sourceDocument', label: 'Nguồn' },
+  { key: 'sourceDocument', label: 'Nguồn câu hỏi' },
 ]
 
 function mapBackendQuestion(question) {
   return {
     id: question.id,
     content: question.stem,
-    category: question.topic || question.sourceDocument || 'Chưa phân loại',
-    difficulty: difficultyText(question.difficulty),
+    category: question.categoryName || 'Chưa phân loại',
+    categoryId: question.categoryId,
+    categoryCode: question.categoryCode,
+    professionalFieldId: question.professionalFieldId,
+    professionalFieldName: question.professionalFieldName,
+    cognitiveLevel: question.cognitiveLevel,
     status: question.status,
     duplicateWarning: question.duplicateWarning,
     impactWarning: question.impactWarning,
@@ -102,7 +104,7 @@ function QuestionBankListPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
-  const [difficultyFilter, setDifficultyFilter] = useState('')
+  const [cognitiveLevelFilter, setCognitiveLevelFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [questionToArchive, setQuestionToArchive] = useState(null)
@@ -141,17 +143,17 @@ function QuestionBankListPage() {
     return questions.filter((question) => {
       const matchesKeyword = !normalizedKeyword || normalizeText(question.content).includes(normalizedKeyword)
       const matchesCategory = !categoryFilter || question.category === categoryFilter
-      const matchesDifficulty = !difficultyFilter || question.difficulty === difficultyFilter
-      return matchesKeyword && matchesCategory && matchesDifficulty
+      const matchesCognitiveLevel = !cognitiveLevelFilter || question.cognitiveLevel === cognitiveLevelFilter
+      return matchesKeyword && matchesCategory && matchesCognitiveLevel
     })
-  }, [questions, keyword, categoryFilter, difficultyFilter])
+  }, [questions, keyword, categoryFilter, cognitiveLevelFilter])
 
   const pageSize = 10
   const totalElements = filteredQuestions.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = filteredQuestions.slice(page * pageSize, (page + 1) * pageSize)
-  const hasActiveFilters = Boolean(categoryFilter || difficultyFilter)
-  const activeFilterCount = [categoryFilter, difficultyFilter].filter(Boolean).length
+  const hasActiveFilters = Boolean(categoryFilter || cognitiveLevelFilter)
+  const activeFilterCount = [categoryFilter, cognitiveLevelFilter].filter(Boolean).length
 
   async function handleDelete(item) {
     if (!item.backend) {
@@ -250,7 +252,7 @@ function QuestionBankListPage() {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'question-bank.xlsx'
+      link.download = 'ngan-hang-cau-hoi.xlsx'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -270,7 +272,7 @@ function QuestionBankListPage() {
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'question-bank-import-template.xlsx'
+      link.download = 'mau-import-ngan-hang-cau-hoi.xlsx'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -301,14 +303,33 @@ function QuestionBankListPage() {
   }
 
   async function commitImport() {
-    const validRows = (importPreview?.rows || []).filter((row) => row.valid)
-    if (validRows.length === 0) {
-      showToast('Không có dòng hợp lệ để import.', 'warning')
+    const allRows = importPreview?.rows || []
+    if (allRows.length === 0) {
+      showToast('Không có dòng preview để xử lý.', 'warning')
       return
     }
     setIsImporting(true)
     try {
-      const response = await questionBankApi.commitImport(validRows, importPreview?.importJobId || null, importDuplicateMode)
+      const rows = allRows.map((row) => ({
+        rowNumber: row.rowNumber,
+        stem: row.stem,
+        optionA: row.optionA,
+        optionB: row.optionB,
+        optionC: row.optionC,
+        optionD: row.optionD,
+        correctAnswer: row.correctAnswer,
+        explanation: row.explanation,
+        topic: row.topic,
+        language: row.language,
+        sourceDocument: row.sourceDocument,
+        status: row.status,
+        categoryId: row.categoryId,
+        categoryReference: row.categoryReference,
+        professionalFieldId: row.professionalFieldId || null,
+        professionalFieldReference: row.professionalFieldReference,
+        cognitiveLevel: row.cognitiveLevel,
+      }))
+      const response = await questionBankApi.commitImport(rows, importPreview?.importJobId || null, importDuplicateMode)
       const result = apiData(response)
       showToast(`Đã import ${result.createdCount || 0} câu hỏi. ${result.skippedCount || 0} dòng bỏ qua. ${result.failedCount || 0} dòng lỗi.`, result.failedCount ? 'warning' : 'success')
       setImportPreview(result)
@@ -318,6 +339,31 @@ function QuestionBankListPage() {
     } finally {
       setIsImporting(false)
     }
+  }
+
+  function downloadImportErrorReport() {
+    const errorRows = (importPreview?.rows || []).filter((row) => row.skipped || !row.valid || (row.errors || []).length)
+    if (errorRows.length === 0) {
+      showToast('Không có dòng lỗi hoặc bị bỏ qua để tải.', 'warning')
+      return
+    }
+    const escapeCsv = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
+    const lines = [
+      ['Dòng', 'Nội dung câu hỏi', 'Mã danh mục', 'Danh mục', 'Lĩnh vực', 'Kết quả', 'Lý do'],
+      ...errorRows.map((row) => [
+        row.rowNumber, row.stem, row.categoryCode, row.categoryName, row.professionalFieldName,
+        row.skipped ? 'Bỏ qua' : 'Lỗi', row.skipReason || (row.errors || []).join('; '),
+      ]),
+    ]
+    const blob = new Blob([`\uFEFF${lines.map((line) => line.map(escapeCsv).join(',')).join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `bao-cao-loi-import-${importPreview?.importJobId || 'preview'}.csv`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
   }
 
   function closeImportModal() {
@@ -341,15 +387,16 @@ function QuestionBankListPage() {
     return entries.length === 0 ? null : Object.fromEntries(entries)
   }
 
-  function getDifficultyClass(diff) {
-    if (diff === 'Dễ') return 'diff-badge--easy'
-    if (diff === 'Trung bình') return 'diff-badge--medium'
-    return 'diff-badge--hard'
+  function getCognitiveLevelClass(level) {
+    if (level === 'FOUNDATION') return 'diff-badge--easy'
+    if (level === 'CLINICAL_APPLICATION') return 'diff-badge--medium'
+    if (level === 'CLINICAL_REASONING_ANALYSIS') return 'diff-badge--hard'
+    return ''
   }
 
   function resetFilters() {
     setCategoryFilter('')
-    setDifficultyFilter('')
+    setCognitiveLevelFilter('')
     setPage(0)
   }
 
@@ -466,18 +513,18 @@ function QuestionBankListPage() {
                       </select>
                     </label>
                     <label>
-                      <span>Độ khó</span>
+                      <span>Mức độ nhận thức</span>
                       <select
                         className="qbl-filter-select"
-                        value={difficultyFilter}
+                        value={cognitiveLevelFilter}
                         onChange={(event) => {
-                          setDifficultyFilter(event.target.value)
+                          setCognitiveLevelFilter(event.target.value)
                           setPage(0)
                         }}
                       >
-                        <option value="">Tất cả độ khó</option>
-                        {DIFFICULTIES.map((difficulty) => (
-                          <option key={difficulty} value={difficulty}>{difficulty}</option>
+                        <option value="">Tất cả mức độ nhận thức</option>
+                        {COGNITIVE_LEVELS.map((level) => (
+                          <option key={level.value} value={level.value}>{level.label}</option>
                         ))}
                       </select>
                     </label>
@@ -489,22 +536,29 @@ function QuestionBankListPage() {
               </div>
 
               <div className="qbl-table-card">
-                <table className="qbl-table admin-table-uppercase">
+                <table className="qbl-table qbl-question-table admin-table-uppercase">
+                  <colgroup>
+                    <col className="qbl-col-question" />
+                    <col className="qbl-col-category" />
+                    <col className="qbl-col-professional-field" />
+                    <col className="qbl-col-actions" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Nội dung câu hỏi</th>
-                      <th style={{ width: '160px' }}>Danh mục</th>
-                      <th style={{ width: '220px' }}>Hành động</th>
+                      <th>Danh mục</th>
+                      <th>Lĩnh vực chuyên môn</th>
+                      <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="3" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
+                        <td colSpan="4" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="3" className="qbl-empty-cell">
+                        <td colSpan="4" className="qbl-empty-cell">
                           <strong>Không tìm thấy câu hỏi phù hợp</strong>
                           <span>Thử đổi từ khóa hoặc xóa bớt bộ lọc.</span>
                         </td>
@@ -512,17 +566,22 @@ function QuestionBankListPage() {
                     ) : (
                       displayRows.map((item) => (
                         <tr key={`${item.backend ? 'api' : 'demo'}-${item.id}`}>
-                          <td>
+                          <td data-label="Nội dung câu hỏi">
                             <button type="button" className="qbl-question-link" onClick={() => openDetailModal(item)}>
                               {item.content}
                             </button>
                             <div className="qbl-question-meta">
-                              <span className={`diff-badge ${getDifficultyClass(item.difficulty)}`}>{item.difficulty}</span>
+                              <span className={`diff-badge ${getCognitiveLevelClass(item.cognitiveLevel)}`}>{cognitiveLevelText(item.cognitiveLevel)}</span>
                               <span className="qbl-mini-badge">{item.questionType === 'PARAPHRASE' ? 'Diễn đạt lại' : 'Câu hỏi gốc'}</span>
                             </div>
                           </td>
-                          <td className="qbl-category-cell">{item.category}</td>
-                          <td>
+                          <td className="qbl-category-cell" data-label="Danh mục">
+                            {item.category}
+                          </td>
+                          <td className="qbl-professional-field-cell" data-label="Lĩnh vực chuyên môn">
+                            {item.professionalFieldName || 'Chưa có lĩnh vực'}
+                          </td>
+                          <td data-label="Hành động">
                             <div className="qbl-actions admin-table-actions">
                               <button
                                 type="button"
@@ -662,13 +721,13 @@ function QuestionBankListPage() {
         <div className="qbl-modal-backdrop">
           <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">
             <h2 id="import-question-bank-title">Import ngân hàng câu hỏi</h2>
-            <p className="qbl-modal-subtitle">File hỗ trợ XLSX/XLS/CSV với header hoặc DOCX theo mẫu cố định: Câu hỏi, A-D, Đáp án, Chủ đề và Độ khó.</p>
+            <p className="qbl-modal-subtitle">Dùng mẫu Excel tiếng Việt để chọn danh mục cho từng dòng. File XLSX/XLS/CSV ngoài mẫu vẫn có thể mapping thủ công. Cột &quot;Mức độ nhận thức&quot; là bắt buộc; file không còn dùng cột &quot;Độ khó&quot;.</p>
 
             <label className="qbl-field">
               <span>File import</span>
               <input
                 type="file"
-                accept=".xlsx,.xls,.csv,.docx"
+                accept=".xlsx,.xls,.csv"
                 onChange={(event) => {
                   setImportFile(event.target.files?.[0] || null)
                   setImportPreview(null)
@@ -713,18 +772,22 @@ function QuestionBankListPage() {
                 <div className="qbl-import-summary">
                   {importPreview.importJobId && <span>Mã import: #{importPreview.importJobId}</span>}
                   <span>Tổng dòng: {importPreview.totalRows}</span>
-                  <span>Hợp lệ: {importPreview.validRows ?? importPreview.createdCount}</span>
-                  {(importPreview.skippedCount ?? 0) > 0 && <span>Bỏ qua: {importPreview.skippedCount}</span>}
+                  <span>Sẵn sàng import: {importPreview.validRows ?? importPreview.createdCount}</span>
+                  <span>Bỏ qua: {importPreview.skippedRows ?? importPreview.skippedCount ?? 0}</span>
                   <span>Lỗi: {importPreview.invalidRows ?? importPreview.failedCount}</span>
                 </div>
+                {(importPreview.skippedRows ?? importPreview.skippedCount ?? 0) > 0 && (
+                  <p className="qbl-import-errors">Các dòng không nhận diện được danh mục sẽ không được lưu. Hãy tải báo cáo để sửa và import lại.</p>
+                )}
                 <div className="qbl-import-preview">
                   <table className="qbl-table">
                     <thead>
                       <tr>
                         <th>Dòng</th>
                         <th>Câu hỏi</th>
-                        <th>Đáp án đúng</th>
-                        <th>Trạng thái</th>
+                        <th>Danh mục</th>
+                        <th>Lĩnh vực</th>
+                        <th>Mức độ nhận thức</th>
                         <th>Kết quả</th>
                       </tr>
                     </thead>
@@ -733,13 +796,14 @@ function QuestionBankListPage() {
                         <tr key={`${row.rowNumber}-${row.stem}`}>
                           <td>{row.rowNumber}</td>
                           <td>{row.stem}</td>
-                          <td>{row.correctAnswer}</td>
-                          <td>{row.status}</td>
+                          <td>{row.categoryCode ? `[${row.categoryCode}] ${row.categoryName}` : row.categoryReference || 'Chưa nhận diện'}</td>
+                          <td>{row.professionalFieldName || '—'}</td>
+                          <td>{cognitiveLevelText(row.cognitiveLevel)}</td>
                           <td>
                             {row.createdQuestionId ? (
                               <span className="qbl-badge qbl-badge--active">Đã lưu #{row.createdQuestionId}</span>
                             ) : row.skipped ? (
-                              <span className="qbl-badge qbl-badge--inactive">Bỏ qua</span>
+                              <span className="qbl-import-errors">{row.skipReason || 'Bỏ qua'}</span>
                             ) : row.valid ? (
                               <span className="qbl-badge qbl-badge--active">Hợp lệ</span>
                             ) : (
@@ -769,9 +833,13 @@ function QuestionBankListPage() {
                 {isImporting ? <LoadingOutlined /> : <UploadOutlined />}
                 <span>Xem trước</span>
               </button>
-              <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).every((row) => !row.valid)}>
+              <button type="button" className="qbl-btn-secondary" onClick={downloadImportErrorReport} disabled={!importPreview || (importPreview.rows || []).every((row) => row.valid)}>
+                <DownloadOutlined />
+                <span>Tải báo cáo lỗi</span>
+              </button>
+              <button type="button" className="qbl-btn-primary" onClick={commitImport} disabled={isImporting || !importPreview || (importPreview.rows || []).length === 0}>
                 {isImporting ? <LoadingOutlined /> : <CheckCircleOutlined />}
-                <span>Nhập các dòng hợp lệ</span>
+                <span>Nhập các dòng đã preview</span>
               </button>
             </div>
           </div>
@@ -803,7 +871,7 @@ function QuestionBankListPage() {
 
                 <div className="qbl-detail-meta-grid">
                   <DetailMeta label="Danh mục" value={detailQuestion.category} />
-                  <DetailMeta label="Độ khó" value={detailQuestion.difficulty} />
+                  <DetailMeta label="Mức độ nhận thức" value={cognitiveLevelText(detailQuestion.cognitiveLevel)} />
                   <DetailMeta label="Loại câu hỏi" value={detailQuestion.questionType === 'PARAPHRASE' ? 'Diễn đạt lại' : 'Câu hỏi gốc'} />
                 </div>
 

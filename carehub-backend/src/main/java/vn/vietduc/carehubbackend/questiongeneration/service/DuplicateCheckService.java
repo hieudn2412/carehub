@@ -223,7 +223,7 @@ public class DuplicateCheckService {
             String stem,
             double similarity
     ) {
-        if (similarity < properties.getDuplicate().getReviewMin()) {
+        if (similarity < properties.getDuplicate().getLexicalReviewMin()) {
             return;
         }
         matches.add(new DuplicateMatchResult(
@@ -231,7 +231,7 @@ public class DuplicateCheckService {
                 sourceId,
                 stem,
                 similarity,
-                similarity >= properties.getDuplicate().getStrongMin()
+                similarity >= properties.getDuplicate().getLexicalStrongMin()
         ));
     }
 
@@ -419,15 +419,15 @@ public class DuplicateCheckService {
                     matchedId = question.getId();
                     matchedStem = question.getStem();
                 }
-                if (best >= properties.getDuplicate().getStrongMin()) {
+                if (best >= properties.getDuplicate().getLexicalStrongMin()) {
                     break;
                 }
             }
         } while (!questionPage.isEmpty() && questionPage.size() == pageSize
-                && best < properties.getDuplicate().getStrongMin());
+                && best < properties.getDuplicate().getLexicalStrongMin());
 
         // Paginate qua toàn bộ comparable candidates
-        if (best < properties.getDuplicate().getStrongMin()) {
+        if (best < properties.getDuplicate().getLexicalStrongMin()) {
             int candidatePage = 0;
             List<DocumentQuestionCandidate> candidatePageResult;
             do {
@@ -443,20 +443,20 @@ public class DuplicateCheckService {
                         matchedId = candidate.getId();
                         matchedStem = candidate.getStem();
                     }
-                    if (best >= properties.getDuplicate().getStrongMin()) {
+                    if (best >= properties.getDuplicate().getLexicalStrongMin()) {
                         break;
                     }
                 }
             } while (!candidatePageResult.isEmpty() && candidatePageResult.size() == pageSize
-                    && best < properties.getDuplicate().getStrongMin());
+                    && best < properties.getDuplicate().getLexicalStrongMin());
         }
 
         return new DuplicateCheckResult(
                 best,
                 matchedId,
                 matchedStem,
-                best >= properties.getDuplicate().getStrongMin(),
-                best >= properties.getDuplicate().getReviewMin()
+                best >= properties.getDuplicate().getLexicalStrongMin(),
+                best >= properties.getDuplicate().getLexicalReviewMin()
         );
     }
 
@@ -481,19 +481,19 @@ public class DuplicateCheckService {
                     matchedId = candidate.getId();
                     matchedStem = candidate.getStem();
                 }
-                if (best >= properties.getDuplicate().getStrongMin()) {
+                if (best >= properties.getDuplicate().getLexicalStrongMin()) {
                     break;
                 }
             }
         } while (!candidatePage.isEmpty() && candidatePage.size() == pageSize
-                && best < properties.getDuplicate().getStrongMin());
+                && best < properties.getDuplicate().getLexicalStrongMin());
 
         return new DuplicateCheckResult(
                 best,
                 matchedId,
                 matchedStem,
-                best >= properties.getDuplicate().getStrongMin(),
-                best >= properties.getDuplicate().getReviewMin(),
+                best >= properties.getDuplicate().getLexicalStrongMin(),
+                best >= properties.getDuplicate().getLexicalReviewMin(),
                 null,
                 "lexical-candidate"
         );

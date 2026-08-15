@@ -7,11 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateExamAssignmentRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationResultReportResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentVariantPolicy;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
@@ -20,7 +22,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTar
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingGroupRepository;
-import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -57,8 +58,8 @@ class ExamAssignmentServiceTest {
     private final DepartmentRepository departmentRepository = mock(DepartmentRepository.class);
     private final PositionRepository positionRepository = mock(PositionRepository.class);
     private final TrainingGroupRepository trainingGroupRepository = mock(TrainingGroupRepository.class);
-    private final ProfessionalFieldRepository professionalFieldRepository = mock(ProfessionalFieldRepository.class);
     private final NotificationEventPublisher notificationEventPublisher = mock(NotificationEventPublisher.class);
+    private final EvaluationResultService evaluationResultService = mock(EvaluationResultService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-08-12T08:00:00Z"), ZoneOffset.UTC);
     private final ZoneId examBusinessZone = ZoneId.of("Asia/Ho_Chi_Minh");
     private ExamAssignmentService service;
@@ -74,10 +75,11 @@ class ExamAssignmentServiceTest {
                 departmentRepository,
                 positionRepository,
                 trainingGroupRepository,
-                professionalFieldRepository,
                 notificationEventPublisher,
                 clock,
-                examBusinessZone
+                examBusinessZone,
+                null,
+                evaluationResultService
         );
     }
 
@@ -128,6 +130,19 @@ class ExamAssignmentServiceTest {
                 target(assignment, notStartedUser)
         ));
         when(attemptRepository.findByAssignmentOrderByStartedAtDesc(assignment)).thenReturn(List.of(gradedAttempt));
+        when(evaluationResultService.report(assignment.getId())).thenReturn(new EvaluationResultReportResponse(
+                assignment.getId(),
+                1,
+                List.of(new EvaluationResultReportResponse.FieldCoverage(
+                        60L, "NOI", "Nội khoa (snapshot)", 8, 10,
+                        BigDecimal.valueOf(80), 1, 1
+                )),
+                List.of(),
+                List.of(new EvaluationResultReportResponse.CellCoverage(
+                        60L, "NOI", "Nội khoa (snapshot)", "EASY", "Kiến thức nền tảng",
+                        3, 4, 1, false
+                ))
+        ));
 
         var results = service.results(assignment.getId());
 
@@ -146,6 +161,10 @@ class ExamAssignmentServiceTest {
                     .isEqualTo("Nguyễn Văn A");
             assertThat(workbook.getSheetAt(0).getRow(7).getCell(4).getStringCellValue())
                     .isEqualTo("Chưa làm");
+            assertThat(workbook.getSheet("Theo lĩnh vực").getRow(1).getCell(1).getStringCellValue())
+                    .isEqualTo("Nội khoa (snapshot)");
+            assertThat(workbook.getSheet("Lĩnh vực × nhận thức").getRow(1).getCell(2).getStringCellValue())
+                    .isEqualTo("Kiến thức nền tảng");
         }
     }
 
@@ -177,7 +196,6 @@ class ExamAssignmentServiceTest {
                 .build();
 
         when(examPaperRepository.findById(paper.getId())).thenReturn(Optional.of(paper));
-        when(professionalFieldRepository.findById(professionalField.getId())).thenReturn(Optional.of(professionalField));
         when(departmentRepository.findAllById(any())).thenReturn(List.of(department));
         when(userRepository.findByDepartment_IdInAndIsDeletedFalse(any())).thenReturn(List.of(explicitUser, departmentUser));
         when(userRepository.findAllById(any())).thenReturn(List.of(explicitUser, departmentUser));
@@ -218,11 +236,31 @@ class ExamAssignmentServiceTest {
         assertThat(response.resultVisibility()).isEqualTo("SCORE_AND_ANSWERS");
         assertThat(response.shuffleQuestions()).isTrue();
         assertThat(response.shuffleOptions()).isTrue();
-        assertThat(response.professionalFieldName()).isEqualTo("Nội khoa");
+        assertThat(response.professionalFieldName()).isNull();
         assertThat(savedTargets)
                 .extracting(target -> target.getUser().getId())
                 .containsExactly(explicitUser.getId(), departmentUser.getId());
+        assertThat(savedTargets)
+                .extracting(ExamAssignmentTarget::getAssignedExamPaper)
+                .containsOnly(paper);
+        assertThat(savedTargets)
+                .extracting(ExamAssignmentTarget::getVariantPolicy)
+                .containsOnly(ExamAssignmentVariantPolicy.FIXED_PAPER);
         verify(notificationEventPublisher, times(2)).publish(any());
+    }
+
+    @Test
+    void createRequiresAnIdempotencyKeyForTheApiRequestContract() {
+        CreateExamAssignmentRequest request = new CreateExamAssignmentRequest(
+                "Đợt kiểm tra", null, 10L,
+                List.of(30L), null, null, null, false,
+                null, null, 1, true, true, "SCORE_ONLY", "DRAFT",
+                null, null, null, null
+        );
+
+        assertThatThrownBy(() -> service.create(request, "admin"))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("Idempotency key");
     }
 
     @Test
@@ -381,8 +419,6 @@ class ExamAssignmentServiceTest {
         List<ExamAssignment> savedAssignments = new ArrayList<>();
 
         when(examPaperRepository.findById(paper.getId())).thenReturn(Optional.of(paper));
-        when(professionalFieldRepository.findById(professionalField.getId()))
-                .thenReturn(Optional.of(professionalField));
         when(userRepository.findAllById(any())).thenReturn(List.of(employee));
         when(assignmentRepository.save(any(ExamAssignment.class))).thenAnswer(invocation -> {
             ExamAssignment assignment = invocation.getArgument(0);

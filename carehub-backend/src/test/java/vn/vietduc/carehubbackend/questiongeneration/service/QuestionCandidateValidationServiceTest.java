@@ -53,7 +53,7 @@ class QuestionCandidateValidationServiceTest {
                 legacy.optionD(),
                 legacy.correctAnswer(),
                 legacy.explanation(),
-                legacy.difficulty(),
+                legacy.cognitiveLevel(),
                 legacy.topic(),
                 legacy.sourceExcerpt(),
                 legacy.knowledgePointId(),

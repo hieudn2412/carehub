@@ -54,7 +54,7 @@ public class EvaluationImportHistoryService {
                 .validRows(preview.validRows())
                 .invalidRows(preview.invalidRows())
                 .createdRows(0)
-                .skippedRows(0)
+                .skippedRows(preview.skippedRows())
                 .failedRows(preview.invalidRows())
                 .build());
         replaceRows(job, preview.rows());
@@ -64,6 +64,7 @@ public class EvaluationImportHistoryService {
                 preview.totalRows(),
                 preview.validRows(),
                 preview.invalidRows(),
+                preview.skippedRows(),
                 preview.rows()
         );
     }
@@ -133,14 +134,17 @@ public class EvaluationImportHistoryService {
             throw new BadRequestException("Import này không có dòng lỗi để tải");
         }
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            Sheet sheet = workbook.createSheet("import-errors");
+            Sheet sheet = workbook.createSheet("Dòng lỗi import");
             CellStyle headerStyle = workbook.createCellStyle();
             Font headerFont = workbook.createFont();
             headerFont.setBold(true);
             headerStyle.setFont(headerFont);
 
             Row header = sheet.createRow(0);
-            List<String> headers = List.of("importJobId", "rowNumber", "stem", "status", "result", "errors");
+            List<String> headers = List.of(
+                    "Mã import", "Dòng", "Nội dung câu hỏi", "Mã danh mục", "Tên danh mục",
+                    "Mã lĩnh vực", "Tên lĩnh vực", "Kết quả", "Lý do"
+            );
             for (int index = 0; index < headers.size(); index++) {
                 header.createCell(index).setCellValue(headers.get(index));
                 header.getCell(index).setCellStyle(headerStyle);
@@ -151,9 +155,13 @@ public class EvaluationImportHistoryService {
                 xlsxRow.createCell(0).setCellValue(job.getId());
                 xlsxRow.createCell(1).setCellValue(row.getRowNumber() == null ? 0 : row.getRowNumber());
                 xlsxRow.createCell(2).setCellValue(blank(row.getStem()));
-                xlsxRow.createCell(3).setCellValue(blank(row.getStatus()));
-                xlsxRow.createCell(4).setCellValue(Boolean.TRUE.equals(row.getSkipped()) ? "Bỏ qua" : "Có lỗi");
-                xlsxRow.createCell(5).setCellValue(blank(row.getErrorsText()));
+                xlsxRow.createCell(3).setCellValue(blank(row.getCategoryCodeSnapshot()));
+                xlsxRow.createCell(4).setCellValue(blank(row.getCategoryNameSnapshot()));
+                xlsxRow.createCell(5).setCellValue(blank(row.getProfessionalFieldCodeSnapshot()));
+                xlsxRow.createCell(6).setCellValue(blank(row.getProfessionalFieldNameSnapshot()));
+                xlsxRow.createCell(7).setCellValue(Boolean.TRUE.equals(row.getSkipped()) ? "Bỏ qua" : "Có lỗi");
+                xlsxRow.createCell(8).setCellValue(StringUtils.hasText(row.getSkipReason())
+                        ? row.getSkipReason() : blank(row.getErrorsText()));
             }
             for (int index = 0; index < headers.size(); index++) {
                 sheet.autoSizeColumn(index);
@@ -179,6 +187,18 @@ public class EvaluationImportHistoryService {
                 .skipped(row.skipped())
                 .createdQuestionId(row.createdQuestionId())
                 .errorsText(row.errors() == null ? "" : String.join("; ", row.errors()))
+                .categoryIdSnapshot(row.categoryId())
+                .categoryCodeSnapshot(row.categoryCode())
+                .categoryNameSnapshot(row.categoryName())
+                .professionalFieldIdSnapshot(row.professionalFieldId())
+                .professionalFieldCodeSnapshot(row.professionalFieldCode())
+                .professionalFieldNameSnapshot(row.professionalFieldName())
+                .categoryResolved(row.categoryResolved())
+                .skipReason(row.skipReason())
+                .cognitiveLevelSnapshot(row.cognitiveLevel())
+                .cognitiveVerifiedAtSnapshot(row.cognitiveVerifiedAt())
+                .cognitiveVerifiedBySnapshot(row.cognitiveVerifiedBy())
+                .sourceDocumentFilenameSnapshot(row.sourceDocument())
                 .build()));
     }
 
@@ -215,7 +235,18 @@ public class EvaluationImportHistoryService {
                 row.getValid(),
                 row.getSkipped(),
                 row.getCreatedQuestionId(),
-                row.getErrorsText()
+                row.getErrorsText(),
+                row.getCategoryIdSnapshot(),
+                row.getCategoryCodeSnapshot(),
+                row.getCategoryNameSnapshot(),
+                row.getProfessionalFieldIdSnapshot(),
+                row.getProfessionalFieldCodeSnapshot(),
+                row.getProfessionalFieldNameSnapshot(),
+                row.getCategoryResolved(),
+                row.getSkipReason(),
+                row.getCognitiveLevelSnapshot(),
+                row.getCognitiveVerifiedAtSnapshot(),
+                row.getCognitiveVerifiedBySnapshot()
         );
     }
 

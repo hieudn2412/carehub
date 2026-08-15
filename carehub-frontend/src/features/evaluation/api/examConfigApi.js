@@ -20,6 +20,12 @@ export const examConfigApi = {
     })
   },
 
+  getWorkflowState(configId) {
+    return httpClient.get(`/exam-configs/${configId}/workflow-state`, {
+      headers: authHeaders(),
+    })
+  },
+
   createExamConfig(payload) {
     return httpClient.post('/exam-configs', payload, {
       headers: authHeaders(),
@@ -56,9 +62,10 @@ export const examConfigApi = {
     })
   },
 
-  previewSavedExamConfig(configId) {
+  previewSavedExamConfig(configId, { variantCount, zeroOverlap } = {}) {
     return httpClient.post(`/exam-configs/${configId}/preview`, {}, {
       headers: authHeaders(),
+      params: { variantCount, zeroOverlap },
     })
   },
 }

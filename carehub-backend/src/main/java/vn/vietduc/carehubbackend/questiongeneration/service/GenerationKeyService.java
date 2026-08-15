@@ -101,7 +101,7 @@ public class GenerationKeyService {
             String chunkTextHash,
             Long categoryId,
             int questionsPerChunk,
-            String targetDifficulty,
+            String targetCognitiveLevel,
             int candidateIndex,
             int attemptNumber
     ) {
@@ -115,7 +115,7 @@ public class GenerationKeyService {
                 nullToEmpty(chunkTextHash),
                 "CAT" + categoryId,
                 "MAX" + questionsPerChunk,
-                nullToEmpty(targetDifficulty),
+                nullToEmpty(targetCognitiveLevel),
                 "Q" + candidateIndex,
                 "ATTEMPT" + attemptNumber
         )).substring(0, 32);

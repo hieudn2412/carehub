@@ -9,6 +9,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -36,6 +37,21 @@ public class ExamConfig extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_set_id")
     private QuestionSet questionSet;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "audience_id")
+    private EvaluationAudience audience;
+
+    @Column(name = "source_scope", nullable = false, length = 32)
+    @Builder.Default
+    private String sourceScope = "QUESTION_BANK";
+
+    @Column(name = "blueprint_version", nullable = false)
+    @Builder.Default
+    private Integer blueprintVersion = 1;
+
+    @Column(name = "pool_checksum", length = 128)
+    private String poolChecksum;
 
     @Column(name = "total_questions", nullable = false)
     private Integer totalQuestions;
@@ -66,15 +82,6 @@ public class ExamConfig extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "question_selection_mode", length = 32)
     private ExamQuestionSelectionMode questionSelectionMode;
-
-    @Column(name = "easy_percentage")
-    private Integer easyPercentage;
-
-    @Column(name = "medium_percentage")
-    private Integer mediumPercentage;
-
-    @Column(name = "hard_percentage")
-    private Integer hardPercentage;
 
     @Column(name = "created_by", length = 100)
     private String createdBy;

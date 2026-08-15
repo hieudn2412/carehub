@@ -52,9 +52,10 @@ public class QuestionCandidateValidationService {
             warnings.add("Đáp án đúng không thuộc A/B/C/D");
             rejected = true;
         }
-        if (!isBlank(question.difficulty())
-                && !Set.of("easy", "medium", "hard").contains(question.difficulty().toLowerCase(Locale.ROOT))) {
-            warnings.add("Độ khó không thuộc easy/medium/hard");
+        if (!isBlank(question.cognitiveLevel())
+                && !Set.of("FOUNDATION", "CLINICAL_APPLICATION", "CLINICAL_REASONING_ANALYSIS")
+                .contains(question.cognitiveLevel().trim().toUpperCase(Locale.ROOT))) {
+            warnings.add("Mức độ nhận thức không thuộc FOUNDATION/CLINICAL_APPLICATION/CLINICAL_REASONING_ANALYSIS");
             rejected = true;
         }
         if (groundedV4 && isGenericDocumentReferenceStem(question.stem())) {
@@ -147,13 +148,13 @@ public class QuestionCandidateValidationService {
                 rejected = true;
                 criticStatus = "FAILED";
             }
-            boolean expectsDomainReasoning = Set.of("medium", "hard").contains(
-                    isBlank(question.difficulty())
+            boolean expectsDomainReasoning = Set.of("CLINICAL_APPLICATION", "CLINICAL_REASONING_ANALYSIS").contains(
+                    isBlank(question.cognitiveLevel())
                             ? ""
-                            : question.difficulty().toLowerCase(Locale.ROOT)
+                            : question.cognitiveLevel().trim().toUpperCase(Locale.ROOT)
             );
             if (expectsDomainReasoning && Boolean.FALSE.equals(llmValidation.requiresDomainReasoning())) {
-                warnings.add("LLM validation: độ khó chỉ đến từ đọc hiểu hoặc loại trừ, chưa cần suy luận chuyên môn");
+                warnings.add("LLM validation: câu chỉ đến từ đọc hiểu hoặc loại trừ, chưa cần suy luận lâm sàng");
                 rejected = true;
                 criticStatus = "FAILED";
             }

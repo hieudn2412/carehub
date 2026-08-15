@@ -12,11 +12,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetCategoryRepository;
+import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetCategory;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankLessonCatalog;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
@@ -35,7 +39,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -56,11 +59,12 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final QuestionBankQuestionRepository questionRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
+    private final QuestionSetCategoryRepository questionSetCategoryRepository;
     private final ProfessionalFieldRepository professionalFieldRepository;
     private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.seed.enabled:true}")
+    @Value("${app.seed.enabled:false}")
     private boolean seedEnabled;
 
     @Value("${app.seed.admin.employee-code}")
@@ -75,7 +79,7 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.seed.admin.name}")
     private String adminName;
 
-    @Value("${app.seed.question-bank.enabled:true}")
+    @Value("${app.seed.question-bank.enabled:false}")
     private boolean questionBankSeedEnabled;
 
     @Value("${app.seed.question-bank.resource:classpath:question-bank/hospital-review-questions.json}")
@@ -83,6 +87,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Value("${app.seed.professional-fields.resource:classpath:professional-fields/nursing-professional-fields.json}")
     private String professionalFieldSeedResource;
+
+    @Value("${app.evaluation.legacy-question-set-write-enabled:false}")
+    private boolean legacyQuestionSetWriteEnabled;
 
     @Override
     public void run(String... args) {
@@ -97,8 +104,13 @@ public class DataSeeder implements CommandLineRunner {
         Role systemJobRole = seedRole(SYSTEM_JOB_ROLE_CODE, "System Job");
         seedEvaluationPermissions();
         seedAdminUser(adminRole);
-        seedQuestionCategories();
         seedProfessionalFields();
+        seedQuestionCategories();
+        if (legacyQuestionSetWriteEnabled) {
+            seedQuestionSetCategories();
+        } else {
+            log.info("Legacy question-set purpose seed is disabled");
+        }
         seedQuestionBank();
     }
 
@@ -177,30 +189,49 @@ public class DataSeeder implements CommandLineRunner {
     private void seedQuestionCategories() {
         for (QuestionBankLessonCatalog.Lesson lesson : QuestionBankLessonCatalog.lessons()) {
             var existing = questionCategoryRepository.findByCode(lesson.code());
-            if (existing.isPresent()) {
-                var cat = existing.get();
-                boolean changed = !lesson.name().equals(cat.getName())
-                        || cat.getStatus() != QuestionCategoryStatus.ACTIVE
-                        || !Objects.equals(cat.getSortOrder(), lesson.number());
-                if (changed) {
-                    cat.setName(lesson.name());
-                    cat.setStatus(QuestionCategoryStatus.ACTIVE);
-                    cat.setSortOrder(lesson.number());
-                    questionCategoryRepository.save(cat);
-                    log.info("Updated question category: {}", lesson.name());
-                }
-            } else {
+            if (existing.isEmpty()) {
                 QuestionCategory category = QuestionCategory.builder()
                         .code(lesson.code())
                         .name(lesson.name())
                         .status(QuestionCategoryStatus.ACTIVE)
-                        .sortOrder(lesson.number())
                         .createdBy("system-seed")
                         .build();
                 questionCategoryRepository.save(category);
                 log.info("Seeded question category: {}", lesson.name());
             }
         }
+    }
+
+    private void seedQuestionSetCategories() {
+        List<String[]> categories = List.of(
+                new String[]{"ON_TAP", "Ôn tập"},
+                new String[]{"DAU_VAO", "Đánh giá đầu vào"},
+                new String[]{"SAU_DAO_TAO", "Sau đào tạo"},
+                new String[]{"DINH_KY", "Đánh giá định kỳ"},
+                new String[]{"BU_KIEN_THUC", "Bù kiến thức"},
+                new String[]{"THI_THU", "Thi thử"}
+        );
+        for (String[] item : categories) {
+            questionSetCategoryRepository.findByCode(item[0]).orElseGet(() -> questionSetCategoryRepository.save(
+                    QuestionSetCategory.builder()
+                            .code(item[0])
+                            .name(item[1])
+                            .status(QuestionSetCategoryStatus.ACTIVE)
+                            .createdBy("system-seed")
+                            .build()
+            ));
+        }
+    }
+
+    private ProfessionalField resolveProfessionalFieldForLesson(QuestionBankLessonCatalog.Lesson lesson) {
+        String code = switch (lesson.number()) {
+            case 1, 2, 5 -> "CC-12";
+            case 3 -> "VT-11";
+            case 4, 6, 7, 8 -> "XK-15";
+            case 9, 10, 11 -> "NK-14";
+            default -> null;
+        };
+        return code == null ? null : professionalFieldRepository.findByCode(code).orElse(null);
     }
 
     private void seedProfessionalFields() {
@@ -231,19 +262,7 @@ public class DataSeeder implements CommandLineRunner {
             String name = item.name().trim();
             String description = StringUtils.hasText(item.description()) ? item.description().trim() : null;
             var existing = professionalFieldRepository.findByCode(code);
-            if (existing.isPresent()) {
-                ProfessionalField field = existing.get();
-                boolean changed = !name.equals(field.getName())
-                        || !java.util.Objects.equals(description, field.getDescription())
-                        || !field.isActive();
-                if (changed) {
-                    field.setName(name);
-                    field.setDescription(description);
-                    field.setActive(true);
-                    professionalFieldRepository.save(field);
-                    changedCount++;
-                }
-            } else {
+            if (existing.isEmpty()) {
                 professionalFieldRepository.save(ProfessionalField.builder()
                         .code(code)
                         .name(name)
@@ -275,7 +294,6 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         List<QuestionBankQuestion> created = new java.util.ArrayList<>();
-        List<QuestionBankQuestion> updated = new java.util.ArrayList<>();
         for (QuestionBankSeedQuestion seedQuestion : seedFile.questions()) {
             if (!isValidSeedQuestion(seedQuestion)) {
                 continue;
@@ -286,27 +304,18 @@ public class DataSeeder implements CommandLineRunner {
                     seedQuestion.stem()
             );
             if (existing.isPresent()) {
-                QuestionBankQuestion question = existing.get();
-                if (!Objects.equals(question.getTopic(), topic)) {
-                    question.setTopic(topic);
-                    updated.add(question);
-                }
-            } else {
-                created.add(toQuestionBankQuestion(seedFile, seedQuestion, topic));
+                continue;
             }
+            created.add(toQuestionBankQuestion(seedFile, seedQuestion, topic));
         }
 
         if (!created.isEmpty()) {
             questionRepository.saveAll(created);
         }
-        if (!updated.isEmpty()) {
-            questionRepository.saveAll(updated);
-        }
         log.info(
-                "Question bank seed synchronized from {}: created={}, remapped={}",
+                "Question bank seed synchronized from {}: created={}",
                 seedFile.sourceDocument(),
-                created.size(),
-                updated.size()
+                created.size()
         );
     }
 
@@ -344,6 +353,15 @@ public class DataSeeder implements CommandLineRunner {
             QuestionBankSeedQuestion question,
             String topic
     ) {
+        QuestionCategory category = questionCategoryRepository.findAll().stream()
+                .filter(item -> item.getName().equalsIgnoreCase(topic))
+                .findFirst().orElse(null);
+        ProfessionalField field = QuestionBankLessonCatalog.lessons().stream()
+                .filter(lesson -> lesson.name().equalsIgnoreCase(topic))
+                .findFirst()
+                .map(this::resolveProfessionalFieldForLesson)
+                .orElse(null);
+        CognitiveLevel cognitiveLevel = resolveCognitiveLevel(question.cognitiveLevel());
         return QuestionBankQuestion.builder()
                 .stem(question.stem())
                 .optionA(question.optionA())
@@ -352,8 +370,9 @@ public class DataSeeder implements CommandLineRunner {
                 .optionD(question.optionD())
                 .correctAnswer(question.correctAnswer())
                 .explanation(question.explanation())
-                .topic(topic)
-                .difficulty(StringUtils.hasText(seedFile.difficulty()) ? seedFile.difficulty() : "medium")
+                .cognitiveLevel(cognitiveLevel)
+                .category(category)
+                .professionalField(field)
                 .language(StringUtils.hasText(seedFile.language()) ? seedFile.language() : "vi")
                 .sourceDocument(seedFile.sourceDocument())
                 .questionType(QuestionType.ORIGINAL)
@@ -361,6 +380,18 @@ public class DataSeeder implements CommandLineRunner {
                 .createdBy("system-seed")
                 .reviewedBy("system-seed")
                 .build();
+    }
+
+    private CognitiveLevel resolveCognitiveLevel(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        try {
+            return CognitiveLevel.valueOf(raw.trim());
+        } catch (IllegalArgumentException ex) {
+            log.warn("Giá trị cognitiveLevel không hợp lệ trong dữ liệu seed: '{}'", raw);
+            return null;
+        }
     }
 
     private record QuestionBankSeedFile(
@@ -387,7 +418,8 @@ public class DataSeeder implements CommandLineRunner {
             String optionC,
             String optionD,
             String correctAnswer,
-            String explanation
+            String explanation,
+            String cognitiveLevel
     ) {
     }
 }

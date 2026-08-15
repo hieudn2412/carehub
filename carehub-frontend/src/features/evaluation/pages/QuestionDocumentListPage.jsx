@@ -395,19 +395,26 @@ function QuestionDocumentListPage() {
       {jobModalDocument && (
         <div className="qdoc-modal-backdrop">
           <div className="qdoc-modal" role="dialog" aria-modal="true" aria-labelledby="create-job-title">
-            <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
-            <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
+            <div className="qdoc-modal-heading-row">
+              <div>
+                <h2 id="create-job-title">Tạo phiên sinh câu hỏi</h2>
+                <p className="qdoc-modal-subtitle">{jobModalDocument.filename}</p>
+              </div>
+              <button type="button" className="qdoc-icon-btn" aria-label="Đóng" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>
+                <CloseOutlined />
+              </button>
+            </div>
             <div className="qdoc-field">
               <div className="qdoc-modal-heading-row">
-                <span>Danh mục câu hỏi</span>
-                <button type="button" className="qdoc-inline-add-btn" onClick={() => setShowCategoryModal(true)}>
+                <span>Danh mục câu hỏi <em>*</em></span>
+                <button type="button" className="qdoc-inline-add-btn" onClick={() => setShowCategoryModal(true)} disabled={isCreatingJob}>
                   <PlusOutlined /> Thêm mới
                 </button>
               </div>
               <select
-                className="qdoc-select"
                 value={selectedCategoryId}
                 onChange={(event) => setSelectedCategoryId(event.target.value)}
+                disabled={isCreatingJob}
               >
                 <option value="">-- Chọn danh mục --</option>
                 {categories.map((cat) => (
@@ -426,11 +433,12 @@ function QuestionDocumentListPage() {
                 max="5"
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
+                disabled={isCreatingJob}
               />
+              <small className="qdoc-field-help">
+                Tài liệu sẽ được chia thành các đoạn nội dung, mỗi đoạn sinh tối đa số câu đã chọn. Nên bắt đầu với 1 để kiểm soát chất lượng.
+              </small>
             </label>
-            <div className="qdoc-note">
-              Chọn danh mục để gom nhóm câu hỏi. Tài liệu sẽ được chia thành các đoạn nội dung để tạo câu hỏi.
-            </div>
             <div className="qdoc-modal-actions">
               <button type="button" className="qdoc-secondary-btn" onClick={() => setJobModalDocument(null)} disabled={isCreatingJob}>
                 Hủy
