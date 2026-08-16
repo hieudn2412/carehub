@@ -159,19 +159,6 @@ function DocumentQuestionJobReviewPage() {
     }
   }
 
-  async function retryProblemChunks() {
-    setIsRetrying(true)
-    try {
-      const response = await documentQuestionApi.retryProblemChunks(jobId)
-      setJobDetail(apiData(response))
-      showToast('Đã chạy lại các đoạn có vấn đề.', 'success')
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setIsRetrying(false)
-    }
-  }
-
   async function cancelJob() {
     setIsCancelConfirmOpen(true)
   }
@@ -199,7 +186,10 @@ function DocumentQuestionJobReviewPage() {
       replaceCandidates(result.candidates || [])
       setSelectedCandidateIds((current) => current.filter((id) => !(result.succeededCandidateIds || []).includes(id)))
       if (Number(result.failedCount || 0) > 0) {
-        showToast(`${successMessage}. ${result.failedCount} câu lỗi, kiểm tra lại trạng thái từng câu.`, 'warning')
+        const reasons = (result.errors || [])
+          .map((err) => `- Câu #${err.candidateId}: ${err.message}`)
+          .join('\n')
+        showToast(`${successMessage}. ${result.failedCount} câu lỗi:\n${reasons}`, 'warning', 8000)
       } else {
         showToast(successMessage, 'success')
       }
@@ -454,19 +444,6 @@ function DocumentQuestionJobReviewPage() {
                     <section className={`qdoc-alert ${jobDetail.status === 'FAILED' ? 'qdoc-alert--danger' : 'qdoc-alert--warning'}`}>
                       <WarningOutlined />
                       <span>{jobDetail.errorMessage}</span>
-                    </section>
-                  )}
-
-                  {Number(jobDetail.problemChunkCount) > 0 && (
-                    <section className="qdoc-alert qdoc-alert--warning qdoc-alert--action">
-                      <div>
-                        <WarningOutlined />
-                        <span>{formatNumber(jobDetail.problemChunkCount)} đoạn nội dung chưa tạo được câu hỏi hoặc xử lý lỗi. Bạn có thể chạy lại các đoạn này.</span>
-                      </div>
-                      <button type="button" className="qdoc-secondary-btn" onClick={retryProblemChunks} disabled={isRetrying}>
-                        {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
-                        <span>Chạy lại</span>
-                      </button>
                     </section>
                   )}
 
@@ -782,9 +759,6 @@ export function CandidateCard({
   const fieldLabel = candidate.professionalFieldCode
     ? `${candidate.professionalFieldCode} · ${candidate.professionalFieldName || 'Lĩnh vực chuyên môn'}`
     : 'Chưa có lĩnh vực chuyên môn'
-  const taxonomyState = ['APPROVED', 'SAVED'].includes(candidate.status)
-    ? 'Đã reviewer xác nhận'
-    : 'AI đề xuất · cần reviewer kiểm tra'
   const pageRef = candidate.pageStart == null
     ? null
     : (candidate.pageEnd && candidate.pageEnd !== candidate.pageStart
@@ -808,7 +782,7 @@ export function CandidateCard({
           >
             {candidate.professionalFieldCode || 'Chưa có lĩnh vực'}
           </span>
-          <span className={`qdoc-mini-badge ${candidate.cognitiveLevel ? '' : 'qdoc-mini-badge--warning'}`} title={taxonomyState}>
+          <span className={`qdoc-mini-badge ${candidate.cognitiveLevel ? '' : 'qdoc-mini-badge--warning'}`}>
             {cognitiveLevelText(candidate.cognitiveLevel)}
           </span>
         </div>
@@ -818,7 +792,6 @@ export function CandidateCard({
         <span className={`qdoc-tag ${candidate.professionalFieldId ? 'qdoc-tag--level' : 'qdoc-tag--warning'}`}>
           Lĩnh vực: {fieldLabel}
         </span>
-        <span className="qdoc-tag">{taxonomyState}</span>
       </div>
 
       <h2>{candidate.stem}</h2>
@@ -935,7 +908,6 @@ function DuplicateMatchCard({ match }) {
       )}
       <footer>
         <span>{match.sourceDocument || 'Không rõ nguồn'}</span>
-        {match.status && <span>Trạng thái: {match.status}</span>}
       </footer>
     </article>
   )

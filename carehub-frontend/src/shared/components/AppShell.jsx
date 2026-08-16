@@ -16,7 +16,16 @@ import { AUTH_ROLE, hasAnyRole } from '../../features/auth/utils/authNavigation.
  *   ...nội dung trang...
  * </AppShell>
  */
-function AppShell({ title, breadcrumbs, back, mobileSearch, className, hideSidebar = false, children }) {
+function AppShell({
+  title,
+  breadcrumbs,
+  back,
+  mobileSearch,
+  className,
+  hideSidebar = false,
+  hideHeader = false,
+  children,
+}) {
   const [staffAlertSummary, setStaffAlertSummary] = useState({
     unreadCount: 0,
     pendingExamCount: 0,
@@ -47,24 +56,26 @@ function AppShell({ title, breadcrumbs, back, mobileSearch, className, hideSideb
 
   return (
     <div
-      className={`app-shell ${roleClassName}${className ? ` ${className}` : ''}`}
+      className={`app-shell ${roleClassName}${hideSidebar ? ' app-shell--no-sidebar' : ''}${hideHeader ? ' app-shell--no-header' : ''}${className ? ` ${className}` : ''}`}
       style={{ '--app-sidebar-width': isAdmin ? '222px' : '240px' }}
     >
       {!hideSidebar && <Sidebar alertSummary={staffAlertSummary} />}
       <div className="app-shell__content">
-        {isAdmin ? (
-          <AdminHeader title={title} breadcrumbs={breadcrumbs} back={back} mobileSearch={mobileSearchConfig} />
-        ) : (
-          <Header
-            title={title}
-            breadcrumbs={breadcrumbs}
-            back={back}
-            mobileSearch={mobileSearchConfig}
-            onAlertSummaryChange={setStaffAlertSummary}
-          />
+        {!hideHeader && (
+          isAdmin ? (
+            <AdminHeader title={title} breadcrumbs={breadcrumbs} back={back} mobileSearch={mobileSearchConfig} />
+          ) : (
+            <Header
+              title={title}
+              breadcrumbs={breadcrumbs}
+              back={back}
+              mobileSearch={mobileSearchConfig}
+              onAlertSummaryChange={setStaffAlertSummary}
+            />
+          )
         )}
         <main className="app-shell__body dashboard-body">
-          {back && <MobileBackBar {...back} />}
+          {back && !hideHeader && <MobileBackBar {...back} />}
           {children}
         </main>
       </div>

@@ -74,7 +74,7 @@ public class CandidateReviewService {
                         candidate.getStem(),
                         Set.of(),
                         Set.of(candidate.getId()),
-                        20
+                        5
                 ).stream()
                 .map(this::toDuplicateMatchResponse)
                 .toList();

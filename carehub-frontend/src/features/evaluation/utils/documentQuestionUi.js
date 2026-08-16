@@ -89,6 +89,14 @@ export function cognitiveLevelText(value) {
   return COGNITIVE_LEVEL_LABELS[value] || value || 'Chưa phân loại nhận thức'
 }
 
+export function formatCognitiveWarningText(warning) {
+  if (!warning || typeof warning !== 'string') return warning
+  return warning
+    .replace(/\bFOUNDATION\b/g, 'Kiến thức nền tảng')
+    .replace(/\bCLINICAL_APPLICATION\b/g, 'Áp dụng lâm sàng')
+    .replace(/\bCLINICAL_REASONING_ANALYSIS\b/g, 'Tư duy phân tích')
+}
+
 export function statusTone(status) {
   if (['READY', 'GOOD', 'APPROVED', 'VALIDATED', 'GENERATED', 'COMPLETED'].includes(status)) return 'success'
   if (['OCR_REQUIRED', 'NEED_REVIEW', 'PARTIALLY_COMPLETED', 'GENERATING', 'CREATED', 'VALIDATING'].includes(status)) return 'warning'

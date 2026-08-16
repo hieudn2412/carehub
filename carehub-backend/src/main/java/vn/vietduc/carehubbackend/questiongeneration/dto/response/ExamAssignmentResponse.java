@@ -30,6 +30,7 @@ public record ExamAssignmentResponse(
         Integer targetCount,
         Integer attemptCount,
         Integer submittedCount,
+        Integer submittedTargetCount,
         List<ExamAssignmentTargetResponse> targets,
         LocalDateTime openedAt,
         LocalDateTime closedAt,

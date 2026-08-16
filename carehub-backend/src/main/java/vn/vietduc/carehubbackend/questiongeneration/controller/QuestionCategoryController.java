@@ -63,7 +63,7 @@ public class QuestionCategoryController {
                 response.id(),
                 actor(authentication),
                 "Tạo danh mục câu hỏi #" + response.id(),
-                Map.of("code", String.valueOf(response.code()), "name", response.name(), "status", response.status())
+                Map.of("code", String.valueOf(response.code()), "name", String.valueOf(response.name()), "status", String.valueOf(response.status()))
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Tạo danh mục câu hỏi thành công",
@@ -85,7 +85,7 @@ public class QuestionCategoryController {
                 categoryId,
                 actor(authentication),
                 "Cập nhật danh mục câu hỏi #" + categoryId,
-                Map.of("code", String.valueOf(response.code()), "name", response.name(), "status", response.status())
+                Map.of("code", String.valueOf(response.code()), "name", String.valueOf(response.name()), "status", String.valueOf(response.status()))
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Cập nhật danh mục câu hỏi thành công",
@@ -106,7 +106,7 @@ public class QuestionCategoryController {
                 categoryId,
                 actor(authentication),
                 "Lưu trữ danh mục câu hỏi #" + categoryId,
-                Map.of("code", String.valueOf(response.code()), "name", response.name(), "status", response.status())
+                Map.of("code", String.valueOf(response.code()), "name", String.valueOf(response.name()), "status", String.valueOf(response.status()))
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Lưu trữ danh mục câu hỏi thành công",

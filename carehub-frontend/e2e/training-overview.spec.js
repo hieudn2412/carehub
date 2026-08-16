@@ -34,10 +34,10 @@ test.describe('Training overview and full list', () => {
       await staffApi.post(`/training/records/${record.id}/submit`, { version: record.version }, 'submit chart record')
 
       await gotoAs(page, browser, staff, '/staff/training')
-      await expect(page.locator('[data-overview-section]')).toHaveCount(4)
+      await expect(page.locator('[data-overview-section]')).toHaveCount(3)
       expect(await page.locator('[data-overview-section]').evaluateAll((sections) =>
         sections.map((section) => section.dataset.overviewSection)))
-        .toEqual(['chart', 'progress', 'tools', 'latest'])
+        .toEqual(['chart', 'progress', 'latest'])
 
       const yearResponse = page.waitForResponse((response) => {
         const url = new URL(response.url())
@@ -48,11 +48,10 @@ test.describe('Training overview and full list', () => {
       await yearResponse
       await expect(page.getByRole('combobox', { name: 'Năm biểu đồ' })).toHaveValue(String(previousYear))
 
-      const search = page.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' })
-      await search.fill(title)
-      await search.press('Enter')
-      await page.waitForURL((url) =>
-        url.pathname === '/staff/training/all' && url.searchParams.get('q') === title)
+      await page.getByRole('button', { name: 'Xem tất cả' }).click()
+      await page.waitForURL((url) => url.pathname === '/staff/training/all')
+      await page.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' }).fill(title)
+      await page.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' }).press('Enter')
       await expect(page.getByText(title, { exact: true })).toBeVisible()
 
       await page.getByRole('button', { name: 'Mở bộ lọc' }).click()
