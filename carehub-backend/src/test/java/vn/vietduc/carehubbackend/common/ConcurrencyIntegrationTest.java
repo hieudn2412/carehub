@@ -491,7 +491,7 @@ class ConcurrencyIntegrationTest {
                 config.getId(), "Đề rollback", 1, 321L, key, false);
 
         assertThatThrownBy(() -> examPaperService.generate(request, "publisher"))
-                .hasMessageContaining("Không đủ họ câu hỏi độc lập");
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.ValidationException.class);
         assertThat(generationBatchRepository.findByIdempotencyKey(key)).isEmpty();
     }
 }

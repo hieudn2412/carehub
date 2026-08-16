@@ -195,14 +195,6 @@ function ActivityTypeDetailPage() {
   )
 }
 
-function durationUnitLabel(unit) {
-  const map = {
-    HOUR: 'Tính theo giờ', LESSON: 'Tính theo tiết học', CREDIT: 'Tính theo tín chỉ',
-    DAY: 'Tính theo ngày', MONTH: 'Tính theo tháng', YEAR: 'Tính theo năm', OTHER: 'Khác'
-  }
-  return map[unit] || unit || '-'
-}
-
 function formatDateTime(value) {
   if (!value) return '-'
   return new Date(value).toLocaleString('vi-VN')

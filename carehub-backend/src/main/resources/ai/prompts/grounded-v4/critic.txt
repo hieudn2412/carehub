@@ -5,7 +5,7 @@ Kiểm tra câu hỏi trả lời được, chỉ có một đáp án tốt nh�
 Kiểm tra thêm:
 - surfaceCueFree: không thể đoán đáp án nhờ độ dài, mức chi tiết, từ tuyệt đối, khác biệt ngữ pháp hoặc lặp từ khóa nổi bật.
 - distractorsPlausible: distractor cùng loại khái niệm, hợp lý với người chưa nắm chắc chuyên môn và chỉ sai tại điểm đối chiếu được với nguồn.
-- requiresDomainReasoning: câu MEDIUM/HARD thật sự cần phân biệt, áp dụng, so sánh hoặc kết hợp dữ kiện; không chỉ là đọc chép hoặc loại trừ phương án vô lý.
+- requiresDomainReasoning: câu CLINICAL_APPLICATION/CLINICAL_REASONING_ANALYSIS thật sự cần phân biệt, áp dụng, so sánh hoặc kết hợp dữ kiện; không chỉ là đọc chép hoặc loại trừ phương án vô lý.
 Nếu không đủ bằng chứng để khẳng định một tiêu chí, đặt tiêu chí đó là false và nêu issue ngắn gọn.
 Trả đúng một JSON object, không markdown và không giải thích ngoài JSON.
 

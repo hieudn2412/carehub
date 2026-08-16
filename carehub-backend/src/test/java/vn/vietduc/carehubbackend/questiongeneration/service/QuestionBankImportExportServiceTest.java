@@ -146,7 +146,7 @@ class QuestionBankImportExportServiceTest {
         assertThat(preview.rows().get(0).categoryId()).isEqualTo(10L);
         assertThat(preview.rows().get(0).categoryName()).isEqualTo("Chủ đề");
         assertThat(preview.rows().get(0).professionalFieldCode()).isNull();
-        assertThat(preview.rows().get(0).cognitiveLevel()).isEqualTo("MEDIUM");
+        assertThat(preview.rows().get(0).cognitiveLevel()).isEqualTo("CLINICAL_APPLICATION");
         assertThat(preview.rows().get(0).sourceDocument()).isEqualTo("questions.csv");
     }
 
@@ -163,7 +163,7 @@ class QuestionBankImportExportServiceTest {
                 new vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportRowRequest(
                         row.rowNumber(), row.stem(), row.optionA(), row.optionB(), row.optionC(), row.optionD(),
                         row.correctAnswer(), row.explanation(), null, "en", row.sourceDocument(),
-                        "REJECTED", row.categoryId(), row.categoryReference())
+                        "REJECTED", row.categoryId(), row.categoryReference(), null, null, row.cognitiveLevel())
         )), "admin");
 
         ArgumentCaptor<vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest> captor =
@@ -238,7 +238,12 @@ class QuestionBankImportExportServiceTest {
                         row.topic(),
                         row.language(),
                         row.sourceDocument(),
-                        row.status()
+                        row.status(),
+                        row.categoryId(),
+                        row.categoryReference(),
+                        row.professionalFieldId(),
+                        row.professionalFieldReference(),
+                        row.cognitiveLevel()
                 ))
                 .toList()), "admin");
 
@@ -272,7 +277,12 @@ class QuestionBankImportExportServiceTest {
                         row.topic(),
                         row.language(),
                         row.sourceDocument(),
-                        row.status()
+                        row.status(),
+                        row.categoryId(),
+                        row.categoryReference(),
+                        row.professionalFieldId(),
+                        row.professionalFieldReference(),
+                        row.cognitiveLevel()
                 ))
                 .toList()), "admin");
 
@@ -288,7 +298,7 @@ class QuestionBankImportExportServiceTest {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook(new ByteArrayInputStream(body))) {
             assertThat(workbook.getNumberOfSheets()).isEqualTo(3);
-            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(12);
+            assertThat(workbook.getSheet("Câu hỏi").getRow(0).getPhysicalNumberOfCells()).isEqualTo(11);
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(0).getStringCellValue()).isEqualTo("Danh mục kiến thức");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(1).getStringCellValue()).isEqualTo("Lĩnh vực chuyên môn");
             assertThat(workbook.getSheet("Câu hỏi").getRow(0).getCell(7).getStringCellValue()).isEqualTo("Đáp án đúng");
