@@ -96,7 +96,11 @@ export default function ManagerDashboard() {
           keyword: filters.employeeCode.trim() || undefined,
           asOf: filters.toDate,
         }),
-        staffApi.getDashboardFormSummary(qualityParams),
+        staffApi.getManagerQualityHistorySummary({
+          fromDate: qualityParams.fromDate,
+          toDate: qualityParams.toDate,
+          subjectUserId,
+        }),
         staffApi.getQualityChecklistDashboard({
           ...qualityParams,
           view: 'FILTERED',
@@ -116,7 +120,7 @@ export default function ManagerDashboard() {
         ? payload(trainingResult.value)?.totals || {}
         : {}
       const quality = qualityResult.status === 'fulfilled'
-        ? payload(qualityResult.value)?.responses || {}
+        ? payload(qualityResult.value)
         : null
 
       setDomains({
@@ -142,10 +146,10 @@ export default function ManagerDashboard() {
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
         quality: quality ? {
-          total: Number(quality.submitted) || 0,
-          passed: Number(quality.passed) || 0,
-          failed: (Number(quality.failedScore) || 0) + (Number(quality.failedCritical) || 0),
-          rate: Number(quality.passRate) || 0,
+          total: Number(quality.monitoringCount) || 0,
+          passed: Number(quality.passedCount) || 0,
+          failed: Number(quality.failedCount) || 0,
+          rate: Number(quality.complianceRate) || 0,
           available: qualityResult.status === 'fulfilled',
           emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
           detail: 'Số lượt checklist đạt / tổng lượt checklist đã chấm từ đầu năm.',

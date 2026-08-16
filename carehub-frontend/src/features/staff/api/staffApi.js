@@ -118,6 +118,13 @@ export const staffApi = {
     })
   },
 
+  getManagerQualityHistorySummary(params) {
+    return httpClient.get('/forms/history/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getQualityChecklistTrend(params) {
     return httpClient.get('/dashboard/quality/checklists/trend', {
       headers: authHeaders(),

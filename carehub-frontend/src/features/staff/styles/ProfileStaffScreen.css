@@ -454,48 +454,104 @@
 /* bp-sm */
 @media (max-width: 768px) {
   .profile-card {
-    padding: 20px 16px;
-    border-radius: 10px;
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .profile-card__title {
+    font-size: 16px;
+  }
+
+  .profile-card__sub {
+    margin-bottom: 12px;
+    font-size: 11px;
   }
 
   .profile-card__header {
     align-items: stretch;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .profile-card__avatar-row {
+    gap: 10px;
+  }
+
+  .profile-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 15px;
+  }
+
+  .profile-name {
+    margin-bottom: 4px;
+    font-size: 15px;
+  }
+
+  .profile-badges {
+    gap: 5px;
+  }
+
+  .profile-badge {
+    padding: 2px 7px;
+    font-size: 10px;
   }
 
   .profile-change-pw-btn {
     width: 100%;
-    min-height: 44px;
+    min-height: 36px;
     justify-content: center;
+    padding: 6px 8px;
+    font-size: 11px;
   }
 
-  .profile-card__actions { flex-direction: column; }
+  .profile-card__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
   .profile-edit-form { grid-template-columns: 1fr; }
   .profile-edit-form > .modal-alert,
   .profile-edit-form__note { grid-column: auto; }
 
   .profile-info-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-info-item:nth-child(even) {
-    padding-left: 0;
+    padding-left: 8px;
+    border-left: 0.5px solid #f0f0f0;
   }
 
   .profile-info-item:nth-last-child(-n+2) {
-    border-bottom: 0.5px solid #f0f0f0;
+    border-bottom: none;
   }
 
-  .profile-info-item:last-child {
-    border-bottom: none;
+  .profile-info-item {
+    min-width: 0;
+    gap: 8px;
+    padding: 10px 6px 10px 0;
   }
 
   .profile-info-item > div:last-child {
     min-width: 0;
   }
 
+  .profile-info-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    font-size: 14px;
+  }
+
+  .profile-info-label {
+    font-size: 10px;
+  }
+
   .profile-info-value {
+    font-size: 12px;
     overflow-wrap: anywhere;
   }
 }
@@ -515,15 +571,15 @@
   }
 
   .profile-card {
-    padding: 18px 14px;
+    padding: 12px 10px;
   }
 
   .profile-card__sub {
-    margin-bottom: 18px;
+    margin-bottom: 10px;
   }
 
   .profile-card__avatar-row {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .profile-badges {
@@ -533,6 +589,22 @@
 
   .profile-change-pw-btn,
   .change-password-modal__action {
-    min-height: 44px;
+    min-height: 36px;
+  }
+
+  .profile-info-item {
+    gap: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .profile-info-item:nth-child(even) {
+    padding-left: 6px;
+  }
+
+  .profile-info-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
   }
 }
