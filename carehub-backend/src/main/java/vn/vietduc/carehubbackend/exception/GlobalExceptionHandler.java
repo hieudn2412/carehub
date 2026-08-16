@@ -17,6 +17,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import vn.vietduc.carehubbackend.common.response.ErrorResponse;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import jakarta.persistence.OptimisticLockException;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, "SYS_409", ex.getMessage(), null, request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Data integrity violation for {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return build(HttpStatus.CONFLICT, "SYS_409", "Dữ liệu đã tồn tại hoặc vi phạm ràng buộc dữ liệu", null, request);
     }
 
     @ExceptionHandler({OptimisticLockException.class, ObjectOptimisticLockingFailureException.class})

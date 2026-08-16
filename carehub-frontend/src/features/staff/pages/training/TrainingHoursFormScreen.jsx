@@ -9,6 +9,9 @@ import {
   CloseOutlined,
   LeftOutlined,
   RightOutlined,
+  EyeOutlined,
+  DownloadOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
@@ -34,6 +37,18 @@ const todayIso = () => {
 const getDateParts = (value) => {
   const [year, month, day] = String(value || todayIso()).split('-').map(Number)
   return { year, month, day }
+}
+
+const clampDraftToToday = (draft) => {
+  const today = getDateParts(todayIso())
+  if (draft.year > today.year) return { ...today }
+  if (draft.year === today.year && draft.month > today.month) {
+    return { ...draft, month: today.month, day: Math.min(draft.day, today.day) }
+  }
+  if (draft.year === today.year && draft.month === today.month && draft.day > today.day) {
+    return { ...draft, day: today.day }
+  }
+  return draft
 }
 
 const formatDisplayDate = (value) => {
@@ -267,6 +282,7 @@ function TrainingHoursFormScreen() {
   const previewUrlsRef = useRef(new Set())
   const [selectedFiles, setSelectedFiles] = useState([])
   const [existingEvidences, setExistingEvidences] = useState([])
+  const [openingEvidenceId, setOpeningEvidenceId] = useState(null)
   const [evidencesToDelete, setEvidencesToDelete] = useState([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [fileError, setFileError] = useState('')
@@ -287,7 +303,7 @@ function TrainingHoursFormScreen() {
     setMobileDateDraft(currentDraft => {
       const nextDraft = { ...currentDraft, ...changes }
       const maxDay = new Date(nextDraft.year, nextDraft.month, 0).getDate()
-      return { ...nextDraft, day: Math.min(nextDraft.day, maxDay) }
+      return clampDraftToToday({ ...nextDraft, day: Math.min(nextDraft.day, maxDay) })
     })
   }
 
@@ -415,6 +431,10 @@ function TrainingHoursFormScreen() {
     const hoursError = getTrainingHoursValidationError(form.hours)
     if (hoursError) e.hours = hoursError
 
+    if (form.date && form.date > todayIso()) {
+      e.date = 'Ngày đào tạo không được vượt quá ngày hôm nay'
+    }
+
     if (shouldSubmit && form.date && trainingWindowYears) {
       const recordDate = new Date(form.date)
       const windowStart = new Date()
@@ -448,6 +468,7 @@ function TrainingHoursFormScreen() {
     if (mobileStep === 0) {
       if (!form.name) stepErrors.name = true
       if (!form.date) stepErrors.date = true
+      else if (form.date > todayIso()) stepErrors.date = 'Ngày đào tạo không được vượt quá ngày hôm nay'
       const hoursError = getTrainingHoursValidationError(form.hours)
       if (hoursError) stepErrors.hours = hoursError
     }
@@ -609,6 +630,31 @@ function TrainingHoursFormScreen() {
     setEvidencesToDelete(prev => [...prev, ev])
   }
 
+  const handleViewEvidence = async (evidenceId) => {
+    setOpeningEvidenceId(evidenceId)
+    try {
+      const res = await trainingApi.createEvidencePreviewUrl(id, evidenceId)
+      const url = res.data?.data?.downloadUrl
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      else showToast('Không thể mở minh chứng.', 'error')
+    } catch {
+      showToast('Không thể mở minh chứng.', 'error')
+    } finally {
+      setOpeningEvidenceId(null)
+    }
+  }
+
+  const handleDownloadEvidence = async (evidenceId) => {
+    try {
+      const res = await trainingApi.createEvidenceDownloadUrl(id, evidenceId)
+      const url = res.data?.data?.downloadUrl
+      if (url) window.open(url, '_blank', 'noopener,noreferrer')
+      else showToast('Không thể tải minh chứng.', 'error')
+    } catch {
+      showToast('Không thể tải minh chứng.', 'error')
+    }
+  }
+
   const fieldStyle = (key) => ({
     width: '100%',
     padding: '10px 14px',
@@ -697,6 +743,7 @@ function TrainingHoursFormScreen() {
                         <input
                           type="date"
                           value={form.date}
+                          max={todayIso()}
                           onChange={e => setForm({ ...form, date: e.target.value })}
                           style={{ ...fieldStyle('date'), paddingLeft: 38 }}
                         />
@@ -840,6 +887,23 @@ function TrainingHoursFormScreen() {
                               <span style={{ color: '#6b7280', fontSize: 11 }}>
                                 {formatEvidenceStorageSummary(ev, formatCompactSize)}
                               </span>
+                              <button
+                                type="button"
+                                onClick={() => handleViewEvidence(ev.id)}
+                                disabled={openingEvidenceId === ev.id}
+                                className="evidence-chip__action"
+                                title="Xem minh chứng"
+                              >
+                                {openingEvidenceId === ev.id ? <LoadingOutlined spin /> : <EyeOutlined />}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadEvidence(ev.id)}
+                                className="evidence-chip__action"
+                                title="Tải về"
+                              >
+                                <DownloadOutlined />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => removeExistingEvidence(ev)}
@@ -1006,10 +1070,15 @@ function TrainingHoursFormScreen() {
                   value={mobileDateDraft.day}
                   onChange={event => updateMobileDateDraft({ day: Number(event.target.value) })}
                 >
-                  {Array.from(
-                    { length: new Date(mobileDateDraft.year, mobileDateDraft.month, 0).getDate() },
-                    (_, index) => index + 1,
-                  ).map(day => <option key={day} value={day}>{day}</option>)}
+                  {(() => {
+                    const today = getDateParts(todayIso())
+                    const isCurrentMonth = mobileDateDraft.year === today.year && mobileDateDraft.month === today.month
+                    const maxDay = isCurrentMonth
+                      ? today.day
+                      : new Date(mobileDateDraft.year, mobileDateDraft.month, 0).getDate()
+                    return Array.from({ length: maxDay }, (_, index) => index + 1)
+                      .map(day => <option key={day} value={day}>{day}</option>)
+                  })()}
                 </select>
               </label>
               <label>
@@ -1018,8 +1087,12 @@ function TrainingHoursFormScreen() {
                   value={mobileDateDraft.month}
                   onChange={event => updateMobileDateDraft({ month: Number(event.target.value) })}
                 >
-                  {Array.from({ length: 12 }, (_, index) => index + 1)
-                    .map(month => <option key={month} value={month}>Tháng {month}</option>)}
+                  {(() => {
+                    const today = getDateParts(todayIso())
+                    const maxMonth = mobileDateDraft.year === today.year ? today.month : 12
+                    return Array.from({ length: maxMonth }, (_, index) => index + 1)
+                      .map(month => <option key={month} value={month}>Tháng {month}</option>)
+                  })()}
                 </select>
               </label>
               <label>
@@ -1028,7 +1101,7 @@ function TrainingHoursFormScreen() {
                   value={mobileDateDraft.year}
                   onChange={event => updateMobileDateDraft({ year: Number(event.target.value) })}
                 >
-                  {Array.from({ length: 22 }, (_, index) => new Date().getFullYear() + 1 - index)
+                  {Array.from({ length: 21 }, (_, index) => new Date().getFullYear() - index)
                     .map(year => <option key={year} value={year}>{year}</option>)}
                 </select>
               </label>

@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.training.dto.request.ProfessionalFieldFormRequest;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.util.Optional;
@@ -54,5 +55,24 @@ class ProfessionalFieldAdminServiceTest {
         assertThrows(ConflictException.class, () -> service.create(
                 new ProfessionalFieldFormRequest("CAP_CUU", "Tên khác", null, true, null)
         ));
+    }
+
+    @Test
+    void rejectsPendingEmployeeProposalAndKeepsReason() {
+        ProfessionalField pending = ProfessionalField.builder()
+                .id(10L)
+                .code("CUSTOM_10")
+                .name("Điều dưỡng nhi")
+                .active(false)
+                .moderationStatus(ProfessionalFieldModerationStatus.PENDING)
+                .build();
+        when(repository.findById(10L)).thenReturn(Optional.of(pending));
+        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.reject(10L);
+
+        assertEquals(ProfessionalFieldModerationStatus.REJECTED, response.moderationStatus());
+        assertEquals(null, response.rejectionReason());
+        assertEquals(false, response.active());
     }
 }

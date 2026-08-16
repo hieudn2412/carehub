@@ -17,6 +17,7 @@ public record UpsertExamConfigRequest(
         Integer maxRetakes,
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
+        Boolean backfillNearestCognitiveLevel,
         String questionSelectionMode,
         String status,
         Long audienceId,

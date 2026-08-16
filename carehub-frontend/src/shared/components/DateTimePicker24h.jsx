@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import './DateTimePicker24h.css'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'))
+const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
 export default function DateTimePicker24h({
   value,
@@ -34,31 +34,15 @@ export default function DateTimePicker24h({
   }
 
   const handleHourChange = (e) => {
-    const raw = e.target.value
-    if (!date) return
-    if (raw === '') {
-      onChange(`${date}T00:${minute || '00'}`)
-      return
-    }
-    const num = parseInt(raw, 10)
-    if (isNaN(num)) return
-    const clamped = Math.max(0, Math.min(23, num))
-    const formatted = String(clamped).padStart(2, '0')
-    onChange(`${date}T${formatted}:${minute || '00'}`)
+    const h = e.target.value
+    const d = date || new Date().toISOString().slice(0, 10)
+    onChange(`${d}T${h}:${minute || '00'}`)
   }
 
   const handleMinuteChange = (e) => {
-    const raw = e.target.value
-    if (!date) return
-    if (raw === '') {
-      onChange(`${date}T${hour || '08'}:00`)
-      return
-    }
-    const num = parseInt(raw, 10)
-    if (isNaN(num)) return
-    const clamped = Math.max(0, Math.min(59, num))
-    const formatted = String(clamped).padStart(2, '0')
-    onChange(`${date}T${hour || '08'}:${formatted}`)
+    const m = e.target.value
+    const d = date || new Date().toISOString().slice(0, 10)
+    onChange(`${d}T${hour || '08'}:${m}`)
   }
 
   const handleClear = () => {
@@ -76,42 +60,30 @@ export default function DateTimePicker24h({
         disabled={disabled}
       />
       <div className="dt24-time-group">
-        <span className="dt24-time-icon" title="Nhập hoặc chọn giờ (00 - 23)">🕒</span>
-        <input
-          type="number"
-          min={0}
-          max={23}
-          list="dt24-hours-list"
-          className="dt24-num-input dt24-num-input--hour"
+        <span className="dt24-time-icon" title="Chọn giờ & phút (24h)">🕒</span>
+        <select
+          className="dt24-time-select"
           value={hour}
           onChange={handleHourChange}
-          disabled={disabled || !date}
-          placeholder="HH"
-          title="Nhập giờ 24h (00-23)"
-        />
-        <datalist id="dt24-hours-list">
+          disabled={disabled}
+          title="Chọn giờ (00-23)"
+        >
           {HOURS.map((h) => (
-            <option key={h} value={h} />
+            <option key={h} value={h}>{h}</option>
           ))}
-        </datalist>
+        </select>
         <span className="dt24-sep">:</span>
-        <input
-          type="number"
-          min={0}
-          max={59}
-          list="dt24-minutes-list"
-          className="dt24-num-input dt24-num-input--minute"
+        <select
+          className="dt24-time-select"
           value={minute}
           onChange={handleMinuteChange}
-          disabled={disabled || !date}
-          placeholder="MM"
-          title="Nhập phút (00-59)"
-        />
-        <datalist id="dt24-minutes-list">
+          disabled={disabled}
+          title="Chọn phút (00-59)"
+        >
           {MINUTES.map((m) => (
-            <option key={m} value={m} />
+            <option key={m} value={m}>{m}</option>
           ))}
-        </datalist>
+        </select>
       </div>
       {date && !disabled && (
         <button

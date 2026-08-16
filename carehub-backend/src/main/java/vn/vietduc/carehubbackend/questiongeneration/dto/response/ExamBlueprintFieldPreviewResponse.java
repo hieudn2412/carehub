@@ -11,6 +11,7 @@ public record ExamBlueprintFieldPreviewResponse(
         Integer requiredQuestionCount,
         Integer availableQuestionCount,
         Integer shortage,
+        Integer backfilledQuestionCount,
         Integer displayOrder,
         List<ExamBlueprintCellPreviewResponse> cells
 ) {
@@ -19,6 +20,7 @@ public record ExamBlueprintFieldPreviewResponse(
             BigDecimal percentage,
             Integer requiredQuestionCount,
             Integer availableQuestionCount,
-            Integer shortage
+            Integer shortage,
+            Integer backfilledCount
     ) { }
 }

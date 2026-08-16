@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   CheckCircleOutlined,
+  CloseCircleOutlined,
   CloseOutlined,
   EditOutlined,
   FilterOutlined,
@@ -18,6 +19,11 @@ import '../styles/ProfessionalFieldManagementPage.css'
 
 const EMPTY_FORM = { code: '', name: '', description: '', active: true, version: null }
 const EMPTY_FORM_ERRORS = { code: '', name: '' }
+
+function moderationStatusOf(field) {
+  if (field?.moderationStatus) return field.moderationStatus
+  return field?.code?.startsWith('CUSTOM_') && !field?.active ? 'PENDING' : 'APPROVED'
+}
 
 function validateForm(form) {
   const errors = { ...EMPTY_FORM_ERRORS }
@@ -45,12 +51,15 @@ function ProfessionalFieldManagementPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
+  const [rejectedCount, setRejectedCount] = useState(0)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formErrors, setFormErrors] = useState(EMPTY_FORM_ERRORS)
   const [editingId, setEditingId] = useState(null)
   const [formModalOpen, setFormModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [rejectingField, setRejectingField] = useState(null)
+  const [rejectSaving, setRejectSaving] = useState(false)
 
   const activeTab = searchParams.get('tab') || 'existing'
 
@@ -60,7 +69,7 @@ function ProfessionalFieldManagementPage() {
 
   const loadFields = useCallback(() => {
     setLoading(true)
-    const apiActive = activeTab === 'pending'
+    const apiActive = activeTab === 'pending' || activeTab === 'rejected'
       ? 'false'
       : (statusFilter === '' ? undefined : statusFilter)
 
@@ -73,10 +82,11 @@ function ProfessionalFieldManagementPage() {
       .then(response => {
         let content = response.data?.data?.content || []
         if (activeTab === 'pending') {
-          content = content.filter(f => f.code?.startsWith('CUSTOM_'))
+          content = content.filter(f => moderationStatusOf(f) === 'PENDING')
+        } else if (activeTab === 'rejected') {
+          content = content.filter(f => moderationStatusOf(f) === 'REJECTED')
         } else {
-          // 'existing' - show all except unapproved custom fields
-          content = content.filter(f => !(f.code?.startsWith('CUSTOM_') && !f.active))
+          content = content.filter(f => moderationStatusOf(f) === 'APPROVED')
         }
         setFields(content)
       })
@@ -92,8 +102,8 @@ function ProfessionalFieldManagementPage() {
     })
       .then(response => {
         const content = response.data?.data?.content || []
-        const count = content.filter(f => f.code?.startsWith('CUSTOM_')).length
-        setPendingCount(count)
+        setPendingCount(content.filter(f => moderationStatusOf(f) === 'PENDING').length)
+        setRejectedCount(content.filter(f => moderationStatusOf(f) === 'REJECTED').length)
       })
       .catch(error => console.error("Error loading pending fields count", error))
   }, [])
@@ -113,6 +123,15 @@ function ProfessionalFieldManagementPage() {
     setFormErrors(EMPTY_FORM_ERRORS)
     setFormModalOpen(false)
   }, [saving])
+
+  const closeRejectModal = useCallback(() => {
+    if (rejectSaving) return
+    setRejectingField(null)
+  }, [rejectSaving])
+
+  const openRejectModal = field => {
+    setRejectingField(field)
+  }
 
   const createField = () => {
     setEditingId(null)
@@ -142,10 +161,13 @@ function ProfessionalFieldManagementPage() {
   }
 
   useEffect(() => {
-    if (!formModalOpen) return undefined
+    if (!formModalOpen && !rejectingField) return undefined
     const previousOverflow = document.body.style.overflow
     const closeOnEscape = event => {
-      if (event.key === 'Escape') closeFormModal()
+      if (event.key === 'Escape') {
+        if (rejectingField) closeRejectModal()
+        else closeFormModal()
+      }
     }
     document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', closeOnEscape)
@@ -153,7 +175,7 @@ function ProfessionalFieldManagementPage() {
       document.body.style.overflow = previousOverflow
       document.removeEventListener('keydown', closeOnEscape)
     }
-  }, [closeFormModal, formModalOpen])
+  }, [closeFormModal, closeRejectModal, formModalOpen, rejectingField])
 
   const submit = async event => {
     event.preventDefault()
@@ -189,6 +211,22 @@ function ProfessionalFieldManagementPage() {
       showToast(error?.response?.data?.message || 'Không thể lưu lĩnh vực chuyên môn', 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const rejectField = async event => {
+    event.preventDefault()
+    setRejectSaving(true)
+    try {
+      await adminApi.rejectProfessionalField(rejectingField.id)
+      showToast('Đã từ chối đề xuất lĩnh vực chuyên môn', 'success')
+      setRejectingField(null)
+      loadFields()
+      loadPendingCount()
+    } catch (error) {
+      showToast(error?.response?.data?.message || 'Không thể từ chối đề xuất lĩnh vực', 'error')
+    } finally {
+      setRejectSaving(false)
     }
   }
 
@@ -239,6 +277,13 @@ function ProfessionalFieldManagementPage() {
                     onClick={() => handleTabChange('pending')}
                   >
                     Chờ phê duyệt {pendingCount > 0 && <span className="pfm-tab-badge">{pendingCount}</span>}
+                  </button>
+                  <button
+                    type="button"
+                    className={`pfm-tab-btn ${activeTab === 'rejected' ? 'active' : ''}`}
+                    onClick={() => handleTabChange('rejected')}
+                  >
+                    Đã từ chối {rejectedCount > 0 && <span className="pfm-tab-badge pfm-tab-badge--rejected">{rejectedCount}</span>}
                   </button>
                 </div>
                 <div className="pfm-search-box">
@@ -293,12 +338,21 @@ function ProfessionalFieldManagementPage() {
                     {loading ? <tr><td colSpan={4}>Đang tải...</td></tr> : fields.length === 0 ? <tr><td colSpan={4}>Chưa có lĩnh vực phù hợp.</td></tr> : fields.map(field => (
                       <tr key={field.id}>
                         <td><code>{field.code}</code></td>
-                        <td><strong>{field.name}</strong><small>{field.description || 'Không có mô tả'}</small></td>
+                         <td>
+                           <strong>{field.name}</strong>
+                           <small>
+                             {moderationStatusOf(field) === 'REJECTED' && field.rejectionReason
+                               ? `Lý do: ${field.rejectionReason}`
+                               : field.description || 'Không có mô tả'}
+                           </small>
+                         </td>
                         <td>
-                          {field.active ? (
-                            <span className="pfm-status pfm-status--active">Đang dùng</span>
-                          ) : field.code?.startsWith('CUSTOM_') ? (
+                          {moderationStatusOf(field) === 'REJECTED' ? (
+                            <span className="pfm-status pfm-status--rejected">Đã từ chối</span>
+                          ) : moderationStatusOf(field) === 'PENDING' ? (
                             <span className="pfm-status pfm-status--pending">Chờ duyệt</span>
+                          ) : field.active ? (
+                            <span className="pfm-status pfm-status--active">Đang dùng</span>
                           ) : (
                             <span className="pfm-status">Ngừng dùng</span>
                           )}
@@ -315,14 +369,25 @@ function ProfessionalFieldManagementPage() {
                               <EditOutlined />
                             </button>
                             <button
-                              aria-label={`${field.active ? 'Ngừng sử dụng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'} lĩnh vực ${field.name}`}
+                              aria-label={`${field.active ? 'Ngừng sử dụng' : moderationStatusOf(field) === 'REJECTED' ? 'Duyệt lại' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'} lĩnh vực ${field.name}`}
                               type="button"
                               className={`${field.active ? 'pfm-btn-deactivate admin-table-action--danger' : 'pfm-btn-activate admin-table-action--success'} admin-table-action admin-table-action--icon`}
                               onClick={() => toggleStatus(field)}
-                              title={field.active ? 'Ngừng sử dụng' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
+                              title={field.active ? 'Ngừng sử dụng' : moderationStatusOf(field) === 'REJECTED' ? 'Duyệt lại' : field.code?.startsWith('CUSTOM_') ? 'Phê duyệt' : 'Kích hoạt'}
                             >
                               {field.active ? <StopOutlined /> : <CheckCircleOutlined />}
                             </button>
+                            {moderationStatusOf(field) === 'PENDING' && (
+                              <button
+                                aria-label={`Từ chối lĩnh vực ${field.name}`}
+                                className="pfm-btn-reject admin-table-action admin-table-action--icon"
+                                onClick={() => openRejectModal(field)}
+                                title="Từ chối đề xuất"
+                                type="button"
+                              >
+                                <CloseCircleOutlined />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -437,6 +502,51 @@ function ProfessionalFieldManagementPage() {
                 <button className="pfm-primary" disabled={saving} type="submit">
                   {editingId ? <EditOutlined /> : <PlusOutlined />}
                   {saving ? 'Đang lưu...' : editingId ? 'Lưu thay đổi' : 'Tạo lĩnh vực'}
+                </button>
+              </footer>
+            </form>
+          </div>
+        )}
+        {rejectingField && (
+          <div className="pfm-modal-backdrop" onMouseDown={closeRejectModal} role="presentation">
+            <form
+              aria-labelledby="professional-field-reject-title"
+              aria-modal="true"
+              className="pfm-modal pfm-reject-modal"
+              onMouseDown={event => event.stopPropagation()}
+              onSubmit={rejectField}
+              role="dialog"
+            >
+              <header className="pfm-modal__header pfm-reject-modal__header">
+                <div>
+                  <span className="pfm-reject-eyebrow">TỪ CHỐI ĐỀ XUẤT</span>
+                  <h2 id="professional-field-reject-title">Từ chối lĩnh vực chuyên môn</h2>
+                  <p>Đề xuất bị từ chối sẽ không xuất hiện để chọn cho bản ghi đào tạo mới.</p>
+                </div>
+                <button
+                  aria-label="Đóng popup"
+                  className="pfm-modal__close"
+                  disabled={rejectSaving}
+                  onClick={closeRejectModal}
+                  type="button"
+                >
+                  <CloseOutlined />
+                </button>
+              </header>
+              <div className="pfm-modal__body pfm-reject-body">
+                <div className="pfm-reject-field-summary">
+                  <span className="pfm-reject-field-summary__badge">Lĩnh vực được đề xuất</span>
+                  <strong className="pfm-reject-field-summary__name">{rejectingField.name}</strong>
+                  {rejectingField.description && (
+                    <p className="pfm-reject-field-summary__desc">{rejectingField.description}</p>
+                  )}
+                </div>
+              </div>
+              <footer className="pfm-actions pfm-modal__actions">
+                <button disabled={rejectSaving} onClick={closeRejectModal} type="button">Hủy</button>
+                <button className="pfm-danger" disabled={rejectSaving} type="submit">
+                  <CloseCircleOutlined />
+                  {rejectSaving ? 'Đang xử lý...' : 'Từ chối đề xuất'}
                 </button>
               </footer>
             </form>

@@ -12,5 +12,7 @@ public interface QuestionCategoryRepository extends JpaRepository<QuestionCatego
 
     Optional<QuestionCategory> findByCodeIgnoreCase(String code);
 
+    Optional<QuestionCategory> findByNameIgnoreCase(String name);
+
     List<QuestionCategory> findByStatusOrderByNameAsc(QuestionCategoryStatus status);
 }

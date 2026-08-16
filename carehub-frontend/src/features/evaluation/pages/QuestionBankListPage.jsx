@@ -872,7 +872,7 @@ function QuestionBankListPage() {
                 <div className="qbl-detail-meta-grid">
                   <DetailMeta label="Danh mục" value={detailQuestion.category} />
                   <DetailMeta label="Mức độ nhận thức" value={cognitiveLevelText(detailQuestion.cognitiveLevel)} />
-                  <DetailMeta label="Loại câu hỏi" value={detailQuestion.questionType === 'PARAPHRASE' ? 'Diễn đạt lại' : 'Câu hỏi gốc'} />
+                  <DetailMeta label="Lĩnh vực chuyên môn" value={detailQuestion.professionalFieldName || 'Chưa có lĩnh vực'} />
                 </div>
 
                 <div className="qbl-detail-section">

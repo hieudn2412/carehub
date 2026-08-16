@@ -37,7 +37,7 @@ public class ValidationRulesProperties {
          * hoàn toàn ({@code RUN_LEXICAL_CALIBRATION=true ./mvnw.cmd test -Dtest=LexicalSimilarityCalibrationTest}).</p>
          */
         private double lexicalStrongMin = 0.80;
-        private double lexicalReviewMin = 0.20;
+        private double lexicalReviewMin = 0.50;
     }
 
     @Getter

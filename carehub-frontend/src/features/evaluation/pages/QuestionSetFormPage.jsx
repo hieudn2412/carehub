@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   CheckOutlined,
@@ -20,7 +20,7 @@ import { questionBankApi } from '../api/questionBankApi.js'
 import { questionSetApi } from '../api/questionSetApi.js'
 import { questionSetCategoryApi } from '../api/questionSetCategoryApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
-import { apiData, apiErrorMessage, cognitiveLevelText, COGNITIVE_LEVELS, formatDateTime } from '../utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, cognitiveLevelText, COGNITIVE_LEVELS, formatCognitiveWarningText, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/QuestionSetFormPage.css'
 
 function QuestionSetFormPage() {
@@ -674,7 +674,7 @@ function QuestionSetFormPage() {
                 {previewResult && (
                   <div className="qsf-preview-box">
                     <strong>{previewResult.questionIds?.length || 0} câu hỏi phù hợp</strong>
-                    {(previewResult.warnings || []).map((warning) => <p key={warning}>{warning}</p>)}
+                    {(previewResult.warnings || []).map((warning) => <p key={warning}>{formatCognitiveWarningText(warning)}</p>)}
                   </div>
                 )}
                 </div>

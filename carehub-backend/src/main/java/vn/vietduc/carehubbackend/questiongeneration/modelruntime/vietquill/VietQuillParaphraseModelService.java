@@ -272,7 +272,38 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
             throw new ParaphraseModelException("Không decode được với VietQuill ONNX", ex);
         }
 
-        return candidateSelector.select(source, decoded, changeStrength, requestedCount);
+        return selectWithDegradation(source, decoded, changeStrength, requestedCount);
+    }
+
+    /**
+     * Câu nguồn dài/nhiều thuật ngữ (vd bệnh án lâm sàng) có thể khiến VietQuill không sinh nổi
+     * ứng viên đạt ngưỡng của changeStrength gốc. Thay vì fail cứng, nới dần ngưỡng
+     * (high → medium → low) trước khi bỏ cuộc, để job vẫn ra được kết quả thay vì trắng tay.
+     */
+    private static final List<String> DEGRADATION_ORDER = List.of("high", "medium", "low");
+
+    private List<String> selectWithDegradation(
+            String source,
+            List<String> decoded,
+            String changeStrength,
+            int requestedCount
+    ) {
+        String normalizedStrength = changeStrength == null ? "" : changeStrength.trim().toLowerCase();
+        int startIndex = Math.max(0, DEGRADATION_ORDER.indexOf(normalizedStrength));
+        for (int i = startIndex; i < DEGRADATION_ORDER.size(); i++) {
+            String candidateStrength = DEGRADATION_ORDER.get(i);
+            List<String> selected = candidateSelector.select(source, decoded, candidateStrength, requestedCount);
+            if (!selected.isEmpty()) {
+                if (i > startIndex) {
+                    log.warn(
+                            "VietQuill hạ ngưỡng changeStrength {} -> {} vì không có ứng viên nào đạt ngưỡng gốc",
+                            changeStrength, candidateStrength
+                    );
+                }
+                return selected;
+            }
+        }
+        return List.of();
     }
 
     private boolean isAcceptable(
