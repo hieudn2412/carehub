@@ -14,8 +14,8 @@ app:
       field-results: ${EVAL_FIELD_RESULTS:true}
   notification:
     # Notification bootstrap/scanning are explicit opt-in. Keeping them off by
-    # default prevents an IntelliJ run with a missing .env.properties import
-    # from mutating the database or starting background work unexpectedly.
+    # default prevents an ordinary IDE run from mutating a database or starting
+    # background work unexpectedly.
     seed-enabled: ${APP_NOTIFICATION_SEED_ENABLED:false}
     scheduling-enabled: ${APP_NOTIFICATION_SCHEDULING_ENABLED:false}
     # The legacy constraint fixer performs ALTER TABLE at startup. It is only
@@ -37,7 +37,7 @@ app:
       max-response-bytes: 5242880
 
   import:
-    default-password: ${DEFAULT_PASSWORD:ChangeMe123@}
+    default-password: ${DEFAULT_PASSWORD}
 
   api-prefix: /api/v1
   competency:
@@ -46,11 +46,6 @@ app:
       skill: ${COMPETENCY_WEIGHT_SKILL:0.5}
     compliance:
       default-target: ${COMPETENCY_DEFAULT_TARGET:80.0}
-  cors:
-    allowed-origin-patterns:
-      - http://localhost:*
-      - http://127.0.0.1:*
-      - https://app.fpthub.online
   jwt:
     secret: ${JWT_SECRET}
     access-token-expiration-minutes: 15
@@ -202,6 +197,10 @@ validation:
     reject-min: ${VALIDATION_QUALITY_REJECT_MIN:0.55}
 
 spring:
+  profiles:
+    # Development uses the shared VPS unless production/test is selected explicitly.
+    default: dev
+
   devtools:
     restart:
       enabled: false
@@ -210,49 +209,21 @@ spring:
       max-file-size: 20MB
       max-request-size: 21MB
 
-  config:
-    import:
-      - optional:file:.env.properties
-      - optional:file:env.properties
-      # IntelliJ may use the repository root as the working directory while
-      # Maven/IDE module runs use carehub-backend/. Keep both paths optional so
-      # the same bounded remote-DB settings are loaded in either case.
-      - optional:file:carehub-backend/.env.properties
-      - optional:file:carehub-backend/env.properties
-
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
-    ssl:
-      enabled: ${RABBITMQ_SSL_ENABLED:false}
-    # Do not create RabbitAdmin or declare queues when the broker is not
-    # provisioned. This keeps local/API startup independent from RabbitMQ.
-    dynamic: ${RABBITMQ_LISTENER_ENABLED:false}
-    listener:
-      simple:
-        auto-startup: ${RABBITMQ_LISTENER_ENABLED:false}
-      direct:
-        auto-startup: ${RABBITMQ_LISTENER_ENABLED:false}
-    connection-timeout: 10s
-    requested-heartbeat: 30s
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/carehub}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:root123}
+    driver-class-name: org.postgresql.Driver
     hikari:
-      # Fail fast when a remote database endpoint is unavailable. Without an
-      # explicit timeout, an IntelliJ run can look frozen while the driver
-      # waits on TCP connection retries.
       connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:10000}
       validation-timeout: ${DB_POOL_VALIDATION_TIMEOUT_MS:5000}
       data-source-properties:
         TimeZone: Asia/Ho_Chi_Minh
         connectTimeout: ${DB_CONNECT_TIMEOUT_SECONDS:10}
         socketTimeout: ${DB_SOCKET_TIMEOUT_SECONDS:30}
-    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    ssl:
+      enabled: ${RABBITMQ_SSL_ENABLED:false}
+    connection-timeout: 10s
+    requested-heartbeat: 30s
 
   jpa:
     hibernate:
@@ -271,11 +242,10 @@ spring:
   flyway:
     enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration
-    # The remote database predates Flyway. Baseline 5 records that legacy
-    # state once, then V6+ become the authoritative migration chain.
-    baseline-on-migrate: true
-    baseline-version: 5
+    # Every runtime profile decides which reviewed baseline it owns.
+    baseline-on-migrate: false
     validate-on-migrate: true
+    validate-migration-naming: true
 
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}

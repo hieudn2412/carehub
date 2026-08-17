@@ -5,6 +5,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import vn.vietduc.carehubbackend.exception.ServiceUnavailableException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchParaphraseCandidateActionRequest;
@@ -60,6 +61,7 @@ class ParaphraseServiceTest {
     private final AtomicReference<ParaphraseJob> savedJob = new AtomicReference<>();
     private final List<ParaphraseCandidate> savedCandidates = new ArrayList<>();
     private final AtomicLong ids = new AtomicLong(100);
+    private AiParaphraseProperties paraphraseProperties;
     private ParaphraseService service;
     private QuestionBankQuestion sourceQuestion;
 
@@ -67,7 +69,7 @@ class ParaphraseServiceTest {
     void setUp() {
         AiEmbeddingProperties embeddingProperties = new AiEmbeddingProperties();
         embeddingProperties.setProvider("lexical");
-        AiParaphraseProperties paraphraseProperties = new AiParaphraseProperties();
+        paraphraseProperties = new AiParaphraseProperties();
         paraphraseProperties.setRequestedCountDefault(2);
 
         ParaphraseValidationService validationService = new ParaphraseValidationService(
@@ -176,6 +178,31 @@ class ParaphraseServiceTest {
         assertThat(response.status()).isEqualTo(ParaphraseJobStatus.CREATED.name());
         assertThat(response.candidates()).isEmpty();
         verify(eventPublisher).publishEvent(new ParaphraseJobCreatedEvent(response.id()));
+    }
+
+    @Test
+    void createJobReturnsServiceUnavailableWhenParaphraseIsDisabled() {
+        paraphraseProperties.setProvider("disabled");
+
+        assertThatThrownBy(() -> service.createJob(
+                sourceQuestion.getId(),
+                new CreateParaphraseJobRequest(1, "medium"),
+                "admin"
+        ))
+                .isInstanceOf(ServiceUnavailableException.class)
+                .hasMessage("Dịch vụ diễn đạt lại chưa được bật");
+    }
+
+    @Test
+    void createBatchJobsReturnsServiceUnavailableWhenParaphraseIsDisabled() {
+        paraphraseProperties.setProvider("disabled");
+
+        assertThatThrownBy(() -> service.createBatchJobs(
+                new CreateBatchParaphraseJobsRequest(List.of(sourceQuestion.getId()), 1, "medium"),
+                "admin"
+        ))
+                .isInstanceOf(ServiceUnavailableException.class)
+                .hasMessage("Dịch vụ diễn đạt lại chưa được bật");
     }
 
     @Test

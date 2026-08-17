@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.vscode
+.env
+.env.*
+!.env.prod.example
+target
+logs
+*.log
+models
+storage
+developer_docs
+docs
+docker/postgres/baseline/*.sql
