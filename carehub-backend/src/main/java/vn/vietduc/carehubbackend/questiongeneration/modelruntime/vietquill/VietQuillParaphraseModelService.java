@@ -15,6 +15,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import vn.vietduc.carehubbackend.exception.ServiceUnavailableException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
 import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphraseModelException;
 import vn.vietduc.carehubbackend.questiongeneration.modelruntime.ParaphraseModelInput;
@@ -64,8 +65,11 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     @PostConstruct
     void preload() {
+        if (!properties.isVietQuillProvider()) {
+            return;
+        }
         inferenceExecutor();
-        if (!properties.isVietQuillProvider() || !properties.isPreload()) {
+        if (!properties.isPreload()) {
             return;
         }
         try {
@@ -116,12 +120,18 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
 
     @Override
     public String provider() {
+        if (properties.isDisabledProvider()) {
+            return "disabled";
+        }
         return properties.isMockProvider() ? "mock" : "vietquill";
     }
 
     @Override
     public List<ParaphrasedMcq> paraphrase(ParaphraseModelInput input) {
         int count = Math.max(1, Math.min(10, input.requestedCount()));
+        if (properties.isDisabledProvider()) {
+            throw new ServiceUnavailableException("Dịch vụ diễn đạt lại chưa được bật");
+        }
         if (properties.isMockProvider()) {
             return mock(input, count);
         }

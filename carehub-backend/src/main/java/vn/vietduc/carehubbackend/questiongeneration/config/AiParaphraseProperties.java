@@ -69,4 +69,8 @@ public class AiParaphraseProperties {
     public boolean isMockProvider() {
         return "mock".equalsIgnoreCase(provider);
     }
+
+    public boolean isDisabledProvider() {
+        return "disabled".equalsIgnoreCase(provider);
+    }
 }
