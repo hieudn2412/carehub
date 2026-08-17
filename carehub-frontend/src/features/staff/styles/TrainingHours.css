@@ -967,7 +967,7 @@
   }
 
   .training-page--overview .th-overview-chart-canvas {
-    height: 162px;
+    height: 174px;
     padding-inline: 2px;
   }
 
@@ -1140,6 +1140,13 @@
     height: 44px;
   }
 
+  .th-overview-progress .th-ring-value {
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
   .th-overview-progress .th-compliance-total {
     font-size: 18px;
   }
@@ -1276,7 +1283,7 @@
   }
 
   .th-overview-chart-canvas {
-    height: 162px;
+    height: 174px;
     padding-inline: 2px;
   }
 
