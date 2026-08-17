@@ -27,6 +27,7 @@ public class TrainingDashboardController {
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse<TrainingDashboardSummaryResponse>> summary(
             @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) Long professionalFieldId,
             @RequestParam(required = false) ComplianceStatus complianceStatus,
             @RequestParam(required = false) Boolean compliant,
@@ -35,6 +36,7 @@ public class TrainingDashboardController {
         Long scopedDepartmentId = dashboardAccessPolicy.resolveDepartmentScope(departmentId);
         EmployeeTrainingStatusSearchRequest request = new EmployeeTrainingStatusSearchRequest(
                 null,
+                employeeId,
                 scopedDepartmentId,
                 null,
                 professionalFieldId,

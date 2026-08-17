@@ -53,6 +53,7 @@ public class ManagerDashboardService {
         TrainingDashboardSummaryResponse trainingSummary = trainingStatusService.getDashboardSummary(
                 new EmployeeTrainingStatusSearchRequest(
                         null,
+                        null,
                         departmentId,
                         null,
                         professionalFieldId,
