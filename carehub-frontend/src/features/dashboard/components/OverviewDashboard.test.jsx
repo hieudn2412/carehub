@@ -77,6 +77,60 @@ function DashboardRouteHarness({ includeComplianceChart = false }) {
 }
 
 describe('OverviewDashboard navigation regression', () => {
+  const managementDomains = {
+    training: { available: true, total: 4, passed: 2, failed: 2, rate: 50 },
+    exams: { available: true, total: 3, passed: 1, failed: 2, rate: 33.3, knowledgeAverage: 7.5, skillAverage: 6.5 },
+    quality: { available: true, total: 5, passed: 4, failed: 1, rate: 80 },
+  }
+
+  it('does not present the overall competency pass rate as a knowledge-specific percentage', () => {
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          loading={false}
+          error=""
+          filters={{ departmentId: '', employeeCode: '', content: 'knowledge', fromDate: '', toDate: '' }}
+          departments={[]}
+          onFilterChange={vi.fn()}
+          domains={managementDomains}
+          complianceChart={[]}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('TB 7,5/10')).toBeInTheDocument()
+    expect(screen.getByText('3 nhân viên')).toBeInTheDocument()
+    expect(screen.queryByText('33,3%')).not.toBeInTheDocument()
+  })
+
+  it('counts changed date filters and can reset the complete admin scope', () => {
+    const onFilterChange = vi.fn()
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          loading={false}
+          error=""
+          filters={{ departmentId: '10', employeeCode: 'NV001', content: 'compliance', fromDate: '2025-01-01', toDate: '2025-12-31' }}
+          departments={[]}
+          onFilterChange={onFilterChange}
+          domains={managementDomains}
+          complianceChart={[]}
+        />
+      </MemoryRouter>,
+    )
+
+    const filterButton = screen.getByRole('button', { name: /Bộ lọc/ })
+    expect(filterButton).toHaveTextContent('5')
+    fireEvent.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }))
+    expect(onFilterChange).toHaveBeenCalledWith('departmentId', '')
+    expect(onFilterChange).toHaveBeenCalledWith('employeeCode', '')
+    expect(onFilterChange).toHaveBeenCalledWith('content', 'all')
+    expect(onFilterChange).toHaveBeenCalledWith('fromDate', expect.stringMatching(/^\d{4}-01-01$/))
+    expect(onFilterChange).toHaveBeenCalledWith('toDate', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+  })
+
   it('does not enter a render loop when a staff dashboard omits compliance chart data', () => {
     let commitCount = 0
 

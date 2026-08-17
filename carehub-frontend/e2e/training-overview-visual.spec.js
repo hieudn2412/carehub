@@ -312,19 +312,16 @@ test.describe('Training overview deterministic browser QA', () => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto('/staff/training')
 
-    await expect(page.locator('[data-overview-section]')).toHaveCount(4)
+    await expect(page.locator('[data-overview-section]')).toHaveCount(3)
     expect(await page.locator('[data-overview-section]').evaluateAll((sections) =>
       sections.map((section) => section.dataset.overviewSection)))
-      .toEqual(['chart', 'progress', 'tools', 'latest'])
+      .toEqual(['chart', 'progress', 'latest'])
 
     await page.getByRole('combobox', { name: 'Năm biểu đồ' }).selectOption(String(previousYear))
     await expect.poll(() => api.requestedChartYears.at(-1)).toBe(previousYear)
 
-    const search = page.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' })
-    await search.fill('Hồ sơ nháp')
-    await search.press('Enter')
-    await page.waitForURL((url) =>
-      url.pathname === '/staff/training/all' && url.searchParams.get('q') === 'Hồ sơ nháp')
+    await page.getByRole('button', { name: 'Xem tất cả' }).click()
+    await page.waitForURL((url) => url.pathname === '/staff/training/all')
     await expect(page.getByRole('button', { name: 'Xem chi tiết Hồ sơ nháp kiểm thử giao diện' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Chỉnh sửa Hồ sơ nháp kiểm thử giao diện' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Xóa hồ sơ Hồ sơ nháp kiểm thử giao diện' })).toBeVisible()
@@ -577,9 +574,8 @@ test.describe('Training overview deterministic browser QA', () => {
     await page.goto('/staff/training')
     const controls = [
       page.getByRole('combobox', { name: 'Năm biểu đồ' }),
-      page.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' }),
-      page.getByRole('button', { name: 'Mở bộ lọc giờ đào tạo' }),
       page.getByRole('button', { name: 'Cập nhật giờ đào tạo' }),
+      page.getByRole('button', { name: 'Xem tất cả' }),
     ]
 
     const expectVisibleFocus = async (control) => {
@@ -600,7 +596,5 @@ test.describe('Training overview deterministic browser QA', () => {
     await expectVisibleFocus(controls[1])
     await page.keyboard.press('Tab')
     await expectVisibleFocus(controls[2])
-    await page.keyboard.press('Tab')
-    await expectVisibleFocus(controls[3])
   })
 })

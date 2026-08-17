@@ -54,7 +54,6 @@ import ChecklistFormScreen from '../features/staff/pages/ChecklistFormScreen.jsx
 import TrainingHoursOverviewScreen from '../features/staff/pages/training/TrainingHoursOverviewScreen.jsx'
 import TrainingHoursAllScreen from '../features/staff/pages/training/TrainingHoursAllScreen.jsx'
 import TrainingHoursDetailScreen from '../features/staff/pages/training/TrainingHoursDetailScreen.jsx'
-import TrainingHoursEvidenceScreen from '../features/staff/pages/training/TrainingHoursEvidenceScreen.jsx'
 import TrainingHoursEvidencesListScreen from '../features/staff/pages/training/TrainingHoursEvidencesListScreen.jsx'
 import TrainingHoursFormScreen from '../features/staff/pages/training/TrainingHoursFormScreen.jsx'
 import TrainingStatusScreen from '../features/staff/pages/TrainingStatusScreen.jsx'
@@ -302,7 +301,6 @@ function AppRouter() {
       <Route path="/staff/training/new" element={protectedElement(<TrainingHoursFormScreen />)} />
       <Route path="/staff/training/:id" element={protectedElement(<TrainingHoursDetailScreen />)} />
       <Route path="/staff/training/:id/edit" element={protectedElement(<TrainingHoursFormScreen />)} />
-      <Route path="/staff/training/:id/evidence" element={protectedElement(<TrainingHoursEvidenceScreen />)} />
       <Route path="/staff/training/evidences" element={protectedElement(<TrainingHoursEvidencesListScreen />)} />
       <Route path="/staff/training-status" element={protectedElement(<TrainingStatusScreen />)} />
       <Route path="/staff/competency/all" element={protectedElement(<StaffCompetencyPage />)} />

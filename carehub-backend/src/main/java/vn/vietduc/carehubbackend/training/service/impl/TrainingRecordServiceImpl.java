@@ -30,6 +30,7 @@ import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordChangeType;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.training.mapper.TrainingRecordMapper;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
@@ -353,6 +354,9 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         if (id != null) {
             ProfessionalField professionalField = professionalFieldRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("Professional field not found"));
+            if (professionalField.getModerationStatus() == ProfessionalFieldModerationStatus.REJECTED) {
+                throw ValidationException.field("professionalFieldId", "Professional field is no longer available");
+            }
             if (!professionalField.isActive() && !professionalField.getCode().startsWith("CUSTOM_")) {
                 throw ValidationException.field("professionalFieldId", "Professional field must be active");
             }
@@ -365,6 +369,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
             }
             User actor = accessPolicy.currentActor();
             ProfessionalField savedPf = professionalFieldRepository.findAll().stream()
+                    .filter(pf -> pf.getModerationStatus() != ProfessionalFieldModerationStatus.REJECTED)
                     .filter(pf -> pf.getName().equalsIgnoreCase(trimmedName))
                     .findFirst()
                     .orElseGet(() -> {
@@ -374,6 +379,7 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                                 .name(trimmedName)
                                 .description("Tự đề xuất bởi nhân viên: " + actor.getName() + " (Chờ duyệt)")
                                 .active(false)
+                                .moderationStatus(ProfessionalFieldModerationStatus.PENDING)
                                 .version(0L)
                                 .build();
                         return professionalFieldRepository.save(newPf);

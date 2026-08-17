@@ -80,6 +80,11 @@ function QuestionDocumentDetailPage() {
   }, [questionJobs, jobStatusFilter])
 
   async function createJob() {
+    const rawCount = Number(questionsPerChunk) || 1
+    if (rawCount > 3 || rawCount < 1) {
+      showToast('Số câu mỗi đoạn nội dung chỉ được từ 1 đến 3.', 'warning')
+      return
+    }
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
@@ -330,10 +335,11 @@ function QuestionDocumentDetailPage() {
               <input
                 type="number"
                 min="1"
-                max="5"
+                max="3"
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
               />
+              <small className="qdoc-field-help">Tối đa 3 câu/đoạn — vượt quá dễ khiến AI trả lời bị cắt dở và sinh câu thất bại.</small>
             </label>
             <label className="qdoc-field">
               <span>Mức độ nhận thức mục tiêu</span>

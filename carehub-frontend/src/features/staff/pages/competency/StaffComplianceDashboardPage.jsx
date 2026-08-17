@@ -252,7 +252,7 @@ function StaffComplianceDashboardPage() {
           <header className="scd-section-header">
             <div>
               <span className="scd-eyebrow">Mới nhất</span>
-              <h2 id="scd-latest-title">Bảng kiểm đã chấm gần nhất</h2>
+              <h2 id="scd-latest-title">Bảng kiểm đã được chấm gần nhất</h2>
             </div>
             <button type="button" className="scd-view-all" onClick={() => navigate('/staff/competency/all')}>Xem toàn bộ <ArrowRightOutlined /></button>
           </header>

@@ -101,10 +101,10 @@ export default function StaffCompetencyPage() {
   }
 
   const mobileSearchContent = ({ close }) => (
-    <div className="sc-mobile-search-form">
-      <label>
+    <div className="th-mobile-search-form">
+      <label className="th-mobile-search-form__field">
         <span>Tên bảng kiểm</span>
-        <div className="sc-search-input">
+        <div className="th-mobile-search-form__search">
           <SearchOutlined aria-hidden="true" />
           <input
             data-mobile-search-autofocus="true"
@@ -121,12 +121,14 @@ export default function StaffCompetencyPage() {
           />
         </div>
       </label>
-      <label><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
-      <label><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
-      {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
-      <div className="sc-mobile-search-actions">
-        <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
-        <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
+      <div className="th-mobile-search-form__grid">
+        <label className="th-mobile-search-form__field"><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
+      </div>
+      {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
+      <div className="th-mobile-search-form__actions">
+        <button type="button" className="th-mobile-search-form__clear" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
+        <button type="button" className="th-mobile-search-form__apply" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ public record ExamConfigResponse(
         Integer maxRetakes,
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
+        Boolean backfillNearestCognitiveLevel,
         String questionSelectionMode,
         String status,
         String statusText,

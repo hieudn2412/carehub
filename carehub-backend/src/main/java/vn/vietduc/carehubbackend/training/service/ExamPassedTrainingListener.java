@@ -15,18 +15,8 @@ import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublish
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.event.ExamAttemptPassedEvent;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionGenerationLabels;
-import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
-import vn.vietduc.carehubbackend.training.enums.DurationUnit;
-import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
-import vn.vietduc.carehubbackend.training.enums.TrainingSourceType;
-import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -35,22 +25,17 @@ import java.util.Map;
 @Slf4j
 public class ExamPassedTrainingListener {
 
-    private final TrainingRecordRepository trainingRecordRepository;
-    private final TrainingActivityTypeRepository activityTypeRepository;
     private final NotificationEventPublisher notificationEventPublisher;
-    private final TrainingComplianceCalculator complianceCalculator;
     private final PlatformTransactionManager transactionManager;
 
     /**
-     * Chạy sau khi transaction chấm bài commit, và BẮT BUỘC phải mở transaction MỚI.
-     * Nếu không: save() dùng lại EntityManager của transaction đã commit, Hibernate
-     * hoãn INSERT và trả về DelayedPostInsertIdentifier nên bản ghi không bao giờ
-     * được ghi thật (triệu chứng: log "recordId=null") — trước đây thi đạt không
-     * tạo được bản ghi CME lẫn thông báo.
+     * Chạy sau khi transaction chấm bài commit, và BẮT BUỘC phải mở transaction MỚI —
+     * xem lịch sử ở NotificationDispatcher cho lý do (AFTER_COMMIT + @Transactional
+     * thường không join transaction nào cả).
      *
-     * <p>Dùng TransactionTemplate thay cho {@code @Transactional}: Spring gọi
-     * phương thức lắng nghe sự kiện trực tiếp trên bean đích nên annotation không
-     * đi qua proxy và không có hiệu lực.
+     * <p>Chỉ gửi thông báo chúc mừng. Giờ đào tạo CME luôn do nhân viên tự khai báo
+     * thủ công (TrainingRecordServiceImpl) — thi đạt bài kiểm tra năng lực KHÔNG được
+     * tự động quy đổi thành giờ CME.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onExamPassed(ExamAttemptPassedEvent event) {
@@ -66,56 +51,8 @@ public class ExamPassedTrainingListener {
                 ? attempt.getAssignment().getName()
                 : (attempt.getExamPaper() != null ? attempt.getExamPaper().getName() : "Bài kiểm tra");
 
-        // Mỗi bài được giao chỉ cộng giờ CME MỘT LẦN cho mỗi nhân viên — nếu tính theo
-        // từng lượt thì thi lại nhiều lần sẽ cộng giờ nhiều lần.
-        String cmeSourceReference = attempt.getAssignment() != null
-                ? "EXAM_ASSIGNMENT:" + attempt.getAssignment().getId() + ":USER:" + user.getId()
-                : "EXAM_ATTEMPT:" + attempt.getId();
-        if (trainingRecordRepository.existsBySourceReference(cmeSourceReference)) {
-            log.debug("Bỏ qua ghi nhận CME trùng: userId={}, attemptId={}, ref={}",
-                    user.getId(), attempt.getId(), cmeSourceReference);
-            return;
-        }
-
         try {
-            // Find or create a "Kiểm tra năng lực" activity type for auto-created records
-            TrainingActivityType examActivityType = activityTypeRepository
-                    .findByCode("EXAM_PASSED")
-                    .orElseGet(() -> createExamActivityType());
-
-            // Create a training record for the passed exam
-            TrainingRecord record = TrainingRecord.builder()
-                    .employee(user)
-                    .employeeDepartmentSnapshot(user.getDepartment())
-                    .activityType(examActivityType)
-                    .professionalField(null)
-                    .title("Đạt: " + examName)
-                    .description("Tự động ghi nhận từ bài kiểm tra năng lực \"" + examName
-                            + "\" với điểm số " + (attempt.getScore() != null ? attempt.getScore().toPlainString() : "N/A")
-                            + " - Phân loại: "
-                            + (attempt.getClassification() != null
-                            ? QuestionGenerationLabels.competencyLevel(attempt.getClassification())
-                            : "Không xác định"))
-                    .startDate(LocalDate.now())
-                    .endDate(LocalDate.now())
-                    .durationValue(BigDecimal.valueOf(attempt.getExamPaper() != null
-                            ? attempt.getExamPaper().getTimeLimitMinutes() / 60.0
-                            : 1.0))
-                    .durationUnit(DurationUnit.HOUR)
-                    .declaredHours(BigDecimal.valueOf(1.0)) // Default 1 CME hour per passed exam
-                    .workflowStatus(TrainingRecordStatus.SUBMITTED)
-                    .sourceType(TrainingSourceType.MANUAL)
-                    .sourceReference(cmeSourceReference)
-                    .createdByUser(user)
-                    .submittedAt(LocalDateTime.now())
-                    .build();
-            TrainingRecord savedRecord = trainingRecordRepository.saveAndFlush(record);
-            log.info("Created training record for exam passed: userId={}, attemptId={}, recordId={}",
-                    user.getId(), attempt.getId(), savedRecord.getId());
-
-            // Calculate new compliance and send notification
             sendExamPassedNotification(attempt, user, examName);
-
         } catch (Exception e) {
             log.error("Failed to process exam passed event for attemptId={}: {}", attempt.getId(), e.getMessage(), e);
         }
@@ -150,19 +87,5 @@ public class ExamPassedTrainingListener {
                 "EXAM_PASSED:" + attempt.getId() + ":" + user.getId(),
                 variables
         ));
-    }
-
-    private TrainingActivityType createExamActivityType() {
-        TrainingActivityType type = TrainingActivityType.builder()
-                .code("EXAM_PASSED")
-                .name("Đạt bài kiểm tra năng lực")
-                .description("Tự động ghi nhận khi nhân viên đạt bài kiểm tra năng lực")
-                .defaultDurationUnit(DurationUnit.HOUR)
-                .requiresEvidence(false)
-                .maxCreditedHoursPerRecord(BigDecimal.valueOf(2.0))
-                .sortOrder(100)
-                .active(true)
-                .build();
-        return activityTypeRepository.save(type);
     }
 }

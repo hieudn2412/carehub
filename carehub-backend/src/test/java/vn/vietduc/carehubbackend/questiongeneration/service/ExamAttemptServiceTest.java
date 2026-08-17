@@ -344,6 +344,21 @@ class ExamAttemptServiceTest {
     }
 
     @Test
+    void expiryScannerGradesAnAbandonedAttemptOnTheServer() {
+        attempt.setExpiresAt(now().minusMinutes(1));
+        when(attemptRepository.findByStatusAndExpiresAtLessThanEqual(
+                ExamAttemptStatus.IN_PROGRESS,
+                now()
+        )).thenReturn(List.of(attempt));
+
+        service.finalizeExpiredAttempts();
+
+        assertThat(attempt.getStatus()).isEqualTo(ExamAttemptStatus.GRADED);
+        assertThat(attempt.getSubmittedAt()).isEqualTo(attempt.getExpiresAt());
+        verify(attemptRepository).save(attempt);
+    }
+
+    @Test
     void saveAfterDeadlineAutoGradesAndDiscardsLateAnswers() {
         attempt.setExpiresAt(now().minusSeconds(1));
         var request = new SaveExamAttemptAnswersRequest(List.of(

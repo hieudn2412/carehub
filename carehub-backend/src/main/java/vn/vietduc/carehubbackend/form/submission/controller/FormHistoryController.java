@@ -15,6 +15,7 @@ import vn.vietduc.carehubbackend.common.response.PageResponse;
 import vn.vietduc.carehubbackend.form.dto.response.FormResponse;
 import vn.vietduc.carehubbackend.form.dto.response.FormVersionResponse;
 import vn.vietduc.carehubbackend.form.submission.dto.FormHistorySummaryResponse;
+import vn.vietduc.carehubbackend.form.submission.dto.FormHistoryTotalsResponse;
 import vn.vietduc.carehubbackend.form.submission.dto.FormVersionHistorySummaryResponse;
 import vn.vietduc.carehubbackend.form.submission.service.FormHistoryService;
 
@@ -40,6 +41,20 @@ public class FormHistoryController {
         return ApiResponse.success(
                 "Get form history successfully",
                 PageResponse.from(historyService.searchForms(keyword, dateFrom, dateTo, pageable))
+        );
+    }
+
+    @GetMapping("/history/summary")
+    public ApiResponse<FormHistoryTotalsResponse> getHistorySummary(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) Long subjectUserId
+    ) {
+        return ApiResponse.success(
+                "Get form history summary successfully",
+                historyService.getSummary(dateFrom, dateTo, subjectUserId)
         );
     }
 

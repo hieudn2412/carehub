@@ -6,13 +6,6 @@ import { openEvidenceUrl, resolveEvidenceUrl } from '../utils/evidenceUrl.js'
 
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
 
-const moderationLabels = {
-  PASSED: 'Đã duyệt',
-  FAILED: 'Từ chối',
-  ERROR: 'Lỗi kiểm duyệt',
-  PENDING: 'Chờ duyệt',
-}
-
 function formatSize(bytes) {
   const value = Number(bytes || 0)
   if (value < 1024) return `${value} B`
@@ -60,7 +53,6 @@ export default function EvidenceGallery({ recordId, evidences = [], onError }) {
       {evidences.map(evidence => {
         const isImage = IMAGE_TYPES.has(evidence?.mimeType?.toLowerCase())
         const preview = previews[evidence.id]
-        const moderation = evidence.moderationStatus || 'PENDING'
         return (
           <article key={evidence.id} className={`th-evidence-item${isImage ? ' th-evidence-item--with-preview' : ''}`}>
             <div className="th-evidence-preview">
@@ -87,9 +79,6 @@ export default function EvidenceGallery({ recordId, evidences = [], onError }) {
               <PaperClipOutlined className="th-evidence-item__icon" />
               <span className="th-evidence-item__name" title={evidence.originalFilename}>{evidence.originalFilename}</span>
               <span className="th-evidence-item__size">{formatEvidenceStorageSummary(evidence, formatSize)}</span>
-              <span className={`th-badge th-badge--${moderation === 'PASSED' ? 'success' : moderation === 'FAILED' || moderation === 'ERROR' ? 'danger' : 'warning'} th-badge--sm`}>
-                {moderationLabels[moderation] || moderation}
-              </span>
               <button type="button" className="th-detail-btn th-evidence-item__download" onClick={() => download(evidence)}>
                 <DownloadOutlined /> Tải
               </button>

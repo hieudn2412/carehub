@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.AddExamAssignmentTargetsRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateExamAssignmentRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentTargetCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAssignmentService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
@@ -51,6 +53,16 @@ public class ExamAssignmentController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Lấy chi tiết phân công kiểm tra thành công",
                 assignmentService.get(assignmentId)
+        ));
+    }
+
+    @GetMapping("/{assignmentId}/target-candidates")
+    public ResponseEntity<ApiResponse<List<ExamAssignmentTargetCandidateResponse>>> targetCandidates(
+            @PathVariable Long assignmentId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Lấy danh sách nhân viên chưa được giao thành công",
+                assignmentService.targetCandidates(assignmentId)
         ));
     }
 
@@ -133,6 +145,27 @@ public class ExamAssignmentController {
         );
         return ResponseEntity.ok(ApiResponse.success(
                 "Mở phân công kiểm tra thành công",
+                response
+        ));
+    }
+
+    @PostMapping("/{assignmentId}/targets")
+    public ResponseEntity<ApiResponse<ExamAssignmentResponse>> addTargets(
+            @PathVariable Long assignmentId,
+            @RequestBody AddExamAssignmentTargetsRequest request,
+            Authentication authentication
+    ) {
+        ExamAssignmentResponse response = assignmentService.addTargets(assignmentId, request);
+        auditLogService.record(
+                "EXAM_ASSIGNMENT_ADD_TARGETS",
+                "EXAM_ASSIGNMENT",
+                assignmentId,
+                actor(authentication),
+                "Giao bổ sung nhân viên cho phân công kiểm tra #" + assignmentId,
+                Map.of("targetCount", response.targetCount())
+        );
+        return ResponseEntity.ok(ApiResponse.success(
+                "Giao bổ sung nhân viên thành công",
                 response
         ));
     }

@@ -93,6 +93,12 @@ export const adminApi = {
     })
   },
 
+  rejectProfessionalField(id) {
+    return httpClient.post(`/training/professional-fields/${id}/reject`, null, {
+      headers: authHeaders(),
+    })
+  },
+
   getUserById(id) {
     return httpClient.get(`/user/${id}`, {
       headers: authHeaders(),

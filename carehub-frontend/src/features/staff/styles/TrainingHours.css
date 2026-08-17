@@ -440,6 +440,13 @@
   padding: 20px 22px 0;
 }
 
+.th-overview-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .th-overview-card__header-copy {
   min-width: 0;
 }
@@ -909,12 +916,50 @@
 }
 
 @media (max-width: 768px) {
+  .training-hours-overview-shell .app-shell__body {
+    overflow-x: clip;
+    padding: 8px;
+  }
+
+  .training-hours-overview-shell .th-mobile-filter-date-trigger {
+    display: grid;
+    width: 100%;
+    min-height: 36px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border: 1px solid #dbe5e2;
+    border-radius: 7px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  .training-hours-overview-shell .th-mobile-filter-date-trigger > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .training-hours-overview-shell .th-mobile-filter-date-trigger > .anticon:first-child {
+    color: #1aaa84;
+  }
+
+  .training-hours-overview-shell .th-mobile-filter-date-trigger > .anticon:last-child {
+    color: #7b8a85;
+    font-size: 10px;
+  }
+
   .training-page--overview {
-    gap: 7px;
+    gap: 5px;
   }
 
   .training-page--overview .th-overview-card--chart .th-overview-card__header {
-    padding: 10px 12px 0;
+    align-items: center;
+    padding: 7px 9px 0;
   }
 
   .training-page--overview .th-overview-card--chart .th-overview-card__description {
@@ -922,23 +967,46 @@
   }
 
   .training-page--overview .th-overview-chart-canvas {
-    height: 202px;
-    padding-inline: 4px;
+    height: 162px;
+    padding-inline: 2px;
   }
 
   .training-page--overview .th-overview-card__state--chart {
-    min-height: 124px;
+    min-height: 96px;
   }
 
-  .training-page--overview .th-overview-search,
-  .training-page--overview .th-overview-toolbar .th-overview-link {
-    display: none;
+  .th-overview-card--latest .th-overview-card__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 14px 0;
+  }
+
+  .th-overview-card--latest .th-overview-card__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .th-overview-card--latest .th-overview-card__actions .th-btn-primary {
+    flex: 1 1 auto;
+    min-height: 38px;
+    justify-content: center;
+  }
+
+  .th-overview-card--latest .th-overview-card__actions .th-overview-link {
+    flex: none;
+    font-size: 13px;
   }
 
   .training-page--overview .th-overview-filter-btn,
   .training-page--overview .th-overview-toolbar .th-btn-primary {
     flex: 1 1 180px;
-    min-height: 38px;
+    min-height: 34px;
+    padding-block: 5px;
+    font-size: 11px;
     justify-content: center;
   }
 
@@ -953,7 +1021,7 @@
 
   .th-overview-latest-mobile-link {
     display: inline-flex;
-    min-height: 32px;
+    min-height: 28px;
     padding: 0;
     font-size: 12px;
   }
@@ -964,9 +1032,9 @@
 
   .th-overview-latest-card {
     display: grid;
-    gap: 8px;
-    margin: 6px 8px 8px;
-    padding: 10px;
+    gap: 5px;
+    margin: 4px 6px 6px;
+    padding: 7px 8px;
     border: 1px solid #e3ece9;
     border-radius: 12px;
     background: #fbfdfc;
@@ -974,19 +1042,21 @@
 
   .th-overview-latest-card dl {
     display: grid;
-    gap: 7px;
+    gap: 4px;
     margin: 0;
   }
 
   .th-overview-latest-card dl > div {
     display: grid;
-    grid-template-columns: 74px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 66px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 18px;
+    align-items: center;
   }
 
   .th-overview-latest-card dt {
     color: #64748b;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 650;
   }
 
@@ -995,13 +1065,15 @@
     margin: 0;
     overflow-wrap: anywhere;
     color: #26332f;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 650;
   }
 
   .th-overview-latest-card__view {
     width: 100%;
-    min-height: 34px;
+    min-height: 30px;
+    padding-block: 4px;
+    font-size: 11px;
     justify-content: center;
   }
 }
@@ -1030,11 +1102,11 @@
 
 @media (max-width: 560px) {
   .training-page--overview {
-    gap: 6px;
+    gap: 5px;
   }
 
   .training-page--overview .th-compliance-banner {
-    padding: 12px;
+    padding: 8px 10px;
   }
 
   .training-page--overview .th-compliance-banner__left,
@@ -1044,68 +1116,90 @@
 
   .th-overview-progress {
     min-height: 0;
-    padding: 12px;
-    gap: 10px;
+    padding: 8px 10px;
+    gap: 6px;
   }
 
   .th-overview-progress .th-compliance-banner__right {
     justify-content: center;
+    gap: 8px;
   }
 
   .th-overview-progress .th-page-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .th-overview-progress .th-page-subtitle {
-    margin-top: 3px;
-    font-size: 11px;
+    margin-top: 1px;
+    font-size: 10px;
   }
 
   .th-overview-progress .th-compliance-ring,
   .th-overview-progress .th-ring-svg {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
   }
 
   .th-overview-progress .th-compliance-total {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .th-overview-progress .th-compliance-status {
-    min-height: 22px;
-    padding-inline: 7px;
-    font-size: 10px;
+    min-height: 20px;
+    padding-inline: 6px;
+    font-size: 9px;
   }
 
   .th-overview-progress .th-compliance-label {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .th-overview-year-select {
-    min-width: 120px;
+    min-width: 92px;
+    gap: 2px;
+    font-size: 9px;
+  }
+
+  .th-overview-year-select select {
+    min-height: 30px;
+    padding: 4px 24px 4px 8px;
+    font-size: 11px;
   }
 
   .th-overview-card__header {
-    padding: 11px 12px 0;
+    padding: 7px 9px 0;
+  }
+
+  .th-overview-card__eyebrow {
+    margin-bottom: 1px;
+    font-size: 9px;
+  }
+
+  .th-overview-card__title {
+    font-size: 14px;
   }
 
   .th-overview-card__state {
-    min-height: 112px;
-    padding: 14px 12px;
+    min-height: 88px;
+    padding: 10px;
   }
 
   .th-overview-toolbar {
     align-items: stretch;
-    flex-direction: column;
-    gap: 7px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 6px;
   }
 
   .th-overview-toolbar .th-btn-primary,
   .th-overview-toolbar .th-overview-filter-btn,
   .th-overview-toolbar .th-overview-link {
+    min-width: 0;
+    flex: 1 1 0;
     justify-content: center;
-    width: 100%;
-    min-height: 38px;
+    width: auto;
+    min-height: 34px;
   }
 
   .th-overview-toolbar .th-overview-link {
@@ -1113,12 +1207,52 @@
   }
 
   .th-overview-filter-panel {
+    min-width: 0;
     width: 100%;
+    max-height: calc(100dvh - 148px);
+    flex: 1 0 100%;
     margin-top: 2px;
+    padding: 12px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .th-overview-filter-panel__header {
+    margin-bottom: 10px;
+  }
+
+  .th-overview-filter-panel__header strong {
+    min-width: 0;
+    font-size: 14px;
+  }
+
+  .th-overview-filter-panel__header span {
+    flex: 0 0 auto;
+    font-size: 10px;
   }
 
   .th-overview-filter-panel__grid {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .th-overview-filter-panel__grid label {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .th-overview-filter-panel__grid select,
+  .th-overview-filter-panel__grid input {
+    min-height: 36px;
+  }
+
+  .th-overview-filter-panel__actions {
+    position: sticky;
+    bottom: -12px;
+    margin: 10px -12px -12px;
+    padding: 8px 12px;
+    background: #f8fafc;
   }
 
   .th-overview-card__header {
@@ -1134,16 +1268,16 @@
   }
 
   .th-overview-card__state--chart {
-    min-height: 124px;
-  }
-
-  .th-overview-card__state--latest {
     min-height: 96px;
   }
 
+  .th-overview-card__state--latest {
+    min-height: 72px;
+  }
+
   .th-overview-chart-canvas {
-    height: 202px;
-    padding-inline: 4px;
+    height: 162px;
+    padding-inline: 2px;
   }
 
   .th-overview-latest-table {
@@ -1157,7 +1291,7 @@
 
   .th-overview-latest-mobile-link {
     display: inline-flex;
-    min-height: 32px;
+    min-height: 28px;
     padding: 0;
     font-size: 12px;
   }
@@ -1168,9 +1302,9 @@
 
   .th-overview-latest-card {
     display: grid;
-    gap: 8px;
-    margin: 6px 8px 8px;
-    padding: 10px;
+    gap: 5px;
+    margin: 4px 6px 6px;
+    padding: 7px 8px;
     border: 1px solid #e3ece9;
     border-radius: 12px;
     background: #fbfdfc;
@@ -1178,19 +1312,21 @@
 
   .th-overview-latest-card dl {
     display: grid;
-    gap: 7px;
+    gap: 4px;
     margin: 0;
   }
 
   .th-overview-latest-card dl > div {
     display: grid;
-    grid-template-columns: 74px minmax(0, 1fr);
-    gap: 8px;
+    grid-template-columns: 66px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 18px;
+    align-items: center;
   }
 
   .th-overview-latest-card dt {
     color: #64748b;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 650;
   }
 
@@ -1199,13 +1335,15 @@
     margin: 0;
     overflow-wrap: anywhere;
     color: #26332f;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 650;
   }
 
   .th-overview-latest-card__view {
     width: 100%;
-    min-height: 34px;
+    min-height: 30px;
+    padding-block: 4px;
+    font-size: 11px;
     justify-content: center;
   }
 }
@@ -1621,7 +1759,8 @@
   border-color: #a7f3d0;
 }
 
-.evidence-chip__remove {
+.evidence-chip__remove,
+.evidence-chip__action {
   background: none;
   border: none;
   cursor: pointer;
@@ -1635,6 +1774,15 @@
 
 .evidence-chip__remove:hover {
   color: #ef4444;
+}
+
+.evidence-chip__action:hover {
+  color: #2563eb;
+}
+
+.evidence-chip__action:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .evidence-selection-grid {
@@ -3077,7 +3225,7 @@
     border-color: #ef4444;
   }
 
-  .training-hours-form-shell .th-mobile-date-backdrop {
+  .th-mobile-date-backdrop {
     position: fixed;
     inset: 0;
     z-index: 9999;
@@ -3089,7 +3237,7 @@
     backdrop-filter: blur(2px);
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet {
+  .th-mobile-date-sheet {
     width: min(100%, 480px);
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     border-radius: 20px;
@@ -3098,7 +3246,7 @@
     animation: th-mobile-date-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet > header {
+  .th-mobile-date-sheet > header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -3106,22 +3254,22 @@
     margin-bottom: 16px;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet > header > div {
+  .th-mobile-date-sheet > header > div {
     display: grid;
     gap: 3px;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet header small {
+  .th-mobile-date-sheet header small {
     color: #71817c;
     font-size: 11px;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet header strong {
+  .th-mobile-date-sheet header strong {
     color: #17231f;
     font-size: 22px;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet header button {
+  .th-mobile-date-sheet header button {
     display: grid;
     width: 38px;
     height: 38px;
@@ -3134,24 +3282,24 @@
     font-size: 15px;
   }
 
-  .training-hours-form-shell .th-mobile-date-fields {
+  .th-mobile-date-fields {
     display: grid;
     grid-template-columns: 0.8fr 1.25fr 1fr;
     gap: 8px;
   }
 
-  .training-hours-form-shell .th-mobile-date-fields label {
+  .th-mobile-date-fields label {
     display: grid;
     gap: 6px;
   }
 
-  .training-hours-form-shell .th-mobile-date-fields label > span {
+  .th-mobile-date-fields label > span {
     color: #71817c;
     font-size: 11px;
     font-weight: 600;
   }
 
-  .training-hours-form-shell .th-mobile-date-fields select {
+  .th-mobile-date-fields select {
     width: 100%;
     min-height: 52px;
     padding: 0 9px;
@@ -3164,14 +3312,14 @@
     font-weight: 650;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet > footer {
+  .th-mobile-date-sheet > footer {
     display: grid;
     grid-template-columns: 1fr 1.5fr;
     gap: 9px;
     margin-top: 18px;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet footer button {
+  .th-mobile-date-sheet footer button {
     min-height: 46px;
     border: 1px solid #cfe0dc;
     border-radius: 12px;
@@ -3182,7 +3330,7 @@
     font-weight: 700;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet footer .th-mobile-date-apply {
+  .th-mobile-date-sheet footer .th-mobile-date-apply {
     border-color: #1aaa84;
     background: #1aaa84;
     color: #fff;
@@ -4023,7 +4171,7 @@
     animation: none;
   }
 
-  .training-hours-form-shell .th-mobile-date-sheet {
+  .th-mobile-date-sheet {
     animation: none;
   }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/AdminSidebar.jsx'
 import AdminHeader from '../components/AdminHeader.jsx'
@@ -7,6 +7,7 @@ import { adminApi } from '../api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import { competencyApi } from '../../evaluation/api/examAssignmentApi.js'
 import { loadCompetencyOverview } from '../../dashboard/utils/competencyOverview.js'
+import { loadAllDashboardItems } from '../../dashboard/utils/paginatedDashboard.js'
 
 function payload(response) {
   return response?.data?.data || {}
@@ -34,6 +35,7 @@ const emptyDomain = (message) => ({
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
+  const dashboardRequestId = useRef(0)
   const [filters, setFilters] = useState(() => ({
     departmentId: '',
     employeeCode: '',
@@ -43,6 +45,7 @@ export default function AdminDashboard() {
   const [departments, setDepartments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [departmentsError, setDepartmentsError] = useState('')
   const [complianceChart, setComplianceChart] = useState([])
   const [filteredEmployeeId, setFilteredEmployeeId] = useState()
   const [dashboard, setDashboard] = useState({
@@ -57,16 +60,26 @@ export default function AdminDashboard() {
         const data = payload(response)
         setDepartments(Array.isArray(data) ? data : data.content || [])
       })
-      .catch(() => setError('Không thể tải danh sách khoa/phòng.'))
+      .catch(() => setDepartmentsError('Không thể tải danh sách khoa/phòng.'))
+  }, [])
+
+  useEffect(() => () => {
+    dashboardRequestId.current += 1
   }, [])
 
   const loadDashboard = useCallback(async () => {
+    const requestId = ++dashboardRequestId.current
     setLoading(true)
     setError('')
     const defaultDates = currentYearRange()
     const dateParams = {
       fromDate: filters.fromDate || defaultDates.fromDate,
       toDate: filters.toDate || defaultDates.toDate,
+    }
+    if (dateParams.fromDate > dateParams.toDate) {
+      setError('Từ ngày không được lớn hơn Đến ngày.')
+      setLoading(false)
+      return
     }
     const scopedParams = {
       ...dateParams,
@@ -77,19 +90,27 @@ export default function AdminDashboard() {
       loadCompetencyOverview(competencyApi.getSummary, scopedParams),
     ])
     const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
+    if (requestId !== dashboardRequestId.current) return
     const employeeFilterActive = Boolean(filters.employeeCode.trim())
     const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+    const employeeNotFound = employeeFilterActive
+      && competencyResult.status === 'fulfilled'
+      && subjectUserId === -1
     setFilteredEmployeeId(subjectUserId)
     const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
     const trainingScope = {
       departmentId: filters.departmentId || undefined,
-      keyword: filters.employeeCode.trim() || undefined,
+      employeeId: subjectUserId,
       asOf: dateParams.toDate,
     }
     const [trainingResult, checklistResult] = await Promise.allSettled([
       trainingApi.getTrainingDashboardSummary(trainingScope),
-      adminApi.getQualityChecklistDashboard({ ...qualityParams, view: 'FILTERED', page: 0, size: 100 }),
+      loadAllDashboardItems(
+        adminApi.getQualityChecklistDashboard,
+        { ...qualityParams, view: 'FILTERED' },
+      ),
     ])
+    if (requestId !== dashboardRequestId.current) return
 
     const trainingTotals = trainingResult.status === 'fulfilled'
       ? payload(trainingResult.value)?.totals || {}
@@ -99,12 +120,7 @@ export default function AdminDashboard() {
     const trainingFailed = (Number(trainingTotals.nonCompliantCount) || 0)
       + (Number(trainingTotals.atRiskCount) || 0)
       + (Number(trainingTotals.notConfiguredCount) || 0)
-    const checklistPage = checklistResult.status === 'fulfilled' && checklistResult.value
-      ? payload(checklistResult.value)
-      : null
-    const checklistItems = Array.isArray(checklistPage)
-      ? checklistPage
-      : checklistPage?.content || checklistPage?.items || []
+    const checklistItems = checklistResult.status === 'fulfilled' ? checklistResult.value : []
     const qualityTotals = checklistItems.reduce((totals, item) => {
       const monitoringCount = Number(item.monitoringCount) || 0
       totals.total += monitoringCount
@@ -158,6 +174,8 @@ export default function AdminDashboard() {
 
     if ([trainingResult, checklistResult, competencyResult].every((result) => result.status === 'rejected')) {
       setError('Không thể tải dashboard. Vui lòng kiểm tra kết nối đến máy chủ rồi thử lại.')
+    } else if (employeeNotFound) {
+      setError(`Không tìm thấy nhân viên có mã "${filters.employeeCode.trim()}" trong phạm vi đang chọn.`)
     }
     setLoading(false)
   }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
@@ -196,10 +214,13 @@ export default function AdminDashboard() {
             <OverviewDashboard
               role="admin"
               loading={loading}
-              error={error}
+              error={error || departmentsError}
               filters={filters}
               departments={departments}
-              onFilterChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+              onFilterChange={(key, value) => {
+                dashboardRequestId.current += 1
+                setFilters((current) => ({ ...current, [key]: value }))
+              }}
               onNavigate={navigate}
               domains={domains}
               complianceChart={complianceChart}

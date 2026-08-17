@@ -26,6 +26,7 @@ import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusRecordSumma
 import vn.vietduc.carehubbackend.training.dto.response.TrainingStatusYearlyHoursResponse;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.training.service.TrainingAccessPolicy;
@@ -58,6 +59,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     private static final Logger log = LoggerFactory.getLogger(TrainingStatusServiceImpl.class);
     private static final int MAX_PAGE_SIZE = 100;
     private static final String UNASSIGNED_PROFESSIONAL_FIELD = "Chưa xác định";
+    private static final String OTHER_PROFESSIONAL_FIELD = "Lĩnh vực khác";
 
     private static final List<TrainingRecordStatus> LEDGER_STATUSES = List.of(
             TrainingRecordStatus.SUBMITTED,
@@ -83,20 +85,31 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         User actor = accessPolicy.currentActor();
         Year selectedYear = resolveYear(year);
 
-        List<ProfessionalFieldHoursItemResponse> fields = recordRepository
+        Map<String, ProfessionalFieldHoursItemResponse> groupedFields = new LinkedHashMap<>();
+        recordRepository
                 .summarizeSubmittedHoursByProfessionalField(
                         actor.getId(),
                         selectedYear.atDay(1),
                         selectedYear.atMonth(12).atEndOfMonth()
                 )
                 .stream()
-                .map(row -> new ProfessionalFieldHoursItemResponse(
-                        row.getProfessionalFieldId(),
-                        row.getProfessionalFieldName() == null
-                                ? UNASSIGNED_PROFESSIONAL_FIELD
-                                : row.getProfessionalFieldName(),
-                        safe(row.getSubmittedHours())
-                ))
+                .forEach(row -> {
+                    boolean rejected = row.getProfessionalFieldModerationStatus() == ProfessionalFieldModerationStatus.REJECTED;
+                    String key = rejected
+                            ? "OTHER"
+                            : row.getProfessionalFieldId() == null ? "UNASSIGNED" : "FIELD:" + row.getProfessionalFieldId();
+                    String name = rejected
+                            ? OTHER_PROFESSIONAL_FIELD
+                            : row.getProfessionalFieldName() == null ? UNASSIGNED_PROFESSIONAL_FIELD : row.getProfessionalFieldName();
+                    Long fieldId = rejected ? null : row.getProfessionalFieldId();
+                    BigDecimal hours = safe(row.getSubmittedHours());
+                    ProfessionalFieldHoursItemResponse current = groupedFields.get(key);
+                    groupedFields.put(key, current == null
+                            ? new ProfessionalFieldHoursItemResponse(fieldId, name, hours)
+                            : new ProfessionalFieldHoursItemResponse(fieldId, name, safe(current.submittedHours()).add(hours)));
+                });
+
+        List<ProfessionalFieldHoursItemResponse> fields = groupedFields.values().stream()
                 .sorted(Comparator
                         .comparing(
                                 ProfessionalFieldHoursItemResponse::submittedHours,
@@ -222,7 +235,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
 
     private EmployeeTrainingStatusSearchRequest normalizeCriteria(EmployeeTrainingStatusSearchRequest request) {
         return request == null
-                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null)
+                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null, null)
                 : request;
     }
 
@@ -245,7 +258,9 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 normalizeKeywordPattern(criteria.keyword()),
                 criteria.departmentId(),
                 criteria.jobPositionId()
-        );
+        ).stream()
+                .filter(employee -> criteria.employeeId() == null || criteria.employeeId().equals(employee.getId()))
+                .toList();
         if (candidates.isEmpty()) {
             return List.of();
         }
