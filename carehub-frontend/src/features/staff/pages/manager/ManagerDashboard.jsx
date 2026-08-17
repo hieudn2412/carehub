@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/sidebar.jsx'
 import Header from '../../components/Header.jsx'
@@ -7,6 +7,7 @@ import { staffApi } from '../../api/staffApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { loadCompetencyOverview } from '../../../dashboard/utils/competencyOverview.js'
+import { loadAllDashboardItems } from '../../../dashboard/utils/paginatedDashboard.js'
 
 function payload(response) {
   return response?.data?.data || {}
@@ -30,6 +31,7 @@ function currentYearRange() {
 
 export default function ManagerDashboard() {
   const navigate = useNavigate()
+  const dashboardRequestId = useRef(0)
   const [profile, setProfile] = useState(null)
   const [filters, setFilters] = useState(() => ({
     departmentId: '',
@@ -67,8 +69,13 @@ export default function ManagerDashboard() {
       })
   }, [])
 
+  useEffect(() => () => {
+    dashboardRequestId.current += 1
+  }, [])
+
   const loadDashboard = useCallback(async () => {
     if (!filters.departmentId) return
+    const requestId = ++dashboardRequestId.current
     setLoading(true)
     setError('')
     try {
@@ -76,6 +83,11 @@ export default function ManagerDashboard() {
       const dateRange = {
         fromDate: filters.fromDate || defaultDates.fromDate,
         toDate: filters.toDate || defaultDates.toDate,
+      }
+      if (dateRange.fromDate > dateRange.toDate) {
+        setError('Từ ngày không được lớn hơn Đến ngày.')
+        setLoading(false)
+        return
       }
       const scopedParams = {
         ...dateRange,
@@ -86,37 +98,39 @@ export default function ManagerDashboard() {
         loadCompetencyOverview(competencyApi.getSummary, scopedParams),
       ])
       const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
+      if (requestId !== dashboardRequestId.current) return
       const employeeFilterActive = Boolean(filters.employeeCode.trim())
       const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+      const employeeNotFound = employeeFilterActive
+        && competencyResult.status === 'fulfilled'
+        && subjectUserId === -1
       setFilteredEmployeeId(subjectUserId)
       const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
       const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
         trainingApi.getTrainingDashboardSummary({
           departmentId: filters.departmentId,
-          keyword: filters.employeeCode.trim() || undefined,
-          asOf: filters.toDate,
+          employeeId: subjectUserId,
+          asOf: dateRange.toDate,
         }),
-        staffApi.getDashboardFormSummary(qualityParams),
-        staffApi.getQualityChecklistDashboard({
-          ...qualityParams,
-          view: 'FILTERED',
-          page: 0,
-          size: 8,
+        staffApi.getManagerQualityHistorySummary({
+          fromDate: qualityParams.fromDate,
+          toDate: qualityParams.toDate,
+          subjectUserId,
         }),
+        loadAllDashboardItems(
+          staffApi.getQualityChecklistDashboard,
+          { ...qualityParams, view: 'FILTERED' },
+        ),
       ])
+      if (requestId !== dashboardRequestId.current) return
       if ([trainingResult, qualityResult, checklistResult, competencyResult]
         .every((result) => result.status === 'rejected')) throw trainingResult.reason
-      const checklistPage = checklistResult.status === 'fulfilled'
-        ? payload(checklistResult.value)
-        : null
-      const checklistItems = Array.isArray(checklistPage)
-        ? checklistPage
-        : checklistPage?.content || checklistPage?.items || []
+      const checklistItems = checklistResult.status === 'fulfilled' ? checklistResult.value : []
       const training = trainingResult.status === 'fulfilled'
         ? payload(trainingResult.value)?.totals || {}
         : {}
       const quality = qualityResult.status === 'fulfilled'
-        ? payload(qualityResult.value)?.responses || {}
+        ? payload(qualityResult.value)
         : null
 
       setDomains({
@@ -142,10 +156,10 @@ export default function ManagerDashboard() {
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
         quality: quality ? {
-          total: Number(quality.submitted) || 0,
-          passed: Number(quality.passed) || 0,
-          failed: (Number(quality.failedScore) || 0) + (Number(quality.failedCritical) || 0),
-          rate: Number(quality.passRate) || 0,
+          total: Number(quality.monitoringCount) || 0,
+          passed: Number(quality.passedCount) || 0,
+          failed: Number(quality.failedCount) || 0,
+          rate: Number(quality.complianceRate) || 0,
           available: qualityResult.status === 'fulfilled',
           emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
           detail: 'Số lượt checklist đạt / tổng lượt checklist đã chấm từ đầu năm.',
@@ -161,7 +175,11 @@ export default function ManagerDashboard() {
         passed: Number(item.passedCount) || 0,
         total: Number(item.monitoringCount) || 0,
       })))
+      if (employeeNotFound) {
+        setError(`Không tìm thấy nhân viên có mã "${filters.employeeCode.trim()}" trong khoa của bạn.`)
+      }
     } catch {
+      if (requestId !== dashboardRequestId.current) return
       setDomains({
         training: unavailable('Không thể tải dữ liệu giờ đào tạo trong khoa.'),
         exams: unavailable('Không thể tải dữ liệu bài kiểm tra trong khoa.'),
@@ -170,7 +188,7 @@ export default function ManagerDashboard() {
       setComplianceChart([])
       setError('Không thể tải dashboard của khoa. Vui lòng kiểm tra kết nối máy chủ.')
     } finally {
-      setLoading(false)
+      if (requestId === dashboardRequestId.current) setLoading(false)
     }
   }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
 
@@ -204,7 +222,10 @@ export default function ManagerDashboard() {
             loading={loading}
             error={error}
             filters={filters}
-            onFilterChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
+            onFilterChange={(key, value) => {
+              dashboardRequestId.current += 1
+              setFilters((current) => ({ ...current, [key]: value }))
+            }}
             onNavigate={navigate}
             domains={domains}
             complianceChart={complianceChart}
