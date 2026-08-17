@@ -21,7 +21,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
 import './StaffComplianceDashboardPage.css'
 
 const today = () => {

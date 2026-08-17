@@ -1,10 +1,10 @@
-export const DOCUMENT_STATUS_LABELS = {
+const DOCUMENT_STATUS_LABELS = {
   READY: 'Sẵn sàng',
   OCR_REQUIRED: 'Cần OCR',
   FAILED: 'Thất bại',
 }
 
-export const JOB_STATUS_LABELS = {
+const JOB_STATUS_LABELS = {
   CREATED: 'Đã tạo',
   GENERATING: 'Đang tạo',
   GENERATED: 'Đã tạo xong',
@@ -15,7 +15,7 @@ export const JOB_STATUS_LABELS = {
   CANCELLED: 'Đã hủy',
 }
 
-export const CANDIDATE_STATUS_LABELS = {
+const CANDIDATE_STATUS_LABELS = {
   GENERATED: 'Đã sinh',
   VALIDATED: 'Đã kiểm tra',
   NEED_REVIEW: 'Cần xem xét',
@@ -24,7 +24,7 @@ export const CANDIDATE_STATUS_LABELS = {
   SAVED: 'Đã lưu',
 }
 
-export const CANDIDATE_LABELS = {
+const CANDIDATE_LABELS = {
   GOOD: 'Đạt',
   NEED_REVIEW: 'Cần xem xét',
   REJECTED: 'Đã từ chối',
@@ -36,18 +36,9 @@ export const COGNITIVE_LEVELS = [
   { value: 'CLINICAL_REASONING_ANALYSIS', label: 'Tư duy phân tích' },
 ]
 
-export const COGNITIVE_LEVEL_LABELS = Object.fromEntries(
+const COGNITIVE_LEVEL_LABELS = Object.fromEntries(
   COGNITIVE_LEVELS.map((level) => [level.value, level.label]),
 )
-
-export const QUALITY_FLAG_LABELS = {
-  LOW_INFORMATION_DENSITY: 'Ít thông tin',
-  HEADING_ONLY: 'Chỉ có heading',
-  DUPLICATE_TEXT: 'Trùng nội dung',
-  TABLE_LIKE_LOW_CONFIDENCE: 'Bảng/layout chưa chắc chắn',
-  LOW_SECTION_CONFIDENCE: 'Section chưa chắc chắn',
-  ABOVE_TARGET_TOKEN_RANGE: 'Vượt target token',
-}
 
 const BLOCKING_CHUNK_FLAGS = new Set([
   'LOW_INFORMATION_DENSITY',
@@ -55,14 +46,6 @@ const BLOCKING_CHUNK_FLAGS = new Set([
   'DUPLICATE_TEXT',
   'TABLE_LIKE_LOW_CONFIDENCE',
 ])
-
-export function apiData(response, fallback = null) {
-  return response?.data?.data ?? fallback
-}
-
-export function apiErrorMessage(error) {
-  return error?.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.'
-}
 
 export function documentStatusText(document) {
   return document?.statusText || DOCUMENT_STATUS_LABELS[document?.status] || 'Không xác định'
@@ -105,30 +88,6 @@ export function statusTone(status) {
   return 'neutral'
 }
 
-export function formatDateTime(value) {
-  if (!value) return '---'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const year = date.getFullYear()
-
-  return `${hours}:${minutes} ${day}/${month}/${year}`
-}
-
-export function formatNumber(value) {
-  if (value === null || value === undefined || value === '') return '0'
-  return new Intl.NumberFormat('vi-VN').format(Number(value) || 0)
-}
-
-export function shortHash(value) {
-  if (!value) return '---'
-  return value.length <= 12 ? value : value.slice(0, 12)
-}
-
 export function parseJsonList(value) {
   if (!value) return []
   if (Array.isArray(value)) return value
@@ -140,13 +99,7 @@ export function parseJsonList(value) {
   }
 }
 
-export function qualityFlagsText(value) {
-  const flags = chunkQualityFlags(value)
-  if (!flags.length) return 'Không có'
-  return flags.map((flag) => QUALITY_FLAG_LABELS[flag] || flag).join(', ')
-}
-
-export function chunkQualityFlags(value) {
+function chunkQualityFlags(value) {
   return parseJsonList(value).filter((flag) => typeof flag === 'string' && flag.trim())
 }
 
@@ -154,10 +107,12 @@ export function chunkGenerationEligible(chunk) {
   return chunkQualityFlags(chunk?.qualityFlags).every((flag) => !BLOCKING_CHUNK_FLAGS.has(flag))
 }
 
-export function chunkGenerationText(chunk) {
-  return chunkGenerationEligible(chunk) ? 'Có thể tạo câu hỏi' : 'Bỏ qua'
-}
-
 export function normalizeText(value) {
   return String(value || '').toLowerCase().trim()
 }
+export {
+  apiData,
+  apiErrorMessage,
+  formatDateTime,
+  formatNumber,
+} from '../../../shared/utils/apiUi.js'

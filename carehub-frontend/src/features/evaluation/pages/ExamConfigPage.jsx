@@ -13,9 +13,8 @@ import {
   SendOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import DepartmentCombobox from '../../admin/components/DepartmentCombobox.jsx'
+import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { examConfigApi } from '../api/examConfigApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -283,16 +282,12 @@ export default function ExamConfigPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
-          breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
-        />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="exp-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
+      breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
+    >
+      <div className="exp-page">
               <ExamDeliveryFlow
                 activeStep="matrix"
                 title="Tạo ma trận & Giao đề kiểm tra"
@@ -704,10 +699,7 @@ export default function ExamConfigPage() {
                   </form>
                 )}
               </section>
-            </div>
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

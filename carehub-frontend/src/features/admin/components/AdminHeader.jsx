@@ -11,8 +11,10 @@ import {
 } from '@ant-design/icons'
 import { useNotifications } from '../../staff/hooks/useNotifications'
 import { staffApi } from '../../staff/api/staffApi'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
-import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
+import { logoutUser } from '../../auth/services/logoutUser.js'
+import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
+import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
 import MobileSearchSheet from '../../../shared/components/MobileSearchSheet.jsx'
@@ -289,6 +291,8 @@ function AdminHeader({ title = 'Trang chủ', userName = '', roleName = '', brea
           displayName={displayName}
           displayRole={displayRole}
           profilePath="/admin/profile"
+          loginPath={AUTH_ROUTES.login}
+          onLogout={logoutUser}
         />
       </div>
       {mobileSearch?.isOpen && (

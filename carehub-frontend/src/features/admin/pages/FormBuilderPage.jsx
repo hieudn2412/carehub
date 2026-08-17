@@ -15,7 +15,7 @@ import {
   SettingOutlined,
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import '../styles/FormBuilderPage.css'
 
 const CHOICE_FIELD_TYPES = ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'DROPDOWN']

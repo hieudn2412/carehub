@@ -209,5 +209,4 @@ function TrainingRecordTable({
   )
 }
 
-export { DEFAULT_COLUMNS, DEFAULT_ACTIONS, COLUMN_DEFINITIONS }
 export default TrainingRecordTable

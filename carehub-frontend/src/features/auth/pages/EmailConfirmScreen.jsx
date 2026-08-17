@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import { authApi } from '../api/authApi.js'
-import { getApiErrorMessage } from '../utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import Icon from '../../../shared/components/Icon.jsx'
 import { createOtpExpiresAt } from '../hooks/useOtpExpiry.js'
-import '../../../styles/EmailConfirmScreen.css'
+import '../styles/auth/email-confirm.css'
 
 const steps = [
   { label: 'Xác nhận email' },

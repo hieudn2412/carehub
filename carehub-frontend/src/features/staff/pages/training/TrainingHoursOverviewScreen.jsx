@@ -17,8 +17,8 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
-import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
-import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../../../shared/auth/jwt.js'
+import { tokenStorage } from '../../../../shared/auth/tokenStorage.js'
 import TrainingRecordTable from './components/TrainingRecordTable.jsx'
 import { formatTrainingDate } from './utils/trainingRecordFormatters.js'
 import {
@@ -27,7 +27,7 @@ import {
   normalizeChartYears,
   truncateChartLabel,
 } from './utils/trainingOverviewChart.js'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 function getDashboardPath() {
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())

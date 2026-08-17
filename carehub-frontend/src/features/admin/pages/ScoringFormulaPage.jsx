@@ -10,9 +10,8 @@ import {
   SettingOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader.jsx'
-import AdminSidebar from '../components/AdminSidebar.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ScoringFormulaPage.css'
@@ -168,14 +167,12 @@ function ScoringFormulaPage() {
   }
 
   return (
-    <div className="dashboard-layout scoring-formula-page">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          title="Công thức chỉ số"
-          breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
-        />
-        <main className="sfp-main">
+    <AppShell
+      className="dashboard-layout scoring-formula-page"
+      title="Công thức chỉ số"
+      breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
+    >
+      <div className="sfp-main">
           <section className="sfp-toolbar" aria-label="Bộ lọc công thức">
             <div className="sfp-toolbar-main">
               <div className="sfp-search-filter-group">
@@ -278,7 +275,6 @@ function ScoringFormulaPage() {
             <span>Trang {page + 1} / {totalPages}</span>
             <button disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)} type="button">Sau</button>
           </nav>
-        </main>
       </div>
 
       {editing && (
@@ -313,7 +309,7 @@ function ScoringFormulaPage() {
         onConfirm={executeSave}
         onCancel={() => setConfirmSave(false)}
       />
-    </div>
+    </AppShell>
   )
 }
 

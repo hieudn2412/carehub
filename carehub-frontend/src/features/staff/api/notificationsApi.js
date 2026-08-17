@@ -6,41 +6,40 @@ function authHeaders() {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
 }
 
-export const trainingGroupApi = {
-  listAvailableUsers(params = { size: 500 }) {
-    return httpClient.get('/users', {
+export const notificationsApi = {
+  list(params) {
+    return httpClient.get('/me/notifications', {
       headers: authHeaders(),
       params,
     })
   },
 
-  list(q) {
-    return httpClient.get('/training-groups', {
-      headers: authHeaders(),
-      params: q ? { q } : {},
-    })
-  },
-
   get(id) {
-    return httpClient.get(`/training-groups/${id}`, {
+    return httpClient.get(`/me/notifications/${id}`, {
       headers: authHeaders(),
     })
   },
 
-  create(data) {
-    return httpClient.post('/training-groups', data, {
+  getUnreadCount() {
+    return httpClient.get('/me/notifications/unread-count', {
       headers: authHeaders(),
     })
   },
 
-  update(id, data) {
-    return httpClient.put(`/training-groups/${id}`, data, {
+  markAsRead(id) {
+    return httpClient.patch(`/me/notifications/${id}`, { read: true }, {
+      headers: authHeaders(),
+    })
+  },
+
+  markAllAsRead() {
+    return httpClient.patch('/me/notifications/read-status', { read: true }, {
       headers: authHeaders(),
     })
   },
 
   delete(id) {
-    return httpClient.delete(`/training-groups/${id}`, {
+    return httpClient.delete(`/me/notifications/${id}`, {
       headers: authHeaders(),
     })
   },

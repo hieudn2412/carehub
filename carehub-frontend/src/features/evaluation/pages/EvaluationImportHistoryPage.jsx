@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DownloadOutlined, EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationImportApi } from '../api/evaluationImportApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -63,13 +62,8 @@ function EvaluationImportHistoryPage() {
   const breadcrumbs = [{ label: 'Lịch sử import đánh giá' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="exp-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="exp-page">
               <div className="exp-title-card">
                 <div>
                   <h1 className="exp-title">Lịch sử import đánh giá</h1>
@@ -192,11 +186,8 @@ function EvaluationImportHistoryPage() {
                   </div>
                 </div>
               )}
-            </div>
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -17,7 +17,7 @@ import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { myExamApi } from '../../../evaluation/api/myExamApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import './ProfessionalCompetencyDashboard.css'
 
