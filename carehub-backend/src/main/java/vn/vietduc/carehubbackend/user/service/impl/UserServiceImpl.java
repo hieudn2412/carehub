@@ -11,6 +11,7 @@ import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
+import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
 import vn.vietduc.carehubbackend.user.dto.request.UpdateUserRequest;
@@ -47,6 +48,7 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final EmailProducer emailProducer;
     private final SecurityUtils securityUtils;
+    private final BrandedEmailRenderer emailRenderer;
 
     @Override
     @Transactional
@@ -88,14 +90,17 @@ public class UserServiceImpl implements UserService {
             userRoleRepository.save(userRole);
         }
 
+        var renderedEmail = emailRenderer.accountCreated(
+                user.getName(),
+                user.getEmployeeCode(),
+                randomPassword
+        );
         emailProducer.sendEmail(
                 EmailMessage.builder()
                         .to(user.getEmail())
-                        .subject("Account Created")
-                        .content("""
-                            Employee Code: %s
-                            Password: %s
-                            """.formatted(user.getEmployeeCode(), randomPassword))
+                        .subject(renderedEmail.subject())
+                        .content(renderedEmail.plainText())
+                        .htmlContent(renderedEmail.htmlContent())
                         .build()
         );
 

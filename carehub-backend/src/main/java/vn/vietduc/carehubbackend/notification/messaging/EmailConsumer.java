@@ -39,7 +39,12 @@ public class EmailConsumer {
         long deliveryTag = amqpMessage.getMessageProperties().getDeliveryTag();
 
         try {
-            emailService.send(message.getTo(), message.getSubject(), message.getContent());
+            emailService.send(
+                    message.getTo(),
+                    message.getSubject(),
+                    message.getContent(),
+                    message.getHtmlContent()
+            );
             channel.basicAck(deliveryTag, false);
         } catch (Exception ex) {
             log.warn("Email dispatch failed for {}, attempt {}", message.getTo(), message.getAttempts() + 1, ex);

@@ -245,18 +245,21 @@ spring:
     validate-migration-naming: true
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
+    host: ${MAIL_HOST:smtp.mx.cloudflare.net}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:api_token}
     password: ${MAIL_PASSWORD}
-
+    default-encoding: UTF-8
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
             required: true
+          starttls:
+            enable: false
+            required: false
 
 cloudflare:
   r2:

@@ -20,6 +20,8 @@ public class EmailMessage {
 
     private String content;
 
+    private String htmlContent;
+
     private String type;
 
     private String deepLink;
