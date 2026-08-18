@@ -211,7 +211,7 @@ class AuthFlowIntegrationTest {
                 .hasSize(1)
                 .allSatisfy(message -> {
                     assertThat(message.getTo()).isEqualTo(email);
-                    assertThat(message.getContent()).contains("Your OTP is:");
+                    assertThat(message.getContent()).contains("Mã xác thực:");
                 });
     }
 

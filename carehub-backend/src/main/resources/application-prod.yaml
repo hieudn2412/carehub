@@ -2,6 +2,13 @@ server:
   port: ${SERVER_PORT:8081}
 
 app:
+  mail:
+    from: ${MAIL_FROM}
+    from-name: ${MAIL_FROM_NAME:VietDuc Care}
+    reply-to: ${MAIL_REPLY_TO:}
+    brand-name: ${MAIL_BRAND_NAME:VietDuc Care}
+    website-url: ${MAIL_WEBSITE_URL:https://quanlydieuduongvd.org}
+    support-email: ${MAIL_SUPPORT_EMAIL:}
   cors:
     allowed-origin-patterns: ${CORS_ALLOWED_ORIGINS}
   import:
