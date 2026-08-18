@@ -1,8 +1,6 @@
 package vn.vietduc.carehubbackend.training.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -56,7 +54,6 @@ import java.util.function.Function;
 @Service
 @RequiredArgsConstructor
 public class TrainingStatusServiceImpl implements TrainingStatusService {
-    private static final Logger log = LoggerFactory.getLogger(TrainingStatusServiceImpl.class);
     private static final int MAX_PAGE_SIZE = 100;
     private static final String UNASSIGNED_PROFESSIONAL_FIELD = "Chưa xác định";
     private static final String OTHER_PROFESSIONAL_FIELD = "Lĩnh vực khác";
@@ -203,10 +200,6 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 pageable,
                 Sort.by(Sort.Order.desc("startDate"), Sort.Order.desc("id"))
         );
-        if (workflowStatus != null && !LEDGER_STATUSES.contains(workflowStatus)) {
-            return new PageImpl<>(List.of(), normalizedPageable, 0);
-        }
-
         LocalDate asOfDate = asOf == null ? LocalDate.now() : asOf;
         int windowYears = settingsService.trainingWindowYears();
         List<TrainingRecordStatus> statuses = workflowStatus == null ? LEDGER_STATUSES : List.of(workflowStatus);

@@ -55,7 +55,6 @@ function ExamPaperListPage({
         || (paper.name || '').toLowerCase().includes(normalized)
         || (paper.code || '').toLowerCase().includes(normalized)
         || (paper.examConfigName || '').toLowerCase().includes(normalized)
-        || (paper.questionSetName || '').toLowerCase().includes(normalized)
       const matchesStatus = !status || paper.status === status
       return matchesKeyword && matchesStatus
     })

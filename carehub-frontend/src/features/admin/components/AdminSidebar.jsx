@@ -85,7 +85,6 @@ const navSections = [
         requiredPermissions: [
           EVALUATION_PERMISSION.questionAuthor,
           EVALUATION_PERMISSION.questionReviewer,
-          EVALUATION_PERMISSION.questionSetManager,
         ],
       },
       {

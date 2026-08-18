@@ -20,14 +20,12 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseMapper;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionDocumentRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
@@ -52,7 +50,6 @@ public class QuestionBankService {
     private final DuplicateCheckService duplicateCheckService;
     private final QuestionEmbeddingService questionEmbeddingService;
     private final QuestionClassificationRuleService classificationRuleService;
-    private final QuestionSetItemRepository questionSetItemRepository;
     private final ExamPaperQuestionRepository examPaperQuestionRepository;
     private QuestionCategoryRepository questionCategoryRepository;
     private ProfessionalFieldRepository professionalFieldRepository;
@@ -451,23 +448,17 @@ public class QuestionBankService {
     }
 
     private QuestionImpactWarningResponse buildImpactWarning(QuestionBankQuestion question) {
-        long activeSetCount = questionSetItemRepository.countDistinctQuestionSetsByQuestionAndStatus(
-                question,
-                QuestionSetStatus.ACTIVE
-        );
         long publishedPaperCount = examPaperQuestionRepository.countDistinctExamPapersByQuestionAndStatus(
                 question,
                 ExamPaperStatus.PUBLISHED
         );
-        boolean hasImpact = activeSetCount > 0 || publishedPaperCount > 0;
-        if (!hasImpact) {
-            return new QuestionImpactWarningResponse(0, 0, false, null);
+        if (publishedPaperCount == 0) {
+            return new QuestionImpactWarningResponse(0, false, null);
         }
         String warning = "Câu hỏi đang được dùng trong "
-                + activeSetCount + " bộ câu hỏi đang hoạt động và "
                 + publishedPaperCount + " bộ đề đã phát hành. "
-                + "Hãy tạo phiên bản/bản sao bộ câu hỏi hoặc bộ đề trước khi lưu trữ hay tạm ngưng.";
-        return new QuestionImpactWarningResponse(activeSetCount, publishedPaperCount, true, warning);
+                + "Hãy tạo phiên bản/bản sao bộ đề trước khi lưu trữ hay tạm ngưng.";
+        return new QuestionImpactWarningResponse(publishedPaperCount, true, warning);
     }
 
     private String normalizeCorrectAnswer(String value) {

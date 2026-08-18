@@ -17,7 +17,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfigSourceFilte
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
@@ -25,7 +24,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentS
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintFieldRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintCellRepository;
@@ -57,7 +55,6 @@ import java.util.stream.Collectors;
 @Service
 public class ExamConfigService {
     private final ExamConfigRepository examConfigRepository;
-    private final QuestionSetRepository questionSetRepository;
     private final QuestionCategoryRepository categoryRepository;
     private final ExamBlueprintFieldRepository blueprintFieldRepository;
     private final ExamBlueprintCellRepository blueprintCellRepository;
@@ -72,7 +69,6 @@ public class ExamConfigService {
     @Autowired
     public ExamConfigService(
             ExamConfigRepository examConfigRepository,
-            QuestionSetRepository questionSetRepository,
             QuestionCategoryRepository categoryRepository,
             ExamBlueprintFieldRepository blueprintFieldRepository,
             ExamBlueprintCellRepository blueprintCellRepository,
@@ -83,7 +79,6 @@ public class ExamConfigService {
             QuestionDocumentRepository documentRepository
     ) {
         this.examConfigRepository = examConfigRepository;
-        this.questionSetRepository = questionSetRepository;
         this.categoryRepository = categoryRepository;
         this.blueprintFieldRepository = blueprintFieldRepository;
         this.blueprintCellRepository = blueprintCellRepository;
@@ -114,8 +109,7 @@ public class ExamConfigService {
         return configs.stream()
                 .filter(config -> normalizedQuery.isBlank()
                         || normalize(config.getName()).contains(normalizedQuery)
-                        || normalize(config.getDescription()).contains(normalizedQuery)
-                        || normalize(config.getQuestionSet() == null ? null : config.getQuestionSet().getName()).contains(normalizedQuery))
+                        || normalize(config.getDescription()).contains(normalizedQuery))
                 .sorted(Comparator.comparing(ExamConfig::getUpdatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(this::toResponse)
                 .toList();
@@ -236,14 +230,10 @@ public class ExamConfigService {
                 ? buildBlueprintPreview(config, 1, false)
                 : new BlueprintPreview(0, false, List.of(),
                 List.of("Cấu hình này thuộc pipeline độ khó cũ đã ngừng hỗ trợ, vui lòng cấu hình lại theo ma trận mức độ nhận thức"));
-        QuestionSet questionSet = config.getQuestionSet();
         return new ExamConfigResponse(
                 config.getId(),
                 config.getName(),
                 config.getDescription(),
-                questionSet == null ? null : questionSet.getId(),
-                questionSet == null ? null : questionSet.getName(),
-                questionSet == null ? null : questionSet.getQuestionCount(),
                 config.getTotalQuestions(),
                 config.getTimeLimitMinutes(),
                 config.getPassingScore(),
@@ -446,7 +436,7 @@ public class ExamConfigService {
         validateBlueprintInput(request, total);
         EvaluationAudience audience = resolveOptionalAudience(request.audienceId());
         ExamConfig config = examConfigRepository.save(ExamConfig.builder()
-                .name(name).description(trimToNull(request.description())).questionSet(null).audience(audience)
+                .name(name).description(trimToNull(request.description())).audience(audience)
                 .sourceScope("QUESTION_BANK").blueprintVersion(1).totalQuestions(total).timeLimitMinutes(duration)
                 .passingScore(passing).maxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"))
                 .shuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions())
@@ -469,7 +459,7 @@ public class ExamConfigService {
         validateBlueprintInput(request, total);
         EvaluationAudience audience = resolveOptionalAudience(request.audienceId());
         config.setName(required(request.name(), "Tên cấu hình không được để trống"));
-        config.setDescription(trimToNull(request.description())); config.setQuestionSet(null); config.setAudience(audience);
+        config.setDescription(trimToNull(request.description())); config.setAudience(audience);
         config.setSourceScope("QUESTION_BANK"); config.setTotalQuestions(total);
         config.setTimeLimitMinutes(positive(request.timeLimitMinutes(), "Thời gian làm bài phải lớn hơn 0"));
         config.setPassingScore(percent(request.passingScore(), "Điểm đạt phải trong khoảng 0-10"));

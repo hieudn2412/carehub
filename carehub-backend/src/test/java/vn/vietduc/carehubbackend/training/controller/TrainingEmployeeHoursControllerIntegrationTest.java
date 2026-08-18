@@ -14,23 +14,19 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
-import vn.vietduc.carehubbackend.training.entity.CmeScopeConfiguration;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
-import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.EvidenceModerationStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordChangeType;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
-import vn.vietduc.carehubbackend.training.repository.CmeScopeConfigurationRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingEvidenceFileRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordChangeLogRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
-import vn.vietduc.carehubbackend.training.repository.TrainingRequirementRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Position;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -43,7 +39,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.LinkedHashSet;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
@@ -77,12 +72,6 @@ class TrainingEmployeeHoursControllerIntegrationTest {
 
     @Autowired
     private TrainingActivityTypeRepository activityTypeRepository;
-
-    @Autowired
-    private TrainingRequirementRepository requirementRepository;
-
-    @Autowired
-    private CmeScopeConfigurationRepository cmeScopeConfigurationRepository;
 
     @Autowired
     private TrainingRecordRepository recordRepository;
@@ -119,10 +108,6 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .departmentCode("P9_SU")
                 .name("Phase 9 Surgery")
                 .build());
-        cmeScopeConfigurationRepository.saveAndFlush(CmeScopeConfiguration.builder()
-                .scopeKey(CmeScopeConfiguration.CME_SCOPE_KEY)
-                .departments(new LinkedHashSet<>(List.of(anesthesia)))
-                .build());
         doctor = positionRepository.save(Position.builder().name("Phase 9 Doctor").build());
         nurse = positionRepository.save(Position.builder().name("Phase 9 Nurse").build());
         intensiveCare = professionalFieldRepository.save(ProfessionalField.builder()
@@ -142,9 +127,6 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .requiresEvidence(false)
                 .active(true)
                 .build());
-
-        saveRequirement("P9_DOCTOR_GLOBAL", "Doctor Global Requirement", BigDecimal.valueOf(100), doctor, null);
-        saveRequirement("P9_AN_DOCTOR", "Anesthesia Doctor Requirement", BigDecimal.valueOf(120), doctor, anesthesia);
 
         submittedRecord1 = saveRecord(
                 doctorEmployee,
@@ -314,27 +296,6 @@ class TrainingEmployeeHoursControllerIntegrationTest {
                 .department(department)
                 .position(position)
                 .status(UserStatus.ACTIVE)
-                .build());
-    }
-
-    private void saveRequirement(
-            String code,
-            String name,
-            BigDecimal requiredHours,
-            Position position,
-            Department department
-    ) {
-        requirementRepository.save(TrainingRequirement.builder()
-                .code(code)
-                .name(name)
-                .requiredHours(requiredHours)
-                .cycleYears(5)
-                .jobPosition(position)
-                .department(department)
-                .effectiveFrom(LocalDate.of(2021, 1, 1))
-                .active(true)
-                .createdByUser(admin)
-                .updatedByUser(admin)
                 .build());
     }
 

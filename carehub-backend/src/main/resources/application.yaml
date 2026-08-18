@@ -3,7 +3,6 @@ server:
 
 app:
   evaluation:
-    legacy-question-set-write-enabled: ${LEGACY_QUESTION_SET_WRITE_ENABLED:false}
     cutover:
       direct-field: ${EVAL_QUESTION_DIRECT_FIELD:true}
       cognitive-verified: ${EVAL_COGNITIVE_VERIFIED:false}
@@ -111,7 +110,6 @@ ai:
   training:
     records:
       review-enabled: ${TRAINING_RECORDS_REVIEW_ENABLED:false}
-      max-edit-count: ${TRAINING_RECORDS_MAX_EDIT_COUNT:2}
     evidence:
       delete-retry-ms: ${TRAINING_EVIDENCE_DELETE_RETRY_MS:600000}
   embedding:

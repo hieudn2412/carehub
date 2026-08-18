@@ -3,7 +3,6 @@ server:
 
 app:
   evaluation:
-    legacy-question-set-write-enabled: true
     cutover:
       direct-field: true
       cognitive-verified: true

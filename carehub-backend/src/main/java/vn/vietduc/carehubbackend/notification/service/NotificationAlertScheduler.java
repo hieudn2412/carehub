@@ -79,8 +79,7 @@ public class NotificationAlertScheduler {
                 PersonalTrainingStatusResponse status = complianceCalculator.calculate(
                         employee,
                         null,
-                        today,
-                        applicableDepartmentIds
+                        today
                 );
                 if (status.status() != ComplianceStatus.AT_RISK
                         && status.status() != ComplianceStatus.NON_COMPLIANT) {

@@ -8,24 +8,20 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
-import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -56,7 +52,6 @@ class ExamAttemptServiceTest {
     private final ExamAssignmentService assignmentService = mock(ExamAssignmentService.class);
     private final ExamAttemptRepository attemptRepository = mock(ExamAttemptRepository.class);
     private final ExamAttemptAnswerRepository answerRepository = mock(ExamAttemptAnswerRepository.class);
-    private final ExamAttemptQuestionRepository attemptQuestionRepository = mock(ExamAttemptQuestionRepository.class);
     private final ExamAssignmentTargetRepository targetRepository = mock(ExamAssignmentTargetRepository.class);
     private final ExamPaperQuestionRepository paperQuestionRepository = mock(ExamPaperQuestionRepository.class);
     private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
@@ -68,7 +63,6 @@ class ExamAttemptServiceTest {
     private final ZoneId examBusinessZone = ZoneId.of("Asia/Ho_Chi_Minh");
     private final AtomicLong ids = new AtomicLong(500);
     private final List<ExamAttemptAnswer> savedAnswers = new ArrayList<>();
-    private final List<ExamAttemptQuestion> savedSelections = new ArrayList<>();
     private ExamAttemptService service;
     private ExamAttempt attempt;
     private ExamPaperQuestion questionOne;
@@ -83,7 +77,6 @@ class ExamAttemptServiceTest {
                 assignmentService,
                 attemptRepository,
                 answerRepository,
-                attemptQuestionRepository,
                 targetRepository,
                 paperQuestionRepository,
                 snapshotRepository,
@@ -100,15 +93,9 @@ class ExamAttemptServiceTest {
                 .name("Nguyễn Văn A")
                 .email("a@example.com")
                 .build();
-        QuestionSet questionSet = QuestionSet.builder()
-                .id(20L)
-                .name("Bộ câu hỏi")
-                .status(QuestionSetStatus.ACTIVE)
-                .build();
         ExamConfig config = ExamConfig.builder()
                 .id(30L)
                 .name("Cấu hình")
-                .questionSet(questionSet)
                 .totalQuestions(2)
                 .timeLimitMinutes(30)
                 .passingScore(6)
@@ -119,7 +106,6 @@ class ExamAttemptServiceTest {
                 .code("EP-1")
                 .name("Đề kiểm tra")
                 .examConfig(config)
-                .questionSet(questionSet)
                 .version(1)
                 .randomSeed(1L)
                 .status(ExamPaperStatus.PUBLISHED)
@@ -150,24 +136,8 @@ class ExamAttemptServiceTest {
                 .totalQuestions(2)
                 .build();
         savedAnswers.clear();
-        savedSelections.clear();
 
         when(attemptRepository.findById(attempt.getId())).thenReturn(Optional.of(attempt));
-        when(attemptQuestionRepository.findByAttemptOrderByPositionAsc(any())).thenAnswer(invocation -> {
-            ExamAttempt selectedAttempt = invocation.getArgument(0);
-            return savedSelections.stream()
-                    .filter(selection -> selection.getAttempt() == selectedAttempt)
-                    .sorted(java.util.Comparator.comparing(ExamAttemptQuestion::getPosition))
-                    .toList();
-        });
-        when(attemptQuestionRepository.findPreviouslySeenQuestionIds(any(), any(), any())).thenReturn(List.of());
-        when(attemptQuestionRepository.save(any())).thenAnswer(invocation -> {
-            ExamAttemptQuestion selection = invocation.getArgument(0);
-            if (!savedSelections.contains(selection)) {
-                savedSelections.add(selection);
-            }
-            return selection;
-        });
         when(assignmentService.isAssignmentEnded(any(ExamAssignment.class), any(LocalDateTime.class)))
                 .thenAnswer(invocation -> {
                     ExamAssignment checked = invocation.getArgument(0);
@@ -246,7 +216,6 @@ class ExamAttemptServiceTest {
                 assignmentService,
                 attemptRepository,
                 answerRepository,
-                attemptQuestionRepository,
                 targetRepository,
                 paperQuestionRepository,
                 snapshotRepository,

@@ -4,9 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
-import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -14,7 +12,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -57,30 +54,10 @@ public class TrainingComplianceCalculator {
         );
     }
 
-    public PersonalTrainingStatusResponse calculate(
-            User employee,
-            Long ignoredProfessionalFieldId,
-            LocalDate asOf,
-            Set<Long> ignoredApplicableDepartmentIds
-    ) {
-        return calculate(employee, ignoredProfessionalFieldId, asOf);
-    }
-
     public ComplianceStatus resolveStatus(BigDecimal requiredHours, BigDecimal submittedHours) {
         return safe(submittedHours).compareTo(safe(requiredHours)) >= 0
                 ? ComplianceStatus.COMPLIANT
                 : ComplianceStatus.NON_COMPLIANT;
-    }
-
-    public BigDecimal sumSubmittedHours(List<TrainingRecord> records) {
-        if (records == null || records.isEmpty()) {
-            return BigDecimal.ZERO;
-        }
-        return records.stream()
-                .filter(record -> record.getWorkflowStatus() == TrainingRecordStatus.SUBMITTED)
-                .map(TrainingRecord::getDeclaredHours)
-                .map(this::safe)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal safe(BigDecimal value) {

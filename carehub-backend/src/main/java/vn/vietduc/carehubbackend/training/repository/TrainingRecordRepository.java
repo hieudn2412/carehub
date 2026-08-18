@@ -18,15 +18,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, Long> {
-    /** Dùng để chống tạo trùng bản ghi CME tự động (mỗi lượt thi đạt chỉ ghi nhận một lần). */
-    boolean existsBySourceReference(String sourceReference);
-
-    Page<TrainingRecord> findByEmployee_Id(Long employeeId, Pageable pageable);
-
-    Page<TrainingRecord> findByEmployee_Department_Id(Long departmentId, Pageable pageable);
-
-    List<TrainingRecord> findByWorkflowStatus(TrainingRecordStatus status);
-
     long countByActivityType_Id(Long activityTypeId);
 
     Page<TrainingRecord> findByActivityType_IdOrderByStartDateDesc(Long activityTypeId, Pageable pageable);
@@ -328,18 +319,4 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
             @Param("windowEnd") LocalDate windowEnd
     );
 
-    @Query("""
-            SELECT r
-            FROM TrainingRecord r
-            WHERE r.employee.id = :employeeId
-              AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
-              AND r.startDate >= :windowStart
-              AND r.startDate <= :windowEnd
-            ORDER BY r.startDate DESC
-            """)
-    List<TrainingRecord> findApprovedRecordsForEmployee(
-            @Param("employeeId") Long employeeId,
-            @Param("windowStart") LocalDate windowStart,
-            @Param("windowEnd") LocalDate windowEnd
-    );
 }

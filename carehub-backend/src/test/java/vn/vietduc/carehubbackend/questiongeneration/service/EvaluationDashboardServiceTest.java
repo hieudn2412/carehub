@@ -18,7 +18,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestion
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.CountByKeyProjection;
 import vn.vietduc.carehubbackend.questiongeneration.repository.projection.QuestionItemAnalysisProjection;
-import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -106,7 +105,6 @@ class EvaluationDashboardServiceTest {
     @Test
     void examOverviewIncludesTargetsWithoutAttemptsAndPaperBreakdown() {
         Department department = Department.builder().id(10L).name("Khoa A").build();
-        ProfessionalField field = ProfessionalField.builder().id(20L).code("HSCC").name("Hồi sức").build();
         ExamPaper paper = ExamPaper.builder()
                 .id(30L)
                 .code("P-01")
@@ -119,7 +117,6 @@ class EvaluationDashboardServiceTest {
                 .id(40L)
                 .name("Đợt 1")
                 .examPaper(paper)
-                .professionalField(field)
                 .status(ExamAssignmentStatus.OPEN)
                 .build();
         User first = user(50L, "NV050", department);

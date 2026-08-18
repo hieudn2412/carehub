@@ -7,16 +7,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
 import vn.vietduc.carehubbackend.training.dto.response.PersonalTrainingStatusResponse;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.ComplianceStatus;
-import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,8 +36,7 @@ import static org.mockito.Mockito.when;
  * </ul>
  *
  * <p>SRS traceability caveat: BR-05 / FR-023 / NAC-05-01 say only <em>approved</em> hours count, but
- * {@link TrainingRecordStatus} has no APPROVED value and both {@code sumSubmittedHours} and
- * {@code TrainingRecordRepository.sumApprovedHoursForEmployee} filter on SUBMITTED — see D1 in
+ * {@code TrainingRecordRepository.sumApprovedHoursForEmployee} filters on SUBMITTED — see D1 in
  * docs/l1-unit-tests/SRS-CODE-DIVERGENCE.md.
  */
 class TrainingComplianceCalculatorTest {
@@ -109,43 +104,6 @@ class TrainingComplianceCalculatorTest {
                     .as("submitted=%s", submitted)
                     .isIn(ComplianceStatus.COMPLIANT, ComplianceStatus.NON_COMPLIANT);
         }
-    }
-
-    // ── Block: sumSubmittedHours() — status partitioning ───────────────────────
-
-    @Test
-    @DisplayName("L1-TCC-07 | EP: only SUBMITTED records are summed; DRAFT and CANCELLED ignored")
-    void onlySubmittedRecordsAreSummed() {
-        BigDecimal total = calculator.sumSubmittedHours(List.of(
-                record(TrainingRecordStatus.SUBMITTED, new BigDecimal("5")),
-                record(TrainingRecordStatus.DRAFT, new BigDecimal("100")),
-                record(TrainingRecordStatus.CANCELLED, new BigDecimal("50"))
-        ));
-
-        assertThat(total).isEqualByComparingTo("5");
-    }
-
-    @Test
-    @DisplayName("L1-TCC-08 | BC-TRUE: sumSubmittedHours(null) → 0 without NPE")
-    void nullRecordListSumsToZero() {
-        assertThat(calculator.sumSubmittedHours(null)).isEqualByComparingTo("0");
-    }
-
-    @Test
-    @DisplayName("L1-TCC-09 | BC-TRUE: sumSubmittedHours(empty list) → 0")
-    void emptyRecordListSumsToZero() {
-        assertThat(calculator.sumSubmittedHours(List.of())).isEqualByComparingTo("0");
-    }
-
-    @Test
-    @DisplayName("L1-TCC-10 | EP-Invalid: SUBMITTED record with null declaredHours contributes 0")
-    void nullDeclaredHoursContributesZero() {
-        BigDecimal total = calculator.sumSubmittedHours(List.of(
-                record(TrainingRecordStatus.SUBMITTED, null),
-                record(TrainingRecordStatus.SUBMITTED, new BigDecimal("7.5"))
-        ));
-
-        assertThat(total).isEqualByComparingTo("7.5");
     }
 
     // ── Block: calculate() — settings-driven window and totals ────────────────
@@ -276,18 +234,6 @@ class TrainingComplianceCalculatorTest {
         assertThat(status.employeeName()).isEqualTo("Employee");
     }
 
-    @Test
-    @DisplayName("L1-TCC-20 | EP: the 4-arg overload ignores the department scope and delegates")
-    void fourArgOverloadDelegatesToTheGlobalCalculation() {
-        when(recordRepository.sumApprovedHoursForEmployee(anyLong(), any(), any()))
-                .thenReturn(new BigDecimal("90"));
-
-        PersonalTrainingStatusResponse global = calculator.calculate(employee(), null, AS_OF);
-        PersonalTrainingStatusResponse scoped = calculator.calculate(employee(), 7L, AS_OF, Set.of(999L));
-
-        assertThat(scoped).isEqualTo(global);
-    }
-
     // ── fixtures ──────────────────────────────────────────────────────────────
 
     private static User employee() {
@@ -299,10 +245,4 @@ class TrainingComplianceCalculatorTest {
                 .build();
     }
 
-    private static TrainingRecord record(TrainingRecordStatus status, BigDecimal declaredHours) {
-        return TrainingRecord.builder()
-                .workflowStatus(status)
-                .declaredHours(declaredHours)
-                .build();
-    }
 }

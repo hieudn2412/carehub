@@ -9,7 +9,6 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
-import vn.vietduc.carehubbackend.training.entity.TrainingRequirement;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -42,9 +41,6 @@ class TrainingRepositoryIntegrationTest {
     private TrainingActivityTypeRepository activityTypeRepository;
 
     @Autowired
-    private TrainingRequirementRepository requirementRepository;
-
-    @Autowired
     private TrainingRecordRepository recordRepository;
 
     @DisplayName("L2-CMP-10 | Query Correctness: sumApprovedHoursForEmployee counts SUBMITTED rows only (DRAFT excluded) inside the window")
@@ -69,15 +65,6 @@ class TrainingRepositoryIntegrationTest {
                 .name("Đào tạo liên tục")
                 .defaultDurationUnit(DurationUnit.HOUR)
                 .requiresEvidence(true)
-                .build());
-        TrainingRequirement requirement = requirementRepository.save(TrainingRequirement.builder()
-                .code("REQ-GMHS-DR")
-                .name("Yêu cầu CME bác sĩ GMHS")
-                .department(department)
-                .jobPosition(position)
-                .requiredHours(BigDecimal.valueOf(120))
-                .cycleYears(5)
-                .effectiveFrom(LocalDate.of(2025, 1, 1))
                 .build());
         recordRepository.save(TrainingRecord.builder()
                 .employee(employee)
@@ -105,15 +92,7 @@ class TrainingRepositoryIntegrationTest {
                 LocalDate.of(2021, 6, 16),
                 LocalDate.of(2026, 6, 16)
         );
-        var candidates = requirementRepository.findActiveCandidates(
-                department.getId(),
-                position.getId(),
-                null,
-                LocalDate.of(2026, 6, 16)
-        );
-
         assertThat(activityTypeRepository.findByCode("CME")).contains(activityType);
         assertThat(submittedHours).isEqualByComparingTo("8");
-        assertThat(candidates).contains(requirement);
     }
 }

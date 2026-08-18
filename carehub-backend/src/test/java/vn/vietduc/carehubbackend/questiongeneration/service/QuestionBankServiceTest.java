@@ -12,14 +12,12 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.paraphrase.ParaphraseMapper;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.model.DuplicateCheckResult;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
@@ -43,7 +41,6 @@ class QuestionBankServiceTest {
     private final DuplicateCheckService duplicateCheckService = mock(DuplicateCheckService.class);
     private final QuestionEmbeddingService embeddingService = mock(QuestionEmbeddingService.class);
     private final QuestionClassificationRuleService classificationRuleService = mock(QuestionClassificationRuleService.class);
-    private final QuestionSetItemRepository questionSetItemRepository = mock(QuestionSetItemRepository.class);
     private final ExamPaperQuestionRepository examPaperQuestionRepository = mock(ExamPaperQuestionRepository.class);
     private final AtomicLong ids = new AtomicLong(10);
     private QuestionBankService service;
@@ -56,14 +53,12 @@ class QuestionBankServiceTest {
                 duplicateCheckService,
                 embeddingService,
                 classificationRuleService,
-                questionSetItemRepository,
                 examPaperQuestionRepository
         );
         when(duplicateCheckService.check(anyString())).thenReturn(new DuplicateCheckResult(0.2, null, null, false, false));
         when(duplicateCheckService.check(anyString(), any())).thenReturn(new DuplicateCheckResult(0.2, null, null, false, false));
         when(classificationRuleService.classifyQuestion(anyString(), any(), any(), any(), any()))
                 .thenReturn(new QuestionClassificationTestResponse(null, null, null, "Chưa phân loại", 0, "Không khớp"));
-        when(questionSetItemRepository.countDistinctQuestionSetsByQuestionAndStatus(any(), eq(QuestionSetStatus.ACTIVE))).thenReturn(0L);
         when(examPaperQuestionRepository.countDistinctExamPapersByQuestionAndStatus(any(), eq(ExamPaperStatus.PUBLISHED))).thenReturn(0L);
         when(questionRepository.save(any(QuestionBankQuestion.class))).thenAnswer(invocation -> {
             QuestionBankQuestion question = invocation.getArgument(0);
@@ -164,7 +159,6 @@ class QuestionBankServiceTest {
     void getQuestionReturnsImpactWarning() {
         QuestionBankQuestion existing = existingQuestion();
         when(questionRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(questionSetItemRepository.countDistinctQuestionSetsByQuestionAndStatus(existing, QuestionSetStatus.ACTIVE)).thenReturn(2L);
         when(examPaperQuestionRepository.countDistinctExamPapersByQuestionAndStatus(existing, ExamPaperStatus.PUBLISHED)).thenReturn(1L);
 
         var response = service.get(existing.getId());
@@ -179,16 +173,15 @@ class QuestionBankServiceTest {
         assertThat(response.sourceDocument()).isEqualTo("Nhập thủ công");
         assertThat(response.statusText()).isEqualTo("Đã duyệt");
         assertThat(response.impactWarning()).isNotNull();
-        assertThat(response.impactWarning().activeQuestionSetCount()).isEqualTo(2);
         assertThat(response.impactWarning().publishedExamPaperCount()).isEqualTo(1);
         assertThat(response.impactWarning().blocksArchive()).isTrue();
     }
 
     @Test
-    void archiveQuestionRejectsWhenQuestionIsUsedByActiveSet() {
+    void archiveQuestionRejectsWhenQuestionIsUsedByPublishedPaper() {
         QuestionBankQuestion existing = existingQuestion();
         when(questionRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(questionSetItemRepository.countDistinctQuestionSetsByQuestionAndStatus(existing, QuestionSetStatus.ACTIVE)).thenReturn(1L);
+        when(examPaperQuestionRepository.countDistinctExamPapersByQuestionAndStatus(existing, ExamPaperStatus.PUBLISHED)).thenReturn(1L);
 
         assertThatThrownBy(() -> service.archive(existing.getId()))
                 .isInstanceOf(BadRequestException.class)
@@ -196,10 +189,10 @@ class QuestionBankServiceTest {
     }
 
     @Test
-    void updateQuestionRejectsDraftStatusWhenQuestionIsUsedByActiveSet() {
+    void updateQuestionRejectsDraftStatusWhenQuestionIsUsedByPublishedPaper() {
         QuestionBankQuestion existing = existingQuestion();
         when(questionRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(questionSetItemRepository.countDistinctQuestionSetsByQuestionAndStatus(existing, QuestionSetStatus.ACTIVE)).thenReturn(1L);
+        when(examPaperQuestionRepository.countDistinctExamPapersByQuestionAndStatus(existing, ExamPaperStatus.PUBLISHED)).thenReturn(1L);
 
         assertThatThrownBy(() -> service.update(existing.getId(), validRequest("DRAFT"), "admin"))
                 .isInstanceOf(BadRequestException.class)

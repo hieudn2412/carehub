@@ -6,7 +6,6 @@ import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
 import vn.vietduc.carehubbackend.training.dto.response.EvidenceMetadataResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordChangeLogResponse;
 import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordDetailResponse;
-import vn.vietduc.carehubbackend.training.dto.response.TrainingRecordListResponse;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
@@ -35,42 +34,10 @@ public class TrainingRecordMapper {
         entity.setDescription(request.description());
         entity.setStartDate(request.startDate());
         entity.setEndDate(request.endDate());
-        entity.setStartTime(request.startTime());
-        entity.setEndTime(request.endTime());
         entity.setDurationValue(request.durationValue());
         entity.setDurationUnit(request.durationUnit());
         entity.setDurationRawText(request.durationRawText());
         entity.setDeclaredHours(request.declaredHours());
-    }
-
-    public TrainingRecordListResponse toListResponse(TrainingRecord entity) {
-        User employee = entity.getEmployee();
-        TrainingActivityType activityType = entity.getActivityType();
-        return new TrainingRecordListResponse(
-                entity.getId(),
-                idOf(employee),
-                employee == null ? null : employee.getEmployeeCode(),
-                employee == null ? null : employee.getName(),
-                idOf(entity.getEmployeeDepartmentSnapshot()),
-                entity.getEmployeeDepartmentSnapshot() == null ? null : entity.getEmployeeDepartmentSnapshot().getName(),
-                activityType == null ? null : activityType.getId(),
-                activityType == null ? null : activityType.getName(),
-                entity.getProfessionalField() == null ? null : entity.getProfessionalField().getId(),
-                professionalFieldDisplayName(entity.getProfessionalField()),
-                entity.getTitle(),
-                entity.getProvider(),
-                entity.getStartDate(),
-                entity.getEndDate(),
-                entity.getDeclaredHours(),
-                entity.getWorkflowStatus(),
-                entity.getSourceType(),
-                entity.getSubmittedAt(),
-                entity.getUpdatedAt(),
-                0,
-                0,
-                0,
-                entity.getVersion()
-        );
     }
 
     public TrainingRecordDetailResponse toDetailResponse(
@@ -106,8 +73,6 @@ public class TrainingRecordMapper {
                 entity.getDescription(),
                 entity.getStartDate(),
                 entity.getEndDate(),
-                entity.getStartTime(),
-                entity.getEndTime(),
                 entity.getDurationValue(),
                 entity.getDurationUnit(),
                 entity.getDurationRawText(),
@@ -126,14 +91,6 @@ public class TrainingRecordMapper {
                 entity.getUpdatedAt(),
                 entity.getVersion()
         );
-    }
-
-    public TrainingRecordDetailResponse toDetailResponse(
-            TrainingRecord entity,
-            List<TrainingEvidenceFile> evidenceFiles,
-            long duplicateCandidateCount
-    ) {
-        return toDetailResponse(entity, evidenceFiles, List.of(), duplicateCandidateCount);
     }
 
     private TrainingRecordChangeLogResponse toChangeLogResponse(TrainingRecordChangeLog changeLog) {
