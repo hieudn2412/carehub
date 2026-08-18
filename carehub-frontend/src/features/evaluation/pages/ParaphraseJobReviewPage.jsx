@@ -9,8 +9,7 @@ import {
   StopOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import {
@@ -241,13 +240,12 @@ function ParaphraseJobReviewPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ onClick: () => navigate(-1), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page qdoc-paraphrase-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ onClick: () => navigate(-1), label: 'Quay lại' }}
+      breadcrumbs={breadcrumbs}
+    >
+      <div className="qdoc-page qdoc-paraphrase-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên diễn đạt lại...</section>
               ) : !jobDetail ? (
@@ -341,9 +339,6 @@ function ParaphraseJobReviewPage() {
                   </section>
                 </>
               )}
-            </div>
-          </main>
-        </div>
       </div>
 
       {editingCandidate && editForm && (
@@ -388,7 +383,7 @@ function ParaphraseJobReviewPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 
   function setEditFormField(field, value) {

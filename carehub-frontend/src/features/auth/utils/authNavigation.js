@@ -1,5 +1,5 @@
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
-import { getPermissionsFromAccessToken, getRolesFromAccessToken } from './jwt.js'
+import { getPermissionsFromAccessToken, getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 
 export const AUTH_ROLE = {
   admin: 'ADMIN',
@@ -18,12 +18,6 @@ export const EVALUATION_PERMISSIONS = [
   'ASSIGNMENT_MANAGER',
   'RESULT_VIEWER',
   'AUDIT_VIEWER',
-]
-
-export const THEORY_DASHBOARD_PERMISSIONS = [
-  'RESULT_VIEWER',
-  'QUESTION_REVIEWER',
-  'EXAM_PUBLISHER',
 ]
 
 function normalizeRoles(roles) {

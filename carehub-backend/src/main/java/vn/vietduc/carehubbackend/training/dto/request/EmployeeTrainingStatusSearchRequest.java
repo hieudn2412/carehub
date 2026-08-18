@@ -7,6 +7,7 @@ import java.time.LocalDate;
 
 public record EmployeeTrainingStatusSearchRequest(
         String keyword,
+        Long employeeId,
         Long departmentId,
         Long jobPositionId,
         Long professionalFieldId,

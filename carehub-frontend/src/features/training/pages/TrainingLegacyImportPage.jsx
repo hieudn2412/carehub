@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   AlertOutlined,
   ArrowLeftOutlined,
@@ -150,11 +150,20 @@ function formatScore(value) {
   return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
 }
 
+function currentYearRange() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return { fromDate: `${year}-01-01`, toDate: `${year}-${month}-${day}` }
+}
+
 function ManagementKpiCard({ type, data, content, onOpen }) {
   const total = Number(data?.total) || 0
   const passed = Number(data?.passed) || 0
   const rate = Number(data?.rate) || 0
   const available = data?.available !== false
+  const isScoreContent = type === 'exams' && ['knowledge', 'skill'].includes(content)
   const labels = {
     training: 'Đào tạo liên tục',
     quality: 'Tuân thủ chung',
@@ -195,7 +204,7 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       {available ? (
         <span className="overview-management-kpi__metrics">
           <strong>{primaryValue}</strong>
-          <b>{formatPercent(rate)}</b>
+          <b>{isScoreContent ? `${formatNumber(total)} nhân viên` : formatPercent(rate)}</b>
         </span>
       ) : (
         <span className="overview-management-kpi__empty">Chưa có dữ liệu</span>
@@ -445,10 +454,14 @@ export default function OverviewDashboard({
   const [showComplianceDetails, setShowComplianceDetails] = useState(false)
   const [complianceTrends, setComplianceTrends] = useState({})
   const [complianceTrendsLoading, setComplianceTrendsLoading] = useState(false)
+  const complianceTrendRequestId = useRef(0)
+  const defaultDates = currentYearRange()
   const activeFilterCount = [
     role === 'admin' && filters.departmentId,
-    filters.employeeCode,
+    filters.employeeCode?.trim(),
     filters.content && filters.content !== 'all',
+    filters.fromDate && filters.fromDate !== defaultDates.fromDate,
+    filters.toDate && filters.toDate !== defaultDates.toDate,
   ].filter(Boolean).length
   const managementTypes = filters.content === 'training'
     ? ['training']
@@ -458,9 +471,23 @@ export default function OverviewDashboard({
         ? ['exams']
         : ['training', 'quality', 'exams']
   const showComplianceSection = !filters.content || filters.content === 'all' || filters.content === 'compliance'
+  const changeFilter = (key, value) => {
+    complianceTrendRequestId.current += 1
+    setShowComplianceDetails(false)
+    setComplianceTrendsLoading(false)
+    onFilterChange(key, value)
+  }
+  const resetFilters = () => {
+    if (role === 'admin') changeFilter('departmentId', '')
+    changeFilter('employeeCode', '')
+    changeFilter('content', 'all')
+    changeFilter('fromDate', defaultDates.fromDate)
+    changeFilter('toDate', defaultDates.toDate)
+  }
 
   useEffect(() => {
     if (isStaff) return
+    complianceTrendRequestId.current += 1
     setShowComplianceDetails(false)
     setComplianceTrends({})
   }, [complianceChart, isStaff])
@@ -468,16 +495,24 @@ export default function OverviewDashboard({
   const openComplianceDetails = async () => {
     setShowComplianceDetails(true)
     if (!onLoadComplianceTrend || !complianceChart.length) return
+    const requestId = ++complianceTrendRequestId.current
     setComplianceTrendsLoading(true)
     const results = await Promise.allSettled(
       complianceChart.map((item) => onLoadComplianceTrend(item.id)),
     )
+    if (requestId !== complianceTrendRequestId.current) return
     setComplianceTrends(Object.fromEntries(results.map((result, index) => [
       complianceChart[index].id,
       result.status === 'fulfilled'
         ? complianceTrend(result.value, filters.fromDate, filters.toDate)
         : [],
     ])))
+    setComplianceTrendsLoading(false)
+  }
+
+  const closeComplianceDetails = () => {
+    complianceTrendRequestId.current += 1
+    setShowComplianceDetails(false)
     setComplianceTrendsLoading(false)
   }
 
@@ -499,6 +534,11 @@ export default function OverviewDashboard({
                   <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
                 )}
               </button>
+              {activeFilterCount > 0 && (
+                <button className="overview-filter-reset" onClick={resetFilters} type="button">
+                  Xóa bộ lọc
+                </button>
+              )}
             </div>
             {onExport && (
               <button className="overview-export" type="button" onClick={onExport}>
@@ -514,7 +554,7 @@ export default function OverviewDashboard({
                 {role === 'admin' ? (
                   <SearchableSelect
                     value={filters.departmentId}
-                    onChange={(value) => onFilterChange('departmentId', value)}
+                    onChange={(value) => changeFilter('departmentId', value)}
                     ariaLabel="Tìm và chọn khoa/phòng"
                     placeholder="Toàn viện"
                     searchPlaceholder="Gõ tên khoa/phòng..."
@@ -537,7 +577,7 @@ export default function OverviewDashboard({
                   type="date"
                   value={filters.fromDate}
                   max={filters.toDate}
-                  onChange={(event) => onFilterChange('fromDate', event.target.value)}
+                  onChange={(event) => changeFilter('fromDate', event.target.value)}
                 />
               </label>
               <label>
@@ -546,7 +586,7 @@ export default function OverviewDashboard({
                   type="date"
                   value={filters.toDate}
                   min={filters.fromDate}
-                  onChange={(event) => onFilterChange('toDate', event.target.value)}
+                  onChange={(event) => changeFilter('toDate', event.target.value)}
                 />
               </label>
               <label>
@@ -555,12 +595,12 @@ export default function OverviewDashboard({
                   type="search"
                   value={filters.employeeCode}
                   placeholder="Nhập mã nhân viên..."
-                  onChange={(event) => onFilterChange('employeeCode', event.target.value)}
+                  onChange={(event) => changeFilter('employeeCode', event.target.value)}
                 />
               </label>
               <label>
                 <span>Nội dung</span>
-                <select value={filters.content} onChange={(event) => onFilterChange('content', event.target.value)}>
+                <select value={filters.content} onChange={(event) => changeFilter('content', event.target.value)}>
                   <option value="all">Tất cả nội dung</option>
                   <option value="training">Giờ đào tạo liên tục</option>
                   <option value="compliance">Tỷ lệ tuân thủ chung</option>
@@ -569,6 +609,9 @@ export default function OverviewDashboard({
                   <option value="classification">Phân loại năng lực</option>
                 </select>
               </label>
+              <p className="overview-filter-hint">
+                Tuân thủ và năng lực dùng toàn bộ khoảng ngày; đào tạo liên tục được tính tại mốc Đến ngày theo mục tiêu 5 năm.
+              </p>
             </div>
           )}
         </section>
@@ -646,7 +689,7 @@ export default function OverviewDashboard({
               loading={complianceTrendsLoading}
               fromDate={filters.fromDate}
               toDate={filters.toDate}
-              onBack={() => setShowComplianceDetails(false)}
+              onBack={closeComplianceDetails}
             />
           ) : (
             <ComplianceTargetChart

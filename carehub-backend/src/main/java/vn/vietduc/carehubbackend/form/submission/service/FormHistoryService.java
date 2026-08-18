@@ -19,6 +19,7 @@ import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.form.service.FormService;
 import vn.vietduc.carehubbackend.form.service.FormVersionService;
 import vn.vietduc.carehubbackend.form.submission.dto.FormHistorySummaryResponse;
+import vn.vietduc.carehubbackend.form.submission.dto.FormHistoryTotalsResponse;
 import vn.vietduc.carehubbackend.form.submission.dto.FormVersionHistorySummaryResponse;
 
 import java.math.BigDecimal;
@@ -122,6 +123,42 @@ public class FormHistoryService {
 
         Long total = jdbc.queryForObject(eligible + "select count(*) from eligible_forms", params, Long.class);
         return new PageImpl<>(content, normalized, total == null ? 0 : total);
+    }
+
+    @Transactional(readOnly = true)
+    public FormHistoryTotalsResponse getSummary(
+            LocalDate dateFrom, LocalDate dateTo, Long subjectUserId) {
+        FormHistoryAccessPolicy.Scope scope = accessPolicy.requireHistoryScope();
+        Period period = period(dateFrom, dateTo);
+        MapSqlParameterSource queryParams = params(scope, period, null)
+                .addValue("subjectUserId", subjectUserId, Types.BIGINT);
+
+        return jdbc.queryForObject(eligibleFormsCte(scope) + """
+                select
+                    count(*) as monitoring_count,
+                    count(*) filter (where s.result_status = 'PASSED') as passed_count,
+                    count(*) filter (where s.result_status in ('FAILED_SCORE', 'FAILED_CRITICAL')) as failed_count,
+                    case when count(*) = 0 then 0
+                         else round((count(*) filter (where s.result_status = 'PASSED') * 100.0 / count(*))::numeric, 2)
+                    end as compliance_rate,
+                    coalesce(round(avg(s.converted_score)::numeric, 2), 0) as average_converted_score
+                from eligible_versions ev
+                join eligible_forms ef on ef.form_id = ev.form_id
+                join form_submissions s on s.form_version_id = ev.version_id
+                left join form_submission_contexts ctx on ctx.submission_id = s.id
+                left join users subject_user on subject_user.id = ctx.subject_user_id
+                where s.status = 'SUBMITTED'
+                  and s.submitted_at >= :fromInstant
+                  and s.submitted_at < :toInstant
+                  and (:isAdmin = true or subject_user.department_id = :departmentId)
+                  and (:subjectUserId is null or subject_user.id = :subjectUserId)
+                """, queryParams, (rs, ignored) -> new FormHistoryTotalsResponse(
+                rs.getLong("monitoring_count"),
+                rs.getLong("passed_count"),
+                rs.getLong("failed_count"),
+                decimal(rs.getObject("compliance_rate")),
+                decimal(rs.getObject("average_converted_score"))
+        ));
     }
 
     @Transactional(readOnly = true)

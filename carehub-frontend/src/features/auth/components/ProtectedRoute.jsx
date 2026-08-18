@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
-import { tokenStorage } from '../services/tokenStorage.js'
-import { getPermissionsFromAccessToken, getRolesFromAccessToken } from '../utils/jwt.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
+import { getPermissionsFromAccessToken, getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import { getDefaultAuthenticatedRoute, hasAnyPermission, hasAnyRole } from '../utils/authNavigation.js'
 
 function ProtectedRoute({ allowFirstLoginSetup = false, allowedRoles = [], allowedPermissions = [], children }) {

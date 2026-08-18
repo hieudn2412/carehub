@@ -13,9 +13,7 @@ const createAssignment = vi.fn()
 
 globalThis.React = React
 
-vi.mock('../../admin/components/AdminSidebar.jsx', () => ({ default: () => <aside data-testid="admin-sidebar" /> }))
-vi.mock('../../admin/components/AdminHeader.jsx', () => ({ default: ({ breadcrumbs }) => <header>{breadcrumbs?.map((item) => item.label).join(' / ')}</header> }))
-vi.mock('../../admin/components/DepartmentCombobox.jsx', () => ({
+vi.mock('../../../shared/components/DepartmentCombobox.jsx', () => ({
   default: ({ departments, value, onChange, placeholder }) => (
     <select aria-label={placeholder} value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">Chọn lĩnh vực</option>

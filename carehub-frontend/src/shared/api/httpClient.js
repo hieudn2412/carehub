@@ -1,5 +1,19 @@
 import axios from 'axios'
-import { tokenStorage } from '../../features/auth/services/tokenStorage.js'
+
+const emptyTokenStorage = {
+  clear() {},
+  getAccessToken: () => null,
+  getRefreshToken: () => null,
+  setAccessToken() {},
+  setRefreshToken() {},
+  setRequiresFirstLoginSetup() {},
+}
+
+let tokenStorage = emptyTokenStorage
+
+export function configureHttpClientAuth(storage) {
+  tokenStorage = storage || emptyTokenStorage
+}
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 let refreshTokenRequest = null

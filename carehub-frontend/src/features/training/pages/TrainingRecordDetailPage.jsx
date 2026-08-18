@@ -6,13 +6,12 @@ import {
   PaperClipOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import EvidenceGallery from '../components/EvidenceGallery.jsx'
-import '../../staff/styles/TrainingHours.css'
+import '../styles/TrainingHours.css'
 
 const statusCfg = {
   SUBMITTED: { label: 'Đã nộp', cls: 'th-badge--success' },
@@ -76,22 +75,19 @@ export default function TrainingRecordDetailPage() {
   const status = statusCfg[record?.workflowStatus] || { label: record?.workflowStatus || '-', cls: 'th-badge--warning' }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ onClick: goBack, label: 'Quay lại' }}
-          breadcrumbs={[
-            { label: 'Giờ đào tạo liên tục', link: '/training/employees' },
-            {
-              label: record?.employeeName || 'Nhân viên',
-              link: record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees',
-            },
-            { label: 'Chi tiết hồ sơ' },
-          ]}
-        />
-        <div className="dashboard-layout__body">
-          <main className="training-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ onClick: goBack, label: 'Quay lại' }}
+      breadcrumbs={[
+        { label: 'Giờ đào tạo liên tục', link: '/training/employees' },
+        {
+          label: record?.employeeName || 'Nhân viên',
+          link: record?.employeeId ? `/training/employees/${record.employeeId}` : '/training/employees',
+        },
+        { label: 'Chi tiết hồ sơ' },
+      ]}
+    >
+      <div className="training-page">
             {loading ? <div className="th-table-state">Đang tải thông tin hồ sơ...</div> : null}
             {error ? (
               <div className="th-table-state" role="alert">
@@ -189,9 +185,7 @@ export default function TrainingRecordDetailPage() {
                 </section>
               </>
             ) : null}
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

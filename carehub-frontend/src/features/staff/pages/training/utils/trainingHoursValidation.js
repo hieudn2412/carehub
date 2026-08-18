@@ -23,6 +23,5 @@ function getTrainingHoursValidationError(value) {
 
 export {
   MAX_TRAINING_HOURS,
-  MIN_TRAINING_HOURS,
   getTrainingHoursValidationError,
 }

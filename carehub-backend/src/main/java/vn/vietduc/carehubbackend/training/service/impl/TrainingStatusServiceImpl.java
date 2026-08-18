@@ -228,7 +228,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
 
     private EmployeeTrainingStatusSearchRequest normalizeCriteria(EmployeeTrainingStatusSearchRequest request) {
         return request == null
-                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null)
+                ? new EmployeeTrainingStatusSearchRequest(null, null, null, null, null, null, null, null, null, null, null)
                 : request;
     }
 
@@ -251,7 +251,9 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 normalizeKeywordPattern(criteria.keyword()),
                 criteria.departmentId(),
                 criteria.jobPositionId()
-        );
+        ).stream()
+                .filter(employee -> criteria.employeeId() == null || criteria.employeeId().equals(employee.getId()))
+                .toList();
         if (candidates.isEmpty()) {
             return List.of();
         }

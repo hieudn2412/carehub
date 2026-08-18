@@ -1,5 +1,5 @@
 import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 function authHeaders() {
   const accessToken = tokenStorage.getAccessToken()
@@ -7,6 +7,13 @@ function authHeaders() {
 }
 
 export const trainingGroupApi = {
+  listAvailableUsers(params = { size: 500 }) {
+    return httpClient.get('/users', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   list(q) {
     return httpClient.get('/training-groups', {
       headers: authHeaders(),

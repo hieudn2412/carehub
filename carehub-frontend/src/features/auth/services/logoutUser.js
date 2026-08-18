@@ -1,5 +1,5 @@
 import { authApi } from '../api/authApi.js'
-import { tokenStorage } from './tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 export async function logoutUser() {
   const refreshToken = tokenStorage.getRefreshToken()

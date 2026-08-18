@@ -1,8 +1,28 @@
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_BASE_URL, server } from '../../test/msw/server.js'
-import { httpClient } from './httpClient.js'
-import { tokenStorage } from '../../features/auth/services/tokenStorage.js'
+import { configureHttpClientAuth, httpClient } from './httpClient.js'
+
+const session = {
+  accessToken: null,
+  refreshToken: null,
+  requiresFirstLoginSetup: false,
+}
+
+const tokenStorage = {
+  clear() {
+    session.accessToken = null
+    session.refreshToken = null
+    session.requiresFirstLoginSetup = false
+  },
+  getAccessToken: () => session.accessToken,
+  getRefreshToken: () => session.refreshToken,
+  setAccessToken: value => { session.accessToken = value || null },
+  setRefreshToken: value => { session.refreshToken = value || null },
+  setRequiresFirstLoginSetup: value => { session.requiresFirstLoginSetup = Boolean(value) },
+}
+
+configureHttpClientAuth(tokenStorage)
 
 /**
  * L1 unit tests — sheet Frontend, Test ID prefix L1-FE (IDs 01–12 live here).

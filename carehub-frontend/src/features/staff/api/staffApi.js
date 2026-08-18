@@ -1,5 +1,5 @@
 import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 function authHeaders() {
   const accessToken = tokenStorage.getAccessToken()
@@ -113,6 +113,13 @@ export const staffApi = {
 
   getDashboardFormSummary(params) {
     return httpClient.get('/dashboard/forms/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getManagerQualityHistorySummary(params) {
+    return httpClient.get('/forms/history/summary', {
       headers: authHeaders(),
       params,
     })

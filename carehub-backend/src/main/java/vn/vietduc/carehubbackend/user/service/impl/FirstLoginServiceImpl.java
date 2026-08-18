@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.auth.repository.PasswordResetRepository;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
+import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.dto.request.CompleteFirstLoginRequest;
 import vn.vietduc.carehubbackend.user.dto.request.SendEmailVerificationRequest;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -32,6 +33,7 @@ public class FirstLoginServiceImpl implements FirstLoginService {
     private final PasswordEncoder passwordEncoder;
     private final SecurityUtils securityUtils;
     private final EmailProducer emailProducer;
+    private final BrandedEmailRenderer emailRenderer;
 
     @Override
     public void sendEmailVerificationOtp(SendEmailVerificationRequest request) {
@@ -56,11 +58,13 @@ public class FirstLoginServiceImpl implements FirstLoginService {
 
         passwordResetRepository.save(resetOtp);
 
+        var renderedEmail = emailRenderer.emailVerificationOtp(user.getName(), otp, OTP_EXPIRY_MINUTES);
         emailProducer.sendEmail(
                 EmailMessage.builder()
                         .to(email)
-                        .subject("Email Verification OTP")
-                        .content("Your OTP is: " + otp)
+                        .subject(renderedEmail.subject())
+                        .content(renderedEmail.plainText())
+                        .htmlContent(renderedEmail.htmlContent())
                         .build()
         );
     }

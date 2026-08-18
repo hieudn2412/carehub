@@ -13,7 +13,7 @@ CareHub — a hospital staff management platform for Continuing Medical Educatio
 - **Build**: `./mvnw clean package -DskipTests`
 - **Test all**: `./mvnw test`
 - **Test single class**: `./mvnw test -Dtest=ClassName`
-- **Infrastructure**: `docker compose up -d` (starts PostgreSQL 17, RabbitMQ 3, Redis 7)
+- **Development infrastructure**: shared PostgreSQL 17 and RabbitMQ 4 on `116.118.6.153`; no local Compose stack
 
 ### Frontend (`carehub-frontend/`)
 - **Dev server**: `npm run dev` (proxies `/api` to `http://localhost:8081` via Vite config — the dev server can be accessed at port 5173, but `VITE_API_BASE_URL` can be set to any environment)
@@ -22,13 +22,13 @@ CareHub — a hospital staff management platform for Continuing Medical Educatio
 - **Preview build**: `npm run preview`
 
 ### Environment
-Backend requires a `.env.properties` or `env.properties` file at the project root (or environment variables) for secrets: `JWT_SECRET`, `DB_*`, `MAIL_*`, `DEEPSEEK_API_KEY`, admin seed credentials, etc. See `application.yaml` for all config keys and their defaults. Frontend uses `.env` (copy from `.env.example`; default `VITE_API_BASE_URL=http://localhost:8081/api/v1`).
+Backend defaults to profile `dev` and loads `.env.dev` from `carehub-backend` (or environment variables) for secrets: `JWT_SECRET`, `DB_*`, `RABBITMQ_*`, `MAIL_*`, `DEEPSEEK_API_KEY`, admin credentials, etc. Production uses profile `prod` and `.env.prod`. Frontend uses `.env` (copy from `.env.example`; default `VITE_API_BASE_URL=http://localhost:8081/api/v1`).
 
 ## Architecture
 
 ### Backend (`carehub-backend/`)
 
-**Stack**: Java 17, Spring Boot 4.0.6, Spring Security (OAuth2 Resource Server + JWT), Spring Data JPA (Hibernate → PostgreSQL 17), RabbitMQ, Redis, Cloudflare R2 (file storage).
+**Stack**: Java 17, Spring Boot 4.0.6, Spring Security (OAuth2 Resource Server + JWT), Spring Data JPA (Hibernate → PostgreSQL 17), RabbitMQ and Cloudflare R2 (file storage).
 
 **API prefix**: `/api/v1` (configured via `app.api-prefix`).
 

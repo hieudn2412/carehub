@@ -4,7 +4,7 @@ import { BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/ico
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
-import { formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
+import { formatNumber } from '../../../../shared/utils/apiUi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerEmployeeDetailPage() {

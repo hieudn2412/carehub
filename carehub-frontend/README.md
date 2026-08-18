@@ -140,10 +140,11 @@ carehub-frontend/
 │  │  └─ training/         # Giờ đào tạo và loại hoạt động đào tạo
 │  ├─ shared/              # Thành phần dùng chung, không chứa nghiệp vụ riêng
 │  │  ├─ api/              # Axios client và xử lý lỗi HTTP chung
+│  │  ├─ auth/             # Lưu token và đọc JWT ở mức hạ tầng
 │  │  ├─ components/       # UI component tái sử dụng
 │  │  ├─ context/          # Context dùng toàn ứng dụng
-│  │  └─ styles/           # Style nền và design pattern dùng chung
-│  ├─ styles/              # Style cấp ứng dụng còn lại
+│  │  ├─ styles/           # Style nền và design pattern dùng chung
+│  │  └─ utils/            # Helper thuần về response và định dạng hiển thị
 │  ├─ test/                # Vitest setup và test helpers
 │  └─ main.jsx             # Entry point
 ├─ .env.example
@@ -206,7 +207,9 @@ nhập URL trực tiếp. Backend luôn là nơi quyết định quyền cuối 
 ## 9. API và xác thực
 
 - Axios client chung: `src/shared/api/httpClient.js`.
-- Token/session helpers nằm trong feature `auth`.
+- Token storage và JWT helpers nằm tại `src/shared/auth` vì `httpClient`, route
+  guard và nhiều feature cùng sử dụng. Luồng đăng nhập/đăng xuất và điều hướng
+  xác thực vẫn thuộc feature `auth`.
 - Feature API chỉ nhận dữ liệu cần thiết từ page và trả dữ liệu đã chuẩn hóa khi
   hợp lý.
 - Không log token, mật khẩu, OTP hoặc dữ liệu nhạy cảm.

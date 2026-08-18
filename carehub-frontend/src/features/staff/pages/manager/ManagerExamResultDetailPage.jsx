@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom'
 import { LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { examAssignmentApi } from '../../../../features/evaluation/api/examAssignmentApi'
-import { formatNumber } from '../../../../features/evaluation/utils/documentQuestionUi.js'
+import { formatNumber } from '../../../../shared/utils/apiUi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerExamResultDetailPage() {

@@ -2,10 +2,10 @@ import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import Icon from '../../../shared/components/Icon.jsx'
-import { tokenStorage } from '../services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getDefaultAuthenticatedRoute } from '../utils/authNavigation.js'
-import { getRolesFromAccessToken } from '../utils/jwt.js'
-import '../../../styles/EmailConfirmScreen.css'
+import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
+import '../styles/auth/email-confirm.css'
 
 function EmailConfirmSuccessScreen() {
   const navigate = useNavigate()

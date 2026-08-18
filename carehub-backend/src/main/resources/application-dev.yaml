@@ -1,0 +1,50 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+app:
+  mail:
+    from: ${MAIL_FROM}
+    from-name: ${MAIL_FROM_NAME:VietDuc Care}
+    reply-to: ${MAIL_REPLY_TO:}
+    brand-name: ${MAIL_BRAND_NAME:VietDuc Care}
+    website-url: ${MAIL_WEBSITE_URL:https://quanlydieuduongvd.org}
+    support-email: ${MAIL_SUPPORT_EMAIL:}
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*}
+  import:
+    # Shared development must not silently fall back to a known password.
+    default-password: ${DEFAULT_PASSWORD}
+  notification:
+    rabbit-listener-enabled: ${RABBITMQ_LISTENER_ENABLED:true}
+  seed:
+    # Never seed or overwrite the shared VPS data unless explicitly requested.
+    enabled: ${APP_SEED_ENABLED:false}
+
+spring:
+  config:
+    import:
+      - optional:file:./.env.dev[.properties]
+      - optional:file:./carehub-backend/.env.dev[.properties]
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://116.118.6.153:5432/carehub}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  flyway:
+    baseline-on-migrate: true
+    # This value is ignored when the shared database already has Flyway history.
+    baseline-version: 17
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:116.118.6.153}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+    virtual-host: ${RABBITMQ_VIRTUAL_HOST:/}
+    dynamic: ${RABBITMQ_LISTENER_ENABLED:true}
+    listener:
+      simple:
+        auto-startup: ${RABBITMQ_LISTENER_ENABLED:true}
+      direct:
+        auto-startup: ${RABBITMQ_LISTENER_ENABLED:true}

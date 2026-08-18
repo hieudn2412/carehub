@@ -9,8 +9,7 @@ import {
   PlayCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
@@ -163,13 +162,12 @@ function QuestionDocumentDetailPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/question-documents', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ to: '/admin/evaluation/question-documents', label: 'Quay lại' }}
+      breadcrumbs={breadcrumbs}
+    >
+      <div className="qdoc-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải chi tiết tài liệu...</section>
               ) : !documentDetail ? (
@@ -315,9 +313,6 @@ function QuestionDocumentDetailPage() {
                   </section>
                 </>
               )}
-            </div>
-          </main>
-        </div>
       </div>
 
       {showJobModal && documentDetail && (
@@ -431,7 +426,7 @@ function QuestionDocumentDetailPage() {
           </form>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 

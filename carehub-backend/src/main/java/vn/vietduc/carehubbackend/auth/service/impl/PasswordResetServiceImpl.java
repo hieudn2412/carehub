@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.auth.service.PasswordResetService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
+import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.auth.dto.request.ForgotPasswordRequest;
 import vn.vietduc.carehubbackend.auth.dto.request.ResetPasswordRequest;
 import vn.vietduc.carehubbackend.auth.entity.PasswordResetOtp;
@@ -22,10 +23,13 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class PasswordResetServiceImpl implements PasswordResetService {
+    private static final int OTP_EXPIRY_MINUTES = 5;
+
     private final PasswordResetRepository passwordResetRepository;
     private final UserRepository userRepository;
     private final EmailProducer emailProducer;
     private final PasswordEncoder passwordEncoder;
+    private final BrandedEmailRenderer emailRenderer;
 
     @Transactional
     public void forgotPassword(
@@ -49,17 +53,19 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 .email(user.getEmail())
                 .otp(otp)
                 .emailVerification(false)
-                .expiredAt(LocalDateTime.now().plusMinutes(5))
+                .expiredAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES))
                 .used(false)
                 .build();
 
         passwordResetRepository.save(resetOtp);
 
+        var email = emailRenderer.passwordResetOtp(user.getName(), otp, OTP_EXPIRY_MINUTES);
         emailProducer.sendEmail(
                 EmailMessage.builder()
                         .to(user.getEmail())
-                        .subject("Reset Password OTP")
-                        .content("Your OTP is: " + otp)
+                        .subject(email.subject())
+                        .content(email.plainText())
+                        .htmlContent(email.htmlContent())
                         .build()
         );
     }
