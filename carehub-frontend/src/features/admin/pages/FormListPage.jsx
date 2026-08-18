@@ -22,7 +22,7 @@ import {
   getChecklistDisplayCode,
   resolveChecklistSearchKeyword,
 } from '../utils/formCode.js'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/FormListPage.css'

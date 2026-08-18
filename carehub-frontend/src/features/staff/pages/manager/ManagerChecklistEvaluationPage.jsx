@@ -14,7 +14,7 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
-import ConfirmModal from '../../../admin/components/ConfirmModal.jsx'
+import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { adminApi } from '../../../admin/api/adminApi.js'

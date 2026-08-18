@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ChangePasswordModal from '../components/ChangePasswordModal'
+import ChangePasswordModal from '../../../shared/components/ChangePasswordModal.jsx'
 import EditProfileModal from '../components/EditProfileModal.jsx'
-import ProfileDetails from '../components/ProfileDetails'
+import ProfileDetails from '../../../shared/components/ProfileDetails.jsx'
 import { staffApi } from '../api/staffApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import '../styles/ProfileStaffScreen.css'
+import '../../../shared/styles/profile.css'
 
 function ProfileStaffScreen() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -46,7 +46,11 @@ function ProfileStaffScreen() {
           showToast('Cập nhật hồ sơ cá nhân thành công', 'success')
         }}
       />
-      <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ChangePasswordModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmitPassword={staffApi.changePassword}
+      />
     </AppShell>
   )
 }

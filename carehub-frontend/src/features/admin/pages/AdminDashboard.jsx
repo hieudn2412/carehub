@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdminSidebar from '../components/AdminSidebar.jsx'
-import AdminHeader from '../components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import OverviewDashboard from '../../dashboard/components/OverviewDashboard.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
@@ -205,30 +204,22 @@ export default function AdminDashboard() {
   }, [filteredEmployeeId, filters.departmentId, filters.fromDate, filters.toDate])
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Dashboard tổng quan' }]} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <OverviewDashboard
-              role="admin"
-              loading={loading}
-              error={error || departmentsError}
-              filters={filters}
-              departments={departments}
-              onFilterChange={(key, value) => {
-                dashboardRequestId.current += 1
-                setFilters((current) => ({ ...current, [key]: value }))
-              }}
-              onNavigate={navigate}
-              domains={domains}
-              complianceChart={complianceChart}
-              onLoadComplianceTrend={loadComplianceTrend}
-            />
-          </main>
-        </div>
-      </div>
-    </div>
+    <AppShell className="dashboard-layout" breadcrumbs={[{ label: 'Dashboard tổng quan' }]}>
+      <OverviewDashboard
+        role="admin"
+        loading={loading}
+        error={error || departmentsError}
+        filters={filters}
+        departments={departments}
+        onFilterChange={(key, value) => {
+          dashboardRequestId.current += 1
+          setFilters((current) => ({ ...current, [key]: value }))
+        }}
+        onNavigate={navigate}
+        domains={domains}
+        complianceChart={complianceChart}
+        onLoadComplianceTrend={loadComplianceTrend}
+      />
+    </AppShell>
   )
 }

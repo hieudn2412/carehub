@@ -14,9 +14,8 @@ import {
   SyncOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import { apiData, apiErrorMessage, cognitiveLevelText, COGNITIVE_LEVELS, normalizeText } from '../utils/documentQuestionUi.js'
@@ -424,13 +423,8 @@ function QuestionBankListPage() {
 
   return (
     <>
-      <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qbl-page">
+      <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+        <div className="qbl-page">
               {!apiAvailable && (
                 <div className="qbl-warning">
                   Đang hiển thị dữ liệu demo vì chưa lấy được ngân hàng câu hỏi từ backend.
@@ -651,11 +645,8 @@ function QuestionBankListPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </main>
         </div>
-      </div>
-      </div>
+      </AppShell>
       {paraphraseTarget && (
         <div className="qbl-modal-backdrop">
           <div className="qbl-modal" role="dialog" aria-modal="true" aria-labelledby="create-paraphrase-title">

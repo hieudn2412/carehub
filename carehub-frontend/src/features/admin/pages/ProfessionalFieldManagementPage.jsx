@@ -11,8 +11,7 @@ import {
   SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons'
-import AdminHeader from '../components/AdminHeader.jsx'
-import AdminSidebar from '../components/AdminSidebar.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ProfessionalFieldManagementPage.css'
@@ -248,11 +247,11 @@ function ProfessionalFieldManagementPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Lĩnh vực chuyên môn' }]} />
-        <main className="pfm-page">
+    <AppShell
+      className="dashboard-layout"
+      breadcrumbs={[{ label: 'Đào tạo' }, { label: 'Lĩnh vực chuyên môn' }]}
+    >
+      <div className="pfm-page">
           <section className="pfm-heading">
             <div>
               <h1>Quản lý lĩnh vực chuyên môn</h1>
@@ -397,7 +396,7 @@ function ProfessionalFieldManagementPage() {
               </div>
             </section>
           </div>
-        </main>
+      </div>
         {formModalOpen && (
           <div
             className="pfm-modal-backdrop"
@@ -552,8 +551,7 @@ function ProfessionalFieldManagementPage() {
             </form>
           </div>
         )}
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

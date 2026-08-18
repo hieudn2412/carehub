@@ -8,9 +8,7 @@ globalThis.React = React
 const listExamPapers = vi.fn()
 const showToast = vi.fn()
 
-vi.mock('../../admin/components/AdminSidebar.jsx', () => ({ default: () => <aside /> }))
-vi.mock('../../admin/components/AdminHeader.jsx', () => ({ default: () => <header /> }))
-vi.mock('../../admin/components/ConfirmModal.jsx', () => ({ default: () => null }))
+vi.mock('../../../shared/components/ConfirmModal.jsx', () => ({ default: () => null }))
 vi.mock('../components/ExamManagementViewSwitch.jsx', () => ({ default: () => <nav /> }))
 vi.mock('../../../shared/context/ToastContext.jsx', () => ({ useToast: () => ({ showToast }) }))
 vi.mock('../api/examPaperApi.js', () => ({

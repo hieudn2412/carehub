@@ -11,9 +11,8 @@ import {
   StopOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
@@ -385,13 +384,12 @@ function DocumentQuestionJobReviewPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ onClick: () => navigate(-1), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ onClick: () => navigate(-1), label: 'Quay lại' }}
+      breadcrumbs={breadcrumbs}
+    >
+      <div className="qdoc-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên tạo câu hỏi...</section>
               ) : !jobDetail ? (
@@ -571,9 +569,6 @@ function DocumentQuestionJobReviewPage() {
                   </section>
                 </>
               )}
-            </div>
-          </main>
-        </div>
       </div>
 
       {editingCandidate && editForm && (
@@ -723,7 +718,7 @@ function DocumentQuestionJobReviewPage() {
         onCancel={() => setIsCancelConfirmOpen(false)}
         onConfirm={confirmCancelJob}
       />
-    </div>
+    </AppShell>
   )
 
   function setEditFormField(field, value) {

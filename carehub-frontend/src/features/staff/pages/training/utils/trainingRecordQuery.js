@@ -114,12 +114,10 @@ function countActiveFilterGroups(filters = {}) {
 }
 
 export {
-  VALID_STATUS_VALUES,
   buildTrainingAllUrl,
   countActiveFilterGroups,
   createEmptyTrainingFilters,
   isDateRangeValid,
-  isValidIsoDate,
   parseTrainingQuery,
   serializeTrainingQuery,
   toTrainingListApiParams,

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ChangePasswordModal from '../../staff/components/ChangePasswordModal'
-import ProfileDetails from '../../staff/components/ProfileDetails'
+import ChangePasswordModal from '../../../shared/components/ChangePasswordModal.jsx'
+import ProfileDetails from '../../../shared/components/ProfileDetails.jsx'
 import { staffApi } from '../../staff/api/staffApi'
-import '../../staff/styles/ProfileStaffScreen.css'
+import '../../../shared/styles/profile.css'
 
 function AdminProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -31,7 +31,11 @@ function AdminProfilePage() {
         fallbackInitials="AD"
         onChangePassword={() => setIsModalOpen(true)}
       />
-      <ChangePasswordModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ChangePasswordModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmitPassword={staffApi.changePassword}
+      />
     </AppShell>
   )
 }

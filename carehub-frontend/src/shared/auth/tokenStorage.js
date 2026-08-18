@@ -16,7 +16,6 @@ export const tokenStorage = {
       window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
       return
     }
-
     window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
   },
 
@@ -29,7 +28,6 @@ export const tokenStorage = {
       window.sessionStorage.removeItem(REFRESH_TOKEN_KEY)
       return
     }
-
     window.sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
   },
 

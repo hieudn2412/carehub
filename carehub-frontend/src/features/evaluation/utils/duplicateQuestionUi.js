@@ -1,5 +1,5 @@
-export const DUPLICATE_REVIEW_THRESHOLD = 0.88
-export const STRONG_DUPLICATE_THRESHOLD = 0.95
+const DUPLICATE_REVIEW_THRESHOLD = 0.88
+const STRONG_DUPLICATE_THRESHOLD = 0.95
 
 export function hasPotentialDuplicate(candidate) {
   if (typeof candidate?.duplicateNeedsReview === 'boolean') {

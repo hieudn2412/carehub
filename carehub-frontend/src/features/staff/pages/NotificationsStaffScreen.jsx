@@ -15,9 +15,8 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
-import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { notificationsApi } from '../api/notificationsApi.js'
 import { publishNotificationStateChange } from '../hooks/useNotifications.js'
 import '../styles/NotificationsStaffScreen.css'
 
@@ -58,9 +57,6 @@ function NotificationsStaffScreen() {
   // Hàm tải thông báo từ API
   const fetchNotifications = useCallback(() => {
     setLoading(true)
-    const token = tokenStorage.getAccessToken()
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
-
     const params = {
       page,
       size,
@@ -74,7 +70,7 @@ function NotificationsStaffScreen() {
       params.read = true
     }
 
-    httpClient.get('/me/notifications', { headers, params })
+    notificationsApi.list(params)
       .then((response) => {
         const data = response.data?.data
         setNotifications(data?.content || [])
@@ -102,9 +98,7 @@ function NotificationsStaffScreen() {
     setSelectedNotification(notif)
 
     try {
-      const token = tokenStorage.getAccessToken()
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      const response = await httpClient.get(`/me/notifications/${notif.id}`, { headers })
+      const response = await notificationsApi.get(notif.id)
 
       const freshData = response.data?.data
       if (freshData) {
@@ -129,9 +123,7 @@ function NotificationsStaffScreen() {
     publishNotificationStateChange({ readId: id, decrementUnreadBy: 1 })
 
     try {
-      const token = tokenStorage.getAccessToken()
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await httpClient.patch(`/me/notifications/${id}`, { read: true }, { headers })
+      await notificationsApi.markAsRead(id)
       if (!silent) {
         showToast("Đã đánh dấu là đã đọc.", "success")
       }
@@ -151,9 +143,7 @@ function NotificationsStaffScreen() {
     }
 
     try {
-      const token = tokenStorage.getAccessToken()
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await httpClient.delete(`/me/notifications/${id}`, { headers })
+      await notificationsApi.delete(id)
       setTotalElements(prev => Math.max(0, prev - 1))
       showToast("Đã xóa thông báo thành công.", "success")
     } catch (err) {
@@ -173,9 +163,7 @@ function NotificationsStaffScreen() {
     publishNotificationStateChange({ markAllRead: true, unreadCount: 0 })
 
     try {
-      const token = tokenStorage.getAccessToken()
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
-      await httpClient.patch('/me/notifications/read-status', { read: true }, { headers })
+      await notificationsApi.markAllAsRead()
       showToast("Đã đánh dấu đọc tất cả thông báo.", "success")
     } catch (err) {
       console.error("Lỗi khi đánh dấu tất cả đã đọc:", err)

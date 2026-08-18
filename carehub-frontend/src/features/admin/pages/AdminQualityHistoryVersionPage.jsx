@@ -16,7 +16,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'

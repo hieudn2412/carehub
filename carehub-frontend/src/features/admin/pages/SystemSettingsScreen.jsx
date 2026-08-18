@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ClockCircleOutlined, LoadingOutlined, SaveOutlined, TrophyOutlined } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { adminApi } from '../api/adminApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/SystemSettingsScreen.css'
 

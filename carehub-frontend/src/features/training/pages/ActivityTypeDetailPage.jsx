@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import '../styles/training.css'

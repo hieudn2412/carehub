@@ -18,9 +18,9 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
-import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
-import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
-import '../../styles/TrainingHours.css'
+import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
+import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
+import '../../../training/styles/TrainingHours.css'
 
 const PREVIEWABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
 

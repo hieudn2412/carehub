@@ -13,7 +13,7 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import {
