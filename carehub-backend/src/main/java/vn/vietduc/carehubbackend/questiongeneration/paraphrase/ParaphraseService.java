@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
+import vn.vietduc.carehubbackend.exception.ServiceUnavailableException;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiParaphraseProperties;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.BatchParaphraseCandidateActionRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateBatchParaphraseJobsRequest;
@@ -58,6 +59,7 @@ public class ParaphraseService {
 
     @Transactional
     public ParaphraseJobResponse createJob(Long questionId, CreateParaphraseJobRequest request, String actor) {
+        requireParaphraseAvailable();
         QuestionBankQuestion source = findQuestion(questionId);
         if (source.getStatus() != QuestionBankStatus.APPROVED) {
             throw new BadRequestException("Chỉ có thể diễn đạt lại câu hỏi đã duyệt");
@@ -86,6 +88,7 @@ public class ParaphraseService {
 
     @Transactional
     public BatchParaphraseJobResponse createBatchJobs(CreateBatchParaphraseJobsRequest request, String actor) {
+        requireParaphraseAvailable();
         List<Long> questionIds = normalizedQuestionIds(request);
         CreateParaphraseJobRequest jobRequest = new CreateParaphraseJobRequest(
                 request == null ? null : request.requestedCount(),
@@ -417,6 +420,12 @@ public class ParaphraseService {
         candidate.setDuplicateQuestionId(validation.duplicateQuestionId());
         candidate.setDuplicateQuestionStemSnapshot(validation.duplicateQuestionStem());
         candidate.setWarnings(toJson(validation.warnings()));
+    }
+
+    private void requireParaphraseAvailable() {
+        if (properties.isDisabledProvider()) {
+            throw new ServiceUnavailableException("Dịch vụ diễn đạt lại chưa được bật");
+        }
     }
 
     private QuestionBankQuestion findQuestion(Long questionId) {
