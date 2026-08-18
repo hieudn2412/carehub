@@ -18,9 +18,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategor
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetCategoryRepository;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetCategory;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankLessonCatalog;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
@@ -59,7 +56,6 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final QuestionBankQuestionRepository questionRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
-    private final QuestionSetCategoryRepository questionSetCategoryRepository;
     private final ProfessionalFieldRepository professionalFieldRepository;
     private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
@@ -88,9 +84,6 @@ public class DataSeeder implements CommandLineRunner {
     @Value("${app.seed.professional-fields.resource:classpath:professional-fields/nursing-professional-fields.json}")
     private String professionalFieldSeedResource;
 
-    @Value("${app.evaluation.legacy-question-set-write-enabled:false}")
-    private boolean legacyQuestionSetWriteEnabled;
-
     @Override
     public void run(String... args) {
         if (!seedEnabled) {
@@ -106,11 +99,6 @@ public class DataSeeder implements CommandLineRunner {
         seedAdminUser(adminRole);
         seedProfessionalFields();
         seedQuestionCategories();
-        if (legacyQuestionSetWriteEnabled) {
-            seedQuestionSetCategories();
-        } else {
-            log.info("Legacy question-set purpose seed is disabled");
-        }
         seedQuestionBank();
     }
 
@@ -163,7 +151,6 @@ public class DataSeeder implements CommandLineRunner {
         Map<String, String> labels = Map.of(
                 EvaluationPermissions.QUESTION_AUTHOR, "Tạo và sửa câu hỏi",
                 EvaluationPermissions.QUESTION_REVIEWER, "Duyệt câu hỏi AI/paraphrase",
-                EvaluationPermissions.QUESTION_SET_MANAGER, "Quản lý bộ câu hỏi",
                 EvaluationPermissions.EXAM_CONFIG_MANAGER, "Quản lý cấu hình đề",
                 EvaluationPermissions.EXAM_PUBLISHER, "Sinh và phát hành bộ đề",
                 EvaluationPermissions.ASSIGNMENT_MANAGER, "Quản lý phân công kiểm tra",
@@ -199,27 +186,6 @@ public class DataSeeder implements CommandLineRunner {
                 questionCategoryRepository.save(category);
                 log.info("Seeded question category: {}", lesson.name());
             }
-        }
-    }
-
-    private void seedQuestionSetCategories() {
-        List<String[]> categories = List.of(
-                new String[]{"ON_TAP", "Ôn tập"},
-                new String[]{"DAU_VAO", "Đánh giá đầu vào"},
-                new String[]{"SAU_DAO_TAO", "Sau đào tạo"},
-                new String[]{"DINH_KY", "Đánh giá định kỳ"},
-                new String[]{"BU_KIEN_THUC", "Bù kiến thức"},
-                new String[]{"THI_THU", "Thi thử"}
-        );
-        for (String[] item : categories) {
-            questionSetCategoryRepository.findByCode(item[0]).orElseGet(() -> questionSetCategoryRepository.save(
-                    QuestionSetCategory.builder()
-                            .code(item[0])
-                            .name(item[1])
-                            .status(QuestionSetCategoryStatus.ACTIVE)
-                            .createdBy("system-seed")
-                            .build()
-            ));
         }
     }
 

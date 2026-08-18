@@ -5,7 +5,6 @@ app:
   mail:
     from: no-reply@example.test
   evaluation:
-    legacy-question-set-write-enabled: true
     cutover:
       direct-field: true
       cognitive-verified: true

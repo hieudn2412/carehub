@@ -409,9 +409,7 @@ public class EvaluationDashboardService {
                 .filter(a -> assignmentId == null || (a.getAssignment() != null && a.getAssignment().getId().equals(assignmentId)))
                 .filter(a -> departmentId == null || (a.getUser() != null && a.getUser().getDepartment() != null
                         && a.getUser().getDepartment().getId().equals(departmentId)))
-                .filter(a -> professionalFieldId == null || (a.getAssignment() != null
-                        && a.getAssignment().getProfessionalField() != null
-                        && a.getAssignment().getProfessionalField().getId().equals(professionalFieldId)))
+                .filter(a -> professionalFieldId == null)
                 .toList();
     }
 
@@ -432,8 +430,7 @@ public class EvaluationDashboardService {
                         || paperId.equals(target.getAssignment().getExamPaper().getId()))
                 .filter(target -> assignmentId == null
                         || assignmentId.equals(target.getAssignment().getId()))
-                .filter(target -> professionalFieldId == null
-                        || professionalFieldId.equals(professionalFieldId(target.getAssignment())))
+                .filter(target -> professionalFieldId == null)
                 .filter(target -> employeeId == null || employeeId.equals(target.getUser().getId()))
                 .toList();
     }
@@ -448,8 +445,8 @@ public class EvaluationDashboardService {
         EvaluationExamResultsSummaryResponse summary = summarizeAttempts(scopedAttempts);
         return new EvaluationExamDashboardResponse.ProfessionalFieldItem(
                 professionalFieldId(assignment),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
-                assignment.getProfessionalField() == null ? "Chưa xác định" : assignment.getProfessionalField().getName(),
+                null,
+                "Chưa xác định",
                 distinctAssignmentCount(targets),
                 targets.size(),
                 notStartedCount(targets, startedTargetKeys),
@@ -469,13 +466,7 @@ public class EvaluationDashboardService {
         ExamPaper paper = targets.get(0).getAssignment().getExamPaper();
         List<ExamAttempt> scopedAttempts = attemptsForTargets(attempts, targets);
         EvaluationExamResultsSummaryResponse summary = summarizeAttempts(scopedAttempts);
-        List<String> fieldNames = targets.stream()
-                .map(ExamAssignmentTarget::getAssignment)
-                .map(ExamAssignment::getProfessionalField)
-                .map(field -> field == null ? "Chưa xác định" : field.getName())
-                .distinct()
-                .sorted(String.CASE_INSENSITIVE_ORDER)
-                .toList();
+        List<String> fieldNames = List.of("Chưa xác định");
         return new EvaluationExamDashboardResponse.PaperItem(
                 paper.getId(),
                 paper.getCode(),
@@ -524,7 +515,7 @@ public class EvaluationDashboardService {
     }
 
     private Long professionalFieldId(ExamAssignment assignment) {
-        return assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId();
+        return null;
     }
 
     private String targetKey(ExamAssignment assignment, Long userId) {

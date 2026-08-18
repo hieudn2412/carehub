@@ -51,7 +51,6 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             SELECT a FROM ExamAttempt a
             LEFT JOIN FETCH a.examPaper ep
             LEFT JOIN FETCH ep.examConfig ec
-            LEFT JOIN FETCH ec.questionSet qs
             WHERE a.user = :user
               AND a.status IN ('SUBMITTED', 'GRADED')
               AND a.submittedAt >= :fromDate
@@ -69,7 +68,6 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
             LEFT JOIN FETCH u.department
             LEFT JOIN FETCH a.examPaper ep
             LEFT JOIN FETCH ep.examConfig ec
-            LEFT JOIN FETCH ec.questionSet qs
             WHERE a.user.id IN :userIds
               AND a.status IN ('SUBMITTED', 'GRADED')
               AND a.submittedAt >= :fromDate

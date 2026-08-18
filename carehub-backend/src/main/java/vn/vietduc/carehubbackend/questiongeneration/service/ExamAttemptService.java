@@ -17,7 +17,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignmentTarget;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
-import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
@@ -29,7 +28,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisib
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -62,7 +60,6 @@ public class ExamAttemptService {
     private final ExamAssignmentService assignmentService;
     private final ExamAttemptRepository attemptRepository;
     private final ExamAttemptAnswerRepository answerRepository;
-    private final ExamAttemptQuestionRepository attemptQuestionRepository;
     private final ExamAssignmentTargetRepository targetRepository;
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
@@ -163,7 +160,6 @@ public class ExamAttemptService {
                 .totalQuestions(paper.getTotalQuestions())
                 .presentationSeed(ThreadLocalRandom.current().nextLong())
                 .build());
-        initializeAttemptQuestions(attempt);
         return toResponse(attempt, true, false, true);
     }
 
@@ -357,9 +353,6 @@ public class ExamAttemptService {
                 attempt.getExamPaper().getId(),
                   attempt.getExamPaper().getCode(),
                   attempt.getExamPaper().getName(),
-                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getId(),
-                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getCode(),
-                  attempt.getAssignment().getProfessionalField() == null ? null : attempt.getAssignment().getProfessionalField().getName(),
                   attempt.getUser().getId(),
                 attempt.getUser().getEmployeeCode(),
                 attempt.getUser().getName(),
@@ -432,10 +425,6 @@ public class ExamAttemptService {
     }
 
     private List<ExamPaperQuestion> presentedQuestions(ExamAttempt attempt) {
-        List<ExamAttemptQuestion> selections = attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt);
-        if (!selections.isEmpty()) {
-            return selections.stream().map(ExamAttemptQuestion::getPaperQuestion).toList();
-        }
         List<ExamPaperQuestion> questions = new ArrayList<>(questionsForAttempt(attempt));
         ExamAssignment assignment = attempt.getAssignment();
         if (attempt.getPresentationSeed() == null
@@ -448,19 +437,7 @@ public class ExamAttemptService {
         return questions;
     }
 
-    /**
-     * Đề thi hiện luôn là FIXED_PAPER theo ma trận mức độ nhận thức, không còn
-     * chọn câu theo tỷ lệ độ khó cho từng lượt thi.
-     */
-    private void initializeAttemptQuestions(ExamAttempt attempt) {
-        // no-op
-    }
-
     private List<ExamPaperQuestion> questionsForAttempt(ExamAttempt attempt) {
-        List<ExamAttemptQuestion> selections = attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt);
-        if (!selections.isEmpty()) {
-            return selections.stream().map(ExamAttemptQuestion::getPaperQuestion).toList();
-        }
         return paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
     }
 
