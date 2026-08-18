@@ -18,9 +18,9 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
-import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
-import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
-import '../../styles/TrainingHours.css'
+import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
+import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
+import '../../../training/styles/TrainingHours.css'
 
 const PREVIEWABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png'])
 
@@ -382,16 +382,6 @@ function TrainingHoursDetailScreen() {
                                   {getEvidenceTypeLabel(ev)}{fileSize ? ` · ${fileSize}` : ''}
                                 </span>
                               </span>
-                              <span className={`th-badge th-badge--${
-                                ev.moderationStatus === 'PASSED' ? 'success'
-                                  : ev.moderationStatus === 'FAILED' || ev.moderationStatus === 'ERROR' ? 'danger'
-                                  : 'warning'
-                              } th-badge--sm`}>
-                                {ev.moderationStatus === 'PASSED' ? 'Đã duyệt'
-                                  : ev.moderationStatus === 'FAILED' ? 'Từ chối'
-                                  : ev.moderationStatus === 'ERROR' ? 'Lỗi'
-                                  : 'Chờ duyệt'}
-                              </span>
                               <span className="th-evidence-item__actions">
                                 <button
                                   type="button"
@@ -464,9 +454,6 @@ function TrainingHoursDetailScreen() {
                       </button>
                       <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/edit`)}>
                         <EditOutlined /> Chỉnh sửa
-                      </button>
-                      <button className="th-detail-btn" onClick={() => navigate(`/staff/training/${record.id}/evidence`)}>
-                        <PaperClipOutlined /> Quản lý minh chứng
                       </button>
                       <button
                         className="th-detail-btn th-detail-btn--danger"

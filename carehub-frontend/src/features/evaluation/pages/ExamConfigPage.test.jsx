@@ -10,11 +10,10 @@ const publishExamPaper = vi.fn()
 const createAudience = vi.fn()
 const activateAudience = vi.fn()
 const createAssignment = vi.fn()
+
 globalThis.React = React
 
-vi.mock('../../admin/components/AdminSidebar.jsx', () => ({ default: () => <aside data-testid="admin-sidebar" /> }))
-vi.mock('../../admin/components/AdminHeader.jsx', () => ({ default: ({ breadcrumbs }) => <header>{breadcrumbs?.map((item) => item.label).join(' / ')}</header> }))
-vi.mock('../../admin/components/DepartmentCombobox.jsx', () => ({
+vi.mock('../../../shared/components/DepartmentCombobox.jsx', () => ({
   default: ({ departments, value, onChange, placeholder }) => (
     <select aria-label={placeholder} value={value} onChange={(event) => onChange(event.target.value)}>
       <option value="">Chọn lĩnh vực</option>
@@ -23,7 +22,9 @@ vi.mock('../../admin/components/DepartmentCombobox.jsx', () => ({
   ),
 }))
 vi.mock('../../training/api/trainingApi.js', () => ({
-  trainingApi: { getRecordOptions: vi.fn().mockResolvedValue({ data: { data: { professionalFields: [{ id: 1, name: 'Hồi sức cấp cứu', code: 'HSCC' }] } } }) },
+  trainingApi: {
+    getRecordOptions: vi.fn().mockResolvedValue({ data: { data: { professionalFields: [{ id: 1, name: 'Hồi sức cấp cứu', code: 'HSCC' }] } } }),
+  },
 }))
 vi.mock('../../admin/api/adminApi.js', () => ({
   adminApi: {
@@ -43,7 +44,8 @@ vi.mock('../api/evaluationAudienceApi.js', () => ({
 vi.mock('../api/examAssignmentApi.js', () => ({
   examAssignmentApi: { createAssignment },
 }))
-vi.mock('../../../shared/context/ToastContext.jsx', () => ({ useToast: () => ({ showToast: vi.fn() }) }))
+const showToast = vi.fn()
+vi.mock('../../../shared/context/ToastContext.jsx', () => ({ useToast: () => ({ showToast }) }))
 
 describe('ExamConfigPage blueprint flow', () => {
   beforeEach(() => {

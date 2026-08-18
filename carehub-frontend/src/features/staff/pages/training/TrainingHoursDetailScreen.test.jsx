@@ -9,7 +9,7 @@ vi.mock('../../../../shared/components/AppShell.jsx', () => ({
   default: ({ children }) => <div data-testid="app-shell">{children}</div>,
 }))
 
-vi.mock('../../../../features/admin/components/ConfirmModal.jsx', () => ({
+vi.mock('../../../../shared/components/ConfirmModal.jsx', () => ({
   default: () => null,
 }))
 

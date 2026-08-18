@@ -5,7 +5,15 @@ import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import ExamTakeScreen from './ExamTakeScreen.jsx'
 
 vi.mock('../../../shared/components/AppShell.jsx', () => ({
-  default: ({ children }) => <div data-testid="app-shell">{children}</div>,
+  default: ({ hideSidebar, hideHeader, children }) => (
+    <div
+      data-testid="app-shell"
+      data-hide-sidebar={String(hideSidebar)}
+      data-hide-header={String(hideHeader)}
+    >
+      {children}
+    </div>
+  ),
 }))
 
 vi.mock('../../../shared/components/ConfirmDialog.jsx', () => ({
@@ -231,5 +239,90 @@ describe('ExamTakeScreen timer regression', () => {
 
     expect(myExamApi.saveAnswers).toHaveBeenCalledTimes(1)
     expect(screen.getByText('10:00')).toBeInTheDocument()
+  })
+
+  it('toggles navbar visibility and passes hideSidebar and hideHeader to AppShell', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi test',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    const appShell = screen.getByTestId('app-shell')
+    const toggleBtn = screen.getByRole('button', { name: /Ẩn navbar/i })
+    expect(appShell).toHaveAttribute('data-hide-sidebar', 'false')
+    expect(appShell).toHaveAttribute('data-hide-header', 'false')
+
+    await act(async () => {
+      toggleBtn.click()
+      await Promise.resolve()
+    })
+
+    expect(screen.getByRole('button', { name: /Hiện navbar/i })).toBeInTheDocument()
+    expect(appShell).toHaveAttribute('data-hide-sidebar', 'true')
+    expect(appShell).toHaveAttribute('data-hide-header', 'true')
+  })
+
+  it('blocks clipboard actions and clipboard shortcuts while an attempt is writable', async () => {
+    myExamApi.getAttempt.mockResolvedValue(response({
+      id: 70,
+      status: 'IN_PROGRESS',
+      examPaperName: 'Đề kiểm tra bảo mật',
+      remainingSeconds: 1800,
+      expiresAt: '2026-08-12T08:30:00Z',
+      totalQuestions: 1,
+      employeeCode: 'NV001',
+      userName: 'Nguyễn Văn A',
+      questions: [{
+        paperQuestionId: 1,
+        position: 1,
+        stem: 'Câu hỏi bảo mật',
+        optionA: 'A',
+        optionB: 'B',
+        optionC: 'C',
+        optionD: 'D',
+      }],
+      answers: [],
+    }))
+
+    renderExamAttempt()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(0)
+    })
+
+    const copyEvent = new Event('copy', { bubbles: true, cancelable: true })
+    document.dispatchEvent(copyEvent)
+    expect(copyEvent.defaultPrevented).toBe(true)
+
+    const pasteShortcut = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      ctrlKey: true,
+      key: 'v',
+    })
+    document.dispatchEvent(pasteShortcut)
+    expect(pasteShortcut.defaultPrevented).toBe(true)
   })
 })

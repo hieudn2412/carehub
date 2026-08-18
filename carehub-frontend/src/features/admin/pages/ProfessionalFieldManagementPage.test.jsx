@@ -7,13 +7,11 @@ import { adminApi } from '../api/adminApi.js'
 
 const { showToastMock } = vi.hoisted(() => ({ showToastMock: vi.fn() }))
 
-vi.mock('../components/AdminHeader.jsx', () => ({ default: () => null }))
-vi.mock('../components/AdminSidebar.jsx', () => ({ default: () => null }))
-
 vi.mock('../api/adminApi.js', () => ({
   adminApi: {
     createProfessionalField: vi.fn(),
     getProfessionalFields: vi.fn(),
+    rejectProfessionalField: vi.fn(),
     updateProfessionalField: vi.fn(),
   },
 }))
@@ -47,6 +45,7 @@ describe('ProfessionalFieldManagementPage create form', () => {
       data: { data: { content: [] } },
     })
     adminApi.createProfessionalField.mockResolvedValue({ data: { data: {} } })
+    adminApi.rejectProfessionalField.mockResolvedValue({ data: { data: {} } })
   })
 
   it('shows field-level validation in the create modal', async () => {
@@ -84,5 +83,33 @@ describe('ProfessionalFieldManagementPage create form', () => {
       })
     })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('rejects a pending proposal without requiring a reason', async () => {
+    adminApi.getProfessionalFields.mockResolvedValue({
+      data: {
+        data: {
+          content: [{
+            id: 7,
+            code: 'CUSTOM_7',
+            name: 'Điều dưỡng nhi',
+            active: false,
+            moderationStatus: 'PENDING',
+            version: 0,
+          }],
+        },
+      },
+    })
+
+    renderPage()
+
+    fireEvent.click(await screen.findByRole('button', { name: /Chờ phê duyệt/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Từ chối lĩnh vực Điều dưỡng nhi' }))
+    expect(screen.getByRole('dialog', { name: 'Từ chối lĩnh vực chuyên môn' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Từ chối đề xuất$/i }))
+
+    await waitFor(() => expect(adminApi.rejectProfessionalField).toHaveBeenCalledWith(7))
+    expect(showToastMock).toHaveBeenCalledWith('Đã từ chối đề xuất lĩnh vực chuyên môn', 'success')
   })
 })

@@ -7,7 +7,7 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.TargetCognitive
 
 public record CreateDocumentQuestionJobRequest(
         @Min(1)
-        @Max(5)
+        @Max(3)
         Integer questionsPerChunk,
         Long categoryId,
         Long professionalFieldId,

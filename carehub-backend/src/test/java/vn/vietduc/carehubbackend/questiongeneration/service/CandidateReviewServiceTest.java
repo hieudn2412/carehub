@@ -196,7 +196,7 @@ class CandidateReviewServiceTest {
         when(candidateRepository.findById(other.getId())).thenReturn(Optional.of(other));
         when(questionRepository.findById(bankQuestion.getId())).thenReturn(Optional.of(bankQuestion));
         when(duplicateCheckService.findPotentialMatches(
-                eq(current.getStem()), eq(Set.of()), eq(Set.of(current.getId())), eq(20)))
+                eq(current.getStem()), eq(Set.of()), eq(Set.of(current.getId())), eq(5)))
                 .thenReturn(List.of(
                         new DuplicateMatchResult(
                                 DuplicateMatchResult.SourceType.QUESTION_BANK,

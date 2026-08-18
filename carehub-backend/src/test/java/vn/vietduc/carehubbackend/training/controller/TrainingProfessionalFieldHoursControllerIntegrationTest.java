@@ -16,6 +16,7 @@ import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.training.enums.DurationUnit;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
@@ -165,6 +166,42 @@ class TrainingProfessionalFieldHoursControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.year").value(1900))
                 .andExpect(jsonPath("$.data.fields.length()").value(0))
                 .andExpect(jsonPath("$.data.availableYears", hasItem(currentYear)));
+    }
+
+    @Test
+    @DisplayName("Rejected professional fields are grouped as other while their submitted hours remain counted")
+    void groupsRejectedFieldsAsOther() throws Exception {
+        ProfessionalField rejectedOne = professionalFieldRepository.save(ProfessionalField.builder()
+                .code("CUSTOM_REJECTED_ONE")
+                .name("Lĩnh vực đề xuất một")
+                .active(false)
+                .moderationStatus(ProfessionalFieldModerationStatus.REJECTED)
+                .rejectionReason("Không thuộc danh mục")
+                .build());
+        ProfessionalField rejectedTwo = professionalFieldRepository.save(ProfessionalField.builder()
+                .code("CUSTOM_REJECTED_TWO")
+                .name("Lĩnh vực đề xuất hai")
+                .active(false)
+                .moderationStatus(ProfessionalFieldModerationStatus.REJECTED)
+                .rejectionReason("Trùng phạm vi")
+                .build());
+        saveRecord(employee, "Rejected one", LocalDate.of(2025, 3, 1),
+                TrainingRecordStatus.SUBMITTED, new BigDecimal("3.00"), rejectedOne);
+        saveRecord(employee, "Rejected two", LocalDate.of(2025, 4, 1),
+                TrainingRecordStatus.SUBMITTED, new BigDecimal("4.00"), rejectedTwo);
+        saveRecord(employee, "Approved field", LocalDate.of(2025, 5, 1),
+                TrainingRecordStatus.SUBMITTED, new BigDecimal("2.00"), intensiveCare);
+
+        mockMvc.perform(get("/api/v1/training/status/me/professional-field-hours")
+                        .with(jwtFor(employee))
+                        .param("year", "2025"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fields.length()").value(2))
+                .andExpect(jsonPath("$.data.fields[0].professionalFieldId").doesNotExist())
+                .andExpect(jsonPath("$.data.fields[0].professionalFieldName").value("Lĩnh vực khác"))
+                .andExpect(jsonPath("$.data.fields[0].submittedHours").value(7.0))
+                .andExpect(jsonPath("$.data.fields[1].professionalFieldId").value(intensiveCare.getId()))
+                .andExpect(jsonPath("$.data.fields[1].submittedHours").value(2.0));
     }
 
     @Test

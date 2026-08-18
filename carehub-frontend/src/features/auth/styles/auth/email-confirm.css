@@ -1,4 +1,4 @@
-/* TODO(ui-refactor): bộ UI này song song với features/auth/styles/auth/*
+/* TODO(ui-refactor): bộ UI này vẫn song song với các auth style khác
    (steps vs stepper, primary-btn vs primary-button, otp-inputs định nghĩa
    trùng tên). Kế hoạch dài hạn: hợp nhất về auth styles rồi xoá file này.
    Hiện chỉ vá responsive tối thiểu để không chặn mobile. */

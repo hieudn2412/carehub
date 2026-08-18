@@ -11,8 +11,8 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
-import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
-import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
 
 function ComplianceEmployeeTechniqueDetailPage() {

@@ -59,4 +59,14 @@ public class ProfessionalFieldAdminController {
                 service.update(id, request)
         ));
     }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<ProfessionalFieldResponse>> reject(
+            @PathVariable Long id
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Đã từ chối đề xuất lĩnh vực chuyên môn",
+                service.reject(id)
+        ));
+    }
 }

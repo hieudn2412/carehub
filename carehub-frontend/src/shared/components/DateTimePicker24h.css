@@ -41,11 +41,11 @@
 .dt24-time-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  padding: 2px 6px;
+  padding: 2px 5px;
   height: 28px;
   box-sizing: border-box;
 }
@@ -57,33 +57,33 @@
   margin-right: 2px;
 }
 
-.dt24-num-input {
-  width: 24px;
+.dt24-time-select {
   border: none;
   outline: none;
   background: transparent;
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
-  text-align: center;
   font-family: inherit;
   padding: 0;
-  -moz-appearance: textfield;
-}
-
-.dt24-num-input::-webkit-outer-spin-button,
-.dt24-num-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
   margin: 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  text-align: center;
+  text-align-last: center;
+  width: auto;
+  min-width: 18px;
 }
 
-.dt24-num-input:focus {
+.dt24-time-select:focus {
   background: #eff6ff;
   border-radius: 4px;
   color: #2563eb;
 }
 
-.dt24-num-input:disabled {
+.dt24-time-select:disabled {
   color: #94a3b8;
   cursor: not-allowed;
 }

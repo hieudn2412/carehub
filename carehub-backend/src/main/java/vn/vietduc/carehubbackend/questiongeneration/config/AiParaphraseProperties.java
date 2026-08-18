@@ -18,7 +18,7 @@ public class AiParaphraseProperties {
     private int maxOutputLength = 512;
     private int timeoutSeconds = 60;
     private int generateTimeoutSeconds = 30;
-    private int numBeams = 4;
+    private int numBeams = 6;
     private int maxDecodeLength = 96;
     private int requestedCountDefault = 3;
     /**

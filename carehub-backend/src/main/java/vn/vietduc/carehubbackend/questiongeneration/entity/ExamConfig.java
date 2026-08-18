@@ -71,6 +71,10 @@ public class ExamConfig extends BaseEntity {
     @Column(name = "shuffle_options", nullable = false)
     private Boolean shuffleOptions;
 
+    @Column(name = "backfill_nearest_cognitive_level", nullable = false)
+    @Builder.Default
+    private Boolean backfillNearestCognitiveLevel = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     private ExamConfigStatus status;

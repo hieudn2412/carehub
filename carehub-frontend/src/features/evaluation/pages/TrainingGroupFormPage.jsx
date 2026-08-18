@@ -1,14 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
-import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import '../styles/TrainingGroupFormPage.css'
-
-function authHeaders() {
-  const accessToken = tokenStorage.getAccessToken()
-  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
-}
 
 function TrainingGroupFormPage({ group, onClose }) {
   const { showToast } = useToast()
@@ -24,7 +17,7 @@ function TrainingGroupFormPage({ group, onClose }) {
 
   // Load available users for member selection
   useEffect(() => {
-    httpClient.get('/users', { headers: authHeaders(), params: { size: 500 } })
+    trainingGroupApi.listAvailableUsers({ size: 500 })
       .then(res => {
         const data = res.data?.data?.content || res.data?.data || []
         setUsers(Array.isArray(data) ? data : [])

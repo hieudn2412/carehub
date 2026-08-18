@@ -250,6 +250,7 @@ public class ExamConfigService {
                 config.getMaxRetakes(),
                 config.getShuffleQuestions(),
                 config.getShuffleOptions(),
+                config.getBackfillNearestCognitiveLevel(),
                 selectionMode(config).name(),
                 config.getStatus().name(),
                 QuestionGenerationLabels.examConfigStatus(config.getStatus()),
@@ -291,11 +292,12 @@ public class ExamConfigService {
         if (config.getPoolChecksum() != null && !config.getPoolChecksum().equals(currentChecksum)) {
             warnings.add("Ngân hàng câu hỏi đã thay đổi sau lần lưu ma trận; cần xem preview lại");
         }
+        boolean backfill = Boolean.TRUE.equals(config.getBackfillNearestCognitiveLevel());
         int distributed = 0;
         for (ExamBlueprintField field : fields) {
-            List<ExamBlueprintCell> cells = blueprintCellRepository.findByBlueprintFieldId(field.getId());
-            List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cellResponses = new ArrayList<>();
-            int availableField = 0;
+            List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
+            cells.sort(Comparator.comparingInt(cell -> CognitiveBackfillAllocator.order(cell.getCognitiveLevel())));
+            List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (ExamBlueprintCell cell : cells) {
                 int available = Math.toIntExact(pool.stream()
                         .filter(q -> Objects.equals(q.getProfessionalField().getId(), field.getProfessionalField().getId())
@@ -304,15 +306,24 @@ public class ExamConfigService {
                         .distinct()
                         .count());
                 int required = zeroOverlap ? cell.getQuestionCount() * variantCount : cell.getQuestionCount();
-                int shortage = Math.max(0, required - available);
-                availableField += available;
-                if (shortage > 0) warnings.add(field.getProfessionalField().getName() + " / " + cell.getCognitiveLevel().name() + " thiếu " + shortage + " câu");
-                cellResponses.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(cell.getCognitiveLevel().name(), cell.getPercentage(), cell.getQuestionCount(), available, shortage));
+                demands.add(new CognitiveBackfillAllocator.CellDemand(cell.getCognitiveLevel(), required, available));
+            }
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(demands, backfill);
+            List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cellResponses = new ArrayList<>();
+            int availableField = 0;
+            int backfilledField = 0;
+            for (int i = 0; i < cells.size(); i++) {
+                ExamBlueprintCell cell = cells.get(i);
+                CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(i);
+                availableField += outcome.rawAvailable();
+                backfilledField += outcome.backfilled();
+                if (outcome.shortage() > 0) warnings.add(field.getProfessionalField().getName() + " / " + cell.getCognitiveLevel().name() + " thiếu " + outcome.shortage() + " câu");
+                cellResponses.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(cell.getCognitiveLevel().name(), cell.getPercentage(), cell.getQuestionCount(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
             int fieldShortage = Math.max(0, field.getQuestionCount() - availableField);
             if (fieldShortage > 0 && cells.isEmpty()) warnings.add(field.getProfessionalField().getName() + " thiếu nguồn câu hỏi");
             distributed += field.getQuestionCount();
-            responses.add(new ExamBlueprintFieldPreviewResponse(field.getProfessionalField().getId(), field.getProfessionalField().getCode(), field.getProfessionalField().getName(), field.getPercentage(), field.getQuestionCount(), availableField, fieldShortage, field.getDisplayOrder(), cellResponses));
+            responses.add(new ExamBlueprintFieldPreviewResponse(field.getProfessionalField().getId(), field.getProfessionalField().getCode(), field.getProfessionalField().getName(), field.getPercentage(), field.getQuestionCount(), availableField, fieldShortage, backfilledField, field.getDisplayOrder(), cellResponses));
         }
         if (distributed != config.getTotalQuestions()) warnings.add("Tổng blueprint " + distributed + " câu chưa khớp tổng đề " + config.getTotalQuestions());
         return new BlueprintPreview(distributed, warnings.isEmpty(), responses, warnings);
@@ -324,21 +335,41 @@ public class ExamConfigService {
         List<UpsertExamConfigRequest.FieldBlueprint> fields = request.fieldBlueprints() == null ? List.of() : request.fieldBlueprints();
         List<Integer> fieldCounts = fields.isEmpty() ? List.of() : allocateCounts(fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::percentage).toList(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::questionCount).toList(), total);
         List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::professionalFieldId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        boolean backfill = Boolean.TRUE.equals(request.backfillNearestCognitiveLevel());
         List<ExamBlueprintFieldPreviewResponse> responses = new ArrayList<>();
         for (int i = 0; i < fields.size(); i++) {
             UpsertExamConfigRequest.FieldBlueprint draft = fields.get(i);
             ProfessionalField field = professionalFieldRepository == null ? null : professionalFieldRepository.findById(draft.professionalFieldId()).orElse(null);
             int fieldCount = i < fieldCounts.size() ? fieldCounts.get(i) : 0;
             List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), fieldCount);
+            ProfessionalField cellField = field;
+            record IndexedCell(UpsertExamConfigRequest.CognitiveDistribution cell, CognitiveLevel level, int baseRequired) { }
+            List<IndexedCell> orderedCognitive = new ArrayList<>();
+            for (int c = 0; c < draft.cognitive().size(); c++) {
+                var cell = draft.cognitive().get(c);
+                orderedCognitive.add(new IndexedCell(cell, parseCognitive(cell.cognitiveLevel()), cellCounts.get(c)));
+            }
+            orderedCognitive.sort(Comparator.comparingInt(ic -> CognitiveBackfillAllocator.order(ic.level())));
+            List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
+            for (IndexedCell ic : orderedCognitive) {
+                int available = cellField == null ? 0 : Math.toIntExact(pool.stream().filter(q -> Objects.equals(q.getProfessionalField().getId(), cellField.getId()) && q.getCognitiveLevel() == ic.level()).mapToLong(ExamGenerationDeterminism::familyId).distinct().count());
+                int required = zeroOverlap ? ic.baseRequired() * variantCount : ic.baseRequired();
+                demands.add(new CognitiveBackfillAllocator.CellDemand(ic.level(), required, available));
+            }
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(demands, backfill);
             List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cells = new ArrayList<>();
             int availableField = 0;
-            for (int c = 0; c < draft.cognitive().size(); c++) {
-                var cell = draft.cognitive().get(c); CognitiveLevel level = parseCognitive(cell.cognitiveLevel()); int available = field == null ? 0 : Math.toIntExact(pool.stream().filter(q -> Objects.equals(q.getProfessionalField().getId(), field.getId()) && q.getCognitiveLevel() == level).mapToLong(ExamGenerationDeterminism::familyId).distinct().count());
-                int baseRequired = cellCounts.get(c); int required = zeroOverlap ? baseRequired * variantCount : baseRequired; int shortage = Math.max(0, required - available); availableField += available; if (shortage > 0) warnings.add((field == null ? "Lĩnh vực #" + draft.professionalFieldId() : field.getName()) + " / " + level.name() + " thiếu " + shortage + " câu");
-                cells.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(level == null ? cell.cognitiveLevel() : level.name(), cell.percentage(), baseRequired, available, shortage));
+            int backfilledField = 0;
+            for (int c = 0; c < orderedCognitive.size(); c++) {
+                IndexedCell ic = orderedCognitive.get(c);
+                CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(c);
+                availableField += outcome.rawAvailable();
+                backfilledField += outcome.backfilled();
+                if (outcome.shortage() > 0) warnings.add((field == null ? "Lĩnh vực #" + draft.professionalFieldId() : field.getName()) + " / " + ic.level().name() + " thiếu " + outcome.shortage() + " câu");
+                cells.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(ic.level() == null ? ic.cell().cognitiveLevel() : ic.level().name(), ic.cell().percentage(), outcome.required(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
             String code = field == null ? null : field.getCode(); String name = field == null ? null : field.getName();
-            responses.add(new ExamBlueprintFieldPreviewResponse(draft.professionalFieldId(), code, name, draft.percentage(), fieldCount, availableField, Math.max(0, fieldCount - availableField), draft.displayOrder() == null ? i : draft.displayOrder(), cells));
+            responses.add(new ExamBlueprintFieldPreviewResponse(draft.professionalFieldId(), code, name, draft.percentage(), fieldCount, availableField, Math.max(0, fieldCount - availableField), backfilledField, draft.displayOrder() == null ? i : draft.displayOrder(), cells));
         }
         return new BlueprintPreview(fieldCounts.stream().mapToInt(Integer::intValue).sum(), warnings.isEmpty(), responses, warnings);
     }
@@ -420,6 +451,7 @@ public class ExamConfigService {
                 .passingScore(passing).maxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"))
                 .shuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions())
                 .shuffleOptions(request.shuffleOptions() == null || request.shuffleOptions())
+                .backfillNearestCognitiveLevel(Boolean.TRUE.equals(request.backfillNearestCognitiveLevel()))
                 .questionSelectionMode(parseSelectionMode(request.questionSelectionMode()))
                 .status(parseStatus(request.status(), ExamConfigStatus.DRAFT)).createdBy(actor)
                 .reviewedBy("ACTIVE".equalsIgnoreCase(request.status()) ? actor : null).build());
@@ -444,6 +476,7 @@ public class ExamConfigService {
         config.setMaxRetakes(nonNegative(request.maxRetakes(), "Số lần thi lại tối đa không được âm"));
         config.setShuffleQuestions(request.shuffleQuestions() == null || request.shuffleQuestions());
         config.setShuffleOptions(request.shuffleOptions() == null || request.shuffleOptions());
+        config.setBackfillNearestCognitiveLevel(Boolean.TRUE.equals(request.backfillNearestCognitiveLevel()));
         config.setQuestionSelectionMode(parseSelectionMode(request.questionSelectionMode()));
         config.setStatus(parseStatus(request.status(), config.getStatus()));
         if (config.getStatus() == ExamConfigStatus.ACTIVE) config.setReviewedBy(actor);

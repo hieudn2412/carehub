@@ -7,11 +7,10 @@ import {
   CloseCircleFilled,
   ExclamationCircleFilled,
 } from '@ant-design/icons'
-import Modal from '../../../shared/components/Modal.jsx'
-import { staffApi } from '../api/staffApi'
-import { getApiErrorMessage } from '../../auth/utils/apiError'
+import Modal from './Modal.jsx'
+import { getApiErrorMessage } from '../api/apiError.js'
 
-function ChangePasswordModal({ isOpen, onClose }) {
+function ChangePasswordModal({ isOpen, onClose, onSubmitPassword }) {
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -71,8 +70,11 @@ function ChangePasswordModal({ isOpen, onClose }) {
 
     try {
       setIsSubmitting(true)
-      // 1. Gọi API đổi mật khẩu ở Backend
-      await staffApi.changePassword({
+      if (typeof onSubmitPassword !== 'function') {
+        throw new Error('Change password handler is not configured')
+      }
+
+      await onSubmitPassword({
         oldPassword,
         newPassword,
         confirmNewPassword,

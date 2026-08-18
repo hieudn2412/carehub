@@ -7,12 +7,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ValidationException;
 import vn.vietduc.carehubbackend.training.dto.request.ProfessionalFieldFormRequest;
 import vn.vietduc.carehubbackend.training.dto.response.ProfessionalFieldResponse;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.training.repository.ProfessionalFieldRepository;
 
 import java.util.Locale;
@@ -46,6 +48,7 @@ public class ProfessionalFieldAdminService {
                 .name(request.name().trim())
                 .description(trimToNull(request.description()))
                 .active(request.active() == null || request.active())
+                .moderationStatus(ProfessionalFieldModerationStatus.APPROVED)
                 .build());
         return response(field);
     }
@@ -66,14 +69,34 @@ public class ProfessionalFieldAdminService {
         field.setDescription(trimToNull(request.description()));
         if (request.active() != null) {
             field.setActive(request.active());
+            if (request.active() && field.getModerationStatus() != ProfessionalFieldModerationStatus.APPROVED) {
+                field.setModerationStatus(ProfessionalFieldModerationStatus.APPROVED);
+            }
         }
+        return response(repository.save(field));
+    }
+
+    @Transactional
+    public ProfessionalFieldResponse reject(Long id) {
+        ProfessionalField field = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lĩnh vực chuyên môn"));
+        if (!field.getCode().startsWith("CUSTOM_")) {
+            throw new BadRequestException("Chỉ có thể từ chối lĩnh vực do nhân viên đề xuất");
+        }
+        if (field.getModerationStatus() != ProfessionalFieldModerationStatus.PENDING) {
+            throw new ConflictException("Lĩnh vực này không còn ở trạng thái chờ duyệt");
+        }
+        field.setActive(false);
+        field.setModerationStatus(ProfessionalFieldModerationStatus.REJECTED);
+        field.setRejectionReason(null);
         return response(repository.save(field));
     }
 
     private ProfessionalFieldResponse response(ProfessionalField field) {
         return new ProfessionalFieldResponse(
                 field.getId(), field.getCode(), field.getName(), field.getDescription(),
-                field.isActive(), field.getVersion(), field.getUpdatedAt()
+                field.isActive(), field.getModerationStatus(), field.getRejectionReason(),
+                field.getVersion(), field.getUpdatedAt()
         );
     }
 

@@ -4,15 +4,13 @@ const MESSAGE_TRANSLATIONS = {
   'email already exists': 'Email này đã được sử dụng',
   'email not found': 'Không tìm thấy tài khoản với email này',
   'employee code is required': 'Vui lòng nhập mã nhân viên',
-  'first login setup is not required for this account':
-    'Tài khoản này không cần thực hiện thiết lập lần đầu',
+  'first login setup is not required for this account': 'Tài khoản này không cần thực hiện thiết lập lần đầu',
   'invalid code or password': 'Mã nhân viên hoặc mật khẩu không chính xác',
   'invalid otp': 'Mã OTP không chính xác',
   'otp already used': 'Mã OTP đã được sử dụng',
   'otp expired': 'Mã OTP đã hết hạn',
   'password is required': 'Vui lòng nhập mật khẩu',
-  'please complete first login setup before resetting password':
-    'Vui lòng hoàn tất thiết lập tài khoản lần đầu trước khi đặt lại mật khẩu',
+  'please complete first login setup before resetting password': 'Vui lòng hoàn tất thiết lập tài khoản lần đầu trước khi đặt lại mật khẩu',
   'refresh token invalid': 'Phiên đăng nhập không hợp lệ',
   'token has expired': 'Phiên đăng nhập đã hết hạn',
   'token is revoked': 'Phiên đăng nhập đã bị thu hồi',
@@ -31,27 +29,15 @@ const STATUS_MESSAGES = {
 }
 
 function translateMessage(message) {
-  if (typeof message !== 'string' || !message.trim()) {
-    return ''
-  }
-
-  const normalizedMessage = message.trim().toLowerCase()
-  const translatedMessage = MESSAGE_TRANSLATIONS[normalizedMessage]
-
-  if (translatedMessage) {
-    return translatedMessage
-  }
-
-  return message.trim()
+  if (typeof message !== 'string' || !message.trim()) return ''
+  return MESSAGE_TRANSLATIONS[message.trim().toLowerCase()] || message.trim()
 }
 
 function getFieldErrors(responseData) {
   const details = responseData?.details ?? responseData?.data
   const fieldErrors = Array.isArray(details?.fieldErrors)
     ? details.fieldErrors
-    : Array.isArray(details)
-      ? details
-      : []
+    : Array.isArray(details) ? details : []
 
   return fieldErrors
     .map((fieldError) => translateMessage(fieldError?.message))
@@ -68,14 +54,10 @@ export function getApiErrorMessage(error, fallbackMessage = 'Đã xảy ra lỗi
   }
 
   const fieldErrorMessage = getFieldErrors(responseData)
-  if (fieldErrorMessage) {
-    return fieldErrorMessage
-  }
+  if (fieldErrorMessage) return fieldErrorMessage
 
   const translatedMessage = translateMessage(responseData?.message)
-  if (translatedMessage) {
-    return translatedMessage
-  }
+  if (translatedMessage) return translatedMessage
 
   return STATUS_MESSAGES[status] || fallbackMessage
 }

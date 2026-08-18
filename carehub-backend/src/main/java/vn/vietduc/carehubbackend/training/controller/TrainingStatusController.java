@@ -36,6 +36,7 @@ public class TrainingStatusController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'SYSTEM_JOB')")
     public ResponseEntity<ApiResponse<PageResponse<EmployeeTrainingStatusSummaryResponse>>> listEmployeeStatuses(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long jobPositionId,
             @RequestParam(required = false) Long professionalFieldId,
@@ -50,6 +51,7 @@ public class TrainingStatusController {
     ) {
         EmployeeTrainingStatusSearchRequest request = new EmployeeTrainingStatusSearchRequest(
                 keyword,
+                employeeId,
                 departmentId,
                 jobPositionId,
                 professionalFieldId,

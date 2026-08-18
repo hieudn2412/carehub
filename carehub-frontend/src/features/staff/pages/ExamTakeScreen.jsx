@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
+  ClockCircleOutlined,
   FlagFilled,
   FlagOutlined,
   LoadingOutlined,
@@ -12,7 +13,7 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import {
@@ -110,6 +111,17 @@ function answersEqual(left, right) {
     && leftKeys.every((key) => left[key] === right[key])
 }
 
+function blockExamClipboard(event) {
+  event.preventDefault()
+  event.stopPropagation()
+}
+
+function blockExamClipboardShortcuts(event) {
+  if (!(event.ctrlKey || event.metaKey)) return
+  if (!['c', 'x', 'v'].includes(event.key.toLowerCase())) return
+  blockExamClipboard(event)
+}
+
 function ExamTakeScreen() {
   const { attemptId } = useParams()
   const navigate = useNavigate()
@@ -128,6 +140,7 @@ function ExamTakeScreen() {
   const [confirmSubmitMessage, setConfirmSubmitMessage] = useState(null)
   const [flaggedQuestions, setFlaggedQuestions] = useState(new Set())
   const [isNavbarHidden, setIsNavbarHidden] = useState(false)
+  const [hasLeftExam, setHasLeftExam] = useState(false)
 
   const attemptRef = useRef(null)
   const answersRef = useRef({})
@@ -138,6 +151,7 @@ function ExamTakeScreen() {
   const timerDeadlineRef = useRef(null)
   const submitCurrentAttemptRef = useRef(null)
   const saveAnswersRef = useRef(null)
+  const wasExamHiddenRef = useRef(false)
 
   const updateAttempt = useCallback((nextAttempt) => {
     attemptRef.current = nextAttempt
@@ -380,18 +394,48 @@ function ExamTakeScreen() {
       event.preventDefault()
       event.returnValue = ''
     }
-    const saveWhenHidden = () => {
+    const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && dirtyRef.current) {
         saveAnswers(true)
       }
+      if (document.visibilityState === 'hidden') {
+        wasExamHiddenRef.current = true
+        return
+      }
+      if (wasExamHiddenRef.current) {
+        wasExamHiddenRef.current = false
+        setHasLeftExam(true)
+        showToast('Bạn vừa rời màn hình làm bài. Thời gian vẫn tiếp tục tính theo máy chủ.', 'warning')
+      }
     }
     window.addEventListener('beforeunload', warnBeforeUnload)
-    document.addEventListener('visibilitychange', saveWhenHidden)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
       window.removeEventListener('beforeunload', warnBeforeUnload)
-      document.removeEventListener('visibilitychange', saveWhenHidden)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isWritable, saveAnswers])
+  }, [isWritable, saveAnswers, showToast])
+
+  useEffect(() => {
+    if (!isWritable) return undefined
+
+    document.addEventListener('copy', blockExamClipboard, true)
+    document.addEventListener('cut', blockExamClipboard, true)
+    document.addEventListener('paste', blockExamClipboard, true)
+    document.addEventListener('contextmenu', blockExamClipboard, true)
+    document.addEventListener('selectstart', blockExamClipboard, true)
+    document.addEventListener('dragstart', blockExamClipboard, true)
+    document.addEventListener('keydown', blockExamClipboardShortcuts, true)
+    return () => {
+      document.removeEventListener('copy', blockExamClipboard, true)
+      document.removeEventListener('cut', blockExamClipboard, true)
+      document.removeEventListener('paste', blockExamClipboard, true)
+      document.removeEventListener('contextmenu', blockExamClipboard, true)
+      document.removeEventListener('selectstart', blockExamClipboard, true)
+      document.removeEventListener('dragstart', blockExamClipboard, true)
+      document.removeEventListener('keydown', blockExamClipboardShortcuts, true)
+    }
+  }, [isWritable])
 
   function selectAnswer(paperQuestionId, optionKey) {
     const nextAnswers = {
@@ -462,14 +506,29 @@ function ExamTakeScreen() {
       back={{ onClick: leaveExam, label: 'Quay lại' }}
       title={reviewMode ? 'Xem lại bài kiểm tra' : 'Làm bài thi'}
       hideSidebar={isNavbarHidden}
+      hideHeader={isNavbarHidden}
     >
-      <div className="eh-page eh-exam-page">
+      <div className={`eh-page eh-exam-page${isWritable ? ' eh-exam-page--protected' : ''}`}>
         {isLoading ? (
           <div className="eh-table-card eh-loading-state"><LoadingOutlined spin /> Đang tải bài kiểm tra...</div>
         ) : loadError ? (
           <div className="eh-table-card eh-loading-state">{loadError}</div>
         ) : (
           <>
+            {hasLeftExam && isWritable && (
+              <div className="eh-table-card eh-security-warning" role="status">
+                <strong>Bạn vừa rời màn hình làm bài</strong>
+                <span>Thời gian vẫn tiếp tục tính theo máy chủ. Hãy quay lại làm bài trong cửa sổ này.</span>
+                <button type="button" onClick={() => setHasLeftExam(false)}>Đã hiểu</button>
+              </div>
+            )}
+            {isWritable && (attempt?.employeeCode || attempt?.userName) && (
+              <div className="eh-exam-watermark" aria-hidden="true">
+                {Array.from({ length: 12 }, (_, index) => (
+                  <span key={index}>{[attempt.employeeCode, attempt.userName].filter(Boolean).join(' · ')}</span>
+                ))}
+              </div>
+            )}
             <div className="eh-header eh-detail-header eh-exam-toolbar">
               <div>
                 <h2 className="eh-page-title">{attempt?.assignmentName || attempt?.examPaperName || 'Bài kiểm tra'}</h2>
@@ -479,7 +538,7 @@ function ExamTakeScreen() {
                   {lastSavedAt ? ` lúc ${lastSavedAt.toLocaleTimeString('vi-VN')}` : ''}
                 </p>
               </div>
-                <div className="eh-exam-toolbar__right">
+              <div className="eh-exam-toolbar__right">
                 <button
                   type="button"
                   className="eh-btn eh-btn--view eh-navbar-toggle"
@@ -492,13 +551,20 @@ function ExamTakeScreen() {
                 </button>
                 {reviewMode ? (
                   <div className="eh-review-score" aria-label="Kết quả bài kiểm tra">
-                    <span>Điểm</span>
-                    <strong>{formatReviewScore(attempt?.score)}/10</strong>
+                    <span className="eh-review-score__label">Điểm</span>
+                    <strong className="eh-review-score__value">{formatReviewScore(attempt?.score)}/10</strong>
                   </div>
                 ) : (
-                  <div className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}>
-                    <span>{timerContractError ? 'Lỗi đồng bộ thời gian' : 'Thời gian còn lại'}</span>
-                    <strong>{timerContractError ? '--:--' : formatRemaining(remainingSeconds)}</strong>
+                  <div
+                    className={`eh-timer ${remainingSeconds !== null && remainingSeconds <= 300 ? 'eh-timer--warning' : ''}`}
+                    title={timerContractError ? 'Lỗi đồng bộ thời gian' : 'Thời gian còn lại'}
+                    aria-label={timerContractError ? 'Lỗi đồng bộ thời gian' : `Thời gian còn lại: ${formatRemaining(remainingSeconds)}`}
+                  >
+                    <span className="eh-timer__label">
+                      <ClockCircleOutlined className="eh-timer__icon" />
+                      <span className="eh-timer__text">{timerContractError ? 'Lỗi đồng bộ' : 'Thời gian còn lại'}</span>
+                    </span>
+                    <strong className="eh-timer__value">{timerContractError ? '--:--' : formatRemaining(remainingSeconds)}</strong>
                   </div>
                 )}
               </div>

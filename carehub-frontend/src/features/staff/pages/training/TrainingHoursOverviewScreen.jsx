@@ -11,18 +11,15 @@ import {
 } from 'recharts'
 import {
   ArrowRightOutlined,
-  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
-import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
-import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../../../shared/auth/jwt.js'
+import { tokenStorage } from '../../../../shared/auth/tokenStorage.js'
 import TrainingRecordTable from './components/TrainingRecordTable.jsx'
-import TrainingSearchFilters from './components/TrainingSearchFilters.jsx'
 import { formatTrainingDate } from './utils/trainingRecordFormatters.js'
 import {
   formatChartHours,
@@ -30,13 +27,7 @@ import {
   normalizeChartYears,
   truncateChartLabel,
 } from './utils/trainingOverviewChart.js'
-import {
-  buildTrainingAllUrl,
-  countActiveFilterGroups,
-  createEmptyTrainingFilters,
-  isDateRangeValid,
-} from './utils/trainingRecordQuery.js'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 function getDashboardPath() {
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())
@@ -48,6 +39,34 @@ function getDashboardPath() {
     : isManager
       ? '/manager/dashboard'
       : '/staff/dashboard'
+}
+
+function wrapMobileChartLabel(value, maxCharacters = 18) {
+  const words = String(value || 'Chưa xác định').trim().split(/\s+/)
+  return words.reduce((lines, word) => {
+    const currentLine = lines.at(-1) || ''
+    const candidate = currentLine ? `${currentLine} ${word}` : word
+    if (!currentLine || candidate.length <= maxCharacters) {
+      if (lines.length) lines[lines.length - 1] = candidate
+      else lines.push(candidate)
+    } else {
+      lines.push(word)
+    }
+    return lines
+  }, [])
+}
+
+function MobileChartTick({ x, y, payload }) {
+  const lines = wrapMobileChartLabel(payload?.value)
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text fill="#64748b" fontSize="9" textAnchor="middle">
+        {lines.map((line, index) => (
+          <tspan key={`${line}-${index}`} x="0" dy={index === 0 ? 12 : 11}>{line}</tspan>
+        ))}
+      </text>
+    </g>
+  )
 }
 
 function getComplianceState(statusData) {
@@ -99,13 +118,6 @@ function TrainingHoursOverviewScreen() {
   const [latestRecord, setLatestRecord] = useState(null)
   const [latestLoading, setLatestLoading] = useState(true)
   const [latestError, setLatestError] = useState('')
-  const [overviewSearch, setOverviewSearch] = useState('')
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [filterDraft, setFilterDraft] = useState(createEmptyTrainingFilters)
-  const [filterOptions, setFilterOptions] = useState({ activityTypes: [], professionalFields: [] })
-  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false)
-  const [filterOptionsError, setFilterOptionsError] = useState('')
-  const [filterDateError, setFilterDateError] = useState('')
   const [isMobileViewport, setIsMobileViewport] = useState(() => (
     typeof window !== 'undefined' && window.matchMedia
       ? window.matchMedia('(max-width: 768px)').matches
@@ -113,7 +125,6 @@ function TrainingHoursOverviewScreen() {
   ))
   const chartRequestIdRef = useRef(0)
   const latestRequestIdRef = useRef(0)
-  const filterControlRef = useRef(null)
 
   const loadStatus = useCallback(() => {
     setStatusLoading(true)
@@ -216,133 +227,19 @@ function TrainingHoursOverviewScreen() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!isFilterOpen) return undefined
-
-    const handlePointerDown = event => {
-      if (!filterControlRef.current?.contains(event.target)) {
-        setIsFilterOpen(false)
-        setFilterDateError('')
-      }
-    }
-    const handleKeyDown = event => {
-      if (event.key === 'Escape') {
-        setIsFilterOpen(false)
-        setFilterDateError('')
-      }
-    }
-
-    document.addEventListener('mousedown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isFilterOpen])
-
-  const loadFilterOptions = useCallback(async () => {
-    setFilterOptionsLoading(true)
-    setFilterOptionsError('')
-    try {
-      const response = await trainingApi.getRecordOptions()
-      const data = response.data?.data || {}
-      setFilterOptions({
-        activityTypes: Array.isArray(data.activityTypes) ? data.activityTypes : [],
-        professionalFields: Array.isArray(data.professionalFields) ? data.professionalFields : [],
-      })
-    } catch {
-      setFilterOptionsError('Không thể tải danh sách bộ lọc.')
-    } finally {
-      setFilterOptionsLoading(false)
-    }
-  }, [])
-
   const compliance = getComplianceState(statusData)
   const bannerClass = !compliance.configured
     ? 'th-compliance-banner--neutral'
     : compliance.compliant
       ? 'th-compliance-banner--success'
       : 'th-compliance-banner--warning'
-  const chartMinWidth = Math.max(640, chartFields.length * 92)
-
-  const handleOverviewSearchKeyDown = (event) => {
-    if (event.key !== 'Enter') return
-
-    const query = overviewSearch.trim()
-    navigate(buildTrainingAllUrl({ q: query, page: 1 }))
-  }
-
-  const handleFilterToggle = () => {
-    const nextOpen = !isFilterOpen
-    setIsFilterOpen(nextOpen)
-    if (nextOpen && !filterOptionsLoading && !filterOptionsError && !filterOptions.activityTypes.length && !filterOptions.professionalFields.length) {
-      loadFilterOptions()
-    }
-    if (!nextOpen) setFilterDateError('')
-  }
-
-  const handleApplyFilters = () => {
-    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
-      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
-      return
-    }
-
-    navigate(buildTrainingAllUrl({ ...filterDraft, page: 1 }))
-    setFilterDateError('')
-    setIsFilterOpen(false)
-  }
-
-  const handleClearFilters = () => {
-    setFilterDraft(createEmptyTrainingFilters())
-    setFilterDateError('')
-  }
-
-  const handleMobileApplyFilters = (close) => {
-    if (!isDateRangeValid(filterDraft.dateFrom, filterDraft.dateTo)) {
-      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
-      return
-    }
-
-    navigate(buildTrainingAllUrl({ ...filterDraft, q: overviewSearch.trim(), page: 1 }))
-    setFilterDateError('')
-    close()
-  }
-
-  const renderMobileSearch = ({ close }) => (
-    <TrainingSearchFilters
-      searchValue={overviewSearch}
-      onSearchChange={setOverviewSearch}
-      onSearchKeyDown={event => {
-        if (event.key === 'Enter') handleMobileApplyFilters(close)
-      }}
-      filters={filterDraft}
-      onFilterChange={setFilterDraft}
-      filterOptions={filterOptions}
-      filterOptionsLoading={filterOptionsLoading}
-      filterOptionsError={filterOptionsError}
-      onRetryOptions={loadFilterOptions}
-      dateError={filterDateError}
-      onClear={handleClearFilters}
-      onApply={() => handleMobileApplyFilters(close)}
-    />
-  )
-
-  const mobileSearchActiveCount = (overviewSearch.trim() ? 1 : 0) + countActiveFilterGroups(filterDraft)
+  const chartMinWidth = isMobileViewport
+    ? Math.max(330, chartFields.length * 150)
+    : Math.max(640, chartFields.length * 92)
 
   return (
     <AppShell
       className="training-hours-overview-shell"
-      mobileSearch={{
-        title: 'Tìm kiếm giờ đào tạo',
-        ariaLabel: 'Mở tìm kiếm và bộ lọc giờ đào tạo',
-        activeCount: mobileSearchActiveCount,
-        onOpen: () => {
-          if (!filterOptionsLoading && !filterOptionsError && !filterOptions.activityTypes.length && !filterOptions.professionalFields.length) {
-            loadFilterOptions()
-          }
-        },
-        renderContent: renderMobileSearch,
-      }}
       breadcrumbs={[
         { label: 'Tổng quan', link: dashboardPath },
         { label: 'Giờ đào tạo liên tục' },
@@ -398,34 +295,41 @@ function TrainingHoursOverviewScreen() {
                 role="img"
                 aria-label={`Biểu đồ giờ đào tạo theo lĩnh vực năm ${chartYear}`}
               >
-                <ResponsiveContainer width="100%" height={isMobileViewport ? 196 : 300}>
+                <ResponsiveContainer width="100%" height={isMobileViewport ? 170 : 300}>
                   <BarChart
                     data={chartFields}
-                    margin={{ top: 20, right: 20, bottom: 24, left: 4 }}
+                    margin={isMobileViewport
+                      ? { top: 10, right: 8, bottom: 4, left: 0 }
+                      : { top: 20, right: 20, bottom: 24, left: 4 }}
                     accessibilityLayer
                   >
                     <CartesianGrid stroke="#e8efed" strokeDasharray="4 4" vertical={false} />
                     <XAxis
                       dataKey="professionalFieldName"
-                      tickFormatter={value => truncateChartLabel(value)}
+                      tickFormatter={isMobileViewport ? undefined : value => truncateChartLabel(value)}
                       interval={0}
-                      angle={isMobileViewport ? -45 : 0}
-                      textAnchor={isMobileViewport ? 'end' : 'middle'}
-                      height={isMobileViewport ? 62 : 64}
-                      tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
+                      angle={0}
+                      textAnchor="middle"
+                      height={isMobileViewport ? 58 : 64}
+                      tick={isMobileViewport ? <MobileChartTick /> : { fill: '#64748b', fontSize: 12 }}
                       tickLine={false}
                       axisLine={{ stroke: '#dce7e4' }}
                     />
                     <YAxis
                       tickFormatter={formatChartNumber}
                       allowDecimals
-                      width={50}
-                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      width={isMobileViewport ? 36 : 50}
+                      tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <Tooltip content={<TrainingHoursChartTooltip />} cursor={{ fill: 'rgba(26, 170, 132, 0.08)' }} />
-                    <Bar dataKey="submittedHours" fill="#1aaa84" radius={[7, 7, 0, 0]} maxBarSize={58} />
+                    <Bar
+                      dataKey="submittedHours"
+                      fill="#1aaa84"
+                      radius={[7, 7, 0, 0]}
+                      maxBarSize={isMobileViewport ? 36 : 58}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -487,122 +391,6 @@ function TrainingHoursOverviewScreen() {
           </div>
         </section>
 
-        <section className="th-overview-toolbar th-table-card" ref={filterControlRef} data-overview-section="tools" aria-label="Tìm kiếm và thao tác giờ đào tạo">
-          <div className="th-overview-search">
-            <SearchOutlined className="th-overview-search__icon" aria-hidden="true" />
-            <input
-              value={overviewSearch}
-              onChange={event => setOverviewSearch(event.target.value)}
-              onKeyDown={handleOverviewSearchKeyDown}
-              className="th-overview-search__input"
-              placeholder="Tìm theo nội dung đào tạo..."
-              aria-label="Tìm theo nội dung đào tạo"
-            />
-          </div>
-          <button
-            type="button"
-            className="th-overview-filter-btn"
-            onClick={handleFilterToggle}
-            aria-label="Mở bộ lọc giờ đào tạo"
-            aria-controls="training-overview-filter-panel"
-            aria-expanded={isFilterOpen}
-          >
-            <FilterOutlined aria-hidden="true" /> Bộ lọc
-            {countActiveFilterGroups(filterDraft) > 0 && (
-              <span className="th-filter-active-count" aria-label={`${countActiveFilterGroups(filterDraft)} điều kiện đang chọn`}>
-                {countActiveFilterGroups(filterDraft)}
-              </span>
-            )}
-          </button>
-          <button type="button" className="th-btn-primary" onClick={() => navigate('/staff/training/new')}>
-            <PlusOutlined /> Cập nhật giờ đào tạo
-          </button>
-          <button type="button" className="th-overview-link" onClick={() => navigate('/staff/training/all')}>
-            Xem danh sách tất cả <ArrowRightOutlined />
-          </button>
-          {isFilterOpen && (
-            <div className="th-overview-filter-panel" id="training-overview-filter-panel" role="region" aria-label="Bộ lọc giờ đào tạo">
-              <div className="th-overview-filter-panel__header">
-                <strong>Bộ lọc giờ đào tạo</strong>
-                <span>{countActiveFilterGroups(filterDraft)} điều kiện đang chọn</span>
-              </div>
-              {filterOptionsLoading ? (
-                <div className="th-overview-filter-panel__state" role="status">Đang tải tùy chọn lọc...</div>
-              ) : filterOptionsError ? (
-                <div className="th-overview-filter-panel__state th-overview-filter-panel__state--error" role="alert">
-                  <span>{filterOptionsError}</span>
-                  <button type="button" className="th-retry-btn" onClick={loadFilterOptions}>Thử lại</button>
-                </div>
-              ) : (
-                <div className="th-overview-filter-panel__grid">
-                  <label>
-                    <span>Trạng thái</span>
-                    <select
-                      value={filterDraft.status}
-                      onChange={event => setFilterDraft(current => ({ ...current, status: event.target.value }))}
-                      aria-label="Bộ lọc trạng thái"
-                    >
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="SUBMITTED">Đã nộp</option>
-                      <option value="DRAFT">Nháp</option>
-                      <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Từ ngày</span>
-                    <input
-                      type="date"
-                      value={filterDraft.dateFrom}
-                      onChange={event => setFilterDraft(current => ({ ...current, dateFrom: event.target.value }))}
-                      aria-label="Bộ lọc từ ngày"
-                    />
-                  </label>
-                  <label>
-                    <span>Đến ngày</span>
-                    <input
-                      type="date"
-                      value={filterDraft.dateTo}
-                      onChange={event => setFilterDraft(current => ({ ...current, dateTo: event.target.value }))}
-                      aria-label="Bộ lọc đến ngày"
-                    />
-                  </label>
-                  <label>
-                    <span>Lĩnh vực chuyên môn</span>
-                    <select
-                      value={filterDraft.professionalFieldId}
-                      onChange={event => setFilterDraft(current => ({ ...current, professionalFieldId: event.target.value }))}
-                      aria-label="Bộ lọc lĩnh vực chuyên môn"
-                    >
-                      <option value="">Tất cả lĩnh vực</option>
-                      {filterOptions.professionalFields.map(option => (
-                        <option key={option.id} value={option.id}>{option.name || option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Hình thức đào tạo</span>
-                    <select
-                      value={filterDraft.activityTypeId}
-                      onChange={event => setFilterDraft(current => ({ ...current, activityTypeId: event.target.value }))}
-                      aria-label="Bộ lọc hình thức đào tạo"
-                    >
-                      <option value="">Tất cả hình thức</option>
-                      {filterOptions.activityTypes.map(option => (
-                        <option key={option.id} value={option.id}>{option.name || option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              )}
-              {filterDateError && <p className="th-overview-filter-panel__error" role="alert">{filterDateError}</p>}
-              <div className="th-overview-filter-panel__actions">
-                <button type="button" className="th-overview-filter-panel__clear" onClick={handleClearFilters}>Xóa bộ lọc</button>
-                <button type="button" className="th-btn-primary" onClick={handleApplyFilters}>Áp dụng</button>
-              </div>
-            </div>
-          )}
-        </section>
-
         <section className="th-overview-card th-overview-card--latest th-table-card" data-overview-section="latest" aria-labelledby="training-latest-title">
           <div className="th-overview-card__header">
             <div className="th-overview-card__header-copy">
@@ -611,9 +399,22 @@ function TrainingHoursOverviewScreen() {
                 Giờ đào tạo gần nhất
               </h2>
             </div>
-            <button type="button" className="th-overview-link th-overview-latest-mobile-link" onClick={() => navigate('/staff/training/all')}>
-              Xem tất cả <ArrowRightOutlined />
-            </button>
+            <div className="th-overview-card__actions">
+              <button
+                type="button"
+                className="th-btn-primary"
+                onClick={() => navigate('/staff/training/new')}
+              >
+                <PlusOutlined /> Cập nhật giờ đào tạo
+              </button>
+              <button
+                type="button"
+                className="th-overview-link"
+                onClick={() => navigate('/staff/training/all')}
+              >
+                Xem tất cả <ArrowRightOutlined />
+              </button>
+            </div>
           </div>
           {latestLoading ? (
             <OverviewCardState state="loading" className="th-overview-card__state--latest">
