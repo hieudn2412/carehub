@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.training.entity.TrainingActivityType;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecordChangeLog;
 import vn.vietduc.carehubbackend.training.entity.TrainingEvidenceFile;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
+import vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 
@@ -55,7 +56,7 @@ public class TrainingRecordMapper {
                 activityType == null ? null : activityType.getId(),
                 activityType == null ? null : activityType.getName(),
                 entity.getProfessionalField() == null ? null : entity.getProfessionalField().getId(),
-                entity.getProfessionalField() == null ? null : entity.getProfessionalField().getName(),
+                professionalFieldDisplayName(entity.getProfessionalField()),
                 entity.getTitle(),
                 entity.getProvider(),
                 entity.getStartDate(),
@@ -99,7 +100,7 @@ public class TrainingRecordMapper {
                 activityType == null ? null : activityType.getId(),
                 activityType == null ? null : activityType.getName(),
                 professionalField == null ? null : professionalField.getId(),
-                professionalField == null ? null : professionalField.getName(),
+                professionalFieldDisplayName(professionalField),
                 entity.getTitle(),
                 entity.getProvider(),
                 entity.getDescription(),
@@ -155,5 +156,14 @@ public class TrainingRecordMapper {
 
     private Long idOf(Department department) {
         return department == null ? null : department.getId();
+    }
+
+    private String professionalFieldDisplayName(ProfessionalField professionalField) {
+        if (professionalField == null) {
+            return null;
+        }
+        return professionalField.getModerationStatus() == ProfessionalFieldModerationStatus.REJECTED
+                ? "Lĩnh vực khác"
+                : professionalField.getName();
     }
 }

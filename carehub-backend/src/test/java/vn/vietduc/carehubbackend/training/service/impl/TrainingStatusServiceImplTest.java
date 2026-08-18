@@ -64,11 +64,17 @@ class TrainingStatusServiceImplTest {
                 eq(asOf),
                 anyList()
         )).thenReturn(List.of());
+        when(recordRepository.findStatusWindowRecordsForEmployees(
+                eq(List.of(2L)),
+                eq(asOf.minusYears(5)),
+                eq(asOf),
+                anyList()
+        )).thenReturn(List.of());
         when(complianceCalculator.resolveStatus(eq(new BigDecimal("120")), eq(BigDecimal.ZERO)))
                 .thenReturn(ComplianceStatus.NON_COMPLIANT);
 
         var response = service.getDashboardSummary(new EmployeeTrainingStatusSearchRequest(
-                null, null, null, null, null, null, null, null, null, asOf
+                null, null, null, null, null, null, null, null, null, null, asOf
         ));
 
         assertThat(response.asOf()).isEqualTo(asOf);
@@ -81,11 +87,17 @@ class TrainingStatusServiceImplTest {
                 .extracting("departmentName")
                 .containsExactly("Cấp cứu", "Ngoại");
 
+        var employeeResponse = service.getDashboardSummary(new EmployeeTrainingStatusSearchRequest(
+                null, 2L, null, null, null, null, null, null, null, null, asOf
+        ));
+        assertThat(employeeResponse.totals().employeeCount()).isEqualTo(1);
+        assertThat(employeeResponse.byDepartment()).extracting("departmentName").containsExactly("Cấp cứu");
+
         var attentionPage = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
-                null, null, null, null, null, null, null, null, false, asOf
+                null, null, null, null, null, null, null, null, null, false, asOf
         ), PageRequest.of(0, 20));
         var compliantPage = service.getEmployeeStatuses(new EmployeeTrainingStatusSearchRequest(
-                null, null, null, null, null, null, null, null, true, asOf
+                null, null, null, null, null, null, null, null, null, true, asOf
         ), PageRequest.of(0, 20));
 
         assertThat(attentionPage.getTotalElements()).isEqualTo(2);

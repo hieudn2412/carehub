@@ -34,6 +34,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
     @Query("""
             SELECT professionalField.id AS professionalFieldId,
                    professionalField.name AS professionalFieldName,
+                   professionalField.moderationStatus AS professionalFieldModerationStatus,
                    SUM(r.declaredHours) AS submittedHours
             FROM TrainingRecord r
             LEFT JOIN r.professionalField professionalField
@@ -41,7 +42,7 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
               AND r.workflowStatus = vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus.SUBMITTED
               AND r.startDate >= :dateFrom
               AND r.startDate <= :dateTo
-            GROUP BY professionalField.id, professionalField.name
+            GROUP BY professionalField.id, professionalField.name, professionalField.moderationStatus
             ORDER BY SUM(r.declaredHours) DESC, professionalField.name ASC
             """)
     List<ProfessionalFieldHoursProjection> summarizeSubmittedHoursByProfessionalField(
@@ -102,7 +103,8 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                 activityType.id,
                 activityType.name,
                 professionalField.id,
-                professionalField.name,
+                CASE WHEN professionalField.moderationStatus = vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus.REJECTED
+                     THEN 'Lĩnh vực khác' ELSE professionalField.name END,
                 r.startDate,
                 r.endDate,
                 r.declaredHours,
@@ -156,7 +158,8 @@ public interface TrainingRecordRepository extends JpaRepository<TrainingRecord, 
                         activityType.id,
                         activityType.name,
                         professionalField.id,
-                        professionalField.name,
+                        CASE WHEN professionalField.moderationStatus = vn.vietduc.carehubbackend.training.enums.ProfessionalFieldModerationStatus.REJECTED
+                             THEN 'Lĩnh vực khác' ELSE professionalField.name END,
                         r.title,
                         r.provider,
                         r.startDate,

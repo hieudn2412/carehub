@@ -15,6 +15,8 @@ import vn.vietduc.carehubbackend.auth.service.impl.PasswordResetServiceImpl;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
+import vn.vietduc.carehubbackend.notification.config.MailProperties;
+import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -44,11 +46,14 @@ class PasswordResetServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        MailProperties mailProperties = new MailProperties();
+        mailProperties.setBrandName("VietDuc Care");
         service = new PasswordResetServiceImpl(
                 passwordResetRepository,
                 userRepository,
                 emailProducer,
-                passwordEncoder
+                passwordEncoder,
+                new BrandedEmailRenderer(mailProperties)
         );
         activeUser = User.builder()
                 .id(7L)
@@ -78,8 +83,9 @@ class PasswordResetServiceImplTest {
         ArgumentCaptor<EmailMessage> emailCaptor = ArgumentCaptor.forClass(EmailMessage.class);
         verify(emailProducer).sendEmail(emailCaptor.capture());
         assertEquals("emp007@example.com", emailCaptor.getValue().getTo());
-        assertEquals("Reset Password OTP", emailCaptor.getValue().getSubject());
+        assertEquals("[VietDuc Care] Mã xác thực đặt lại mật khẩu", emailCaptor.getValue().getSubject());
         assertTrue(emailCaptor.getValue().getContent().contains(otp.getOtp()));
+        assertTrue(emailCaptor.getValue().getHtmlContent().contains(otp.getOtp()));
     }
 
     @Test

@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
@@ -191,6 +192,21 @@ public class ExamAttemptService {
         // Quá hạn thì chỉ chấm phần đã lưu trước hạn — đáp án gửi kèm lần nộp muộn bị bỏ qua.
         ExamAttempt saved = gradeAttempt(attempt, expired ? null : request, submittedAt);
         return toResponse(saved, canRevealQuestionReview(saved), canRevealAnswers(saved), canRevealScore(saved));
+    }
+
+    /**
+     * Keep an abandoned browser tab from leaving the attempt in IN_PROGRESS forever.
+     * The persisted expiresAt remains the authority; this job only materializes the
+     * already-due server decision and grades the answers saved before the deadline.
+     */
+    @Scheduled(fixedDelayString = "${app.exam.attempt-expiry-scan-ms:15000}")
+    @Transactional
+    public void finalizeExpiredAttempts() {
+        LocalDateTime now = now();
+        attemptRepository.findByStatusAndExpiresAtLessThanEqual(ExamAttemptStatus.IN_PROGRESS, now)
+                .stream()
+                .filter(this::isExpired)
+                .forEach(attempt -> gradeAttempt(attempt, null, effectiveExpiry(attempt)));
     }
 
     /**
@@ -539,7 +555,7 @@ public class ExamAttemptService {
     }
 
     private boolean isExpired(ExamAttempt attempt) {
-        return attempt.getExpiresAt() != null && now().isAfter(attempt.getExpiresAt());
+        return attempt.getExpiresAt() != null && !now().isBefore(attempt.getExpiresAt());
     }
 
     private void expireIfNeeded(ExamAttempt attempt) {

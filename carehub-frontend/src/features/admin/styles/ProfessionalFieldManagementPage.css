@@ -308,6 +308,10 @@
   line-height: 1;
 }
 
+.pfm-tab-badge--rejected {
+  background: #b42318;
+}
+
 .pfm-tab-btn:hover {
   color: #0f172a;
 }
@@ -558,6 +562,21 @@
   border-color: #ffedd5;
 }
 
+.pfm-status--rejected {
+  background: #fff1f0;
+  color: #b42318;
+  border-color: #ffd6d2;
+}
+
+.pfm-btn-reject {
+  color: #b42318;
+}
+
+.pfm-btn-reject:hover {
+  border-color: #f3aaa3;
+  background: #fff1f0;
+}
+
 /* Create / edit modal */
 .pfm-modal-backdrop {
   position: fixed;
@@ -652,6 +671,161 @@
 .pfm-modal__actions button {
   flex: 0 0 auto;
   min-width: 118px;
+}
+
+.pfm-modal__actions .pfm-danger {
+  border-color: #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.pfm-modal__actions .pfm-danger:hover:not(:disabled) {
+  border-color: #912018;
+  background: #912018;
+  color: #fff;
+}
+
+/* Reject modal */
+.pfm-reject-modal {
+  width: min(580px, 100%);
+  border-color: #fee2e2;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22), 0 4px 16px rgba(180, 35, 24, 0.08);
+}
+
+.pfm-reject-modal__header {
+  border-bottom: 1px solid #fee2e2;
+  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 70%);
+}
+
+.pfm-reject-eyebrow {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #b42318;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pfm-reject-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 26px;
+}
+
+.pfm-reject-field-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff8f8;
+}
+
+.pfm-reject-field-summary__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.pfm-reject-field-summary__badge {
+  color: #991b1b;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pfm-reject-field-summary__code {
+  padding: 2px 8px;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.pfm-reject-field-summary__name {
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.pfm-reject-field-summary__desc {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pfm-reject-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.pfm-reject-form-field .pfm-form-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pfm-reject-form-field textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 110px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pfm-reject-form-field textarea::placeholder {
+  color: #94a3b8;
+}
+
+.pfm-reject-form-field textarea:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.pfm-reject-field-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.pfm-reject-hint {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pfm-char-count {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 /* bp-md */

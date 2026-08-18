@@ -5,7 +5,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
-import { apiData, apiErrorMessage, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/StaffCompetencyPage.css'
 
@@ -101,10 +101,10 @@ export default function StaffCompetencyPage() {
   }
 
   const mobileSearchContent = ({ close }) => (
-    <div className="sc-mobile-search-form">
-      <label>
+    <div className="th-mobile-search-form">
+      <label className="th-mobile-search-form__field">
         <span>Tên bảng kiểm</span>
-        <div className="sc-search-input">
+        <div className="th-mobile-search-form__search">
           <SearchOutlined aria-hidden="true" />
           <input
             data-mobile-search-autofocus="true"
@@ -121,12 +121,14 @@ export default function StaffCompetencyPage() {
           />
         </div>
       </label>
-      <label><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
-      <label><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
-      {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
-      <div className="sc-mobile-search-actions">
-        <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
-        <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
+      <div className="th-mobile-search-form__grid">
+        <label className="th-mobile-search-form__field"><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
+      </div>
+      {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
+      <div className="th-mobile-search-form__actions">
+        <button type="button" className="th-mobile-search-form__clear" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
+        <button type="button" className="th-mobile-search-form__apply" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
       </div>
     </div>
   )
@@ -162,6 +164,7 @@ export default function StaffCompetencyPage() {
   return (
     <AppShell
       title="Danh sách bảng kiểm đã chấm"
+      className="staff-competency-list-shell"
       back={{ to: '/staff/competency', label: 'Tuân thủ quy trình, quy định' }}
       breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định', link: '/staff/competency' }, { label: 'Danh sách bảng kiểm' }]}
       mobileSearch={{
@@ -225,10 +228,10 @@ export default function StaffCompetencyPage() {
               </colgroup>
               <thead><tr><th>Quy trình</th><th>Số lượt đạt/tổng lượt</th><th>Tỷ lệ tuân thủ</th><th>Hành động</th></tr></thead><tbody>
               {visibleItems.map(item => <tr key={item.formId}>
-                <td><strong className="sc-table__process-name">{item.formName}</strong></td>
-                <td><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
-                <td><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
-                <td><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).length > 0 && <button type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá`} aria-label={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá ${item.formName}`} onClick={() => openAttemptHistory(item.attempts)}><EyeOutlined /></button>}</div></td>
+                <td data-label="Quy trình"><strong className="sc-table__process-name">{item.formName}</strong></td>
+                <td data-label="Đạt / Tổng"><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
+                <td data-label="Tỷ lệ"><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
+                <td data-label="Chi tiết"><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).length > 0 && <button type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá`} aria-label={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá ${item.formName}`} onClick={() => openAttemptHistory(item.attempts)}><EyeOutlined /></button>}</div></td>
               </tr>)}
             </tbody></table></div>
           )}

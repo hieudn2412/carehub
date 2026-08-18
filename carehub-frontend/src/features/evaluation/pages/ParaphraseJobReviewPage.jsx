@@ -9,8 +9,7 @@ import {
   StopOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import {
@@ -241,13 +240,12 @@ function ParaphraseJobReviewPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ onClick: () => navigate(-1), label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page qdoc-paraphrase-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ onClick: () => navigate(-1), label: 'Quay lại' }}
+      breadcrumbs={breadcrumbs}
+    >
+      <div className="qdoc-page qdoc-paraphrase-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên diễn đạt lại...</section>
               ) : !jobDetail ? (
@@ -341,9 +339,6 @@ function ParaphraseJobReviewPage() {
                   </section>
                 </>
               )}
-            </div>
-          </main>
-        </div>
       </div>
 
       {editingCandidate && editForm && (
@@ -388,7 +383,7 @@ function ParaphraseJobReviewPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 
   function setEditFormField(field, value) {
@@ -422,11 +417,6 @@ function ParaphraseCandidateCard({
             </label>
           )}
           <span className={`qdoc-badge qdoc-badge--${statusTone(candidate.status)}`}>{candidateStatusText(candidate)}</span>
-          {candidate.semanticSimilarityToSource != null && (
-            <span className="qdoc-paraphrase-similarity">
-              Tương đồng câu gốc {Math.round(candidate.semanticSimilarityToSource * 100)}%
-            </span>
-          )}
         </div>
       </header>
 
@@ -437,13 +427,6 @@ function ParaphraseCandidateCard({
         <div className="qdoc-soft-box">
           <strong>Giải thích</strong>
           <p>{candidate.explanation}</p>
-        </div>
-      )}
-
-      {candidate.duplicateMaxSimilarity >= 0.8 && (
-        <div className="qdoc-alert qdoc-alert--warning">
-          <WarningOutlined />
-          <span>Khả năng trùng: {Math.round(candidate.duplicateMaxSimilarity * 100)}% {candidate.duplicateQuestionStemSnapshot || ''}</span>
         </div>
       )}
 
@@ -514,7 +497,9 @@ function Options({ candidate }) {
 }
 
 function Warnings({ warnings }) {
-  const items = parseJsonList(warnings)
+  const items = parseJsonList(warnings).filter((item) =>
+    typeof item === 'string' && item.startsWith('Mất thuật ngữ hoặc số liệu cần giữ')
+  )
   if (!items.length) return null
   return (
     <div className="qdoc-warning-list">

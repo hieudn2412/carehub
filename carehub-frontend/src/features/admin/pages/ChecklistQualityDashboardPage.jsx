@@ -17,7 +17,7 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
-import { apiData, apiErrorMessage } from '../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
 import '../styles/ChecklistQualityDashboardPage.css'
 
 function localDate(date = new Date()) {

@@ -15,7 +15,7 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import ChecklistReadOnlyVersion from '../components/ChecklistReadOnlyVersion.jsx'
 import { adminApi } from '../api/adminApi'
 import { createChecklistCode } from '../utils/formCode.js'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import '../styles/ChecklistCreatePage.css'
 
 const CHOICE_FIELD_TYPES = ['DROPDOWN', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE']

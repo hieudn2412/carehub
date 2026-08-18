@@ -1,5 +1,5 @@
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
-import { getPermissionsFromAccessToken, getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
+import { getPermissionsFromAccessToken, getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 
 export const EVALUATION_PERMISSION = {
   questionAuthor: 'QUESTION_AUTHOR',
@@ -12,7 +12,7 @@ export const EVALUATION_PERMISSION = {
   auditViewer: 'AUDIT_VIEWER',
 }
 
-export const ALL_EVALUATION_PERMISSIONS = Object.values(EVALUATION_PERMISSION)
+const ALL_EVALUATION_PERMISSIONS = Object.values(EVALUATION_PERMISSION)
 
 export function getCurrentEvaluationAccess() {
   const token = tokenStorage.getAccessToken()
@@ -31,10 +31,6 @@ export function getCurrentEvaluationAccess() {
       return requiredPermissions.map(normalize).some((permission) => permissions.includes(permission))
     },
   }
-}
-
-export function hasAnyEvaluationPermission(requiredPermissions = []) {
-  return getCurrentEvaluationAccess().hasAny(requiredPermissions)
 }
 
 function normalize(value) {

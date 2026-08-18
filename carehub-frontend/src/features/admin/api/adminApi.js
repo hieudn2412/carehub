@@ -1,5 +1,5 @@
 import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 function authHeaders() {
   const accessToken = tokenStorage.getAccessToken()
@@ -89,6 +89,12 @@ export const adminApi = {
 
   updateProfessionalField(id, data) {
     return httpClient.put(`/training/professional-fields/${id}`, data, {
+      headers: authHeaders(),
+    })
+  },
+
+  rejectProfessionalField(id) {
+    return httpClient.post(`/training/professional-fields/${id}/reject`, null, {
       headers: authHeaders(),
     })
   },

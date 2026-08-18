@@ -176,6 +176,7 @@ public class EvaluationAuditLogService {
             case "EXAM_PAPER_EXPORT" -> "Export bộ đề";
             case "EXAM_PAPER_VIEW_ANSWER_KEY" -> "Xem đáp án bộ đề";
             case "EXAM_ASSIGNMENT_CREATE" -> "Tạo phân công kiểm tra";
+            case "EXAM_ASSIGNMENT_ADD_TARGETS" -> "Giao bổ sung nhân viên";
             case "EXAM_ASSIGNMENT_OPEN" -> "Mở phân công kiểm tra";
             case "EXAM_ASSIGNMENT_CLOSE" -> "Đóng phân công kiểm tra";
             case "EXAM_ASSIGNMENT_ARCHIVE" -> "Lưu trữ phân công kiểm tra";

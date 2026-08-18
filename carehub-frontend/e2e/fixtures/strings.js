@@ -148,21 +148,5 @@ export const MANAGER = {
   viewRecordTitle: 'Xem chi tiết hồ sơ',
 }
 
-export const NOTIFICATIONS = {
-  bellStaffLabel: 'Mở thông báo',
-  popoverHeading: 'Thông báo',
-  markAllRead: 'Đánh dấu đã đọc',
-  pageHeading: 'Thông báo của tôi',
-  empty: 'Không có thông báo mới nào',
-}
-
-export const FIRST_LOGIN = {
-  step1Heading: 'Thiết lập bảo mật tài khoản',
-  sendOtp: 'Gửi mã OTP',
-  step2Heading: 'Xác thực OTP',
-  step3Heading: 'Tạo mật khẩu mới',
-  doneHeading: 'Hoàn tất',
-}
-
 /** Toast container/text — the toast auto-dismisses after 4000 ms, so assert immediately. */
 export const TOAST_SELECTOR = '.toast-message'

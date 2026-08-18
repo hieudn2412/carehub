@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { tokenStorage } from './tokenStorage.js'
 
-/**
- * L1 unit tests — sheet Frontend, Test ID prefix L1-FE (IDs 36–39 live here).
- *
- * Traces the session-handling rules in TDS Part 2.2: tokens live in sessionStorage only, and a
- * logout or failed refresh must leave nothing behind.
- */
 describe('tokenStorage', () => {
   it('L1-FE-36 | EP-Valid: tokens round-trip through sessionStorage under the carehub.* keys', () => {
     tokenStorage.setAccessToken('access-1')
@@ -24,7 +18,6 @@ describe('tokenStorage', () => {
     (falsy) => {
       tokenStorage.setAccessToken('access-1')
       tokenStorage.setRefreshToken('refresh-1')
-
       tokenStorage.setAccessToken(falsy)
       tokenStorage.setRefreshToken(falsy)
 
@@ -43,7 +36,6 @@ describe('tokenStorage', () => {
     expect(window.sessionStorage.getItem('carehub.requiresFirstLoginSetup')).toBe('false')
     expect(tokenStorage.getRequiresFirstLoginSetup()).toBe(false)
 
-    // Anything other than the exact string "true" reads back as false.
     window.sessionStorage.setItem('carehub.requiresFirstLoginSetup', 'TRUE')
     expect(tokenStorage.getRequiresFirstLoginSetup()).toBe(false)
   })
@@ -53,7 +45,6 @@ describe('tokenStorage', () => {
     tokenStorage.setRefreshToken('refresh-1')
     tokenStorage.setRequiresFirstLoginSetup(true)
     window.localStorage.setItem('token', 'legacy')
-
     tokenStorage.clear()
 
     expect(tokenStorage.getAccessToken()).toBeNull()

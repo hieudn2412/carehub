@@ -1,5 +1,5 @@
 import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 function authHeaders() {
   const accessToken = tokenStorage.getAccessToken()
@@ -59,6 +59,12 @@ export const examAssignmentApi = {
     })
   },
 
+  listTargetCandidates(assignmentId) {
+    return httpClient.get(`/exam-assignments/${assignmentId}/target-candidates`, {
+      headers: authHeaders(),
+    })
+  },
+
   getAssignmentResults(assignmentId) {
     return httpClient.get(`/exam-assignments/${assignmentId}/results`, {
       headers: authHeaders(),
@@ -106,6 +112,12 @@ export const examAssignmentApi = {
 
   createAssignment(payload) {
     return httpClient.post('/exam-assignments', payload, {
+      headers: authHeaders(),
+    })
+  },
+
+  addTargets(assignmentId, payload) {
+    return httpClient.post(`/exam-assignments/${assignmentId}/targets`, payload, {
       headers: authHeaders(),
     })
   },

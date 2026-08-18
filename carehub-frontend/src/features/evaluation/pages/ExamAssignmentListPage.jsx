@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, BarChartOutlined, LoadingOutlined, FilterOutlined } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import { CloseOutlined, DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, StopOutlined, BarChartOutlined, LoadingOutlined, FilterOutlined, UserAddOutlined } from '@ant-design/icons'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
+import ExamAssignmentAddTargetsModal from '../components/ExamAssignmentAddTargetsModal.jsx'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
@@ -30,6 +30,7 @@ function ExamAssignmentListPage({
   const [isLoadingResults, setIsLoadingResults] = useState(false)
   const [isLoadingAttemptResult, setIsLoadingAttemptResult] = useState(false)
   const [pendingArchive, setPendingArchive] = useState(null)
+  const [pendingAddTargets, setPendingAddTargets] = useState(null)
 
   const loadAssignments = useCallback(async () => {
     setIsLoading(true)
@@ -82,6 +83,22 @@ function ExamAssignmentListPage({
 
   async function archiveAssignment(assignment) {
     setPendingArchive(assignment)
+  }
+
+  async function handleTargetsAdded(assignment, addedCount) {
+    await loadAssignments()
+    if (selectedAssignmentId !== assignment.id) return
+    try {
+      const [response, reportResponse] = await Promise.all([
+        examAssignmentApi.getAssignmentResults(assignment.id),
+        examAssignmentApi.getResultReport(assignment.id),
+      ])
+      setResults(apiData(response, null))
+      setResultReport(apiData(reportResponse, null))
+    } catch (error) {
+      showToast(apiErrorMessage(error), 'error')
+    }
+    return addedCount
   }
 
   async function confirmArchiveAssignment() {
@@ -152,13 +169,8 @@ function ExamAssignmentListPage({
   const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="exp-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="exp-page">
               <section className="exp-management-card">
                 <ExamManagementViewSwitch
                   activeView={activeView}
@@ -217,7 +229,7 @@ function ExamAssignmentListPage({
                       <th>Tên đợt giao đề</th>
                       <th>Bộ đề</th>
                       <th>Số NV</th>
-                      <th>Đã nộp</th>
+                      <th>Đã nộp / Tổng NV</th>
                       <th>Hạn nộp</th>
                       <th>Trạng thái</th>
                       <th style={{ width: 170 }}>Hành động</th>
@@ -233,7 +245,7 @@ function ExamAssignmentListPage({
                         <td><strong>{assignment.name}</strong></td>
                         <td>{assignment.examPaperCode} - {assignment.examPaperName}</td>
                         <td>{assignment.targetCount}</td>
-                        <td>{assignment.submittedCount ?? 0}/{assignment.attemptCount ?? '-'}</td>
+                        <td>{assignment.submittedTargetCount ?? 0}/{assignment.targetCount ?? 0}</td>
                         <td>{formatDateTime(assignment.dueAt)}</td>
                         <td><span className={`exp-badge exp-badge--${assignment.status?.toLowerCase()}`}>{assignment.statusText || assignment.status}</span></td>
                         <td>
@@ -246,6 +258,14 @@ function ExamAssignmentListPage({
                             ><BarChartOutlined /></button>
                             {assignment.status !== 'OPEN' && assignment.status !== 'ARCHIVED' && (
                               <button type="button" className="admin-table-action admin-table-action--icon admin-table-action--success" onClick={() => openAssignment(assignment)} title="Mở"><FolderOpenOutlined /></button>
+                            )}
+                            {assignment.status === 'OPEN' && (
+                              <button
+                                type="button"
+                                className="admin-table-action admin-table-action--icon admin-table-action--success"
+                                onClick={() => setPendingAddTargets(assignment)}
+                                title="Giao bổ sung nhân viên"
+                              ><UserAddOutlined /></button>
                             )}
                             {assignment.status === 'OPEN' && (
                               <button type="button" className="admin-table-action admin-table-action--icon" onClick={() => closeAssignment(assignment)} title="Đóng"><StopOutlined /></button>
@@ -427,9 +447,6 @@ function ExamAssignmentListPage({
                 )}
                 </div>
               </section>
-            </div>
-          </main>
-        </div>
       </div>
       <ConfirmModal
         isOpen={Boolean(pendingArchive)}
@@ -440,7 +457,14 @@ function ExamAssignmentListPage({
         onCancel={() => setPendingArchive(null)}
         onConfirm={confirmArchiveAssignment}
       />
-    </div>
+      {pendingAddTargets && (
+        <ExamAssignmentAddTargetsModal
+          assignment={pendingAddTargets}
+          onAdded={(addedCount) => handleTargetsAdded(pendingAddTargets, addedCount)}
+          onClose={() => setPendingAddTargets(null)}
+        />
+      )}
+    </AppShell>
   )
 }
 

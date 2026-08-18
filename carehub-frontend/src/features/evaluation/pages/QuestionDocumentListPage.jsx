@@ -6,15 +6,13 @@ import {
   DeleteOutlined,
   FileAddOutlined,
   FileSearchOutlined,
-  FilterOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
   PlusOutlined,
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
@@ -43,8 +41,6 @@ function QuestionDocumentListPage() {
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
   const [keyword, setKeyword] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [jobModalDocument, setJobModalDocument] = useState(null)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
@@ -73,11 +69,9 @@ function QuestionDocumentListPage() {
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = normalizeText(keyword)
     return documents.filter((document) => {
-      const matchesKeyword = !normalizedKeyword || normalizeText(document.filename).includes(normalizedKeyword)
-      const matchesStatus = !statusFilter || document.status === statusFilter
-      return matchesKeyword && matchesStatus
+      return !normalizedKeyword || normalizeText(document.filename).includes(normalizedKeyword)
     })
-  }, [documents, keyword, statusFilter])
+  }, [documents, keyword])
 
   const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / PAGE_SIZE))
   const displayRows = filteredDocuments.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -169,13 +163,13 @@ function QuestionDocumentListPage() {
     try {
       const response = await questionCategoryApi.createCategory({
         name,
-        code: categoryForm.code.trim() || undefined,
-        description: categoryForm.description.trim() || undefined,
+        code: categoryForm.code.trim() || null,
+        description: categoryForm.description.trim() || null,
         status: 'ACTIVE',
       })
       const category = apiData(response)
       if (category?.id) {
-        setCategories((current) => [...current, category])
+        setCategories((current) => [...current, category].sort((left, right) => (left.name || '').localeCompare(right.name || '', 'vi')))
         setSelectedCategoryId(String(category.id))
       }
       setCategoryForm({ name: '', code: '', description: '' })
@@ -194,7 +188,12 @@ function QuestionDocumentListPage() {
       showToast('Vui lòng chọn danh mục câu hỏi.', 'warning')
       return
     }
-    const normalizedCount = Math.min(5, Math.max(1, Number(questionsPerChunk) || 1))
+    const rawCount = Number(questionsPerChunk) || 1
+    if (rawCount > 3 || rawCount < 1) {
+      showToast('Số câu mỗi đoạn nội dung chỉ được từ 1 đến 3.', 'warning')
+      return
+    }
+    const normalizedCount = rawCount
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(jobModalDocument.id, {
@@ -219,13 +218,8 @@ function QuestionDocumentListPage() {
   const breadcrumbs = [{ label: 'Đánh giá' }, { label: 'Tạo câu hỏi từ tài liệu' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="qdoc-page">
               <section className="qdoc-title-card">
                 <div>
                   <h1 className="qdoc-title">Tạo câu hỏi từ tài liệu</h1>
@@ -288,38 +282,8 @@ function QuestionDocumentListPage() {
                         }}
                       />
                     </div>
-                    <button
-                      aria-controls="question-document-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                      type="button"
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {statusFilter && <span className="admin-control-toolbar__filter-count">1</span>}
-                    </button>
                   </div>
                 </div>
-                {isFilterOpen && (
-                  <div className="admin-control-toolbar__panel" id="question-document-filter-panel">
-                    <label className="admin-control-toolbar__field">
-                      <span>Trạng thái</span>
-                      <select
-                        className="qdoc-select"
-                        value={statusFilter}
-                        onChange={(event) => {
-                          setStatusFilter(event.target.value)
-                          setPage(0)
-                        }}
-                      >
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="READY">Sẵn sàng</option>
-                        <option value="OCR_REQUIRED">Cần OCR</option>
-                        <option value="FAILED">Thất bại</option>
-                      </select>
-                    </label>
-                  </div>
-                )}
               </section>
 
               <section className="qdoc-table-card">
@@ -379,9 +343,16 @@ function QuestionDocumentListPage() {
                                 onClick={() => navigate(`/admin/evaluation/document-question-jobs/${document.latestQuestionJob.id}`)}
                               >
                                 <span>{formatNumber(document.latestQuestionJob.candidateCount)} câu</span>
-                                <span className={`qdoc-mini-badge qdoc-mini-badge--${statusTone(document.latestQuestionJob.status)}`}>
-                                  {jobStatusText(document.latestQuestionJob)}
-                                </span>
+                                {['GENERATING', 'VALIDATING'].includes(document.latestQuestionJob.status) && (
+                                  <span className={`qdoc-mini-badge qdoc-mini-badge--${statusTone(document.latestQuestionJob.status)}`}>
+                                    {jobStatusText(document.latestQuestionJob)}
+                                  </span>
+                                )}
+                                {document.latestQuestionJob.status === 'FAILED' && (
+                                  <span className="qdoc-mini-badge qdoc-mini-badge--danger">
+                                    Thất bại
+                                  </span>
+                                )}
                               </button>
                             ) : (
                               <span className="qdoc-muted-text">Chưa tạo</span>
@@ -438,9 +409,6 @@ function QuestionDocumentListPage() {
                   </div>
                 </div>
               </section>
-            </div>
-          </main>
-        </div>
       </div>
 
       {jobModalDocument && (
@@ -481,13 +449,13 @@ function QuestionDocumentListPage() {
               <input
                 type="number"
                 min="1"
-                max="5"
+                max="3"
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
                 disabled={isCreatingJob}
               />
               <small className="qdoc-field-help">
-                Tài liệu sẽ được chia thành các đoạn nội dung, mỗi đoạn sinh tối đa số câu đã chọn. Nên bắt đầu với 1 để kiểm soát chất lượng.
+                Tài liệu sẽ được chia thành các đoạn nội dung, mỗi đoạn sinh tối đa số câu đã chọn. Tối đa 3 câu/đoạn — vượt quá dễ khiến AI trả lời bị cắt dở và sinh câu thất bại. Nên bắt đầu với 1 để kiểm soát chất lượng.
               </small>
             </label>
             <div className="qdoc-modal-actions">
@@ -546,7 +514,7 @@ function QuestionDocumentListPage() {
           }}
         />
       )}
-    </div>
+    </AppShell>
   )
 }
 

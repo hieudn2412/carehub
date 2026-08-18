@@ -10,16 +10,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
+import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.notification.entity.NotificationAudience;
 import vn.vietduc.carehubbackend.notification.entity.NotificationEventType;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationDispatchEvent;
 import vn.vietduc.carehubbackend.notification.messaging.NotificationEventPublisher;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.CreateExamAssignmentRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.AddExamAssignmentTargetsRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultRowResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResultsResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentTargetResponse;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.ExamAssignmentTargetCandidateResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationResultReportResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyExamAssignmentResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAssignment;
@@ -193,6 +196,33 @@ public class ExamAssignmentService {
     @Transactional(readOnly = true)
     public ExamAssignmentResponse get(Long assignmentId) {
         return toResponse(find(assignmentId), true);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExamAssignmentTargetCandidateResponse> targetCandidates(Long assignmentId) {
+        ExamAssignment assignment = find(assignmentId);
+        if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
+            throw new BadRequestException("Chỉ có thể xem nhân viên để giao bổ sung cho đợt đang mở");
+        }
+        LocalDateTime now = now();
+        if (assignment.getDueAt() != null && !now.isBefore(assignment.getDueAt())) {
+            throw new BadRequestException("Đợt giao đề đã quá hạn, không thể giao bổ sung");
+        }
+        Set<Long> assignedUserIds = targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(assignment).stream()
+                .map(target -> target.getUser().getId())
+                .collect(Collectors.toSet());
+        return userRepository.findByIsDeletedFalseAndStatus(UserStatus.ACTIVE).stream()
+                .filter(user -> !assignedUserIds.contains(user.getId()))
+                .sorted(Comparator.comparing(User::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER))
+                        .thenComparing(User::getEmployeeCode, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .map(user -> new ExamAssignmentTargetCandidateResponse(
+                        user.getId(),
+                        user.getEmployeeCode(),
+                        user.getName(),
+                        user.getPosition() == null ? null : user.getPosition().getName(),
+                        user.getDepartment() == null ? null : user.getDepartment().getName()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -589,6 +619,74 @@ public class ExamAssignmentService {
         return toResponse(saved, true);
     }
 
+    @Transactional
+    public ExamAssignmentResponse addTargets(Long assignmentId, AddExamAssignmentTargetsRequest request) {
+        if (request == null || request.userIds() == null) {
+            throw new BadRequestException("Vui lòng chọn nhân viên cần giao bổ sung");
+        }
+        ExamAssignment assignment = find(assignmentId);
+        if (assignment.getStatus() != ExamAssignmentStatus.OPEN) {
+            throw new BadRequestException("Chỉ có thể giao bổ sung cho đợt đang mở");
+        }
+        LocalDateTime now = now();
+        if (assignment.getDueAt() != null && !now.isBefore(assignment.getDueAt())) {
+            throw new BadRequestException("Đợt giao đề đã quá hạn, không thể giao bổ sung");
+        }
+        if (assignment.getExamPaper().getStatus() != ExamPaperStatus.PUBLISHED) {
+            throw new BadRequestException("Bộ đề của đợt giao chưa được phát hành");
+        }
+
+        Set<Long> uniqueUserIds = request.userIds().stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (uniqueUserIds.isEmpty()) {
+            throw new BadRequestException("Vui lòng chọn ít nhất một nhân viên để giao bổ sung");
+        }
+
+        Set<Long> assignedUserIds = targetRepository.findByAssignmentOrderByUserEmployeeCodeAsc(assignment).stream()
+                .map(target -> target.getUser().getId())
+                .collect(Collectors.toSet());
+        List<Long> alreadyAssigned = uniqueUserIds.stream()
+                .filter(assignedUserIds::contains)
+                .toList();
+        if (!alreadyAssigned.isEmpty()) {
+            throw new ConflictException("Một hoặc nhiều nhân viên đã được giao trong đợt này");
+        }
+
+        List<User> users = new ArrayList<>(userRepository.findAllById(uniqueUserIds));
+        if (users.size() != uniqueUserIds.size()
+                || users.stream().anyMatch(user -> user.isDeleted() || user.getStatus() != UserStatus.ACTIVE)) {
+            throw new BadRequestException("Danh sách nhân viên giao bổ sung không hợp lệ hoặc đã ngừng hoạt động");
+        }
+        users.sort(Comparator.comparing(User::getId));
+
+        List<ExamPaper> publishedVariants = publishedVariants(assignment.getExamPaper());
+        ExamAssignmentVariantPolicy variantPolicy = assignment.getVariantPolicy() == null
+                ? ExamAssignmentVariantPolicy.FIXED_PAPER
+                : assignment.getVariantPolicy();
+        List<ExamAssignmentTarget> targets = new ArrayList<>();
+        for (User user : users) {
+            ExamPaper assignedPaper = assignedVariant(assignment, user, publishedVariants, variantPolicy);
+            targets.add(ExamAssignmentTarget.builder()
+                    .assignment(assignment)
+                    .user(user)
+                    .assignedExamPaper(assignedPaper)
+                    .assignedVariantIndex(assignedPaper.getVariantIndex() == null
+                            ? assignedPaper.getVersion()
+                            : assignedPaper.getVariantIndex())
+                    .variantPolicy(variantPolicy)
+                    .targetType(AssignmentTargetType.EMPLOYEE)
+                    .resolvedAt(now)
+                    .sourceDepartmentId(user.getDepartment() == null ? null : user.getDepartment().getId())
+                    .sourceDepartmentName(user.getDepartment() == null ? null : user.getDepartment().getName())
+                    .sourcePositionName(user.getPosition() == null ? null : user.getPosition().getName())
+                    .build());
+        }
+        targetRepository.saveAll(targets);
+        users.forEach(user -> publishExamAssigned(assignment, user));
+        return toResponse(assignment, true);
+    }
+
     private void publishExamAssigned(ExamAssignment assignment, User user) {
         Map<String, String> variables = new LinkedHashMap<>();
         variables.put("employee_name", user.getName());
@@ -640,11 +738,12 @@ public class ExamAssignmentService {
                 .map(this::toTargetResponse)
                 .toList()
                 : List.of();
-        List<vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt> attempts =
+        List<ExamAttempt> attempts =
                 attemptRepository.findByAssignmentOrderByStartedAtDesc(assignment);
         int submittedCount = (int) attempts.stream()
                 .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.SUBMITTED || attempt.getStatus() == ExamAttemptStatus.GRADED)
                 .count();
+        int submittedTargetCount = latestSubmittedTargetCount(attempts);
         return new ExamAssignmentResponse(
                 assignment.getId(),
                 assignment.getName(),
@@ -672,12 +771,29 @@ public class ExamAssignmentService {
                 Math.toIntExact(targetRepository.countByAssignment(assignment)),
                 attempts.size(),
                 submittedCount,
+                submittedTargetCount,
                 targets,
                 assignment.getOpenedAt(),
                 assignment.getClosedAt(),
                 assignment.getCreatedAt(),
                 assignment.getUpdatedAt()
         );
+    }
+
+    /**
+     * Assignment progress is employee-based, while attemptCount/submittedCount are
+     * attempt-based metrics. Keep both available so the list page does not report
+     * values such as 2/2 when one employee has submitted two retakes.
+     */
+    private int latestSubmittedTargetCount(List<ExamAttempt> attempts) {
+        Map<Long, ExamAttempt> latestByUser = new LinkedHashMap<>();
+        for (ExamAttempt attempt : attempts) {
+            latestByUser.putIfAbsent(attempt.getUser().getId(), attempt);
+        }
+        return (int) latestByUser.values().stream()
+                .filter(attempt -> attempt.getStatus() == ExamAttemptStatus.SUBMITTED
+                        || attempt.getStatus() == ExamAttemptStatus.GRADED)
+                .count();
     }
 
     private MyExamAssignmentResponse toMyExamResponse(

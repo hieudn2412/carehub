@@ -66,6 +66,7 @@
   color: #1e293b;
   margin: 0;
   line-height: 1.4;
+  white-space: pre-line;
 }
 
 /* Close Button */

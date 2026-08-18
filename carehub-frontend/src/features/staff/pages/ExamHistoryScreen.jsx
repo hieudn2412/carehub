@@ -3,7 +3,7 @@ import '../styles/ExamHistoryScreen.css'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { CheckCircleOutlined, EyeOutlined, FileTextOutlined, PieChartOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
-import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 

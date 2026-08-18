@@ -1,4 +1,4 @@
-import { tokenStorage } from '../services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 export function useAuthTokens() {
   const saveTokens = (tokens) => {

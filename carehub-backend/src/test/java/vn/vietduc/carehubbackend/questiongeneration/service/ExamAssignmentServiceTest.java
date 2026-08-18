@@ -233,6 +233,7 @@ class ExamAssignmentServiceTest {
         ), "admin");
 
         assertThat(response.targetCount()).isEqualTo(2);
+        assertThat(response.submittedTargetCount()).isZero();
         assertThat(response.resultVisibility()).isEqualTo("SCORE_AND_ANSWERS");
         assertThat(response.shuffleQuestions()).isTrue();
         assertThat(response.shuffleOptions()).isTrue();

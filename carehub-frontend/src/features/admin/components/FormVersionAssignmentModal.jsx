@@ -8,7 +8,7 @@ import {
   UserSwitchOutlined,
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
-import ConfirmModal from './ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi.js'
 import '../styles/AdminQualityHistoryPage.css'
 

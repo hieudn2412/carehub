@@ -6,6 +6,7 @@ import vn.vietduc.carehubbackend.training.dto.request.RequirementFormRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Set;
 
 @Component
@@ -20,6 +21,13 @@ public class TrainingDomainValidator {
     private static final long MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
 
     public void validateRecordForm(TrainingRecordFormRequest request, boolean legacyImport) {
+        LocalDate today = LocalDate.now();
+        if (request.startDate() != null && request.startDate().isAfter(today)) {
+            throw new BadRequestException("Ngày đào tạo không được vượt quá ngày hôm nay");
+        }
+        if (request.endDate() != null && request.endDate().isAfter(today)) {
+            throw new BadRequestException("Ngày đào tạo không được vượt quá ngày hôm nay");
+        }
         if (request.startDate() != null && request.endDate() != null && request.endDate().isBefore(request.startDate())) {
             throw new BadRequestException("End date must be greater than or equal to start date");
         }

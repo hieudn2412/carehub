@@ -11,9 +11,9 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
-import ConfirmModal from '../../../../features/admin/components/ConfirmModal.jsx'
+import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
-import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
 import TrainingRecordTable from './components/TrainingRecordTable.jsx'
 import TrainingSearchFilters from './components/TrainingSearchFilters.jsx'
 import {
@@ -24,7 +24,7 @@ import {
   serializeTrainingQuery,
   toTrainingListApiParams,
 } from './utils/trainingRecordQuery.js'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 const STATUS_FILTER_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },

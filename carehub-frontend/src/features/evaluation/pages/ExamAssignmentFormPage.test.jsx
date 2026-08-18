@@ -6,13 +6,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 globalThis.React = React
 
 const listExamPapers = vi.fn()
+const getExamPaper = vi.fn()
+const publishExamPaper = vi.fn()
 const listAudiences = vi.fn()
 const createAssignment = vi.fn()
 
-vi.mock('../../admin/components/AdminSidebar.jsx', () => ({ default: () => <aside /> }))
-vi.mock('../../admin/components/AdminHeader.jsx', () => ({ default: () => <header /> }))
+vi.mock('../../../shared/components/AppShell.jsx', () => ({ default: ({ children }) => <div data-testid="app-shell">{children}</div> }))
 vi.mock('../../../shared/context/ToastContext.jsx', () => ({ useToast: () => ({ showToast: vi.fn() }) }))
-vi.mock('../api/examPaperApi.js', () => ({ examPaperApi: { listExamPapers } }))
+vi.mock('../api/examPaperApi.js', () => ({ examPaperApi: { listExamPapers, getExamPaper, publishExamPaper } }))
 vi.mock('../api/evaluationAudienceApi.js', () => ({ evaluationAudienceApi: { list: listAudiences } }))
 vi.mock('../api/examAssignmentApi.js', () => ({ examAssignmentApi: { createAssignment } }))
 
@@ -51,4 +52,37 @@ describe('ExamAssignmentFormPage', () => {
     expect(screen.queryByText('Lĩnh vực chuyên môn')).not.toBeInTheDocument()
     expect(screen.queryByText('Bộ câu hỏi')).not.toBeInTheDocument()
   }, 15_000)
+
+  it('auto-selects and pre-fills paper when paperId param is passed', async () => {
+    const { default: ExamAssignmentFormPage } = await import('./ExamAssignmentFormPage.jsx')
+    render(
+      <MemoryRouter initialEntries={['/admin/evaluation/exam-assignments/new?paperId=41']}>
+        <ExamAssignmentFormPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByDisplayValue('Đợt kiểm tra: Đề đa lĩnh vực')).toBeInTheDocument())
+    expect(screen.getByText(/EP-041 · Đề đa lĩnh vực/)).toBeInTheDocument()
+  })
+
+  it('shows draft warning and allows publishing draft paper directly', async () => {
+    listExamPapers.mockResolvedValue({ data: { data: [{
+      id: 21, code: 'EP-021', name: 'Đề kiểm tra bản nháp', status: 'DRAFT',
+      totalQuestions: 20, timeLimitMinutes: 30, passingScore: 7,
+    }] } })
+    publishExamPaper.mockResolvedValue({ data: { success: true } })
+
+    const { default: ExamAssignmentFormPage } = await import('./ExamAssignmentFormPage.jsx')
+    render(
+      <MemoryRouter initialEntries={['/admin/evaluation/exam-assignments/new?paperId=21']}>
+        <ExamAssignmentFormPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => expect(screen.getByText(/đang ở trạng thái Bản nháp/i)).toBeInTheDocument())
+    const publishBtn = screen.getByRole('button', { name: /Phát hành đề ngay/i })
+    fireEvent.click(publishBtn)
+
+    await waitFor(() => expect(publishExamPaper).toHaveBeenCalledWith(21))
+  })
 })

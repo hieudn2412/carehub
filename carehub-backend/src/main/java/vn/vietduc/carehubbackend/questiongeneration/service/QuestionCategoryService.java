@@ -51,7 +51,7 @@ public class QuestionCategoryService {
     public QuestionCategoryResponse create(UpsertQuestionCategoryRequest request, String actor) {
         String name = required(request.name(), "Tên danh mục không được để trống");
         String code = codeOrSlug(request.code(), name);
-        if (categoryRepository.findByCode(code).isPresent()) {
+        if (categoryRepository.findByCodeIgnoreCase(code).isPresent()) {
             throw new BadRequestException("Mã danh mục đã tồn tại");
         }
         QuestionCategory category = QuestionCategory.builder()

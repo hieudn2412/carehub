@@ -44,13 +44,13 @@ vi.mock('../../api/staffApi.js', () => ({
   },
 }))
 
-vi.mock('../../../../features/auth/services/tokenStorage.js', () => ({
+vi.mock('../../../../shared/auth/tokenStorage.js', () => ({
   tokenStorage: {
     getAccessToken: vi.fn(() => null),
   },
 }))
 
-vi.mock('../../../../features/auth/utils/jwt.js', () => ({
+vi.mock('../../../../shared/auth/jwt.js', () => ({
   getRolesFromAccessToken: vi.fn(() => []),
 }))
 
@@ -97,14 +97,6 @@ describe('TrainingHoursOverviewScreen', () => {
         },
       },
     })
-    trainingApi.getRecordOptions.mockResolvedValue({
-      data: {
-        data: {
-          professionalFields: [{ id: 7, name: 'Hồi sức cấp cứu' }],
-          activityTypes: [{ id: 4, name: 'Hội thảo' }],
-        },
-      },
-    })
     staffApi.getProfile.mockResolvedValue({ data: { data: { id: 42 } } })
     trainingApi.listRecords.mockResolvedValue({
       data: {
@@ -123,8 +115,7 @@ describe('TrainingHoursOverviewScreen', () => {
     })
   })
 
-  it('renders the chart and exactly one latest submitted record', async () => {
-
+  it('renders the chart and exactly one latest submitted record with action buttons in header', async () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/staff/training']}>
         <TrainingHoursOverviewScreen />
@@ -139,26 +130,22 @@ describe('TrainingHoursOverviewScreen', () => {
     expect(screen.getByRole('heading', { name: 'Giờ đào tạo liên tục' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Giờ đào tạo theo lĩnh vực' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Giờ đào tạo gần nhất' })).toBeInTheDocument()
-    const search = screen.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' })
     const yearSelect = screen.getByRole('combobox', { name: 'Năm biểu đồ' })
-    const filterButton = screen.getByRole('button', { name: 'Mở bộ lọc giờ đào tạo' })
     const updateButton = screen.getByRole('button', { name: /Cập nhật giờ đào tạo/ })
-    expect(search).toBeInTheDocument()
+    const viewAllButton = screen.getByRole('button', { name: /Xem tất cả/ })
     expect(yearSelect).toBeInTheDocument()
-    expect(filterButton).toBeInTheDocument()
     expect(updateButton).toBeInTheDocument()
-    search.focus()
-    expect(search).toHaveFocus()
+    expect(viewAllButton).toBeInTheDocument()
     yearSelect.focus()
     expect(yearSelect).toHaveFocus()
-    filterButton.focus()
-    expect(filterButton).toHaveFocus()
     updateButton.focus()
     expect(updateButton).toHaveFocus()
     fireEvent.click(updateButton)
     expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training/new')
+    fireEvent.click(viewAllButton)
+    expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training/all')
     expect([...container.querySelectorAll('[data-overview-section]')].map(section => section.dataset.overviewSection))
-      .toEqual(['chart', 'progress', 'tools', 'latest'])
+      .toEqual(['chart', 'progress', 'latest'])
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Xem chi tiết Khóa đào tạo mới nhất' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Chỉnh sửa Khóa đào tạo mới nhất/ })).not.toBeInTheDocument()
@@ -287,39 +274,6 @@ describe('TrainingHoursOverviewScreen', () => {
     const chartCanvas = container.querySelector('.th-overview-chart-canvas')
     expect(chartCanvas).toHaveStyle({ minWidth: '1104px' })
     expect(chartCanvas?.parentElement).toHaveClass('th-overview-chart-scroll')
-  })
-
-  it('navigates search and applied filters with a compact URL', async () => {
-    render(
-      <MemoryRouter initialEntries={['/staff/training']}>
-        <TrainingHoursOverviewScreen />
-        <LocationProbe />
-      </MemoryRouter>,
-    )
-
-    const search = screen.getByRole('textbox', { name: 'Tìm theo nội dung đào tạo' })
-    fireEvent.change(search, { target: { value: '  khóa học  ' } })
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training')
-    fireEvent.keyDown(search, { key: 'Enter' })
-    expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training/all')
-
-    // Render a fresh overview so the filter draft starts from a clean state.
-    render(
-      <MemoryRouter initialEntries={['/staff/training']}>
-        <TrainingHoursOverviewScreen />
-        <LocationProbe />
-      </MemoryRouter>,
-    )
-    fireEvent.click(screen.getAllByRole('button', { name: 'Mở bộ lọc giờ đào tạo' })[1])
-    expect(await screen.findByRole('region', { name: 'Bộ lọc giờ đào tạo' })).toBeInTheDocument()
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Bộ lọc trạng thái' }), { target: { value: 'SUBMITTED' } })
-    fireEvent.change(screen.getByLabelText('Bộ lọc từ ngày'), { target: { value: '2026-01-01' } })
-    fireEvent.change(screen.getByLabelText('Bộ lọc đến ngày'), { target: { value: '2026-03-31' } })
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Bộ lọc lĩnh vực chuyên môn' }), { target: { value: '7' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
-    expect(screen.getAllByTestId('current-path')[1]).toHaveTextContent(
-      '/staff/training/all?status=SUBMITTED&dateFrom=2026-01-01&dateTo=2026-03-31&professionalFieldId=7',
-    )
   })
 })
 

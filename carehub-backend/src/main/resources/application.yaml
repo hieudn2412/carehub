@@ -88,7 +88,7 @@ ai:
     circuit-breaker-cooldown-seconds: ${GENERATION_CIRCUIT_BREAKER_COOLDOWN_SECONDS:60}
     temperature: ${GENERATION_TEMPERATURE:0.7}
     top-p: ${GENERATION_TOP_P:0.9}
-    max-output-tokens: ${GENERATION_MAX_OUTPUT_TOKENS:1800}
+    max-output-tokens: ${GENERATION_MAX_OUTPUT_TOKENS:3200}
     llm-validation-enabled: ${GENERATION_LLM_VALIDATION_ENABLED:false}
     parallel-chunk-processing: ${GENERATION_PARALLEL_CHUNKS:true}
     chunk-parallelism: ${GENERATION_CHUNK_PARALLELISM:-1}
@@ -147,7 +147,7 @@ ai:
     max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:256}
     timeout-seconds: ${VIETQUILL_TIMEOUT_SECONDS:60}
     generate-timeout-seconds: ${VIETQUILL_GENERATE_TIMEOUT_SECONDS:30}
-    num-beams: ${VIETQUILL_NUM_BEAMS:2}
+    num-beams: ${VIETQUILL_NUM_BEAMS:6}
     max-decode-length: ${VIETQUILL_MAX_DECODE_LENGTH:160}
     requested-count-default: ${VIETQUILL_REQUESTED_COUNT_DEFAULT:3}
     paraphrase-options: ${VIETQUILL_PARAPHRASE_OPTIONS:false}
@@ -189,7 +189,10 @@ validation:
     # Chỉ dùng khi provider=lexical hoặc E5 lỗi/chưa backfill xong.
     # Hiệu chỉnh trên 270 câu seed — xem developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md
     lexical-strong-min: ${VALIDATION_DUPLICATE_LEXICAL_STRONG_MIN:0.80}
-    lexical-review-min: ${VALIDATION_DUPLICATE_LEXICAL_REVIEW_MIN:0.20}
+    # 0.20 (ngưỡng hiệu chỉnh gốc) chỉ vừa trên p99 của các cặp KHÁC bài (0,192) nên vẫn lọt rất
+    # nhiều câu chỉ trùng lác đác từ ngữ vào danh sách "có khả năng trùng". Nâng lên 0.5 để chỉ giữ
+    # lại các câu thực sự đáng ngờ, gần vùng "trùng mạnh" (0.80) hơn.
+    lexical-review-min: ${VALIDATION_DUPLICATE_LEXICAL_REVIEW_MIN:0.50}
   quality:
     reject-min: ${VALIDATION_QUALITY_REJECT_MIN:0.55}
 
@@ -245,18 +248,21 @@ spring:
     validate-migration-naming: true
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
+    host: ${MAIL_HOST:smtp.mx.cloudflare.net}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:api_token}
     password: ${MAIL_PASSWORD}
-
+    default-encoding: UTF-8
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
             required: true
+          starttls:
+            enable: false
+            required: false
 
 cloudflare:
   r2:

@@ -634,6 +634,16 @@
   letter-spacing: 0.04em;
 }
 
+.eh-timer__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.eh-timer__icon {
+  font-size: 12px;
+}
+
 .eh-timer--warning {
   border-color: #fdba74;
   background: #fff7ed;
@@ -837,6 +847,66 @@
   font-size: 12px;
 }
 
+.eh-security-warning {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.eh-security-warning span {
+  color: #78350f;
+  font-size: 12px;
+}
+
+.eh-security-warning button {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 5px 9px;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  background: #fff;
+  color: #92400e;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eh-exam-page--protected .eh-exam-question-list,
+.eh-exam-page--protected .eh-exam-progress {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.eh-exam-watermark {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  justify-items: center;
+  gap: 90px 40px;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 0.1;
+}
+
+.eh-exam-watermark span {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transform: rotate(-24deg);
+}
+
 .eh-exam-question {
   scroll-margin-top: 126px;
   overflow: visible;
@@ -937,8 +1007,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .eh-detail-header,
-  .eh-exam-toolbar__right {
+  .eh-detail-header {
     align-items: stretch;
     flex-direction: column;
   }
@@ -962,20 +1031,100 @@
   }
 
   /* Toolbar thi giữ sticky trên mobile để đồng hồ đếm ngược luôn hiển thị khi cuộn;
-     thu gọn: ẩn dòng hạn lượt làm (giữ trạng thái lưu), timer + nút nằm cùng hàng */
+     thu gọn: 1 hàng ngang tinh gọn, title + save indicator bên trái, nút + đồng hồ bên phải */
   .eh-exam-toolbar {
     top: 0;
-    padding: 10px 14px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border-radius: 10px;
+  }
+
+  .eh-exam-toolbar > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .eh-exam-toolbar .eh-page-title {
+    font-size: 15px;
+    margin: 0;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .eh-exam-toolbar .eh-page-sub:not(.eh-save-indicator) {
     display: none;
   }
 
+  .eh-exam-toolbar .eh-save-indicator {
+    font-size: 11px;
+    margin: 2px 0 0;
+    min-height: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .eh-exam-toolbar__right {
+    display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .eh-navbar-toggle {
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    border-radius: 8px;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .eh-timer {
+    min-width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+
+  .eh-timer span {
+    font-size: 11px;
+  }
+
+  .eh-timer strong {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .eh-review-score {
+    min-width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+
+  .eh-review-score span {
+    font-size: 11px;
+  }
+
+  .eh-review-score strong {
+    font-size: 16px;
+    line-height: 1;
   }
 
   .eh-exam-workspace {
@@ -989,11 +1138,7 @@
   }
 
   .eh-exam-question {
-    scroll-margin-top: 150px;
-  }
-
-  .eh-timer {
-    align-items: flex-start;
+    scroll-margin-top: 80px;
   }
 
   .eh-actions .eh-btn {
@@ -1019,26 +1164,70 @@
     min-height: 44px;
   }
 
-  /* Toolbar thi gọn: title 1 dòng để đồng hồ + nút chiếm ít chỗ nhất */
+  /* Toolbar thi siêu gọn: nằm trên 1 dòng duy nhất, timer hiển thị dạng badge icon + số */
+  .eh-exam-toolbar {
+    padding: 6px 10px;
+    gap: 6px;
+    border-radius: 8px;
+  }
+
   .eh-exam-toolbar .eh-page-title {
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  .eh-exam-toolbar .eh-save-indicator {
+    font-size: 10px;
   }
 
   .eh-exam-toolbar__right {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .eh-navbar-toggle,
-  .eh-timer {
-    width: 100%;
-  }
-
-  .eh-timer {
+    display: flex;
+    flex-direction: row;
     align-items: center;
+    gap: 5px;
+  }
+
+  .eh-navbar-toggle {
+    width: auto;
+    min-height: 30px;
+    padding: 4px 8px;
+    font-size: 11.5px;
+    border-radius: 6px;
+    gap: 3px;
+  }
+
+  .eh-timer {
+    width: auto;
+    padding: 4px 8px;
+    gap: 4px;
+    border-radius: 6px;
+  }
+
+  .eh-timer .eh-timer__text {
+    display: none;
+  }
+
+  .eh-timer .eh-timer__icon {
+    font-size: 11.5px;
+  }
+
+  .eh-timer strong {
+    font-size: 14px;
+  }
+
+  .eh-review-score {
+    width: auto;
+    padding: 4px 8px;
+    gap: 4px;
+    border-radius: 6px;
+  }
+
+  .eh-review-score span {
+    font-size: 10.5px;
+  }
+
+  .eh-review-score strong {
+    font-size: 14px;
   }
 
   .eh-question-heading {
@@ -1047,7 +1236,7 @@
   }
 
   .eh-exam-question {
-    scroll-margin-top: 130px;
+    scroll-margin-top: 65px;
   }
 
   /* Bảng gắn class .eh-table--cards chuyển card-mode (data-label trên từng td) */
@@ -1123,6 +1312,7 @@
     height: 1px;
   }
 }
+
 .eh-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

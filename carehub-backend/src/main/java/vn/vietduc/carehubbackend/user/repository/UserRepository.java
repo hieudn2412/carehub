@@ -106,6 +106,7 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             SELECT COUNT(u)
             FROM User u
             WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
                    OR LOWER(u.name) LIKE :keyword

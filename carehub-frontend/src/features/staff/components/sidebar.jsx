@@ -18,15 +18,14 @@ import {
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import {
   AUTH_ROLE,
   hasAnyRole,
 } from '../../auth/utils/authNavigation.js'
-import { getRolesFromAccessToken } from '../../auth/utils/jwt.js'
+import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import { staffApi } from '../api/staffApi.js'
 import logo from '../../../assets/logo.png'
-import AdminSidebar from '../../admin/components/AdminSidebar'
 import '../styles/StaffDashBoardScreen.css'
 
 function normalizeSearchText(value) {
@@ -38,10 +37,6 @@ function normalizeSearchText(value) {
     .toLocaleLowerCase('vi')
 }
 
-/* TODO(ui-refactor): component này đang là "facade" sidebar duy nhất của app
-   (AppShell dùng nó; khi user là admin nó render AdminSidebar). Bước hợp nhất
-   vật lý AdminSidebar + Sidebar thành một AppSidebar nhận config menu theo
-   role vẫn còn nợ — làm khi có điều kiện test đủ 3 role trên trình duyệt. */
 function Sidebar({ alertSummary = {} }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -59,7 +54,6 @@ function Sidebar({ alertSummary = {} }) {
 
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
-  const isAdmin = hasAnyRole(roles, [AUTH_ROLE.admin])
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
   const [assignedChecklistAccess, setAssignedChecklistAccess] = useState({
     accessToken: null,
@@ -73,7 +67,7 @@ function Sidebar({ alertSummary = {} }) {
   useEffect(() => {
     let active = true
 
-    if (isAdmin || isManager) {
+    if (isManager) {
       return () => {
         active = false
       }
@@ -103,7 +97,7 @@ function Sidebar({ alertSummary = {} }) {
     return () => {
       active = false
     }
-  }, [isAdmin, isManager, accessToken])
+  }, [isManager, accessToken])
 
   const isLinkActive = (itemPath) => {
     if (itemPath === '/staff/professional-competency') {
@@ -125,7 +119,7 @@ function Sidebar({ alertSummary = {} }) {
     {
       label: 'Trang chủ',
       items: [
-        { icon: <DashboardOutlined />, label: 'Dashboard', path: isAdmin ? '/admin/dashboard' : isManager ? '/manager/dashboard' : '/staff/dashboard' },
+        { icon: <DashboardOutlined />, label: 'Dashboard', path: isManager ? '/manager/dashboard' : '/staff/dashboard' },
       ],
     },
     {
@@ -196,16 +190,13 @@ function Sidebar({ alertSummary = {} }) {
 
   // Restore scroll position
   useEffect(() => {
-    if (isAdmin) return
     const savedScroll = sessionStorage.getItem('staff-sidebar-scroll')
     if (savedScroll && navRef.current) {
       navRef.current.scrollTop = parseInt(savedScroll, 10)
     }
-  }, [isAdmin])
+  }, [])
 
   useEffect(() => {
-    if (isAdmin) return undefined
-
     const handleMenuToggle = () => {
       if (isMobileClosing) return
 
@@ -220,10 +211,10 @@ function Sidebar({ alertSummary = {} }) {
     }
     window.addEventListener('staff-sidebar-toggle', handleMenuToggle)
     return () => window.removeEventListener('staff-sidebar-toggle', handleMenuToggle)
-  }, [isAdmin, isMobileClosing, isMobileOpen])
+  }, [isMobileClosing, isMobileOpen])
 
   useEffect(() => {
-    if (isAdmin || (!isMobileOpen && !isMobileClosing)) return undefined
+    if (!isMobileOpen && !isMobileClosing) return undefined
 
     const handleEscape = (event) => {
       if (event.key !== 'Escape' || isMobileClosing) return
@@ -239,11 +230,7 @@ function Sidebar({ alertSummary = {} }) {
       document.body.classList.remove('staff-sidebar-open')
       document.removeEventListener('keydown', handleEscape)
     }
-  }, [isAdmin, isMobileClosing, isMobileOpen])
-
-  if (isAdmin) {
-    return <AdminSidebar />
-  }
+  }, [isMobileClosing, isMobileOpen])
 
   const handleScroll = (e) => {
     sessionStorage.setItem('staff-sidebar-scroll', String(e.target.scrollTop))

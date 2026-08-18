@@ -13,9 +13,8 @@ import {
   SendOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import DepartmentCombobox from '../../admin/components/DepartmentCombobox.jsx'
+import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { examConfigApi } from '../api/examConfigApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -25,7 +24,7 @@ import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
-import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatCognitiveWarningText } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
 
@@ -64,6 +63,7 @@ export default function ExamConfigPage() {
   const [fields, setFields] = useState([])
   const [form, setForm] = useState({ name: '', description: '', totalQuestions: 30, timeLimitMinutes: 45, passingScore: 7, maxRetakes: 0 })
   const [blueprint, setBlueprint] = useState([])
+  const [backfillNearestCognitiveLevel, setBackfillNearestCognitiveLevel] = useState(false)
   const [preview, setPreview] = useState(null)
 
   // Audience (đối tượng nhận đề)
@@ -168,6 +168,7 @@ export default function ExamConfigPage() {
       maxRetakes: Number(form.maxRetakes),
       shuffleQuestions: true,
       shuffleOptions: true,
+      backfillNearestCognitiveLevel,
       questionSelectionMode: 'FIXED_PAPER',
       status,
       fieldBlueprints: blueprint.map((field, index) => ({
@@ -220,7 +221,7 @@ export default function ExamConfigPage() {
       setSubmitStep('1/5. Đang kiểm tra khả dụng nguồn câu hỏi...')
       const check = data(await examConfigApi.previewExamConfig(matrixPayload()), null)
       if (check && check.valid === false) {
-        showToast((check.warnings || []).join('; ') || 'Ngân hàng câu hỏi chưa đủ nguồn theo ma trận đã chọn.', 'warning')
+        showToast((check.warnings || []).map(formatCognitiveWarningText).join('; ') || 'Ngân hàng câu hỏi chưa đủ nguồn theo ma trận đã chọn.', 'warning')
         setPreview(check)
         return
       }
@@ -281,16 +282,12 @@ export default function ExamConfigPage() {
   }
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader
-          back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
-          breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
-        />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="exp-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ to: '/admin/evaluation/exam-management', label: 'Quay lại' }}
+      breadcrumbs={[{ label: 'Quản lý bài kiểm tra', link: '/admin/evaluation/exam-management' }, { label: 'Tạo ma trận & Giao đề' }]}
+    >
+      <div className="exp-page">
               <ExamDeliveryFlow
                 activeStep="matrix"
                 title="Tạo ma trận & Giao đề kiểm tra"
@@ -351,6 +348,7 @@ export default function ExamConfigPage() {
                             max="200"
                             className="ch-input"
                             value={form.totalQuestions}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })}
                           />
                         </label>
@@ -364,6 +362,7 @@ export default function ExamConfigPage() {
                             max="300"
                             className="ch-input"
                             value={form.timeLimitMinutes}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })}
                           />
                         </label>
@@ -378,6 +377,7 @@ export default function ExamConfigPage() {
                             step="0.5"
                             className="ch-input"
                             value={form.passingScore}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, passingScore: e.target.value })}
                           />
                         </label>
@@ -407,12 +407,25 @@ export default function ExamConfigPage() {
                         </label>
                       </div>
 
+                      <label className="exp-backfill-toggle">
+                        <input
+                          type="checkbox"
+                          checked={backfillNearestCognitiveLevel}
+                          onChange={(e) => setBackfillNearestCognitiveLevel(e.target.checked)}
+                        />
+                        <span>
+                          Tự động bù câu từ mức nhận thức gần nhất khi thiếu
+                          <small> (ví dụ thiếu Kiến thức nền tảng sẽ lấy bù từ Áp dụng lâm sàng trước khi báo thiếu)</small>
+                        </span>
+                      </label>
+
                       {blueprint.length > 0 && (
                         <div className="exp-blueprint-list">
                           {blueprint.map((item) => {
                             const field = fields.find((v) => v.id === item.professionalFieldId)
                             const cognitiveSum = item.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0)
                             const cognitiveValid = Math.abs(cognitiveSum - 100) < 0.001
+                            const previewField = preview?.blueprintFields?.find((f) => f.professionalFieldId === item.professionalFieldId)
 
                             return (
                               <div key={item.professionalFieldId} className="exp-field-card">
@@ -434,8 +447,24 @@ export default function ExamConfigPage() {
                                       min="0"
                                       className="ch-input"
                                       value={item.questionCount}
-                                      onChange={(e) => updateField(item.professionalFieldId, 'questionCount', e.target.value)}
+                                      onFocus={(e) => e.target.select()}
+                                      onChange={(e) => {
+                                        const raw = e.target.value
+                                        const parsed = parseInt(raw, 10)
+                                        const normalized = isNaN(parsed) ? 0 : Math.max(0, parsed)
+                                        if (raw !== String(normalized) && raw !== '') {
+                                          e.target.value = String(normalized)
+                                        }
+                                        updateField(item.professionalFieldId, 'questionCount', normalized)
+                                      }}
                                     />
+                                    {previewField && (
+                                      <span className={`exp-cognitive-availability ${previewField.shortage > 0 ? 'is-short' : previewField.backfilledQuestionCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
+                                        Khả dụng {previewField.availableQuestionCount}/{previewField.requiredQuestionCount} câu
+                                        {previewField.backfilledQuestionCount > 0 && ` · đã bù ${previewField.backfilledQuestionCount} câu`}
+                                        {previewField.shortage > 0 && ` · thiếu ${previewField.shortage} câu`}
+                                      </span>
+                                    )}
                                   </label>
 
                                   <div className="exp-cognitive-table-wrap">
@@ -443,26 +472,50 @@ export default function ExamConfigPage() {
                                       <thead>
                                         <tr>
                                           <th>Mức nhận thức</th>
-                                          <th style={{ width: '140px', textAlign: 'right' }}>Tỷ lệ (%)</th>
+                                          <th style={{ width: '110px', textAlign: 'right' }}>Tỷ lệ (%)</th>
+                                          <th style={{ width: '180px', textAlign: 'right' }}>Khả dụng</th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {item.cognitive.map((cell) => (
-                                          <tr key={cell.cognitiveLevel}>
-                                            <td>{cell.label}</td>
-                                            <td style={{ textAlign: 'right' }}>
-                                              <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                className="ch-input"
-                                                style={{ width: '80px', textAlign: 'center' }}
-                                                value={cell.percentage}
-                                                onChange={(e) => updateCognitive(item.professionalFieldId, cell.cognitiveLevel, e.target.value)}
-                                              />
-                                            </td>
-                                          </tr>
-                                        ))}
+                                        {item.cognitive.map((cell) => {
+                                          const previewCell = previewField?.cells?.find((c) => c.cognitiveLevel === cell.cognitiveLevel)
+                                          return (
+                                            <tr key={cell.cognitiveLevel}>
+                                              <td>{cell.label}</td>
+                                              <td style={{ textAlign: 'right' }}>
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  max="100"
+                                                  className="ch-input"
+                                                  style={{ width: '80px', textAlign: 'center' }}
+                                                  value={cell.percentage}
+                                                  onFocus={(e) => e.target.select()}
+                                                  onChange={(e) => {
+                                                    const raw = e.target.value
+                                                    const parsed = parseInt(raw, 10)
+                                                    const normalized = isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+                                                    if (raw !== String(normalized) && raw !== '') {
+                                                      e.target.value = String(normalized)
+                                                    }
+                                                    updateCognitive(item.professionalFieldId, cell.cognitiveLevel, normalized)
+                                                  }}
+                                                />
+                                              </td>
+                                              <td style={{ textAlign: 'right' }}>
+                                                {previewCell ? (
+                                                  <span className={`exp-cognitive-availability ${previewCell.shortage > 0 ? 'is-short' : previewCell.backfilledCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
+                                                    {previewCell.availableQuestionCount}/{previewCell.requiredQuestionCount} câu
+                                                    {previewCell.backfilledCount > 0 && <><br /><small>đã bù {previewCell.backfilledCount} câu</small></>}
+                                                    {previewCell.shortage > 0 && <><br /><small>thiếu {previewCell.shortage} câu</small></>}
+                                                  </span>
+                                                ) : (
+                                                  <span style={{ color: '#94a3b8', fontSize: '12px' }}>Chưa kiểm tra</span>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          )
+                                        })}
                                       </tbody>
                                     </table>
                                   </div>
@@ -606,19 +659,15 @@ export default function ExamConfigPage() {
                           <EyeOutlined /> Đánh giá khả dụng: {preview.distributedQuestions} / {totalQuestions} câu khả dụng
                         </div>
                         {preview.warnings?.length > 0 && (
-                          <ul style={{ margin: '4px 0 8px 18px', padding: 0 }}>
+                          <ul style={{ margin: '4px 0 0 18px', padding: 0 }}>
                             {preview.warnings.map((warning) => (
-                              <li key={warning}>{warning}</li>
+                              <li key={warning}>{formatCognitiveWarningText(warning)}</li>
                             ))}
                           </ul>
                         )}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                          {preview.blueprintFields?.map((field) => (
-                            <span key={field.professionalFieldId} style={{ fontSize: '12.5px' }}>
-                              • {field.professionalFieldName}: Yêu cầu {field.requiredQuestionCount} câu / Khả dụng {field.availableQuestionCount} câu
-                            </span>
-                          ))}
-                        </div>
+                        {preview.warnings?.length === 0 && (
+                          <small>Đủ nguồn câu hỏi theo ma trận đã cấu hình. Xem chi tiết khả dụng theo từng mức nhận thức ở bảng lĩnh vực bên trên.</small>
+                        )}
                       </div>
                     )}
 
@@ -650,10 +699,7 @@ export default function ExamConfigPage() {
                   </form>
                 )}
               </section>
-            </div>
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

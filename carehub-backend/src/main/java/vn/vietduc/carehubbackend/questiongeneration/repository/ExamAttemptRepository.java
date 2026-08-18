@@ -1,7 +1,9 @@
 package vn.vietduc.carehubbackend.questiongeneration.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -21,6 +23,11 @@ public interface ExamAttemptRepository extends JpaRepository<ExamAttempt, Long> 
     List<ExamAttempt> findByAssignmentAndUserOrderByAttemptNumberDesc(ExamAssignment assignment, User user);
     List<ExamAttempt> findByUserOrderByStartedAtDesc(User user);
     List<ExamAttempt> findByStatusOrderByStartedAtDesc(ExamAttemptStatus status);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<ExamAttempt> findByStatusAndExpiresAtLessThanEqual(
+            ExamAttemptStatus status,
+            LocalDateTime expiresAt
+    );
     @EntityGraph(attributePaths = {
             "assignment",
             "assignment.generationBatch",

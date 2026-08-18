@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { httpClient } from '../../../shared/api/httpClient.js'
-import { tokenStorage } from '../../auth/services/tokenStorage.js'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
+import { notificationsApi } from '../api/notificationsApi.js'
 
 const NOTIFICATION_SYNC_EVENT = 'carehub:notification-state-changed'
 
 export function publishNotificationStateChange(detail = {}) {
   window.dispatchEvent(new CustomEvent(NOTIFICATION_SYNC_EVENT, { detail }))
-}
-
-function authHeaders() {
-  const token = tokenStorage.getAccessToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
 function formatDateTime(value) {
@@ -51,10 +45,9 @@ export function useNotifications() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const headers = authHeaders()
       const [listResponse, countResponse, assignmentResponse] = await Promise.all([
-        httpClient.get('/me/notifications', { headers, params: { page: 0, size: 8 } }),
-        httpClient.get('/me/notifications/unread-count', { headers }),
+        notificationsApi.list({ page: 0, size: 8 }),
+        notificationsApi.getUnreadCount(),
         myExamApi.listAssignments().catch(() => ({ data: { data: [] } })),
       ])
       setNotifications((listResponse.data?.data?.content || []).map(mapNotification))
@@ -117,7 +110,7 @@ export function useNotifications() {
     setNotifications((current) => current.map((item) => ({ ...item, read: true, isRead: true })))
     setUnreadCount(0)
     try {
-      await httpClient.patch('/me/notifications/read-status', { read: true }, { headers: authHeaders() })
+      await notificationsApi.markAllAsRead()
     } catch (requestError) {
       console.error('Không thể đánh dấu tất cả thông báo đã đọc', requestError)
       setNotifications(previous)
@@ -133,7 +126,7 @@ export function useNotifications() {
     )))
     setUnreadCount((current) => Math.max(0, current - 1))
     try {
-      await httpClient.patch(`/me/notifications/${id}`, { read: true }, { headers: authHeaders() })
+      await notificationsApi.markAsRead(id)
     } catch (requestError) {
       console.error('Không thể đánh dấu thông báo đã đọc', requestError)
       load()

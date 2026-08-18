@@ -4,7 +4,7 @@ import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi'
 import { SearchOutlined, LeftOutlined, RightOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import '../styles/ReferenceDepartmentsListPage.css'
 
 function ReferenceDepartmentsListPage() {

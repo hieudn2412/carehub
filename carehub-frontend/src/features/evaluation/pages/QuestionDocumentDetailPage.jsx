@@ -9,8 +9,7 @@ import {
   PlayCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
@@ -80,6 +79,11 @@ function QuestionDocumentDetailPage() {
   }, [questionJobs, jobStatusFilter])
 
   async function createJob() {
+    const rawCount = Number(questionsPerChunk) || 1
+    if (rawCount > 3 || rawCount < 1) {
+      showToast('Số câu mỗi đoạn nội dung chỉ được từ 1 đến 3.', 'warning')
+      return
+    }
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
@@ -158,13 +162,12 @@ function QuestionDocumentDetailPage() {
   ]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader back={{ to: '/admin/evaluation/question-documents', label: 'Quay lại' }} breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page">
+    <AppShell
+      className="dashboard-layout"
+      back={{ to: '/admin/evaluation/question-documents', label: 'Quay lại' }}
+      breadcrumbs={breadcrumbs}
+    >
+      <div className="qdoc-page">
               {isLoading ? (
                 <section className="qdoc-panel qdoc-loading-panel">Đang tải chi tiết tài liệu...</section>
               ) : !documentDetail ? (
@@ -310,9 +313,6 @@ function QuestionDocumentDetailPage() {
                   </section>
                 </>
               )}
-            </div>
-          </main>
-        </div>
       </div>
 
       {showJobModal && documentDetail && (
@@ -330,10 +330,11 @@ function QuestionDocumentDetailPage() {
               <input
                 type="number"
                 min="1"
-                max="5"
+                max="3"
                 value={questionsPerChunk}
                 onChange={(event) => setQuestionsPerChunk(event.target.value)}
               />
+              <small className="qdoc-field-help">Tối đa 3 câu/đoạn — vượt quá dễ khiến AI trả lời bị cắt dở và sinh câu thất bại.</small>
             </label>
             <label className="qdoc-field">
               <span>Mức độ nhận thức mục tiêu</span>
@@ -425,7 +426,7 @@ function QuestionDocumentDetailPage() {
           </form>
         </div>
       )}
-    </div>
+    </AppShell>
   )
 }
 
