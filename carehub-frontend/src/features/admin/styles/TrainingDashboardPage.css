@@ -198,6 +198,11 @@
   font-weight: 650;
 }
 
+/* Thẻ chứa bảng "Nhân sự trong khoa" của Manager */
+.training-chart-card .dtst {
+  margin-top: 14px;
+}
+
 .training-chart-card__legend {
   display: flex;
   justify-content: center;
