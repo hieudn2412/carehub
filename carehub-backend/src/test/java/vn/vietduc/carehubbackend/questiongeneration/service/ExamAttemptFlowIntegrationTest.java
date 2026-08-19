@@ -98,8 +98,6 @@ class ExamAttemptFlowIntegrationTest {
     @Autowired
     private vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository examConfigRepository;
     @Autowired
-    private vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetRepository questionSetRepository;
-    @Autowired
     private ExamPaperQuestionRepository paperQuestionRepository;
     @Autowired
     private ExamPaperQuestionSnapshotRepository snapshotRepository;
@@ -150,13 +148,6 @@ class ExamAttemptFlowIntegrationTest {
                 .status(QuestionCategoryStatus.ACTIVE)
                 .createdBy("integration-test")
                 .build());
-        vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet questionSet =
-                questionSetRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet.builder()
-                        .code("EXM-SET-%03d".formatted(seq))
-                        .name("Bộ câu hỏi kiểm tra " + seq)
-                        .status(vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus.ACTIVE)
-                        .questionCount(2)
-                        .build());
         vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig config =
                 examConfigRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig.builder()
                         .name("Cấu hình kiểm tra " + seq)
@@ -167,11 +158,9 @@ class ExamAttemptFlowIntegrationTest {
                         .shuffleQuestions(false)
                         .shuffleOptions(false)
                         .status(vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus.ACTIVE)
-                        .questionSet(questionSet)
                         .build());
         paper = paperRepository.save(ExamPaper.builder()
                 .examConfig(config)
-                .questionSet(questionSet)
                 .code("EXM-PAPER-%03d".formatted(seq))
                 .name("Đề an toàn người bệnh " + seq)
                 .status(ExamPaperStatus.PUBLISHED)

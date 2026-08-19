@@ -17,7 +17,6 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSelectionStrategy;
 
 @Entity
 @Getter
@@ -33,10 +32,6 @@ public class ExamConfig extends BaseEntity {
 
     @Column(columnDefinition = "text")
     private String description;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "question_set_id")
-    private QuestionSet questionSet;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "audience_id")
@@ -78,10 +73,6 @@ public class ExamConfig extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     private ExamConfigStatus status;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "selection_strategy", length = 24)
-    private QuestionSelectionStrategy selectionStrategy;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "question_selection_mode", length = 32)

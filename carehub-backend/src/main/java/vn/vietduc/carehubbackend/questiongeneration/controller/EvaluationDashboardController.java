@@ -27,7 +27,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${app.api-prefix}/evaluation-dashboard")
 @RequiredArgsConstructor
-@PreAuthorize("@evaluationSecurity.hasAny(authentication, 'RESULT_VIEWER', 'QUESTION_REVIEWER', 'QUESTION_SET_MANAGER', 'EXAM_PUBLISHER')")
+@PreAuthorize("@evaluationSecurity.hasAny(authentication, 'RESULT_VIEWER', 'QUESTION_REVIEWER', 'EXAM_PUBLISHER')")
 public class EvaluationDashboardController {
     private final EvaluationDashboardService dashboardService;
     private final DashboardAccessPolicy dashboardAccessPolicy;

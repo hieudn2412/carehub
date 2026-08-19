@@ -56,7 +56,6 @@ public class MyCompetencyService {
 
     /**
      * Build knowledge competency report for current user, grouped by category.
-     * Category is derived from QuestionSet.category string in the exam chain.
      */
     @Transactional(readOnly = true)
     public MyCompetencyKnowledgeResponse getKnowledgeCompetency(User user, LocalDate fromDate, LocalDate toDate) {
@@ -78,7 +77,6 @@ public class MyCompetencyService {
             );
         }
 
-        // Group by QuestionSet.category string
         Map<String, List<ExamAttempt>> groupedByCategory = new LinkedHashMap<>();
         for (ExamAttempt a : attempts) {
             String category = getCategoryName(a);
@@ -445,15 +443,6 @@ public class MyCompetencyService {
     }
 
     private String getCategoryName(ExamAttempt attempt) {
-        try {
-            return attempt.getExamPaper() != null
-                    && attempt.getExamPaper().getExamConfig() != null
-                    && attempt.getExamPaper().getExamConfig().getQuestionSet() != null
-                    && attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory() != null
-                    ? attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory().getName()
-                    : "Chung";
-        } catch (Exception e) {
-            return "Chung";
-        }
+        return "Chung";
     }
 }

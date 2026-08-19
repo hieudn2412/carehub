@@ -45,7 +45,6 @@ class EvaluationSecurityTest {
 
         assertThat(security.canAuthor(admin)).isTrue();
         assertThat(security.canReview(admin)).isTrue();
-        assertThat(security.canManageQuestionSet(admin)).isTrue();
         assertThat(security.canManageExamConfig(admin)).isTrue();
         assertThat(security.canPublishExam(admin)).isTrue();
         assertThat(security.canManageAssignment(admin)).isTrue();
@@ -147,7 +146,6 @@ class EvaluationSecurityTest {
         List<Capability> capabilities = List.of(
                 new Capability(EvaluationPermissions.QUESTION_AUTHOR, EvaluationSecurity::canAuthor),
                 new Capability(EvaluationPermissions.QUESTION_REVIEWER, EvaluationSecurity::canReview),
-                new Capability(EvaluationPermissions.QUESTION_SET_MANAGER, EvaluationSecurity::canManageQuestionSet),
                 new Capability(EvaluationPermissions.EXAM_CONFIG_MANAGER, EvaluationSecurity::canManageExamConfig),
                 new Capability(EvaluationPermissions.EXAM_PUBLISHER, EvaluationSecurity::canPublishExam),
                 new Capability(EvaluationPermissions.ASSIGNMENT_MANAGER, EvaluationSecurity::canManageAssignment),

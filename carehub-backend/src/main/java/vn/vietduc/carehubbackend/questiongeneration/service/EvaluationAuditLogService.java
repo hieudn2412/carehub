@@ -152,12 +152,6 @@ public class EvaluationAuditLogService {
             case "PARAPHRASE_CANDIDATE_BATCH_APPROVE" -> "Duyệt hàng loạt candidate paraphrase";
             case "PARAPHRASE_CANDIDATE_BATCH_REJECT" -> "Từ chối hàng loạt candidate paraphrase";
             case "PARAPHRASE_CANDIDATE_BATCH_SAVE" -> "Lưu hàng loạt candidate paraphrase";
-            case "QUESTION_SET_CREATE" -> "Tạo bộ câu hỏi";
-            case "QUESTION_SET_UPDATE" -> "Cập nhật bộ câu hỏi";
-            case "QUESTION_SET_ACTIVATE" -> "Kích hoạt bộ câu hỏi";
-            case "QUESTION_SET_DEACTIVATE" -> "Tạm ngưng bộ câu hỏi";
-            case "QUESTION_SET_ARCHIVE" -> "Lưu trữ bộ câu hỏi";
-            case "QUESTION_SET_DUPLICATE" -> "Nhân bản bộ câu hỏi";
             case "QUESTION_CATEGORY_CREATE" -> "Tạo danh mục câu hỏi";
             case "QUESTION_CATEGORY_UPDATE" -> "Cập nhật danh mục câu hỏi";
             case "QUESTION_CATEGORY_ARCHIVE" -> "Lưu trữ danh mục câu hỏi";

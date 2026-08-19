@@ -27,10 +27,6 @@ public class EvaluationSecurity {
         return isAdmin(authentication);
     }
 
-    public boolean canManageQuestionSet(Authentication authentication) {
-        return hasAny(authentication, EvaluationPermissions.QUESTION_SET_MANAGER);
-    }
-
     public boolean canManageExamConfig(Authentication authentication) {
         return hasAny(authentication, EvaluationPermissions.EXAM_CONFIG_MANAGER);
     }

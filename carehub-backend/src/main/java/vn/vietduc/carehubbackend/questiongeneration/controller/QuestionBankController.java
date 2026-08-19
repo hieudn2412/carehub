@@ -77,7 +77,7 @@ public class QuestionBankController {
     }
 
     @GetMapping("/export")
-    @PreAuthorize("@evaluationSecurity.hasAny(authentication, 'QUESTION_AUTHOR', 'QUESTION_REVIEWER', 'QUESTION_SET_MANAGER')")
+    @PreAuthorize("@evaluationSecurity.hasAny(authentication, 'QUESTION_AUTHOR', 'QUESTION_REVIEWER')")
     public ResponseEntity<byte[]> export(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String status,

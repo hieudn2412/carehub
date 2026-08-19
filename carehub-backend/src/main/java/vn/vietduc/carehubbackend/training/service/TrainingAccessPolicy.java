@@ -1,8 +1,8 @@
 package vn.vietduc.carehubbackend.training.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 public class TrainingAccessPolicy {
     public static final String ROLE_ADMIN = "ADMIN";
     public static final String ROLE_MANAGER = "MANAGER";
-    public static final String ROLE_USER = "USER";
     public static final String ROLE_SYSTEM_JOB = "SYSTEM_JOB";
 
     private final UserRepository userRepository;
@@ -102,10 +101,6 @@ public class TrainingAccessPolicy {
                 .stream()
                 .map(TrainingAccessPolicy::roleCodeOf)
                 .collect(Collectors.toSet());
-    }
-
-    public static Set<String> roleCodesOf(Collection<? extends GrantedAuthority> authorities) {
-        return authorities.stream().map(TrainingAccessPolicy::roleCodeOf).collect(Collectors.toSet());
     }
 
     private static String roleCodeOf(GrantedAuthority authority) {

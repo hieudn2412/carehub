@@ -164,7 +164,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
                 .getBody()).contains(subject.getEmployeeCode());
     }
 
-    @DisplayName("L3-FLOW-04 | Multi-step Flow: question bank → set → config → paper → assignment → the employee sits the exam and it is graded")
+    @DisplayName("L3-FLOW-04 | Multi-step Flow: question bank → config → paper → assignment → the employee sits the exam and it is graded")
     @Test
     void examLifecycleFlow() {
         ProfessionalField field = professionalFieldRepository.save(ProfessionalField.builder()
@@ -194,13 +194,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         bankQuestion.setStatus(QuestionBankStatus.APPROVED);
         questionRepository.save(bankQuestion);
 
-        // Step 2-3: active question set.
-        long setId = id(post(API + "/question-sets", adminToken, """
-                {"name":"Bộ luồng %d","questionIds":[%d]}
-                """.formatted(nextSeq(), questionId)));
-        assertOk(post(API + "/question-sets/" + setId + "/activate", adminToken, "{}"));
-
-        // Step 4-5: active exam config.
+        // Step 2-3: active exam config.
         long configId = id(post(API + "/exam-configs", adminToken, """
                 {"name":"Cấu hình luồng %d","totalQuestions":1,"timeLimitMinutes":30,
                  "passingScore":5,"maxRetakes":2,"shuffleQuestions":false,"shuffleOptions":false,
@@ -215,13 +209,13 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
                 """.formatted(nextSeq(), field.getId())));
         assertOk(post(API + "/exam-configs/" + configId + "/activate", adminToken, "{}"));
 
-        // Step 6-7: generated and published paper.
+        // Step 4-5: generated and published paper.
         long paperId = data(post(API + "/exam-papers/generate", adminToken, """
                 {"examConfigId":%d,"namePrefix":"Đề luồng","variantCount":1,"randomSeed":3,"idempotencyKey":"api-flow-paper-%d"}
                 """.formatted(configId, nextSeq()))).get(0).get("id").asLong();
         assertOk(post(API + "/exam-papers/" + paperId + "/publish", adminToken, "{}"));
 
-        // Step 8-9: open assignment targeting the employee.
+        // Step 6-7: open assignment targeting the employee.
         long assignmentId = id(post(API + "/exam-assignments", adminToken, """
                 {"name":"Phân công luồng %d","examPaperId":%d,"userIds":[%d],"idempotencyKey":"api-flow-assignment-%d",
                  "maxAttempts":2,"shuffleQuestions":false,"shuffleOptions":false,
@@ -229,7 +223,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
                 """.formatted(nextSeq(), paperId, employee.getId(), nextSeq())));
         assertOk(post(API + "/exam-assignments/" + assignmentId + "/open", adminToken, "{}"));
 
-        // Step 10-12: the employee starts, answers and submits.
+        // Step 8-10: the employee starts, answers and submits.
         JsonNode attempt = data(post(API + "/me/exam-assignments/" + assignmentId + "/start", employeeToken, "{}"));
         long attemptId = attempt.get("id").asLong();
         long paperQuestionId = attempt.get("questions").get(0).get("paperQuestionId").asLong();
@@ -239,7 +233,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         assertThat(graded.get("status").asText()).isEqualTo("GRADED");
         assertThat(graded.get("passed").asBoolean()).isTrue();
 
-        // Step 13: the attempt shows up in the employee's own history as graded.
+        // Step 11: the attempt shows up in the employee's own history as graded.
         assertThat(get(API + "/me/exam-attempts", employeeToken).getBody())
                 .contains("GRADED")
                 .contains(String.valueOf(attemptId));

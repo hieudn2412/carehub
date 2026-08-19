@@ -196,37 +196,6 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         assertThat(data(activated).get("preview").get("valid").asBoolean()).isTrue();
     }
 
-    @DisplayName("L3-EXM-07 | Input-Domain-Happy: POST /question-sets then /activate → ACTIVE with the approved question counted")
-    @Test
-    void questionSetGoesActiveWithApprovedQuestions() {
-        long questionId = approvedQuestion("set member");
-
-        long setId = id(post(API + "/question-sets", adminToken, """
-                {"name":"Bộ câu hỏi L3 %d","questionIds":[%d]}
-                """.formatted(nextSeq(), questionId)));
-        ResponseEntity<String> response = post(API + "/question-sets/" + setId + "/activate", adminToken, "{}");
-
-        assertOk(response);
-        JsonNode body = data(response);
-        assertThat(body.get("status").asText()).isEqualTo("ACTIVE");
-        assertThat(body.get("questionCount").asInt()).isEqualTo(1);
-    }
-
-    @DisplayName("L3-EXM-08 | State-Conflict: activating an empty question set → 4xx 'Không thể kích hoạt bộ câu hỏi rỗng'")
-    @Test
-    void emptyQuestionSetCannotBeActivated() {
-        long setId = id(post(API + "/question-sets", adminToken, """
-                {"name":"Bộ rỗng %d"}
-                """.formatted(nextSeq())));
-
-        ResponseEntity<String> response = post(API + "/question-sets/" + setId + "/activate", adminToken, "{}");
-
-        assertThat(response.getStatusCode().is4xxClientError())
-                .as("body was: %s", response.getBody()).isTrue();
-        assertThat(json(response).get("message").asText())
-                .isEqualTo("Không thể kích hoạt bộ câu hỏi rỗng");
-    }
-
     @DisplayName("L3-EXM-09 | Input-Domain-Happy: POST /exam-configs then /activate → ACTIVE with direct field×cognitive blueprint")
     @Test
     void examConfigGoesActive() {
@@ -505,15 +474,6 @@ class ExamApiSystemTest extends AbstractApiSystemTest {
         assertThat(counts.getOrDefault("FOUNDATION", 0L)).isEqualTo(foundation);
         assertThat(counts.getOrDefault("CLINICAL_APPLICATION", 0L)).isEqualTo(application);
         assertThat(counts.getOrDefault("CLINICAL_REASONING_ANALYSIS", 0L)).isEqualTo(reasoning);
-    }
-
-    private long activeQuestionSet() {
-        long questionId = approvedQuestion("chain");
-        long setId = id(post(API + "/question-sets", adminToken, """
-                {"name":"Bộ câu hỏi chuỗi %d","questionIds":[%d]}
-                """.formatted(nextSeq(), questionId)));
-        assertOk(post(API + "/question-sets/" + setId + "/activate", adminToken, "{}"));
-        return setId;
     }
 
     private String configBody(String passingScore) {

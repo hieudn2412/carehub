@@ -68,14 +68,14 @@ class NotificationAlertSchedulerTest {
         });
         when(userRepository.findByIsDeletedFalseAndStatus(UserStatus.ACTIVE))
                 .thenReturn(List.of(included, excluded));
-        when(complianceCalculator.calculate(included, null, today, applicableDepartmentIds))
+        when(complianceCalculator.calculate(included, null, today))
                 .thenReturn(nonCompliantStatus(included, today));
         when(userRepository.findManagersByDepartmentId(includedDepartment.getId())).thenReturn(List.of());
 
         scheduler.scanCme(today);
 
-        verify(complianceCalculator).calculate(included, null, today, applicableDepartmentIds);
-        verify(complianceCalculator, never()).calculate(eq(excluded), eq(null), eq(today), anySet());
+        verify(complianceCalculator).calculate(included, null, today);
+        verify(complianceCalculator, never()).calculate(eq(excluded), eq(null), eq(today));
         verify(dispatcher).dispatch(any(NotificationDispatchEvent.class));
     }
 
