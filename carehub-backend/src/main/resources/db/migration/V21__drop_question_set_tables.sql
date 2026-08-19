@@ -10,14 +10,14 @@
 -- the questionSet field from ExamConfig/ExamPaper, so Hibernate (ddl-auto: update) is
 -- no longer touching these tables/columns.
 
-ALTER TABLE exam_configs DROP COLUMN question_set_id;
-ALTER TABLE exam_papers DROP COLUMN question_set_id;
+ALTER TABLE IF EXISTS exam_configs DROP COLUMN IF EXISTS question_set_id;
+ALTER TABLE IF EXISTS exam_papers DROP COLUMN IF EXISTS question_set_id;
 
-DROP TABLE question_set_item_snapshots;
-DROP TABLE question_set_version_items;
-DROP TABLE question_set_versions;
-DROP TABLE question_set_items;
-DROP TABLE question_sets;
-DROP TABLE question_set_categories;
+DROP TABLE IF EXISTS question_set_item_snapshots;
+DROP TABLE IF EXISTS question_set_version_items;
+DROP TABLE IF EXISTS question_set_versions;
+DROP TABLE IF EXISTS question_set_items;
+DROP TABLE IF EXISTS question_sets;
+DROP TABLE IF EXISTS question_set_categories;
 
 DELETE FROM permissions WHERE code = 'QUESTION_SET_MANAGER';
