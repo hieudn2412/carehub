@@ -175,6 +175,16 @@ class SecurityApiSystemTest extends AbstractApiSystemTest {
         assertThat(traced.getHeaders().getFirst("X-Correlation-ID")).isEqualTo("l3-trace-42");
     }
 
+    @DisplayName("Infrastructure health endpoint is available without a bearer token")
+    @Test
+    void actuatorHealthIsAvailableWithoutAuthentication() {
+        ResponseEntity<String> response = get("/actuator/health", null);
+
+        assertThat(response.getStatusCode())
+                .isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).contains("\"status\"");
+    }
+
     @Disabled("Needs OWASP ZAP and a TLS-terminated deployment: active scan, HSTS/security headers and "
             + "cipher configuration cannot be asserted against the plain-HTTP test server.")
     @DisplayName("L3-SEC-09 | A05 Security Misconfiguration: active ZAP scan plus HTTPS/HSTS and security-header verification")

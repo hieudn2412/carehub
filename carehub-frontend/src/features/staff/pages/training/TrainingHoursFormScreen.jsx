@@ -16,10 +16,10 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
-import { getApiErrorMessage } from '../../../../features/auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
 import { formatEvidenceStorageSummary, getEvidenceFileError } from '../../../../features/training/utils/evidenceFile.js'
 import { getTrainingHoursValidationError, MAX_TRAINING_HOURS } from './utils/trainingHoursValidation.js'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 const formatCompactSize = (bytes) => {
   const value = Number(bytes || 0)

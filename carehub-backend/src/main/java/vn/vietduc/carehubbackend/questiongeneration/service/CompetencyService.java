@@ -635,16 +635,7 @@ public class CompetencyService {
     }
 
     private String getCategoryName(ExamAttempt attempt) {
-        try {
-            return attempt.getExamPaper() != null
-                    && attempt.getExamPaper().getExamConfig() != null
-                    && attempt.getExamPaper().getExamConfig().getQuestionSet() != null
-                    && attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory() != null
-                    ? attempt.getExamPaper().getExamConfig().getQuestionSet().getQuestionSetCategory().getName()
-                    : "Chung";
-        } catch (Exception e) {
-            return "Chung";
-        }
+        return "Chung";
     }
 
     private Form foundById(Long formId) {

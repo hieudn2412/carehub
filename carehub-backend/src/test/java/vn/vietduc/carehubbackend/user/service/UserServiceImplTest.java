@@ -12,6 +12,8 @@ import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
+import vn.vietduc.carehubbackend.notification.config.MailProperties;
+import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -70,6 +72,8 @@ class UserServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        MailProperties mailProperties = new MailProperties();
+        mailProperties.setBrandName("VietDuc Care");
         service = new UserServiceImpl(
                 userRepository,
                 departmentRepository,
@@ -79,7 +83,8 @@ class UserServiceImplTest {
                 passwordEncoder,
                 roleRepository,
                 emailProducer,
-                securityUtils
+                securityUtils,
+                new BrandedEmailRenderer(mailProperties)
         );
         department = Department.builder().id(3L).departmentCode("ICU").name("ICU").build();
         userRole = Role.builder().code("USER").name("User").build();
@@ -117,7 +122,9 @@ class UserServiceImplTest {
         ArgumentCaptor<EmailMessage> emailCaptor = ArgumentCaptor.forClass(EmailMessage.class);
         verify(emailProducer).sendEmail(emailCaptor.capture());
         assertEquals("emp100@example.com", emailCaptor.getValue().getTo());
+        assertEquals("[VietDuc Care] Thông tin tài khoản của bạn", emailCaptor.getValue().getSubject());
         assertTrue(emailCaptor.getValue().getContent().contains("EMP100"));
+        assertTrue(emailCaptor.getValue().getHtmlContent().contains("EMP100"));
     }
 
     @Test

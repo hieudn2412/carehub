@@ -18,7 +18,7 @@ import {
   CloseOutlined,
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import '../styles/FormMetadataFormPage.css'
 
 const DEFAULT_FORM_SUBJECT_TYPE = 'USER'

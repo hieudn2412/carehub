@@ -33,9 +33,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestion
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionItemRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionRepository;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.math.BigDecimal;
@@ -55,7 +52,6 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ExamPaperDirectGenerationTest {
@@ -63,9 +59,6 @@ class ExamPaperDirectGenerationTest {
     private final ExamPaperQuestionRepository paperQuestionRepository = mock(ExamPaperQuestionRepository.class);
     private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(ExamPaperQuestionSnapshotRepository.class);
     private final ExamConfigRepository configRepository = mock(ExamConfigRepository.class);
-    private final QuestionSetItemRepository questionSetItemRepository = mock(QuestionSetItemRepository.class);
-    private final QuestionSetVersionRepository questionSetVersionRepository = mock(QuestionSetVersionRepository.class);
-    private final QuestionSetVersionItemRepository questionSetVersionItemRepository = mock(QuestionSetVersionItemRepository.class);
     private final QuestionBankQuestionRepository questionRepository = mock(QuestionBankQuestionRepository.class);
     private final ExamAssignmentRepository assignmentRepository = mock(ExamAssignmentRepository.class);
     private final ExamBlueprintFieldRepository blueprintFieldRepository = mock(ExamBlueprintFieldRepository.class);
@@ -93,15 +86,14 @@ class ExamPaperDirectGenerationTest {
     void setUp() {
         service = new ExamPaperService(
                 paperRepository, paperQuestionRepository, snapshotRepository, configRepository,
-                questionSetItemRepository, questionSetVersionRepository,
-                questionSetVersionItemRepository, questionRepository, assignmentRepository);
+                questionRepository, assignmentRepository);
         service.setBlueprintRepositories(blueprintFieldRepository, blueprintCellRepository, sourceFilterRepository);
         service.setGenerationRepositories(batchRepository, batchCellRepository);
 
         emergency = field(1L, "CC", "Hồi sức – Cấp cứu");
         surgery = field(2L, "NGOAI", "Chăm sóc ngoại khoa");
         config = ExamConfig.builder()
-                .id(50L).name("Kiểm tra đa lĩnh vực").questionSet(null).blueprintVersion(4)
+                .id(50L).name("Kiểm tra đa lĩnh vực").blueprintVersion(4)
                 .totalQuestions(2).timeLimitMinutes(30).passingScore(7).maxRetakes(0)
                 .shuffleQuestions(true).shuffleOptions(true).status(ExamConfigStatus.ACTIVE)
                 .build();
@@ -191,7 +183,6 @@ class ExamPaperDirectGenerationTest {
         assertThat(papers.get(0).generationAlgorithmVersion()).isEqualTo(ExamGenerationDeterminism.ALGORITHM_VERSION);
         assertThat(papers.get(0).configVersion()).isEqualTo(4);
         verify(questionRepository).findByStatusAndProfessionalFieldIdInOrderByIdAsc(any(), anySet());
-        verifyNoInteractions(questionSetItemRepository, questionSetVersionRepository, questionSetVersionItemRepository);
     }
 
     @Test

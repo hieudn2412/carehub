@@ -12,7 +12,7 @@ vi.mock('../../../../shared/components/AppShell.jsx', () => ({
   default: ({ children }) => <div>{children}</div>,
 }))
 
-vi.mock('../../../../features/admin/components/ConfirmModal.jsx', () => ({
+vi.mock('../../../../shared/components/ConfirmModal.jsx', () => ({
   default: ({ isOpen, onConfirm, onCancel }) => isOpen ? (
     <div role="dialog">
       <button type="button" onClick={onConfirm}>Xác nhận xóa</button>

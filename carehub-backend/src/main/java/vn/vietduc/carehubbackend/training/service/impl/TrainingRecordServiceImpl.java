@@ -3,7 +3,6 @@ package vn.vietduc.carehubbackend.training.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,7 +42,6 @@ import vn.vietduc.carehubbackend.training.service.TrainingRecordService;
 import vn.vietduc.carehubbackend.training.service.TrainingRecordStateMachine;
 import vn.vietduc.carehubbackend.training.validation.TrainingDomainValidator;
 import vn.vietduc.carehubbackend.user.entity.User;
-import vn.vietduc.carehubbackend.user.entity.UserRole;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 import vn.vietduc.carehubbackend.notification.service.NotificationService;
@@ -52,12 +50,10 @@ import vn.vietduc.carehubbackend.training.service.TrainingRecordValidity;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -80,9 +76,6 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
     private final NotificationService notificationService;
     private final UserRoleRepository userRoleRepository;
     private final SystemSettingsService settingsService;
-
-    @Value("${app.training.records.max-edit-count:2}")
-    private int maxEditCount;
 
     @Override
     @Transactional(readOnly = true)
@@ -204,17 +197,10 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
         ProfessionalField professionalField = resolveProfessionalField(request.professionalFieldId(), request.customProfessionalField());
         validator.validateRecordForm(request, false);
 
-        if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT && record.getEditCount() >= maxEditCount) {
-            throw new ConflictException("Training record edit limit exceeded");
-        }
-
         Map<String, Object> before = snapshot(record);
         mapper.applyForm(record, request);
         record.setActivityType(activityType);
         record.setProfessionalField(professionalField);
-        if (record.getWorkflowStatus() != TrainingRecordStatus.DRAFT) {
-            record.setEditCount(record.getEditCount() + 1);
-        }
         record.setUpdatedByUser(actor);
 
         long duplicateCount = duplicateCount(record.getEmployee().getId(), request, record.getId());

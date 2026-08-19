@@ -122,7 +122,7 @@ function ImportLogsListPage() {
   const isSystemLogsPath = window.location.pathname.includes('/admin/system-logs')
   const isSyncHistoryPath = window.location.pathname.includes('/admin/reference/sync-history')
 
-  // Breadcrumbs config for AdminHeader
+  // Breadcrumbs config for the shared app shell.
   const breadcrumbs = isSyncHistoryPath
     ? [
         { label: 'Dữ liệu tham chiếu' },

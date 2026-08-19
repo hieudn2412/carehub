@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
@@ -14,8 +14,6 @@ const EMPTY_FORM = {
   description: '',
   startDate: '',
   endDate: '',
-  startTime: '',
-  endTime: '',
   durationValue: '',
   durationUnit: 'HOUR',
   durationRawText: '',
@@ -242,22 +240,6 @@ function TrainingRecordFormPage() {
 
             <div className="training-form-grid training-form-grid--compact">
               <label>
-                Start time
-                <input
-                  onChange={(event) => updateField('startTime', event.target.value)}
-                  type="time"
-                  value={form.startTime}
-                />
-              </label>
-              <label>
-                End time
-                <input
-                  onChange={(event) => updateField('endTime', event.target.value)}
-                  type="time"
-                  value={form.endTime}
-                />
-              </label>
-              <label>
                 Duration unit
                 <select onChange={(event) => updateField('durationUnit', event.target.value)} value={form.durationUnit}>
                   {['HOUR', 'LESSON', 'CREDIT', 'DAY', 'MONTH', 'YEAR', 'OTHER'].map((unit) => (
@@ -354,8 +336,6 @@ function fromRecord(record) {
     description: record.description ?? '',
     startDate: record.startDate ?? '',
     endDate: record.endDate ?? '',
-    startTime: record.startTime ?? '',
-    endTime: record.endTime ?? '',
     durationValue: record.durationValue ?? '',
     durationUnit: record.durationUnit ?? 'HOUR',
     durationRawText: record.durationRawText ?? '',
@@ -373,8 +353,6 @@ function toPayload(form) {
     description: form.description || null,
     startDate: form.startDate || null,
     endDate: form.endDate || null,
-    startTime: form.startTime || null,
-    endTime: form.endTime || null,
     durationValue: form.durationValue ? Number(form.durationValue) : null,
     durationUnit: form.durationUnit,
     durationRawText: form.durationRawText || null,

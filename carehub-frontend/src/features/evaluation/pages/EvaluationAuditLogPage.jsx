@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EyeOutlined, FilterOutlined, HistoryOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationAuditLogApi } from '../api/evaluationAuditLogApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -14,7 +13,6 @@ const ACTION_OPTIONS = [
   { value: 'PARAPHRASE', label: 'Paraphrase' },
   { value: 'QUESTION_CATEGORY', label: 'Danh mục câu hỏi' },
   { value: 'CLASSIFICATION_RULE', label: 'Quy tắc phân loại' },
-  { value: 'QUESTION_SET', label: 'Bộ câu hỏi' },
   { value: 'EXAM_CONFIG', label: 'Cấu hình đề' },
   { value: 'EXAM_PAPER', label: 'Bộ đề' },
   { value: 'EXAM_ASSIGNMENT', label: 'Phân công' },
@@ -29,7 +27,6 @@ const ENTITY_OPTIONS = [
   { value: 'PARAPHRASE_CANDIDATE', label: 'Candidate paraphrase' },
   { value: 'QUESTION_CATEGORY', label: 'Danh mục câu hỏi' },
   { value: 'QUESTION_CLASSIFICATION_RULE', label: 'Quy tắc phân loại' },
-  { value: 'QUESTION_SET', label: 'Bộ câu hỏi' },
   { value: 'EXAM_CONFIG', label: 'Cấu hình đề' },
   { value: 'EXAM_PAPER', label: 'Bộ đề' },
   { value: 'EXAM_ASSIGNMENT', label: 'Phân công' },
@@ -65,13 +62,8 @@ function EvaluationAuditLogPage() {
   const breadcrumbs = [{ label: 'Audit đánh giá' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="eal-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="eal-page">
               <section className="eal-toolbar admin-control-toolbar" aria-label="Công cụ audit đánh giá">
                 <div className="admin-control-toolbar__main">
                   <div className="admin-control-toolbar__controls">
@@ -233,11 +225,8 @@ function EvaluationAuditLogPage() {
                   )}
                 </aside>
               </section>
-            </div>
-          </main>
-        </div>
       </div>
-    </div>
+    </AppShell>
   )
 }
 

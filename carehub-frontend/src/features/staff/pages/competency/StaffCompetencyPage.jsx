@@ -5,7 +5,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
-import { apiData, apiErrorMessage, formatNumber } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/StaffCompetencyPage.css'
 
@@ -164,6 +164,7 @@ export default function StaffCompetencyPage() {
   return (
     <AppShell
       title="Danh sách bảng kiểm đã chấm"
+      className="staff-competency-list-shell"
       back={{ to: '/staff/competency', label: 'Tuân thủ quy trình, quy định' }}
       breadcrumbs={[{ label: 'Tuân thủ quy trình, quy định', link: '/staff/competency' }, { label: 'Danh sách bảng kiểm' }]}
       mobileSearch={{
@@ -227,10 +228,10 @@ export default function StaffCompetencyPage() {
               </colgroup>
               <thead><tr><th>Quy trình</th><th>Số lượt đạt/tổng lượt</th><th>Tỷ lệ tuân thủ</th><th>Hành động</th></tr></thead><tbody>
               {visibleItems.map(item => <tr key={item.formId}>
-                <td><strong className="sc-table__process-name">{item.formName}</strong></td>
-                <td><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
-                <td><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
-                <td><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).length > 0 && <button type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá`} aria-label={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá ${item.formName}`} onClick={() => openAttemptHistory(item.attempts)}><EyeOutlined /></button>}</div></td>
+                <td data-label="Quy trình"><strong className="sc-table__process-name">{item.formName}</strong></td>
+                <td data-label="Đạt / Tổng"><span className="sc-table__metric">{item.passCount || 0}/{item.evaluationCount || 0}</span></td>
+                <td data-label="Tỷ lệ"><strong className={`sc-table__rate${Number(item.passRate || 0) < 50 ? ' is-low' : ''}`}>{formatNumber(item.passRate || 0)}%</strong></td>
+                <td data-label="Chi tiết"><div className="sc-compliance-attempts admin-table-actions">{(item.attempts || []).length > 0 && <button type="button" className="sc-view-btn admin-table-action admin-table-action--icon admin-table-action--primary" title={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá`} aria-label={`Xem chi tiết ${item.evaluationCount || item.attempts.length} lượt đánh giá ${item.formName}`} onClick={() => openAttemptHistory(item.attempts)}><EyeOutlined /></button>}</div></td>
               </tr>)}
             </tbody></table></div>
           )}

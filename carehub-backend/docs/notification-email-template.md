@@ -219,7 +219,7 @@ Mỗi `event_type` chỉ có một policy.
 | `event_type` | Event liên kết |
 | `audience` | `EMPLOYEE`, `MANAGER`, `ADMIN` |
 | `subject` | Tiêu đề email, tối đa 200 ký tự |
-| `body` | Nội dung email dạng plain text |
+| `body` | Nội dung dạng text; khi gửi sẽ được escape và bọc trong layout HTML thương hiệu, đồng thời vẫn giữ bản plain text |
 | `mandatory` | Template hệ thống |
 | `active` | Template đang hoạt động |
 | `lock_version` | Optimistic locking |
@@ -692,7 +692,14 @@ Retry queue có TTL 15 phút. Sau TTL, message được dead-letter về main ex
 - Gửi lỗi thì tăng `attempts`, đẩy vào retry queue và ACK message hiện tại.
 - Từ lần thất bại thứ 5, message được chuyển vào DLQ.
 
-Email hiện được gửi dưới dạng plain text bằng `SimpleMailMessage`.
+Email được gửi bằng `MimeMessage` dạng multipart/alternative:
+
+- Bản `text/plain` giúp email client cũ và bộ lọc thư đọc được nội dung.
+- Bản `text/html` dùng layout VietDuc Care responsive, không phụ thuộc JavaScript hay CSS ngoài.
+- Email OTP và email tạo tài khoản có layout chuyên biệt.
+- Email nghiệp vụ do admin cấu hình được HTML-escape rồi bọc trong layout dùng chung.
+- Header tự động gồm `Auto-Submitted: auto-generated`, `X-Auto-Response-Suppress: All` và `Content-Language: vi-VN`.
+- Queue message cũ không có `htmlContent` vẫn tương thích; consumer tự tạo HTML từ `content`.
 
 ## 15. Dedup và idempotency
 
@@ -762,13 +769,21 @@ CLOUDAMQP_URL=amqps://...
 ### 17.3. SMTP
 
 ```text
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=...
-MAIL_PASSWORD=...
+MAIL_HOST=smtp.mx.cloudflare.net
+MAIL_PORT=465
+MAIL_USERNAME=api_token
+MAIL_PASSWORD=<Cloudflare Email Sending API token>
+MAIL_FROM=thongbao@quanlydieuduongvd.org
+MAIL_FROM_NAME=VietDuc Care
+MAIL_REPLY_TO=hotro@quanlydieuduongvd.org
+MAIL_BRAND_NAME=VietDuc Care
+MAIL_WEBSITE_URL=https://quanlydieuduongvd.org
+MAIL_SUPPORT_EMAIL=hotro@quanlydieuduongvd.org
 ```
 
-SMTP bật authentication và STARTTLS.
+Cloudflare SMTP dùng authentication và implicit TLS trên cổng `465`. `MAIL_FROM` phải thuộc domain đã được onboard trong Cloudflare Email Sending. Không commit API token vào repository.
+
+Để giảm nguy cơ vào spam, kiểm tra bản gốc email tại Gmail phải có `SPF: PASS`, `DKIM: PASS`, `DMARC: PASS`; đồng thời theo dõi Activity Log và Suppressions trên Cloudflare.
 
 ## 18. Database và migration
 
@@ -857,7 +872,8 @@ Kiểm tra:
 3. Có active template đúng `(eventType, audience)`.
 4. Placeholder có đủ biến runtime.
 5. RabbitMQ main/retry/DLQ.
-6. SMTP credentials và STARTTLS.
+6. SMTP credentials, implicit TLS cổng `465` và domain của `MAIL_FROM` đã được Cloudflare cho phép.
+7. Trong Gmail Show original, SPF/DKIM/DMARC đều `PASS`.
 
 ### Template trả `422`
 

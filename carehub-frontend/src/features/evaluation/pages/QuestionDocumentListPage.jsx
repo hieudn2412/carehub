@@ -12,8 +12,7 @@ import {
   SearchOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
@@ -219,13 +218,8 @@ function QuestionDocumentListPage() {
   const breadcrumbs = [{ label: 'Đánh giá' }, { label: 'Tạo câu hỏi từ tài liệu' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="qdoc-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="qdoc-page">
               <section className="qdoc-title-card">
                 <div>
                   <h1 className="qdoc-title">Tạo câu hỏi từ tài liệu</h1>
@@ -415,9 +409,6 @@ function QuestionDocumentListPage() {
                   </div>
                 </div>
               </section>
-            </div>
-          </main>
-        </div>
       </div>
 
       {jobModalDocument && (
@@ -523,7 +514,7 @@ function QuestionDocumentListPage() {
           }}
         />
       )}
-    </div>
+    </AppShell>
   )
 }
 

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, FilterOutlined } from '@ant-design/icons'
-import AdminSidebar from '../../admin/components/AdminSidebar.jsx'
-import AdminHeader from '../../admin/components/AdminHeader.jsx'
-import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import Modal from '../../../shared/components/Modal.jsx'
+import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -55,7 +54,6 @@ function ExamPaperListPage({
         || (paper.name || '').toLowerCase().includes(normalized)
         || (paper.code || '').toLowerCase().includes(normalized)
         || (paper.examConfigName || '').toLowerCase().includes(normalized)
-        || (paper.questionSetName || '').toLowerCase().includes(normalized)
       const matchesStatus = !status || paper.status === status
       return matchesKeyword && matchesStatus
     })
@@ -138,13 +136,8 @@ function ExamPaperListPage({
   const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
 
   return (
-    <div className="dashboard-layout">
-      <AdminSidebar />
-      <div className="dashboard-layout__content">
-        <AdminHeader breadcrumbs={breadcrumbs} />
-        <div className="dashboard-root">
-          <main className="dashboard-body">
-            <div className="exp-page">
+    <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
+      <div className="exp-page">
               <section className="exp-management-card">
                 <ExamManagementViewSwitch
                   activeView={activeView}
@@ -346,10 +339,7 @@ function ExamPaperListPage({
         onCancel={() => setPendingArchive(null)}
         onConfirm={confirmArchivePaper}
       />
-          </main>
-        </div>
-      </div>
-    </div>
+    </AppShell>
   )
 }
 

@@ -8,7 +8,6 @@ import vn.vietduc.carehubbackend.training.enums.DurationUnit;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 
 public record TrainingRecordFormRequest(
         Long employeeId,
@@ -20,8 +19,6 @@ public record TrainingRecordFormRequest(
         String description,
         LocalDate startDate,
         LocalDate endDate,
-        LocalTime startTime,
-        LocalTime endTime,
         @DecimalMin("0.0") BigDecimal durationValue,
         @NotNull DurationUnit durationUnit,
         @Size(max = 100) String durationRawText,

@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 function TrainingHoursEvidencesListScreen() {
   const navigate = useNavigate()

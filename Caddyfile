@@ -1,0 +1,26 @@
+{$APP_DOMAIN} {
+	encode zstd gzip
+	log {
+		output stdout
+		format console
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	@actuator path /actuator /actuator/*
+	handle @actuator {
+		respond 404
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8081
+	}
+
+	handle {
+		reverse_proxy frontend:8081
+	}
+}

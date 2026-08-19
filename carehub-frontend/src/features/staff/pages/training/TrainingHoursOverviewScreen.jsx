@@ -17,8 +17,8 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
-import { getRolesFromAccessToken } from '../../../../features/auth/utils/jwt.js'
-import { tokenStorage } from '../../../../features/auth/services/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../../../shared/auth/jwt.js'
+import { tokenStorage } from '../../../../shared/auth/tokenStorage.js'
 import TrainingRecordTable from './components/TrainingRecordTable.jsx'
 import { formatTrainingDate } from './utils/trainingRecordFormatters.js'
 import {
@@ -27,7 +27,7 @@ import {
   normalizeChartYears,
   truncateChartLabel,
 } from './utils/trainingOverviewChart.js'
-import '../../styles/TrainingHours.css'
+import '../../../training/styles/TrainingHours.css'
 
 function getDashboardPath() {
   const roles = getRolesFromAccessToken(tokenStorage.getAccessToken())
@@ -39,6 +39,34 @@ function getDashboardPath() {
     : isManager
       ? '/manager/dashboard'
       : '/staff/dashboard'
+}
+
+function wrapMobileChartLabel(value, maxCharacters = 18) {
+  const words = String(value || 'Chưa xác định').trim().split(/\s+/)
+  return words.reduce((lines, word) => {
+    const currentLine = lines.at(-1) || ''
+    const candidate = currentLine ? `${currentLine} ${word}` : word
+    if (!currentLine || candidate.length <= maxCharacters) {
+      if (lines.length) lines[lines.length - 1] = candidate
+      else lines.push(candidate)
+    } else {
+      lines.push(word)
+    }
+    return lines
+  }, [])
+}
+
+function MobileChartTick({ x, y, payload }) {
+  const lines = wrapMobileChartLabel(payload?.value)
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text fill="#64748b" fontSize="9" textAnchor="middle">
+        {lines.map((line, index) => (
+          <tspan key={`${line}-${index}`} x="0" dy={index === 0 ? 12 : 11}>{line}</tspan>
+        ))}
+      </text>
+    </g>
+  )
 }
 
 function getComplianceState(statusData) {
@@ -205,7 +233,9 @@ function TrainingHoursOverviewScreen() {
     : compliance.compliant
       ? 'th-compliance-banner--success'
       : 'th-compliance-banner--warning'
-  const chartMinWidth = Math.max(640, chartFields.length * 92)
+  const chartMinWidth = isMobileViewport
+    ? Math.max(330, chartFields.length * 150)
+    : Math.max(640, chartFields.length * 92)
 
   return (
     <AppShell
@@ -265,34 +295,41 @@ function TrainingHoursOverviewScreen() {
                 role="img"
                 aria-label={`Biểu đồ giờ đào tạo theo lĩnh vực năm ${chartYear}`}
               >
-                <ResponsiveContainer width="100%" height={isMobileViewport ? 196 : 300}>
+                <ResponsiveContainer width="100%" height={isMobileViewport ? 170 : 300}>
                   <BarChart
                     data={chartFields}
-                    margin={{ top: 20, right: 20, bottom: 24, left: 4 }}
+                    margin={isMobileViewport
+                      ? { top: 10, right: 8, bottom: 4, left: 0 }
+                      : { top: 20, right: 20, bottom: 24, left: 4 }}
                     accessibilityLayer
                   >
                     <CartesianGrid stroke="#e8efed" strokeDasharray="4 4" vertical={false} />
                     <XAxis
                       dataKey="professionalFieldName"
-                      tickFormatter={value => truncateChartLabel(value)}
+                      tickFormatter={isMobileViewport ? undefined : value => truncateChartLabel(value)}
                       interval={0}
-                      angle={isMobileViewport ? -45 : 0}
-                      textAnchor={isMobileViewport ? 'end' : 'middle'}
-                      height={isMobileViewport ? 62 : 64}
-                      tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
+                      angle={0}
+                      textAnchor="middle"
+                      height={isMobileViewport ? 58 : 64}
+                      tick={isMobileViewport ? <MobileChartTick /> : { fill: '#64748b', fontSize: 12 }}
                       tickLine={false}
                       axisLine={{ stroke: '#dce7e4' }}
                     />
                     <YAxis
                       tickFormatter={formatChartNumber}
                       allowDecimals
-                      width={50}
-                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      width={isMobileViewport ? 36 : 50}
+                      tick={{ fill: '#64748b', fontSize: isMobileViewport ? 10 : 12 }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <Tooltip content={<TrainingHoursChartTooltip />} cursor={{ fill: 'rgba(26, 170, 132, 0.08)' }} />
-                    <Bar dataKey="submittedHours" fill="#1aaa84" radius={[7, 7, 0, 0]} maxBarSize={58} />
+                    <Bar
+                      dataKey="submittedHours"
+                      fill="#1aaa84"
+                      radius={[7, 7, 0, 0]}
+                      maxBarSize={isMobileViewport ? 36 : 58}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

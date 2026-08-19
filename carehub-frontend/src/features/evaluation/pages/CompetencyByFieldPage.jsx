@@ -10,11 +10,12 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
+import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
-import { tokenStorage } from '../../../features/auth/services/tokenStorage.js'
-import { getRolesFromAccessToken } from '../../../features/auth/utils/jwt.js'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
+import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import '../styles/EvaluationDashboardPage.css'
@@ -70,7 +71,6 @@ function CompetencyByFieldPage() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const { questionCategoryApi } = await import('../api/questionCategoryApi.js')
       const response = await questionCategoryApi.listCategories()
       const cats = apiData(response, [])
       setCategories(cats)

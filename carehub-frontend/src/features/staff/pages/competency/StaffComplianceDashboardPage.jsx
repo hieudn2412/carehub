@@ -21,7 +21,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
-import { apiData, apiErrorMessage, formatDateTime } from '../../../evaluation/utils/documentQuestionUi.js'
+import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
 import './StaffComplianceDashboardPage.css'
 
 const today = () => {
@@ -95,6 +95,11 @@ function SummaryCard({ icon, label, value, suffix, tone }) {
 
 function StaffComplianceDashboardPage() {
   const navigate = useNavigate()
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 768px)').matches
+  ))
   const [chartYear, setChartYear] = useState(currentYear())
   const [chart, setChart] = useState(null)
   const [overview, setOverview] = useState(null)
@@ -131,6 +136,13 @@ function StaffComplianceDashboardPage() {
 
   useEffect(() => { loadOverview() }, [loadOverview])
   useEffect(() => { loadChart() }, [loadChart])
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined
+    const mediaQuery = window.matchMedia('(max-width: 768px)')
+    const handleChange = event => setIsMobile(event.matches)
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
+  }, [])
 
   const summary = overview || {}
   const totalEvaluations = Number(summary.totalEvaluations || 0)
@@ -228,15 +240,22 @@ function StaffComplianceDashboardPage() {
           ) : !chartData.length ? <div className="scd-chart-state"><EmptyState>Chưa có lượt chấm trong năm {chartYear}.</EmptyState></div> : (
             <div className="scd-chart-scroll">
               <div className="scd-chart-inner" style={{ minWidth: Math.max(620, chartData.length * 100) }}>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={chartData}
-                    margin={{ top: 14, right: 18, left: 0, bottom: 62 }}
+                    margin={{ top: isMobile ? 8 : 14, right: isMobile ? 8 : 18, left: 0, bottom: isMobile ? 2 : 62 }}
                     barGap={0}
                     barCategoryGap="28%"
                   >
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5eeeb" />
-                    <XAxis dataKey="label" interval={0} angle={-32} textAnchor="end" height={72} tick={{ fontSize: 11, fill: '#647b74' }} />
+                    <XAxis
+                      dataKey="label"
+                      interval={0}
+                      angle={isMobile ? -28 : -32}
+                      textAnchor="end"
+                      height={isMobile ? 48 : 72}
+                      tick={{ fontSize: isMobile ? 9 : 11, fill: '#647b74' }}
+                    />
                     <YAxis domain={[0, 100]} tickFormatter={value => `${value}%`} tick={{ fontSize: 11, fill: '#647b74' }} />
                     <Tooltip formatter={(value, name) => [`${formatPercent(value)}%`, name === 'targetPercent' ? 'Mục tiêu' : 'Tuân thủ']} labelFormatter={(_, payload) => payload?.[0]?.payload?.formName || ''} />
                     <Bar dataKey="targetPercent" name="Mục tiêu" fill="#1677c8" radius={[4, 4, 0, 0]} barSize={34} />

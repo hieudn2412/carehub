@@ -77,6 +77,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/error",
+                                "/actuator/health",
                                 apiPrefix + "/auth/login",
                                 apiPrefix + "/auth/refresh-token",
                                 apiPrefix + "/auth/logout",

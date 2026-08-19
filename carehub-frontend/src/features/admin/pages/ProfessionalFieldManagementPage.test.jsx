@@ -7,9 +7,6 @@ import { adminApi } from '../api/adminApi.js'
 
 const { showToastMock } = vi.hoisted(() => ({ showToastMock: vi.fn() }))
 
-vi.mock('../components/AdminHeader.jsx', () => ({ default: () => null }))
-vi.mock('../components/AdminSidebar.jsx', () => ({ default: () => null }))
-
 vi.mock('../api/adminApi.js', () => ({
   adminApi: {
     createProfessionalField: vi.fn(),

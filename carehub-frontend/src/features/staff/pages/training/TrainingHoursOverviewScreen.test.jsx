@@ -44,13 +44,13 @@ vi.mock('../../api/staffApi.js', () => ({
   },
 }))
 
-vi.mock('../../../../features/auth/services/tokenStorage.js', () => ({
+vi.mock('../../../../shared/auth/tokenStorage.js', () => ({
   tokenStorage: {
     getAccessToken: vi.fn(() => null),
   },
 }))
 
-vi.mock('../../../../features/auth/utils/jwt.js', () => ({
+vi.mock('../../../../shared/auth/jwt.js', () => ({
   getRolesFromAccessToken: vi.fn(() => []),
 }))
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../../shared/components/Modal.jsx'
 import { staffApi } from '../api/staffApi.js'
-import { getApiErrorMessage } from '../../auth/utils/apiError.js'
+import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 
 function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
   const [form, setForm] = useState({ fullName: '', email: '', phone: '', birthday: '', gender: '' })

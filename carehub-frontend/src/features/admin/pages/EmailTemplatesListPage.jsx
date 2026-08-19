@@ -10,7 +10,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ConfirmModal from '../components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EmailTemplatesListPage.css'

@@ -6,6 +6,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.GenerateExamPaperRequest;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintCell;
+import vn.vietduc.carehubbackend.questiongeneration.entity.ExamBlueprintField;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaper;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperGenerationBatch;
@@ -13,30 +15,28 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetItem;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersion;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSetVersionItem;
+import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintCellRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintFieldRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigRepository;
+import vn.vietduc.carehubbackend.questiongeneration.repository.ExamConfigSourceFilterRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperGenerationBatchCellRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetItemRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionItemRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetVersionRepository;
+import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -55,22 +55,23 @@ class ExamPaperServiceTest {
         private final ExamPaperQuestionSnapshotRepository snapshotRepository = mock(
                         ExamPaperQuestionSnapshotRepository.class);
         private final ExamConfigRepository configRepository = mock(ExamConfigRepository.class);
-        private final QuestionSetItemRepository questionSetItemRepository = mock(QuestionSetItemRepository.class);
-        private final QuestionSetVersionRepository questionSetVersionRepository = mock(
-                        QuestionSetVersionRepository.class);
-        private final QuestionSetVersionItemRepository questionSetVersionItemRepository = mock(
-                        QuestionSetVersionItemRepository.class);
         private final QuestionBankQuestionRepository questionRepository = mock(QuestionBankQuestionRepository.class);
         private final ExamAssignmentRepository examAssignmentRepository = mock(ExamAssignmentRepository.class);
         private final ExamPaperGenerationBatchRepository generationBatchRepository = mock(ExamPaperGenerationBatchRepository.class);
         private final ExamPaperGenerationBatchCellRepository generationBatchCellRepository = mock(ExamPaperGenerationBatchCellRepository.class);
+        private final ExamBlueprintFieldRepository blueprintFieldRepository = mock(ExamBlueprintFieldRepository.class);
+        private final ExamBlueprintCellRepository blueprintCellRepository = mock(ExamBlueprintCellRepository.class);
+        private final ExamConfigSourceFilterRepository sourceFilterRepository = mock(ExamConfigSourceFilterRepository.class);
         private final AtomicLong ids = new AtomicLong(200);
         private final List<ExamPaperQuestion> savedQuestions = new ArrayList<>();
         private final List<ExamPaperQuestionSnapshot> savedSnapshots = new ArrayList<>();
+        private final List<QuestionBankQuestion> pool = new ArrayList<>();
         private ExamPaperService service;
         private ExamConfig activeConfig;
         private QuestionCategory category;
-        private QuestionSet questionSet;
+        private ProfessionalField professionalField;
+        private ExamBlueprintField blueprintField;
+        private ExamBlueprintCell blueprintCell;
 
         @BeforeEach
         void setUp() {
@@ -79,37 +80,53 @@ class ExamPaperServiceTest {
                                 paperQuestionRepository,
                                 snapshotRepository,
                                 configRepository,
-                                questionSetItemRepository,
-                                questionSetVersionRepository,
-                                questionSetVersionItemRepository,
                                 questionRepository,
                                 examAssignmentRepository);
+                service.setBlueprintRepositories(blueprintFieldRepository, blueprintCellRepository, sourceFilterRepository);
                 service.setGenerationRepositories(generationBatchRepository, generationBatchCellRepository);
                 category = QuestionCategory.builder()
                                 .id(10L)
                                 .name("An toàn người bệnh")
                                 .status(QuestionCategoryStatus.ACTIVE)
                                 .build();
-                questionSet = QuestionSet.builder()
-                                .id(20L)
-                                .name("Bộ câu hỏi an toàn")
-                                .status(QuestionSetStatus.ACTIVE)
-                                .questionCount(3)
+                professionalField = ProfessionalField.builder()
+                                .id(15L)
+                                .code("PF-01")
+                                .name("Lĩnh vực an toàn")
+                                .active(true)
                                 .build();
                 activeConfig = ExamConfig.builder()
                                 .id(30L)
                                 .name("Cấu hình an toàn")
-                                .questionSet(questionSet)
                                 .totalQuestions(2)
                                 .timeLimitMinutes(30)
                                 .passingScore(70)
                                 .maxRetakes(3)
                                 .shuffleQuestions(false)
                                 .shuffleOptions(false)
+                                .blueprintVersion(1)
                                 .status(ExamConfigStatus.ACTIVE)
+                                .build();
+                blueprintField = ExamBlueprintField.builder()
+                                .id(60L)
+                                .examConfig(activeConfig)
+                                .professionalField(professionalField)
+                                .percentage(BigDecimal.valueOf(100))
+                                .questionCount(2)
+                                .displayOrder(0)
+                                .build();
+                blueprintCell = ExamBlueprintCell.builder()
+                                .id(61L)
+                                .blueprintField(blueprintField)
+                                .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                                .percentage(BigDecimal.valueOf(100))
+                                .questionCount(2)
                                 .build();
                 savedQuestions.clear();
                 savedSnapshots.clear();
+                pool.clear();
+                pool.addAll(questionPool(2));
+                recomputeChecksum();
 
                 when(configRepository.findById(activeConfig.getId())).thenReturn(Optional.of(activeConfig));
                 when(configRepository.findByIdForUpdate(activeConfig.getId())).thenReturn(Optional.of(activeConfig));
@@ -119,10 +136,13 @@ class ExamPaperServiceTest {
                         if (batch.getId() == null) batch.setId(ids.incrementAndGet());
                         return batch;
                 });
-                when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
-                                .thenReturn(questionSetItems(3));
-                when(questionSetVersionRepository.findByQuestionSetOrderByVersionDesc(questionSet))
-                                .thenReturn(List.of());
+                when(blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(activeConfig.getId()))
+                                .thenReturn(List.of(blueprintField));
+                when(blueprintCellRepository.findByBlueprintFieldId(blueprintField.getId()))
+                                .thenReturn(List.of(blueprintCell));
+                when(sourceFilterRepository.findByExamConfigOrderByIdAsc(activeConfig)).thenReturn(List.of());
+                when(questionRepository.findByStatusAndProfessionalFieldIdInOrderByIdAsc(any(), any()))
+                                .thenAnswer(invocation -> new ArrayList<>(pool));
                 when(paperRepository.save(any(ExamPaper.class))).thenAnswer(invocation -> {
                         ExamPaper paper = invocation.getArgument(0);
                         if (paper.getId() == null) {
@@ -168,51 +188,6 @@ class ExamPaperServiceTest {
         }
 
         @Test
-        void generateUsesActiveQuestionSetVersionSnapshotWhenAvailable() {
-                activeConfig.setTotalQuestions(1);
-                questionSet.setActiveVersion(1);
-                QuestionSetVersion version = QuestionSetVersion.builder()
-                                .id(501L)
-                                .questionSet(questionSet)
-                                .version(1)
-                                .questionCount(1)
-                                .snapshotAt(java.time.LocalDateTime.now())
-                                .activatedBy("admin")
-                                .build();
-                QuestionSetVersionItem versionItem = QuestionSetVersionItem.builder()
-                                .id(502L)
-                                .questionSetVersion(version)
-                                .sourceQuestionId(1L)
-                                .position(1)
-                                .points(BigDecimal.ONE)
-                                .required(true)
-                                .stem("Stem snapshot active")
-                                .optionA("A snapshot")
-                                .optionB("B snapshot")
-                                .optionC("C snapshot")
-                                .optionD("D snapshot")
-                                .correctAnswer("B")
-                                .explanation("Giải thích snapshot")
-                                .sourceDocument("Snapshot source")
-                                .build();
-                when(questionSetVersionRepository.findByQuestionSetOrderByVersionDesc(questionSet))
-                                .thenReturn(List.of(version));
-                when(questionSetVersionItemRepository.findByQuestionSetVersionOrderByPositionAsc(version))
-                                .thenReturn(List.of(versionItem));
-                when(questionRepository.findAllById(List.of(1L))).thenReturn(List.of(
-                                question(1L, "Stem live đã đổi", QuestionBankStatus.APPROVED)));
-                var responses = service.generate(
-                                new GenerateExamPaperRequest(activeConfig.getId(), "Đề snapshot", 1, 123L, "paper-snapshot"), "admin");
-
-                assertThat(responses.get(0).questions()).hasSize(1);
-                assertThat(responses.get(0).questions().get(0).stem()).isEqualTo("Stem snapshot active");
-                assertThat(responses.get(0).questions().get(0).optionB()).isEqualTo("B snapshot");
-                assertThat(responses.get(0).questions().get(0).correctAnswer()).isEqualTo("B");
-                assertThat(savedSnapshots.get(0).getStem()).isEqualTo("Stem snapshot active");
-                assertThat(savedSnapshots.get(0).getStem()).doesNotContain("live");
-        }
-
-        @Test
         void generateShufflesOptionsAndRemapsCorrectAnswerInSnapshot() {
                 QuestionBankQuestion question = QuestionBankQuestion.builder()
                                 .id(99L)
@@ -224,20 +199,19 @@ class ExamPaperServiceTest {
                                 .correctAnswer("C")
                                 .explanation("Giải thích")
                                 .category(category)
+                                .professionalField(professionalField)
+                                .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                                .cognitiveVerifiedAt(LocalDateTime.now())
+                                .cognitiveVerifiedBy("admin")
                                 .sourceDocument("Tài liệu")
-                                .build();
-                QuestionSetItem item = QuestionSetItem.builder()
-                                .id(199L)
-                                .questionSet(questionSet)
-                                .question(question)
-                                .position(1)
-                                .points(BigDecimal.ONE)
-                                .required(true)
                                 .build();
                 activeConfig.setTotalQuestions(1);
                 activeConfig.setShuffleOptions(true);
-                when(questionSetItemRepository.findByQuestionSetOrderByPositionAsc(questionSet))
-                                .thenReturn(List.of(item));
+                blueprintField.setQuestionCount(1);
+                blueprintCell.setQuestionCount(1);
+                pool.clear();
+                pool.add(question);
+                recomputeChecksum();
 
                 var responses = service.generate(
                                 new GenerateExamPaperRequest(activeConfig.getId(), "Đề xáo đáp án", 1, 123L, "paper-options"), "admin");
@@ -267,7 +241,6 @@ class ExamPaperServiceTest {
                                 .code("EP-1")
                                 .name("Đề an toàn")
                                 .examConfig(activeConfig)
-                                .questionSet(questionSet)
                                 .version(1)
                                 .randomSeed(1L)
                                 .status(ExamPaperStatus.DRAFT)
@@ -291,7 +264,7 @@ class ExamPaperServiceTest {
                 ExamPaperQuestion paperQuestion = ExamPaperQuestion.builder()
                                 .id(81L)
                                 .examPaper(paper)
-                                .question(questionSetItems(1).get(0).getQuestion())
+                                .question(questionPool(1).get(0))
                                 .position(1)
                                 .points(BigDecimal.ONE)
                                 .build();
@@ -314,7 +287,7 @@ class ExamPaperServiceTest {
                 ExamPaperQuestion paperQuestion = ExamPaperQuestion.builder()
                                 .id(91L)
                                 .examPaper(paper)
-                                .question(questionSetItems(1).get(0).getQuestion())
+                                .question(questionPool(1).get(0))
                                 .position(1)
                                 .points(BigDecimal.ONE)
                                 .build();
@@ -344,10 +317,15 @@ class ExamPaperServiceTest {
                 assertThat(new String(Arrays.copyOf(pdf, 4), StandardCharsets.US_ASCII)).isEqualTo("%PDF");
         }
 
-        private List<QuestionSetItem> questionSetItems(int count) {
-                List<QuestionSetItem> items = new ArrayList<>();
+        private void recomputeChecksum() {
+                activeConfig.setPoolChecksum(ExamGenerationDeterminism.poolChecksum(
+                                activeConfig.getBlueprintVersion(), List.of(), pool));
+        }
+
+        private List<QuestionBankQuestion> questionPool(int count) {
+                List<QuestionBankQuestion> items = new ArrayList<>();
                 for (int index = 0; index < count; index++) {
-                        QuestionBankQuestion question = QuestionBankQuestion.builder()
+                        items.add(QuestionBankQuestion.builder()
                                         .id((long) index + 1)
                                         .stem("Câu hỏi " + index)
                                         .optionA("A" + index)
@@ -357,34 +335,15 @@ class ExamPaperServiceTest {
                                         .correctAnswer("A")
                                         .explanation("Giải thích " + index)
                                         .category(category)
+                                        .professionalField(professionalField)
+                                        .cognitiveLevel(CognitiveLevel.FOUNDATION)
+                                        .cognitiveVerifiedAt(LocalDateTime.now())
+                                        .cognitiveVerifiedBy("admin")
                                         .sourceDocument("Tài liệu")
-                                        .build();
-                        items.add(QuestionSetItem.builder()
-                                        .id((long) index + 100)
-                                        .questionSet(questionSet)
-                                        .question(question)
-                                        .position(index + 1)
-                                        .points(BigDecimal.ONE)
-                                        .required(true)
+                                        .status(QuestionBankStatus.APPROVED)
                                         .build());
                 }
                 return items;
-        }
-
-        private QuestionBankQuestion question(Long id, String stem, QuestionBankStatus status) {
-                return QuestionBankQuestion.builder()
-                                .id(id)
-                                .stem(stem)
-                                .optionA("A")
-                                .optionB("B")
-                                .optionC("C")
-                                .optionD("D")
-                                .correctAnswer("A")
-                                .explanation("Giải thích")
-                                .category(category)
-                                .sourceDocument("Tài liệu")
-                                .status(status)
-                                .build();
         }
 
         private ExamPaper paper(Long id, ExamPaperStatus status) {
@@ -393,7 +352,6 @@ class ExamPaperServiceTest {
                                 .code("EP-" + id)
                                 .name("Đề " + id)
                                 .examConfig(activeConfig)
-                                .questionSet(questionSet)
                                 .version(1)
                                 .randomSeed(1L)
                                 .status(status)

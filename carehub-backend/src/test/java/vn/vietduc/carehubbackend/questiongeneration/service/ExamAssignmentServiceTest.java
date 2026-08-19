@@ -237,7 +237,6 @@ class ExamAssignmentServiceTest {
         assertThat(response.resultVisibility()).isEqualTo("SCORE_AND_ANSWERS");
         assertThat(response.shuffleQuestions()).isTrue();
         assertThat(response.shuffleOptions()).isTrue();
-        assertThat(response.professionalFieldName()).isNull();
         assertThat(savedTargets)
                 .extracting(target -> target.getUser().getId())
                 .containsExactly(explicitUser.getId(), departmentUser.getId());

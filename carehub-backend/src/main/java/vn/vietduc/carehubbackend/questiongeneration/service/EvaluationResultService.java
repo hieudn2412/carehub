@@ -12,11 +12,9 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptCellResult
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptCognitiveResult;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptFieldResult;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptAnswer;
-import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttemptQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamPaperQuestionSnapshot;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswerRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCellResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCognitiveResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptFieldResultRepository;
@@ -41,7 +39,6 @@ public class EvaluationResultService {
     private final ExamAttemptCognitiveResultRepository cognitiveResultRepository;
     private final ExamAttemptCellResultRepository cellResultRepository;
     private final ExamAttemptAnswerRepository answerRepository;
-    private final ExamAttemptQuestionRepository attemptQuestionRepository;
     private final ExamPaperQuestionRepository paperQuestionRepository;
     private final ExamPaperQuestionSnapshotRepository snapshotRepository;
 
@@ -72,10 +69,7 @@ public class EvaluationResultService {
     private List<ExamAttemptResultBreakdownResponse.QuestionResult> questionResults(ExamAttempt attempt) {
         Map<Long, ExamAttemptAnswer> answers = answerRepository.findByAttemptOrderByPaperQuestionPositionAsc(attempt).stream()
                 .collect(java.util.stream.Collectors.toMap(answer -> answer.getPaperQuestion().getId(), answer -> answer));
-        List<ExamPaperQuestion> questions = attemptQuestionRepository.findByAttemptOrderByPositionAsc(attempt).stream()
-                .map(ExamAttemptQuestion::getPaperQuestion)
-                .toList();
-        if (questions.isEmpty()) questions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
+        List<ExamPaperQuestion> questions = paperQuestionRepository.findByExamPaperOrderByPositionAsc(attempt.getExamPaper());
         return questions.stream().map(question -> {
             ExamPaperQuestionSnapshot snapshot = snapshotRepository.findByExamPaperQuestion(question).orElse(null);
             ExamAttemptAnswer answer = answers.get(question.getId());

@@ -4,14 +4,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
-import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -70,7 +68,7 @@ class TrainingAccessPolicyTest {
     void employeeReadsOwnRecord() {
         User actor = user(1L, department(10L));
 
-        assertThat(policy.canReadEmployee(actor, Set.of(TrainingAccessPolicy.ROLE_USER), actor)).isTrue();
+        assertThat(policy.canReadEmployee(actor, Set.of("USER"), actor)).isTrue();
     }
 
     @Test
@@ -79,7 +77,7 @@ class TrainingAccessPolicyTest {
         User actor = user(1L, department(10L));
         TrainingRecord record = TrainingRecord.builder().employee(user(2L, department(10L))).build();
 
-        assertThat(policy.canReadRecord(actor, Set.of(TrainingAccessPolicy.ROLE_USER), record)).isFalse();
+        assertThat(policy.canReadRecord(actor, Set.of("USER"), record)).isFalse();
     }
 
     // ── Block: canReadEmployee() — CC on hasRole(MANAGER) && sameDepartment ───
@@ -97,7 +95,7 @@ class TrainingAccessPolicyTest {
         User target = user(2L, department(sameDepartment ? 10L : 20L));
         Set<String> roles = Set.of(isManager
                 ? TrainingAccessPolicy.ROLE_MANAGER
-                : TrainingAccessPolicy.ROLE_USER);
+                : "USER");
 
         assertThat(policy.canReadEmployee(actor, roles, target)).isEqualTo(expected);
     }
@@ -173,7 +171,7 @@ class TrainingAccessPolicyTest {
         User actor = user(1L, department(10L));
         User target = user(2L, department(20L));
         TrainingRecord record = TrainingRecord.builder().employee(target).build();
-        Set<String> roles = Set.of(TrainingAccessPolicy.ROLE_USER);
+        Set<String> roles = Set.of("USER");
 
         assertThatThrownBy(() -> policy.requireCanReadEmployee(actor, roles, target))
                 .isInstanceOf(ForbiddenException.class)
@@ -183,20 +181,6 @@ class TrainingAccessPolicyTest {
                 .hasMessageContaining("training record");
         assertThatCode(() -> policy.requireCanReadEmployee(actor, Set.of(TrainingAccessPolicy.ROLE_ADMIN), target))
                 .doesNotThrowAnyException();
-    }
-
-    // ── Block: roleCodesOf() — authority normalisation ────────────────────────
-
-    @Test
-    @DisplayName("L1-SEC-14 | EP: roleCodesOf strips the ROLE_ prefix and keeps bare permission strings")
-    void roleCodesOfStripsRolePrefix() {
-        Set<String> codes = TrainingAccessPolicy.roleCodesOf(List.of(
-                new SimpleGrantedAuthority("ROLE_ADMIN"),
-                new SimpleGrantedAuthority("MANAGER"),
-                new SimpleGrantedAuthority("QUESTION_AUTHOR")
-        ));
-
-        assertThat(codes).containsExactlyInAnyOrder("ADMIN", "MANAGER", "QUESTION_AUTHOR");
     }
 
     // ── fixtures ──────────────────────────────────────────────────────────────

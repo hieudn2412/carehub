@@ -5,11 +5,16 @@ import {
   LogoutOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { AUTH_ROUTES } from '../../features/auth/constants/authRoutes.js'
-import { logoutUser } from '../../features/auth/services/logoutUser.js'
 import './AccountDropdown.css'
 
-function AccountDropdown({ avatarLetter, displayName, displayRole, profilePath }) {
+function AccountDropdown({
+  avatarLetter,
+  displayName,
+  displayRole,
+  profilePath,
+  loginPath,
+  onLogout,
+}) {
   const navigate = useNavigate()
   const containerRef = useRef(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -46,8 +51,8 @@ function AccountDropdown({ avatarLetter, displayName, displayRole, profilePath }
     if (isLoggingOut) return
 
     setIsLoggingOut(true)
-    await logoutUser()
-    navigate(AUTH_ROUTES.login, { replace: true })
+    await onLogout?.()
+    navigate(loginPath, { replace: true })
   }
 
   return (

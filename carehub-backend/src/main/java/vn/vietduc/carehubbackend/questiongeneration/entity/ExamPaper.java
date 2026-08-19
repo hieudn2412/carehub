@@ -17,7 +17,6 @@ import lombok.experimental.SuperBuilder;
 import vn.vietduc.carehubbackend.common.entity.BaseEntity;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamQuestionSelectionMode;
-import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.time.LocalDateTime;
 
@@ -32,12 +31,6 @@ import java.time.LocalDateTime;
         uniqueConstraints = @UniqueConstraint(name = "uq_exam_papers_code", columnNames = "code")
 )
 public class ExamPaper extends BaseEntity {
-
-    /** @deprecated multi-field papers derive fields from their question snapshots. */
-    @Deprecated
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "professional_field_id")
-    private ProfessionalField professionalField;
 
     @Column(nullable = false, length = 80)
     private String code;
@@ -73,12 +66,6 @@ public class ExamPaper extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "exam_config_id", nullable = false)
     private ExamConfig examConfig;
-
-    /** @deprecated new papers are generated from a direct blueprint. */
-    @Deprecated
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "question_set_id")
-    private QuestionSet questionSet;
 
     @Column(nullable = false)
     private Integer version;

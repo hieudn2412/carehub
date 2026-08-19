@@ -6,7 +6,5 @@ import vn.vietduc.carehubbackend.training.entity.TrainingImportRow;
 import java.util.List;
 
 public interface TrainingImportRowRepository extends JpaRepository<TrainingImportRow, Long> {
-    List<TrainingImportRow> findByImportBatch_Id(Long importBatchId);
-
     List<TrainingImportRow> findByImportBatch_IdOrderBySourceRowNumberAsc(Long importBatchId);
 }

@@ -19,7 +19,6 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentS
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentRetakeVariantPolicy;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentVariantPolicy;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
-import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
 
 import java.time.LocalDateTime;
 
@@ -66,12 +65,6 @@ public class ExamAssignment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "audience_id")
     private EvaluationAudience audience;
-
-    /** @deprecated derive fields from the assigned paper snapshots. */
-    @Deprecated
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "professional_field_id")
-    private ProfessionalField professionalField;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)

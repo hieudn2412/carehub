@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import ConfirmModal from '../../admin/components/ConfirmModal.jsx'
+import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import {
   CloseOutlined,
   DeleteOutlined,

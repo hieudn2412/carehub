@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../../components/sidebar.jsx'
-import Header from '../../components/Header.jsx'
+import AppShell from '../../../../shared/components/AppShell.jsx'
 import OverviewDashboard from '../../../dashboard/components/OverviewDashboard.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
@@ -211,29 +210,23 @@ export default function ManagerDashboard() {
   }, [filteredEmployeeId, filters.departmentId, filters.fromDate, filters.toDate])
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <div className="dashboard-layout__content">
-        <Header title="Dashboard tổng quan" />
-        <div className="dashboard-layout__body">
-          <OverviewDashboard
-            role="manager"
-            profile={profile}
-            loading={loading}
-            error={error}
-            filters={filters}
-            onFilterChange={(key, value) => {
-              dashboardRequestId.current += 1
-              setFilters((current) => ({ ...current, [key]: value }))
-            }}
-            onNavigate={navigate}
-            domains={domains}
-            complianceChart={complianceChart}
-            onLoadComplianceTrend={loadComplianceTrend}
-            visibleDomains={['training', 'exams', 'quality']}
-          />
-        </div>
-      </div>
-    </div>
+    <AppShell className="dashboard-layout" title="Dashboard tổng quan">
+      <OverviewDashboard
+        role="manager"
+        profile={profile}
+        loading={loading}
+        error={error}
+        filters={filters}
+        onFilterChange={(key, value) => {
+          dashboardRequestId.current += 1
+          setFilters((current) => ({ ...current, [key]: value }))
+        }}
+        onNavigate={navigate}
+        domains={domains}
+        complianceChart={complianceChart}
+        onLoadComplianceTrend={loadComplianceTrend}
+        visibleDomains={['training', 'exams', 'quality']}
+      />
+    </AppShell>
   )
 }
