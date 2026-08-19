@@ -10,17 +10,17 @@
 -- Run this AFTER deploying the code that removes the corresponding entity fields, so
 -- Hibernate (ddl-auto: update) is no longer touching these tables/columns.
 
-ALTER TABLE exam_configs DROP COLUMN easy_percentage;
-ALTER TABLE exam_configs DROP COLUMN medium_percentage;
-ALTER TABLE exam_configs DROP COLUMN hard_percentage;
-ALTER TABLE exam_configs DROP COLUMN selection_strategy;
+ALTER TABLE IF EXISTS exam_configs DROP COLUMN IF EXISTS easy_percentage;
+ALTER TABLE IF EXISTS exam_configs DROP COLUMN IF EXISTS medium_percentage;
+ALTER TABLE IF EXISTS exam_configs DROP COLUMN IF EXISTS hard_percentage;
+ALTER TABLE IF EXISTS exam_configs DROP COLUMN IF EXISTS selection_strategy;
 
-ALTER TABLE exam_papers DROP COLUMN easy_percentage;
-ALTER TABLE exam_papers DROP COLUMN medium_percentage;
-ALTER TABLE exam_papers DROP COLUMN hard_percentage;
-ALTER TABLE exam_papers DROP COLUMN professional_field_id;
+ALTER TABLE IF EXISTS exam_papers DROP COLUMN IF EXISTS easy_percentage;
+ALTER TABLE IF EXISTS exam_papers DROP COLUMN IF EXISTS medium_percentage;
+ALTER TABLE IF EXISTS exam_papers DROP COLUMN IF EXISTS hard_percentage;
+ALTER TABLE IF EXISTS exam_papers DROP COLUMN IF EXISTS professional_field_id;
 
-ALTER TABLE exam_assignments DROP COLUMN professional_field_id;
+ALTER TABLE IF EXISTS exam_assignments DROP COLUMN IF EXISTS professional_field_id;
 
-DROP TABLE exam_config_distributions;
-DROP TABLE exam_attempt_questions;
+DROP TABLE IF EXISTS exam_config_distributions;
+DROP TABLE IF EXISTS exam_attempt_questions;
