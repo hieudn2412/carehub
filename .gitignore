@@ -74,8 +74,13 @@ replay_pid*
 developer_docs/*
 !developer_docs/evaluation-multi-field-redesign/
 !developer_docs/evaluation-multi-field-redesign/**
+docs/
 
 # Local storage
 storage/
 models/
 carehub-backend/models/
+
+# Python
+__pycache__/
+*.pyc
