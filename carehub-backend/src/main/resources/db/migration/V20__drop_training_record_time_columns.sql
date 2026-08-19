@@ -8,5 +8,5 @@
 -- TrainingRecord/TrainingRecordFormRequest/TrainingRecordDetailResponse, so
 -- Hibernate (ddl-auto: update) is no longer writing to these columns.
 
-ALTER TABLE training_records DROP COLUMN start_time;
-ALTER TABLE training_records DROP COLUMN end_time;
+ALTER TABLE IF EXISTS training_records DROP COLUMN IF EXISTS start_time;
+ALTER TABLE IF EXISTS training_records DROP COLUMN IF EXISTS end_time;
