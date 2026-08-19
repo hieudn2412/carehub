@@ -24,6 +24,7 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
+import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import '../styles/TrainingDashboardPage.css'
 
@@ -366,25 +367,34 @@ function DashboardContent({ role }) {
                 </div>
               </article>
 
-              <article className="training-chart-card training-chart-card--wide">
-                <header><h2>Tỷ lệ hoàn thành theo khoa</h2><span>Tối đa 12 khoa</span></header>
-                {departmentData.length === 0 ? (
-                  <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo khoa trong phạm vi này.</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={310}>
-                    <BarChart data={departmentData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
-                      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
-                      <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
-                      <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
-                      <Tooltip formatter={(value) => [`${value}%`, 'Tỷ lệ hoàn thành']} />
-                      <Bar dataKey="rate" radius={[7, 7, 0, 0]} maxBarSize={46}>
-                        {departmentData.map((entry) => <Cell key={entry.name} fill={entry.rate >= 80 ? '#10a77d' : '#ef4444'} />)}
-                        <LabelList dataKey="rate" position="top" formatter={(value) => `${value}%`} fill="#334155" fontSize={11} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </article>
+              {/* Manager chỉ quản lý một khoa nên biểu đồ so sánh giữa các khoa không có ý
+                  nghĩa; chỗ này dành cho danh sách nhân sự trong khoa. */}
+              {isManager ? (
+                <article className="training-chart-card training-chart-card--wide">
+                  <header><h2>Nhân sự trong khoa</h2><span>{profile?.departmentName || 'Khoa của tôi'}</span></header>
+                  <DepartmentTrainingStaffTable />
+                </article>
+              ) : (
+                <article className="training-chart-card training-chart-card--wide">
+                  <header><h2>Tỷ lệ hoàn thành theo khoa</h2><span>Tối đa 12 khoa</span></header>
+                  {departmentData.length === 0 ? (
+                    <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo khoa trong phạm vi này.</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={310}>
+                      <BarChart data={departmentData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                        <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                        <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                        <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
+                        <Tooltip formatter={(value) => [`${value}%`, 'Tỷ lệ hoàn thành']} />
+                        <Bar dataKey="rate" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                          {departmentData.map((entry) => <Cell key={entry.name} fill={entry.rate >= 80 ? '#10a77d' : '#ef4444'} />)}
+                          <LabelList dataKey="rate" position="top" formatter={(value) => `${value}%`} fill="#334155" fontSize={11} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </article>
+              )}
             </section>
           )}
         </>

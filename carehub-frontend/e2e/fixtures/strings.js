@@ -38,10 +38,12 @@ export const HEADER_TITLES = {
 export const SIDEBAR = {
   sectionHome: 'Trang chủ',
   sectionPersonal: 'Theo dõi cá nhân',
-  sectionDepartment: 'Quản lý khoa',
   sectionAccount: 'Tài khoản',
-  trainingHours: 'Giờ đào tạo liên tục',
-  employees: 'Nhân sự & Giờ đào tạo',
+  trainingHours: 'Đào tạo liên tục',
+  // Hai mục dưới đây chỉ MANAGER mới thấy — nhãn của staff không trùng với chúng.
+  // (Nhân sự trong khoa đã chuyển vào dashboard Đào tạo liên tục nên không còn là mục menu.)
+  managerCompliance: 'Giám sát tuân thủ theo kỹ thuật',
+  managerResults: 'Kết quả năng lực chuyên môn',
   profile: 'Hồ sơ cá nhân',
 }
 

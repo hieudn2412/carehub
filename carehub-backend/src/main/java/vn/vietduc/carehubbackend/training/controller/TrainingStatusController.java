@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,7 +46,7 @@ public class TrainingStatusController {
             @RequestParam(required = false) BigDecimal submittedHoursMax,
             @RequestParam(required = false) Boolean requirementConfigured,
             @RequestParam(required = false) Boolean compliant,
-            @RequestParam(required = false) LocalDate asOf,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf,
             @PageableDefault(size = 20, sort = "employeeCode", direction = Sort.Direction.ASC)
             Pageable pageable
     ) {
@@ -71,7 +72,7 @@ public class TrainingStatusController {
     @GetMapping("/status/me")
     public ResponseEntity<ApiResponse<PersonalTrainingStatusResponse>> getMyStatus(
             @RequestParam(required = false) Long professionalFieldId,
-            @RequestParam(required = false) LocalDate asOf
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Get training status successfully",
@@ -93,7 +94,7 @@ public class TrainingStatusController {
     public ResponseEntity<ApiResponse<PersonalTrainingStatusResponse>> getEmployeeStatus(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Long professionalFieldId,
-            @RequestParam(required = false) LocalDate asOf
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Get employee training status successfully",
@@ -105,8 +106,9 @@ public class TrainingStatusController {
     public ResponseEntity<ApiResponse<PageResponse<EmployeeTrainingRecordLedgerResponse>>> getEmployeeRecords(
             @PathVariable Long employeeId,
             @RequestParam(required = false) Long professionalFieldId,
-            @RequestParam(required = false) LocalDate asOf,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOf,
             @RequestParam(required = false) TrainingRecordStatus workflowStatus,
+
             @PageableDefault(size = 20, sort = "startDate", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
