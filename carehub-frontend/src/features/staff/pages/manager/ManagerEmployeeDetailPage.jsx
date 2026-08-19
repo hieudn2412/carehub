@@ -133,17 +133,13 @@ function ManagerEmployeeDetailPage() {
             <span className="mgr-kv-label">Chu kỳ đào tạo</span>
             <div className="mgr-kv-val">{formatDate(employee.windowStart)} - {formatDate(employee.windowEnd)}</div>
           </div>
-          <div className="mgr-kv-item">
-            <span className="mgr-kv-label">Lần thi gần nhất</span>
-            <div className="mgr-kv-val">{formatDate(employee.lastAttemptAt)}</div>
-          </div>
         </div>
 
         {/* Metrics cards inside Detail */}
         <div className="mgr-card-title" style={{ border: 'none', margin: '24px 0 12px', padding: 0 }}>
-          Tổng hợp hoạt động
+          Giờ đào tạo liên tục
         </div>
-        <div className="mgr-dashboard-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 24 }}>
+        <div className="mgr-dashboard-grid" style={{ gridTemplateColumns: '1fr', maxWidth: 360, marginBottom: 24 }}>
           <div className="mgr-metric-card" style={{ cursor: 'default' }}>
             <div className="mgr-metric-label">Giờ đào tạo tích lũy</div>
             <div className="mgr-metric-val" style={{ color: '#d97706' }}>{employee.hours}h</div>
@@ -151,37 +147,16 @@ function ManagerEmployeeDetailPage() {
               yêu cầu: {employee.requiredHours}h · còn {employee.remainingHours}h
             </div>
           </div>
-
-          <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-            <div className="mgr-metric-label">Điểm thi trung bình</div>
-            <div className="mgr-metric-val" style={{ color: '#10b981' }}>
-              {employee.examScore == null ? '---' : `${formatNumber(employee.examScore)}/10`}
-            </div>
-            <div className="mgr-metric-sub">{employee.totalAttempts} lượt thi đã có điểm</div>
-          </div>
-
-          <div className="mgr-metric-card" style={{ cursor: 'default' }}>
-            <div className="mgr-metric-label">Xếp loại năng lực</div>
-            <div className="mgr-metric-val" style={{ color: '#2563eb', fontSize: 26 }}>{employee.performance}</div>
-            <div className="mgr-metric-sub">Đánh giá chu kỳ hiện tại</div>
-          </div>
         </div>
 
         {/* Actions Footer */}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
           <button
             onClick={() => navigate(`/training/employees/${employee.id}`)}
-            className="training-button"
-            style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
-          >
-            <BookOutlined /> Hồ sơ đào tạo
-          </button>
-          <button
-            onClick={() => navigate('/manager/exam-results')}
             className="training-button training-button--primary"
             style={{ height: 38, borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}
           >
-            <FileDoneOutlined /> Danh sách kết quả thi
+            <BookOutlined /> Hồ sơ đào tạo
           </button>
         </div>
       </div>
