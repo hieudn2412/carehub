@@ -15,6 +15,8 @@ import vn.vietduc.carehubbackend.form.entity.*;
 import vn.vietduc.carehubbackend.form.entity.enums.*;
 import vn.vietduc.carehubbackend.form.repository.FormRepository;
 import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
+import vn.vietduc.carehubbackend.form.compliance.entity.FormComplianceTarget;
+import vn.vietduc.carehubbackend.form.compliance.repository.FormComplianceTargetRepository;
 import vn.vietduc.carehubbackend.form.submission.dto.*;
 import vn.vietduc.carehubbackend.form.submission.entity.*;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
@@ -51,6 +53,7 @@ public class FormSubmissionService {
     private final NotificationEventPublisher notificationEventPublisher;
     private final NotificationVariableFormatter notificationVariableFormatter;
     private final FormHistoryAccessPolicy historyAccessPolicy;
+    private final FormComplianceTargetRepository complianceTargetRepository;
 
     @Transactional
     public FormSubmissionResponse create(CreateFormSubmissionRequest request) {
@@ -78,7 +81,7 @@ public class FormSubmissionService {
         if (subject.getId().equals(actorId)) {
             throw ValidationException.field("subject.userId", "Người đánh giá không thể tự đánh giá chính mình");
         }
-        requireEvaluatorSubjectScope(actor, subject);
+        requireEvaluatorSubjectScope(actor, subject, selectedVersion.getForm().getId());
         boolean draftExists = item != null
                 ? submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                         item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)
@@ -322,7 +325,17 @@ public class FormSubmissionService {
         }
         long actorId = securityUtils.getCurrentUserId();
         User subject = resolveSubjectUser(subjectUserId, employeeCode);
-        requireEvaluatorSubjectScope(activeUser(actorId), subject);
+        Long formId = null;
+        if (assignmentItemId != null) {
+            var item = assignmentAccessService.requireActiveOwnedItem(assignmentItemId, actorId);
+            formId = item.getForm().getId();
+        } else if (formVersionId != null) {
+            var version = versionRepository.findById(formVersionId).orElse(null);
+            if (version != null) {
+                formId = version.getForm().getId();
+            }
+        }
+        requireEvaluatorSubjectScope(activeUser(actorId), subject, formId);
 
         Optional<FormSubmission> draft;
         if (assignmentItemId != null) {
@@ -372,7 +385,7 @@ public class FormSubmissionService {
         }
         FormSubmissionContext subjectContext = submission.getSubjectContext();
         if (subjectContext != null && subjectContext.getSubjectUser() != null) {
-            requireEvaluatorSubjectScope(activeUser(actorId), subjectContext.getSubjectUser());
+            requireEvaluatorSubjectScope(activeUser(actorId), subjectContext.getSubjectUser(), submission.getFormVersion().getForm().getId());
         }
         FormAssignmentItem item = submission.getAssignmentItem();
         if (item == null) {
@@ -531,15 +544,34 @@ public class FormSubmissionService {
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
-    private void requireEvaluatorSubjectScope(User actor, User subject) {
+    private void requireEvaluatorSubjectScope(User actor, User subject, Long formId) {
         if (isAdmin()) return;
         if (actor.getDepartment() == null) {
             throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
         }
-        if (subject.getDepartment() == null
-                || !actor.getDepartment().getId().equals(subject.getDepartment().getId())) {
-            throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc khoa/phòng của mình");
+        if (subject.getDepartment() == null) {
+            throw new ForbiddenException("Nhân viên đối tượng đánh giá chưa được gán khoa/phòng");
         }
+        if (actor.getDepartment().getId().equals(subject.getDepartment().getId())) {
+            return;
+        }
+        if (formId != null) {
+            List<FormComplianceTarget> targets = complianceTargetRepository.findAllByForm_IdOrderByDepartment_NameAsc(formId);
+            boolean allowed = false;
+            for (FormComplianceTarget target : targets) {
+                if (target.getDepartment() == null) {
+                    allowed = true;
+                    break;
+                } else if (target.getDepartment().getId().equals(subject.getDepartment().getId())) {
+                    allowed = true;
+                    break;
+                }
+            }
+            if (allowed) {
+                return;
+            }
+        }
+        throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc các khoa/phòng được phân công");
     }
 
     private FormSubmissionResponse toResponse(FormSubmission submission, boolean detail) {

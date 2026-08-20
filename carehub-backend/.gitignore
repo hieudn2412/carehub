@@ -11,7 +11,7 @@ target/
 !.env.dev.example
 *.env
 env.properties
-.env.properties
+.env.dev
 !.env.example
 !.env.sample
 !.env.template

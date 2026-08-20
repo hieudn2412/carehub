@@ -80,6 +80,36 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("departmentId") Long departmentId,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            ORDER BY u.name ASC, u.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            """)
+    Page<User> searchActiveFormSubjectsInDepartments(
+            @Param("keyword") String keyword,
+            @Param("excludedUserId") Long excludedUserId,
+            @Param("departmentIds") Collection<Long> departmentIds,
+            Pageable pageable);
+
     @Query("""
             SELECT u.department.id AS departmentId, COUNT(u.id) AS employeeCount
             FROM User u

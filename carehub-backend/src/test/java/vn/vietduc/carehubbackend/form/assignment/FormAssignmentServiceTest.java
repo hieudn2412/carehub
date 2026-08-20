@@ -18,6 +18,7 @@ import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.*;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
+import vn.vietduc.carehubbackend.notification.service.NotificationService;
 
 import java.time.*;
 import java.util.*;
@@ -36,6 +37,7 @@ class FormAssignmentServiceTest {
     @Mock SecurityUtils securityUtils;
     @Mock FormAssignmentAccessService accessService;
     @Mock FormMapper formMapper;
+    @Mock NotificationService notificationService;
     private FormAssignmentService service;
     private User manager;
     private User admin;
@@ -44,7 +46,7 @@ class FormAssignmentServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-06-21T00:00:00Z"), ZoneOffset.UTC);
         service = new FormAssignmentService(assignmentRepository, itemRepository, formRepository, versionRepository,
-                userRepository, userRoleRepository, securityUtils, accessService, formMapper, clock);
+                userRepository, userRoleRepository, securityUtils, accessService, formMapper, clock, notificationService);
         manager = User.builder().id(5L).employeeCode("M01").name("Manager").status(UserStatus.ACTIVE).build();
         admin = User.builder().id(1L).employeeCode("ADMIN").name("Admin").status(UserStatus.ACTIVE).build();
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(manager));

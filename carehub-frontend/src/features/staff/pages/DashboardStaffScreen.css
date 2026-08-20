@@ -35,14 +35,17 @@
   height: 88px;
   flex: 0 0 88px;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 5px 18px rgba(20, 78, 62, 0.12);
 }
 
+/* Logo phủ kín vòng tròn trắng phía sau (asset logo-mark.png đã cắt sát viền). */
 .staff-home-profile__logo img {
-  width: 62px;
-  height: 62px;
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 
@@ -159,16 +162,19 @@
   margin-top: 19px;
 }
 
+/* The right-hand figure is the measurement; the left-hand one only annotates it,
+   so the right one carries the larger type. */
 .staff-home-metric__values strong {
   color: var(--metric-accent);
-  font-size: 30px;
+  font-size: 19px;
   line-height: 1;
 }
 
 .staff-home-metric__values span {
   color: #20322c;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .staff-home-metric__mobile-ring {
@@ -230,6 +236,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .staff-home-overall__content strong {
@@ -267,22 +274,37 @@
 }
 
 .staff-home-overall__status strong {
-  font-size: 18px;
+  font-size: 22px;
+  line-height: 1.15;
 }
 
 .staff-home-overall__status span {
   color: #71807b;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
+  /* The shell reserves a full viewport height, so a short dashboard used to leave a dead
+     strip under the last card. Letting the body flex and the metric grid absorb the slack
+     makes the content end exactly where the screen does. */
   .staff-home-shell .app-shell__body {
+    display: flex;
+    flex-direction: column;
     padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
   }
 
   .staff-home-dashboard {
-    display: grid;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
     gap: 8px;
+  }
+
+  .staff-home-dashboard__grid {
+    flex: 1 1 auto;
+    align-content: stretch;
   }
 
   .staff-home-dashboard__error {
@@ -306,8 +328,8 @@
   }
 
   .staff-home-profile__logo img {
-    width: 47px;
-    height: 47px;
+    width: 100%;
+    height: 100%;
   }
 
   .staff-home-profile__content {
@@ -382,11 +404,11 @@
   }
 
   .staff-home-metric__values strong {
-    font-size: 20px;
+    font-size: 13px;
   }
 
   .staff-home-metric__values span {
-    font-size: 12px;
+    font-size: 19px;
   }
 
   .staff-home-metric--training .staff-home-metric__primary,
@@ -446,10 +468,10 @@
 
   .staff-home-overall {
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 10px;
+    gap: 8px;
     min-height: 98px;
     margin-top: 0;
-    padding: 14px;
+    padding: 14px 12px;
     border-radius: 16px;
   }
 
@@ -464,9 +486,12 @@
     min-width: 0;
   }
 
+  /* "Năng lực chuyên môn" has to stay on one line — dropping the letter spacing buys the
+     room the larger status text takes back. */
   .staff-home-overall__content > span {
-    font-size: 11px;
-    letter-spacing: 0.02em;
+    font-size: 10.5px;
+    letter-spacing: 0;
+    white-space: nowrap;
   }
 
   .staff-home-overall__content strong {
@@ -496,12 +521,12 @@
   }
 
   .staff-home-overall__status strong {
-    font-size: 15px;
+    font-size: 19px;
     line-height: 1.2;
   }
 
   .staff-home-overall__status span {
-    font-size: 11px;
+    font-size: 10px;
     white-space: nowrap;
   }
 }
@@ -517,11 +542,19 @@
   }
 
   .staff-home-metric__values strong {
-    font-size: 18px;
+    font-size: 12px;
   }
 
   .staff-home-metric__values span {
-    font-size: 11px;
+    font-size: 17px;
+  }
+
+  .staff-home-overall__content > span {
+    font-size: 9.5px;
+  }
+
+  .staff-home-overall__status strong {
+    font-size: 17px;
   }
 }
 

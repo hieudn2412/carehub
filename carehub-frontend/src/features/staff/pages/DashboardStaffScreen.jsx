@@ -9,7 +9,9 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
-import logo from '../../../assets/logo.png'
+// logo-mark.png là logo đã cắt sát viền: logo.png gốc có ~35% lề trong suốt nên khi đặt
+// width 100% vẫn nhỏ hơn hẳn vòng tròn trắng phía sau.
+import logo from '../../../assets/logo-mark.png'
 import { myCompetencyApi } from '../../evaluation/api/myCompetencyApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import { staffApi } from '../api/staffApi.js'
