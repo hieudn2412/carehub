@@ -13,7 +13,10 @@ services:
     env_file:
       - ./carehub-backend/.env.test
     environment:
-      SPRING_PROFILES_ACTIVE: test
+      # This compose file is for the public staging/test domain, not for the
+      # automated Spring test profile. The "test" profile is packaged without
+      # test-only beans and disables real EvidenceStorageService implementations.
+      SPRING_PROFILES_ACTIVE: prod
       SERVER_PORT: 8081
       DOCUMENT_STORAGE_PATH: /data/documents
       E5_PRELOAD: "false"
