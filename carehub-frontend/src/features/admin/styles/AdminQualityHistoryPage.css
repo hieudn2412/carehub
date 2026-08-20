@@ -95,8 +95,9 @@
   font-weight: 750;
 }
 
-.aqh-history-toolbar input[type='date'],
+.aqh-history-toolbar label:not(.aqh-main-search) input,
 .aqh-history-toolbar > button {
+  width: 100%;
   min-height: 46px;
   border: 1px solid #d7e2ed;
   border-radius: 10px;
@@ -104,6 +105,14 @@
   color: #24324b;
   font: inherit;
   padding: 0 13px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.aqh-history-toolbar label:not(.aqh-main-search) input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .aqh-history-toolbar > button {
@@ -2491,12 +2500,28 @@
   }
 
   .aqh-history-toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px;
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .aqh-history-toolbar .aqh-main-search {
+    grid-column: span 2 !important;
   }
 
   .aqh-history-toolbar > button {
-    grid-column: auto;
+    grid-column: span 2 !important;
     justify-self: stretch;
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+  }
+
+  .aqh-history-toolbar label:not(.aqh-main-search) input {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 
   .aqh-history-skeleton,

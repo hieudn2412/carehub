@@ -628,25 +628,81 @@ textarea.ch-input {
   width: 100%;
   min-width: 0;
   min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  color: #1e293b;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-control-toolbar__field select:focus,
+.admin-control-toolbar__field input:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 @media (max-width: 768px) {
-  .admin-control-toolbar__main,
-  .admin-control-toolbar__controls {
+  .admin-control-toolbar__main {
     align-items: stretch;
     flex-direction: column;
+    gap: 10px;
   }
 
-  .admin-control-toolbar__search,
+  .admin-control-toolbar__controls {
+    display: flex;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .admin-control-toolbar__search {
+    flex: 1 1 150px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .admin-control-toolbar__search input {
+    height: 100% !important;
+    font-size: 13px !important;
+  }
+
   .admin-control-toolbar__filter-trigger,
   .admin-control-toolbar__main > button {
-    width: 100%;
-    min-width: 0;
-    max-width: none;
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
   }
 
   .admin-control-toolbar__panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .admin-control-toolbar__panel .admin-control-toolbar__field:first-child:nth-last-child(3) {
+    grid-column: span 2 !important;
+  }
+
+  .admin-control-toolbar__field input,
+  .admin-control-toolbar__field select {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 }
 
@@ -755,5 +811,45 @@ textarea.ch-input {
 
   .ch-spinner {
     animation-duration: 1.6s;
+  }
+}
+
+/* ── Tối ưu hóa phản hồi (Mobile Layout & Controls) ── */
+@media (max-width: 768px) {
+  /* Khống chế thanh tìm kiếm & điều khiển hiển thị hàng ngang gọn đẹp */
+  [class*="search-filter-group"],
+  [class*="toolbar-main"],
+  [class*="filter-bar"] > div:first-child,
+  .etl-filter-bar,
+  .am-filter-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  [class*="search-wrapper"],
+  [class*="am-search"],
+  [class*="search-container"] {
+    width: auto !important;
+    flex: 1 1 150px !important;
+    max-width: none !important;
+  }
+
+  /* Khống chế kích thước chiều cao 38px cho tất cả ô nhập liệu search/filter và các nút trên mobile */
+  [class*="search-input"],
+  [class*="search-wrapper"] input,
+  [class*="filter-bar"] input,
+  [class*="toolbar"] input,
+  [class*="filter-bar"] select,
+  [class*="toolbar"] select,
+  [class*="filter-trigger"],
+  .am-filter-trigger,
+  .etl-filter-trigger {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
   }
 }
