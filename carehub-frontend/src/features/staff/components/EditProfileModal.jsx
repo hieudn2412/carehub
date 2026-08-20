@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../../shared/components/Modal.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../api/staffApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 
@@ -64,7 +65,7 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
         </div>
         <div className="profile-edit-form__field">
           <label htmlFor="profile-birthday">Ngày sinh</label>
-          <input id="profile-birthday" max={new Date().toISOString().slice(0, 10)} onChange={updateField('birthday')} type="date" value={form.birthday} />
+          <KeyboardDatePicker id="profile-birthday" max={new Date().toISOString().slice(0, 10)} onChange={(val) => setForm((current) => ({ ...current, birthday: val }))} value={form.birthday} />
         </div>
         <div className="profile-edit-form__field profile-edit-form__field--gender">
           <label htmlFor="profile-gender">Giới tính</label>

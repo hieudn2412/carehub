@@ -14,6 +14,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
@@ -740,11 +741,10 @@ function TrainingHoursFormScreen() {
                         Ngày đào tạo liên tục <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <div className="th-desktop-date-picker" style={{ position: 'relative' }}>
-                        <input
-                          type="date"
+                        <KeyboardDatePicker
                           value={form.date}
                           max={todayIso()}
-                          onChange={e => setForm({ ...form, date: e.target.value })}
+                          onChange={val => setForm({ ...form, date: val })}
                           style={{ ...fieldStyle('date'), paddingLeft: 38 }}
                         />
                         <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>

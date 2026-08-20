@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CheckCircleFilled, CloseOutlined, EyeOutlined, FilterOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
@@ -122,8 +123,8 @@ export default function StaffCompetencyPage() {
         </div>
       </label>
       <div className="th-mobile-search-form__grid">
-        <label className="th-mobile-search-form__field"><span>Từ ngày</span><input type="date" value={draftFilters.dateFrom} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Từ ngày" /></label>
-        <label className="th-mobile-search-form__field"><span>Đến ngày</span><input type="date" value={draftFilters.dateTo} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} aria-label="Đến ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Từ ngày</span><KeyboardDatePicker value={draftFilters.dateFrom} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} aria-label="Từ ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Đến ngày</span><KeyboardDatePicker value={draftFilters.dateTo} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} aria-label="Đến ngày" /></label>
       </div>
       {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
       <div className="th-mobile-search-form__actions">
@@ -198,11 +199,11 @@ export default function StaffCompetencyPage() {
             <div id="staff-compliance-filter-panel" className="sc-toolbar__filter-panel admin-control-toolbar__panel">
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
-                <input type="date" value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={event => setDraftFilters(current => ({ ...current, dateFrom: event.target.value }))} />
+                <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} />
               </label>
               <label className="admin-control-toolbar__field">
                 <span>Đến ngày</span>
-                <input type="date" value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={event => setDraftFilters(current => ({ ...current, dateTo: event.target.value }))} />
+                <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} />
               </label>
               <div className="sc-toolbar__filter-actions">
                 <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>

@@ -11,6 +11,7 @@ import {
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
@@ -453,11 +454,11 @@ function TrainingHoursListScreen() {
                       </label>
                       <label>
                         <span>Từ ngày</span>
-                        <input type="date" value={filterDraft.dateFrom} onChange={event => setFilterDraft(current => ({ ...current, dateFrom: event.target.value }))} aria-label="Lọc từ ngày" />
+                        <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => setFilterDraft(current => ({ ...current, dateFrom: val }))} aria-label="Lọc từ ngày" />
                       </label>
                       <label>
                         <span>Đến ngày</span>
-                        <input type="date" value={filterDraft.dateTo} onChange={event => setFilterDraft(current => ({ ...current, dateTo: event.target.value }))} aria-label="Lọc đến ngày" />
+                        <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => setFilterDraft(current => ({ ...current, dateTo: val }))} aria-label="Lọc đến ngày" />
                       </label>
                       <label>
                         <span>Lĩnh vực chuyên môn</span>

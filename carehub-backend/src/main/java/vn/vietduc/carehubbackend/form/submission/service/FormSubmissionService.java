@@ -552,26 +552,14 @@ public class FormSubmissionService {
         if (subject.getDepartment() == null) {
             throw new ForbiddenException("Nhân viên đối tượng đánh giá chưa được gán khoa/phòng");
         }
+        // If it is via assignment (formId is provided), we allow evaluating all departments
+        if (formId != null) {
+            return;
+        }
         if (actor.getDepartment().getId().equals(subject.getDepartment().getId())) {
             return;
         }
-        if (formId != null) {
-            List<FormComplianceTarget> targets = complianceTargetRepository.findAllByForm_IdOrderByDepartment_NameAsc(formId);
-            boolean allowed = false;
-            for (FormComplianceTarget target : targets) {
-                if (target.getDepartment() == null) {
-                    allowed = true;
-                    break;
-                } else if (target.getDepartment().getId().equals(subject.getDepartment().getId())) {
-                    allowed = true;
-                    break;
-                }
-            }
-            if (allowed) {
-                return;
-            }
-        }
-        throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc các khoa/phòng được phân công");
+        throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc khoa/phòng của mình");
     }
 
     private FormSubmissionResponse toResponse(FormSubmission submission, boolean detail) {

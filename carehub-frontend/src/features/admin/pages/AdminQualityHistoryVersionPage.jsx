@@ -16,6 +16,8 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
@@ -640,8 +642,8 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
                       </select>
                     </label>
-                    <label className="aqh-filter-field"><span>Từ ngày</span><input type="date" value={dateFrom} onChange={(event) => updateQuery({ dateFrom: event.target.value })} /></label>
-                    <label className="aqh-filter-field"><span>Đến ngày</span><input type="date" value={dateTo} onChange={(event) => updateQuery({ dateTo: event.target.value })} /></label>
+                    <label className="aqh-filter-field"><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} onChange={(val) => updateQuery({ dateFrom: val })} /></label>
+                    <label className="aqh-filter-field"><span>Đến ngày</span><KeyboardDatePicker value={dateTo} onChange={(val) => updateQuery({ dateTo: val })} /></label>
                     {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize), dateFrom: defaultDateRange.dateFrom, dateTo: defaultDateRange.dateTo }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
                     </div>
                   )}
@@ -759,7 +761,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       value={selectedManagerIds}
                     />
                   </div>
-                  <div className="aqh-manager-assign__field"><label htmlFor="aqh-manager-valid-until">Hiệu lực đến</label><input disabled={managerBusy} id="aqh-manager-valid-until" onChange={(event) => setValidUntil(event.target.value)} type="datetime-local" value={validUntil} /></div>
+                  <div className="aqh-manager-assign__field"><label htmlFor="aqh-manager-valid-until">Hiệu lực đến</label><DateTimePicker24h disabled={managerBusy} id="aqh-manager-valid-until" onChange={setValidUntil} value={validUntil} /></div>
                   <button className="aqh-manager-assign__submit" disabled={managerBusy || effectiveSelectedManagerIds.length === 0} type="submit">{managerBusy ? <LoadingOutlined spin /> : <PlusOutlined />} Thêm người nhận</button>
                 </form>
               ) : <div className="aqh-manager-modal__notice">Phiên bản không còn hoạt động nên không thể thêm phân quyền mới.</div>}

@@ -1,4 +1,5 @@
 import { SearchOutlined } from '@ant-design/icons'
+import KeyboardDatePicker from '../../../../../shared/components/KeyboardDatePicker.jsx'
 import { createEmptyTrainingFilters, countActiveFilterGroups } from '../utils/trainingRecordQuery.js'
 
 const STATUS_OPTIONS = [
@@ -59,11 +60,11 @@ function TrainingSearchFilters({
           </label>
           <label className="th-mobile-search-form__field">
             <span>Từ ngày</span>
-            <input type="date" value={filters.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Bộ lọc từ ngày" />
+            <KeyboardDatePicker value={filters.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Bộ lọc từ ngày" />
           </label>
           <label className="th-mobile-search-form__field">
             <span>Đến ngày</span>
-            <input type="date" value={filters.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Bộ lọc đến ngày" />
+            <KeyboardDatePicker value={filters.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Bộ lọc đến ngày" />
           </label>
           <label className="th-mobile-search-form__field">
             <span>Lĩnh vực chuyên môn</span>

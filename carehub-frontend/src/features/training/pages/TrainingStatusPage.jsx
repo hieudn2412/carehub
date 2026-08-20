@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
@@ -94,7 +95,7 @@ function TrainingStatusPage() {
           </label>
           <label>
             As of
-            <input onChange={(event) => setAsOf(event.target.value)} type="date" value={asOf} />
+            <KeyboardDatePicker onChange={(val) => setAsOf(val)} value={asOf} />
           </label>
           <div className="training-form-actions">
             <button className="training-button training-button--primary" type="submit">
