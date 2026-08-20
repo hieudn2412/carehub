@@ -47,7 +47,7 @@ app:
       default-target: ${COMPETENCY_DEFAULT_TARGET:80.0}
   jwt:
     secret: ${JWT_SECRET}
-    refresh-secret: ${JWT_REFRESH_SECRET:${JWT_SECRET}}
+    refresh-secret: ${AUTH_REFRESH_SECRET:${JWT_REFRESH_SECRET:${JWT_SECRET}}}
     access-token-expiration-minutes: 15
     refresh-token-expiration-days: 60
     first-login-refresh-token-expiration-hours: 24
