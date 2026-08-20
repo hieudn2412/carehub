@@ -1,11 +1,10 @@
 import axios from 'axios'
+import { AUTH_EVENTS, dispatchAuthEvent } from '../auth/authEvents.js'
 
 const emptyTokenStorage = {
   clear() {},
   getAccessToken: () => null,
-  getRefreshToken: () => null,
   setAccessToken() {},
-  setRefreshToken() {},
   setRequiresFirstLoginSetup() {},
 }
 
@@ -32,6 +31,7 @@ function shouldIgnoreRefresh(url = '') {
 
 function clearSessionAndRedirectToLogin() {
   tokenStorage.clear()
+  dispatchAuthEvent(AUTH_EVENTS.sessionInvalid)
 
   if (
     typeof window !== 'undefined'
@@ -43,10 +43,15 @@ function clearSessionAndRedirectToLogin() {
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 })
+
+function isSessionInvalidRefreshError(error) {
+  return error?.response?.status === 401 || error?.response?.status === 403
+}
 
 httpClient.interceptors.request.use((config) => {
   const accessToken = tokenStorage.getAccessToken()
@@ -73,20 +78,14 @@ httpClient.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    const refreshToken = tokenStorage.getRefreshToken()
-
-    if (!refreshToken) {
-      clearSessionAndRedirectToLogin()
-      return Promise.reject(error)
-    }
-
     originalRequest._retry = true
 
     try {
       refreshTokenRequest ??= axios.post(
         `${API_BASE_URL}/auth/refresh-token`,
-        { refreshToken },
+        {},
         {
+          withCredentials: true,
           headers: {
             'Content-Type': 'application/json',
           },
@@ -97,18 +96,20 @@ httpClient.interceptors.response.use(
       const authData = refreshResponse.data?.data
 
       if (!authData?.accessToken) {
+        clearSessionAndRedirectToLogin()
         throw new Error('Refresh token response is invalid')
       }
 
       tokenStorage.setAccessToken(authData.accessToken)
-      tokenStorage.setRefreshToken(authData.refreshToken)
       tokenStorage.setRequiresFirstLoginSetup(Boolean(authData.requiresFirstLoginSetup))
 
       originalRequest.headers ??= {}
       originalRequest.headers.Authorization = `Bearer ${authData.accessToken}`
       return httpClient(originalRequest)
     } catch (refreshError) {
-      clearSessionAndRedirectToLogin()
+      if (isSessionInvalidRefreshError(refreshError)) {
+        clearSessionAndRedirectToLogin()
+      }
       return Promise.reject(refreshError)
     } finally {
       refreshTokenRequest = null

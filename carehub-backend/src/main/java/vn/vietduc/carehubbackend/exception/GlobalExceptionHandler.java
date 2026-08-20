@@ -89,12 +89,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
+        return build(HttpStatus.FORBIDDEN, "AUTH_ACCOUNT_DISABLED", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(TokenException.class)
     public ResponseEntity<ErrorResponse> handleTokenException(TokenException ex, HttpServletRequest request) {
-        return build(HttpStatus.UNAUTHORIZED, "AUTH_001", ex.getMessage(), null, request);
+        return build(HttpStatus.UNAUTHORIZED, "AUTH_SESSION_INVALID", ex.getMessage(), null, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

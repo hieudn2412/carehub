@@ -36,7 +36,7 @@ export default function DateTimePicker24h({
 
   const handleTimeChange = (e) => {
     let raw = e.target.value;
-    
+
     // Only allow numbers and colons
     raw = raw.replace(/[^\d:]/g, '');
 

@@ -102,7 +102,9 @@ import {
   ADMIN_ROLES,
   AUTH_ROLE,
   EVALUATION_PERMISSIONS,
+  getPostLoginRoute,
 } from '../features/auth/utils/authNavigation.js'
+import { useAuth } from '../features/auth/context/AuthContext.jsx'
 
 
 function protectedElement(element, options = {}) {
@@ -130,13 +132,49 @@ function managerOrAdminElement(element) {
   return protectedElement(element, { allowedRoles: [AUTH_ROLE.admin, AUTH_ROLE.manager] })
 }
 
+function AuthCheckingStatus({ message = 'Đang kiểm tra phiên đăng nhập...' }) {
+  return (
+    <div className="auth-route-status" role="status">
+      <p>{message}</p>
+    </div>
+  )
+}
+
+function AuthLandingRedirect() {
+  const auth = useAuth()
+
+  if (auth.isChecking) {
+    return <AuthCheckingStatus />
+  }
+
+  if (auth.isAuthenticated) {
+    return <Navigate to={getPostLoginRoute(auth.accessToken)} replace />
+  }
+
+  return <Navigate to={AUTH_ROUTES.login} replace />
+}
+
+function PublicLoginRoute({ children }) {
+  const auth = useAuth()
+
+  if (auth.isChecking) {
+    return <AuthCheckingStatus />
+  }
+
+  if (auth.isAuthenticated) {
+    return <Navigate to={getPostLoginRoute(auth.accessToken)} replace />
+  }
+
+  return children
+}
+
 
 function AppRouter() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={AUTH_ROUTES.login} replace />} />
-      <Route path="/auth" element={<Navigate to={AUTH_ROUTES.login} replace />} />
-      <Route path={AUTH_ROUTES.login} element={<LoginScreen />} />
+      <Route path="/" element={<AuthLandingRedirect />} />
+      <Route path="/auth" element={<AuthLandingRedirect />} />
+      <Route path={AUTH_ROUTES.login} element={<PublicLoginRoute><LoginScreen /></PublicLoginRoute>} />
       <Route path={AUTH_ROUTES.forgotPassword} element={<ForgotAccountScreen />} />
       <Route path={AUTH_ROUTES.otp} element={<OtpScreen />} />
       <Route path={AUTH_ROUTES.resetPassword} element={<ResetPasswordScreen />} />

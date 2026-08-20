@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { BookOutlined, FileDoneOutlined, LoadingOutlined } from '@ant-design/icons'
+import { BookOutlined, LoadingOutlined } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
-import { formatNumber } from '../../../../shared/utils/apiUi.js'
 import '../../styles/ManagerPages.css'
 
 function ManagerEmployeeDetailPage() {

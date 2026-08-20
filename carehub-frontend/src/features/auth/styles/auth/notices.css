@@ -37,3 +37,31 @@
   margin: 0;
 }
 
+.auth-route-status {
+  align-items: center;
+  color: #405365;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  text-align: center;
+}
+
+.auth-route-status p {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.auth-route-status button {
+  background: #0f8b7f;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 18px;
+}

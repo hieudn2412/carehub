@@ -181,7 +181,7 @@ class UserAdminApiSystemTest extends AbstractApiSystemTest {
         ResponseEntity<String> blocked = post(API + "/auth/login", null, """
                 {"employeeCode":"%s","password":"%s"}
                 """.formatted(employee.getEmployeeCode(), PASSWORD));
-        assertError(blocked, HttpStatus.UNAUTHORIZED, "AUTH_001");
+        assertError(blocked, HttpStatus.FORBIDDEN, "AUTH_ACCOUNT_DISABLED");
         assertThat(userRepository.findById(employee.getId()).orElseThrow().getStatus())
                 .isEqualTo(UserStatus.LOCKED);
 
