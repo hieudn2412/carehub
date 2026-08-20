@@ -14,6 +14,7 @@ import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessSer
 import vn.vietduc.carehubbackend.form.entity.Form;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
 import vn.vietduc.carehubbackend.form.subject.service.FormSubjectService;
+import vn.vietduc.carehubbackend.form.compliance.repository.FormComplianceTargetRepository;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
@@ -29,9 +30,10 @@ class FormSubjectServiceTest {
     @Mock UserRepository userRepository;
     @Mock SecurityUtils securityUtils;
     @Mock FormAssignmentAccessService assignmentAccessService;
+    @Mock FormComplianceTargetRepository complianceTargetRepository;
     private FormSubjectService service;
 
-    @BeforeEach void setUp() { service = new FormSubjectService(userRepository, securityUtils, assignmentAccessService); }
+    @BeforeEach void setUp() { service = new FormSubjectService(userRepository, securityUtils, assignmentAccessService, complianceTargetRepository); }
     @AfterEach void tearDown() { SecurityContextHolder.clearContext(); }
 
     @Test
@@ -110,7 +112,7 @@ class FormSubjectServiceTest {
                 .status(UserStatus.ACTIVE).build();
         var pageable = PageRequest.of(0, 20);
         when(securityUtils.getCurrentUserId()).thenReturn(1L);
-        when(userRepository.searchActiveFormSubjects("%nv04%", 1L, null, pageable))
+        when(userRepository.searchActiveFormSubjectsInDepartments("%nv04%", 1L, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(target), pageable, 1));
 
         var result = service.search(null, " NV04 ", pageable);
@@ -129,11 +131,12 @@ class FormSubjectServiceTest {
         User evaluator = User.builder().id(8L).employeeCode("NV08").name("Người đánh giá")
                 .department(department).status(UserStatus.ACTIVE).build();
         FormAssignmentItem item = FormAssignmentItem.builder()
-                .form(Form.builder().subjectType(FormSubjectType.USER).build()).build();
+                .form(Form.builder().id(100L).subjectType(FormSubjectType.USER).build()).build();
         when(securityUtils.getCurrentUserId()).thenReturn(8L);
         when(assignmentAccessService.requireActiveOwnedItem(12L, 8L)).thenReturn(item);
         when(userRepository.findByIdAndIsDeletedFalse(8L)).thenReturn(Optional.of(evaluator));
-        when(userRepository.searchActiveFormSubjects(null, 8L, 30L, pageable))
+        when(complianceTargetRepository.findAllByForm_IdOrderByDepartment_NameAsc(100L)).thenReturn(List.of());
+        when(userRepository.searchActiveFormSubjectsInDepartments(null, 8L, Set.of(30L), pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         assertTrue(service.search(12L, " ", pageable).isEmpty());
