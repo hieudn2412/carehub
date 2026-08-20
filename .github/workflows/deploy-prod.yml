@@ -18,7 +18,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
           script: |
-            cd /opt/carehub/carehub
+            cd /opt/carehub
             git fetch origin production
             git checkout production
             git pull origin production
