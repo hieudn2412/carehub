@@ -132,6 +132,8 @@ class ManagerDashboardServiceTest {
                         new BigDecimal("75.00"),
                         new BigDecimal("70.00")
                 ),
+                List.of(),
+                List.of(),
                 List.of()
         );
     }
