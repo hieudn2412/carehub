@@ -225,6 +225,26 @@ function DashboardContent({ role }) {
       .slice(0, 12)
   }, [summary])
 
+  const professionalFieldData = useMemo(() => {
+    return (summary?.byProfessionalField || [])
+      .map((item) => ({
+        name: item.professionalFieldName || 'Chưa xác định',
+        hours: Number(item.submittedHours) || 0,
+      }))
+      .sort((left, right) => right.hours - left.hours)
+      .slice(0, 12)
+  }, [summary])
+
+  const activityTypeData = useMemo(() => {
+    return (summary?.byActivityType || [])
+      .map((item) => ({
+        name: item.activityTypeName || 'Chưa xác định',
+        hours: Number(item.submittedHours) || 0,
+      }))
+      .sort((left, right) => right.hours - left.hours)
+      .slice(0, 12)
+  }, [summary])
+
   const completionData = [
     { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
     { name: 'Chưa đạt', value: metrics.total - metrics.completed, color: '#ef4444' },
@@ -387,6 +407,46 @@ function DashboardContent({ role }) {
               </article>
             </section>
           )}
+
+          <section className="training-dashboard__charts training-dashboard__charts--equal">
+            <article className="training-chart-card">
+              <header><h2>Tổng giờ đào tạo theo lĩnh vực</h2><span>Tối đa 12 lĩnh vực</span></header>
+              {professionalFieldData.length === 0 ? (
+                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo lĩnh vực trong phạm vi này.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={310}>
+                  <BarChart data={professionalFieldData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                    <Bar dataKey="hours" fill="#0284c7" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </article>
+
+            <article className="training-chart-card">
+              <header><h2>Tổng giờ đào tạo theo hình thức</h2><span>Tối đa 12 hình thức</span></header>
+              {activityTypeData.length === 0 ? (
+                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo hình thức trong phạm vi này.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={310}>
+                  <BarChart data={activityTypeData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                    <Bar dataKey="hours" fill="#0f9f7a" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </article>
+          </section>
         </>
       )}
     </div>
