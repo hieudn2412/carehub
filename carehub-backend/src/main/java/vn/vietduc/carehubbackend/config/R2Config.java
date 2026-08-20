@@ -14,7 +14,6 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import java.net.URI;
 
 @Configuration
-@Profile("!test")
 @EnableConfigurationProperties(R2Properties.class)
 public class R2Config {
     @Bean(destroyMethod = "close")
