@@ -3,7 +3,7 @@ name: CI and Deploy CareHub
 on:
   push:
     branches:
-      - main
+      - test
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VITE_API_BASE_URL: https://api.fpthub.online/api/v1
+  VITE_API_BASE_URL: https://fpthub.online/api/v1
 
 jobs:
   backend-ci:
