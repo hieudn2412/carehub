@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
@@ -1064,11 +1065,10 @@ function AdminAccountsScreen() {
 
                       <div className="am-form-group">
                         <label className="am-form-label">Ngày sinh</label>
-                        <input
-                          type="date"
+                        <KeyboardDatePicker
                           className="am-form-input"
                           value={formBirthday}
-                          onChange={(e) => setFormBirthday(e.target.value)}
+                          onChange={(val) => setFormBirthday(val)}
                         />
                       </div>
 

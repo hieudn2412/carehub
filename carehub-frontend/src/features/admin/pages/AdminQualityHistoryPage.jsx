@@ -7,6 +7,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -186,8 +187,8 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
               <input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} placeholder="Tìm theo tên hoặc mã quy trình..." />
             </label>
           )}
-          <label><span>Từ ngày</span><input type="date" value={dateFrom} max={dateTo} onChange={(event) => updateQuery({ dateFrom: event.target.value, page: 0 })} /></label>
-          <label><span>Đến ngày</span><input type="date" value={dateTo} min={dateFrom} onChange={(event) => updateQuery({ dateTo: event.target.value, page: 0 })} /></label>
+          <label><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} max={dateTo} onChange={(val) => updateQuery({ dateFrom: val, page: 0 })} /></label>
+          <label><span>Đến ngày</span><KeyboardDatePicker value={dateTo} min={dateFrom} onChange={(val) => updateQuery({ dateTo: val, page: 0 })} /></label>
           <button type="button" onClick={() => updateQuery({ dateFrom: defaults.dateFrom, dateTo: defaults.dateTo, page: 0 })}><ReloadOutlined /> Năm hiện tại</button>
         </section>
 

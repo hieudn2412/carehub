@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import { adminApi } from '../api/adminApi.js'
 import '../styles/AdminQualityHistoryPage.css'
 
@@ -292,11 +293,9 @@ function FormVersionAssignmentModal({ form, onClose, onAssignmentCountChange }) 
                 </div>
                 <div className="aqh-manager-assign__field">
                   <label htmlFor="form-version-assignment-valid-until">Hiệu lực đến</label>
-                  <input
+                  <DateTimePicker24h
                     id="form-version-assignment-valid-until"
-                    min={new Date().toISOString().slice(0, 16)}
-                    onChange={(event) => setValidUntil(event.target.value)}
-                    type="datetime-local"
+                    onChange={setValidUntil}
                     value={validUntil}
                   />
                 </div>

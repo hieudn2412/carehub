@@ -71,27 +71,13 @@ public class FormSubjectService {
             throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
         }
         
+        // When assigned, evaluator is allowed to evaluate all departments
+        if (item != null) {
+            return null;
+        }
+        
         Set<Long> allowedDepartmentIds = new HashSet<>();
         allowedDepartmentIds.add(actor.getDepartment().getId());
-        
-        if (item != null) {
-            if (item.getForm() != null && item.getForm().getId() != null) {
-                Long formId = item.getForm().getId();
-                List<FormComplianceTarget> targets = complianceTargetRepository.findAllByForm_IdOrderByDepartment_NameAsc(formId);
-                boolean hospitalWide = false;
-                for (FormComplianceTarget target : targets) {
-                    if (target.getDepartment() == null) {
-                        hospitalWide = true;
-                        break;
-                    } else {
-                        allowedDepartmentIds.add(target.getDepartment().getId());
-                    }
-                }
-                if (hospitalWide) {
-                    return null;
-                }
-            }
-        }
         return allowedDepartmentIds;
     }
 

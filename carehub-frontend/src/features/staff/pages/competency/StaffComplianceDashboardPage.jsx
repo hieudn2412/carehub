@@ -18,6 +18,7 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
@@ -66,11 +67,11 @@ function SearchForm({ filters, onChange, onApply, onClear, dateError, mobile = f
       </label>
       <label>
         <span>Từ ngày</span>
-        <input type="date" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={event => onChange({ dateFrom: event.target.value })} aria-label="Từ ngày tuân thủ" />
+        <KeyboardDatePicker value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
       </label>
       <label>
         <span>Đến ngày</span>
-        <input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} max={today()} onChange={event => onChange({ dateTo: event.target.value })} aria-label="Đến ngày tuân thủ" />
+        <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={today()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
       </label>
       {dateError && <p className="scd-search-error" role="alert">{dateError}</p>}
       <div className="scd-search-actions">

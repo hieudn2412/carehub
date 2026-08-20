@@ -13,6 +13,7 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
@@ -112,11 +113,11 @@ function CompetencySearchForm({ filters, onChange, onClear, onApply, dateError =
       </label>
       <label>
         <span>Từ ngày</span>
-        <input type="date" value={filters.dateFrom} max={filters.dateTo || undefined} onChange={event => onChange({ dateFrom: event.target.value })} aria-label="Từ ngày năng lực" />
+        <KeyboardDatePicker value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày năng lực" />
       </label>
       <label>
         <span>Đến ngày</span>
-        <input type="date" value={filters.dateTo} min={filters.dateFrom || undefined} max={localToday()} onChange={event => onChange({ dateTo: event.target.value })} aria-label="Đến ngày năng lực" />
+        <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={localToday()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày năng lực" />
       </label>
       {dateError && <p className="pc-search-form__error" role="alert">{dateError}</p>}
       <div className="pc-search-form__actions">

@@ -14,6 +14,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import {
   Area,
   AreaChart,
@@ -573,20 +574,18 @@ export default function OverviewDashboard({
               </label>
               <label>
                 <span>Từ ngày</span>
-                <input
-                  type="date"
+                <KeyboardDatePicker
                   value={filters.fromDate}
                   max={filters.toDate}
-                  onChange={(event) => changeFilter('fromDate', event.target.value)}
+                  onChange={(val) => changeFilter('fromDate', val)}
                 />
               </label>
               <label>
                 <span>Đến ngày</span>
-                <input
-                  type="date"
+                <KeyboardDatePicker
                   value={filters.toDate}
                   min={filters.fromDate}
-                  onChange={(event) => changeFilter('toDate', event.target.value)}
+                  onChange={(val) => changeFilter('toDate', val)}
                 />
               </label>
               <label>
