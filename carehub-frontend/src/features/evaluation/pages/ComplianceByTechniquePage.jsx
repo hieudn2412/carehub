@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  DownloadOutlined,
   EyeOutlined,
   FilterOutlined,
   ReloadOutlined,
@@ -16,10 +17,22 @@ import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/EvaluationDashboardPage.css'
 
 const today = new Date().toISOString().slice(0, 10)
 const yearStart = `${new Date().getFullYear()}-01-01`
+
+const EXPORT_HEADERS = [
+  'Mã NV',
+  'Họ và tên',
+  'Khoa / Phòng',
+  'Tổng số lần được kiểm tra',
+  'Số lần đạt',
+  'Tỷ lệ tuân thủ (%)',
+  'Từ ngày',
+  'Đến ngày',
+]
 
 function ComplianceByTechniquePage() {
   const navigate = useNavigate()
@@ -97,10 +110,26 @@ function ComplianceByTechniquePage() {
     return () => window.clearTimeout(timer)
   }, [departmentId, isAdmin, loadData])
 
+  // `data.items` chính là kết quả của bộ lọc đang áp dụng (backend lọc theo khoa, từ khóa và
+  // khoảng ngày), nên file xuất ra luôn khớp đúng những gì đang hiển thị trên bảng.
+  const handleExport = () => {
+    const rows = (data?.items || []).map((item) => [
+      item.employeeCode,
+      item.employeeName,
+      item.departmentName || data?.departmentName || '',
+      item.evaluationCount || 0,
+      item.passCount || 0,
+      item.passRate != null ? item.passRate : 0,
+      fromDate,
+      toDate,
+    ])
+    downloadCsv(exportFileName('tuan-thu-chung'), EXPORT_HEADERS, rows)
+  }
+
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
     { label: 'Đánh giá' },
-    { label: 'Tuân thủ quy trình, quy định' },
+    { label: 'Tuân thủ chung' },
   ]
 
   const totalCount = data?.items ? data.items.length : 0
@@ -111,9 +140,9 @@ function ComplianceByTechniquePage() {
   ].filter(Boolean).length
 
   return (
-    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined}>
+    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ chung' : undefined}>
             <div className="evd-page">
-              <section className="compliance-toolbar admin-control-toolbar" aria-label="Công cụ tuân thủ theo nhân viên">
+              <section className="compliance-toolbar admin-control-toolbar" aria-label="Công cụ tuân thủ chung">
                 <div className="admin-control-toolbar__main">
                   <div className="admin-control-toolbar__controls">
                     <div className="compliance-toolbar__search admin-control-toolbar__search">
@@ -141,6 +170,15 @@ function ComplianceByTechniquePage() {
                   </div>
                   <div className="compliance-toolbar__actions">
                     <span>{totalCount} nhân viên</span>
+                    <button
+                      type="button"
+                      className="compliance-toolbar__export"
+                      onClick={handleExport}
+                      disabled={loading || totalCount === 0}
+                      title="Xuất danh sách đang lọc ra file Excel"
+                    >
+                      <DownloadOutlined /> Xuất Excel
+                    </button>
                     <button
                       type="button"
                       className="compliance-toolbar__reload"
@@ -208,7 +246,7 @@ function ComplianceByTechniquePage() {
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="ch-empty">
-                          {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
+                          {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ chung.'}
                         </td>
                       </tr>
                     ) : (
