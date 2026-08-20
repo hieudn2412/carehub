@@ -937,6 +937,34 @@
   white-space: nowrap;
 }
 
+.compliance-toolbar__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.compliance-toolbar__export:hover:not(:disabled) {
+  border-color: #0b5f59;
+  background: #0b5f59;
+}
+
+.compliance-toolbar__export:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
 .compliance-toolbar__reload {
   display: inline-grid;
   width: 44px;
@@ -1017,7 +1045,13 @@
 
 @media (max-width: 768px) {
   .compliance-toolbar__actions {
+    flex-wrap: wrap;
     justify-content: space-between;
+  }
+
+  .compliance-toolbar__export {
+    height: 38px;
+    padding: 0 12px;
   }
 
   .compliance-filter-panel {

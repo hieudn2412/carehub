@@ -428,6 +428,12 @@
   width: 100%;
 }
 
+/* Nút "Cập nhật giờ đào tạo" đứng riêng ngay dưới thẻ tiến độ giờ đào tạo. */
+.th-overview-primary-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .th-overview-card {
   min-width: 0;
 }
@@ -985,20 +991,20 @@
   .th-overview-card--latest .th-overview-card__actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     width: 100%;
     gap: 10px;
-  }
-
-  .th-overview-card--latest .th-overview-card__actions .th-btn-primary {
-    flex: 1 1 auto;
-    min-height: 38px;
-    justify-content: center;
   }
 
   .th-overview-card--latest .th-overview-card__actions .th-overview-link {
     flex: none;
     font-size: 13px;
+  }
+
+  .th-overview-primary-action .th-btn-primary {
+    flex: 1 1 auto;
+    min-height: 38px;
+    justify-content: center;
   }
 
   .training-page--overview .th-overview-filter-btn,

@@ -123,7 +123,7 @@ const navSections = [
       { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/admin/reports/training-dashboard' },
       { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
       { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/admin/reports/checklist-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
         label: 'Chất lượng chăm sóc',

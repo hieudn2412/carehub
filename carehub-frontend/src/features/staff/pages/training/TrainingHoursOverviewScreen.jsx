@@ -391,6 +391,18 @@ function TrainingHoursOverviewScreen() {
           </div>
         </section>
 
+        {/* Thao tác chính của màn hình này là khai báo giờ, nên nút nằm ngay dưới thẻ tiến độ
+            thay vì trong header thẻ hồ sơ — trên mobile người dùng không phải cuộn để thấy nó. */}
+        <div className="th-overview-primary-action">
+          <button
+            type="button"
+            className="th-btn-primary"
+            onClick={() => navigate('/staff/training/new')}
+          >
+            <PlusOutlined /> Cập nhật giờ đào tạo
+          </button>
+        </div>
+
         <section className="th-overview-card th-overview-card--latest th-table-card" data-overview-section="latest" aria-labelledby="training-latest-title">
           <div className="th-overview-card__header">
             <div className="th-overview-card__header-copy">
@@ -400,13 +412,6 @@ function TrainingHoursOverviewScreen() {
               </h2>
             </div>
             <div className="th-overview-card__actions">
-              <button
-                type="button"
-                className="th-btn-primary"
-                onClick={() => navigate('/staff/training/new')}
-              >
-                <PlusOutlined /> Cập nhật giờ đào tạo
-              </button>
               <button
                 type="button"
                 className="th-overview-link"

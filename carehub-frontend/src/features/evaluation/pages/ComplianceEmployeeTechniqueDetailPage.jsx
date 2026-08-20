@@ -51,7 +51,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
-    { label: 'Tuân thủ kỹ thuật', link: backPath },
+    { label: 'Tuân thủ chung', link: backPath },
     { label: data?.employeeName || 'Chi tiết' },
   ]
 
@@ -87,7 +87,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
     <AppShell
       back={{ onClick: handleBack, label: 'Quay lại' }}
       breadcrumbs={isAdmin ? breadcrumbs : undefined}
-      title={!isAdmin ? `Tuân thủ KT: ${data?.employeeName || '...'}` : undefined}
+      title={!isAdmin ? `Tuân thủ chung: ${data?.employeeName || '...'}` : undefined}
     >
             <div className="evd-page">
 

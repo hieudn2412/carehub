@@ -60,6 +60,39 @@
   font-size: 13px;
 }
 
+.dtst__export {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid #0f9d76;
+  border-radius: 10px;
+  background: #0f9d76;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.dtst__export:hover:not(:disabled) {
+  border-color: #0b7f5f;
+  background: #0b7f5f;
+}
+
+.dtst__export:focus-visible {
+  outline: 2px solid rgba(16, 167, 125, 0.35);
+  outline-offset: 2px;
+}
+
+.dtst__export:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
 .dtst__state {
   margin: 0;
   padding: 34px 12px;
@@ -171,6 +204,12 @@
 
 /* Mobile: mỗi dòng thành một thẻ, bỏ cuộn ngang */
 @media (max-width: 768px) {
+  .dtst__select,
+  .dtst__export {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
   .dtst__scroll {
     overflow-x: visible;
     border: 0;

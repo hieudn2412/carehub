@@ -86,8 +86,8 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/evaluation/competency-thresholds', 'Ngưỡng năng lực'],
   ['/admin/evaluation/competency-by-field/:employeeId', 'Chi tiết năng lực nhân viên'],
   ['/admin/evaluation/competency-by-field', 'Năng lực theo lĩnh vực'],
-  ['/admin/evaluation/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ kỹ thuật'],
-  ['/admin/evaluation/compliance-by-technique', 'Tuân thủ theo kỹ thuật'],
+  ['/admin/evaluation/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ chung'],
+  ['/admin/evaluation/compliance-by-technique', 'Tuân thủ chung'],
   ['/admin/evaluation/competency-summary', 'Tổng hợp năng lực'],
   ['/admin/evaluation/competency', 'Năng lực theo khoa phòng'],
   ['/admin/evaluation/training-groups', 'Nhóm đào tạo'],
@@ -109,8 +109,8 @@ const PAGE_TITLE_ROUTES = [
   ['/manager/quality/history', 'Lịch sử đánh giá'],
   ['/manager/competency-by-field/:employeeId', 'Chi tiết năng lực nhân viên'],
   ['/manager/competency-by-field', 'Năng lực theo lĩnh vực'],
-  ['/manager/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ kỹ thuật'],
-  ['/manager/compliance-by-technique', 'Tuân thủ theo kỹ thuật'],
+  ['/manager/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ chung'],
+  ['/manager/compliance-by-technique', 'Tuân thủ chung'],
   ['/manager/competency-summary', 'Tổng hợp năng lực'],
 
   // Staff

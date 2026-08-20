@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { EyeOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownloadOutlined, EyeOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
 import { trainingApi } from '../api/trainingApi'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/DepartmentTrainingStaffTable.css'
 
 const STATUS_TEXT = {
@@ -23,6 +24,32 @@ function statusText(status) {
 
 function statusTone(status) {
   return STATUS_TONE[status] || 'gray'
+}
+
+const EXPORT_HEADERS = [
+  'Mã NV',
+  'Họ và tên',
+  'Chức danh',
+  'Khoa / Phòng',
+  'Giờ đã nộp',
+  'Giờ yêu cầu',
+  'Còn thiếu',
+  'Trạng thái',
+]
+
+function exportRow(employee) {
+  const submitted = Number(employee.submittedHours) || 0
+  const required = Number(employee.requiredHours) || 0
+  return [
+    employee.employeeCode,
+    employee.employeeName,
+    employee.jobPositionName || '',
+    employee.departmentName || '',
+    submitted,
+    required,
+    Math.max(required - submitted, 0),
+    statusText(employee.complianceStatus),
+  ]
 }
 
 /**
@@ -94,6 +121,21 @@ export default function DepartmentTrainingStaffTable({ pageSize = 100 }) {
           <option value="AT_RISK">Đang theo dõi</option>
           <option value="NOT_CONFIGURED">Chưa thiết lập</option>
         </select>
+        {/* `employees` chính là kết quả của bộ lọc đang áp dụng (backend lọc theo keyword và
+            trạng thái), nên file xuất ra luôn khớp đúng những gì đang hiển thị. */}
+        <button
+          type="button"
+          className="dtst__export"
+          onClick={() => downloadCsv(
+            exportFileName('nhan-su-dao-tao-lien-tuc'),
+            EXPORT_HEADERS,
+            employees.map(exportRow),
+          )}
+          disabled={loading || employees.length === 0}
+          title="Xuất danh sách đang lọc ra file Excel"
+        >
+          <DownloadOutlined /> Xuất Excel
+        </button>
       </div>
 
       {loading ? (

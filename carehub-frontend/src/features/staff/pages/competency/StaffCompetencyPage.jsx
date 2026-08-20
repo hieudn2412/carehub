@@ -6,6 +6,7 @@ import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
+import { indexAnswersByQuestion, resolveStepRating } from '../../utils/checklistRating.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/StaffCompetencyPage.css'
@@ -23,13 +24,6 @@ const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
 const formatScore10 = value => {
   const score = Number(value)
   return SCORE_FORMATTER.format(Number.isFinite(score) ? score : 0)
-}
-
-const convertToTenPointScale = (value, totalMaxScore) => {
-  const score = Number(value)
-  const maxScore = Number(totalMaxScore)
-  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return 0
-  return score * 10 / maxScore
 }
 
 export default function StaffCompetencyPage() {
@@ -80,6 +74,20 @@ export default function StaffCompetencyPage() {
     if (!query) return data?.items || []
     return (data?.items || []).filter(item => String(item.formName || '').toLowerCase().includes(query.toLowerCase()))
   }, [data, query])
+
+  // Người được chấm quan tâm "bước nào bị trừ điểm", không phải điểm quy đổi của từng bước,
+  // nên mỗi bước hiển thị bằng mức đánh giá mà người chấm đã chọn.
+  const detailSteps = useMemo(() => {
+    const answers = indexAnswersByQuestion(detail?.answers)
+    return (detail?.scoreBreakdown || []).map((step, index) => ({
+      key: step.questionKey == null ? `step-${index}` : String(step.questionKey),
+      order: index + 1,
+      code: step.code || '',
+      title: step.title || 'Bước không có tên',
+      critical: Boolean(step.critical),
+      rating: resolveStepRating(step, answers.get(String(step.questionKey))),
+    }))
+  }, [detail])
 
   const applyFilters = () => {
     if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
@@ -243,11 +251,31 @@ export default function StaffCompetencyPage() {
         {detailLoading ? <div className="sc-detail-dialog__loading"><LoadingState label="Đang tải..." /></div> : <div className="sc-detail-dialog__body">
           {detailAttempts.length > 1 && <section className="sc-attempt-history" aria-label="Lịch sử các lượt đánh giá"><h4>Lịch sử đánh giá ({detailAttempts.length} lượt)</h4><div>{detailAttempts.map((attempt, index) => <button key={attempt.submissionId} type="button" className={attempt.submissionId === activeSubmissionId ? 'is-active' : ''} onClick={() => openDetail(attempt.submissionId)}><span>Lượt {detailAttempts.length - index}</span><strong>{attempt.evaluatedAt ? new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN') : 'Chưa có ngày'}</strong><small>{attempt.passed ? 'Đạt' : 'Chưa đạt'} · {formatScore10(attempt.score)}/10</small></button>)}</div></section>}
           <div className="sc-detail-metrics"><article className="sc-personal-metric"><span className="sc-personal-metric__icon">{detail?.result === 'PASSED' ? <CheckCircleFilled /> : <WarningFilled />}</span><div><span>Kết quả</span><strong>{detail?.result === 'PASSED' ? 'Đạt' : 'Chưa đạt'}</strong></div></article><article className="sc-personal-metric"><div><span>Điểm</span><strong>{formatScore10(detail?.convertedScore)}/10</strong></div></article></div>
-          <div className="sc-detail-breakdown"><h4>Câu trả lời và tiêu chí</h4>{(detail?.scoreBreakdown || []).map(item => {
-            const score10 = convertToTenPointScale(item.weightedScore, detail?.maxScore)
-            const maxScore10 = convertToTenPointScale(item.maxScore, detail?.maxScore)
-            return <article key={item.questionKey}><div><strong>{item.code} · {item.title}</strong></div><small>Điểm (thang 10): {formatScore10(score10)} / {formatScore10(maxScore10)}</small></article>
-          })}</div>
+          <div className="sc-detail-breakdown">
+            <h4>Các bước và mức đánh giá</h4>
+            {detailSteps.length === 0 ? <p>Bảng kiểm này chưa có dữ liệu chấm theo từng bước.</p> : (
+              <ul className="sc-step-list">
+                {detailSteps.map(step => (
+                  <li key={step.key} className={`sc-step sc-step--${step.rating.tone}`}>
+                    <div className="sc-step__info">
+                      <span className="sc-step__order">{step.order}</span>
+                      <div>
+                        <strong>{step.title}</strong>
+                        {(step.code || step.critical) && (
+                          <small>
+                            {step.code}
+                            {step.code && step.critical ? ' · ' : ''}
+                            {step.critical ? 'Bước trọng yếu' : ''}
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                    <span className="sc-step__rating">{step.rating.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>}
       </section></div> : null}
     </AppShell>
