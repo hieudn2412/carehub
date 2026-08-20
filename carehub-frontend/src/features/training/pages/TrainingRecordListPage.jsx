@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import '../styles/training.css'
 
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'CANCELLED']
@@ -128,11 +129,11 @@ function TrainingRecordListPage() {
           </label>
           <label>
             From
-            <input onChange={(event) => updateFilter('dateFrom', event.target.value)} type="date" value={filters.dateFrom} />
+            <KeyboardDatePicker onChange={(val) => updateFilter('dateFrom', val)} value={filters.dateFrom} />
           </label>
           <label>
             To
-            <input onChange={(event) => updateFilter('dateTo', event.target.value)} type="date" value={filters.dateTo} />
+            <KeyboardDatePicker onChange={(val) => updateFilter('dateTo', val)} value={filters.dateTo} />
           </label>
           <label>
             Activity

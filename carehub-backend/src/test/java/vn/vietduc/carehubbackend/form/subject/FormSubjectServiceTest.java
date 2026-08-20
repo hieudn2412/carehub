@@ -62,7 +62,7 @@ class FormSubjectServiceTest {
     }
 
     @Test
-    void managerCannotLookupEmployeeFromAnotherDepartment() {
+    void managerCanLookupEmployeeFromAnotherDepartment() {
         Department managerDepartment = Department.builder().id(20L).name("Khoa Nội").build();
         Department otherDepartment = Department.builder().id(21L).name("Khoa Ngoại").build();
         User manager = User.builder().id(5L).employeeCode("QL01").name("Manager")
@@ -78,8 +78,9 @@ class FormSubjectServiceTest {
         when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse("NV01"))
                 .thenReturn(Optional.of(target));
 
-        assertThrows(ResourceNotFoundException.class,
-                () -> service.findByEmployeeCode(10L, "NV01"));
+        var response = service.findByEmployeeCode(10L, "NV01");
+        assertEquals(101L, response.userId());
+        assertEquals("NV01", response.employeeCode());
     }
 
     @Test
@@ -135,8 +136,7 @@ class FormSubjectServiceTest {
         when(securityUtils.getCurrentUserId()).thenReturn(8L);
         when(assignmentAccessService.requireActiveOwnedItem(12L, 8L)).thenReturn(item);
         when(userRepository.findByIdAndIsDeletedFalse(8L)).thenReturn(Optional.of(evaluator));
-        when(complianceTargetRepository.findAllByForm_IdOrderByDepartment_NameAsc(100L)).thenReturn(List.of());
-        when(userRepository.searchActiveFormSubjectsInDepartments(null, 8L, Set.of(30L), pageable))
+        when(userRepository.searchActiveFormSubjectsInDepartments(null, 8L, null, pageable))
                 .thenReturn(new PageImpl<>(List.of(), pageable, 0));
 
         assertTrue(service.search(12L, " ", pageable).isEmpty());

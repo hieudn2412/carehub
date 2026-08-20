@@ -11,6 +11,7 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
@@ -371,11 +372,9 @@ function FormAssignmentManagementPage() {
 
                     <label className="fam-field">
                       <span>Hiệu lực đến</span>
-                      <input
+                      <DateTimePicker24h
                         disabled={loading || submitting || !publishedVersion?.id}
-                        min={new Date().toISOString().slice(0, 16)}
-                        onChange={(event) => setValidUntil(event.target.value)}
-                        type="datetime-local"
+                        onChange={setValidUntil}
                         value={validUntil}
                       />
                       <small>Bỏ trống nếu không có ngày hết hạn.</small>

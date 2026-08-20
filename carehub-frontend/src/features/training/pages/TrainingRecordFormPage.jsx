@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
@@ -210,18 +211,16 @@ function TrainingRecordFormPage() {
             <div className="training-form-grid training-form-grid--compact">
               <label>
                 Start date
-                <input
-                  onChange={(event) => updateField('startDate', event.target.value)}
+                <KeyboardDatePicker
+                  onChange={(val) => updateField('startDate', val)}
                   required
-                  type="date"
                   value={form.startDate}
                 />
               </label>
               <label>
                 End date
-                <input
-                  onChange={(event) => updateField('endDate', event.target.value)}
-                  type="date"
+                <KeyboardDatePicker
+                  onChange={(val) => updateField('endDate', val)}
                   value={form.endDate}
                 />
               </label>

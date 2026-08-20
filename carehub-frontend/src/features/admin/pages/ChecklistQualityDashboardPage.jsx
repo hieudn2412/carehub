@@ -14,6 +14,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
@@ -463,7 +464,7 @@ function userOptions(items, allLabel) {
 
 function DateFilter({ label, value, min, max, onChange }) {
   return <label className="checklist-quality-filter"><span>{label}</span><div><CalendarOutlined />
-    <input type="date" value={value} min={min} max={max} onChange={(event) => onChange(event.target.value)} />
+    <KeyboardDatePicker value={value} min={min} max={max} onChange={(val) => onChange(val)} />
   </div></label>
 }
 

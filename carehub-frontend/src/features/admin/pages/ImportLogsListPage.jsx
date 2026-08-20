@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import { adminApi } from '../api/adminApi'
 import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
@@ -449,21 +450,19 @@ function ImportLogsListPage() {
 
                 <div className="il-filter-field">
                   <span className="il-filter-label">Từ ngày</span>
-                  <input
-                    type="date"
+                  <KeyboardDatePicker
                     className="il-filter-date"
                     value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={(val) => setDateFrom(val)}
                   />
                 </div>
 
                 <div className="il-filter-field">
                   <span className="il-filter-label">Đến ngày</span>
-                  <input
-                    type="date"
+                  <KeyboardDatePicker
                     className="il-filter-date"
                     value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={(val) => setDateTo(val)}
                   />
                 </div>
 
