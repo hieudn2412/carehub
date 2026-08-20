@@ -268,3 +268,32 @@
   .training-dashboard__filter-panel,
   .training-dashboard__kpis { grid-template-columns: 1fr; }
 }
+
+/* bp-sm (overrides cho Manager trên di động) */
+@media (max-width: 768px) {
+  .app-shell--manager .training-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .app-shell--manager .training-dashboard__kpis {
+    display: contents;
+  }
+
+  .app-shell--manager .training-dashboard__charts {
+    display: contents;
+  }
+
+  .app-shell--manager .training-chart-card:not(.training-chart-card--wide) {
+    order: 10;
+  }
+
+  .app-shell--manager .training-kpi {
+    order: 20;
+  }
+
+  .app-shell--manager .training-chart-card--wide {
+    order: 30;
+  }
+}
