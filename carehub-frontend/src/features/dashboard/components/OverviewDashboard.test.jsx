@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-rou
 import { describe, expect, it, vi } from 'vitest'
 import OverviewDashboard from './OverviewDashboard.jsx'
 import Sidebar from '../../staff/components/sidebar.jsx'
+import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }) => <div>{children}</div>,
@@ -170,7 +171,7 @@ describe('OverviewDashboard navigation regression', () => {
 
   it('changes the route when a USER clicks the desktop sidebar training link', async () => {
     const payload = window.btoa(JSON.stringify({ roles: ['USER'] }))
-    window.sessionStorage.setItem('carehub.accessToken', `header.${payload}.signature`)
+    tokenStorage.setAccessToken(`header.${payload}.signature`)
 
     render(
       <MemoryRouter initialEntries={['/staff/dashboard']}>
@@ -184,7 +185,7 @@ describe('OverviewDashboard navigation regression', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /Theo dõi cá nhân/ }))
-    fireEvent.click(screen.getByRole('link', { name: /Giờ đào tạo liên tục/ }))
+    fireEvent.click(screen.getByRole('link', { name: /Đào tạo liên tục/ }))
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Giờ đào tạo liên tục' })).toBeInTheDocument()
@@ -193,7 +194,7 @@ describe('OverviewDashboard navigation regression', () => {
 
   it('changes the route after a USER selects a mobile sidebar item and the drawer closes', async () => {
     const payload = window.btoa(JSON.stringify({ roles: ['USER'] }))
-    window.sessionStorage.setItem('carehub.accessToken', `header.${payload}.signature`)
+    tokenStorage.setAccessToken(`header.${payload}.signature`)
 
     render(
       <MemoryRouter initialEntries={['/staff/dashboard']}>
@@ -213,7 +214,7 @@ describe('OverviewDashboard navigation regression', () => {
 
     const mobileNavigation = within(aside).getByRole('navigation', { name: 'Chức năng của nhân viên' })
     await act(async () => {
-      fireEvent.click(within(mobileNavigation).getByRole('link', { name: /Giờ đào tạo liên tục/ }))
+      fireEvent.click(within(mobileNavigation).getByRole('link', { name: /Đào tạo liên tục/ }))
     })
 
     await waitFor(() => {

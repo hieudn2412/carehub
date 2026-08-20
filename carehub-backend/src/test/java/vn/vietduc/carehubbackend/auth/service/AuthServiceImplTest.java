@@ -3,16 +3,12 @@ package vn.vietduc.carehubbackend.auth.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import vn.vietduc.carehubbackend.auth.dto.request.LoginRequest;
-import vn.vietduc.carehubbackend.auth.dto.request.LogoutRequest;
-import vn.vietduc.carehubbackend.auth.dto.request.RefreshTokenRequest;
 import vn.vietduc.carehubbackend.auth.dto.response.AccessTokenResult;
 import vn.vietduc.carehubbackend.auth.entity.RefreshToken;
-import vn.vietduc.carehubbackend.auth.repository.RefreshTokenRepository;
 import vn.vietduc.carehubbackend.auth.service.impl.AuthServiceImpl;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.TokenException;
@@ -41,9 +37,6 @@ class AuthServiceImplTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
-
     private AuthServiceImpl service;
     private User activeUser;
 
@@ -53,8 +46,7 @@ class AuthServiceImplTest {
                 userRepository,
                 passwordEncoder,
                 jwtTokenService,
-                refreshTokenService,
-                refreshTokenRepository
+                refreshTokenService
         );
         activeUser = User.builder()
                 .id(11L)
@@ -129,9 +121,9 @@ class AuthServiceImplTest {
                 .revoked(true)
                 .expiredAt(LocalDateTime.now().plusDays(1))
                 .build();
-        when(refreshTokenService.findToken("revoked")).thenReturn(revoked);
+        when(refreshTokenService.rotateRefreshToken("revoked")).thenThrow(new TokenException("Token đã bị thu hồi"));
 
-        assertThrows(TokenException.class, () -> service.refreshToken(refresh("revoked")));
+        assertThrows(TokenException.class, () -> service.refreshToken("revoked"));
 
         RefreshToken expired = RefreshToken.builder()
                 .token("expired")
@@ -139,9 +131,9 @@ class AuthServiceImplTest {
                 .revoked(false)
                 .expiredAt(LocalDateTime.now().minusSeconds(1))
                 .build();
-        when(refreshTokenService.findToken("expired")).thenReturn(expired);
+        when(refreshTokenService.rotateRefreshToken("expired")).thenThrow(new TokenException("Token đã hết hạn"));
 
-        assertThrows(TokenException.class, () -> service.refreshToken(refresh("expired")));
+        assertThrows(TokenException.class, () -> service.refreshToken("expired"));
         verify(jwtTokenService, never()).generateAccessToken(any());
     }
 
@@ -161,10 +153,10 @@ class AuthServiceImplTest {
                 .revoked(false)
                 .expiredAt(LocalDateTime.now().plusDays(1))
                 .build();
-        when(refreshTokenService.findToken("refresh")).thenReturn(token);
+        when(refreshTokenService.rotateRefreshToken("refresh")).thenReturn(token);
         when(jwtTokenService.generateAccessToken(firstLoginUser)).thenReturn(new AccessTokenResult("access", 900));
 
-        var response = service.refreshToken(refresh("refresh"));
+        var response = service.refreshToken("refresh");
 
         assertEquals("access", response.getAccessToken());
         assertTrue(response.isRequiresFirstLoginSetup());
@@ -178,13 +170,10 @@ class AuthServiceImplTest {
                 .revoked(false)
                 .expiredAt(LocalDateTime.now().plusDays(1))
                 .build();
-        when(refreshTokenService.findToken("refresh")).thenReturn(token);
 
-        service.logout(logout("refresh"));
+        service.logout("refresh");
 
-        ArgumentCaptor<RefreshToken> captor = ArgumentCaptor.forClass(RefreshToken.class);
-        verify(refreshTokenRepository).save(captor.capture());
-        assertTrue(captor.getValue().getRevoked());
+        verify(refreshTokenService).revokeRefreshToken("refresh");
     }
 
     private LoginRequest login(String employeeCode, String password) {
@@ -194,15 +183,4 @@ class AuthServiceImplTest {
         return request;
     }
 
-    private RefreshTokenRequest refresh(String token) {
-        RefreshTokenRequest request = new RefreshTokenRequest();
-        request.setRefreshToken(token);
-        return request;
-    }
-
-    private LogoutRequest logout(String token) {
-        LogoutRequest request = new LogoutRequest();
-        request.setRefreshToken(token);
-        return request;
-    }
 }

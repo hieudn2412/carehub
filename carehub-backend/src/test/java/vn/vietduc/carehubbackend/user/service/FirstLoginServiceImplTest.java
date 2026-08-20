@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import vn.vietduc.carehubbackend.auth.entity.PasswordResetOtp;
 import vn.vietduc.carehubbackend.auth.repository.PasswordResetRepository;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.notification.config.MailProperties;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
@@ -39,6 +40,8 @@ class FirstLoginServiceImplTest {
     private SecurityUtils securityUtils;
     @Mock
     private EmailProducer emailProducer;
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     private FirstLoginServiceImpl service;
 
@@ -52,7 +55,8 @@ class FirstLoginServiceImplTest {
                 passwordEncoder,
                 securityUtils,
                 emailProducer,
-                new BrandedEmailRenderer(properties)
+                new BrandedEmailRenderer(properties),
+                refreshTokenService
         );
     }
 

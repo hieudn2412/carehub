@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.auth.repository.PasswordResetRepository;
 import vn.vietduc.carehubbackend.auth.service.PasswordResetService;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
 import vn.vietduc.carehubbackend.notification.messaging.EmailProducer;
@@ -30,6 +31,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final EmailProducer emailProducer;
     private final PasswordEncoder passwordEncoder;
     private final BrandedEmailRenderer emailRenderer;
+    private final RefreshTokenService refreshTokenService;
 
     @Transactional
     public void forgotPassword(
@@ -95,6 +97,9 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         String newPassword = passwordEncoder.encode(request.getNewPassword());
         user.setPassword(newPassword);
+        user.setLastChangePassword(LocalDateTime.now());
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
         otp.setUsed(true);
         userRepository.save(user);
         passwordResetRepository.save(otp);

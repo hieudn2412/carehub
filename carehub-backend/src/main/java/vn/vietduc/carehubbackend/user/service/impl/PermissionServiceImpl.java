@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.user.service.impl;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUpdatePermissionRequest;
@@ -11,6 +12,8 @@ import vn.vietduc.carehubbackend.user.entity.Permission;
 import vn.vietduc.carehubbackend.user.mapper.PermissionMapper;
 import vn.vietduc.carehubbackend.user.repository.PermissionRepository;
 import vn.vietduc.carehubbackend.user.repository.RolePermissionRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRoleRepository;
 import vn.vietduc.carehubbackend.user.service.PermissionService;
 
 import java.util.List;
@@ -23,6 +26,9 @@ public class PermissionServiceImpl implements PermissionService {
 
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService;
     private final PermissionMapper permissionMapper;
 
     @Override
@@ -98,6 +104,11 @@ public class PermissionServiceImpl implements PermissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Permission not found"));
         permission.setName(request.getName());
         permission.setCode(request.getCode());
+        userRoleRepository.findUsersByPermissionId(id).forEach(user -> {
+            user.bumpAuthVersion();
+            refreshTokenService.revokeAllUserTokens(user);
+            userRepository.save(user);
+        });
         return permissionMapper.toResponse(permissionRepository.save(permission));
     }
 }

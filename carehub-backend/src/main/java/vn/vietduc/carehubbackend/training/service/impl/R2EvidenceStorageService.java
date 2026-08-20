@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
+@Profile("!test")
 @RequiredArgsConstructor
 public class R2EvidenceStorageService implements EvidenceStorageService {
     private final S3Client s3Client;

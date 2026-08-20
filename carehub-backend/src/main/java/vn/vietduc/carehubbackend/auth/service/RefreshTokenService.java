@@ -6,6 +6,8 @@ import vn.vietduc.carehubbackend.user.entity.User;
 
 public interface RefreshTokenService {
     RefreshToken createRefreshToken(User user);
-    RefreshToken findToken(String token);
+    RefreshToken rotateRefreshToken(String credential);
+    void revokeRefreshToken(String credential);
     void revokeAllUserTokens(User user);
+    int cleanupExpiredSessions();
 }

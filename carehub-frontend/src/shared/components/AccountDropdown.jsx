@@ -19,6 +19,7 @@ function AccountDropdown({
   const containerRef = useRef(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -51,8 +52,14 @@ function AccountDropdown({
     if (isLoggingOut) return
 
     setIsLoggingOut(true)
-    await onLogout?.()
-    navigate(loginPath, { replace: true })
+    setLogoutError('')
+    try {
+      await onLogout?.()
+      navigate(loginPath, { replace: true })
+    } catch (error) {
+      setLogoutError(error?.message || 'Không thể đăng xuất. Vui lòng thử lại.')
+      setIsLoggingOut(false)
+    }
   }
 
   return (
@@ -86,6 +93,11 @@ function AccountDropdown({
             <span>Thông tin tài khoản</span>
           </button>
           <div className="account-dropdown__divider" />
+          {logoutError && (
+            <p className="account-dropdown__error" role="alert">
+              {logoutError}
+            </p>
+          )}
           <button
             type="button"
             className="account-dropdown__item account-dropdown__item--danger"

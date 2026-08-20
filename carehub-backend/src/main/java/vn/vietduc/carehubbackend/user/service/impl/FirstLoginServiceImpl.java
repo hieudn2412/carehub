@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.auth.entity.PasswordResetOtp;
 import vn.vietduc.carehubbackend.auth.repository.PasswordResetRepository;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
@@ -34,6 +35,7 @@ public class FirstLoginServiceImpl implements FirstLoginService {
     private final SecurityUtils securityUtils;
     private final EmailProducer emailProducer;
     private final BrandedEmailRenderer emailRenderer;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public void sendEmailVerificationOtp(SendEmailVerificationRequest request) {
@@ -102,6 +104,9 @@ public class FirstLoginServiceImpl implements FirstLoginService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setFirstLogin(false);
         user.setStatus(UserStatus.ACTIVE);
+        user.setLastChangePassword(LocalDateTime.now());
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
 
         otp.setUsed(true);
         userRepository.save(user);

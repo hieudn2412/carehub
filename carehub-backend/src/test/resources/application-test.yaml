@@ -25,8 +25,11 @@ app:
       - http://localhost:*
   jwt:
     secret: test-secret-key-test-secret-key-123456
+    refresh-secret: test-refresh-secret-key-test-refresh-123456
     access-token-expiration-minutes: 15
-    refresh-token-expiration-days: 7
+    refresh-token-expiration-days: 60
+    first-login-refresh-token-expiration-hours: 24
+    refresh-cookie-secure: true
   seed:
     enabled: false
     admin:

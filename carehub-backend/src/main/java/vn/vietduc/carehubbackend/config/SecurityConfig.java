@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.SecretKey;
@@ -35,6 +36,7 @@ import java.nio.charset.StandardCharsets;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final CustomJwtAuthenticationConverter converter;
+    private final AuthenticatedAccountValidationFilter authenticatedAccountValidationFilter;
 
     @Value("${app.api-prefix}")
     private String apiPrefix;
@@ -89,7 +91,8 @@ public class SecurityConfig {
                 .oauth2ResourceServer(
                         oauth2 -> oauth2.jwt(
                                 jwt -> jwt.decoder(jwtDecoder())
-                                        .jwtAuthenticationConverter(converter)));
+                                        .jwtAuthenticationConverter(converter)))
+                .addFilterAfter(authenticatedAccountValidationFilter, BearerTokenAuthenticationFilter.class);
         return http.build();
     }
 }

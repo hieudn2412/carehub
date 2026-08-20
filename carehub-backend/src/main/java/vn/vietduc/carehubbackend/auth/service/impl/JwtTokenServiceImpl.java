@@ -42,6 +42,8 @@ public class JwtTokenServiceImpl implements JwtTokenService {
                 .claim("roles", roleCodes)
                 .claim("permissions", permissionCodes)
                 .claim("employeeCode", user.getEmployeeCode())
+                .claim("auth_version", user.getAuthVersion())
+                .claim("first_login_setup", user.requiresFirstLoginSetup())
                 .issuedAt(now)
                 .expiresAt(now.plus(accessTokenExpiration, ChronoUnit.MINUTES))
                 .build();
