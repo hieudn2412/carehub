@@ -16,8 +16,8 @@ export const authApi = {
     return httpClient.post('/auth/login', payload)
   },
 
-  refreshToken(payload) {
-    return httpClient.post('/auth/refresh-token', payload)
+  refreshToken() {
+    return httpClient.post('/auth/refresh-token', {})
   },
 
   forgotPassword(payload) {
@@ -40,7 +40,7 @@ export const authApi = {
     })
   },
 
-  logout(payload) {
-    return httpClient.post('/auth/logout', payload)
+  logout() {
+    return httpClient.post('/auth/logout', {})
   },
 }

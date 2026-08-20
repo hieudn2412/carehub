@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AUTH_ROUTES } from '../constants/authRoutes.js'
 import { authApi } from '../api/authApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
-import { useAuthTokens } from '../hooks/useAuthTokens.js'
 import { getPostLoginRoute } from '../utils/authNavigation.js'
+import { useAuth } from '../context/AuthContext.jsx'
 import AuthShell from '../components/AuthShell.jsx'
 import BrandLogo from '../../../shared/components/BrandLogo.jsx'
 import FormField from '../../../shared/components/FormField.jsx'
@@ -25,7 +25,7 @@ function LoginScreen() {
   )
   const [errorMessage, setErrorMessage] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { saveTokens } = useAuthTokens()
+  const auth = useAuth()
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -43,7 +43,7 @@ function LoginScreen() {
         password,
       })
       const authData = response.data.data
-      saveTokens(authData)
+      auth.acceptAuthResponse(authData)
 
       if (rememberMe) {
         window.localStorage.setItem(REMEMBERED_EMPLOYEE_CODE_KEY, employeeCode.trim())
@@ -106,7 +106,7 @@ function LoginScreen() {
                 onChange={(event) => setRememberMe(event.target.checked)}
                 type="checkbox"
               />
-              <span>Ghi nhớ đăng nhập</span>
+              <span>Ghi nhớ mã nhân viên</span>
             </label>
             <Link className="text-button" to={AUTH_ROUTES.forgotPassword}>
               Quên mật khẩu?

@@ -8,6 +8,7 @@ import AdminHeader from '../features/admin/components/AdminHeader.jsx'
 import { tokenStorage } from '../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../shared/auth/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../features/auth/utils/authNavigation.js'
+import { AuthProvider } from '../features/auth/context/AuthContext.jsx'
 
 const appShellAdapter = {
   Sidebar,
@@ -27,7 +28,9 @@ function AppProviders({ children }) {
     <BrowserRouter>
       <AppShellAdapterProvider adapter={appShellAdapter}>
         <ToastProvider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ToastProvider>
       </AppShellAdapterProvider>
     </BrowserRouter>

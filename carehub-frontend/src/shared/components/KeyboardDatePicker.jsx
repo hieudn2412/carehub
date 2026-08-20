@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function KeyboardDatePicker({ value, onChange, min, max, className, id, ...props }) {
   const toDisplay = (val) => {
@@ -33,7 +33,7 @@ export default function KeyboardDatePicker({ value, onChange, min, max, classNam
 
   const handleInputChange = (e) => {
     let raw = e.target.value;
-    
+
     // Support setting value via ISO date string (yyyy-MM-dd) commonly used in tests
     if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
       const parts = raw.split('-');
@@ -54,12 +54,12 @@ export default function KeyboardDatePicker({ value, onChange, min, max, classNam
         raw = raw + '/';
       }
     }
-    
+
     // Prevent typing more than 10 characters
     if (raw.length > 10) {
       raw = raw.slice(0, 10);
     }
-    
+
     setInputValue(raw);
 
     // Validate and notify parent

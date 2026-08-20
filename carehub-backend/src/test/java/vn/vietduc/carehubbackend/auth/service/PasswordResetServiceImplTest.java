@@ -41,6 +41,9 @@ class PasswordResetServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private PasswordResetServiceImpl service;
     private User activeUser;
 
@@ -53,7 +56,8 @@ class PasswordResetServiceImplTest {
                 userRepository,
                 emailProducer,
                 passwordEncoder,
-                new BrandedEmailRenderer(mailProperties)
+                new BrandedEmailRenderer(mailProperties),
+                refreshTokenService
         );
         activeUser = User.builder()
                 .id(7L)
@@ -125,8 +129,10 @@ class PasswordResetServiceImplTest {
 
         assertEquals("new-hash", activeUser.getPassword());
         assertTrue(otp.isUsed());
+        assertEquals(1L, activeUser.getAuthVersion());
         verify(userRepository).save(activeUser);
         verify(passwordResetRepository).save(otp);
+        verify(refreshTokenService).revokeAllUserTokens(activeUser);
     }
 
     @Test

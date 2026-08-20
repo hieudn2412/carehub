@@ -95,13 +95,13 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
                 .isEqualTo("Mã nhân viên hoặc mật khẩu không chính xác");
     }
 
-    @DisplayName("L3-AUTH-05 | State-Conflict: LOCKED account with the correct password → 401 AUTH_001 'Tài khoản đã bị khóa'")
+    @DisplayName("L3-AUTH-05 | State-Conflict: LOCKED account with the correct password → 403 AUTH_ACCOUNT_DISABLED 'Tài khoản đã bị khóa'")
     @Test
     void lockedAccountCannotLogIn() {
         ResponseEntity<String> response = post(API + "/auth/login", null,
                 loginBody(lockedUser.getEmployeeCode(), PASSWORD));
 
-        assertError(response, HttpStatus.UNAUTHORIZED, "AUTH_001");
+        assertError(response, HttpStatus.FORBIDDEN, "AUTH_ACCOUNT_DISABLED");
         assertThat(json(response).get("message").asText()).isEqualTo("Tài khoản đã bị khóa");
     }
 
@@ -133,7 +133,7 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
         assertThat(get(API + "/me", newAccessToken).getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
-    @DisplayName("L3-AUTH-08 | Input-Domain-Invalid: refresh with a token that was never issued → 401 AUTH_001 'Refresh token không hợp lệ'")
+    @DisplayName("L3-AUTH-08 | Input-Domain-Invalid: refresh with a token that was never issued → 401 AUTH_SESSION_INVALID 'Refresh token không hợp lệ'")
     @Test
     void unknownRefreshTokenIsRejected() {
         ResponseEntity<String> response = post(API + "/auth/refresh-token", null,
@@ -141,11 +141,11 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
                 {"refreshToken":"not-a-real-token-%d"}
                 """.formatted(nextSeq()));
 
-        assertError(response, HttpStatus.UNAUTHORIZED, "AUTH_001");
+        assertError(response, HttpStatus.UNAUTHORIZED, "AUTH_SESSION_INVALID");
         assertThat(json(response).get("message").asText()).isEqualTo("Refresh token không hợp lệ");
     }
 
-    @DisplayName("L3-AUTH-09 | State-Conflict: refresh after logout → 401 AUTH_001 'Token đã bị thu hồi' and the row is revoked")
+    @DisplayName("L3-AUTH-09 | State-Conflict: refresh after logout → 401 AUTH_SESSION_INVALID 'Token đã bị thu hồi' and the row is revoked")
     @Test
     void refreshAfterLogoutIsRejected() {
         String refreshToken = data(post(API + "/auth/login", null,
@@ -159,9 +159,9 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
                 {"refreshToken":"%s"}
                 """.formatted(refreshToken));
 
-        assertError(response, HttpStatus.UNAUTHORIZED, "AUTH_001");
+        assertError(response, HttpStatus.UNAUTHORIZED, "AUTH_SESSION_INVALID");
         assertThat(json(response).get("message").asText()).isEqualTo("Token đã bị thu hồi");
-        assertThat(refreshTokenRepository.findByToken(refreshToken).orElseThrow().getRevoked()).isTrue();
+        assertThat(latestSessionFor(user).getRevoked()).isTrue();
     }
 
     @DisplayName("L3-AUTH-10 | Contract: /auth/logout is public and idempotent — the same refresh token can be logged out twice → 200")
@@ -176,7 +176,7 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
         assertOk(post(API + "/auth/logout", null, body));
         assertOk(post(API + "/auth/logout", null, body));
 
-        assertThat(refreshTokenRepository.findByToken(refreshToken).orElseThrow().getRevoked()).isTrue();
+        assertThat(latestSessionFor(user).getRevoked()).isTrue();
     }
 
     @DisplayName("L3-AUTH-11 | Input-Domain-Happy: POST /auth/forgot-password → 200, an unused OTP row exists and one email is queued")
@@ -285,5 +285,12 @@ class AuthApiSystemTest extends AbstractApiSystemTest {
                 .filter(item -> email.equals(item.getEmail()))
                 .max(java.util.Comparator.comparing(PasswordResetOtp::getId))
                 .orElseThrow(() -> new AssertionError("no OTP row for " + email));
+    }
+
+    private vn.vietduc.carehubbackend.auth.entity.RefreshToken latestSessionFor(User sessionUser) {
+        return refreshTokenRepository.findAll().stream()
+                .filter(token -> token.getUser().getId().equals(sessionUser.getId()))
+                .max(java.util.Comparator.comparing(vn.vietduc.carehubbackend.auth.entity.RefreshToken::getId))
+                .orElseThrow(() -> new AssertionError("no refresh session for " + sessionUser.getEmployeeCode()));
     }
 }

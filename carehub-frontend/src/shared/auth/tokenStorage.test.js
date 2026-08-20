@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { tokenStorage } from './tokenStorage.js'
 
 describe('tokenStorage', () => {
-  it('L1-FE-36 | EP-Valid: tokens round-trip through sessionStorage under the carehub.* keys', () => {
+  it('L1-FE-36 | EP-Valid: access state lives in memory only', () => {
     tokenStorage.setAccessToken('access-1')
     tokenStorage.setRefreshToken('refresh-1')
 
     expect(tokenStorage.getAccessToken()).toBe('access-1')
-    expect(tokenStorage.getRefreshToken()).toBe('refresh-1')
+    expect(tokenStorage.getRefreshToken()).toBeNull()
     expect(tokenStorage.hasAccessToken()).toBe(true)
-    expect(window.sessionStorage.getItem('carehub.accessToken')).toBe('access-1')
-    expect(window.sessionStorage.getItem('carehub.refreshToken')).toBe('refresh-1')
+    expect(window.sessionStorage.getItem('carehub.accessToken')).toBeNull()
+    expect(window.sessionStorage.getItem('carehub.refreshToken')).toBeNull()
   })
 
   it.each([[null], [undefined], ['']])(
@@ -27,13 +27,12 @@ describe('tokenStorage', () => {
     },
   )
 
-  it('L1-FE-38 | EP: requiresFirstLoginSetup is stored as the strings "true"/"false"', () => {
+  it('L1-FE-38 | EP: requiresFirstLoginSetup is stored in memory', () => {
     tokenStorage.setRequiresFirstLoginSetup(true)
-    expect(window.sessionStorage.getItem('carehub.requiresFirstLoginSetup')).toBe('true')
+    expect(window.sessionStorage.getItem('carehub.requiresFirstLoginSetup')).toBeNull()
     expect(tokenStorage.getRequiresFirstLoginSetup()).toBe(true)
 
     tokenStorage.setRequiresFirstLoginSetup(false)
-    expect(window.sessionStorage.getItem('carehub.requiresFirstLoginSetup')).toBe('false')
     expect(tokenStorage.getRequiresFirstLoginSetup()).toBe(false)
 
     window.sessionStorage.setItem('carehub.requiresFirstLoginSetup', 'TRUE')

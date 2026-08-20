@@ -41,9 +41,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestion
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
-import vn.vietduc.carehubbackend.training.entity.TrainingRecord;
-import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
-import vn.vietduc.carehubbackend.training.repository.TrainingActivityTypeRepository;
 import vn.vietduc.carehubbackend.training.repository.TrainingRecordRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.training.entity.ProfessionalField;
@@ -67,8 +64,8 @@ import static org.assertj.core.api.Assertions.within;
  * {@code EvaluationDashboardControllerIntegrationTest}).
  *
  * <p>Not {@code @Transactional}: L2-EXM-10 asserts the AFTER_COMMIT chain
- * (ExamAttemptPassedEvent → ExamPassedTrainingListener → training record + notification), which
- * only fires on a real commit. Fixtures use unique codes; assertions are id-scoped.
+ * (ExamAttemptPassedEvent → ExamPassedTrainingListener → notification), which only fires on a real
+ * commit. Fixtures use unique codes; assertions are id-scoped.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -111,8 +108,6 @@ class ExamAttemptFlowIntegrationTest {
     private UserRepository userRepository;
     @Autowired
     private TrainingRecordRepository trainingRecordRepository;
-    @Autowired
-    private TrainingActivityTypeRepository activityTypeRepository;
     @Autowired
     private NotificationRepository notificationRepository;
     @Autowired
@@ -293,14 +288,11 @@ class ExamAttemptFlowIntegrationTest {
 
     // ── submit + grading + AFTER_COMMIT chain ─────────────────────────────────
 
-    @DisplayName("L2-EXM-10 | Event Published: a passed submit must create the EXAM_PASSED training record and notification after commit (D33)")
+    @DisplayName("L2-EXM-10 | Event Published: a passed submit creates an EXAM_PASSED notification after commit")
     @Test
     void passedSubmitTriggersTheAfterCommitChain() {
-        // D33 (fixed): ExamPassedTrainingListener now runs in its own transaction
-        // (@Transactional REQUIRES_NEW). Without it the AFTER_COMMIT save reused the committed
-        // transaction's EntityManager, Hibernate handed back a DelayedPostInsertIdentifier and
-        // the resulting ClassCastException was swallowed by the listener's catch — so passing an
-        // exam never created the CME record nor the notification.
+        // ExamPassedTrainingListener runs AFTER_COMMIT in a new transaction. Passing an exam sends a
+        // congratulations notification, but it must not auto-convert into CME hours.
         ExamAssignment assignment = seedAssignment(1, null);
         ExamAttemptResponse started = attemptService.start(assignment.getId(), employee.getId());
 
@@ -315,15 +307,9 @@ class ExamAttemptFlowIntegrationTest {
 
         // AFTER_COMMIT listener effects (this class is not @Transactional, so the commit is real):
         String cmeRef = "EXAM_ASSIGNMENT:" + assignment.getId() + ":USER:" + employee.getId();
-        List<TrainingRecord> records = trainingRecordRepository.findAll().stream()
+        assertThat(trainingRecordRepository.findAll().stream()
                 .filter(r -> cmeRef.equals(r.getSourceReference()))
-                .toList();
-        assertThat(records).hasSize(1);
-        assertThat(records.get(0).getWorkflowStatus()).isEqualTo(TrainingRecordStatus.SUBMITTED);
-        assertThat(records.get(0).getDeclaredHours()).isEqualByComparingTo("1.0");
-        assertThat(records.get(0).getEmployee().getId()).isEqualTo(employee.getId());
-
-        assertThat(activityTypeRepository.findByCode("EXAM_PASSED")).isPresent();
+                .toList()).isEmpty();
 
         assertThat(notificationRepository.findAll().stream()
                 .filter(n -> n.getUser().getId().equals(employee.getId()))

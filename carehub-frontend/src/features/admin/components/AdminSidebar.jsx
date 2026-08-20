@@ -285,8 +285,12 @@ function AdminSidebar() {
   }
 
   const handleLogout = async () => {
-    await logoutUser()
-    navigate(AUTH_ROUTES.login, { replace: true })
+    try {
+      await logoutUser()
+      navigate(AUTH_ROUTES.login, { replace: true })
+    } catch (error) {
+      window.alert(error?.message || 'Không thể đăng xuất. Vui lòng thử lại.')
+    }
   }
 
   const handleGroupSelect = (group) => {

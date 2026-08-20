@@ -3,6 +3,7 @@ import React from 'react'
 import { cleanup } from '@testing-library/react'
 import { afterAll, afterEach, beforeAll, vi } from 'vitest'
 import { server } from './msw/server.js'
+import { tokenStorage } from '../shared/auth/tokenStorage.js'
 
 // Vitest transforms the project's JSX with the classic runtime. Production
 // modules intentionally use JSX without importing the React default, so expose
@@ -34,6 +35,7 @@ beforeAll(() => {
 afterEach(() => {
   cleanup()
   server.resetHandlers()
+  tokenStorage.clear()
   window.sessionStorage.clear()
   window.localStorage.clear()
   locationStub.pathname = '/'

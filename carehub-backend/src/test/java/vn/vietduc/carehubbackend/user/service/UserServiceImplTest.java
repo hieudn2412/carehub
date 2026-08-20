@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
@@ -66,6 +67,9 @@ class UserServiceImplTest {
     @Mock
     private SecurityUtils securityUtils;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private UserServiceImpl service;
     private Department department;
     private Role userRole;
@@ -84,7 +88,8 @@ class UserServiceImplTest {
                 roleRepository,
                 emailProducer,
                 securityUtils,
-                new BrandedEmailRenderer(mailProperties)
+                new BrandedEmailRenderer(mailProperties),
+                refreshTokenService
         );
         department = Department.builder().id(3L).departmentCode("ICU").name("ICU").build();
         userRole = Role.builder().code("USER").name("User").build();
@@ -154,7 +159,9 @@ class UserServiceImplTest {
         service.changePassword(changePassword("old-password", "new-password", "new-password"));
 
         assertEquals("new-hash", user.getPassword());
+        assertEquals(1L, user.getAuthVersion());
         verify(userRepository).save(user);
+        verify(refreshTokenService).revokeAllUserTokens(user);
 
         assertThrows(BadRequestException.class,
                 () -> service.changePassword(changePassword("old-password", "old-password", "old-password")));
