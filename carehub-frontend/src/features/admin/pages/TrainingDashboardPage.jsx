@@ -22,6 +22,7 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
@@ -318,7 +319,7 @@ function DashboardContent({ role }) {
             </label>
             <label>
               <span>Tính đến ngày</span>
-              <input type="date" value={filters.asOf} max={today} onChange={(event) => setFilters((current) => ({ ...current, asOf: event.target.value }))} />
+              <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
             </label>
             <label>
               <span>Trạng thái</span>

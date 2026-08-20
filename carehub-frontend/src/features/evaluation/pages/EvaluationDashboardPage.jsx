@@ -30,6 +30,7 @@ import { trainingApi } from '../../training/api/trainingApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function numberOrNull(value) {
@@ -253,8 +254,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                 id="exam-dashboard-filter-panel"
                 className="exam-dashboard__filter-panel admin-control-toolbar__panel"
               >
-                <Filter label="Từ ngày"><input type="date" value={filters.fromDate} onChange={(event) => setFilters({ ...filters, fromDate: event.target.value })} /></Filter>
-                <Filter label="Đến ngày"><input type="date" value={filters.toDate} onChange={(event) => setFilters({ ...filters, toDate: event.target.value })} /></Filter>
+                <Filter label="Từ ngày"><KeyboardDatePicker value={filters.fromDate} onChange={(val) => setFilters({ ...filters, fromDate: val })} /></Filter>
+                <Filter label="Đến ngày"><KeyboardDatePicker value={filters.toDate} onChange={(val) => setFilters({ ...filters, toDate: val })} /></Filter>
                 <Filter label="Khoa/phòng">
                   <SearchableSelect
                     value={filters.departmentId}

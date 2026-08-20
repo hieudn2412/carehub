@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import {
@@ -231,22 +233,20 @@ function FormPreviewPage() {
       }
       case 'DATE':
         return (
-          <input
-            type="date"
+          <KeyboardDatePicker
             className="fpp-input"
             style={{ width: '200px' }}
             value={val}
-            onChange={(e) => handleAnswerChange(q.questionKey, e.target.value)}
+            onChange={(val) => handleAnswerChange(q.questionKey, val)}
           />
         )
       case 'DATETIME':
         return (
-          <input
-            type="datetime-local"
+          <DateTimePicker24h
             className="fpp-input"
             style={{ width: '250px' }}
             value={val}
-            onChange={(e) => handleAnswerChange(q.questionKey, e.target.value)}
+            onChange={(val) => handleAnswerChange(q.questionKey, val)}
           />
         )
       default:

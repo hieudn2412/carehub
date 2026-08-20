@@ -8,6 +8,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -177,11 +178,11 @@ function CompetencyByFieldPage() {
                       </label>
                       <label className="admin-control-toolbar__field">
                         <span>Từ ngày</span>
-                        <input type="date" value={fromDate} max={toDate || undefined} onChange={e => setFromDate(e.target.value)} />
+                        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={val => setFromDate(val)} />
                       </label>
                       <label className="admin-control-toolbar__field">
                         <span>Đến ngày</span>
-                        <input type="date" value={toDate} min={fromDate || undefined} onChange={e => setToDate(e.target.value)} />
+                        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={val => setToDate(val)} />
                       </label>
                       <button className="evd-btn" type="button" onClick={loadData}>Áp dụng</button>
                     </AdminFilterDisclosure>

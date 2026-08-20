@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import {
   CalendarOutlined,
@@ -387,10 +388,9 @@ function TrainingEmployeeStatusDetailPage() {
                         </label>
                         <label>
                           <span>Tính đến ngày</span>
-                          <input
+                          <KeyboardDatePicker
                             aria-label="Tính tổng hợp đến ngày"
-                            onChange={event => updateStatusFilter('asOf', event.target.value)}
-                            type="date"
+                            onChange={val => updateStatusFilter('asOf', val)}
                             value={statusFilters.asOf}
                           />
                         </label>
@@ -554,11 +554,11 @@ function TrainingEmployeeStatusDetailPage() {
                               </label>
                               <label>
                                 <span>Từ ngày</span>
-                                <input type="date" value={filterDraft.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Lọc từ ngày" />
+                                <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Lọc từ ngày" />
                               </label>
                               <label>
                                 <span>Đến ngày</span>
-                                <input type="date" value={filterDraft.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Lọc đến ngày" />
+                                <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Lọc đến ngày" />
                               </label>
                               <label>
                                 <span>Lĩnh vực chuyên môn</span>

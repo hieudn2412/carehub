@@ -15,6 +15,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import { adminApi } from '../../../admin/api/adminApi.js'
@@ -481,7 +482,7 @@ function ManagerChecklistEvaluationPage() {
       case 'LINEAR_SCALE':
         return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} placeholder="Nhập số" type="number" value={value} />
       case 'DATE':
-        return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} type="date" value={value} />
+        return <KeyboardDatePicker className="check-eval-input check-eval-input--short" onChange={(val) => handleAnswerChange(question.questionKey, val)} value={value} />
       case 'TIME':
         return <input className="check-eval-input check-eval-input--short" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} type="time" value={value} />
       default:
