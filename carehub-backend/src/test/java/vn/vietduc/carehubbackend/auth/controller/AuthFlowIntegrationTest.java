@@ -30,7 +30,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.blankOrNullString;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,8 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * transaction. Fixtures therefore use unique employee codes and every assertion is scoped to ids
  * created by the test.
  *
- * <p>Divergences pinned here (docs/l1-unit-tests/SRS-CODE-DIVERGENCE.md):
- * D25 — refresh does not rotate the token; D26 — a soft-deleted user's refresh token keeps working;
+ * <p>Divergence still pinned here (docs/l1-unit-tests/SRS-CODE-DIVERGENCE.md):
  * D27 — the OTP email is published inside the transaction, so a rollback un-does the DB row but not
  * the message (dual write).
  */
@@ -96,32 +95,48 @@ class AuthFlowIntegrationTest {
         emailProducer.reset();
     }
 
-    @DisplayName("L2-AUTH-05 | Query Correctness: refresh does NOT rotate — the same token string comes back and no new row is created (D25)")
+    @DisplayName("L2-AUTH-05 | Query Correctness: refresh rotates the signed generation while keeping one session row")
     @Test
-    void refreshReturnsTheSameTokenWithoutRotation() throws Exception {
+    void refreshRotatesSignedTokenGeneration() throws Exception {
         String refreshToken = login();
 
-        for (int i = 0; i < 2; i++) {
-            mockMvc.perform(post("/api/v1/auth/refresh-token")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.data.refreshToken", is(refreshToken)));
-        }
+        String rotatedToken = JsonPath.read(
+                mockMvc.perform(post("/api/v1/auth/refresh-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.data.refreshToken", org.hamcrest.Matchers.not(refreshToken)))
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
+                "$.data.refreshToken");
 
-        // Pins D25: CLAUDE.md and the TDS describe refresh-token ROTATION, but two refreshes later
-        // the original credential is still the only one, still valid, and never superseded.
+        // The previous generation is still accepted briefly for concurrent tabs.
+        mockMvc.perform(post("/api/v1/auth/refresh-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.refreshToken", org.hamcrest.Matchers.not(blankOrNullString())));
+
+        mockMvc.perform(post("/api/v1/auth/refresh-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"%s\"}".formatted(rotatedToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.refreshToken", org.hamcrest.Matchers.not(rotatedToken)));
+
         assertThat(refreshTokenRepository.findAll().stream()
                 .filter(token -> token.getUser().getId().equals(user.getId()))
                 .toList())
                 .hasSize(1)
                 .allSatisfy(token -> {
-                    assertThat(token.getToken()).isEqualTo(refreshToken);
+                    assertThat(token.getToken()).isNull();
+                    assertThat(token.getSessionId()).isNotBlank();
+                    assertThat(token.getGeneration()).isGreaterThanOrEqualTo(2);
                     assertThat(token.getRevoked()).isFalse();
                 });
     }
 
-    @DisplayName("L2-AUTH-06 | Negative: an expired refresh token → 401 AUTH_001 'Token đã hết hạn'")
+    @DisplayName("L2-AUTH-06 | Negative: an expired refresh token → 401 AUTH_SESSION_INVALID 'Token đã hết hạn'")
     @Test
     void expiredRefreshTokenIsRejected() throws Exception {
         String tokenValue = "expired-" + employeeCode;
@@ -134,9 +149,9 @@ class AuthFlowIntegrationTest {
 
         mockMvc.perform(post("/api/v1/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"%s\"}".formatted(tokenValue)))
+                .content("{\"refreshToken\":\"%s\"}".formatted(tokenValue)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error_code", is("AUTH_001")))
+                .andExpect(jsonPath("$.error_code", is("AUTH_SESSION_INVALID")))
                 .andExpect(jsonPath("$.message", containsString("Token đã hết hạn")));
     }
 
@@ -173,21 +188,19 @@ class AuthFlowIntegrationTest {
         assertThat(passwordResetRepository.findById(row.getId()).orElseThrow().isUsed()).isFalse();
     }
 
-    @DisplayName("L2-AUTH-09 | Query Correctness: a soft-deleted user's refresh token still mints access tokens (D26)")
+    @DisplayName("L2-AUTH-09 | State-Conflict: a soft-deleted user's refresh token is rejected")
     @Test
-    void softDeletedUserCanStillRefresh() throws Exception {
+    void softDeletedUserCannotRefresh() throws Exception {
         String refreshToken = login();
 
         user.setDeleted(true);
         userRepository.save(user);
 
-        // Pins D26: refreshToken() checks user.getStatus() but never isDeleted, so deletion does not
-        // end the session. Recorded as a security divergence, not fixed here.
         mockMvc.perform(post("/api/v1/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.refreshToken", is(refreshToken)));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code", is("AUTH_ACCOUNT_DISABLED")));
     }
 
     @DisplayName("L2-AUTH-10 | Transaction Boundary: forgot-password inside a rolled-back transaction loses the OTP row but the email already left (D27)")

@@ -71,7 +71,15 @@ public class User extends BaseEntity {
     @Builder.Default
     private boolean isDeleted = false;
 
+    @Column(name = "auth_version", nullable = false)
+    @Builder.Default
+    private long authVersion = 0L;
+
     public boolean requiresFirstLoginSetup() {
         return firstLogin && (email == null || email.isBlank());
+    }
+
+    public void bumpAuthVersion() {
+        this.authVersion += 1;
     }
 }

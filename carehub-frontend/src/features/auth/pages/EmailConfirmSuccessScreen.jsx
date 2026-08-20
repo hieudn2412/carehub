@@ -5,11 +5,13 @@ import Icon from '../../../shared/components/Icon.jsx'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getDefaultAuthenticatedRoute } from '../utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
+import { useAuth } from '../context/AuthContext.jsx'
 import '../styles/auth/email-confirm.css'
 
 function EmailConfirmSuccessScreen() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { clearAuthState } = useAuth()
 
   useEffect(() => {
     if (!location.state?.completed) {
@@ -22,14 +24,14 @@ function EmailConfirmSuccessScreen() {
       return undefined
     }
 
-    tokenStorage.clear()
+    clearAuthState()
 
     const timer = setTimeout(() => {
       navigate(AUTH_ROUTES.login, { replace: true })
     }, 3000)
 
     return () => clearTimeout(timer)
-  }, [location.state?.completed, navigate])
+  }, [clearAuthState, location.state?.completed, navigate])
 
   return (
     <div className="email-confirm-page modal-bg">

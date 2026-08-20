@@ -1,8 +1,8 @@
 package vn.vietduc.carehubbackend.user.repository.custom;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -15,8 +15,10 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-@RequiredArgsConstructor
 public class UserRepositoryCustomImpl implements UserRepositoryCustom {
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Override
     public List<User> getAllUsersToExport(UserFilterRequest request) {
         StringBuilder sql = new StringBuilder("""
@@ -45,8 +47,6 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
         List<User> users = dataQuery.getResultList();
         return users;
     }
-
-    private final EntityManager entityManager;
 
     @Override
     public Page<User> searchUsers(
