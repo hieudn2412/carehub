@@ -26,7 +26,6 @@ import vn.vietduc.carehubbackend.user.entity.User;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 @Entity
 @Getter
@@ -71,12 +70,6 @@ public class TrainingRecord extends BaseEntity {
 
     @Column(name = "end_date")
     private LocalDate endDate;
-
-    @Column(name = "start_time")
-    private LocalTime startTime;
-
-    @Column(name = "end_time")
-    private LocalTime endTime;
 
     @Column(name = "duration_value", precision = 10, scale = 2)
     private BigDecimal durationValue;

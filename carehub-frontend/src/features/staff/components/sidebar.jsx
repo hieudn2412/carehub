@@ -8,7 +8,6 @@ import {
   HistoryOutlined,
   UserOutlined,
   LogoutOutlined,
-  TeamOutlined,
   CheckSquareOutlined,
   FileDoneOutlined,
   DownOutlined,
@@ -125,14 +124,12 @@ function Sidebar({ alertSummary = {} }) {
     {
       label: 'Theo dõi cá nhân',
       items: [
-        { icon: <ClockCircleOutlined />, label: 'Giờ đào tạo liên tục', path: '/staff/training' },
-        { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/staff/competency' },
-        ...(!isManager ? [
-          { icon: <FileDoneOutlined />, label: 'Thực hiện đánh giá được giao', path: '/staff/checklists' },
-        ] : []),
+        { icon: <ClockCircleOutlined />, label: 'Đào tạo liên tục', path: '/staff/training' },
+        { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/staff/competency' },
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
         ...(!isManager ? [
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
+          { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists' },
         ] : []),
         ...(!isManager && hasAssignedChecklist ? [
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
@@ -147,17 +144,16 @@ function Sidebar({ alertSummary = {} }) {
       {
         label: 'Đào tạo liên tục',
         items: [
-          { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/manager/reports/training-dashboard' },
-          { icon: <TeamOutlined />, label: 'Nhân sự & giờ đào tạo liên tục', path: '/manager/employees' },
+          { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/manager/reports/training-dashboard' },
         ],
       },
       {
-        label: 'Tuân thủ quy trình, quy định',
+        label: 'Giám sát tuân thủ',
         items: [
-          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/manager/reports/checklist-dashboard' },
-          { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo kỹ thuật', path: '/manager/compliance-by-technique' },
+          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/manager/reports/checklist-dashboard' },
+          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ theo kỹ thuật', path: '/manager/compliance-by-technique' },
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
-          { icon: <CheckSquareOutlined />, label: 'Thực hiện đánh giá', path: '/manager/quality/checklists' },
+          { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
@@ -323,7 +319,7 @@ function Sidebar({ alertSummary = {} }) {
       items: [
         {
           icon: <ClockCircleOutlined />,
-          label: 'Giờ đào tạo liên tục',
+          label: 'Đào tạo liên tục',
           route: '/staff/training',
         },
         {
@@ -333,7 +329,7 @@ function Sidebar({ alertSummary = {} }) {
         },
         {
           icon: <CheckSquareOutlined />,
-          label: 'Tuân thủ quy trình, quy định',
+          label: 'Giám sát tuân thủ',
           route: '/staff/competency',
         },
         {
@@ -356,12 +352,12 @@ function Sidebar({ alertSummary = {} }) {
     },
     ...(!isManager ? [
       {
-        title: 'Tuân thủ',
+        title: 'Giám sát tuân thủ',
         items: [
           ...(hasAssignedChecklist ? [
             {
               icon: <FileDoneOutlined />,
-              label: 'Bảng kiểm được giao',
+              label: 'Bảng kiểm giám sát',
               route: '/staff/checklists',
             },
             {

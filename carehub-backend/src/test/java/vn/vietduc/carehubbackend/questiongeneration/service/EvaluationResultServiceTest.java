@@ -11,7 +11,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptAnswer
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCellResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptCognitiveResultRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptFieldResultRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamPaperQuestionSnapshotRepository;
@@ -31,7 +30,7 @@ class EvaluationResultServiceTest {
     private final ExamAttemptCognitiveResultRepository cognitive = mock(ExamAttemptCognitiveResultRepository.class);
     private final ExamAttemptCellResultRepository cells = mock(ExamAttemptCellResultRepository.class);
     private final EvaluationResultService service = new EvaluationResultService(attempts, fields, cognitive, cells,
-            mock(ExamAttemptAnswerRepository.class), mock(ExamAttemptQuestionRepository.class),
+            mock(ExamAttemptAnswerRepository.class),
             mock(ExamPaperQuestionRepository.class), mock(ExamPaperQuestionSnapshotRepository.class));
 
     @Test

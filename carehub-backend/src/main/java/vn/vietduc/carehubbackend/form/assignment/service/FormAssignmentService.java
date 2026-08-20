@@ -17,6 +17,7 @@ import vn.vietduc.carehubbackend.form.repository.FormVersionRepository;
 import vn.vietduc.carehubbackend.user.entity.*;
 import vn.vietduc.carehubbackend.user.repository.*;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
+import vn.vietduc.carehubbackend.notification.service.NotificationService;
 
 import java.time.*;
 import java.util.*;
@@ -35,6 +36,7 @@ public class FormAssignmentService {
     private final FormAssignmentAccessService accessService;
     private final FormMapper formMapper;
     private final Clock clock;
+    private final NotificationService notificationService;
 
     @Transactional
     public FormAssignmentResponse create(CreateFormAssignmentRequest request) {
@@ -91,8 +93,23 @@ public class FormAssignmentService {
             newVersions.forEach(version -> assignment.getItems().add(FormAssignmentItem.builder()
                     .assignment(assignment).form(version.getForm()).formVersion(version)
                     .status(FormAssignmentStatus.ACTIVE).build()));
-            FormAssignmentResponse response = toResponse(assignmentRepository.saveAndFlush(assignment));
+            FormAssignment savedAssignment = assignmentRepository.saveAndFlush(assignment);
+            FormAssignmentResponse response = toResponse(savedAssignment);
             if (firstResponse == null) firstResponse = response;
+
+            List<Role> userRoles = userRoleRepository.findRolesByUserId(assignee.getId());
+            boolean isManager = userRoles.stream().anyMatch(role -> "MANAGER".equalsIgnoreCase(role.getCode()));
+            String deepLink = isManager ? "/manager/quality/checklists" : "/staff/checklists";
+            for (FormAssignmentItem item : savedAssignment.getItems()) {
+                notificationService.createInAppNotification(
+                        assignee.getId(),
+                        "INFO",
+                        "Bạn được phân công bảng kiểm mới",
+                        "Bạn đã được phân công thực hiện bảng kiểm: " + item.getFormVersion().getTitle(),
+                        deepLink,
+                        "form_assignment_item:" + item.getId()
+                );
+            }
         }
         if (firstResponse == null) throw new ConflictException("Không thể tạo phân công biểu mẫu");
         return firstResponse;

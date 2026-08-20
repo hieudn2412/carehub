@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 public record UpsertExamConfigRequest(
         @NotBlank String name,
         String description,
-        Long questionSetId,
         Integer totalQuestions,
         Integer timeLimitMinutes,
         Integer passingScore,

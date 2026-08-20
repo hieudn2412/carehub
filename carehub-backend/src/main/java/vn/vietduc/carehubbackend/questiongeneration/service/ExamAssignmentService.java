@@ -270,9 +270,6 @@ public class ExamAssignmentService {
                 assignment.getExamPaper().getId(),
                 assignment.getExamPaper().getCode(),
                 assignment.getExamPaper().getName(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 rows.size(),
                 (int) rows.stream().filter(row -> row.latestAttemptId() == null).count(),
                 (int) rows.stream().filter(row -> "IN_PROGRESS".equals(row.latestStatus())).count(),
@@ -756,9 +753,6 @@ public class ExamAssignmentService {
                 (assignment.getRetakeVariantPolicy() == null ? ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT : assignment.getRetakeVariantPolicy()).name(),
                 assignment.getAudience() == null ? null : assignment.getAudience().getId(),
                 assignment.getAudience() == null ? null : assignment.getAudience().getName(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getCode(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
                 QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
                 assignment.getAvailableFrom(),
@@ -880,8 +874,6 @@ public class ExamAssignmentService {
                 (assignment.getRetakeVariantPolicy() == null
                         ? ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT
                         : assignment.getRetakeVariantPolicy()).name(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getId(),
-                assignment.getProfessionalField() == null ? null : assignment.getProfessionalField().getName(),
                 assignment.getStatus().name(),
                 QuestionGenerationLabels.examAssignmentStatus(assignment.getStatus()),
                 assignment.getAvailableFrom(),

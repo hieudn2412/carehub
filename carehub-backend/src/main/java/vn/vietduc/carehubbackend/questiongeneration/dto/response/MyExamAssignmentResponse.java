@@ -13,8 +13,6 @@ public record MyExamAssignmentResponse(
         String examPaperName,
         Integer assignedVariantIndex,
         String retakeVariantPolicy,
-        Long professionalFieldId,
-        String professionalFieldName,
         String status,
         String statusText,
         LocalDateTime availableFrom,

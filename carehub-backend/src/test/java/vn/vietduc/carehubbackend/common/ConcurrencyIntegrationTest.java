@@ -25,13 +25,11 @@ import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CognitiveLevel;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionCategoryStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionType;
-import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionSet;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.AssignmentTargetType;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAssignmentStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamConfigStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamPaperStatus;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamResultVisibility;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionSetStatus;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAssignmentTargetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
@@ -42,7 +40,6 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintFiel
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamBlueprintCellRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionBankQuestionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
-import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionSetRepository;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamAttemptService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamPaperService;
 import vn.vietduc.carehubbackend.questiongeneration.service.ExamGenerationDeterminism;
@@ -116,8 +113,6 @@ class ConcurrencyIntegrationTest {
     private ExamPaperRepository paperRepository;
     @Autowired
     private ExamConfigRepository examConfigRepository;
-    @Autowired
-    private QuestionSetRepository questionSetRepository;
     @Autowired
     private ExamPaperService examPaperService;
     @Autowired
@@ -269,16 +264,9 @@ class ConcurrencyIntegrationTest {
     @DisplayName("L2-FLOW-03 | Concurrency: two simultaneous starts of the same exam target — the pessimistic lock serialises them into one attempt")
     @Test
     void doubleStartYieldsExactlyOneAttempt() throws Exception {
-        QuestionSet set = questionSetRepository.save(QuestionSet.builder()
-                .code("CONC-SET-%03d".formatted(seq))
-                .name("Concurrency set " + seq)
-                .status(QuestionSetStatus.ACTIVE)
-                .questionCount(1)
-                .build());
         var config = examConfigRepository.save(
                 vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig.builder()
                         .name("Concurrency config " + seq)
-                        .questionSet(set)
                         .totalQuestions(1)
                         .timeLimitMinutes(30)
                         .passingScore(70)
@@ -289,7 +277,6 @@ class ConcurrencyIntegrationTest {
                         .build());
         ExamPaper paper = paperRepository.save(ExamPaper.builder()
                 .examConfig(config)
-                .questionSet(set)
                 .code("CONC-PAPER-%03d".formatted(seq))
                 .name("Concurrency paper " + seq)
                 .status(ExamPaperStatus.PUBLISHED)
@@ -372,7 +359,6 @@ class ConcurrencyIntegrationTest {
                 .build());
         var config = examConfigRepository.save(vn.vietduc.carehubbackend.questiongeneration.entity.ExamConfig.builder()
                 .name("Direct generation config " + seq)
-                .questionSet(null)
                 .sourceScope("QUESTION_BANK")
                 .blueprintVersion(1)
                 .totalQuestions(1)

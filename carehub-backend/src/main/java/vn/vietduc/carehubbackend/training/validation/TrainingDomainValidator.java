@@ -2,24 +2,15 @@ package vn.vietduc.carehubbackend.training.validation;
 
 import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
-import vn.vietduc.carehubbackend.training.dto.request.RequirementFormRequest;
 import vn.vietduc.carehubbackend.training.dto.request.TrainingRecordFormRequest;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Set;
 
 @Component
 public class TrainingDomainValidator {
     private static final BigDecimal MIN_DIRECT_RECORD_HOURS = BigDecimal.valueOf(0.5);
     private static final BigDecimal MAX_DIRECT_RECORD_HOURS = BigDecimal.valueOf(999);
-    private static final Set<String> ALLOWED_MIME_TYPES = Set.of(
-            "image/jpeg",
-            "image/png",
-            "application/pdf"
-    );
-    private static final long MAX_EVIDENCE_BYTES = 5 * 1024 * 1024;
-
     public void validateRecordForm(TrainingRecordFormRequest request, boolean legacyImport) {
         LocalDate today = LocalDate.now();
         if (request.startDate() != null && request.startDate().isAfter(today)) {
@@ -30,13 +21,6 @@ public class TrainingDomainValidator {
         }
         if (request.startDate() != null && request.endDate() != null && request.endDate().isBefore(request.startDate())) {
             throw new BadRequestException("End date must be greater than or equal to start date");
-        }
-        if (request.startDate() != null
-                && (request.endDate() == null || request.endDate().isEqual(request.startDate()))
-                && request.startTime() != null
-                && request.endTime() != null
-                && request.endTime().isBefore(request.startTime())) {
-            throw new BadRequestException("End time must be greater than or equal to start time");
         }
         if (!legacyImport && request.declaredHours() != null) {
             if (request.declaredHours().compareTo(MIN_DIRECT_RECORD_HOURS) < 0) {
@@ -50,18 +34,4 @@ public class TrainingDomainValidator {
         }
     }
 
-    public void validateRequirementForm(RequirementFormRequest request) {
-        if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
-            throw new BadRequestException("Requirement effective_to must be greater than or equal to effective_from");
-        }
-    }
-
-    public void validateEvidenceMetadata(String mimeType, long fileSizeBytes) {
-        if (fileSizeBytes <= 0 || fileSizeBytes > MAX_EVIDENCE_BYTES) {
-            throw new BadRequestException("Evidence file size must be greater than 0 and not exceed 5 MB");
-        }
-        if (mimeType == null || mimeType.isBlank() || !ALLOWED_MIME_TYPES.contains(mimeType)) {
-            throw new BadRequestException("Loại file minh chứng phải là JPG, PNG hoặc PDF");
-        }
-    }
 }

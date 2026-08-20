@@ -14,6 +14,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import {
   Area,
   AreaChart,
@@ -573,20 +574,18 @@ export default function OverviewDashboard({
               </label>
               <label>
                 <span>Từ ngày</span>
-                <input
-                  type="date"
+                <KeyboardDatePicker
                   value={filters.fromDate}
                   max={filters.toDate}
-                  onChange={(event) => changeFilter('fromDate', event.target.value)}
+                  onChange={(val) => changeFilter('fromDate', val)}
                 />
               </label>
               <label>
                 <span>Đến ngày</span>
-                <input
-                  type="date"
+                <KeyboardDatePicker
                   value={filters.toDate}
                   min={filters.fromDate}
-                  onChange={(event) => changeFilter('toDate', event.target.value)}
+                  onChange={(val) => changeFilter('toDate', val)}
                 />
               </label>
               <label>
@@ -602,7 +601,7 @@ export default function OverviewDashboard({
                 <span>Nội dung</span>
                 <select value={filters.content} onChange={(event) => changeFilter('content', event.target.value)}>
                   <option value="all">Tất cả nội dung</option>
-                  <option value="training">Giờ đào tạo liên tục</option>
+                  <option value="training">Đào tạo liên tục</option>
                   <option value="compliance">Tỷ lệ tuân thủ chung</option>
                   <option value="knowledge">Trung bình điểm kiểm tra kiến thức</option>
                   <option value="skill">Trung bình điểm kiểm tra kỹ năng</option>

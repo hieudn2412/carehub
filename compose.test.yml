@@ -1,0 +1,81 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  backend:
+    build:
+      context: ./carehub-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./carehub-backend/.env.test
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      SERVER_PORT: 8081
+      DOCUMENT_STORAGE_PATH: /data/documents
+      E5_PRELOAD: "false"
+      VIETQUILL_PRELOAD: "false"
+    expose:
+      - "8081"
+    volumes:
+      - document_files:/data/documents
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    logging: *default-logging
+
+  frontend:
+    build:
+      context: ./carehub-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    restart: unless-stopped
+    expose:
+      - "8081"
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/health >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN is required}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - frontend
+      - backend
+    logging: *default-logging
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  document_files:
+  caddy_data:
+  caddy_config:

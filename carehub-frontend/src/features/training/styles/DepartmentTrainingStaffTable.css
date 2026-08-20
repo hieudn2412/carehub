@@ -1,0 +1,230 @@
+/* Nhân sự trong khoa — dùng chung cho dashboard đào tạo và trang danh sách nhân sự.
+   Toàn bộ class mang tiền tố dtst- để không đè style của trang chứa nó. */
+
+.dtst {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dtst__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.dtst__search {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1 1 240px;
+  align-items: center;
+}
+
+.dtst__search .anticon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.dtst__search input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 12px 9px 34px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+}
+
+.dtst__search input:focus-visible,
+.dtst__select:focus-visible {
+  border-color: #10a77d;
+  outline: 2px solid rgba(16, 167, 125, 0.18);
+  outline-offset: 1px;
+}
+
+.dtst__select {
+  padding: 9px 12px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  font-size: 13px;
+}
+
+.dtst__state {
+  margin: 0;
+  padding: 34px 12px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+
+.dtst__state--error {
+  color: #ef4444;
+}
+
+.dtst__scroll {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid #e6edf4;
+  border-radius: 12px;
+}
+
+.dtst__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dtst__table th,
+.dtst__table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dtst__table thead th {
+  background: #f7fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dtst__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.dtst__table tbody tr:hover td {
+  background: #f9fbfd;
+}
+
+.dtst__code {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.dtst__name {
+  color: #0f172a;
+  font-weight: 600;
+  white-space: normal;
+}
+
+.dtst__hours {
+  font-size: 13px;
+}
+
+.dtst__hours--green { color: #0f9d76; }
+.dtst__hours--red { color: #ef4444; }
+.dtst__hours--amber { color: #d97706; }
+.dtst__hours--gray { color: #64748b; }
+
+.dtst__badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dtst__badge--green { background: #e7f7f1; color: #0f7a5e; }
+.dtst__badge--red { background: #fdecec; color: #c53434; }
+.dtst__badge--amber { background: #fdf2e2; color: #a96410; }
+.dtst__badge--gray { background: #eef2f7; color: #64748b; }
+
+.dtst__col-action {
+  width: 76px;
+  text-align: center;
+}
+
+.dtst__view {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #d6e6df;
+  border-radius: 9px;
+  background: #f2fbf8;
+  color: #0f9d76;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.dtst__view:hover {
+  border-color: #0f9d76;
+  background: #e3f6ef;
+}
+
+.dtst__view:focus-visible {
+  outline: 2px solid rgba(16, 167, 125, 0.35);
+  outline-offset: 2px;
+}
+
+/* Mobile: mỗi dòng thành một thẻ, bỏ cuộn ngang */
+@media (max-width: 768px) {
+  .dtst__scroll {
+    overflow-x: visible;
+    border: 0;
+  }
+
+  .dtst__table,
+  .dtst__table tbody,
+  .dtst__table tr,
+  .dtst__table td {
+    display: block;
+    width: 100%;
+  }
+
+  .dtst__table thead {
+    display: none;
+  }
+
+  .dtst__table tr {
+    position: relative;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 1px solid #e6edf4;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .dtst__table tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .dtst__table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 0;
+    white-space: normal;
+  }
+
+  .dtst__table td::before {
+    color: #94a3b8;
+    content: attr(data-label);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .dtst__table td.dtst__col-action {
+    width: auto;
+    justify-content: flex-end;
+    padding-top: 8px;
+  }
+
+  .dtst__table td.dtst__col-action::before {
+    content: none;
+  }
+}

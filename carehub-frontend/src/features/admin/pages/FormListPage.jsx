@@ -25,6 +25,7 @@ import {
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
@@ -1318,10 +1319,9 @@ function FormListPage() {
                   <div className="flp-assignment-validity">
                     <label className="flp-assignment-field">
                       <span>Hiệu lực từ</span>
-                      <input
+                      <DateTimePicker24h
                         disabled={assignmentSubmitting}
-                        onChange={(event) => setAssignmentValidFrom(event.target.value)}
-                        type="datetime-local"
+                        onChange={setAssignmentValidFrom}
                         value={assignmentValidFrom}
                       />
                       <small>Bỏ trống để có hiệu lực ngay.</small>
@@ -1329,11 +1329,9 @@ function FormListPage() {
 
                     <label className="flp-assignment-field">
                       <span>Hiệu lực đến</span>
-                      <input
+                      <DateTimePicker24h
                         disabled={assignmentSubmitting}
-                        min={assignmentValidFrom || undefined}
-                        onChange={(event) => setAssignmentValidUntil(event.target.value)}
-                        type="datetime-local"
+                        onChange={setAssignmentValidUntil}
                         value={assignmentValidUntil}
                       />
                       <small>Bỏ trống nếu không có ngày hết hạn.</small>

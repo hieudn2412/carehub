@@ -80,6 +80,36 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("departmentId") Long departmentId,
             Pageable pageable);
 
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            ORDER BY u.name ASC, u.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            """)
+    Page<User> searchActiveFormSubjectsInDepartments(
+            @Param("keyword") String keyword,
+            @Param("excludedUserId") Long excludedUserId,
+            @Param("departmentIds") Collection<Long> departmentIds,
+            Pageable pageable);
+
     @Query("""
             SELECT u.department.id AS departmentId, COUNT(u.id) AS employeeCount
             FROM User u
@@ -185,32 +215,6 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
               AND UPPER(u.employeeCode) IN :employeeCodes
             """)
     List<User> findActiveByNormalizedEmployeeCodes(@Param("employeeCodes") Collection<String> employeeCodes);
-
-    @Query("""
-            SELECT COUNT(u)
-            FROM User u
-            WHERE u.isDeleted = false
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:positionId IS NULL OR u.position.id = :positionId)
-            """)
-    long countActiveTrainingRequirementCandidates(
-            @Param("departmentId") Long departmentId,
-            @Param("positionId") Long positionId
-    );
-
-    @Query("""
-            SELECT COUNT(u)
-            FROM User u
-            WHERE u.isDeleted = false
-              AND u.department.id IN :applicableDepartmentIds
-              AND (:departmentId IS NULL OR u.department.id = :departmentId)
-              AND (:positionId IS NULL OR u.position.id = :positionId)
-            """)
-    long countScopedTrainingRequirementCandidates(
-            @Param("applicableDepartmentIds") Collection<Long> applicableDepartmentIds,
-            @Param("departmentId") Long departmentId,
-            @Param("positionId") Long positionId
-    );
 
     @EntityGraph(attributePaths = {"department", "position"})
     @Query("""

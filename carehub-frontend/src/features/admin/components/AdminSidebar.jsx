@@ -55,16 +55,16 @@ const navSections = [
   {
     label: 'ĐÀO TẠO LIÊN TỤC',
     items: [
-      { icon: <BookOutlined />, label: 'Giờ đào tạo liên tục', path: '/training/employees' },
+      { icon: <BookOutlined />, label: 'Đào tạo liên tục', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
       { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
       { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
   {
-    label: 'TUÂN THỦ QUY TRÌNH, QUY ĐỊNH',
+    label: 'GIÁM SÁT TUÂN THỦ',
     items: [
-      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/admin/quality/checklists' },
+      { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
       { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
     ],
@@ -85,7 +85,6 @@ const navSections = [
         requiredPermissions: [
           EVALUATION_PERMISSION.questionAuthor,
           EVALUATION_PERMISSION.questionReviewer,
-          EVALUATION_PERMISSION.questionSetManager,
         ],
       },
       {
@@ -121,10 +120,10 @@ const navSections = [
   {
     label: 'DASHBOARD & BÁO CÁO THỐNG KÊ',
     items: [
-      { icon: <BarChartOutlined />, label: 'Giờ đào tạo liên tục', path: '/admin/reports/training-dashboard' },
+      { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/admin/reports/training-dashboard' },
       { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định', path: '/admin/reports/checklist-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Tuân thủ quy trình, quy định theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
+      { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/admin/reports/checklist-dashboard' },
+      { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ theo nhân viên', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
         label: 'Chất lượng chăm sóc',

@@ -11,10 +11,17 @@ import vn.vietduc.carehubbackend.exception.ResourceNotFoundException;
 import vn.vietduc.carehubbackend.exception.ForbiddenException;
 import vn.vietduc.carehubbackend.form.subject.dto.FormSubjectUserResponse;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentAccessService;
+import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentItem;
 import vn.vietduc.carehubbackend.form.entity.enums.FormSubjectType;
+import vn.vietduc.carehubbackend.form.compliance.entity.FormComplianceTarget;
+import vn.vietduc.carehubbackend.form.compliance.repository.FormComplianceTargetRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -22,17 +29,18 @@ public class FormSubjectService {
     private final UserRepository userRepository;
     private final SecurityUtils securityUtils;
     private final FormAssignmentAccessService assignmentAccessService;
+    private final FormComplianceTargetRepository complianceTargetRepository;
 
     @Transactional(readOnly = true)
     public FormSubjectUserResponse findByEmployeeCode(Long assignmentItemId, String employeeCode) {
-        requireSearchAccess(assignmentItemId);
+        FormAssignmentItem item = requireSearchAccess(assignmentItemId);
         long actorId = securityUtils.getCurrentUserId();
-        Long departmentId = evaluatorDepartmentId(actorId);
+        Collection<Long> allowedDeptIds = determineAllowedDepartmentIds(item, actorId);
         User target = userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalse(employeeCode.trim())
                 .filter(user -> user.getStatus() == vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE)
                 .filter(user -> !user.getId().equals(actorId))
-                .filter(user -> departmentId == null || (user.getDepartment() != null
-                        && departmentId.equals(user.getDepartment().getId())))
+                .filter(user -> allowedDeptIds == null || (user.getDepartment() != null
+                        && allowedDeptIds.contains(user.getDepartment().getId())))
                 .orElseThrow(this::notFound);
         return FormSubjectUserResponse.builder()
                 .userId(target.getId())
@@ -43,22 +51,43 @@ public class FormSubjectService {
 
     @Transactional(readOnly = true)
     public Page<FormSubjectUserResponse> search(Long assignmentItemId, String keyword, Pageable pageable) {
-        requireSearchAccess(assignmentItemId);
+        FormAssignmentItem item = requireSearchAccess(assignmentItemId);
         long actorId = securityUtils.getCurrentUserId();
-        Long departmentId = evaluatorDepartmentId(actorId);
+        Collection<Long> allowedDeptIds = determineAllowedDepartmentIds(item, actorId);
         String normalizedKeyword = keyword == null || keyword.isBlank()
                 ? null
                 : "%" + keyword.trim().toLowerCase() + "%";
-        return userRepository.searchActiveFormSubjects(normalizedKeyword, actorId, departmentId, pageable)
+        return userRepository.searchActiveFormSubjectsInDepartments(normalizedKeyword, actorId, allowedDeptIds, pageable)
                 .map(this::toResponse);
     }
 
-    private void requireSearchAccess(Long assignmentItemId) {
-        if (isAdmin()) return;
+    private Collection<Long> determineAllowedDepartmentIds(FormAssignmentItem item, long actorId) {
+        if (isAdmin()) {
+            return null;
+        }
+        User actor = userRepository.findByIdAndIsDeletedFalse(actorId)
+                .orElseThrow(() -> new ForbiddenException("Không tìm thấy tài khoản người đánh giá hiện tại"));
+        if (actor.getDepartment() == null) {
+            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
+        }
+        
+        // When assigned, evaluator is allowed to evaluate all departments
+        if (item != null) {
+            return null;
+        }
+        
+        Set<Long> allowedDepartmentIds = new HashSet<>();
+        allowedDepartmentIds.add(actor.getDepartment().getId());
+        return allowedDepartmentIds;
+    }
+
+    private FormAssignmentItem requireSearchAccess(Long assignmentItemId) {
+        if (isAdmin()) return null;
         if (assignmentItemId == null) throw notFound();
         var item = assignmentAccessService.requireActiveOwnedItem(
                 assignmentItemId, securityUtils.getCurrentUserId());
         if (item.getForm().getSubjectType() != FormSubjectType.USER) throw notFound();
+        return item;
     }
 
     private FormSubjectUserResponse toResponse(User target) {
@@ -77,15 +106,7 @@ public class FormSubjectService {
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
-    private Long evaluatorDepartmentId(long actorId) {
-        if (isAdmin()) return null;
-        User actor = userRepository.findByIdAndIsDeletedFalse(actorId)
-                .orElseThrow(() -> new ForbiddenException("Không tìm thấy tài khoản người đánh giá hiện tại"));
-        if (actor.getDepartment() == null) {
-            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
-        }
-        return actor.getDepartment().getId();
-    }
+
 
     private ResourceNotFoundException notFound() {
         return new ResourceNotFoundException("Form subject user not found");

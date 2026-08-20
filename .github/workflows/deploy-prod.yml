@@ -1,0 +1,26 @@
+name: Deploy Production Environment
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            cd /opt/carehub/carehub
+            git fetch origin production
+            git checkout production
+            git pull origin production
+            docker compose --env-file ./carehub-backend/.env.prod -f compose.prod.yml up -d --build
+            docker image prune -f

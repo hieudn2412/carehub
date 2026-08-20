@@ -20,20 +20,4 @@ public record TrainingRecordSearchRequest(
         Long departmentId,
         TrainingSourceType sourceType
 ) {
-    public TrainingRecordSearchRequest(
-            String keyword,
-            LocalDate dateFrom,
-            LocalDate dateTo,
-            Long activityTypeId,
-            Long professionalFieldId,
-            TrainingRecordStatus workflowStatus,
-            Boolean hasEvidence,
-            EvidenceModerationStatus moderationStatus,
-            Long employeeId,
-            Long departmentId,
-            TrainingSourceType sourceType
-    ) {
-        this(keyword, null, dateFrom, dateTo, activityTypeId, professionalFieldId, workflowStatus,
-                hasEvidence, moderationStatus, employeeId, departmentId, sourceType);
-    }
 }

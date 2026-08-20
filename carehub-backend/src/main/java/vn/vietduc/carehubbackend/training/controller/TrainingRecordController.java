@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,8 +43,8 @@ public class TrainingRecordController {
     public ResponseEntity<ApiResponse<PageResponse<TrainingRecordListResponse>>> list(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String titleKeyword,
-            @RequestParam(required = false) LocalDate dateFrom,
-            @RequestParam(required = false) LocalDate dateTo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
             @RequestParam(required = false) Long activityTypeId,
             @RequestParam(required = false) Long professionalFieldId,
             @RequestParam(required = false) TrainingRecordStatus workflowStatus,

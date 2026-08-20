@@ -4,17 +4,10 @@ import org.springframework.stereotype.Component;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.training.enums.TrainingRecordStatus;
 
-import java.util.EnumSet;
-import java.util.Set;
-
 @Component
 public class TrainingRecordStateMachine {
-    private static final Set<TrainingRecordStatus> TERMINAL_STATUSES = EnumSet.of(
-            TrainingRecordStatus.CANCELLED
-    );
-
     public boolean canTransition(TrainingRecordStatus from, TrainingRecordStatus to, boolean adminActor) {
-        if (from == null || to == null || from == to || TERMINAL_STATUSES.contains(from)) {
+        if (from == null || to == null || from == to || from == TrainingRecordStatus.CANCELLED) {
             return false;
         }
 

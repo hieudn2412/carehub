@@ -201,7 +201,6 @@ function AppRouter() {
       <Route path="/admin/evaluation/document-question-jobs/:jobId" element={evaluationElement(<DocumentQuestionJobReviewPage />)} />
       <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={evaluationElement(<ParaphraseJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={evaluationElement(<QuestionCategoryListPage />)} />
-      <Route path="/admin/evaluation/question-sets/*" element={<Navigate to="/admin/evaluation/question-bank" replace />} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />
       <Route path="/admin/evaluation/question-bank/:id/edit" element={evaluationElement(<QuestionFormPage />)} />
