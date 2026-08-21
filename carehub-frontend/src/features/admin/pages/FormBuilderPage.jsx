@@ -59,6 +59,13 @@ const EMPLOYEE_CODE_SUBJECT_SELECTOR = {
   readOnly: true,
 }
 const DEFAULT_CRITICAL_WEIGHT_PERCENT = 60
+const DEFAULT_CHECKLIST_CHOICE_OPTIONS = [
+  { value: 'NOT_PERFORMED', label: 'Không thực hiện', scoreValue: -1 },
+  { value: 'PERFORMED_NOT_ACHIEVED', label: 'Thực hiện nhưng không đạt', scoreValue: 0 },
+  { value: 'ACHIEVED', label: 'Đạt', scoreValue: 1 },
+  { value: 'GOOD', label: 'Tốt', scoreValue: 1.2 },
+  { value: 'VERY_GOOD', label: 'Rất tốt', scoreValue: 1.5 },
+]
 
 function normalizeCriticalWeightPercent(value) {
   const parsed = Number(value)
@@ -135,15 +142,17 @@ function uuidv4() {
   })
 }
 
-function createDefaultQuestion() {
-  const defaultOptions = [
-    { value: 'NOT_PERFORMED', label: 'Không thực hiện', scoreValue: -1 },
-    { value: 'PERFORMED_NOT_ACHIEVED', label: 'Thực hiện nhưng không đạt', scoreValue: 0 },
-    { value: 'ACHIEVED', label: 'Đạt', scoreValue: 1 },
-    { value: 'GOOD', label: 'Tốt', scoreValue: 1.2 },
-    { value: 'VERY_GOOD', label: 'Rất tốt', scoreValue: 1.5 },
-  ]
+function createDefaultQuestionOptions() {
+  return DEFAULT_CHECKLIST_CHOICE_OPTIONS.map((option, index) => ({
+    optionKey: uuidv4(),
+    ...option,
+    compliant: option.scoreValue > 0,
+    excludeFromDenominator: false,
+    displayOrder: index,
+  }))
+}
 
+function createDefaultQuestion() {
   return {
     questionKey: uuidv4(),
     code: `Q_${Date.now()}`,
@@ -158,13 +167,7 @@ function createDefaultQuestion() {
     weight: 1,
     validationConfig: null,
     displayConfig: null,
-    options: defaultOptions.map((option, index) => ({
-        optionKey: uuidv4(),
-        ...option,
-        compliant: option.scoreValue > 0,
-        excludeFromDenominator: false,
-        displayOrder: index,
-      })),
+    options: createDefaultQuestionOptions(),
   }
 }
 
@@ -544,7 +547,7 @@ function FormBuilderPage() {
 
     if (field === 'fieldType') {
       if (CHOICE_FIELD_TYPES.includes(value) && (!q.options || q.options.length === 0)) {
-        nextQuestion.options = createDefaultQuestion().options
+        nextQuestion.options = createDefaultQuestionOptions()
       }
 
       if (!SCORABLE_FIELD_TYPES.includes(value)) {
@@ -1285,7 +1288,8 @@ function FormBuilderPage() {
                                           className="fbp-btn-add-opt"
                                           onClick={() => handleAddOption(secIdx, itemIdx)}
                                         >
-                                          + Thêm lựa chọn
+                                          <PlusOutlined />
+                                          <span>Thêm lựa chọn</span>
                                         </button>
                                       </div>
 
@@ -1355,7 +1359,7 @@ function FormBuilderPage() {
                           onClick={() => handleAddItem(secIdx)}
                           type="button"
                         >
-                          <PlusOutlined /> Thêm câu hỏi / phần tử mới
+                          <PlusOutlined /> Thêm câu hỏi mới
                         </button>
                       </div>
                     ))}

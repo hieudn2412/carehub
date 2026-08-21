@@ -181,9 +181,21 @@ function FormVersionAssignmentModal({ form, onClose, onAssignmentCountChange }) 
   const availableUsers = useMemo(() => (
     users.filter((user) => !assignedUserIds.has(String(user.id)))
   ), [assignedUserIds, users])
-  const validSelectedUserIds = selectedUserIds.filter((id) => (
+  const validSelectedUserIds = useMemo(() => selectedUserIds.filter((id) => (
     availableUsers.some((user) => String(user.id) === String(id))
-  ))
+  )), [availableUsers, selectedUserIds])
+  const selectedUserOptions = useMemo(() => validSelectedUserIds
+    .map((id) => users.find((user) => String(user.id) === String(id)))
+    .filter(Boolean)
+    .map((user) => ({
+      value: user.id,
+      label: user.fullName || user.name || user.employeeCode,
+      description: user.employeeCode || 'Chưa có mã nhân viên',
+    })), [users, validSelectedUserIds])
+
+  const removeSelectedUser = (userId) => {
+    setSelectedUserIds((current) => current.filter((id) => String(id) !== String(userId)))
+  }
 
   const submitAssignment = async (event) => {
     event.preventDefault()
@@ -288,6 +300,8 @@ function FormVersionAssignmentModal({ form, onClose, onAssignmentCountChange }) 
                       description: user.employeeCode,
                     }))}
                     placeholder="Tìm theo tên hoặc mã nhân viên..."
+                    selectedOptions={selectedUserOptions}
+                    showSelectedChips={false}
                     value={validSelectedUserIds}
                   />
                 </div>
@@ -298,6 +312,26 @@ function FormVersionAssignmentModal({ form, onClose, onAssignmentCountChange }) 
                     onChange={setValidUntil}
                     value={validUntil}
                   />
+                </div>
+                <div className="aqh-manager-selected-box" aria-label="Danh sách người nhận đã chọn">
+                  <div className="aqh-manager-selected-box__header">
+                    <span>Đã chọn</span>
+                    <strong>{selectedUserOptions.length}</strong>
+                  </div>
+                  {selectedUserOptions.length > 0 ? (
+                    <div className="aqh-manager-selected-box__list">
+                      {selectedUserOptions.map((user) => (
+                        <article key={user.value}>
+                          <span className="aqh-manager-selected-box__identity">
+                            <strong>{user.label}</strong>
+                          </span>
+                          <button type="button" aria-label={`Bỏ chọn ${user.label}`} onClick={() => removeSelectedUser(user.value)}>×</button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p>Chưa chọn người nhận nào.</p>
+                  )}
                 </div>
                 <button
                   className="aqh-manager-assign__submit"

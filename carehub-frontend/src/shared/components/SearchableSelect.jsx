@@ -16,6 +16,7 @@ function SearchableSelect({
   onChange,
   onSearch,
   selectedOption: selectedOptionProp,
+  selectedOptions: selectedOptionsProp = [],
   placeholder,
   searchPlaceholder = 'Nhập để tìm kiếm...',
   emptyMessage = 'Không tìm thấy kết quả phù hợp',
@@ -23,6 +24,7 @@ function SearchableSelect({
   loadingMessage = 'Đang tải dữ liệu...',
   disabled = false,
   multiple = false,
+  showSelectedChips = true,
   ariaLabel,
   id,
 }) {
@@ -40,6 +42,19 @@ function SearchableSelect({
     [multiple, value],
   )
   const selectedValueSet = useMemo(() => new Set(normalizedValues), [normalizedValues])
+  const selectedOptionMap = useMemo(() => {
+    const map = new Map()
+    options.forEach((option) => map.set(String(option.value), option))
+    if (Array.isArray(selectedOptionsProp)) {
+      selectedOptionsProp.forEach((option) => map.set(String(option.value), option))
+    }
+    return map
+  }, [options, selectedOptionsProp])
+  const selectedOptions = useMemo(() => (
+    multiple
+      ? normalizedValues.map((selectedValue) => selectedOptionMap.get(String(selectedValue)) || { value: selectedValue, label: selectedValue })
+      : []
+  ), [multiple, normalizedValues, selectedOptionMap])
 
   const selectedOption = useMemo(
     () => (multiple
@@ -98,6 +113,8 @@ function SearchableSelect({
           ? normalizedValues.filter((selectedValue) => selectedValue !== optionValue)
           : [...normalizedValues, optionValue],
       )
+      setQuery('')
+      onSearch?.('')
       setActiveIndex(-1)
       setIsOpen(true)
       window.setTimeout(() => inputRef.current?.focus(), 0)
@@ -107,6 +124,12 @@ function SearchableSelect({
     onChange(String(option.value))
     setIsOpen(false)
     setQuery('')
+    setActiveIndex(-1)
+  }
+
+  const removeSelectedOption = (optionValue) => {
+    if (!multiple || disabled) return
+    onChange(normalizedValues.filter((selectedValue) => selectedValue !== String(optionValue)))
     setActiveIndex(-1)
   }
 
@@ -166,7 +189,9 @@ function SearchableSelect({
       autoComplete="off"
       disabled={disabled}
       value={multiple || isOpen ? query : (selectedOption?.label || '')}
-      placeholder={!multiple && isOpen ? searchPlaceholder : effectivePlaceholder}
+      placeholder={multiple
+        ? selectedOptions.length > 0 ? searchPlaceholder : effectivePlaceholder
+        : isOpen ? searchPlaceholder : effectivePlaceholder}
       onClick={multiple ? undefined : openDropdown}
       onFocus={openDropdown}
       onChange={(event) => {
@@ -189,6 +214,23 @@ function SearchableSelect({
         <div className="searchable-select__control" onClick={openDropdown}>
           <div className="searchable-select__input-wrap">
             <SearchOutlined className="searchable-select__search-icon" aria-hidden="true" />
+            {showSelectedChips && selectedOptions.map((option) => (
+              <span className="searchable-select__chip" key={`selected-${option.value}`}>
+                <span>{option.label}</span>
+                <button
+                  type="button"
+                  aria-label={`Bỏ chọn ${option.label}`}
+                  disabled={disabled}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    removeSelectedOption(option.value)
+                  }}
+                  onMouseDown={(event) => event.preventDefault()}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
             {inputElement}
           </div>
           <DownOutlined className="searchable-select__arrow" aria-hidden="true" />

@@ -396,9 +396,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const availableManagers = useMemo(() => (
     managerUsers.filter((manager) => !assignedManagerIds.has(String(manager.id)))
   ), [assignedManagerIds, managerUsers])
-  const effectiveSelectedManagerIds = selectedManagerIds.filter((id) => (
+  const effectiveSelectedManagerIds = useMemo(() => selectedManagerIds.filter((id) => (
     availableManagers.some((manager) => String(manager.id) === String(id))
-  ))
+  )), [availableManagers, selectedManagerIds])
+  const selectedManagerOptions = useMemo(() => effectiveSelectedManagerIds
+    .map((id) => managerUsers.find((manager) => String(manager.id) === String(id)))
+    .filter(Boolean)
+    .map((manager) => ({
+      value: manager.id,
+      label: getManagerName(manager),
+      description: manager.employeeCode || 'Chưa có mã nhân viên',
+    })), [effectiveSelectedManagerIds, managerUsers])
+
+  const removeSelectedManager = (managerId) => {
+    setSelectedManagerIds((current) => current.filter((id) => String(id) !== String(managerId)))
+  }
 
   const openManagerModal = async () => {
     setManagerModalOpen(true)
@@ -758,10 +770,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       onChange={setSelectedManagerIds}
                       options={availableManagers.map((manager) => ({ value: manager.id, label: getManagerName(manager), description: manager.employeeCode || 'Chưa có mã nhân viên', searchText: `${manager.employeeCode || ''} ${manager.departmentName || manager.department?.name || ''}` }))}
                       placeholder={managerBusy && !managerUsersLoaded ? 'Đang tải danh sách...' : 'Tìm theo tên hoặc mã nhân viên...'}
+                      selectedOptions={selectedManagerOptions}
+                      showSelectedChips={false}
                       value={selectedManagerIds}
                     />
                   </div>
                   <div className="aqh-manager-assign__field"><label htmlFor="aqh-manager-valid-until">Hiệu lực đến</label><DateTimePicker24h disabled={managerBusy} id="aqh-manager-valid-until" onChange={setValidUntil} value={validUntil} /></div>
+                  <div className="aqh-manager-selected-box" aria-label="Danh sách người nhận đã chọn">
+                    <div className="aqh-manager-selected-box__header"><span>Đã chọn</span><strong>{selectedManagerOptions.length}</strong></div>
+                    {selectedManagerOptions.length > 0 ? <div className="aqh-manager-selected-box__list">
+                      {selectedManagerOptions.map((manager) => <article key={manager.value}>
+                        <span className="aqh-manager-selected-box__identity"><strong>{manager.label}</strong></span>
+                        <button type="button" aria-label={`Bỏ chọn ${manager.label}`} onClick={() => removeSelectedManager(manager.value)}>×</button>
+                      </article>)}
+                    </div> : <p>Chưa chọn người nhận nào.</p>}
+                  </div>
                   <button className="aqh-manager-assign__submit" disabled={managerBusy || effectiveSelectedManagerIds.length === 0} type="submit">{managerBusy ? <LoadingOutlined spin /> : <PlusOutlined />} Thêm người nhận</button>
                 </form>
               ) : <div className="aqh-manager-modal__notice">Phiên bản không còn hoạt động nên không thể thêm phân quyền mới.</div>}
