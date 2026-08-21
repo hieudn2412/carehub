@@ -125,8 +125,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isAdmin = role === 'admin'
   const isManager = role === 'manager'
   const isUser = role === 'user'
+  const canConfigureTargets = isAdmin
   const [departments, setDepartments] = useState([])
-  const [profileDepartment, setProfileDepartment] = useState(null)
   const [departmentId, setDepartmentId] = useState('')
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
@@ -167,7 +167,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           const normalized = profile?.departmentId
             ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
             : null
-          setProfileDepartment(normalized)
           setDepartments(normalized ? [normalized] : [])
           if (isManager && normalized) setDepartmentId(String(normalized.id))
           return
@@ -405,8 +404,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               : <div className={`checklist-quality-process-grid${view === 'LATEST' ? ' checklist-quality-process-grid--latest' : ''}`}>
                 {forms.map((item) => <ProcessCard key={item.formId} item={item}
                   active={String(selectedForm?.formId) === String(item.formId)}
-                  canConfigure={!isUser} onSelect={() => setSelectedFormId(String(item.formId))}
-                  onConfigure={() => setTargetModalForm(item)} />)}
+                  canConfigure={canConfigureTargets} onSelect={() => setSelectedFormId(String(item.formId))}
+                  onConfigure={canConfigureTargets ? () => setTargetModalForm(item) : undefined} />)}
               </div>}
             {view === 'FILTERED' && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
               totalElements={pageInfo.totalElements} totalPages={pageInfo.totalPages}
@@ -449,8 +448,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         </div>
       </div>
 
-      {targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
-        departments={departments} currentDepartmentId={isAdmin ? departmentId : profileDepartment?.id}
+      {canConfigureTargets && targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
+        departments={departments} currentDepartmentId={departmentId || null}
         onClose={() => setTargetModalForm(null)} onSaved={() => { setTargetModalForm(null); setReloadKey((value) => value + 1) }} />}
     </AppShell>
   )
@@ -484,7 +483,7 @@ function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
     role="button" tabIndex={0} onClick={onSelect} onKeyDown={handleKeyDown}>
     <div className="checklist-quality-process-card__top">
       <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
-      {canConfigure && <button type="button" onClick={(event) => { event.stopPropagation(); onConfigure() }}>
+      {canConfigure && <button type="button" onClick={(event) => { event.stopPropagation(); onConfigure?.() }}>
         <EditOutlined /> Cấu hình mục tiêu
       </button>}
     </div>
@@ -565,7 +564,7 @@ function TrendChart({ items }) {
   </div>
 }
 
-function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId, onClose, onSaved }) {
+export function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId, onClose, onSaved }) {
   const [config, setConfig] = useState(null)
   const [scope, setScope] = useState(isAdmin && !currentDepartmentId ? 'hospital' : 'department')
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState(() => currentDepartmentId ? [String(currentDepartmentId)] : [])

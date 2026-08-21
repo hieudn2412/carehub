@@ -23,6 +23,7 @@ import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FormComplianceTargetService {
+    private static final BigDecimal DEFAULT_TARGET_PERCENT = new BigDecimal("80.00");
+
     private final FormComplianceTargetRepository targetRepository;
     private final FormRepository formRepository;
     private final DepartmentRepository departmentRepository;
@@ -52,6 +55,19 @@ public class FormComplianceTargetService {
                 .filter(item -> item.getDepartment() == null || departmentId.equals(item.getDepartment().getId()))
                 .toList();
         return response(formId, visible);
+    }
+
+    @Transactional(readOnly = true)
+    public AppliedTarget resolveAppliedTarget(Long formId, Long departmentId) {
+        if (departmentId != null) {
+            var departmentTarget = targetRepository.findByForm_IdAndDepartment_Id(formId, departmentId);
+            if (departmentTarget.isPresent()) {
+                return new AppliedTarget(departmentTarget.get().getTargetPercent(), "DEPARTMENT");
+            }
+        }
+        return targetRepository.findByForm_IdAndDepartmentIsNull(formId)
+                .map(target -> new AppliedTarget(target.getTargetPercent(), "HOSPITAL"))
+                .orElseGet(() -> new AppliedTarget(DEFAULT_TARGET_PERCENT, "DEFAULT"));
     }
 
     @Transactional
@@ -94,12 +110,7 @@ public class FormComplianceTargetService {
     private Department requireDepartmentAccess(Long departmentId, Long formId) {
         Set<String> roles = roles();
         if (!roles.contains("ADMIN")) {
-            if (!roles.contains("MANAGER")) throw new ForbiddenException("Bạn không có quyền cấu hình mục tiêu khoa");
-            Department ownDepartment = currentDepartment();
-            if (!ownDepartment.getId().equals(departmentId)) {
-                throw new ForbiddenException("Manager chỉ được cấu hình mục tiêu của khoa mình");
-            }
-            requireManagerAssignment(formId);
+            throw new ForbiddenException("Chỉ Admin được cấu hình mục tiêu khoa/phòng");
         }
         return departmentRepository.findById(departmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khoa/phòng"));
@@ -156,4 +167,6 @@ public class FormComplianceTargetService {
                 .map(value -> value.startsWith("ROLE_") ? value.substring(5) : value)
                 .collect(Collectors.toSet());
     }
+
+    public record AppliedTarget(BigDecimal targetPercent, String targetSource) {}
 }

@@ -169,8 +169,8 @@ function ScoringFormulaPage() {
   return (
     <AppShell
       className="dashboard-layout scoring-formula-page"
-      title="Công thức chỉ số"
-      breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
+      title="Cài đặt điểm sàn quy trình kỹ thuật"
+      breadcrumbs={[{ label: 'Giám sát tuân thủ' }, { label: 'Cài đặt điểm sàn quy trình kỹ thuật' }]}
     >
       <div className="sfp-main">
           <section className="sfp-toolbar" aria-label="Bộ lọc công thức">

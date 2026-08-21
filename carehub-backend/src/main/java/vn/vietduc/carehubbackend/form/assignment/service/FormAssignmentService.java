@@ -8,6 +8,7 @@ import vn.vietduc.carehubbackend.exception.*;
 import vn.vietduc.carehubbackend.form.assignment.dto.*;
 import vn.vietduc.carehubbackend.form.assignment.entity.*;
 import vn.vietduc.carehubbackend.form.assignment.repository.*;
+import vn.vietduc.carehubbackend.form.compliance.service.FormComplianceTargetService;
 import vn.vietduc.carehubbackend.form.entity.FormVersion;
 import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
@@ -35,6 +36,7 @@ public class FormAssignmentService {
     private final SecurityUtils securityUtils;
     private final FormAssignmentAccessService accessService;
     private final FormMapper formMapper;
+    private final FormComplianceTargetService complianceTargetService;
     private final Clock clock;
     private final NotificationService notificationService;
 
@@ -180,9 +182,15 @@ public class FormAssignmentService {
 
     private AssignedFormResponse toAssigned(FormAssignmentItem item, boolean detail) {
         FormAssignment assignment = item.getAssignment();
+        Long departmentId = assignment.getManager().getDepartment() == null
+                ? null
+                : assignment.getManager().getDepartment().getId();
+        FormComplianceTargetService.AppliedTarget appliedTarget =
+                complianceTargetService.resolveAppliedTarget(item.getForm().getId(), departmentId);
         return AssignedFormResponse.builder().assignmentItemId(item.getId())
                 .formId(item.getForm().getId()).formCode(item.getForm().getCode()).title(item.getFormVersion().getTitle())
-                .complianceTargetPercent(item.getForm().getComplianceTargetPercent())
+                .complianceTargetPercent(appliedTarget.targetPercent())
+                .complianceTargetSource(appliedTarget.targetSource())
                 .validFrom(assignment.getEffectiveFrom()).validUntil(assignment.getEffectiveTo())
                 .version(detail ? formMapper.toResponse(item.getFormVersion()) : null).build();
     }

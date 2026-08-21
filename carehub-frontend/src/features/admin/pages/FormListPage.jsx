@@ -1034,14 +1034,14 @@ function FormListPage() {
                   <table className="flp-table">
                     <thead>
                       <tr>
-                        <th>Tên quy trình</th>
-                        <th>Phiên bản</th>
-                        <th>Ngày tạo</th>
-                        <th>Người được giao</th>
-                        <th>Lượt đánh giá</th>
-                        <th>Điểm sàn</th>
-                        <th>Trạng thái</th>
-                        <th className="flp-table__actions-heading">Hành động</th>
+                        <th className="flp-col-name">Tên quy trình</th>
+                        <th className="flp-col-version">Phiên bản</th>
+                        <th className="flp-col-created">Ngày tạo</th>
+                        <th className="flp-col-assignees">Người được giao</th>
+                        <th className="flp-col-responses">Lượt đánh giá</th>
+                        <th className="flp-col-score">Điểm sàn</th>
+                        <th className="flp-col-status">Trạng thái</th>
+                        <th className="flp-col-actions flp-table__actions-heading">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1066,7 +1066,7 @@ function FormListPage() {
                       ) : (
                         forms.map((form) => (
                           <tr key={form.id}>
-                            <td>
+                            <td className="flp-col-name">
                               <div className="flp-form-title-wrapper">
                                 <span className="flp-form-title">{form.title}</span>
                                 {form.description && (
@@ -1074,7 +1074,7 @@ function FormListPage() {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td className="flp-col-version">
                               {form.currentPublishedVersion ? (
                                 <span className="flp-version-badge">
                                   v{form.currentPublishedVersion.versionNumber}
@@ -1083,10 +1083,10 @@ function FormListPage() {
                                 <span className="flp-text-muted">Chưa có</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-created">
                               <span className="flp-date-stack">{formatChecklistDate(form.createdAt)}</span>
                             </td>
-                            <td>
+                            <td className="flp-col-assignees">
                               <button
                                 className="flp-stat-link"
                                 onClick={() => setPermissionForm(form)}
@@ -1097,8 +1097,8 @@ function FormListPage() {
                                 <span>Quản lý</span>
                               </button>
                             </td>
-                            <td>{formStats[form.id]?.responseCount ?? '—'}</td>
-                            <td>
+                            <td className="flp-col-responses">{formStats[form.id]?.responseCount ?? '—'}</td>
+                            <td className="flp-col-score">
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
                                   {Number(form.currentPublishedVersion.passingScore).toFixed(1)}/10
@@ -1107,14 +1107,14 @@ function FormListPage() {
                                 <span className="flp-text-muted">—</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-status">
                               <span
                                 className={`form-badge ${getStatusBadgeClass(getEffectiveStatus(form))}`}
                               >
                                 {STATUS_LABELS[getEffectiveStatus(form)] || getEffectiveStatus(form)}
                               </span>
                             </td>
-                            <td>
+                            <td className="flp-col-actions">
                               <div className="flp-actions-cell admin-table-actions">
                                 {form.currentPublishedVersion?.id && (
                                   <button
@@ -1133,7 +1133,7 @@ function FormListPage() {
                                   onClick={() =>
                                     navigate(`/admin/quality/checklists/${form.id}/detail`)
                                   }
-                                  title="Xem nội dung checklist"
+                                  title="Xem nội dung bảng kiểm"
                                   type="button"
                                 >
                                   <EyeOutlined />

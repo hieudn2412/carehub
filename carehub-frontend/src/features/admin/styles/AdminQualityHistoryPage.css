@@ -2228,8 +2228,41 @@
   white-space: nowrap;
 }
 
+.aqh-results-table-wrap {
+  container-type: inline-size;
+}
+
 .aqh-results-table {
-  min-width: 1050px;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.aqh-results-table .aqh-result-col-employee {
+  width: 26%;
+}
+
+.aqh-results-table .aqh-result-col-department {
+  width: 22%;
+}
+
+.aqh-results-table .aqh-result-col-grader {
+  width: 16%;
+}
+
+.aqh-results-table .aqh-result-col-submitted {
+  width: 15%;
+}
+
+.aqh-results-table .aqh-result-col-score {
+  width: 9%;
+}
+
+.aqh-results-table .aqh-result-col-result {
+  width: 9%;
+}
+
+.aqh-results-table .aqh-result-col-actions {
+  width: 82px;
 }
 
 .aqh-results-table__inline {
@@ -2263,7 +2296,72 @@
 
 .aqh-results-table th:last-child,
 .aqh-results-table td:last-child {
-  width: 96px;
+  width: 82px;
+}
+
+.aqh-results-table .aqh-result-col-actions .admin-table-actions {
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+@container (max-width: 1040px) {
+  .aqh-results-table .aqh-result-col-department {
+    display: none;
+  }
+
+  .aqh-results-table .aqh-result-col-employee {
+    width: 32%;
+  }
+}
+
+@container (max-width: 900px) {
+  .aqh-results-table .aqh-result-col-submitted {
+    display: none;
+  }
+
+  .aqh-results-table .aqh-result-col-employee {
+    width: 36%;
+  }
+}
+
+@container (max-width: 760px) {
+  .aqh-results-table .aqh-result-col-grader {
+    display: none;
+  }
+
+  .aqh-results-table .aqh-result-col-employee {
+    width: 44%;
+  }
+}
+
+@container (max-width: 620px) {
+  .aqh-results-table .aqh-result-col-score {
+    display: none;
+  }
+
+  .aqh-results-table .aqh-result-col-employee {
+    width: 52%;
+  }
+}
+
+@container (max-width: 500px) {
+  .aqh-results-table .aqh-result-col-result {
+    display: none;
+  }
+
+  .aqh-results-table th,
+  .aqh-results-table td {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .aqh-results-table .aqh-result-col-employee {
+    width: auto;
+  }
+
+  .aqh-results-table .aqh-result-col-actions {
+    width: 64px;
+  }
 }
 
 .aqh-results-empty {

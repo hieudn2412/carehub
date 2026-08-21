@@ -66,7 +66,8 @@ const navSections = [
     items: [
       { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
-      { icon: <CalculatorOutlined />, label: 'Công thức chỉ số', path: '/admin/quality/formulas' },
+      { icon: <CalculatorOutlined />, label: 'Cài đặt điểm sàn quy trình kỹ thuật', path: '/admin/quality/formulas' },
+      { icon: <SlidersOutlined />, label: 'Cài đặt mục tiêu tuân thủ', path: '/admin/quality/compliance-targets' },
     ],
   },
   {

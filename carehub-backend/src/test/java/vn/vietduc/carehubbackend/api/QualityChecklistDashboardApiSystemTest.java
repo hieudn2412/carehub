@@ -14,13 +14,17 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
 
     private String adminToken;
     private String userToken;
+    private String managerToken;
+    private User manager;
 
     @BeforeEach
     void createActors() {
         User admin = newUser("QCD-ADMIN", "ADMIN");
         User user = newUser("QCD-USER", "USER");
+        manager = newUser("QCD-MGR", "MANAGER");
         adminToken = tokenFor(admin);
         userToken = tokenFor(user);
+        managerToken = tokenFor(manager);
     }
 
     @Test
@@ -72,6 +76,20 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
         assertThat(hospital.get("lockVersion").asLong()).isZero();
 
         ResponseEntity<String> forbidden = get(API + "/quality/compliance-targets/forms/" + formId, userToken);
+        assertError(forbidden, HttpStatus.FORBIDDEN, "AUTH_002");
+    }
+
+    @Test
+    @DisplayName("Manager không được cấu hình mục tiêu khoa/phòng")
+    void managerCannotManageDepartmentComplianceTarget() {
+        long formId = id(post(API + "/forms", adminToken, """
+                {"code":"QCD-MGR-%04d","title":"Mục tiêu chỉ Admin cấu hình","subjectType":"USER"}
+                """.formatted(nextSeq())));
+
+        ResponseEntity<String> forbidden = put(API + "/quality/compliance-targets/forms/" + formId
+                        + "/departments/" + manager.getDepartment().getId(),
+                managerToken, "{\"targetPercent\":70.00,\"lockVersion\":null}");
+
         assertError(forbidden, HttpStatus.FORBIDDEN, "AUTH_002");
     }
 }

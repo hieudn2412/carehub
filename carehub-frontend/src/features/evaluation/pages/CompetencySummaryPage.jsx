@@ -219,7 +219,7 @@ function CompetencySummaryPage() {
     return Object.entries(counts)
       .map(([name, count]) => {
         const item = data.items.find(i => (i.competencyLabel || 'Chưa xếp loại') === name)
-        
+
         const shortNameMap = {
           'Chưa đạt năng lực': 'Chưa đạt',
           'Chưa xếp loại': 'Chưa xếp',

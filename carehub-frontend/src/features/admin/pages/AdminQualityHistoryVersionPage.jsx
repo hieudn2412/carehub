@@ -674,45 +674,45 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       <table className="aqh-results-table admin-table-uppercase">
                         <thead>
                           <tr>
-                            <th>Nhân viên</th>
-                            <th>Khoa/phòng</th>
-                            <th>Người chấm</th>
-                            <th>Ngày nộp</th>
-                            <th>Điểm</th>
-                            <th>Kết quả</th>
-                            <th>Hành động</th>
+                            <th className="aqh-result-col-employee">Nhân viên</th>
+                            <th className="aqh-result-col-department">Khoa/phòng</th>
+                            <th className="aqh-result-col-grader">Người chấm</th>
+                            <th className="aqh-result-col-submitted">Ngày nộp</th>
+                            <th className="aqh-result-col-score">Điểm</th>
+                            <th className="aqh-result-col-result">Kết quả</th>
+                            <th className="aqh-result-col-actions">Hành động</th>
                           </tr>
                         </thead>
                         <tbody>
                           {submissionData.content.map((item) => (
                             <tr key={item.id}>
-                              <td>
+                              <td className="aqh-result-col-employee">
                                 <div className="aqh-results-table__person">
                                   <strong>{item.subject?.fullName || 'Chưa có tên'}</strong>
                                   <small>{item.subject?.employeeCode || 'Chưa có mã'}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-department">
                                 <div className="aqh-results-table__inline">
                                   <ApartmentOutlined />
                                   <span>{item.subject?.department || 'Chưa xác định'}</span>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-grader">
                                 <div className="aqh-results-table__person">
                                   <span>{item.submittedBy?.fullName || 'Chưa xác định'}</span>
                                   <small>{item.submittedBy?.employeeCode || ''}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-submitted">
                                 <div className="aqh-results-table__inline">
                                   <ClockCircleOutlined />
                                   <span>{formatDateTime(item.submittedAt || item.updatedAt)}</span>
                                 </div>
                               </td>
-                              <td><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
-                              <td><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
-                              <td>
+                              <td className="aqh-result-col-score"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
+                              <td className="aqh-result-col-result"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
+                              <td className="aqh-result-col-actions">
                                 <div className="admin-table-actions">
                                   <button
                                     aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
