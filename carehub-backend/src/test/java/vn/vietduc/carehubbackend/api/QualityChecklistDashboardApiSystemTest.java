@@ -15,7 +15,6 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
     private String adminToken;
     private String managerToken;
     private String userToken;
-    private String managerToken;
     private User manager;
 
     @BeforeEach
