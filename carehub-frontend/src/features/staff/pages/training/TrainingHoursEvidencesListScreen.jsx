@@ -9,6 +9,8 @@ import {
   SearchOutlined
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import FilterSelectField from '../../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import '../../../training/styles/TrainingHours.css'
 
@@ -84,16 +86,23 @@ function TrainingHoursEvidencesListScreen() {
                 />
               </div>
 
-              <select
+              <FilterSelectField
+                label="Trạng thái minh chứng"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="th-filter-select"
-                aria-label="Lọc trạng thái minh chứng"
-              >
-                <option value="all">Tất cả hồ sơ</option>
-                <option value="has_evidence">Đã có minh chứng</option>
-                <option value="no_evidence">Chưa có minh chứng</option>
-              </select>
+                onChange={(value) => setStatusFilter(value)}
+                options={[
+                  { value: 'all', label: 'Tất cả hồ sơ' },
+                  { value: 'has_evidence', label: 'Đã có minh chứng' },
+                  { value: 'no_evidence', label: 'Chưa có minh chứng' },
+                ]}
+              />
+              <FilterActionButtons
+                onApply={() => {}}
+                onReset={() => {
+                  setSearch('')
+                  setStatusFilter('all')
+                }}
+              />
             </div>
 
             {loading ? (

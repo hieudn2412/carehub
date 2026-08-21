@@ -157,8 +157,14 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     public TrainingDashboardSummaryResponse getDashboardSummary(EmployeeTrainingStatusSearchRequest request) {
         EmployeeTrainingStatusSearchRequest criteria = normalizeCriteria(request);
         LocalDate asOfDate = criteria.asOf() == null ? LocalDate.now() : criteria.asOf();
-        List<EmployeeTrainingStatusSummaryResponse> summaries =
-                employeeStatusSummaries(criteria, Sort.by(Sort.Order.asc("employeeCode")));
+        List<EmployeeStatusContext> contexts = employeeStatusContexts(criteria);
+        List<EmployeeTrainingStatusSummaryResponse> summaries = contexts.stream()
+                .map(EmployeeStatusContext::summary)
+                .sorted(summaryComparator(Sort.by(Sort.Order.asc("employeeCode"))))
+                .toList();
+        List<TrainingRecord> windowRecords = contexts.stream()
+                .flatMap(context -> context.windowRecords().stream())
+                .toList();
 
         Map<Long, List<EmployeeTrainingStatusSummaryResponse>> byDepartment = new HashMap<>();
         summaries.forEach(summary -> byDepartment
@@ -178,7 +184,9 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 criteria.professionalFieldId(),
                 criteria.complianceStatus(),
                 dashboardTotals(summaries),
-                departmentItems
+                departmentItems,
+                professionalFieldDashboardItems(windowRecords),
+                activityTypeDashboardItems(windowRecords)
         );
     }
 
@@ -236,6 +244,15 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
             EmployeeTrainingStatusSearchRequest criteria,
             Sort sort
     ) {
+        return employeeStatusContexts(criteria).stream()
+                .map(EmployeeStatusContext::summary)
+                .sorted(summaryComparator(sort))
+                .toList();
+    }
+
+    private List<EmployeeStatusContext> employeeStatusContexts(
+            EmployeeTrainingStatusSearchRequest criteria
+    ) {
         User actor = accessPolicy.currentActor();
         Set<String> roleCodes = accessPolicy.currentRoleCodes();
         if (!hasAnyRole(roleCodes, TrainingAccessPolicy.ROLE_ADMIN, TrainingAccessPolicy.ROLE_MANAGER, TrainingAccessPolicy.ROLE_SYSTEM_JOB)) {
@@ -272,12 +289,17 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                         asOfDate,
                         recordsByEmployee.getOrDefault(employee.getId(), List.of()),
                         requiredHours,
-                        windowYears
+                        windowYears,
+                        criteria.professionalFieldId()
                 ))
-                .filter(summary -> matchesStatusFilters(summary, criteria))
-                .sorted(summaryComparator(sort))
+                .filter(context -> matchesStatusFilters(context.summary(), criteria))
                 .toList();
     }
+
+    private record EmployeeStatusContext(
+            EmployeeTrainingStatusSummaryResponse summary,
+            List<TrainingRecord> windowRecords
+    ) {}
 
     private TrainingDashboardSummaryResponse.Totals dashboardTotals(
             List<EmployeeTrainingStatusSummaryResponse> summaries
@@ -330,6 +352,34 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 totals.remainingHours(),
                 totals.complianceRate()
         );
+    }
+
+    private List<ProfessionalFieldHoursItemResponse> professionalFieldDashboardItems(List<TrainingRecord> records) {
+        Map<Long, HoursTotals> totals = new LinkedHashMap<>();
+        records.forEach(record -> {
+            Long fieldId = record.getProfessionalField() == null ? null : record.getProfessionalField().getId();
+            String fieldName = record.getProfessionalField() == null
+                    ? UNASSIGNED_PROFESSIONAL_FIELD
+                    : record.getProfessionalField().getName();
+            totals.computeIfAbsent(fieldId, ignored -> new HoursTotals(fieldId, fieldName)).add(record);
+        });
+        return totals.values()
+                .stream()
+                .map(total -> new ProfessionalFieldHoursItemResponse(total.id, total.name, total.submittedHours))
+                .sorted(Comparator.comparing(
+                        ProfessionalFieldHoursItemResponse::professionalFieldName,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                ))
+                .toList();
+    }
+
+    private List<TrainingStatusActivityTypeHoursResponse> activityTypeDashboardItems(List<TrainingRecord> records) {
+        return activityTypeHours(records).stream()
+                .sorted(Comparator.comparing(
+                        TrainingStatusActivityTypeHoursResponse::activityTypeName,
+                        Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)
+                ))
+                .toList();
     }
 
     private long countStatus(
@@ -400,12 +450,13 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         return grouped;
     }
 
-    private EmployeeTrainingStatusSummaryResponse summarizeEmployee(
+    private EmployeeStatusContext summarizeEmployee(
             User employee,
             LocalDate asOf,
             List<TrainingRecord> records,
             BigDecimal requiredHours,
-            int windowYears
+            int windowYears,
+            Long professionalFieldId
     ) {
         Department department = employee.getDepartment();
         Position position = employee.getPosition();
@@ -413,6 +464,9 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         List<TrainingRecord> windowRecords = records.stream()
                 .filter(record -> !record.getStartDate().isBefore(windowStart))
                 .filter(record -> !record.getStartDate().isAfter(asOf))
+                .filter(record -> professionalFieldId == null
+                        || (record.getProfessionalField() != null
+                                && professionalFieldId.equals(record.getProfessionalField().getId())))
                 .toList();
         BigDecimal submittedHours = sumSubmitted(windowRecords);
         BigDecimal normalizedRequiredHours = safe(requiredHours);
@@ -424,7 +478,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 .max(LocalDate::compareTo)
                 .orElse(null);
 
-        return new EmployeeTrainingStatusSummaryResponse(
+        EmployeeTrainingStatusSummaryResponse summary = new EmployeeTrainingStatusSummaryResponse(
                 employee.getId(),
                 employee.getEmployeeCode(),
                 employee.getName(),
@@ -445,6 +499,7 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
                 lastTrainingDate,
                 warningMessage(status, remainingHours)
         );
+        return new EmployeeStatusContext(summary, windowRecords);
     }
 
     private boolean matchesStatusFilters(
@@ -504,18 +559,18 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
     }
 
     private List<TrainingStatusActivityTypeHoursResponse> activityTypeHours(List<TrainingRecord> records) {
-        Map<Long, ActivityTotals> totals = new LinkedHashMap<>();
+        Map<Long, HoursTotals> totals = new LinkedHashMap<>();
         records.forEach(record -> {
             Long activityTypeId = record.getActivityType() == null ? null : record.getActivityType().getId();
             String activityTypeName = record.getActivityType() == null ? null : record.getActivityType().getName();
-            totals.computeIfAbsent(activityTypeId, ignored -> new ActivityTotals(activityTypeId, activityTypeName))
+            totals.computeIfAbsent(activityTypeId, ignored -> new HoursTotals(activityTypeId, activityTypeName))
                     .add(record);
         });
         return totals.values()
                 .stream()
                 .map(total -> new TrainingStatusActivityTypeHoursResponse(
-                        total.activityTypeId,
-                        total.activityTypeName,
+                        total.id,
+                        total.name,
                         total.submittedHours
                 ))
                 .toList();
@@ -689,14 +744,14 @@ public class TrainingStatusServiceImpl implements TrainingStatusService {
         return false;
     }
 
-    private static class ActivityTotals {
-        private final Long activityTypeId;
-        private final String activityTypeName;
+    private static class HoursTotals {
+        private final Long id;
+        private final String name;
         private BigDecimal submittedHours = BigDecimal.ZERO;
 
-        private ActivityTotals(Long activityTypeId, String activityTypeName) {
-            this.activityTypeId = activityTypeId;
-            this.activityTypeName = activityTypeName;
+        private HoursTotals(Long id, String name) {
+            this.id = id;
+            this.name = name;
         }
 
         private void add(TrainingRecord record) {

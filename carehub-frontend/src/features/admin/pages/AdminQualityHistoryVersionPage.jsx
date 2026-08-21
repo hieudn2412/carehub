@@ -20,6 +20,8 @@ import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.js
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -396,9 +398,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const availableManagers = useMemo(() => (
     managerUsers.filter((manager) => !assignedManagerIds.has(String(manager.id)))
   ), [assignedManagerIds, managerUsers])
-  const effectiveSelectedManagerIds = selectedManagerIds.filter((id) => (
+  const effectiveSelectedManagerIds = useMemo(() => selectedManagerIds.filter((id) => (
     availableManagers.some((manager) => String(manager.id) === String(id))
-  ))
+  )), [availableManagers, selectedManagerIds])
+  const selectedManagerOptions = useMemo(() => effectiveSelectedManagerIds
+    .map((id) => managerUsers.find((manager) => String(manager.id) === String(id)))
+    .filter(Boolean)
+    .map((manager) => ({
+      value: manager.id,
+      label: getManagerName(manager),
+      description: manager.employeeCode || 'Chưa có mã nhân viên',
+    })), [effectiveSelectedManagerIds, managerUsers])
+
+  const removeSelectedManager = (managerId) => {
+    setSelectedManagerIds((current) => current.filter((id) => String(id) !== String(managerId)))
+  }
 
   const openManagerModal = async () => {
     setManagerModalOpen(true)
@@ -487,8 +501,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     }
   }
 
-  const hasFilters = Boolean(keyword || result || (!isManager && (submittedByUserId || departmentId))
-    || dateFrom !== defaultDateRange.dateFrom || dateTo !== defaultDateRange.dateTo)
+
   const evaluatorSelectOptions = [
     { value: '', label: 'Tất cả người chấm' },
     ...evaluatorOptions.map((user) => ({
@@ -622,6 +635,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         placeholder="Tất cả người chấm"
                         searchPlaceholder="Tìm tên hoặc mã người chấm..."
                         selectedOption={selectedEvaluatorOption}
+                        showDescriptions={false}
                         value={submittedByUserId}
                       />
                     </label>}
@@ -633,18 +647,29 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         options={departmentOptions}
                         placeholder="Tất cả khoa/phòng"
                         searchPlaceholder="Tìm khoa/phòng..."
+                        showDescriptions={false}
                         value={departmentId}
                       />
                     </label>}
-                    <label className="aqh-filter-field">
-                      <span>Kết quả</span>
-                      <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
-                        {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-                      </select>
-                    </label>
+                    <FilterSelectField
+                      label="Kết quả"
+                      value={result}
+                      onChange={(value) => updateQuery({ result: value })}
+                      options={RESULT_OPTIONS}
+                    />
                     <label className="aqh-filter-field"><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} onChange={(val) => updateQuery({ dateFrom: val })} /></label>
                     <label className="aqh-filter-field"><span>Đến ngày</span><KeyboardDatePicker value={dateTo} onChange={(val) => updateQuery({ dateTo: val })} /></label>
-                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize), dateFrom: defaultDateRange.dateFrom, dateTo: defaultDateRange.dateTo }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
+                    <FilterActionButtons
+                      onApply={() => setIsFilterOpen(false)}
+                      onReset={() => {
+                        setKeywordInput('')
+                        setSearchParams({
+                          size: String(pageSize),
+                          dateFrom: defaultDateRange.dateFrom,
+                          dateTo: defaultDateRange.dateTo
+                        }, { replace: true })
+                      }}
+                    />
                     </div>
                   )}
                 </div>
@@ -662,45 +687,45 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       <table className="aqh-results-table admin-table-uppercase">
                         <thead>
                           <tr>
-                            <th>Nhân viên</th>
-                            <th>Khoa/phòng</th>
-                            <th>Người chấm</th>
-                            <th>Ngày nộp</th>
-                            <th>Điểm</th>
-                            <th>Kết quả</th>
-                            <th>Hành động</th>
+                            <th className="aqh-result-col-employee">Nhân viên</th>
+                            <th className="aqh-result-col-department">Khoa/phòng</th>
+                            <th className="aqh-result-col-grader">Người chấm</th>
+                            <th className="aqh-result-col-submitted">Ngày nộp</th>
+                            <th className="aqh-result-col-score">Điểm</th>
+                            <th className="aqh-result-col-result">Kết quả</th>
+                            <th className="aqh-result-col-actions">Hành động</th>
                           </tr>
                         </thead>
                         <tbody>
                           {submissionData.content.map((item) => (
                             <tr key={item.id}>
-                              <td>
+                              <td className="aqh-result-col-employee">
                                 <div className="aqh-results-table__person">
                                   <strong>{item.subject?.fullName || 'Chưa có tên'}</strong>
                                   <small>{item.subject?.employeeCode || 'Chưa có mã'}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-department">
                                 <div className="aqh-results-table__inline">
                                   <ApartmentOutlined />
                                   <span>{item.subject?.department || 'Chưa xác định'}</span>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-grader">
                                 <div className="aqh-results-table__person">
                                   <span>{item.submittedBy?.fullName || 'Chưa xác định'}</span>
                                   <small>{item.submittedBy?.employeeCode || ''}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-submitted">
                                 <div className="aqh-results-table__inline">
                                   <ClockCircleOutlined />
                                   <span>{formatDateTime(item.submittedAt || item.updatedAt)}</span>
                                 </div>
                               </td>
-                              <td><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
-                              <td><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
-                              <td>
+                              <td className="aqh-result-col-score"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
+                              <td className="aqh-result-col-result"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
+                              <td className="aqh-result-col-actions">
                                 <div className="admin-table-actions">
                                   <button
                                     aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
@@ -758,10 +783,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       onChange={setSelectedManagerIds}
                       options={availableManagers.map((manager) => ({ value: manager.id, label: getManagerName(manager), description: manager.employeeCode || 'Chưa có mã nhân viên', searchText: `${manager.employeeCode || ''} ${manager.departmentName || manager.department?.name || ''}` }))}
                       placeholder={managerBusy && !managerUsersLoaded ? 'Đang tải danh sách...' : 'Tìm theo tên hoặc mã nhân viên...'}
+                      selectedOptions={selectedManagerOptions}
+                      showSelectedChips={false}
                       value={selectedManagerIds}
                     />
                   </div>
                   <div className="aqh-manager-assign__field"><label htmlFor="aqh-manager-valid-until">Hiệu lực đến</label><DateTimePicker24h disabled={managerBusy} id="aqh-manager-valid-until" onChange={setValidUntil} value={validUntil} /></div>
+                  <div className="aqh-manager-selected-box" aria-label="Danh sách người nhận đã chọn">
+                    <div className="aqh-manager-selected-box__header"><span>Đã chọn</span><strong>{selectedManagerOptions.length}</strong></div>
+                    {selectedManagerOptions.length > 0 ? <div className="aqh-manager-selected-box__list">
+                      {selectedManagerOptions.map((manager) => <article key={manager.value}>
+                        <span className="aqh-manager-selected-box__identity"><strong>{manager.label}</strong></span>
+                        <button type="button" aria-label={`Bỏ chọn ${manager.label}`} onClick={() => removeSelectedManager(manager.value)}>×</button>
+                      </article>)}
+                    </div> : <p>Chưa chọn người nhận nào.</p>}
+                  </div>
                   <button className="aqh-manager-assign__submit" disabled={managerBusy || effectiveSelectedManagerIds.length === 0} type="submit">{managerBusy ? <LoadingOutlined spin /> : <PlusOutlined />} Thêm người nhận</button>
                 </form>
               ) : <div className="aqh-manager-modal__notice">Phiên bản không còn hoạt động nên không thể thêm phân quyền mới.</div>}

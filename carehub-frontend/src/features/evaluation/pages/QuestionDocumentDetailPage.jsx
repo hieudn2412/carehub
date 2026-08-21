@@ -10,7 +10,10 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -77,6 +80,14 @@ function QuestionDocumentDetailPage() {
   const filteredQuestionJobs = useMemo(() => {
     return questionJobs.filter((job) => !jobStatusFilter || job.status === jobStatusFilter)
   }, [questionJobs, jobStatusFilter])
+
+  const handleApplyFilters = () => {
+    // keep immediate filter behavior
+  }
+
+  const handleClearFilters = () => {
+    setJobStatusFilter('')
+  }
 
   async function createJob() {
     const rawCount = Number(questionsPerChunk) || 1
@@ -240,15 +251,22 @@ function QuestionDocumentDetailPage() {
                       <div className="qdoc-tab-body">
                         <div className="qdoc-filter-bar qdoc-filter-bar--compact">
                           <AdminFilterDisclosure activeCount={jobStatusFilter ? 1 : 0}>
-                            <select className="qdoc-select" value={jobStatusFilter} onChange={(event) => setJobStatusFilter(event.target.value)}>
-                              <option value="">Tất cả trạng thái</option>
-                              <option value="CREATED">Đã tạo</option>
-                              <option value="GENERATING">Đang tạo</option>
-                              <option value="GENERATED">Đã tạo xong</option>
-                              <option value="PARTIALLY_COMPLETED">Hoàn thành một phần</option>
-                              <option value="FAILED">Thất bại</option>
-                              <option value="CANCELLED">Đã hủy</option>
-                            </select>
+                            <FilterSelectField
+                              label="Trạng thái phiên"
+                              value={jobStatusFilter}
+                              onChange={(value) => setJobStatusFilter(value)}
+                              options={[
+                                { value: '', label: 'Tất cả trạng thái' },
+                                { value: 'CREATED', label: 'Đã tạo' },
+                                { value: 'GENERATING', label: 'Đang tạo' },
+                                { value: 'GENERATED', label: 'Đã tạo xong' },
+                                { value: 'PARTIALLY_COMPLETED', label: 'Hoàn thành một phần' },
+                                { value: 'FAILED', label: 'Thất bại' },
+                                { value: 'CANCELLED', label: 'Đã hủy' },
+                              ]}
+                              placeholder="Tất cả trạng thái"
+                            />
+                            <FilterActionButtons onApply={handleApplyFilters} onReset={handleClearFilters} />
                           </AdminFilterDisclosure>
                         </div>
                         <div className="qdoc-table-scroll">
@@ -338,30 +356,28 @@ function QuestionDocumentDetailPage() {
             </label>
             <label className="qdoc-field">
               <span>Mức độ nhận thức mục tiêu</span>
-              <select
+              <FormSelectField
                 value={targetCognitiveLevel}
-                onChange={(event) => setTargetCognitiveLevel(event.target.value)}
+                onChange={setTargetCognitiveLevel}
                 disabled={isCreatingJob}
-              >
-                <option value="AUTO">Tự động theo nguồn</option>
-                {COGNITIVE_LEVELS.map((level) => (
-                  <option key={level.value} value={level.value}>{level.label}</option>
-                ))}
-              </select>
+                options={[
+                  { value: 'AUTO', label: 'Tự động theo nguồn' },
+                  ...COGNITIVE_LEVELS
+                ]}
+              />
             </label>
             <div className="qdoc-field">
               <span>Danh mục câu hỏi (không bắt buộc)</span>
               <div className="qdoc-inline-field">
-                <select
+                <FormSelectField
                   value={categoryId}
-                  onChange={(event) => setCategoryId(event.target.value)}
+                  onChange={setCategoryId}
                   disabled={isLoadingCategories || isCreatingJob}
-                >
-                  <option value="">Không chọn danh mục</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Không chọn danh mục' },
+                    ...categories.map((category) => ({ value: String(category.id), label: category.name }))
+                  ]}
+                />
                 <button
                   type="button"
                   className="qdoc-secondary-btn qdoc-inline-add-btn"

@@ -475,7 +475,7 @@ function ManagerChecklistEvaluationPage() {
         ))}</div>
       }
       case 'DROPDOWN':
-        return <select className="check-eval-input" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} value={value}><option value="">Chọn một đáp án</option>{options.map((option) => <option key={option.optionKey} value={option.optionKey}>{option.label}</option>)}</select>
+        return <SearchableSelect className="check-eval-input" onChange={(val) => handleAnswerChange(question.questionKey, val)} value={value} searchable={false} placeholder="Chọn một đáp án" options={options.map((option) => ({ value: option.optionKey, label: option.label }))} />
       case 'LONG_TEXT':
         return <textarea className="check-eval-input check-eval-textarea" onChange={(event) => handleAnswerChange(question.questionKey, event.target.value)} placeholder="Nhập câu trả lời..." value={value} />
       case 'NUMBER':

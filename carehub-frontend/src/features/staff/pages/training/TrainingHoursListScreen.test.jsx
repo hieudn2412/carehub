@@ -173,11 +173,14 @@ describe('TrainingHoursListScreen query navigation', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Mở bộ lọc' }))
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Lọc theo trạng thái hồ sơ' }), { target: { value: 'SUBMITTED' } })
+    fireEvent.click(await screen.findByRole('combobox', { name: 'Lọc theo trạng thái hồ sơ' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Đã nộp' }))
     fireEvent.change(screen.getByLabelText('Lọc từ ngày'), { target: { value: '2026-01-01' } })
     fireEvent.change(screen.getByLabelText('Lọc đến ngày'), { target: { value: '2026-12-31' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo lĩnh vực chuyên môn' }), { target: { value: '7' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo hình thức đào tạo' }), { target: { value: '4' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo lĩnh vực chuyên môn' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hồi sức' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo hình thức đào tạo' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hội thảo' }))
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => expect(screen.getByTestId('current-path')).toHaveTextContent('/staff/training/all?status=SUBMITTED'))

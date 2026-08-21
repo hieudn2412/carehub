@@ -12,7 +12,9 @@ public record TrainingDashboardSummaryResponse(
         Long professionalFieldId,
         ComplianceStatus complianceStatus,
         Totals totals,
-        List<DepartmentItem> byDepartment
+        List<DepartmentItem> byDepartment,
+        List<ProfessionalFieldHoursItemResponse> byProfessionalField,
+        List<TrainingStatusActivityTypeHoursResponse> byActivityType
 ) {
     public record Totals(
             long employeeCount,

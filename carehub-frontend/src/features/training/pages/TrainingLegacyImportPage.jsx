@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
@@ -136,20 +137,19 @@ function TrainingLegacyImportPage() {
       <section className="training-grid">
         <div className="training-panel training-panel--wide">
           <div className="training-form-grid training-form-grid--import">
-            <label>
-              Activity type
-              <select
-                onChange={(event) => setForm((current) => ({ ...current, activityTypeId: event.target.value }))}
-                value={form.activityTypeId}
-              >
-                <option value="">Select</option>
-                {options.activityTypes.map((activityType) => (
-                  <option key={activityType.id} value={activityType.id}>
-                    {activityType.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <FormSelectField
+              label="Activity type"
+              onChange={(value) => setForm((current) => ({ ...current, activityTypeId: value }))}
+              value={form.activityTypeId}
+              options={[
+                { value: '', label: 'Select' },
+                ...options.activityTypes.map((activityType) => ({
+                  value: activityType.id,
+                  label: activityType.name
+                }))
+              ]}
+              searchable={false}
+            />
             <label>
               Professional field
               <SearchableSelect

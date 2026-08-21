@@ -55,8 +55,9 @@ test.describe('L4-Permissions', () => {
 
     await test.step('1. Read the sidebar as MANAGER', async () => {
       await gotoAs(page, browser, manager, '/manager/dashboard')
-      await expect(page.getByText(SIDEBAR.managerCompliance)).toBeVisible()
-      await expect(page.getByText(SIDEBAR.managerResults)).toBeVisible()
+      // Nhắm vào link sidebar: "Tuân thủ chung" cũng xuất hiện trên thẻ KPI của dashboard.
+      await expect(page.getByRole('link', { name: SIDEBAR.managerCompliance })).toBeVisible()
+      await expect(page.getByRole('link', { name: SIDEBAR.managerResults })).toBeVisible()
     })
 
     await test.step('2. Read the sidebar as USER in a clean context', async () => {
@@ -67,7 +68,7 @@ test.describe('L4-Permissions', () => {
         await seedSession(staffPage, session)
         await staffPage.goto('/staff/dashboard')
         await expect(staffPage.getByText(SIDEBAR.sectionPersonal)).toBeVisible()
-        await expect(staffPage.getByText(SIDEBAR.managerCompliance)).toHaveCount(0)
+        await expect(staffPage.getByRole('link', { name: SIDEBAR.managerCompliance })).toHaveCount(0)
       } finally {
         await context.close()
       }
@@ -150,7 +151,7 @@ test.describe('L4-Permissions', () => {
 
     await test.step('2. Assert the manager-only menu section is still absent', async () => {
       // ManagerChecklistListPage is reused for both roles; only the surrounding shell differs.
-      await expect(page.getByText(SIDEBAR.managerCompliance)).toHaveCount(0)
+      await expect(page.getByRole('link', { name: SIDEBAR.managerCompliance })).toHaveCount(0)
     })
   })
 })

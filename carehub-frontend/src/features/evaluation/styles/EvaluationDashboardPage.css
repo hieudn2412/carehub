@@ -30,6 +30,33 @@
   box-sizing: border-box;
 }
 
+.evd-competency-toolbar .searchable-select > input,
+.exam-dashboard__filter-panel .searchable-select > input,
+.competency-dashboard-filter-panel .searchable-select > input,
+.compliance-filter-panel .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.evd-competency-toolbar .searchable-select--static > input,
+.exam-dashboard__filter-panel .searchable-select--static > input,
+.competency-dashboard-filter-panel .searchable-select--static > input,
+.compliance-filter-panel .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.evd-competency-toolbar .searchable-select__search-icon,
+.exam-dashboard__filter-panel .searchable-select__search-icon,
+.competency-dashboard-filter-panel .searchable-select__search-icon,
+.compliance-filter-panel .searchable-select__search-icon {
+  display: block;
+  left: 12px;
+}
+
 .evd-competency-toolbar__count {
   color: #64748b;
   font-size: 13px;
@@ -883,12 +910,53 @@
     flex: 0 0 auto;
   }
 
+  .competency-dashboard-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .competency-dashboard-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .competency-dashboard-toolbar .competency-dashboard-search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .competency-dashboard-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
   .competency-dashboard-toolbar__actions {
-    justify-content: space-between;
+    justify-content: flex-end !important;
+    gap: 10px;
+    margin-top: 4px;
   }
 
   .competency-dashboard-filter-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .competency-dashboard-filter-panel .admin-control-toolbar__field input,
+  .competency-dashboard-filter-panel .admin-control-toolbar__field select {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 
   .competency-dashboard-table-card {
@@ -935,6 +1003,34 @@
   color: #64748b;
   font-size: 13px;
   white-space: nowrap;
+}
+
+.compliance-toolbar__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.compliance-toolbar__export:hover:not(:disabled) {
+  border-color: #0b5f59;
+  background: #0b5f59;
+}
+
+.compliance-toolbar__export:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
 }
 
 .compliance-toolbar__reload {
@@ -988,6 +1084,30 @@
   box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
 }
 
+.exam-dashboard__filter-panel .searchable-select > input,
+.competency-dashboard-filter-panel .searchable-select > input,
+.compliance-filter-panel .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.exam-dashboard__filter-panel .searchable-select--static > input,
+.competency-dashboard-filter-panel .searchable-select--static > input,
+.compliance-filter-panel .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.exam-dashboard__filter-panel .searchable-select__search-icon,
+.competency-dashboard-filter-panel .searchable-select__search-icon,
+.compliance-filter-panel .searchable-select__search-icon {
+  display: block;
+  left: 12px;
+}
+
 .compliance-filter-panel__fixed {
   display: flex;
   min-height: 44px;
@@ -1016,12 +1136,62 @@
 }
 
 @media (max-width: 768px) {
+  .compliance-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .compliance-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .compliance-toolbar .compliance-toolbar__search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .compliance-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
   .compliance-toolbar__actions {
-    justify-content: space-between;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .compliance-toolbar__export {
+    height: 38px;
+    padding: 0 12px;
   }
 
   .compliance-filter-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .compliance-filter-panel .admin-control-toolbar__field:first-child:nth-last-child(3) {
+    grid-column: span 2;
+  }
+
+  .compliance-filter-panel .admin-control-toolbar__field input {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 
   .compliance-table-card {

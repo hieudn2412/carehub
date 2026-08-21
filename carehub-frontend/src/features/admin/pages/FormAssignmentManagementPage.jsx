@@ -13,6 +13,7 @@ import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/FormAssignmentManagementPage.css'
@@ -398,20 +399,7 @@ function FormAssignmentManagementPage() {
                       <p>{totalAssignments} bản ghi theo trạng thái đang lọc.</p>
                     </div>
                     <AdminFilterDisclosure activeCount={status !== 'ACTIVE' ? 1 : 0}>
-                      <label className="fam-status-filter">
-                        <span>Trạng thái</span>
-                        <select
-                          disabled={loading}
-                          onChange={(event) => setStatus(event.target.value)}
-                          value={status}
-                        >
-                          {STATUS_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                      <FilterSelectField className="fam-status-filter" label="Trạng thái" disabled={loading} onChange={setStatus} value={status} options={STATUS_OPTIONS} placeholder="Trạng thái" />
                     </AdminFilterDisclosure>
                   </div>
 

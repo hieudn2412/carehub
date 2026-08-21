@@ -85,6 +85,7 @@ import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistory
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
+import ComplianceTargetSettingsPage from '../features/admin/pages/ComplianceTargetSettingsPage.jsx'
 import ChecklistQualityDashboardPage from '../features/admin/pages/ChecklistQualityDashboardPage.jsx'
 
 import ManagerDashboard from '../features/staff/pages/manager/ManagerDashboard.jsx'
@@ -271,6 +272,10 @@ function AppRouter() {
       <Route
         path="/admin/quality/formulas"
         element={adminElement(<ScoringFormulaPage />)}
+      />
+      <Route
+        path="/admin/quality/compliance-targets"
+        element={adminElement(<ComplianceTargetSettingsPage />)}
       />
       <Route
         path="/admin/reports/training-dashboard"

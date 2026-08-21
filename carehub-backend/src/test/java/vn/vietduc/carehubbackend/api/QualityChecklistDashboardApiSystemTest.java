@@ -13,14 +13,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
 
     private String adminToken;
+    private String managerToken;
     private String userToken;
+    private String managerToken;
+    private User manager;
 
     @BeforeEach
     void createActors() {
         User admin = newUser("QCD-ADMIN", "ADMIN");
+        User manager = newUser("QCD-MANAGER", "MANAGER");
         User user = newUser("QCD-USER", "USER");
+        manager = newUser("QCD-MGR", "MANAGER");
         adminToken = tokenFor(admin);
+        managerToken = tokenFor(manager);
         userToken = tokenFor(user);
+        managerToken = tokenFor(manager);
     }
 
     @Test
@@ -57,6 +64,17 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
     }
 
     @Test
+    @DisplayName("Manager truy vấn dashboard theo khoa mà không phụ thuộc người thực hiện đánh giá")
+    void managerDashboardRunsWithDepartmentScopedHistory() {
+        ResponseEntity<String> response = get(API
+                + "/dashboard/quality/checklists?view=LATEST&fromDate=2026-01-01&toDate=2026-12-31&page=0&size=1",
+                managerToken);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data(response).get("content").isArray()).isTrue();
+    }
+
+    @Test
     @DisplayName("Admin cấu hình mục tiêu bệnh viện với optimistic lock, User bị từ chối")
     void hospitalTargetCanOnlyBeManagedByAdmin() {
         long formId = id(post(API + "/forms", adminToken, """
@@ -72,6 +90,20 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
         assertThat(hospital.get("lockVersion").asLong()).isZero();
 
         ResponseEntity<String> forbidden = get(API + "/quality/compliance-targets/forms/" + formId, userToken);
+        assertError(forbidden, HttpStatus.FORBIDDEN, "AUTH_002");
+    }
+
+    @Test
+    @DisplayName("Manager không được cấu hình mục tiêu khoa/phòng")
+    void managerCannotManageDepartmentComplianceTarget() {
+        long formId = id(post(API + "/forms", adminToken, """
+                {"code":"QCD-MGR-%04d","title":"Mục tiêu chỉ Admin cấu hình","subjectType":"USER"}
+                """.formatted(nextSeq())));
+
+        ResponseEntity<String> forbidden = put(API + "/quality/compliance-targets/forms/" + formId
+                        + "/departments/" + manager.getDepartment().getId(),
+                managerToken, "{\"targetPercent\":70.00,\"lockVersion\":null}");
+
         assertError(forbidden, HttpStatus.FORBIDDEN, "AUTH_002");
     }
 }

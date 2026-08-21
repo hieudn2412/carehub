@@ -450,6 +450,91 @@
     .tes-filter-bar,
     .training-dashboard__filters,
     .training-filters
+  ) .searchable-select > input {
+    min-height: 42px !important;
+    height: 42px !important;
+    border-radius: 6px !important;
+    padding: 0 34px 0 38px !important;
+    text-align: left !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-main-search,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .evd-toolbar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .fpp-search-wrapper,
+    .il-filter-bar,
+    .mgr-search-box,
+    .pfm-search-box,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
+  ) .searchable-select--static > input {
+    padding-left: 12px !important;
+    padding-right: 34px !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) :is(
+    .am-filter-bar,
+    .aqh-history-filters,
+    .aqh-main-search,
+    .aqh-version-toolbar,
+    .atl-filter-bar,
+    .checklist-quality-filters,
+    .crl-filter-bar,
+    .eal-filter,
+    .etl-filter-bar,
+    .evd-filter-bar,
+    .evd-toolbar,
+    .exam-dashboard__filters,
+    .exp-filter-bar,
+    .flp-toolbar,
+    .fpp-search-wrapper,
+    .il-filter-bar,
+    .mgr-search-box,
+    .pfm-search-box,
+    .qbl-filter-bar,
+    .qcl-filter-bar,
+    .qdoc-filter-bar,
+    .qsf-qfilter-bar,
+    .qsl-filter-bar,
+    .qsq-filter-bar,
+    .qscl-filter-bar,
+    .rdl-filter-bar,
+    .rel-filter-bar,
+    .sfp-toolbar,
+    .tes-filter-bar,
+    .training-dashboard__filters,
+    .training-filters
   ) :is(
     input[type='text'],
     input[type='search'],
@@ -465,6 +550,20 @@
   ) .searchable-select--open .searchable-select__control {
     border-color: var(--focus, #2563eb) !important;
     box-shadow: 0 0 0 2px rgb(37 99 235 / 15%) !important;
+  }
+
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) .searchable-select--open > input,
+  :where(
+    .app-shell--admin .app-shell__body,
+    .dashboard-layout:has(> .admin-sidebar) .dashboard-body,
+    .dashboard-layout:has(> .admin-sidebar) > .dashboard-layout__content > main
+  ) .searchable-select > input:focus {
+    border-color: #16a085 !important;
+    box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.12) !important;
   }
 
   :where(

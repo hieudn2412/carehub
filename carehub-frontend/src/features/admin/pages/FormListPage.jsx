@@ -5,18 +5,17 @@ import {
   DownOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
-  FilterOutlined,
   CheckSquareOutlined,
   ClockCircleOutlined,
   ImportOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
   ReloadOutlined,
-  SearchOutlined,
   StopOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   getChecklistDisplayCode,
@@ -25,11 +24,11 @@ import {
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/FormListPage.css'
 
 const PAGE_SIZE = 10
-const SEARCH_DEBOUNCE_MS = 400
 
 const STATUS_LABELS = {
   PUBLISHED: 'Hoạt động',
@@ -289,9 +288,9 @@ function FormListPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(0)
   const [keyword, setKeyword] = useState('')
-  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('all')
   const [departmentId, setDepartmentId] = useState('all')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: 'all', departmentId: 'all' })
   const [departments, setDepartments] = useState([])
   const [formStats, setFormStats] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
@@ -336,32 +335,16 @@ function FormListPage() {
   }, [])
 
   useEffect(() => {
-    const normalizedKeyword = keyword.trim()
-    const resolvedKeyword = resolveChecklistSearchKeyword(normalizedKeyword)
-
-    if (resolvedKeyword === debouncedKeyword) {
-      return undefined
-    }
-
-    const timer = window.setTimeout(() => {
-      setLoading(true)
-      setDebouncedKeyword(resolvedKeyword)
-    }, SEARCH_DEBOUNCE_MS)
-
-    return () => window.clearTimeout(timer)
-  }, [debouncedKeyword, keyword])
-
-  useEffect(() => {
     let ignoreResponse = false
     let keepLoading = false
     const params = {
       page: page - 1,
       size: PAGE_SIZE,
       sort: 'updatedAt,desc',
-      keyword: debouncedKeyword || undefined,
-      status: status !== 'all' ? status : undefined,
-      ownerDepartmentId: departmentId !== 'all' ? Number(departmentId) : undefined,
-      includeDeleted: status === RETIRED_STATUS ? true : undefined,
+      keyword: appliedFilters.keyword || undefined,
+      status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
+      ownerDepartmentId: appliedFilters.departmentId !== 'all' ? Number(appliedFilters.departmentId) : undefined,
+      includeDeleted: appliedFilters.status === RETIRED_STATUS ? true : undefined,
     }
 
     const loadForms = async () => {
@@ -377,10 +360,10 @@ function FormListPage() {
         }
 
         const content = pageData.content
-        const nextForms = status === RETIRED_STATUS
+        const nextForms = appliedFilters.status === RETIRED_STATUS
           ? mergeCachedRetiredForms(content, {
-            departmentId,
-            keyword: debouncedKeyword,
+            departmentId: appliedFilters.departmentId,
+            keyword: appliedFilters.keyword,
           })
           : content
         const serverTotalElements = Number(pageData.totalElements) || 0
@@ -393,10 +376,10 @@ function FormListPage() {
 
         setForms(nextForms)
         setFormStats({})
-        setTotalElements(status === RETIRED_STATUS
+        setTotalElements(appliedFilters.status === RETIRED_STATUS
           ? Math.max(serverTotalElements, nextForms.length)
           : serverTotalElements)
-        setTotalPages(status === RETIRED_STATUS && nextForms.length > 0
+        setTotalPages(appliedFilters.status === RETIRED_STATUS && nextForms.length > 0
           ? Math.max(nextTotalPages, 1)
           : nextTotalPages)
         setLoading(false)
@@ -452,19 +435,19 @@ function FormListPage() {
     return () => {
       ignoreResponse = true
     }
-  }, [debouncedKeyword, departmentId, page, refreshKey, status])
+  }, [appliedFilters, page, refreshKey])
 
   const visiblePages = useMemo(
     () => getVisiblePages(page, totalPages),
     [page, totalPages],
   )
-  const hasFilters = Boolean(keyword || status !== 'all' || departmentId !== 'all')
-  const emptyTitle = status === RETIRED_STATUS
+  const hasFilters = Boolean(appliedFilters.keyword || appliedFilters.status !== 'all' || appliedFilters.departmentId !== 'all')
+  const emptyTitle = appliedFilters.status === RETIRED_STATUS
     ? 'Chưa có checklist đã ngừng'
     : hasFilters
       ? 'Không tìm thấy checklist phù hợp'
       : 'Chưa có checklist nào'
-  const emptyDescription = status === RETIRED_STATUS
+  const emptyDescription = appliedFilters.status === RETIRED_STATUS
     ? 'Checklist vừa ngừng trên máy này sẽ được giữ tạm ở đây. Nếu tải lại mà mất, backend cần hỗ trợ trả các form đã xóa mềm.'
     : hasFilters
       ? 'Hãy thử thay đổi từ khóa hoặc bộ lọc.'
@@ -480,25 +463,33 @@ function FormListPage() {
     setPage(nextPage)
   }
 
-  const updateStatus = (event) => {
+  const updateStatus = (value) => {
     setErrorMessage('')
     setSuccessMessage('')
     setShowRetiredShortcut(false)
-    setLoading(true)
-    setStatus(event.target.value)
-    setPage(1)
+    setStatus(value)
   }
 
   const clearFilters = () => {
     setErrorMessage('')
     setSuccessMessage('')
     setShowRetiredShortcut(false)
-    setLoading(true)
     setKeyword('')
-    setDebouncedKeyword('')
     setStatus('all')
     setDepartmentId('all')
     setPage(1)
+    setAppliedFilters({ keyword: '', status: 'all', departmentId: 'all' })
+  }
+
+  const applyFilters = () => {
+    setErrorMessage('')
+    setLoading(true)
+    setPage(1)
+    setAppliedFilters({
+      keyword: resolveChecklistSearchKeyword(keyword.trim()),
+      status,
+      departmentId,
+    })
   }
 
   const retryLoad = () => {
@@ -526,6 +517,7 @@ function FormListPage() {
       setSuccessMessage(`Đã ngừng hoạt động checklist "${form.title}" và chuyển sang danh sách đã ngừng.`)
       setLoading(true)
       setStatus(RETIRED_STATUS)
+      setAppliedFilters((current) => ({ ...current, status: RETIRED_STATUS }))
       setPage(1)
       setRefreshKey((current) => current + 1)
     } catch (error) {
@@ -543,6 +535,7 @@ function FormListPage() {
   const viewRetiredForms = () => {
     setErrorMessage('')
     setStatus(RETIRED_STATUS)
+    setAppliedFilters((current) => ({ ...current, status: RETIRED_STATUS }))
     setPage(1)
     setLoading(true)
     setShowRetiredShortcut(false)
@@ -915,40 +908,9 @@ function FormListPage() {
                 </div>
               )}
 
-              <section className="flp-toolbar" aria-label="Bộ lọc checklist">
-                <div className="flp-toolbar-main">
-                  <div className="flp-search-filter-group">
-                    <div className="flp-search-box">
-                      <SearchOutlined className="flp-search-icon" />
-                      <input
-                        aria-label="Tìm kiếm checklist"
-                        className="flp-search-input"
-                        onChange={(event) => {
-                          setErrorMessage('')
-                          setKeyword(event.target.value)
-                          setPage(1)
-                        }}
-                        placeholder="Tìm theo mã hoặc tiêu đề..."
-                        type="search"
-                        value={keyword}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`flp-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="checklist-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {[status !== 'all', departmentId !== 'all'].filter(Boolean).length > 0 && (
-                        <span className="flp-filter-count">
-                          {[status !== 'all', departmentId !== 'all'].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  <div className="flp-toolbar-actions">
+              <AppliedFilterToolbar
+                activeCount={[status !== 'all', departmentId !== 'all'].filter(Boolean).length}
+                actions={<div className="flp-toolbar-actions">
                     <button className="flp-btn-assign" onClick={openAssignmentModal} type="button">
                       <UserSwitchOutlined /> Giao checklist
                     </button>
@@ -984,29 +946,35 @@ function FormListPage() {
                     <button className="flp-btn-create" onClick={() => navigate('/admin/quality/checklists/new')} type="button">
                       <PlusCircleOutlined /> Tạo biểu mẫu mới
                     </button>
-                  </div>
-                </div>
-
-                {isFilterOpen && (
-                  <div className="flp-filter-panel" id="checklist-filter-panel">
-                    <label className="flp-filter-group">
-                      <span>Trạng thái</span>
-                      <select className="flp-select" onChange={updateStatus} value={status}>
-                        <option value="all">Tất cả trạng thái</option>
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flp-filter-group">
-                      <span>Khoa/phòng</span>
-                      <div className="flp-department-filter">
-                        <SearchableSelect
+                  </div>}
+                ariaLabel="Bộ lọc checklist"
+                className="flp-toolbar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={clearFilters}
+                onSearchChange={(value) => { setErrorMessage(''); setKeyword(value) }}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="flp-filter-panel"
+                panelId="checklist-filter-panel"
+                searchAriaLabel="Tìm kiếm checklist"
+                searchClassName="flp-search-box"
+                searchPlaceholder="Tìm theo mã hoặc tiêu đề..."
+                searchValue={keyword}
+              >
+                    <FilterSelectField
+                      className="flp-filter-group"
+                      label="Trạng thái"
+                      onChange={updateStatus}
+                      value={status}
+                      options={[{ value: 'all', label: 'Tất cả trạng thái' }, ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))]}
+                      placeholder="Tất cả trạng thái"
+                    />
+                    <FilterSelectField
+                          className="flp-filter-group flp-department-filter"
+                          label="Khoa/phòng"
                           onChange={(value) => {
                             setErrorMessage('')
-                            setLoading(true)
                             setDepartmentId(value)
-                            setPage(1)
                           }}
                           value={departmentId}
                           options={[
@@ -1017,31 +985,24 @@ function FormListPage() {
                             })),
                           ]}
                           placeholder="Tất cả khoa/phòng"
+                          searchable
                           searchPlaceholder="Tìm tên khoa/phòng..."
-                          ariaLabel="Tìm và chọn khoa/phòng"
                         />
-                      </div>
-                    </label>
-                    {hasFilters && (
-                      <button className="flp-clear-filters" onClick={clearFilters} type="button">Xóa bộ lọc</button>
-                    )}
-                  </div>
-                )}
-              </section>
+              </AppliedFilterToolbar>
 
               <section className="flp-table-card" aria-busy={loading}>
                 <div className="flp-table-scroll">
                   <table className="flp-table">
                     <thead>
                       <tr>
-                        <th>Tên quy trình</th>
-                        <th>Phiên bản</th>
-                        <th>Ngày tạo</th>
-                        <th>Người được giao</th>
-                        <th>Lượt đánh giá</th>
-                        <th>Điểm sàn</th>
-                        <th>Trạng thái</th>
-                        <th className="flp-table__actions-heading">Hành động</th>
+                        <th className="flp-col-name">Tên quy trình</th>
+                        <th className="flp-col-version">Phiên bản</th>
+                        <th className="flp-col-created">Ngày tạo</th>
+                        <th className="flp-col-assignees">Người được giao</th>
+                        <th className="flp-col-responses">Lượt đánh giá</th>
+                        <th className="flp-col-score">Điểm sàn</th>
+                        <th className="flp-col-status">Trạng thái</th>
+                        <th className="flp-col-actions flp-table__actions-heading">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1066,7 +1027,7 @@ function FormListPage() {
                       ) : (
                         forms.map((form) => (
                           <tr key={form.id}>
-                            <td>
+                            <td className="flp-col-name">
                               <div className="flp-form-title-wrapper">
                                 <span className="flp-form-title">{form.title}</span>
                                 {form.description && (
@@ -1074,7 +1035,7 @@ function FormListPage() {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td className="flp-col-version">
                               {form.currentPublishedVersion ? (
                                 <span className="flp-version-badge">
                                   v{form.currentPublishedVersion.versionNumber}
@@ -1083,10 +1044,10 @@ function FormListPage() {
                                 <span className="flp-text-muted">Chưa có</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-created">
                               <span className="flp-date-stack">{formatChecklistDate(form.createdAt)}</span>
                             </td>
-                            <td>
+                            <td className="flp-col-assignees">
                               <button
                                 className="flp-stat-link"
                                 onClick={() => setPermissionForm(form)}
@@ -1097,8 +1058,8 @@ function FormListPage() {
                                 <span>Quản lý</span>
                               </button>
                             </td>
-                            <td>{formStats[form.id]?.responseCount ?? '—'}</td>
-                            <td>
+                            <td className="flp-col-responses">{formStats[form.id]?.responseCount ?? '—'}</td>
+                            <td className="flp-col-score">
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
                                   {Number(form.currentPublishedVersion.passingScore).toFixed(1)}/10
@@ -1107,14 +1068,14 @@ function FormListPage() {
                                 <span className="flp-text-muted">—</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-status">
                               <span
                                 className={`form-badge ${getStatusBadgeClass(getEffectiveStatus(form))}`}
                               >
                                 {STATUS_LABELS[getEffectiveStatus(form)] || getEffectiveStatus(form)}
                               </span>
                             </td>
-                            <td>
+                            <td className="flp-col-actions">
                               <div className="flp-actions-cell admin-table-actions">
                                 {form.currentPublishedVersion?.id && (
                                   <button
@@ -1133,7 +1094,7 @@ function FormListPage() {
                                   onClick={() =>
                                     navigate(`/admin/quality/checklists/${form.id}/detail`)
                                   }
-                                  title="Xem nội dung checklist"
+                                  title="Xem nội dung bảng kiểm"
                                   type="button"
                                 >
                                   <EyeOutlined />

@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CheckCircleFilled, CloseOutlined, EyeOutlined, FilterOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
+import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
+import { indexAnswersByQuestion, resolveStepRating } from '../../utils/checklistRating.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import '../../styles/StaffCompetencyPage.css'
@@ -23,13 +26,6 @@ const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
 const formatScore10 = value => {
   const score = Number(value)
   return SCORE_FORMATTER.format(Number.isFinite(score) ? score : 0)
-}
-
-const convertToTenPointScale = (value, totalMaxScore) => {
-  const score = Number(value)
-  const maxScore = Number(totalMaxScore)
-  if (!Number.isFinite(score) || !Number.isFinite(maxScore) || maxScore <= 0) return 0
-  return score * 10 / maxScore
 }
 
 export default function StaffCompetencyPage() {
@@ -81,6 +77,20 @@ export default function StaffCompetencyPage() {
     return (data?.items || []).filter(item => String(item.formName || '').toLowerCase().includes(query.toLowerCase()))
   }, [data, query])
 
+  // Người được chấm quan tâm "bước nào bị trừ điểm", không phải điểm quy đổi của từng bước,
+  // nên mỗi bước hiển thị bằng mức đánh giá mà người chấm đã chọn.
+  const detailSteps = useMemo(() => {
+    const answers = indexAnswersByQuestion(detail?.answers)
+    return (detail?.scoreBreakdown || []).map((step, index) => ({
+      key: step.questionKey == null ? `step-${index}` : String(step.questionKey),
+      order: index + 1,
+      code: step.code || '',
+      title: step.title || 'Bước không có tên',
+      critical: Boolean(step.critical),
+      rating: resolveStepRating(step, answers.get(String(step.questionKey))),
+    }))
+  }, [detail])
+
   const applyFilters = () => {
     if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
       setDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
@@ -127,10 +137,11 @@ export default function StaffCompetencyPage() {
         <label className="th-mobile-search-form__field"><span>Đến ngày</span><KeyboardDatePicker value={draftFilters.dateTo} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} aria-label="Đến ngày" /></label>
       </div>
       {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
-      <div className="th-mobile-search-form__actions">
-        <button type="button" className="th-mobile-search-form__clear" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
-        <button type="button" className="th-mobile-search-form__apply" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
-      </div>
+      <FilterActionButtons
+        className="th-mobile-search-form__actions"
+        onReset={() => { clearFilters(); close() }}
+        onApply={() => { const valid = applyFilters(); if (valid !== false) close() }}
+      />
     </div>
   )
 
@@ -178,25 +189,22 @@ export default function StaffCompetencyPage() {
       }}
     >
       <div className="sc-page">
-        <section className="sc-toolbar admin-control-toolbar" aria-label="Bộ lọc tuân thủ cá nhân">
-          <div className="admin-control-toolbar__main">
-            <div className="admin-control-toolbar__controls">
-              <div className="sc-search-input admin-control-toolbar__search"><SearchOutlined aria-hidden="true" /><input value={draftFilters.q} onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))} onKeyDown={event => event.key === 'Enter' && applyFilters()} placeholder="Tìm tên bảng kiểm..." aria-label="Tìm tên bảng kiểm" /></div>
-              <button
-                type="button"
-                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                aria-controls="staff-compliance-filter-panel"
-                aria-expanded={isFilterOpen}
-                onClick={() => setIsFilterOpen(current => !current)}
-              >
-                <FilterOutlined aria-hidden="true" />
-                Bộ lọc
-                <span className="admin-control-toolbar__filter-count">{Number(Boolean(fromDate)) + Number(Boolean(toDate))}</span>
-              </button>
-            </div>
-          </div>
-          {isFilterOpen && (
-            <div id="staff-compliance-filter-panel" className="sc-toolbar__filter-panel admin-control-toolbar__panel">
+        <AppliedFilterToolbar
+          activeCount={Number(Boolean(fromDate && fromDate !== `${new Date().getFullYear()}-01-01`)) + Number(Boolean(toDate && toDate !== today))}
+          ariaLabel="Bộ lọc tuân thủ cá nhân"
+          className="sc-toolbar"
+          isOpen={isFilterOpen}
+          onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
+          onReset={clearFilters}
+          onSearchChange={value => setDraftFilters(current => ({ ...current, q: value }))}
+          onToggle={() => setIsFilterOpen(current => !current)}
+          panelClassName="sc-toolbar__filter-panel"
+          panelId="staff-compliance-filter-panel"
+          searchAriaLabel="Tìm tên bảng kiểm"
+          searchClassName="sc-search-input"
+          searchPlaceholder="Tìm tên bảng kiểm..."
+          searchValue={draftFilters.q}
+        >
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
                 <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} />
@@ -205,14 +213,8 @@ export default function StaffCompetencyPage() {
                 <span>Đến ngày</span>
                 <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} />
               </label>
-              <div className="sc-toolbar__filter-actions">
-                <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>
-                <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={applyFilters}>Áp dụng</button>
-              </div>
               {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
-            </div>
-          )}
-        </section>
+        </AppliedFilterToolbar>
         <section className="sc-personal-metrics sc-personal-metrics--compact" aria-label="Tổng quan tuân thủ">
           <article className="sc-personal-metric sc-personal-metric--primary"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tỷ lệ tuân thủ chung</span><strong>{formatNumber(totals.rate)}%</strong></div></article>
           <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><CheckCircleFilled /></span><div><span>Số lượt đạt</span><strong>{totals.passed}</strong></div></article>
@@ -243,11 +245,31 @@ export default function StaffCompetencyPage() {
         {detailLoading ? <div className="sc-detail-dialog__loading"><LoadingState label="Đang tải..." /></div> : <div className="sc-detail-dialog__body">
           {detailAttempts.length > 1 && <section className="sc-attempt-history" aria-label="Lịch sử các lượt đánh giá"><h4>Lịch sử đánh giá ({detailAttempts.length} lượt)</h4><div>{detailAttempts.map((attempt, index) => <button key={attempt.submissionId} type="button" className={attempt.submissionId === activeSubmissionId ? 'is-active' : ''} onClick={() => openDetail(attempt.submissionId)}><span>Lượt {detailAttempts.length - index}</span><strong>{attempt.evaluatedAt ? new Date(attempt.evaluatedAt).toLocaleDateString('vi-VN') : 'Chưa có ngày'}</strong><small>{attempt.passed ? 'Đạt' : 'Chưa đạt'} · {formatScore10(attempt.score)}/10</small></button>)}</div></section>}
           <div className="sc-detail-metrics"><article className="sc-personal-metric"><span className="sc-personal-metric__icon">{detail?.result === 'PASSED' ? <CheckCircleFilled /> : <WarningFilled />}</span><div><span>Kết quả</span><strong>{detail?.result === 'PASSED' ? 'Đạt' : 'Chưa đạt'}</strong></div></article><article className="sc-personal-metric"><div><span>Điểm</span><strong>{formatScore10(detail?.convertedScore)}/10</strong></div></article></div>
-          <div className="sc-detail-breakdown"><h4>Câu trả lời và tiêu chí</h4>{(detail?.scoreBreakdown || []).map(item => {
-            const score10 = convertToTenPointScale(item.weightedScore, detail?.maxScore)
-            const maxScore10 = convertToTenPointScale(item.maxScore, detail?.maxScore)
-            return <article key={item.questionKey}><div><strong>{item.code} · {item.title}</strong></div><small>Điểm (thang 10): {formatScore10(score10)} / {formatScore10(maxScore10)}</small></article>
-          })}</div>
+          <div className="sc-detail-breakdown">
+            <h4>Các bước và mức đánh giá</h4>
+            {detailSteps.length === 0 ? <p>Bảng kiểm này chưa có dữ liệu chấm theo từng bước.</p> : (
+              <ul className="sc-step-list">
+                {detailSteps.map(step => (
+                  <li key={step.key} className={`sc-step sc-step--${step.rating.tone}`}>
+                    <div className="sc-step__info">
+                      <span className="sc-step__order">{step.order}</span>
+                      <div>
+                        <strong>{step.title}</strong>
+                        {(step.code || step.critical) && (
+                          <small>
+                            {step.code}
+                            {step.code && step.critical ? ' · ' : ''}
+                            {step.critical ? 'Bước trọng yếu' : ''}
+                          </small>
+                        )}
+                      </div>
+                    </div>
+                    <span className="sc-step__rating">{step.rating.label}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>}
       </section></div> : null}
     </AppShell>

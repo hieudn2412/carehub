@@ -13,6 +13,8 @@ import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import ConfirmModal from '../../../../shared/components/ConfirmModal.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
+import FilterSelectField from '../../../../shared/components/FilterSelectField.jsx'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
 import TrainingRecordTable from './components/TrainingRecordTable.jsx'
@@ -446,12 +448,13 @@ function TrainingHoursListScreen() {
                     </div>
                   ) : (
                     <div className="th-list-filter-panel__grid">
-                      <label>
-                        <span>Trạng thái hồ sơ</span>
-                        <select value={filterDraft.status} onChange={event => setFilterDraft(current => ({ ...current, status: event.target.value }))} aria-label="Lọc theo trạng thái hồ sơ">
-                          {STATUS_FILTER_OPTIONS.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-                        </select>
-                      </label>
+                      <FilterSelectField
+                        ariaLabel="Lọc theo trạng thái hồ sơ"
+                        label="Trạng thái hồ sơ"
+                        value={filterDraft.status}
+                        onChange={value => setFilterDraft(current => ({ ...current, status: value }))}
+                        options={STATUS_FILTER_OPTIONS}
+                      />
                       <label>
                         <span>Từ ngày</span>
                         <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => setFilterDraft(current => ({ ...current, dateFrom: val }))} aria-label="Lọc từ ngày" />
@@ -460,27 +463,32 @@ function TrainingHoursListScreen() {
                         <span>Đến ngày</span>
                         <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => setFilterDraft(current => ({ ...current, dateTo: val }))} aria-label="Lọc đến ngày" />
                       </label>
-                      <label>
-                        <span>Lĩnh vực chuyên môn</span>
-                        <select value={filterDraft.professionalFieldId} onChange={event => setFilterDraft(current => ({ ...current, professionalFieldId: event.target.value }))} aria-label="Lọc theo lĩnh vực chuyên môn">
-                          <option value="">Tất cả lĩnh vực</option>
-                          {filterOptions.professionalFields.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-                        </select>
-                      </label>
-                      <label>
-                        <span>Hình thức đào tạo</span>
-                        <select value={filterDraft.activityTypeId} onChange={event => setFilterDraft(current => ({ ...current, activityTypeId: event.target.value }))} aria-label="Lọc theo hình thức đào tạo">
-                          <option value="">Tất cả hình thức</option>
-                          {filterOptions.activityTypes.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-                        </select>
-                      </label>
+                      <FilterSelectField
+                        ariaLabel="Lọc theo lĩnh vực chuyên môn"
+                        label="Lĩnh vực chuyên môn"
+                        value={filterDraft.professionalFieldId}
+                        onChange={value => setFilterDraft(current => ({ ...current, professionalFieldId: value }))}
+                        searchable
+                        options={[
+                          { value: '', label: 'Tất cả lĩnh vực' },
+                          ...filterOptions.professionalFields.map(option => ({ value: option.id, label: option.name || option.label })),
+                        ]}
+                      />
+                      <FilterSelectField
+                        ariaLabel="Lọc theo hình thức đào tạo"
+                        label="Hình thức đào tạo"
+                        value={filterDraft.activityTypeId}
+                        onChange={value => setFilterDraft(current => ({ ...current, activityTypeId: value }))}
+                        searchable
+                        options={[
+                          { value: '', label: 'Tất cả hình thức' },
+                          ...filterOptions.activityTypes.map(option => ({ value: option.id, label: option.name || option.label })),
+                        ]}
+                      />
                     </div>
                   )}
                   {filterDateError && <p className="th-list-filter-panel__error" role="alert">{filterDateError}</p>}
-                  <div className="th-list-filter-panel__actions">
-                    <button type="button" className="th-overview-filter-panel__clear" onClick={handleClearFilters}>Xóa bộ lọc</button>
-                    <button type="button" className="th-btn-primary" onClick={handleApplyFilters}>Áp dụng</button>
-                  </div>
+                  <FilterActionButtons className="th-list-filter-panel__actions" onReset={handleClearFilters} onApply={handleApplyFilters} />
                 </div>
               )}
             </div>
