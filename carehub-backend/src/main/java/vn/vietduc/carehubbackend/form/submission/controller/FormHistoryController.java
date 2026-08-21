@@ -36,11 +36,12 @@ public class FormHistoryController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) Long subjectUserId,
             @PageableDefault(size = 12) Pageable pageable
     ) {
         return ApiResponse.success(
                 "Get form history successfully",
-                PageResponse.from(historyService.searchForms(keyword, dateFrom, dateTo, pageable))
+                PageResponse.from(historyService.searchForms(keyword, dateFrom, dateTo, subjectUserId, pageable))
         );
     }
 

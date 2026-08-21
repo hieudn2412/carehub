@@ -271,9 +271,20 @@ public class DashboardService {
                          else round((a.passed_count * 100.0 / a.submitted_count)::numeric, 2)
                     end as pass_rate,
                     coalesce(round(a.average_converted_score::numeric, 4), 0) as average_converted_score,
-                    a.last_submitted_at
+                    a.last_submitted_at,
+                    coalesce(dt.target_percent, ht.target_percent, 80.00) as target_percent,
+                    case when dt.id is not null then 'DEPARTMENT'
+                         when ht.id is not null then 'HOSPITAL'
+                         else 'DEFAULT'
+                    end as target_source
                 from form_templates f
                 left join agg a on a.form_template_id = f.id
+                left join form_compliance_targets ht
+                  on ht.form_template_id = f.id and ht.department_id is null
+                left join form_compliance_targets dt
+                  on dt.form_template_id = f.id
+                 and :departmentId is not null
+                 and dt.department_id = :departmentId
                 where f.deleted = false
                   and (:formId is null or f.id = :formId)
                   and (:restrictToMatched = false or a.form_template_id is not null)
@@ -294,6 +305,8 @@ public class DashboardService {
                 .passRate(decimal(rs.getObject("pass_rate")))
                 .averageConvertedScore(decimal(rs.getObject("average_converted_score")))
                 .lastSubmittedAt(toInstant(rs.getObject("last_submitted_at")))
+                .targetPercent(decimal(rs.getObject("target_percent")))
+                .targetSource(rs.getString("target_source"))
                 .build());
         Long total = jdbc.queryForObject(aggregateSql + """
                 select count(*)

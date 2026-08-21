@@ -243,7 +243,8 @@ public class CompetencyController {
             @RequestParam(required = false) LocalDate toDate,
             Authentication authentication) {
         requireManagerEmployeeScope(employeeId, authentication);
-        CompetencyEmployeeByTechniqueResponse data = competencyService.getEmployeeByTechnique(employeeId, fromDate, toDate);
+        CompetencyEmployeeByTechniqueResponse data = competencyService.getEmployeeByTechnique(
+                employeeId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy tuân thủ kỹ thuật cá nhân thành công", data));
     }
 

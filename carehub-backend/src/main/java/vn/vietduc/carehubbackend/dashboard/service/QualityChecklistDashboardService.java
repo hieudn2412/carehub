@@ -193,8 +193,8 @@ public class QualityChecklistDashboardService {
     }
 
     private String eligibleFormsCte(Scope scope) {
-        String assignmentPredicate = scope.role() == Role.ADMIN ? "" : """
-                and exists (
+        String activeAssignmentExists = """
+                exists (
                     select 1
                     from form_assignment_items fai
                     join form_assignments fa on fa.id = fai.assignment_id
@@ -207,6 +207,28 @@ public class QualityChecklistDashboardService {
                       and (fa.effective_to is null or fa.effective_to >= :now)
                 )
                 """;
+        String assignmentPredicate = switch (scope.role()) {
+            case ADMIN -> "";
+            case USER -> "and " + activeAssignmentExists;
+            case MANAGER -> """
+                    and (
+                """ + activeAssignmentExists + """
+                        or exists (
+                            select 1
+                            from form_submissions historical_submission
+                            join form_versions historical_version
+                              on historical_version.id = historical_submission.form_version_id
+                            join form_submission_contexts historical_context
+                              on historical_context.submission_id = historical_submission.id
+                            join users historical_subject
+                              on historical_subject.id = historical_context.subject_user_id
+                            where historical_version.form_template_id = f.id
+                              and historical_submission.status = 'SUBMITTED'
+                              and historical_subject.department_id = :metricDepartmentId
+                        )
+                    )
+                    """;
+        };
         return """
                 with eligible_forms as (
                     select f.id as form_id, f.code as form_code, f.title as form_title,

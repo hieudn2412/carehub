@@ -84,7 +84,8 @@ class MyCompetencyServiceTest {
 
         when(attemptRepository.findScoredAttemptsByUserAndDateRange(any(), any(), any()))
                 .thenReturn(List.of(attempt));
-        when(submissionRepository.findScoredEvaluationsForSubject(anyLong(), anyString(), any(), any()))
+        when(submissionRepository.findScoredEvaluationsForSubject(
+                anyLong(), anyString(), any(), any()))
                 .thenReturn(List.of(submission));
         when(classificationService.classifyOverall(any())).thenReturn(CompetencyLevel.PROFICIENT);
     }

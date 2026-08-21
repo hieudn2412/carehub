@@ -5,9 +5,9 @@ import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.js
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { adminApi } from '../api/adminApi'
 import {
-  SearchOutlined,
   EyeOutlined,
   LeftOutlined,
   RightOutlined,
@@ -19,7 +19,6 @@ import {
   UnlockOutlined,
   DeleteOutlined,
   KeyOutlined,
-  FilterOutlined,
   DownloadOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -69,11 +68,16 @@ function AdminAccountsScreen() {
 
   // Filters State
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: '',
+    departmentId: 'all',
+    roleId: 'all',
+    status: 'all',
+  })
 
   // Selected User Detail Modal State
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -125,15 +129,6 @@ function AdminAccountsScreen() {
     setIsFormModalOpen(false)
     navigate('/admin/reference/departments')
   }
-
-  // Debounce search keyword
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search)
-      setPage(1)
-    }, 500)
-    return () => clearTimeout(handler)
-  }, [search])
 
   // Load static reference data on mount
   useEffect(() => {
@@ -187,10 +182,10 @@ function AdminAccountsScreen() {
     const params = {
       page: page - 1,
       size: 10,
-      keyword: debouncedSearch || undefined,
-      departmentId: deptFilter !== 'all' ? deptFilter : undefined,
-      roleId: roleFilter !== 'all' ? roleFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
+      keyword: appliedFilters.search || undefined,
+      departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
+      roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
+      status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
     }
 
     adminApi.getUsers(params)
@@ -213,7 +208,7 @@ function AdminAccountsScreen() {
 
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch, deptFilter, roleFilter, statusFilter])
+  }, [page, appliedFilters])
 
   // Load detail data when select user changes
   useEffect(() => {
@@ -516,10 +511,10 @@ function AdminAccountsScreen() {
   // Handle Export CSV
   const handleExport = () => {
     const params = {
-      keyword: debouncedSearch || undefined,
-      departmentId: deptFilter !== 'all' ? deptFilter : undefined,
-      roleId: roleFilter !== 'all' ? roleFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
+      keyword: appliedFilters.search || undefined,
+      departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
+      roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
+      status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
     }
 
     adminApi.exportUsers(params)
@@ -554,6 +549,25 @@ function AdminAccountsScreen() {
         console.error('Lỗi khi xuất danh sách:', err)
         showToast('Có lỗi xảy ra khi xuất tệp dữ liệu.', 'error')
       })
+  }
+
+  const applyFilters = () => {
+    setPage(1)
+    setAppliedFilters({
+      search: search.trim(),
+      departmentId: deptFilter,
+      roleId: roleFilter,
+      status: statusFilter,
+    })
+  }
+
+  const resetFilters = () => {
+    setSearch('')
+    setDeptFilter('all')
+    setRoleFilter('all')
+    setStatusFilter('all')
+    setPage(1)
+    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all' })
   }
 
   // Render Pill badges for roles
@@ -618,38 +632,9 @@ function AdminAccountsScreen() {
               </div>
 
               {/* Filters Block */}
-              <div className="am-filter-bar">
-                <div className="am-toolbar-main">
-                  <div className="am-search-filter-group">
-                    <div className="am-search">
-                      <span className="am-search-icon">
-                        <SearchOutlined />
-                      </span>
-                      <input
-                        type="text"
-                        className="am-search-input"
-                        placeholder="Tìm theo tên hoặc ID..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`am-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="account-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length > 0 && (
-                        <span className="am-filter-count">
-                          {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="am-toolbar-actions">
+              <AppliedFilterToolbar
+                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
+                actions={<div className="am-toolbar-actions">
                     <span className="am-results-count">{totalElements} kết quả</span>
                     <button className="am-btn-primary" onClick={handleOpenCreateModal}>
                       <PlusOutlined /> Thêm tài khoản
@@ -670,20 +655,26 @@ function AdminAccountsScreen() {
                     >
                       <UploadOutlined />
                     </button>
-                  </div>
-                </div>
-
-                {isFilterOpen && (
-                  <div className="am-filter-panel" id="account-filter-panel">
+                  </div>}
+                className="am-filter-bar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setSearch}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="am-filter-panel"
+                panelId="account-filter-panel"
+                searchAriaLabel="Tìm tài khoản theo tên hoặc ID"
+                searchClassName="am-search"
+                searchPlaceholder="Tìm theo tên hoặc ID..."
+                searchValue={search}
+              >
                     <div className="am-filter-department">
                       <span className="am-filter-label">Phòng ban</span>
                       <SearchableSelect
                         id="account-department-filter"
                         value={deptFilter}
-                        onChange={(value) => {
-                          setDeptFilter(value || 'all')
-                          setPage(1)
-                        }}
+                        onChange={(value) => setDeptFilter(value || 'all')}
                         disabled={departmentLoading}
                         options={[
                           { value: 'all', label: 'Tất cả phòng ban' },
@@ -703,7 +694,7 @@ function AdminAccountsScreen() {
                       <select
                         className="am-filter-select"
                         value={roleFilter}
-                        onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
+                        onChange={(e) => setRoleFilter(e.target.value)}
                       >
                         <option value="all">Tất cả vai trò</option>
                         {roles.map(r => {
@@ -717,7 +708,7 @@ function AdminAccountsScreen() {
                       <select
                         className="am-filter-select"
                         value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
+                        onChange={(e) => setStatusFilter(e.target.value)}
                       >
                         <option value="all">Tất cả trạng thái</option>
                         <option value="ACTIVE">Hoạt động</option>
@@ -725,9 +716,7 @@ function AdminAccountsScreen() {
                         <option value="LOCKED">Đã khoá</option>
                       </select>
                     </label>
-                  </div>
-                )}
-              </div>
+              </AppliedFilterToolbar>
 
               {/* Table Card */}
               <div className="am-table-card">

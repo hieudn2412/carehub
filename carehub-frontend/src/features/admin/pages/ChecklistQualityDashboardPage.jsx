@@ -14,6 +14,7 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi.js'
@@ -150,6 +151,16 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const [targetModalForm, setTargetModalForm] = useState(null)
+  const usesAppliedFilters = isUser || isManager
+  const [appliedRoleFilters, setAppliedRoleFilters] = useState({
+    fromDate: yearStart,
+    processId: '',
+    resultStatus: '',
+    search: '',
+    submittedByUserId: '',
+    subjectUserId: '',
+    toDate: today,
+  })
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300)
@@ -183,39 +194,48 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     return () => { active = false }
   }, [isAdmin, isManager])
 
+  const effectiveSearch = usesAppliedFilters ? appliedRoleFilters.search : debouncedSearch
+  const effectiveFromDate = usesAppliedFilters ? appliedRoleFilters.fromDate : fromDate
+  const effectiveToDate = usesAppliedFilters ? appliedRoleFilters.toDate : toDate
+  const effectiveProcessId = usesAppliedFilters ? appliedRoleFilters.processId : processId
+  const effectiveResultStatus = usesAppliedFilters ? appliedRoleFilters.resultStatus : resultStatus
+  const effectiveSubjectUserId = usesAppliedFilters ? appliedRoleFilters.subjectUserId : subjectUserId
+  const effectiveSubmittedByUserId = usesAppliedFilters ? appliedRoleFilters.submittedByUserId : submittedByUserId
+
   const activeFilterCount = useMemo(() => [
-    search.trim(),
-    fromDate !== yearStart,
-    toDate !== today,
+    effectiveSearch.trim(),
+    effectiveFromDate !== yearStart,
+    effectiveToDate !== today,
     isAdmin && departmentId,
-    processId,
-    resultStatus,
-    subjectUserId,
-    !isUser && submittedByUserId,
+    effectiveProcessId,
+    effectiveResultStatus,
+    effectiveSubjectUserId,
+    !isUser && effectiveSubmittedByUserId,
   ].filter(Boolean).length, [
-    departmentId, fromDate, isAdmin, isUser, processId, resultStatus,
-    search, subjectUserId, submittedByUserId, toDate,
+    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, isAdmin, isUser,
   ])
   const view = activeFilterCount > 0 ? 'FILTERED' : 'LATEST'
 
   const requestParams = useMemo(() => ({
     view,
-    keyword: debouncedSearch || undefined,
-    fromDate,
-    toDate,
+    keyword: effectiveSearch || undefined,
+    fromDate: effectiveFromDate,
+    toDate: effectiveToDate,
     departmentId: isAdmin ? departmentId || undefined : isManager ? departmentId || undefined : undefined,
-    formId: processId || undefined,
-    resultStatus: resultStatus || undefined,
-    subjectUserId: subjectUserId || undefined,
-    submittedByUserId: !isUser && submittedByUserId ? submittedByUserId : undefined,
+    formId: effectiveProcessId || undefined,
+    resultStatus: effectiveResultStatus || undefined,
+    subjectUserId: effectiveSubjectUserId || undefined,
+    submittedByUserId: !isUser && effectiveSubmittedByUserId ? effectiveSubmittedByUserId : undefined,
   }), [
-    debouncedSearch, departmentId, fromDate, isAdmin, isManager, isUser,
-    processId, resultStatus, subjectUserId, submittedByUserId, toDate, view,
+    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveSearch, effectiveSubjectUserId, effectiveToDate, isAdmin, isManager,
+    isUser, effectiveSubmittedByUserId, view,
   ])
 
   useEffect(() => { setPage(0) }, [
-    debouncedSearch, departmentId, fromDate, processId, resultStatus,
-    subjectUserId, submittedByUserId, toDate, view,
+    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, view,
   ])
 
   useEffect(() => {
@@ -257,8 +277,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     if (isManager && !departmentId) return undefined
     let active = true
     adminApi.getQualityChecklistFilterOptions({
-      fromDate,
-      toDate,
+      fromDate: effectiveFromDate,
+      toDate: effectiveToDate,
       departmentId: isAdmin ? departmentId || undefined : isManager ? departmentId || undefined : undefined,
     }).then((response) => {
       if (!active) return
@@ -268,7 +288,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       if (active) setError(apiErrorMessage(requestError))
     })
     return () => { active = false }
-  }, [departmentId, fromDate, isAdmin, isManager, toDate, reloadKey])
+  }, [departmentId, effectiveFromDate, effectiveToDate, isAdmin, isManager, reloadKey])
 
   const selectedForm = forms.find((item) => String(item.formId) === String(selectedFormId)) || forms[0] || null
 
@@ -299,6 +319,35 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setResultStatus('')
     setSubjectUserId('')
     setSubmittedByUserId('')
+    if (usesAppliedFilters) {
+      setAppliedRoleFilters({
+        fromDate: yearStart,
+        processId: '',
+        resultStatus: '',
+        search: '',
+        submittedByUserId: '',
+        subjectUserId: '',
+        toDate: today,
+      })
+    }
+  }
+
+  function applyRoleFilters() {
+    if (fromDate && toDate && fromDate > toDate) {
+      setError('Từ ngày không được sau đến ngày')
+      return
+    }
+    setError('')
+    setAppliedRoleFilters({
+      fromDate,
+      processId,
+      resultStatus,
+      search: search.trim(),
+      submittedByUserId,
+      subjectUserId,
+      toDate,
+    })
+    setIsFilterOpen(false)
   }
 
   async function handleExport() {
@@ -320,6 +369,52 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }
 
   const pageTitle = isUser ? 'Chất lượng chăm sóc cá nhân' : 'Dashboard chất lượng chăm sóc'
+  const toolbarActions = (
+    <div className="checklist-quality-toolbar__actions">
+      <span className="checklist-quality-toolbar__count"><FileSearchOutlined />
+        <strong>{pageInfo.totalElements}</strong> {view === 'LATEST' ? 'quy trình gần nhất' : 'quy trình phù hợp'}
+      </span>
+      {isAdmin && <button className="checklist-quality-export" disabled={exporting || loading || forms.length === 0}
+        onClick={handleExport} type="button">
+        {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+        {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
+      </button>}
+    </div>
+  )
+  const filterFields = (
+    <>
+      <DateFilter label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={setFromDate} />
+      <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={setToDate} />
+      {isAdmin && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
+        <SearchableSelect value={departmentId} onChange={setDepartmentId} placeholder="Toàn viện"
+          searchPlaceholder="Gõ tên khoa/phòng..." options={[
+            { value: '', label: 'Toàn viện' },
+            ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
+          ]} />
+      </SelectFilter>}
+      <label className="checklist-quality-filter"><span>Kết quả</span><div><CheckCircleOutlined />
+        <select aria-label="Kết quả" value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
+          <option value="">Tất cả kết quả</option><option value="PASSED">Đạt</option>
+          <option value="FAILED">Chưa đạt</option><option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
+          <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
+        </select></div></label>
+      <SelectFilter label="Người được đánh giá" icon={<TeamOutlined />}>
+        <SearchableSelect value={subjectUserId} onChange={setSubjectUserId} placeholder="Tất cả nhân viên"
+          searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} />
+      </SelectFilter>
+      {!isUser && <SelectFilter label="Người thực hiện" icon={<EditOutlined />}>
+        <SearchableSelect value={submittedByUserId} onChange={setSubmittedByUserId} placeholder="Tất cả người thực hiện"
+          searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} />
+      </SelectFilter>}
+      <SelectFilter label="Quy trình" icon={<FileSearchOutlined />}>
+        <SearchableSelect value={processId} onChange={setProcessId} placeholder="Tất cả quy trình"
+          searchPlaceholder="Gõ tên hoặc mã quy trình..." options={[
+            { value: '', label: 'Tất cả quy trình' },
+            ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, description: item.code, searchText: item.code })),
+          ]} />
+      </SelectFilter>
+    </>
+  )
 
   return (
     <AppShell
@@ -327,7 +422,25 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       breadcrumbs={isAdmin ? [{ label: 'Dashboard & Báo cáo' }, { label: 'Chất lượng chăm sóc' }] : undefined}
     >
       <div className="checklist-quality-dashboard">
-        <section className="checklist-quality-toolbar admin-control-toolbar" aria-label="Công cụ dashboard chất lượng chăm sóc">
+        {usesAppliedFilters ? <AppliedFilterToolbar
+          activeCount={activeFilterCount}
+          actions={toolbarActions}
+          ariaLabel="Công cụ dashboard chất lượng chăm sóc"
+          className="checklist-quality-toolbar"
+          isOpen={isFilterOpen}
+          onApply={applyRoleFilters}
+          onReset={resetFilters}
+          onSearchChange={setSearch}
+          onToggle={() => setIsFilterOpen((current) => !current)}
+          panelClassName="checklist-quality-filter-panel"
+          panelId="checklist-quality-filter-panel"
+          searchAriaLabel="Tìm theo tên hoặc mã quy trình"
+          searchClassName="checklist-quality-search"
+          searchPlaceholder="Tìm theo tên hoặc mã quy trình..."
+          searchValue={search}
+        >
+          {filterFields}
+        </AppliedFilterToolbar> : <section className="checklist-quality-toolbar admin-control-toolbar" aria-label="Công cụ dashboard chất lượng chăm sóc">
           <div className="admin-control-toolbar__main">
             <div className="admin-control-toolbar__controls">
               <div className="checklist-quality-search admin-control-toolbar__search">
@@ -343,51 +456,13 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               </button>
               {activeFilterCount > 0 && <button type="button" className="checklist-quality-reset" onClick={resetFilters}>Xóa bộ lọc</button>}
             </div>
-            <div className="checklist-quality-toolbar__actions">
-              <span className="checklist-quality-toolbar__count"><FileSearchOutlined />
-                <strong>{pageInfo.totalElements}</strong> {view === 'LATEST' ? 'quy trình gần nhất' : 'quy trình phù hợp'}
-              </span>
-              {isAdmin && <button className="checklist-quality-export" disabled={exporting || loading || forms.length === 0}
-                onClick={handleExport} type="button">
-                {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
-                {exporting ? 'Đang xuất...' : 'Xuất kết quả'}
-              </button>}
-            </div>
+            {toolbarActions}
           </div>
 
           {isFilterOpen && <div id="checklist-quality-filter-panel" className="checklist-quality-filter-panel admin-control-toolbar__panel">
-            <DateFilter label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={setFromDate} />
-            <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={setToDate} />
-            {isAdmin && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
-              <SearchableSelect value={departmentId} onChange={setDepartmentId} placeholder="Toàn viện"
-                searchPlaceholder="Gõ tên khoa/phòng..." options={[
-                  { value: '', label: 'Toàn viện' },
-                  ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
-                ]} />
-            </SelectFilter>}
-            <label className="checklist-quality-filter"><span>Kết quả</span><div><CheckCircleOutlined />
-              <select value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
-                <option value="">Tất cả kết quả</option><option value="PASSED">Đạt</option>
-                <option value="FAILED">Chưa đạt</option><option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
-                <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
-              </select></div></label>
-            <SelectFilter label="Người được đánh giá" icon={<TeamOutlined />}>
-              <SearchableSelect value={subjectUserId} onChange={setSubjectUserId} placeholder="Tất cả nhân viên"
-                searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} />
-            </SelectFilter>
-            {!isUser && <SelectFilter label="Người thực hiện" icon={<EditOutlined />}>
-              <SearchableSelect value={submittedByUserId} onChange={setSubmittedByUserId} placeholder="Tất cả người thực hiện"
-                searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} />
-            </SelectFilter>}
-            <SelectFilter label="Quy trình" icon={<FileSearchOutlined />}>
-              <SearchableSelect value={processId} onChange={setProcessId} placeholder="Tất cả quy trình"
-                searchPlaceholder="Gõ tên hoặc mã quy trình..." options={[
-                  { value: '', label: 'Tất cả quy trình' },
-                  ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, description: item.code, searchText: item.code })),
-                ]} />
-            </SelectFilter>
+            {filterFields}
           </div>}
-        </section>
+        </section>}
 
         {error && <div className="checklist-quality-alert"><CloseCircleOutlined /><span>{error}</span>
           <button type="button" onClick={() => setReloadKey((value) => value + 1)}>Thử lại</button></div>}

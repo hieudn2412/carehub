@@ -6,15 +6,14 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   ExportOutlined,
-  FilterOutlined,
   FormOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
-  SearchOutlined,
   SyncOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
@@ -104,6 +103,7 @@ function QuestionBankListPage() {
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [cognitiveLevelFilter, setCognitiveLevelFilter] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', category: '', cognitiveLevel: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [questionToArchive, setQuestionToArchive] = useState(null)
@@ -138,20 +138,19 @@ function QuestionBankListPage() {
   )
 
   const filteredQuestions = useMemo(() => {
-    const normalizedKeyword = normalizeText(keyword)
+    const normalizedKeyword = normalizeText(appliedFilters.keyword)
     return questions.filter((question) => {
       const matchesKeyword = !normalizedKeyword || normalizeText(question.content).includes(normalizedKeyword)
-      const matchesCategory = !categoryFilter || question.category === categoryFilter
-      const matchesCognitiveLevel = !cognitiveLevelFilter || question.cognitiveLevel === cognitiveLevelFilter
+      const matchesCategory = !appliedFilters.category || question.category === appliedFilters.category
+      const matchesCognitiveLevel = !appliedFilters.cognitiveLevel || question.cognitiveLevel === appliedFilters.cognitiveLevel
       return matchesKeyword && matchesCategory && matchesCognitiveLevel
     })
-  }, [questions, keyword, categoryFilter, cognitiveLevelFilter])
+  }, [appliedFilters, questions])
 
   const pageSize = 10
   const totalElements = filteredQuestions.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = filteredQuestions.slice(page * pageSize, (page + 1) * pageSize)
-  const hasActiveFilters = Boolean(categoryFilter || cognitiveLevelFilter)
   const activeFilterCount = [categoryFilter, cognitiveLevelFilter].filter(Boolean).length
 
   async function handleDelete(item) {
@@ -247,7 +246,7 @@ function QuestionBankListPage() {
   async function exportQuestions() {
     setIsExporting(true)
     try {
-      const response = await questionBankApi.exportQuestions({ status: 'ALL', q: keyword || undefined })
+      const response = await questionBankApi.exportQuestions({ status: 'ALL', q: appliedFilters.keyword || undefined })
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
@@ -394,9 +393,16 @@ function QuestionBankListPage() {
   }
 
   function resetFilters() {
+    setKeyword('')
     setCategoryFilter('')
     setCognitiveLevelFilter('')
     setPage(0)
+    setAppliedFilters({ keyword: '', category: '', cognitiveLevel: '' })
+  }
+
+  function applyFilters() {
+    setPage(0)
+    setAppliedFilters({ keyword: keyword.trim(), category: categoryFilter, cognitiveLevel: cognitiveLevelFilter })
   }
 
   function getVisiblePages() {
@@ -431,38 +437,9 @@ function QuestionBankListPage() {
                 </div>
               )}
 
-              <div className="qbl-filter-bar">
-                <div className="qbl-toolbar-main">
-                  <div className="qbl-search-filter-group">
-                    <div className="qbl-search">
-                      <span className="qbl-search-icon">
-                        <SearchOutlined />
-                      </span>
-                      <input
-                        type="text"
-                        className="qbl-search-input"
-                        placeholder="Tìm theo nội dung câu hỏi..."
-                        value={keyword}
-                        onChange={(event) => {
-                          setKeyword(event.target.value)
-                          setPage(0)
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`qbl-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="question-bank-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                        <FilterOutlined /> Bộ lọc
-                        {activeFilterCount > 0 && <span className="qbl-filter-count">{activeFilterCount}</span>}
-                    </button>
-                  </div>
-
-                  <div className="qbl-toolbar-actions">
+              <AppliedFilterToolbar
+                activeCount={activeFilterCount}
+                actions={<div className="qbl-toolbar-actions">
                     <span className="qbl-results-count">{totalElements} kết quả</span>
                     <button type="button" className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
                       <PlusCircleOutlined /> Thêm câu hỏi
@@ -486,19 +463,26 @@ function QuestionBankListPage() {
                     >
                       {isExporting ? <LoadingOutlined /> : <UploadOutlined />}
                     </button>
-                  </div>
-                </div>
-                {isFilterOpen && (
-                  <div className="qbl-filter-panel" id="question-bank-filter-panel">
+                  </div>}
+                className="qbl-filter-bar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setKeyword}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="qbl-filter-panel"
+                panelId="question-bank-filter-panel"
+                searchAriaLabel="Tìm theo nội dung câu hỏi"
+                searchClassName="qbl-search"
+                searchPlaceholder="Tìm theo nội dung câu hỏi..."
+                searchValue={keyword}
+              >
                     <label>
                       <span>Danh mục</span>
                       <select
                         className="qbl-filter-select"
                         value={categoryFilter}
-                        onChange={(event) => {
-                          setCategoryFilter(event.target.value)
-                          setPage(0)
-                        }}
+                        onChange={(event) => setCategoryFilter(event.target.value)}
                       >
                         <option value="">Tất cả danh mục</option>
                         {categories.map((category) => (
@@ -511,10 +495,7 @@ function QuestionBankListPage() {
                       <select
                         className="qbl-filter-select"
                         value={cognitiveLevelFilter}
-                        onChange={(event) => {
-                          setCognitiveLevelFilter(event.target.value)
-                          setPage(0)
-                        }}
+                        onChange={(event) => setCognitiveLevelFilter(event.target.value)}
                       >
                         <option value="">Tất cả mức độ nhận thức</option>
                         {COGNITIVE_LEVELS.map((level) => (
@@ -522,12 +503,7 @@ function QuestionBankListPage() {
                         ))}
                       </select>
                     </label>
-                    {hasActiveFilters && (
-                      <button type="button" className="qbl-btn-clear" onClick={resetFilters}>Xóa bộ lọc</button>
-                    )}
-                  </div>
-                )}
-              </div>
+              </AppliedFilterToolbar>
 
               <div className="qbl-table-card">
                 <table className="qbl-table qbl-question-table admin-table-uppercase">

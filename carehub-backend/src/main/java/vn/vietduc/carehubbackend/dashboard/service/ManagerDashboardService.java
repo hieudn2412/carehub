@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.vietduc.carehubbackend.dashboard.dto.DashboardFormSummaryResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.ManagerDashboardOverviewResponse;
+import vn.vietduc.carehubbackend.dashboard.dto.ManagerDashboardEmployeeResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamDashboardResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.EvaluationExamResultsSummaryResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationDashboardService;
@@ -12,6 +13,8 @@ import vn.vietduc.carehubbackend.training.dto.request.EmployeeTrainingStatusSear
 import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryResponse;
 import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -30,7 +33,26 @@ public class ManagerDashboardService {
     private final TrainingStatusService trainingStatusService;
     private final EvaluationDashboardService evaluationDashboardService;
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
     private final Clock clock;
+
+    @Transactional(readOnly = true)
+    public ManagerDashboardEmployeeResponse findEmployee(Long departmentId, String employeeCode) {
+        if (employeeCode == null || employeeCode.isBlank()) {
+            return ManagerDashboardEmployeeResponse.notFound();
+        }
+        return userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus(
+                        employeeCode.trim(), UserStatus.ACTIVE)
+                .filter(user -> user.getDepartment() != null
+                        && departmentId.equals(user.getDepartment().getId()))
+                .map(user -> ManagerDashboardEmployeeResponse.builder()
+                        .found(true)
+                        .employeeId(user.getId())
+                        .employeeCode(user.getEmployeeCode())
+                        .fullName(user.getName())
+                        .build())
+                .orElseGet(ManagerDashboardEmployeeResponse::notFound);
+    }
 
     @Transactional(readOnly = true)
     public ManagerDashboardOverviewResponse overview(

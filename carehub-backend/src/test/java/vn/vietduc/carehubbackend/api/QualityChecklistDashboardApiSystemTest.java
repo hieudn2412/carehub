@@ -13,6 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
 
     private String adminToken;
+    private String managerToken;
     private String userToken;
     private String managerToken;
     private User manager;
@@ -20,9 +21,11 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
     @BeforeEach
     void createActors() {
         User admin = newUser("QCD-ADMIN", "ADMIN");
+        User manager = newUser("QCD-MANAGER", "MANAGER");
         User user = newUser("QCD-USER", "USER");
         manager = newUser("QCD-MGR", "MANAGER");
         adminToken = tokenFor(admin);
+        managerToken = tokenFor(manager);
         userToken = tokenFor(user);
         managerToken = tokenFor(manager);
     }
@@ -58,6 +61,17 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
         JsonNode page = data(response);
         assertThat(page.get("content")).isEmpty();
         assertThat(page.get("totalElements").asLong()).isZero();
+    }
+
+    @Test
+    @DisplayName("Manager truy vấn dashboard theo khoa mà không phụ thuộc người thực hiện đánh giá")
+    void managerDashboardRunsWithDepartmentScopedHistory() {
+        ResponseEntity<String> response = get(API
+                + "/dashboard/quality/checklists?view=LATEST&fromDate=2026-01-01&toDate=2026-12-31&page=0&size=1",
+                managerToken);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(data(response).get("content").isArray()).isTrue();
     }
 
     @Test

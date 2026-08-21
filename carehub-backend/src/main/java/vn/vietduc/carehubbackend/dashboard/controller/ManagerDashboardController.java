@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.vietduc.carehubbackend.common.response.ApiResponse;
 import vn.vietduc.carehubbackend.dashboard.dto.ManagerDashboardOverviewResponse;
+import vn.vietduc.carehubbackend.dashboard.dto.ManagerDashboardEmployeeResponse;
 import vn.vietduc.carehubbackend.dashboard.service.DashboardAccessPolicy;
 import vn.vietduc.carehubbackend.dashboard.service.ManagerDashboardService;
 import vn.vietduc.carehubbackend.questiongeneration.security.EvaluationPermissions;
@@ -55,6 +56,18 @@ public class ManagerDashboardController {
                         professionalFieldId,
                         includeTheory
                 )
+        ));
+    }
+
+    @GetMapping("/employee")
+    @PreAuthorize("hasRole('MANAGER')")
+    public ResponseEntity<ApiResponse<ManagerDashboardEmployeeResponse>> employee(
+            @RequestParam String employeeCode
+    ) {
+        Long departmentId = dashboardAccessPolicy.resolveDepartmentScope(null);
+        return ResponseEntity.ok(ApiResponse.success(
+                "Resolve manager dashboard employee successfully",
+                managerDashboardService.findEmployee(departmentId, employeeCode)
         ));
     }
 }
