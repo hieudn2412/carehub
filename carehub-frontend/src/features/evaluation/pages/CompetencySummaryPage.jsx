@@ -219,8 +219,16 @@ function CompetencySummaryPage() {
     return Object.entries(counts)
       .map(([name, count]) => {
         const item = data.items.find(i => (i.competencyLabel || 'Chưa xếp loại') === name)
+        
+        const shortNameMap = {
+          'Chưa đạt năng lực': 'Chưa đạt',
+          'Chưa xếp loại': 'Chưa xếp',
+        }
+        const displayName = shortNameMap[name] || name
+
         return {
-          name,
+          name: displayName,
+          fullName: name,
           count,
           fill: item?.colorHex || '#6b7280',
         }
@@ -504,22 +512,32 @@ function CompetencySummaryPage() {
                       <strong>
                         Phân bố trên trang hiện tại — {data.departmentName || 'Khoa đã chọn'}
                       </strong>
-                      <ResponsiveContainer width="100%" height={190}>
-                        <BarChart data={distribution} layout="vertical" margin={{ left: 100, right: 20, top: 5, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                          <XAxis type="number" allowDecimals={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={100} />
-                          <Tooltip
-                            formatter={(value) => [`${value} Điều dưỡng`, 'Số lượng']}
-                            contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                          />
-                          <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
-                            {distribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                      {(() => {
+                        const maxLabelLength = distribution.reduce((max, item) => Math.max(max, (item.name || '').length), 0);
+                        const yAxisWidth = Math.min(100, Math.max(55, maxLabelLength * 7.5));
+                        return (
+                          <ResponsiveContainer width="100%" height={190}>
+                            <BarChart data={distribution} layout="vertical" margin={{ left: yAxisWidth, right: 20, top: 5, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                              <XAxis type="number" allowDecimals={false} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={yAxisWidth} />
+                              <Tooltip
+                                labelFormatter={(label) => {
+                                  const item = distribution.find((d) => d.name === label)
+                                  return item ? item.fullName : label
+                                }}
+                                formatter={(value) => [`${value} Điều dưỡng`, 'Số lượng']}
+                                contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                              />
+                              <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
+                                {distribution.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
                     </section>
                   )}
                   </div>

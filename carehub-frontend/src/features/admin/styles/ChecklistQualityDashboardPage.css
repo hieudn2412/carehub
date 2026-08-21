@@ -215,6 +215,13 @@
   gap: 9px;
   min-width: 0;
   padding: 0 12px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.checklist-quality-filter > div:focus-within {
+  border-color: #1aaa84;
+  box-shadow: 0 0 0 3px rgba(26, 170, 132, 0.12);
 }
 
 .checklist-quality-filter > div > .searchable-select {
@@ -248,10 +255,22 @@
   width: 100%;
 }
 
+.checklist-quality-filter input:focus,
+.checklist-quality-filter select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 .checklist-quality-filter > div input,
 .checklist-quality-filter > div select {
   border: 0;
   padding: 0;
+}
+
+.checklist-quality-filter > div input:focus,
+.checklist-quality-filter > div select:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .checklist-quality-filter--unavailable { opacity: .63; }
@@ -1062,7 +1081,47 @@
   }
   .checklist-quality-toolbar .admin-control-toolbar__main { align-items: stretch; flex-direction: column; }
   .checklist-quality-toolbar__actions { justify-content: flex-end; }
+  .checklist-quality-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .checklist-quality-toolbar .checklist-quality-search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+  .checklist-quality-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+  .checklist-quality-toolbar .checklist-quality-reset {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+    margin: 0 !important;
+  }
   .checklist-quality-filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .checklist-quality-filter > div {
+    min-height: 38px !important;
+    height: 38px !important;
+    border-radius: 6px !important;
+  }
+  .checklist-quality-filter input,
+  .checklist-quality-filter select {
+    height: 100% !important;
+  }
   .checklist-quality-hero { align-items: flex-start; flex-direction: column; gap: 18px; }
   .checklist-quality-hero__actions { width: 100%; }
   .checklist-quality-hero__count { flex: 1; }
@@ -1099,10 +1158,43 @@
 
 /* bp-xs */
 @media (max-width: 560px) {
+  .checklist-quality-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .checklist-quality-toolbar .checklist-quality-search {
+    width: auto !important;
+    flex: 1 1 150px !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+  .checklist-quality-toolbar .checklist-quality-search input {
+    font-size: 13px !important;
+  }
+  .checklist-quality-toolbar .admin-control-toolbar__filter-trigger,
+  .checklist-quality-toolbar .checklist-quality-reset {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+  }
   .checklist-quality-workspace .checklist-quality-process-grid { grid-template-columns: 1fr; }
   .checklist-quality-toolbar__actions { align-items: stretch; flex-direction: column; }
   .checklist-quality-toolbar__count { justify-content: center; }
-  .checklist-quality-filter-panel { grid-template-columns: 1fr; }
+  .checklist-quality-filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .checklist-quality-filter-panel .checklist-quality-filter:first-child:nth-last-child(3) {
+    grid-column: span 2 !important;
+  }
   .checklist-quality-hero { padding: 18px 16px; }
   .checklist-quality-hero h1 { font-size: 23px; }
   .checklist-quality-hero__actions { align-items: stretch; flex-direction: column; }

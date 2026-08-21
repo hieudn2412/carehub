@@ -883,12 +883,53 @@
     flex: 0 0 auto;
   }
 
+  .competency-dashboard-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .competency-dashboard-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .competency-dashboard-toolbar .competency-dashboard-search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .competency-dashboard-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
   .competency-dashboard-toolbar__actions {
-    justify-content: space-between;
+    justify-content: flex-end !important;
+    gap: 10px;
+    margin-top: 4px;
   }
 
   .competency-dashboard-filter-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .competency-dashboard-filter-panel .admin-control-toolbar__field input,
+  .competency-dashboard-filter-panel .admin-control-toolbar__field select {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 
   .competency-dashboard-table-card {
@@ -1044,9 +1085,41 @@
 }
 
 @media (max-width: 768px) {
+  .compliance-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .compliance-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .compliance-toolbar .compliance-toolbar__search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .compliance-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
   .compliance-toolbar__actions {
     flex-wrap: wrap;
-    justify-content: space-between;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
   }
 
   .compliance-toolbar__export {
@@ -1055,7 +1128,19 @@
   }
 
   .compliance-filter-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .compliance-filter-panel .admin-control-toolbar__field:first-child:nth-last-child(3) {
+    grid-column: span 2;
+  }
+
+  .compliance-filter-panel .admin-control-toolbar__field input {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 13px !important;
   }
 
   .compliance-table-card {
