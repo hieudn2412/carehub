@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { DownloadOutlined, EyeOutlined, LoadingOutlined, SearchOutlined } from '@ant-design/icons'
 import { trainingApi } from '../api/trainingApi'
 import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import '../styles/DepartmentTrainingStaffTable.css'
 
 const STATUS_TEXT = {
@@ -109,18 +111,25 @@ export default function DepartmentTrainingStaffTable({ pageSize = 100 }) {
             aria-label="Tìm nhân sự trong khoa"
           />
         </div>
-        <select
-          className="dtst__select"
+        <FilterSelectField
+          label="Trạng thái đào tạo"
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          aria-label="Lọc theo trạng thái đào tạo"
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="COMPLIANT">Đạt</option>
-          <option value="NON_COMPLIANT">Chưa đạt</option>
-          <option value="AT_RISK">Đang theo dõi</option>
-          <option value="NOT_CONFIGURED">Chưa thiết lập</option>
-        </select>
+          onChange={(value) => setStatusFilter(value)}
+          options={[
+            { value: 'all', label: 'Tất cả trạng thái' },
+            { value: 'COMPLIANT', label: 'Đạt' },
+            { value: 'NON_COMPLIANT', label: 'Chưa đạt' },
+            { value: 'AT_RISK', label: 'Đang theo dõi' },
+            { value: 'NOT_CONFIGURED', label: 'Chưa thiết lập' },
+          ]}
+        />
+        <FilterActionButtons
+          onApply={() => {}}
+          onReset={() => {
+            setSearch('')
+            setStatusFilter('all')
+          }}
+        />
         {/* `employees` chính là kết quả của bộ lọc đang áp dụng (backend lọc theo keyword và
             trạng thái), nên file xuất ra luôn khớp đúng những gì đang hiển thị. */}
         <button

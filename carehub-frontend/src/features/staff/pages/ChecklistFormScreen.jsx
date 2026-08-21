@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { SaveOutlined, SendOutlined } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
 import { staffApi } from '../api/staffApi.js'
@@ -199,10 +200,14 @@ function ChecklistFormScreen() {
         )
       case 'DROPDOWN':
         return (
-          <select className="cfs-select" value={value || ''} onChange={e => updateAnswer(question.questionKey, e.target.value)}>
-            <option value="">-- Chọn --</option>
-            {options.map(opt => <option key={opt.optionKey} value={opt.optionKey}>{opt.label || opt.optionKey}</option>)}
-          </select>
+          <SearchableSelect
+            className="cfs-select"
+            value={value || ''}
+            onChange={val => updateAnswer(question.questionKey, val)}
+            searchable={false}
+            placeholder="-- Chọn --"
+            options={options.map(opt => ({ value: opt.optionKey, label: opt.label || opt.optionKey }))}
+          />
         )
       case 'NUMBER':
       case 'LINEAR_SCALE':

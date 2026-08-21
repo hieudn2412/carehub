@@ -115,7 +115,8 @@ describe('TrainingEmployeeStatusDetailPage', () => {
     renderPage()
 
     await screen.findByText('120/120h - Đạt')
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc tổng hợp theo lĩnh vực chuyên môn' }), { target: { value: '7' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc tổng hợp theo lĩnh vực chuyên môn' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hồi sức cấp cứu' }))
     fireEvent.change(screen.getByLabelText('Tính tổng hợp đến ngày'), { target: { value: '2026-06-30' } })
 
     await waitFor(() => expect(trainingApi.getEmployeeTrainingStatus).toHaveBeenLastCalledWith('1', {
@@ -130,14 +131,20 @@ describe('TrainingEmployeeStatusDetailPage', () => {
     expect(await screen.findByText('Đào tạo an toàn người bệnh')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/ }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Tìm theo khóa học hoặc hội thảo' }), { target: { value: 'an toàn' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo trạng thái hồ sơ' }), { target: { value: 'SUBMITTED' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo trạng thái hồ sơ' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Đã nộp' }))
     fireEvent.change(screen.getByLabelText('Lọc từ ngày'), { target: { value: '2026-01-01' } })
     fireEvent.change(screen.getByLabelText('Lọc đến ngày'), { target: { value: '2026-03-31' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo lĩnh vực chuyên môn' }), { target: { value: '7' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo hình thức đào tạo' }), { target: { value: '4' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo tình trạng minh chứng' }), { target: { value: 'true' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo kết quả minh chứng' }), { target: { value: 'PASSED' } })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Lọc theo nguồn dữ liệu' }), { target: { value: 'MANUAL' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo lĩnh vực chuyên môn' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hồi sức cấp cứu' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo hình thức đào tạo' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hội thảo' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo tình trạng minh chứng' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Có minh chứng' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo kết quả minh chứng' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Đạt' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Lọc theo nguồn dữ liệu' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Nhân viên khai báo' }))
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => expect(trainingApi.listRecords).toHaveBeenLastCalledWith({

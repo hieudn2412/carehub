@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -180,8 +181,8 @@ function ScoringFormulaPage() {
   return (
     <AppShell
       className="dashboard-layout scoring-formula-page"
-      title="Công thức chỉ số"
-      breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
+      title="Cài đặt điểm sàn quy trình kỹ thuật"
+      breadcrumbs={[{ label: 'Giám sát tuân thủ' }, { label: 'Cài đặt điểm sàn quy trình kỹ thuật' }]}
     >
       <div className="sfp-main">
           <AppliedFilterToolbar
@@ -206,12 +207,7 @@ function ScoringFormulaPage() {
             searchPlaceholder="Tìm theo mã hoặc tên quy trình..."
             searchValue={keyword}
           >
-                <label>
-                  <span>Trạng thái</span>
-                  <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                    {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </label>
+                <FilterSelectField label="Trạng thái" value={status} onChange={setStatus} options={STATUS_OPTIONS} placeholder="Tất cả trạng thái" />
           </AppliedFilterToolbar>
 
           {errorMessage && <div className="sfp-alert"><WarningOutlined /> {errorMessage}</div>}

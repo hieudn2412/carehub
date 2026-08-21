@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  FilterOutlined,
   LoadingOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
@@ -27,7 +26,7 @@ import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.js
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/TrainingDashboardPage.css'
 
 const PAGE_SIZE = 100
@@ -134,7 +133,7 @@ function DashboardContent({ role }) {
     asOf: today,
     status: '',
   })
-  const [appliedManagerFilters, setAppliedManagerFilters] = useState({
+  const [appliedFilters, setAppliedFilters] = useState({
     departmentId: '',
     professionalFieldId: '',
     asOf: today,
@@ -146,7 +145,7 @@ function DashboardContent({ role }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const managerDepartmentId = profile?.departmentId || ''
-  const effectiveFilters = isManager ? appliedManagerFilters : filters
+  const effectiveFilters = appliedFilters
   const activeFilterCount = [
     !isManager && effectiveFilters.departmentId,
     effectiveFilters.professionalFieldId,
@@ -278,14 +277,14 @@ function DashboardContent({ role }) {
     }
   }
 
-  function resetManagerFilters() {
+  function resetFilters() {
     const initialFilters = { departmentId: '', professionalFieldId: '', asOf: today, status: '' }
     setFilters(initialFilters)
-    setAppliedManagerFilters(initialFilters)
+    setAppliedFilters(initialFilters)
   }
 
-  function applyManagerFilters() {
-    setAppliedManagerFilters({ ...filters })
+  function applyFilters() {
+    setAppliedFilters({ ...filters })
     setIsFilterOpen(false)
   }
 
@@ -303,12 +302,11 @@ function DashboardContent({ role }) {
 
   const filterFields = (
     <>
-      <label>
-        <span>Khoa/Phòng</span>
-        {isManager ? (
-          <div>{profile?.departmentName || 'Khoa của tôi'}</div>
-        ) : (
-          <SearchableSelect
+      {isManager ? (
+        <label><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
+      ) : (
+          <FilterSelectField
+            label="Khoa/Phòng"
             value={filters.departmentId}
             onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
             options={[
@@ -316,14 +314,12 @@ function DashboardContent({ role }) {
               ...departments.map((department) => ({ value: department.id, label: department.name })),
             ]}
             placeholder="Toàn viện"
+            searchable
             searchPlaceholder="Tìm tên khoa/phòng..."
-            ariaLabel="Tìm và chọn khoa/phòng"
           />
-        )}
-      </label>
-      <label>
-        <span>Lĩnh vực chuyên môn</span>
-        <SearchableSelect
+      )}
+        <FilterSelectField
+          label="Lĩnh vực chuyên môn"
           value={filters.professionalFieldId}
           onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
           options={[
@@ -331,69 +327,39 @@ function DashboardContent({ role }) {
             ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
           ]}
           placeholder="Tất cả lĩnh vực"
+          searchable
           searchPlaceholder="Tìm tên lĩnh vực..."
-          ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
         />
-      </label>
       <label>
         <span>Tính đến ngày</span>
         <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
       </label>
-      <label>
-        <span>Trạng thái</span>
-        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-          <option value="">Tất cả trạng thái</option>
-          <option value="COMPLIANT">Đạt</option>
-          <option value="NON_COMPLIANT">Chưa đạt</option>
-        </select>
-      </label>
+      <FilterSelectField
+        label="Trạng thái"
+        value={filters.status}
+        onChange={(value) => setFilters((current) => ({ ...current, status: value }))}
+        options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'COMPLIANT', label: 'Đạt' }, { value: 'NON_COMPLIANT', label: 'Chưa đạt' }]}
+        placeholder="Tất cả trạng thái"
+      />
     </>
   )
 
   return (
     <div className="training-dashboard">
-      {isManager ? <AppliedFilterToolbar
+      <AppliedFilterToolbar
         activeCount={activeFilterCount}
         actions={exportButton}
         ariaLabel="Công cụ dashboard giờ đào tạo"
         className="training-dashboard__toolbar"
         isOpen={isFilterOpen}
-        onApply={applyManagerFilters}
-        onReset={resetManagerFilters}
+        onApply={applyFilters}
+        onReset={resetFilters}
         onToggle={() => setIsFilterOpen((current) => !current)}
         panelClassName="training-dashboard__filter-panel"
         panelId="training-dashboard-filter-panel"
       >
         {filterFields}
-      </AppliedFilterToolbar> : <section className="training-dashboard__toolbar admin-control-toolbar" aria-label="Công cụ dashboard giờ đào tạo">
-        <div className="admin-control-toolbar__main">
-          <div className="admin-control-toolbar__controls">
-            <button
-              type="button"
-              className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-              aria-expanded={isFilterOpen}
-              aria-controls="training-dashboard-filter-panel"
-              onClick={() => setIsFilterOpen((current) => !current)}
-            >
-              <FilterOutlined />
-              Bộ lọc
-              {activeFilterCount > 0 && (
-                <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
-              )}
-            </button>
-          </div>
-          {exportButton}
-        </div>
-
-        {isFilterOpen && (
-          <div
-            id="training-dashboard-filter-panel"
-            className="training-dashboard__filter-panel admin-control-toolbar__panel"
-          >
-            {filterFields}
-          </div>
-        )}
-      </section>}
+      </AppliedFilterToolbar>
 
       {error && <div className="training-dashboard__alert"><ExclamationCircleOutlined /> {error}</div>}
 

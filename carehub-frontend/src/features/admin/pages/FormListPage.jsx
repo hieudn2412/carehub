@@ -24,6 +24,7 @@ import {
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/FormListPage.css'
 
@@ -462,11 +463,11 @@ function FormListPage() {
     setPage(nextPage)
   }
 
-  const updateStatus = (event) => {
+  const updateStatus = (value) => {
     setErrorMessage('')
     setSuccessMessage('')
     setShowRetiredShortcut(false)
-    setStatus(event.target.value)
+    setStatus(value)
   }
 
   const clearFilters = () => {
@@ -960,19 +961,17 @@ function FormListPage() {
                 searchPlaceholder="Tìm theo mã hoặc tiêu đề..."
                 searchValue={keyword}
               >
-                    <label className="flp-filter-group">
-                      <span>Trạng thái</span>
-                      <select className="flp-select" onChange={updateStatus} value={status}>
-                        <option value="all">Tất cả trạng thái</option>
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flp-filter-group">
-                      <span>Khoa/phòng</span>
-                      <div className="flp-department-filter">
-                        <SearchableSelect
+                    <FilterSelectField
+                      className="flp-filter-group"
+                      label="Trạng thái"
+                      onChange={updateStatus}
+                      value={status}
+                      options={[{ value: 'all', label: 'Tất cả trạng thái' }, ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))]}
+                      placeholder="Tất cả trạng thái"
+                    />
+                    <FilterSelectField
+                          className="flp-filter-group flp-department-filter"
+                          label="Khoa/phòng"
                           onChange={(value) => {
                             setErrorMessage('')
                             setDepartmentId(value)
@@ -986,11 +985,9 @@ function FormListPage() {
                             })),
                           ]}
                           placeholder="Tất cả khoa/phòng"
+                          searchable
                           searchPlaceholder="Tìm tên khoa/phòng..."
-                          ariaLabel="Tìm và chọn khoa/phòng"
                         />
-                      </div>
-                    </label>
               </AppliedFilterToolbar>
 
               <section className="flp-table-card" aria-busy={loading}>
@@ -998,14 +995,14 @@ function FormListPage() {
                   <table className="flp-table">
                     <thead>
                       <tr>
-                        <th>Tên quy trình</th>
-                        <th>Phiên bản</th>
-                        <th>Ngày tạo</th>
-                        <th>Người được giao</th>
-                        <th>Lượt đánh giá</th>
-                        <th>Điểm sàn</th>
-                        <th>Trạng thái</th>
-                        <th className="flp-table__actions-heading">Hành động</th>
+                        <th className="flp-col-name">Tên quy trình</th>
+                        <th className="flp-col-version">Phiên bản</th>
+                        <th className="flp-col-created">Ngày tạo</th>
+                        <th className="flp-col-assignees">Người được giao</th>
+                        <th className="flp-col-responses">Lượt đánh giá</th>
+                        <th className="flp-col-score">Điểm sàn</th>
+                        <th className="flp-col-status">Trạng thái</th>
+                        <th className="flp-col-actions flp-table__actions-heading">Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1030,7 +1027,7 @@ function FormListPage() {
                       ) : (
                         forms.map((form) => (
                           <tr key={form.id}>
-                            <td>
+                            <td className="flp-col-name">
                               <div className="flp-form-title-wrapper">
                                 <span className="flp-form-title">{form.title}</span>
                                 {form.description && (
@@ -1038,7 +1035,7 @@ function FormListPage() {
                                 )}
                               </div>
                             </td>
-                            <td>
+                            <td className="flp-col-version">
                               {form.currentPublishedVersion ? (
                                 <span className="flp-version-badge">
                                   v{form.currentPublishedVersion.versionNumber}
@@ -1047,10 +1044,10 @@ function FormListPage() {
                                 <span className="flp-text-muted">Chưa có</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-created">
                               <span className="flp-date-stack">{formatChecklistDate(form.createdAt)}</span>
                             </td>
-                            <td>
+                            <td className="flp-col-assignees">
                               <button
                                 className="flp-stat-link"
                                 onClick={() => setPermissionForm(form)}
@@ -1061,8 +1058,8 @@ function FormListPage() {
                                 <span>Quản lý</span>
                               </button>
                             </td>
-                            <td>{formStats[form.id]?.responseCount ?? '—'}</td>
-                            <td>
+                            <td className="flp-col-responses">{formStats[form.id]?.responseCount ?? '—'}</td>
+                            <td className="flp-col-score">
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>
                                   {Number(form.currentPublishedVersion.passingScore).toFixed(1)}/10
@@ -1071,14 +1068,14 @@ function FormListPage() {
                                 <span className="flp-text-muted">—</span>
                               )}
                             </td>
-                            <td>
+                            <td className="flp-col-status">
                               <span
                                 className={`form-badge ${getStatusBadgeClass(getEffectiveStatus(form))}`}
                               >
                                 {STATUS_LABELS[getEffectiveStatus(form)] || getEffectiveStatus(form)}
                               </span>
                             </td>
-                            <td>
+                            <td className="flp-col-actions">
                               <div className="flp-actions-cell admin-table-actions">
                                 {form.currentPublishedVersion?.id && (
                                   <button
@@ -1097,7 +1094,7 @@ function FormListPage() {
                                   onClick={() =>
                                     navigate(`/admin/quality/checklists/${form.id}/detail`)
                                   }
-                                  title="Xem nội dung checklist"
+                                  title="Xem nội dung bảng kiểm"
                                   type="button"
                                 >
                                   <EyeOutlined />

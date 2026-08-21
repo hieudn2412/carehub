@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../../shared/components/Modal.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { staffApi } from '../api/staffApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 
@@ -69,7 +70,17 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
         </div>
         <div className="profile-edit-form__field profile-edit-form__field--gender">
           <label htmlFor="profile-gender">Giới tính</label>
-          <select id="profile-gender" onChange={updateField('gender')} value={form.gender}><option value="">Chưa cập nhật</option><option value="true">Nam</option><option value="false">Nữ</option></select>
+          <SearchableSelect
+            id="profile-gender"
+            onChange={val => updateField('gender')({ target: { value: val } })}
+            value={form.gender}
+            searchable={false}
+            placeholder="Chưa cập nhật"
+            options={[
+              { value: 'true', label: 'Nam' },
+              { value: 'false', label: 'Nữ' },
+            ]}
+          />
         </div>
         <p className="profile-edit-form__note"><span aria-hidden="true">i</span>Mã nhân viên, khoa/phòng và chức danh do quản trị viên quản lý.</p>
       </form>

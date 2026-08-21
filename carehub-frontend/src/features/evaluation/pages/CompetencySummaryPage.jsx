@@ -33,7 +33,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
@@ -413,14 +413,10 @@ function CompetencySummaryPage() {
 
   const filterFields = (
     <>
-      <label className="admin-control-toolbar__field">
-        <span>Khoa/phòng</span>
-        <SearchableSelect value={departmentId} onChange={(value) => { setDepartmentId(value); setPage(0) }}
+      <FilterSelectField label="Khoa/phòng" value={departmentId} onChange={(value) => { setDepartmentId(value); setPage(0) }}
           disabled={!isAdmin}
           options={[...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []), ...departments.map((department) => ({ value: department.id, label: department.name }))]}
-          placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'} searchPlaceholder="Tìm tên khoa/phòng..."
-          ariaLabel="Tìm và chọn khoa/phòng" />
-      </label>
+          placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'} searchable searchPlaceholder="Tìm tên khoa/phòng..." />
       <label className="admin-control-toolbar__field"><span>Từ ngày</span>
         <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={(value) => {
           setFromDate(value)
@@ -433,23 +429,16 @@ function CompetencySummaryPage() {
           if (!isManager) setPage(0)
         }} />
       </label>
-      {reportType === 'field' && <label className="admin-control-toolbar__field"><span>Lĩnh vực</span>
-        <SearchableSelect value={selectedCategory} onChange={(value) => {
+      {reportType === 'field' && <FilterSelectField label="Lĩnh vực" value={selectedCategory} onChange={(value) => {
           setSelectedCategory(value)
           if (!isManager) setPage(0)
         }}
           options={[{ value: '', label: 'Tất cả lĩnh vực' }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
-          placeholder="Tất cả lĩnh vực" searchPlaceholder="Tìm tên lĩnh vực..." ariaLabel="Tìm và chọn lĩnh vực" />
-      </label>}
-      {reportType === 'technique' && <label className="admin-control-toolbar__field"><span>Kỹ thuật</span>
-        <select value={selectedFormId} onChange={(event) => {
-          setSelectedFormId(event.target.value)
+          placeholder="Tất cả lĩnh vực" searchable searchPlaceholder="Tìm tên lĩnh vực..." />}
+      {reportType === 'technique' && <FilterSelectField label="Kỹ thuật" value={selectedFormId} onChange={(value) => {
+          setSelectedFormId(value)
           if (!isManager) setPage(0)
-        }}>
-          <option value="">Tất cả kỹ thuật</option>
-          {forms.map((form) => <option key={form.id} value={form.id}>{form.title}</option>)}
-        </select>
-      </label>}
+        }} options={[{ value: '', label: 'Tất cả kỹ thuật' }, ...forms.map((form) => ({ value: form.id, label: form.title }))]} placeholder="Tất cả kỹ thuật" searchable searchPlaceholder="Tìm tên kỹ thuật..." />}
       {reportType === 'summary' && data && <div className="competency-dashboard-weight">
         <span>Trọng số hiện tại</span><strong>Lý thuyết {knowledgeWeight}% · Thực hành {skillWeight}%</strong>
       </div>}

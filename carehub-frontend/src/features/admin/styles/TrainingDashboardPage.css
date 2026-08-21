@@ -80,8 +80,20 @@
 
 .training-dashboard__filter-panel .searchable-select > input {
   min-height: 42px;
-  padding: 0 34px;
-  border-radius: 9px;
+  height: 42px;
+  padding: 0 34px 0 38px !important;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.training-dashboard__filter-panel .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.training-dashboard__filter-panel .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .training-dashboard__alert,

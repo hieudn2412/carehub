@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { CheckOutlined, ExclamationCircleOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -396,16 +397,17 @@ function QuestionFormPage() {
                   <label>
                     Mức độ nhận thức <span className="qf-required-star">*</span>
                   </label>
-                  <select
+                  <FormSelectField
                     className="qf-input-red"
                     required
                     value={cognitiveLevel}
-                    onChange={(e) => setCognitiveLevel(e.target.value)}
+                    onChange={setCognitiveLevel}
                     disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
-                  >
-                    <option value="">Chọn mức độ nhận thức</option>
-                    {COGNITIVE_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
-                  </select>
+                    options={[
+                      { value: '', label: 'Chọn mức độ nhận thức' },
+                      ...COGNITIVE_LEVELS.map((level) => ({ value: level.value, label: level.label }))
+                    ]}
+                  />
                 </div>
               </div>
 

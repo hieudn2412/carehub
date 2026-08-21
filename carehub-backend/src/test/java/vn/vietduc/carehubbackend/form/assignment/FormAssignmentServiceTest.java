@@ -10,6 +10,7 @@ import vn.vietduc.carehubbackend.form.assignment.dto.CreateFormAssignmentRequest
 import vn.vietduc.carehubbackend.form.assignment.entity.*;
 import vn.vietduc.carehubbackend.form.assignment.repository.*;
 import vn.vietduc.carehubbackend.form.assignment.service.*;
+import vn.vietduc.carehubbackend.form.compliance.service.FormComplianceTargetService;
 import vn.vietduc.carehubbackend.form.entity.*;
 import vn.vietduc.carehubbackend.form.entity.enums.*;
 import vn.vietduc.carehubbackend.form.mapper.FormMapper;
@@ -37,6 +38,7 @@ class FormAssignmentServiceTest {
     @Mock SecurityUtils securityUtils;
     @Mock FormAssignmentAccessService accessService;
     @Mock FormMapper formMapper;
+    @Mock FormComplianceTargetService complianceTargetService;
     @Mock NotificationService notificationService;
     private FormAssignmentService service;
     private User manager;
@@ -46,7 +48,8 @@ class FormAssignmentServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-06-21T00:00:00Z"), ZoneOffset.UTC);
         service = new FormAssignmentService(assignmentRepository, itemRepository, formRepository, versionRepository,
-                userRepository, userRoleRepository, securityUtils, accessService, formMapper, clock, notificationService);
+                userRepository, userRoleRepository, securityUtils, accessService, formMapper,
+                complianceTargetService, clock, notificationService);
         manager = User.builder().id(5L).employeeCode("M01").name("Manager").status(UserStatus.ACTIVE).build();
         admin = User.builder().id(1L).employeeCode("ADMIN").name("Admin").status(UserStatus.ACTIVE).build();
         lenient().when(userRepository.findById(5L)).thenReturn(Optional.of(manager));

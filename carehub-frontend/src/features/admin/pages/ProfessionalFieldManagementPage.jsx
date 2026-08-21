@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ProfessionalFieldManagementPage.css'
@@ -318,18 +319,13 @@ function ProfessionalFieldManagementPage() {
                   showFilter={activeTab === 'existing'}
                 >
                   {activeTab === 'existing' && (
-                      <label>
-                        <span>Trạng thái</span>
-                        <select
-                          value={statusFilter}
-                          onChange={e => setStatusFilter(e.target.value)}
-                          className="pfm-status-select"
-                        >
-                          <option value="">Tất cả trạng thái</option>
-                          <option value="true">Đang dùng</option>
-                          <option value="false">Ngừng dùng</option>
-                        </select>
-                      </label>
+                      <FilterSelectField
+                        label="Trạng thái"
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'true', label: 'Đang dùng' }, { value: 'false', label: 'Ngừng dùng' }]}
+                        placeholder="Tất cả trạng thái"
+                      />
                   )}
                 </AppliedFilterToolbar>
               </div>

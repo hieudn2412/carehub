@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ApartmentOutlined,
   BarChartOutlined,
@@ -17,6 +17,7 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
@@ -126,8 +127,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isAdmin = role === 'admin'
   const isManager = role === 'manager'
   const isUser = role === 'user'
+  const canConfigureTargets = isAdmin
   const [departments, setDepartments] = useState([])
-  const [profileDepartment, setProfileDepartment] = useState(null)
   const [departmentId, setDepartmentId] = useState('')
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
@@ -178,7 +179,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           const normalized = profile?.departmentId
             ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
             : null
-          setProfileDepartment(normalized)
           setDepartments(normalized ? [normalized] : [])
           if (isManager && normalized) setDepartmentId(String(normalized.id))
           return
@@ -391,28 +391,37 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           searchPlaceholder="Gõ tên khoa/phòng..." options={[
             { value: '', label: 'Toàn viện' },
             ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
-          ]} />
+          ]} showDescriptions={false} />
       </SelectFilter>}
-      <label className="checklist-quality-filter"><span>Kết quả</span><div><CheckCircleOutlined />
-        <select aria-label="Kết quả" value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
-          <option value="">Tất cả kết quả</option><option value="PASSED">Đạt</option>
-          <option value="FAILED">Chưa đạt</option><option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
-          <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
-        </select></div></label>
+      <SelectFilter label="Kết quả" icon={<CheckCircleOutlined />}>
+        <SearchableSelect
+          value={resultStatus}
+          onChange={setResultStatus}
+          options={[
+            { value: '', label: 'Tất cả kết quả' },
+            { value: 'PASSED', label: 'Đạt' },
+            { value: 'FAILED', label: 'Chưa đạt' },
+            { value: 'FAILED_SCORE', label: 'Chưa đạt điểm sàn' },
+            { value: 'FAILED_CRITICAL', label: 'Không đạt câu trọng yếu' }
+          ]}
+          searchable={false}
+          showDescriptions={false}
+        />
+      </SelectFilter>
       <SelectFilter label="Người được đánh giá" icon={<TeamOutlined />}>
         <SearchableSelect value={subjectUserId} onChange={setSubjectUserId} placeholder="Tất cả nhân viên"
-          searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} />
+          searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} showDescriptions={false} />
       </SelectFilter>
       {!isUser && <SelectFilter label="Người thực hiện" icon={<EditOutlined />}>
         <SearchableSelect value={submittedByUserId} onChange={setSubmittedByUserId} placeholder="Tất cả người thực hiện"
-          searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} />
+          searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} showDescriptions={false} />
       </SelectFilter>}
       <SelectFilter label="Quy trình" icon={<FileSearchOutlined />}>
         <SearchableSelect value={processId} onChange={setProcessId} placeholder="Tất cả quy trình"
           searchPlaceholder="Gõ tên hoặc mã quy trình..." options={[
             { value: '', label: 'Tất cả quy trình' },
-            ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, description: item.code, searchText: item.code })),
-          ]} />
+            ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, searchText: item.code })),
+          ]} showDescriptions={false} />
       </SelectFilter>
     </>
   )
@@ -455,13 +464,13 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 <FilterOutlined /> Bộ lọc
                 {activeFilterCount > 0 && <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>}
               </button>
-              {activeFilterCount > 0 && <button type="button" className="checklist-quality-reset" onClick={resetFilters}>Xóa bộ lọc</button>}
             </div>
             {toolbarActions}
           </div>
 
           {isFilterOpen && <div id="checklist-quality-filter-panel" className="checklist-quality-filter-panel admin-control-toolbar__panel">
             {filterFields}
+            <FilterActionButtons onApply={() => setIsFilterOpen(false)} onReset={resetFilters} />
           </div>}
         </section>}
 
@@ -480,8 +489,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
               : <div className={`checklist-quality-process-grid${view === 'LATEST' ? ' checklist-quality-process-grid--latest' : ''}`}>
                 {forms.map((item) => <ProcessCard key={item.formId} item={item}
                   active={String(selectedForm?.formId) === String(item.formId)}
-                  canConfigure={!isUser} onSelect={() => setSelectedFormId(String(item.formId))}
-                  onConfigure={() => setTargetModalForm(item)} />)}
+                  canConfigure={canConfigureTargets} onSelect={() => setSelectedFormId(String(item.formId))}
+                  onConfigure={canConfigureTargets ? () => setTargetModalForm(item) : undefined} />)}
               </div>}
             {view === 'FILTERED' && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
               totalElements={pageInfo.totalElements} totalPages={pageInfo.totalPages}
@@ -524,8 +533,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         </div>
       </div>
 
-      {targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
-        departments={departments} currentDepartmentId={isAdmin ? departmentId : profileDepartment?.id}
+      {canConfigureTargets && targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
+        departments={departments} currentDepartmentId={departmentId || null}
         onClose={() => setTargetModalForm(null)} onSaved={() => { setTargetModalForm(null); setReloadKey((value) => value + 1) }} />}
     </AppShell>
   )
@@ -543,8 +552,8 @@ function DateFilter({ label, value, min, max, onChange }) {
   </div></label>
 }
 
-function SelectFilter({ label, icon, children }) {
-  return <label className="checklist-quality-filter"><span>{label}</span><div>{icon}{children}</div></label>
+function SelectFilter({ label, children }) {
+  return <label className="checklist-quality-filter"><span>{label}</span>{children}</label>
 }
 
 function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
@@ -559,7 +568,7 @@ function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
     role="button" tabIndex={0} onClick={onSelect} onKeyDown={handleKeyDown}>
     <div className="checklist-quality-process-card__top">
       <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
-      {canConfigure && <button type="button" onClick={(event) => { event.stopPropagation(); onConfigure() }}>
+      {canConfigure && <button type="button" onClick={(event) => { event.stopPropagation(); onConfigure?.() }}>
         <EditOutlined /> Cấu hình mục tiêu
       </button>}
     </div>
@@ -610,9 +619,7 @@ function EmptyState({ isUser, filtered }) {
 function Pagination({ page, size, totalElements, totalPages, onPage, onSize }) {
   return <div className="checklist-quality-pagination">
     <span>Hiển thị {totalElements === 0 ? 0 : page * size + 1}–{Math.min((page + 1) * size, totalElements)} / {totalElements}</span>
-    <label>Số dòng <select value={size} onChange={(event) => onSize(Number(event.target.value))}>
-      {PAGE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
-    </select></label>
+    <label>Số dòng <SearchableSelect value={size} onChange={(val) => onSize(Number(val))} options={PAGE_SIZES.map((item) => ({ value: item, label: String(item) }))} searchable={false} /></label>
     <div><button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)} aria-label="Trang trước">‹</button>
       <strong>{page + 1}/{totalPages}</strong>
       <button type="button" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} aria-label="Trang sau">›</button></div>
@@ -640,14 +647,29 @@ function TrendChart({ items }) {
   </div>
 }
 
-function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId, onClose, onSaved }) {
+export function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId, onClose, onSaved }) {
   const [config, setConfig] = useState(null)
   const [scope, setScope] = useState(isAdmin && !currentDepartmentId ? 'hospital' : 'department')
-  const [departmentId, setDepartmentId] = useState(String(currentDepartmentId || departments[0]?.id || ''))
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState(() => currentDepartmentId ? [String(currentDepartmentId)] : [])
+  const [departmentQuery, setDepartmentQuery] = useState('')
   const [value, setValue] = useState('80')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const departmentOptions = useMemo(() => departments
+    .map((item) => ({ id: String(item.id), name: item.name, code: item.code }))
+    .filter((item) => item.id && item.name), [departments])
+  const normalizedDepartmentQuery = departmentQuery.trim().toLowerCase()
+  const filteredDepartments = useMemo(() => {
+    if (!normalizedDepartmentQuery) return departmentOptions
+    return departmentOptions.filter((item) => `${item.name} ${item.code || ''}`.toLowerCase().includes(normalizedDepartmentQuery))
+  }, [departmentOptions, normalizedDepartmentQuery])
+  const selectedDepartmentSet = useMemo(() => new Set(selectedDepartmentIds), [selectedDepartmentIds])
+  const selectedDepartments = useMemo(
+    () => departmentOptions.filter((item) => selectedDepartmentSet.has(item.id)),
+    [departmentOptions, selectedDepartmentSet],
+  )
 
   useEffect(() => {
     let active = true
@@ -659,33 +681,110 @@ function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId
     return () => { active = false }
   }, [form.formId])
 
+  useEffect(() => {
+    if (scope !== 'department') return
+    const allowedIds = new Set(departmentOptions.map((item) => item.id))
+    const fallbackId = currentDepartmentId ? String(currentDepartmentId) : ''
+    setSelectedDepartmentIds((current) => {
+      const filtered = current.filter((id) => allowedIds.has(id))
+      const next = !isAdmin && fallbackId && allowedIds.has(fallbackId) ? [fallbackId] : filtered
+      const unchanged = next.length === current.length && next.every((id, index) => id === current[index])
+      return unchanged ? current : next
+    })
+  }, [currentDepartmentId, departmentOptions, isAdmin, scope])
+
+  const departmentTargetOf = useCallback((departmentId) => {
+    return config?.departmentTargets?.find((item) => String(item.departmentId) === String(departmentId))
+  }, [config?.departmentTargets])
+
   const directTarget = scope === 'hospital'
     ? config?.hospitalTarget
-    : config?.departmentTargets?.find((item) => String(item.departmentId) === String(departmentId))
+    : selectedDepartmentIds.length === 1 ? departmentTargetOf(selectedDepartmentIds[0]) : null
   const inheritedValue = config?.hospitalTarget?.targetPercent ?? 80
+  const selectedDirectTargets = scope === 'department'
+    ? selectedDepartmentIds.map((id) => ({ id, target: departmentTargetOf(id) })).filter((item) => item.target)
+    : []
+  const selectedInheritedCount = Math.max(0, selectedDepartmentIds.length - selectedDirectTargets.length)
 
   useEffect(() => {
     if (!config) return
-    const target = scope === 'hospital' ? config.hospitalTarget
-      : config.departmentTargets?.find((item) => String(item.departmentId) === String(departmentId))
-    setValue(String(target?.targetPercent ?? (scope === 'department' ? inheritedValue : 80)))
-  }, [config, departmentId, inheritedValue, scope])
+    if (scope === 'hospital') {
+      setValue(String(config.hospitalTarget?.targetPercent ?? 80))
+      return
+    }
+    if (!selectedDepartmentIds.length) {
+      setValue(String(inheritedValue))
+      return
+    }
+    const targets = selectedDepartmentIds.map((id) => departmentTargetOf(id)).filter(Boolean)
+    if (selectedDepartmentIds.length === 1) {
+      setValue(String(targets[0]?.targetPercent ?? inheritedValue))
+      return
+    }
+    const directValues = targets.map((target) => target.targetPercent).filter((targetValue) => targetValue !== null && targetValue !== undefined)
+    const uniqueDirectValues = new Set(directValues.map((targetValue) => String(targetValue)))
+    setValue(String(directValues.length === selectedDepartmentIds.length && uniqueDirectValues.size === 1 ? directValues[0] : inheritedValue))
+  }, [config, departmentTargetOf, inheritedValue, scope, selectedDepartmentIds])
+
+  function toggleDepartment(departmentId) {
+    if (!isAdmin) return
+    setSelectedDepartmentIds((current) => current.includes(departmentId)
+      ? current.filter((id) => id !== departmentId)
+      : [...current, departmentId])
+  }
+
+  function selectAllFilteredDepartments() {
+    if (!isAdmin) return
+    setSelectedDepartmentIds((current) => Array.from(new Set([...current, ...filteredDepartments.map((item) => item.id)])))
+  }
+
+  function clearSelectedDepartments() {
+    if (!isAdmin) return
+    setSelectedDepartmentIds([])
+  }
+
+  function removeSelectedDepartment(departmentId) {
+    if (!isAdmin) return
+    setSelectedDepartmentIds((current) => current.filter((id) => id !== departmentId))
+  }
+
+  const targetHint = (() => {
+    if (scope === 'hospital') {
+      return directTarget ? 'Đang dùng cấu hình riêng ở cấp bệnh viện.' : 'Chưa cấu hình riêng, hệ thống đang dùng mặc định 80,00%.'
+    }
+    if (!selectedDepartmentIds.length) return 'Chọn một hoặc nhiều khoa/phòng để áp dụng cùng một mục tiêu.'
+    if (selectedDepartmentIds.length === 1) {
+      return directTarget
+        ? 'Khoa/phòng này đang dùng mục tiêu riêng.'
+        : `Khoa/phòng này đang kế thừa mục tiêu bệnh viện ${formatPercent(inheritedValue)}.`
+    }
+    return `Đã chọn ${selectedDepartmentIds.length} khoa/phòng: ${selectedDirectTargets.length} khoa đang có mục tiêu riêng, ${selectedInheritedCount} khoa đang kế thừa mục tiêu bệnh viện.`
+  })()
 
   async function save() {
-    const parsed = Number(value.replace(',', '.'))
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100 || !/^\d{1,3}(?:[.,]\d{1,2})?$/.test(value.trim())) {
+    const trimmedValue = value.trim()
+    const parsed = Number(trimmedValue.replace(',', '.'))
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100 || !/^\d{1,3}(?:[.,]\d{1,2})?$/.test(trimmedValue)) {
       setError('Mục tiêu phải từ 0 đến 100 và có tối đa hai chữ số thập phân.')
       return
     }
-    if (scope === 'department' && !departmentId) {
-      setError('Vui lòng chọn khoa/phòng.')
+    if (scope === 'department' && !selectedDepartmentIds.length) {
+      setError('Vui lòng chọn ít nhất một khoa/phòng.')
       return
     }
     setSaving(true); setError('')
-    const payload = { targetPercent: parsed, lockVersion: directTarget?.lockVersion ?? null }
     try {
-      if (scope === 'hospital') await adminApi.updateHospitalComplianceTarget(form.formId, payload)
-      else await adminApi.updateDepartmentComplianceTarget(form.formId, departmentId, payload)
+      if (scope === 'hospital') {
+        await adminApi.updateHospitalComplianceTarget(form.formId, { targetPercent: parsed, lockVersion: directTarget?.lockVersion ?? null })
+      } else {
+        await Promise.all(selectedDepartmentIds.map((departmentId) => {
+          const target = departmentTargetOf(departmentId)
+          return adminApi.updateDepartmentComplianceTarget(form.formId, departmentId, {
+            targetPercent: parsed,
+            lockVersion: target?.lockVersion ?? null,
+          })
+        }))
+      }
       onSaved()
     } catch (requestError) {
       setError(apiErrorMessage(requestError))
@@ -693,10 +792,10 @@ function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId
   }
 
   async function inheritHospital() {
-    if (!directTarget || scope !== 'department') return
+    if (scope !== 'department' || !selectedDirectTargets.length) return
     setSaving(true); setError('')
     try {
-      await adminApi.deleteDepartmentComplianceTarget(form.formId, departmentId, directTarget.lockVersion)
+      await Promise.all(selectedDirectTargets.map(({ id, target }) => adminApi.deleteDepartmentComplianceTarget(form.formId, id, target.lockVersion)))
       onSaved()
     } catch (requestError) {
       setError(apiErrorMessage(requestError))
@@ -714,23 +813,61 @@ function ComplianceTargetModal({ form, isAdmin, departments, currentDepartmentId
             <button type="button" className={scope === 'hospital' ? 'is-active' : ''} onClick={() => setScope('hospital')}>Bệnh viện</button>
             <button type="button" className={scope === 'department' ? 'is-active' : ''} onClick={() => setScope('department')}>Khoa/phòng</button>
           </div>}
-          {scope === 'department' && <label><span>Khoa/phòng</span><SearchableSelect value={departmentId}
-            disabled={!isAdmin} onChange={(next) => setDepartmentId(String(next))} searchPlaceholder="Tìm khoa/phòng..."
-            options={departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code }))} /></label>}
+          {scope === 'department' && <div className="checklist-target-modal__department-picker">
+            <div className="checklist-target-modal__picker-head">
+              <div><span>Khoa/phòng áp dụng</span><strong>{selectedDepartmentIds.length} khoa đã chọn</strong></div>
+              {isAdmin && <div>
+                <button type="button" onClick={selectAllFilteredDepartments} disabled={!filteredDepartments.length}>Chọn tất cả đang lọc</button>
+                <button type="button" onClick={clearSelectedDepartments} disabled={!selectedDepartmentIds.length}>Bỏ chọn</button>
+              </div>}
+            </div>
+            <div className="checklist-target-modal__picker-grid">
+              <div className="checklist-target-modal__department-panel">
+                <label className="checklist-target-modal__department-search">
+                  <SearchOutlined />
+                  <input type="search" value={departmentQuery} onChange={(event) => setDepartmentQuery(event.target.value)}
+                    placeholder="Tìm khoa/phòng..." disabled={!isAdmin} />
+                </label>
+                <div className="checklist-target-modal__department-list" role="listbox" aria-multiselectable="true">
+                  {filteredDepartments.length ? filteredDepartments.map((department) => {
+                    const selected = selectedDepartmentSet.has(department.id)
+                    const departmentTarget = departmentTargetOf(department.id)
+                    return <button type="button" key={department.id} role="option" aria-selected={selected}
+                      className={`checklist-target-modal__department-option${selected ? ' is-selected' : ''}`}
+                      disabled={!isAdmin && !selected} onClick={() => toggleDepartment(department.id)}>
+                      <span className="checklist-target-modal__department-check" aria-hidden="true">{selected ? '✓' : ''}</span>
+                      <span className="checklist-target-modal__department-name"><strong>{department.name}</strong>{department.code && <small>{department.code}</small>}</span>
+                      <span className={`checklist-target-modal__department-badge${departmentTarget ? ' is-direct' : ''}`}>
+                        {departmentTarget ? 'Mục tiêu riêng' : 'Kế thừa'} · {formatPercent(departmentTarget?.targetPercent ?? inheritedValue)}
+                      </span>
+                    </button>
+                  }) : <div className="checklist-target-modal__department-empty">Không tìm thấy khoa/phòng phù hợp.</div>}
+                </div>
+              </div>
+              <aside className="checklist-target-modal__selected-panel" aria-label="Khoa/phòng đã chọn">
+                <div className="checklist-target-modal__selected-head"><span>Đã chọn</span><strong>{selectedDepartmentIds.length}</strong></div>
+                {selectedDepartments.length ? <div className="checklist-target-modal__selected-chips">
+                  {selectedDepartments.map((department) => <span className="checklist-target-modal__chip" key={department.id}>
+                    <span>{department.name}</span>
+                    {isAdmin && <button type="button" onClick={() => removeSelectedDepartment(department.id)} aria-label={`Bỏ chọn ${department.name}`}>×</button>}
+                  </span>)}
+                </div> : <p>Chưa chọn khoa/phòng nào. Có thể chọn từng dòng hoặc chọn tất cả kết quả đang lọc.</p>}
+              </aside>
+            </div>
+          </div>}
           <label><span>Mục tiêu áp dụng</span><div className="checklist-target-modal__input">
             <input type="text" inputMode="decimal" value={value} onChange={(event) => setValue(event.target.value)} aria-label="Mục tiêu tuân thủ" />
             <strong>%</strong></div></label>
-          <p className="checklist-target-modal__hint">{directTarget
-            ? 'Đang dùng cấu hình riêng ở cấp được chọn.'
-            : scope === 'department' ? `Đang kế thừa mục tiêu bệnh viện ${formatPercent(inheritedValue)}.`
-              : 'Chưa cấu hình riêng, hệ thống đang dùng mặc định 80,00%.'}</p>
+          <p className="checklist-target-modal__hint">{targetHint}</p>
           {error && <div className="checklist-quality-alert"><CloseCircleOutlined /> {error}</div>}
         </>}
       </div>
-      <footer>{scope === 'department' && directTarget && <button type="button" className="checklist-target-modal__inherit" disabled={saving} onClick={inheritHospital}>Dùng mục tiêu bệnh viện</button>}
+      <footer>{scope === 'department' && selectedDirectTargets.length > 0 && <button type="button" className="checklist-target-modal__inherit" disabled={saving} onClick={inheritHospital}>
+        Kế thừa mục tiêu bệnh viện ({selectedDirectTargets.length})
+      </button>}
         <span /><button type="button" onClick={onClose}>Hủy</button>
-        <button type="button" className="checklist-target-modal__save" disabled={loading || saving} onClick={save}>
-          {saving ? <LoadingOutlined spin /> : <CheckCircleOutlined />} {saving ? 'Đang lưu...' : 'Lưu mục tiêu'}
+        <button type="button" className="checklist-target-modal__save" disabled={loading || saving || (scope === 'department' && !selectedDepartmentIds.length)} onClick={save}>
+          {saving ? <LoadingOutlined spin /> : <CheckCircleOutlined />} {saving ? 'Đang lưu...' : scope === 'department' && selectedDepartmentIds.length ? `Lưu cho ${selectedDepartmentIds.length} khoa` : 'Lưu mục tiêu'}
         </button></footer>
     </section>
   </div>

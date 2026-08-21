@@ -15,6 +15,8 @@ import {
 } from '@ant-design/icons'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import {
   Area,
   AreaChart,
@@ -535,11 +537,6 @@ export default function OverviewDashboard({
                   <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
                 )}
               </button>
-              {activeFilterCount > 0 && (
-                <button className="overview-filter-reset" onClick={resetFilters} type="button">
-                  Xóa bộ lọc
-                </button>
-              )}
             </div>
             {onExport && (
               <button className="overview-export" type="button" onClick={onExport}>
@@ -559,6 +556,7 @@ export default function OverviewDashboard({
                     ariaLabel="Tìm và chọn khoa/phòng"
                     placeholder="Toàn viện"
                     searchPlaceholder="Gõ tên khoa/phòng..."
+                    showDescriptions={false}
                     options={[
                       { value: '', label: 'Toàn viện' },
                       ...departments.map((department) => ({
@@ -597,17 +595,23 @@ export default function OverviewDashboard({
                   onChange={(event) => changeFilter('employeeCode', event.target.value)}
                 />
               </label>
-              <label>
-                <span>Nội dung</span>
-                <select value={filters.content} onChange={(event) => changeFilter('content', event.target.value)}>
-                  <option value="all">Tất cả nội dung</option>
-                  <option value="training">Đào tạo liên tục</option>
-                  <option value="compliance">Tỷ lệ tuân thủ chung</option>
-                  <option value="knowledge">Trung bình điểm kiểm tra kiến thức</option>
-                  <option value="skill">Trung bình điểm kiểm tra kỹ năng</option>
-                  <option value="classification">Phân loại năng lực</option>
-                </select>
-              </label>
+              <FilterSelectField
+                label="Nội dung"
+                value={filters.content}
+                onChange={(value) => changeFilter('content', value)}
+                options={[
+                  { value: 'all', label: 'Tất cả nội dung' },
+                  { value: 'training', label: 'Đào tạo liên tục' },
+                  { value: 'compliance', label: 'Tỷ lệ tuân thủ chung' },
+                  { value: 'knowledge', label: 'Trung bình điểm kiểm tra kiến thức' },
+                  { value: 'skill', label: 'Trung bình điểm kiểm tra kỹ năng' },
+                  { value: 'classification', label: 'Phân loại năng lực' },
+                ]}
+              />
+              <FilterActionButtons
+                onApply={() => setIsFilterOpen(false)}
+                onReset={resetFilters}
+              />
               <p className="overview-filter-hint">
                 Tuân thủ và năng lực dùng toàn bộ khoảng ngày; đào tạo liên tục được tính tại mốc Đến ngày theo mục tiêu 5 năm.
               </p>

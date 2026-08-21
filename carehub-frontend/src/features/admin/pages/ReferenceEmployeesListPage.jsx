@@ -5,7 +5,8 @@ import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclos
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { adminApi } from '../api/adminApi.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import '../styles/ReferenceEmployeesListPage.css'
 
 function ReferenceEmployeesListPage() {
@@ -193,88 +194,91 @@ function ReferenceEmployeesListPage() {
                     cbTypeFilter !== 'all',
                   ].filter(Boolean).length}
                 >
-                  <div className="rel-filter-row">
-                  <select
-                    className="rel-filter-select"
+                  <FilterSelectField
+                    label="Vị trí"
                     value={positionFilter}
-                    onChange={(e) => updateFilter(setPositionFilter)(e.target.value)}
+                    onChange={updateFilter(setPositionFilter)}
                     disabled={loading}
-                  >
-                    <option value="all">Vị trí</option>
-                    {filterOptions.positions.map(pos => (
-                      <option key={pos} value={pos}>{pos}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'all', label: 'Tất cả vị trí' },
+                      ...filterOptions.positions.map(pos => ({ value: pos, label: pos }))
+                    ]}
+                  />
 
-                  <select
-                    className="rel-filter-select"
+                  <FilterSelectField
+                    label="Trình độ"
                     value={degreeFilter}
-                    onChange={(e) => updateFilter(setDegreeFilter)(e.target.value)}
+                    onChange={updateFilter(setDegreeFilter)}
                     disabled={loading}
-                  >
-                    <option value="all">Trình độ</option>
-                    {filterOptions.degrees.map(deg => (
-                      <option key={deg} value={deg}>{deg}</option>
-                    ))}
-                  </select>
-                </div>
+                    options={[
+                      { value: 'all', label: 'Tất cả trình độ' },
+                      ...filterOptions.degrees.map(deg => ({ value: deg, label: deg }))
+                    ]}
+                  />
 
-                {/* Row 2 */}
-                <div className="rel-filter-row">
-                  <div className="rel-department-filter">
-                    <SearchableSelect
-                      value={deptFilter}
-                      onChange={updateFilter(setDeptFilter)}
-                      disabled={loading}
-                      options={[
-                        { value: 'all', label: 'Tất cả đơn vị' },
-                        ...filterOptions.departments.map((department) => ({
-                          value: department,
-                          label: department,
-                        })),
-                      ]}
-                      placeholder="Tất cả đơn vị"
-                      searchPlaceholder="Tìm khoa/phòng, đơn vị..."
-                      ariaLabel="Tìm và chọn khoa/phòng, đơn vị"
-                    />
-                  </div>
+                  <FilterSelectField
+                    label="Khoa/phòng"
+                    value={deptFilter}
+                    onChange={updateFilter(setDeptFilter)}
+                    disabled={loading}
+                    options={[
+                      { value: 'all', label: 'Tất cả đơn vị' },
+                      ...filterOptions.departments.map((department) => ({
+                        value: department,
+                        label: department,
+                      })),
+                    ]}
+                    searchable
+                    placeholder="Tất cả đơn vị"
+                    searchPlaceholder="Tìm khoa/phòng, đơn vị..."
+                  />
 
-                  <select
-                    className="rel-filter-select"
+                  <FilterSelectField
+                    label="Chức danh"
                     value={titleFilter}
-                    onChange={(e) => updateFilter(setTitleFilter)(e.target.value)}
+                    onChange={updateFilter(setTitleFilter)}
                     disabled={loading}
-                  >
-                    <option value="all">Chức danh</option>
-                    {filterOptions.titles.map(title => (
-                      <option key={title} value={title}>{title}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'all', label: 'Tất cả chức danh' },
+                      ...filterOptions.titles.map(title => ({ value: title, label: title }))
+                    ]}
+                  />
 
-                  <select
-                    className="rel-filter-select"
+                  <FilterSelectField
+                    label="Giới tính"
                     value={genderFilter}
-                    onChange={(e) => updateFilter(setGenderFilter)(e.target.value)}
+                    onChange={updateFilter(setGenderFilter)}
                     disabled={loading}
-                  >
-                    <option value="all">Giới tính</option>
-                    {filterOptions.genders.map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: 'all', label: 'Tất cả giới tính' },
+                      ...filterOptions.genders.map(g => ({ value: g, label: g }))
+                    ]}
+                  />
 
-                  <select
-                    className="rel-filter-select"
+                  <FilterSelectField
+                    label="Loại CB"
                     value={cbTypeFilter}
-                    onChange={(e) => updateFilter(setCbTypeFilter)(e.target.value)}
+                    onChange={updateFilter(setCbTypeFilter)}
                     disabled={loading}
-                  >
-                    <option value="all">Loại CB</option>
-                    {filterOptions.cbTypes.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
+                    options={[
+                      { value: 'all', label: 'Tất cả loại cán bộ' },
+                      ...filterOptions.cbTypes.map(t => ({ value: t, label: t }))
+                    ]}
+                  />
+
+                  <FilterActionButtons
+                    onApply={() => {}}
+                    onReset={() => {
+                      setSearch('')
+                      setPositionFilter('all')
+                      setDegreeFilter('all')
+                      setDeptFilter('all')
+                      setTitleFilter('all')
+                      setGenderFilter('all')
+                      setCbTypeFilter('all')
+                      setPage(1)
+                    }}
+                  />
                 </AdminFilterDisclosure>
               </div>
 

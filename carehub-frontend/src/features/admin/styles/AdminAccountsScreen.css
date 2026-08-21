@@ -136,8 +136,21 @@
 }
 
 .am-filter-department .searchable-select > input {
-  min-height: 39px;
-  border-radius: 8px;
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.am-filter-department .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.am-filter-department .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .am-filter-department .searchable-select__menu {

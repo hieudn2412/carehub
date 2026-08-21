@@ -13,9 +13,11 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { myExamApi } from '../../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
@@ -120,10 +122,7 @@ function CompetencySearchForm({ filters, onChange, onClear, onApply, dateError =
         <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={localToday()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày năng lực" />
       </label>
       {dateError && <p className="pc-search-form__error" role="alert">{dateError}</p>}
-      <div className="pc-search-form__actions">
-        <button type="button" className="pc-button pc-button--ghost" onClick={onClear}>Xóa bộ lọc</button>
-        <button type="button" className="pc-button pc-button--primary" onClick={onApply}>Áp dụng</button>
-      </div>
+      <FilterActionButtons className="pc-search-form__actions" onReset={onClear} onApply={onApply} />
     </div>
   )
 }
@@ -142,6 +141,7 @@ function ProfessionalCompetencyDashboard() {
   const [assignmentsError, setAssignmentsError] = useState('')
   const [dateError, setDateError] = useState('')
   const [startingId, setStartingId] = useState(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => setDraftFilters(filters), [filters])
 
@@ -256,7 +256,31 @@ function ProfessionalCompetencyDashboard() {
       <div className="pc-page">
         <section className="pc-toolbar" aria-label="Bộ lọc năng lực chuyên môn">
           <div className="pc-toolbar__title"><span>Đánh giá cá nhân</span><strong>{filters.dateFrom} → {filters.dateTo}</strong></div>
-          <CompetencySearchForm filters={draftFilters} onChange={updateDraftFilters} onClear={clearFilters} onApply={applyFilters} dateError={dateError} />
+          <AppliedFilterToolbar
+            activeCount={Number(draftFilters.dateFrom !== defaultFromDate() || draftFilters.dateTo !== localToday())}
+            ariaLabel="Bộ lọc năng lực chuyên môn"
+            className="pc-applied-toolbar"
+            isOpen={isFilterOpen}
+            onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
+            onReset={clearFilters}
+            onSearchChange={value => updateDraftFilters({ q: value })}
+            onToggle={() => setIsFilterOpen(current => !current)}
+            panelClassName="pc-filter-panel"
+            panelId="professional-competency-filter-panel"
+            searchAriaLabel="Tìm bài kiểm tra"
+            searchPlaceholder="Nhập tên bài kiểm tra..."
+            searchValue={draftFilters.q}
+          >
+            <label className="admin-control-toolbar__field">
+              <span>Từ ngày</span>
+              <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={val => updateDraftFilters({ dateFrom: val })} aria-label="Từ ngày năng lực" />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Đến ngày</span>
+              <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={localToday()} onChange={val => updateDraftFilters({ dateTo: val })} aria-label="Đến ngày năng lực" />
+            </label>
+            {dateError && <p className="pc-search-form__error" role="alert">{dateError}</p>}
+          </AppliedFilterToolbar>
         </section>
 
         <section className="pc-metric-grid" aria-label="Hai nhóm năng lực">

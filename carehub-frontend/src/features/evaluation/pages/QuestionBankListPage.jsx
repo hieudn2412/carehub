@@ -13,6 +13,8 @@ import {
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -477,32 +479,28 @@ function QuestionBankListPage() {
                 searchPlaceholder="Tìm theo nội dung câu hỏi..."
                 searchValue={keyword}
               >
-                    <label>
-                      <span>Danh mục</span>
-                      <select
-                        className="qbl-filter-select"
+                    <div className="applied-filter-toolbar__fields">
+                      <FilterSelectField
+                        label="Danh mục"
                         value={categoryFilter}
-                        onChange={(event) => setCategoryFilter(event.target.value)}
-                      >
-                        <option value="">Tất cả danh mục</option>
-                        {categories.map((category) => (
-                          <option key={category} value={category}>{category}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Mức độ nhận thức</span>
-                      <select
-                        className="qbl-filter-select"
+                        onChange={(value) => setCategoryFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả danh mục' },
+                          ...categories.map((category) => ({ value: category, label: category }))
+                        ]}
+                        placeholder="Tất cả danh mục"
+                      />
+                      <FilterSelectField
+                        label="Mức độ nhận thức"
                         value={cognitiveLevelFilter}
-                        onChange={(event) => setCognitiveLevelFilter(event.target.value)}
-                      >
-                        <option value="">Tất cả mức độ nhận thức</option>
-                        {COGNITIVE_LEVELS.map((level) => (
-                          <option key={level.value} value={level.value}>{level.label}</option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={(value) => setCognitiveLevelFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả mức độ nhận thức' },
+                          ...COGNITIVE_LEVELS
+                        ]}
+                        placeholder="Tất cả mức độ nhận thức"
+                      />
+                    </div>
               </AppliedFilterToolbar>
 
               <div className="qbl-table-card">
@@ -648,14 +646,15 @@ function QuestionBankListPage() {
 
             <label className="qbl-field">
               <span>Mức thay đổi</span>
-              <select
+              <FormSelectField
                 value={paraphraseForm.changeStrength}
-                onChange={(event) => setParaphraseForm((current) => ({ ...current, changeStrength: event.target.value }))}
-              >
-                <option value="low">Nhẹ</option>
-                <option value="medium">Vừa</option>
-                <option value="high">Nhiều</option>
-              </select>
+                onChange={(value) => setParaphraseForm((current) => ({ ...current, changeStrength: value }))}
+                options={[
+                  { value: 'low', label: 'Nhẹ' },
+                  { value: 'medium', label: 'Vừa' },
+                  { value: 'high', label: 'Nhiều' }
+                ]}
+              />
             </label>
 
             <div className="qbl-modal-actions">
@@ -705,11 +704,15 @@ function QuestionBankListPage() {
 
             <label className="qbl-field">
               <span>Khi gặp câu hỏi trùng mạnh</span>
-              <select value={importDuplicateMode} onChange={(event) => setImportDuplicateMode(event.target.value)}>
-                <option value="BLOCK">Báo lỗi dòng trùng</option>
-                <option value="SKIP_DUPLICATES">Bỏ qua dòng trùng</option>
-                <option value="IMPORT_DUPLICATES_AS_DRAFT">Lưu dòng trùng thành bản nháp</option>
-              </select>
+              <FormSelectField
+                value={importDuplicateMode}
+                onChange={setImportDuplicateMode}
+                options={[
+                  { value: 'BLOCK', label: 'Báo lỗi dòng trùng' },
+                  { value: 'SKIP_DUPLICATES', label: 'Bỏ qua dòng trùng' },
+                  { value: 'IMPORT_DUPLICATES_AS_DRAFT', label: 'Lưu dòng trùng thành bản nháp' }
+                ]}
+              />
             </label>
 
             {(importPreview?.sourceHeaders || []).length > 0 && (
@@ -719,15 +722,14 @@ function QuestionBankListPage() {
                   {IMPORT_MAPPING_FIELDS.map((field) => (
                     <label key={field.key} className="qbl-field">
                       <span>{field.label}</span>
-                      <select
+                      <FormSelectField
                         value={importColumnMapping[field.key] || ''}
-                        onChange={(event) => updateImportColumnMapping(field.key, event.target.value)}
-                      >
-                        <option value="">Tự nhận theo header</option>
-                        {(importPreview.sourceHeaders || []).map((header) => (
-                          <option key={`${field.key}-${header}`} value={header}>{header}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => updateImportColumnMapping(field.key, value)}
+                        options={[
+                          { value: '', label: 'Tự nhận theo header' },
+                          ...(importPreview.sourceHeaders || []).map((header) => ({ value: header, label: header }))
+                        ]}
+                      />
                     </label>
                   ))}
                 </div>

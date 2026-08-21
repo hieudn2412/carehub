@@ -52,6 +52,12 @@ function getVersionNumber(checklist) {
     || null
 }
 
+function targetSourceLabel(source) {
+  if (source === 'DEPARTMENT') return 'Mục tiêu khoa'
+  if (source === 'HOSPITAL') return 'Mục tiêu bệnh viện'
+  return 'Mục tiêu'
+}
+
 function ManagerChecklistListPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -218,7 +224,7 @@ function ManagerChecklistListPage() {
                       </span>
                     )}
                     <span className="mgr-badge" style={{ fontSize: 11, background: '#fff7ed', color: '#b45309', border: '1px solid #fed7aa' }}>
-                      Mục tiêu: {Number(checklist.complianceTargetPercent ?? 80).toLocaleString('vi-VN')}%
+                      {targetSourceLabel(checklist.complianceTargetSource)}: {Number(checklist.complianceTargetPercent ?? 80).toLocaleString('vi-VN')}%
                     </span>
                   </div>
                   <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>

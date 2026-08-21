@@ -504,6 +504,27 @@
   font-size: 13px;
 }
 
+.mgr-toolbar--standard .searchable-select > input,
+.mgr-field-filter .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.mgr-toolbar--standard .searchable-select--static > input,
+.mgr-field-filter .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.mgr-toolbar--standard .searchable-select__search-icon,
+.mgr-field-filter .searchable-select__search-icon {
+  display: block;
+  left: 12px;
+}
+
 .mgr-feedback {
   display: flex;
   align-items: center;
