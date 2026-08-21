@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EyeOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationAuditLogApi } from '../api/evaluationAuditLogApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -100,28 +101,8 @@ function EvaluationAuditLogPage() {
                 searchPlaceholder="Tìm hành động, người thao tác hoặc mô tả..."
                 searchValue={filters.q}
               >
-                  <label>
-                    <span>Hành động</span>
-                    <select
-                      value={filters.action}
-                      onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}
-                    >
-                      {ACTION_OPTIONS.map((option) => (
-                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Đối tượng</span>
-                    <select
-                      value={filters.entityType}
-                      onChange={(event) => setFilters((current) => ({ ...current, entityType: event.target.value }))}
-                    >
-                      {ENTITY_OPTIONS.map((option) => (
-                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                  <FilterSelectField label="Hành động" value={filters.action} onChange={(value) => setFilters((current) => ({ ...current, action: value }))} options={ACTION_OPTIONS} placeholder="Tất cả hành động" />
+                  <FilterSelectField label="Đối tượng" value={filters.entityType} onChange={(value) => setFilters((current) => ({ ...current, entityType: value }))} options={ENTITY_OPTIONS} placeholder="Tất cả đối tượng" />
                   <label>
                     <span>Người thao tác</span>
                     <input

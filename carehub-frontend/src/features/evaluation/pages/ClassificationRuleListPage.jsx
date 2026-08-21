@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { EditOutlined, DeleteOutlined, PlusCircleOutlined, SearchOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { classificationRuleApi } from '../api/classificationRuleApi.js'
@@ -102,15 +104,23 @@ function ClassificationRuleListPage() {
               />
             </div>
             <AdminFilterDisclosure activeCount={enabledFilter ? 1 : 0}>
-            <select
-              className="crl-filter-select"
-              value={enabledFilter}
-              onChange={(event) => setEnabledFilter(event.target.value)}
-            >
-              <option value="">Trạng thái</option>
-              <option value="true">Hoạt động</option>
-              <option value="false">Tạm ngưng</option>
-            </select>
+              <FilterSelectField
+                label="Trạng thái"
+                value={enabledFilter}
+                onChange={(value) => setEnabledFilter(value)}
+                options={[
+                  { value: '', label: 'Trạng thái' },
+                  { value: 'true', label: 'Hoạt động' },
+                  { value: 'false', label: 'Tạm ngưng' },
+                ]}
+              />
+              <FilterActionButtons
+                onApply={() => {}}
+                onReset={() => {
+                  setKeyword('')
+                  setEnabledFilter('')
+                }}
+              />
             </AdminFilterDisclosure>
           </div>
           <button

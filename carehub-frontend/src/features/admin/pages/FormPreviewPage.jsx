@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import {
@@ -179,18 +180,16 @@ function FormPreviewPage() {
       case 'DROPDOWN':
         if (q.fieldType === 'DROPDOWN') {
           return (
-            <select
+            <SearchableSelect
               className="fpp-select"
               value={val}
-              onChange={(e) => handleAnswerChange(q.questionKey, e.target.value)}
-            >
-              <option value="">-- Chọn một lựa chọn --</option>
-              {sortedOpts.map((opt) => (
-                <option key={opt.id || opt.optionKey} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => handleAnswerChange(q.questionKey, value)}
+              options={[
+                { value: '', label: '-- Chọn một lựa chọn --' },
+                ...sortedOpts.map((opt) => ({ value: opt.value, label: opt.label }))
+              ]}
+              searchable={false}
+            />
           )
         }
         return (

@@ -16,9 +16,24 @@
   background: #fff;
   color: inherit;
   font: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.searchable-select--static > input {
+  cursor: pointer;
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+  text-align: left;
 }
 
 .searchable-select > input:focus {
+  border-color: #16a085;
+  box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.12);
+}
+
+.searchable-select--open > input {
   border-color: #16a085;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, 0.12);
 }
@@ -55,6 +70,7 @@
   left: 0;
   max-height: 240px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 5px;
   border: 1px solid #d9e2ec;
   border-radius: 7px;
@@ -62,7 +78,23 @@
   box-shadow: 0 12px 28px rgba(20, 36, 55, 0.16);
 }
 
+.searchable-select__menu::-webkit-scrollbar {
+  width: 10px;
+}
+
+.searchable-select__menu::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border: 3px solid #fff;
+  border-radius: 999px;
+}
+
+.searchable-select__menu::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
 .searchable-select__option {
+  appearance: none;
+  box-sizing: border-box;
   display: flex;
   width: 100%;
   min-height: 42px;
@@ -70,44 +102,54 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 10px;
-  border: 0;
+  border: 0 !important;
   border-radius: 5px;
-  background: transparent;
+  background: transparent !important;
+  box-shadow: none !important;
   color: #263244;
+  font: inherit;
+  outline: 0 !important;
   text-align: left;
   cursor: pointer;
 }
 
 .searchable-select__option:hover,
 .searchable-select__option--active {
-  background: #edf8f5;
+  background: #edf8f5 !important;
   color: #087b68;
 }
 
 .searchable-select__option > span {
   display: grid;
+  flex: 1 1 auto;
+  justify-items: start;
   min-width: 0;
   gap: 2px;
+  text-align: left;
 }
 
 .searchable-select__option strong {
   overflow: hidden;
+  max-width: 100%;
   font-size: 13px;
   font-weight: 500;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .searchable-select__option small {
   overflow: hidden;
+  max-width: 100%;
   color: #7b8797;
   font-size: 11px;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .searchable-select__empty {
-  padding: 14px 10px;
+  padding: 14px 12px;
   color: #7b8797;
   font-size: 12px;
   text-align: center;
@@ -219,8 +261,14 @@
 }
 
 .searchable-select__option--selected {
-  background: #e7f8f3;
+  background: #e7f8f3 !important;
   color: #087b68;
+}
+
+.searchable-select__option > .anticon {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #16a085;
 }
 
 .searchable-select--multi .searchable-select__option > .anticon {

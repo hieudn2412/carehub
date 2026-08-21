@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
   EditOutlined,
-  FilterOutlined,
   LoadingOutlined,
   ReloadOutlined,
-  SearchOutlined,
   SlidersOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
 import { adminApi } from '../api/adminApi.js'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
@@ -16,7 +16,6 @@ import { ComplianceTargetModal } from './ChecklistQualityDashboardPage.jsx'
 import '../styles/ChecklistQualityDashboardPage.css'
 
 const PAGE_SIZE = 10
-const SEARCH_DEBOUNCE_MS = 350
 
 const STATUS_LABELS = {
   DRAFT: 'Bản nháp',
@@ -83,8 +82,9 @@ function ComplianceTargetSettingsPage() {
   const [forms, setForms] = useState([])
   const [targetsByFormId, setTargetsByFormId] = useState({})
   const [keyword, setKeyword] = useState('')
-  const [debouncedKeyword, setDebouncedKeyword] = useState('')
+  const [appliedKeyword, setAppliedKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [draftStatusFilter, setDraftStatusFilter] = useState('')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
@@ -96,13 +96,12 @@ function ComplianceTargetSettingsPage() {
   const [targetModalForm, setTargetModalForm] = useState(null)
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), SEARCH_DEBOUNCE_MS)
-    return () => window.clearTimeout(timer)
-  }, [keyword])
+    setPage(0)
+  }, [appliedKeyword, statusFilter])
 
   useEffect(() => {
-    setPage(0)
-  }, [debouncedKeyword, statusFilter])
+    if (isFilterOpen) setDraftStatusFilter(statusFilter)
+  }, [isFilterOpen, statusFilter])
 
   useEffect(() => {
     let active = true
@@ -125,7 +124,7 @@ function ComplianceTargetSettingsPage() {
       page,
       size: PAGE_SIZE,
       sort: 'updatedAt,desc',
-      keyword: debouncedKeyword || undefined,
+      keyword: appliedKeyword || undefined,
       status: statusFilter || undefined,
     }).then((response) => {
       if (!active) return
@@ -143,7 +142,7 @@ function ComplianceTargetSettingsPage() {
       if (active) setLoading(false)
     })
     return () => { active = false }
-  }, [debouncedKeyword, page, reloadKey, statusFilter])
+  }, [appliedKeyword, page, reloadKey, statusFilter])
 
   useEffect(() => {
     if (!forms.length) {
@@ -171,7 +170,7 @@ function ComplianceTargetSettingsPage() {
 
   const resultFrom = totalElements === 0 ? 0 : page * PAGE_SIZE + 1
   const resultTo = Math.min((page + 1) * PAGE_SIZE, totalElements)
-  const hasFilters = debouncedKeyword.length > 0 || Boolean(statusFilter)
+  const hasFilters = appliedKeyword.length > 0 || Boolean(statusFilter)
   const activeFilterCount = [statusFilter].filter(Boolean).length
 
   const breadcrumbs = useMemo(() => [
@@ -190,38 +189,24 @@ function ComplianceTargetSettingsPage() {
 
   function clearFilters() {
     setKeyword('')
-    setDebouncedKeyword('')
+    setAppliedKeyword('')
     setStatusFilter('')
+    setDraftStatusFilter('')
     setPage(0)
+  }
+
+  function applyFilters() {
+    setAppliedKeyword(keyword.trim())
+    setStatusFilter(draftStatusFilter)
+    setPage(0)
+    setIsFilterOpen(false)
   }
 
   return (
     <AppShell title="Cài đặt mục tiêu tuân thủ" breadcrumbs={breadcrumbs}>
       <div className="checklist-target-settings">
-        <section className="checklist-target-settings__toolbar admin-control-toolbar" aria-label="Tìm kiếm bảng kiểm">
-          <div className="checklist-target-settings__toolbar-main admin-control-toolbar__main">
-            <div className="checklist-target-settings__search-filter-group admin-control-toolbar__controls">
-              <label className="checklist-target-settings__search admin-control-toolbar__search">
-                <SearchOutlined />
-                <input
-                  aria-label="Tìm theo tên hoặc mã bảng kiểm"
-                  type="search"
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="Tìm theo tên hoặc mã bảng kiểm..."
-                />
-              </label>
-              <button
-                type="button"
-                className={`checklist-target-settings__filter-trigger admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                aria-expanded={isFilterOpen}
-                aria-controls="compliance-target-filter-panel"
-                onClick={() => setIsFilterOpen((value) => !value)}
-              >
-                <FilterOutlined /> Bộ lọc
-                {activeFilterCount > 0 && <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>}
-              </button>
-            </div>
+        <AppliedFilterToolbar
+          actions={(
             <div className="checklist-target-settings__toolbar-actions">
               <span>{totalElements} bảng kiểm</span>
               <button
@@ -235,32 +220,30 @@ function ComplianceTargetSettingsPage() {
                 {loading || targetLoading ? <LoadingOutlined spin /> : <ReloadOutlined />}
               </button>
             </div>
-          </div>
-
-          {isFilterOpen && (
-            <div className="checklist-target-settings__filter-panel admin-control-toolbar__panel" id="compliance-target-filter-panel">
-              <label className="admin-control-toolbar__field">
-                <span>Trạng thái</span>
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                >
-                  {STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="checklist-target-settings__clear-filters"
-                onClick={clearFilters}
-                disabled={!hasFilters}
-              >
-                Xóa bộ lọc
-              </button>
-            </div>
           )}
-        </section>
+          activeCount={activeFilterCount}
+          ariaLabel="Tìm kiếm và lọc bảng kiểm cấu hình mục tiêu"
+          className="checklist-target-settings__toolbar"
+          isOpen={isFilterOpen}
+          onApply={applyFilters}
+          onReset={clearFilters}
+          onSearchChange={setKeyword}
+          onToggle={() => setIsFilterOpen((value) => !value)}
+          panelClassName="checklist-target-settings__filter-panel"
+          panelId="compliance-target-filter-panel"
+          searchAriaLabel="Tìm theo tên hoặc mã bảng kiểm"
+          searchClassName="checklist-target-settings__search"
+          searchPlaceholder="Tìm theo tên hoặc mã bảng kiểm..."
+          searchValue={keyword}
+        >
+              <FilterSelectField
+                label="Trạng thái"
+                value={draftStatusFilter}
+                onChange={setDraftStatusFilter}
+                options={STATUS_OPTIONS}
+                placeholder="Tất cả trạng thái"
+              />
+        </AppliedFilterToolbar>
 
         {error && <div className="checklist-quality-alert"><span>{error}</span><button type="button" onClick={retry}>Thử lại</button></div>}
 

@@ -64,7 +64,8 @@ describe('ActivityTypeListPage', () => {
     expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Bộ lọc' }))
-    fireEvent.change(screen.getByRole('combobox', { name: 'Trạng thái' }), { target: { value: 'true' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Trạng thái' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hoạt động' }))
     expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))

@@ -2202,8 +2202,15 @@
 }
 
 .aqh-filter-field .searchable-select input {
+  border-radius: 6px;
   height: 42px;
   font-size: 13px;
+  padding: 0 34px 0 38px !important;
+}
+
+.aqh-filter-field .searchable-select--static input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
 }
 
 .aqh-filter-field .searchable-select__menu {
@@ -2839,9 +2846,13 @@
     grid-template-columns: 1fr;
   }
 
-  .aqh-filter-reset,
   .aqh-readonly-checklist__header button {
     width: 100%;
+  }
+
+  .aqh-filter-reset {
+    justify-self: end;
+    width: fit-content;
   }
 
   .aqh-readonly-checklist {

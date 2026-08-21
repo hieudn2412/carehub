@@ -43,21 +43,15 @@
   font-size: 13px;
 }
 
-.dtst__search input:focus-visible,
-.dtst__select:focus-visible {
+.dtst__search input:focus-visible {
   border-color: #10a77d;
   outline: 2px solid rgba(16, 167, 125, 0.18);
   outline-offset: 1px;
 }
 
 .dtst__select {
-  padding: 9px 12px;
-  border: 1px solid #dbe3ec;
-  border-radius: 10px;
-  background: #fff;
-  color: #0f172a;
-  font: inherit;
-  font-size: 13px;
+  flex: 0 1 220px;
+  min-width: 180px;
 }
 
 .dtst__export {

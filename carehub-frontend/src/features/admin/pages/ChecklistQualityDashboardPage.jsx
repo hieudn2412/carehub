@@ -17,6 +17,7 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
@@ -390,28 +391,37 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           searchPlaceholder="Gõ tên khoa/phòng..." options={[
             { value: '', label: 'Toàn viện' },
             ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
-          ]} />
+          ]} showDescriptions={false} />
       </SelectFilter>}
-      <label className="checklist-quality-filter"><span>Kết quả</span><div><CheckCircleOutlined />
-        <select aria-label="Kết quả" value={resultStatus} onChange={(event) => setResultStatus(event.target.value)}>
-          <option value="">Tất cả kết quả</option><option value="PASSED">Đạt</option>
-          <option value="FAILED">Chưa đạt</option><option value="FAILED_SCORE">Chưa đạt điểm sàn</option>
-          <option value="FAILED_CRITICAL">Không đạt câu trọng yếu</option>
-        </select></div></label>
+      <SelectFilter label="Kết quả" icon={<CheckCircleOutlined />}>
+        <SearchableSelect
+          value={resultStatus}
+          onChange={setResultStatus}
+          options={[
+            { value: '', label: 'Tất cả kết quả' },
+            { value: 'PASSED', label: 'Đạt' },
+            { value: 'FAILED', label: 'Chưa đạt' },
+            { value: 'FAILED_SCORE', label: 'Chưa đạt điểm sàn' },
+            { value: 'FAILED_CRITICAL', label: 'Không đạt câu trọng yếu' }
+          ]}
+          searchable={false}
+          showDescriptions={false}
+        />
+      </SelectFilter>
       <SelectFilter label="Người được đánh giá" icon={<TeamOutlined />}>
         <SearchableSelect value={subjectUserId} onChange={setSubjectUserId} placeholder="Tất cả nhân viên"
-          searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} />
+          searchPlaceholder="Gõ tên hoặc mã nhân viên..." options={userOptions(filterOptions.subjects, 'Tất cả nhân viên')} showDescriptions={false} />
       </SelectFilter>
       {!isUser && <SelectFilter label="Người thực hiện" icon={<EditOutlined />}>
         <SearchableSelect value={submittedByUserId} onChange={setSubmittedByUserId} placeholder="Tất cả người thực hiện"
-          searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} />
+          searchPlaceholder="Gõ tên hoặc mã người thực hiện..." options={userOptions(filterOptions.evaluators, 'Tất cả người thực hiện')} showDescriptions={false} />
       </SelectFilter>}
       <SelectFilter label="Quy trình" icon={<FileSearchOutlined />}>
         <SearchableSelect value={processId} onChange={setProcessId} placeholder="Tất cả quy trình"
           searchPlaceholder="Gõ tên hoặc mã quy trình..." options={[
             { value: '', label: 'Tất cả quy trình' },
-            ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, description: item.code, searchText: item.code })),
-          ]} />
+            ...filterOptions.forms.map((item) => ({ value: item.id, label: item.title, searchText: item.code })),
+          ]} showDescriptions={false} />
       </SelectFilter>
     </>
   )
@@ -454,13 +464,13 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 <FilterOutlined /> Bộ lọc
                 {activeFilterCount > 0 && <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>}
               </button>
-              {activeFilterCount > 0 && <button type="button" className="checklist-quality-reset" onClick={resetFilters}>Xóa bộ lọc</button>}
             </div>
             {toolbarActions}
           </div>
 
           {isFilterOpen && <div id="checklist-quality-filter-panel" className="checklist-quality-filter-panel admin-control-toolbar__panel">
             {filterFields}
+            <FilterActionButtons onApply={() => setIsFilterOpen(false)} onReset={resetFilters} />
           </div>}
         </section>}
 
@@ -542,8 +552,8 @@ function DateFilter({ label, value, min, max, onChange }) {
   </div></label>
 }
 
-function SelectFilter({ label, icon, children }) {
-  return <label className="checklist-quality-filter"><span>{label}</span><div>{icon}{children}</div></label>
+function SelectFilter({ label, children }) {
+  return <label className="checklist-quality-filter"><span>{label}</span>{children}</label>
 }
 
 function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
@@ -609,9 +619,7 @@ function EmptyState({ isUser, filtered }) {
 function Pagination({ page, size, totalElements, totalPages, onPage, onSize }) {
   return <div className="checklist-quality-pagination">
     <span>Hiển thị {totalElements === 0 ? 0 : page * size + 1}–{Math.min((page + 1) * size, totalElements)} / {totalElements}</span>
-    <label>Số dòng <select value={size} onChange={(event) => onSize(Number(event.target.value))}>
-      {PAGE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
-    </select></label>
+    <label>Số dòng <SearchableSelect value={size} onChange={(val) => onSize(Number(val))} options={PAGE_SIZES.map((item) => ({ value: item, label: String(item) }))} searchable={false} /></label>
     <div><button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)} aria-label="Trang trước">‹</button>
       <strong>{page + 1}/{totalPages}</strong>
       <button type="button" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} aria-label="Trang sau">›</button></div>

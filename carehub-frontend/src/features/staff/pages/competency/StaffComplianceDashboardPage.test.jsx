@@ -73,7 +73,8 @@ describe('StaffComplianceDashboardPage', () => {
     render(<MemoryRouter><StaffComplianceDashboardPage /></MemoryRouter>)
     await screen.findByText('Tổng số lượt được chấm')
     const initialOverviewCalls = myCompetencyApi.getComplianceOverview.mock.calls.length
-    fireEvent.change(screen.getByLabelText('Năm biểu đồ tuân thủ'), { target: { value: '2025' } })
+    fireEvent.click(screen.getByRole('combobox', { name: 'Năm biểu đồ tuân thủ' }))
+    fireEvent.click(screen.getByRole('option', { name: '2025' }))
 
     await waitFor(() => expect(myCompetencyApi.getComplianceChart).toHaveBeenCalledWith({ year: 2025 }))
     expect(myCompetencyApi.getComplianceOverview).toHaveBeenCalledTimes(initialOverviewCalls)

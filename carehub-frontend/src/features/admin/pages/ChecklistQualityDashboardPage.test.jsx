@@ -10,8 +10,8 @@ vi.mock('../../../shared/components/AppShell.jsx', () => ({
 }))
 
 vi.mock('../../../shared/components/SearchableSelect.jsx', () => ({
-  default: ({ onChange, options, placeholder, value }) => (
-    <select aria-label={placeholder} onChange={(event) => onChange(event.target.value)} value={value}>
+  default: ({ ariaLabel, id, onChange, options, placeholder, value }) => (
+    <select id={id} aria-label={ariaLabel || placeholder} onChange={(event) => onChange(event.target.value)} value={value}>
       {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>
   ),
@@ -90,6 +90,7 @@ describe('ChecklistQualityDashboardPage', () => {
     expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
     fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm phù hợp' })).toBeInTheDocument()
     expect(screen.getByText('KẾT QUẢ BẢNG KIỂM ĐANG CHỌN')).toBeInTheDocument()

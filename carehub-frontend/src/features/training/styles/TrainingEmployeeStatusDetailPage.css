@@ -609,6 +609,7 @@
 
 .ted-filter-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 14px;
@@ -616,6 +617,7 @@
 
 .ted-filter-clear,
 .ted-filter-apply {
+  flex: 0 0 auto;
   min-height: 40px;
   padding: 7px 13px;
   border-radius: 8px;

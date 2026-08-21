@@ -15,7 +15,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/EvaluationDashboardPage.css'
 
@@ -208,14 +208,11 @@ function ComplianceByTechniquePage() {
 
   const filterFields = (
     <>
-      <label className="admin-control-toolbar__field">
-        <span>Khoa/phòng</span>
-        {isAdmin ? (
-          <SearchableSelect value={departmentId} onChange={setDepartmentId}
+      {isAdmin ? (
+          <FilterSelectField label="Khoa/phòng" value={departmentId} onChange={setDepartmentId}
             options={[{ value: '', label: 'Toàn viện' }, ...departments.map((department) => ({ value: department.id, label: department.name }))]}
-            placeholder="Toàn viện" searchPlaceholder="Tìm tên khoa/phòng..." ariaLabel="Tìm và chọn khoa/phòng" />
-        ) : <div className="compliance-filter-panel__fixed">{departments[0]?.name || 'Khoa của tôi'}</div>}
-      </label>
+            placeholder="Toàn viện" searchable searchPlaceholder="Tìm tên khoa/phòng..." />
+        ) : <label className="admin-control-toolbar__field"><span>Khoa/phòng</span><div className="compliance-filter-panel__fixed">{departments[0]?.name || 'Khoa của tôi'}</div></label>}
       <label className="admin-control-toolbar__field"><span>Từ ngày</span>
         <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={setFromDate} />
       </label>

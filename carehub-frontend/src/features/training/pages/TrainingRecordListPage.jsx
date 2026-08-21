@@ -4,6 +4,8 @@ import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import '../styles/training.css'
 
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'CANCELLED']
@@ -99,6 +101,17 @@ function TrainingRecordListPage() {
     setSearchParams(next)
   }
 
+  const handleApplyFilters = () => {
+    const next = new URLSearchParams(searchParams)
+    next.set('page', '0')
+    setSearchParams(next)
+  }
+
+  const handleClearFilters = () => {
+    setKeywordInput('')
+    setSearchParams(new URLSearchParams())
+  }
+
   return (
     <AppShell title="Hồ sơ đào tạo">
     <div className="training-page">
@@ -135,36 +148,36 @@ function TrainingRecordListPage() {
             To
             <KeyboardDatePicker onChange={(val) => updateFilter('dateTo', val)} value={filters.dateTo} />
           </label>
-          <label>
-            Activity
-            <select onChange={(event) => updateFilter('activityTypeId', event.target.value)} value={filters.activityTypeId}>
-              <option value="">All</option>
-              {(options.activityTypes || []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Status
-            <select onChange={(event) => updateFilter('workflowStatus', event.target.value)} value={filters.workflowStatus}>
-              <option value="">All</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Evidence
-            <select onChange={(event) => updateFilter('hasEvidence', event.target.value)} value={filters.hasEvidence}>
-              <option value="">All</option>
-              <option value="true">Has evidence</option>
-              <option value="false">No evidence</option>
-            </select>
-          </label>
+          <FilterSelectField
+            label="Activity"
+            value={filters.activityTypeId}
+            onChange={(value) => updateFilter('activityTypeId', value)}
+            searchable
+            options={[
+              { value: '', label: 'All' },
+              ...(options.activityTypes || []).map((item) => ({ value: String(item.id), label: item.name })),
+            ]}
+          />
+          <FilterSelectField
+            label="Status"
+            value={filters.workflowStatus}
+            onChange={(value) => updateFilter('workflowStatus', value)}
+            options={[
+              { value: '', label: 'All' },
+              ...STATUS_OPTIONS.map((status) => ({ value: status, label: status })),
+            ]}
+          />
+          <FilterSelectField
+            label="Evidence"
+            value={filters.hasEvidence}
+            onChange={(value) => updateFilter('hasEvidence', value)}
+            options={[
+              { value: '', label: 'All' },
+              { value: 'true', label: 'Has evidence' },
+              { value: 'false', label: 'No evidence' },
+            ]}
+          />
+          <FilterActionButtons onApply={handleApplyFilters} onReset={handleClearFilters} />
         </div>
 
         {errorMessage ? <div className="training-message training-message--error">{errorMessage}</div> : null}

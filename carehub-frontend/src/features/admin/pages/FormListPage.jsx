@@ -24,6 +24,7 @@ import {
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import FormVersionAssignmentModal from '../components/FormVersionAssignmentModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/FormListPage.css'
 
@@ -462,11 +463,11 @@ function FormListPage() {
     setPage(nextPage)
   }
 
-  const updateStatus = (event) => {
+  const updateStatus = (value) => {
     setErrorMessage('')
     setSuccessMessage('')
     setShowRetiredShortcut(false)
-    setStatus(event.target.value)
+    setStatus(value)
   }
 
   const clearFilters = () => {
@@ -960,19 +961,17 @@ function FormListPage() {
                 searchPlaceholder="Tìm theo mã hoặc tiêu đề..."
                 searchValue={keyword}
               >
-                    <label className="flp-filter-group">
-                      <span>Trạng thái</span>
-                      <select className="flp-select" onChange={updateStatus} value={status}>
-                        <option value="all">Tất cả trạng thái</option>
-                        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="flp-filter-group">
-                      <span>Khoa/phòng</span>
-                      <div className="flp-department-filter">
-                        <SearchableSelect
+                    <FilterSelectField
+                      className="flp-filter-group"
+                      label="Trạng thái"
+                      onChange={updateStatus}
+                      value={status}
+                      options={[{ value: 'all', label: 'Tất cả trạng thái' }, ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))]}
+                      placeholder="Tất cả trạng thái"
+                    />
+                    <FilterSelectField
+                          className="flp-filter-group flp-department-filter"
+                          label="Khoa/phòng"
                           onChange={(value) => {
                             setErrorMessage('')
                             setDepartmentId(value)
@@ -986,11 +985,9 @@ function FormListPage() {
                             })),
                           ]}
                           placeholder="Tất cả khoa/phòng"
+                          searchable
                           searchPlaceholder="Tìm tên khoa/phòng..."
-                          ariaLabel="Tìm và chọn khoa/phòng"
                         />
-                      </div>
-                    </label>
               </AppliedFilterToolbar>
 
               <section className="flp-table-card" aria-busy={loading}>

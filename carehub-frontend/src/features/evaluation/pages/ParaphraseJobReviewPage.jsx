@@ -10,6 +10,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
 import {
@@ -357,12 +358,14 @@ function ParaphraseJobReviewPage() {
               </label>
               <label className="qdoc-field">
                 <span>Mức độ nhận thức</span>
-                <select value={editForm.cognitiveLevel} onChange={(event) => setEditFormField('cognitiveLevel', event.target.value)}>
-                  <option value="">-- Chọn mức độ --</option>
-                  {COGNITIVE_LEVELS.map((level) => (
-                    <option key={level.value} value={level.value}>{level.label}</option>
-                  ))}
-                </select>
+                <FormSelectField
+                  value={editForm.cognitiveLevel}
+                  onChange={(value) => setEditFormField('cognitiveLevel', value)}
+                  options={[
+                    { value: '', label: '-- Chọn mức độ --' },
+                    ...COGNITIVE_LEVELS
+                  ]}
+                />
               </label>
               <label className="qdoc-field">
                 <span>Chủ đề</span>

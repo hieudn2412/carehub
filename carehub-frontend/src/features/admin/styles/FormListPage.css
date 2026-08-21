@@ -391,10 +391,23 @@
 }
 
 .flp-department-filter .searchable-select > input {
-  height: 36px;
+  min-height: 42px;
+  height: 42px;
   border-color: var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: 13px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.flp-department-filter .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.flp-department-filter .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .flp-clear-filters {

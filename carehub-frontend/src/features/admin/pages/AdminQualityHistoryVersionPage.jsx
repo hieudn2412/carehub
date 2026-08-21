@@ -20,6 +20,8 @@ import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.js
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
 import '../styles/AdminQualityHistoryPage.css'
@@ -499,8 +501,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     }
   }
 
-  const hasFilters = Boolean(keyword || result || (!isManager && (submittedByUserId || departmentId))
-    || dateFrom !== defaultDateRange.dateFrom || dateTo !== defaultDateRange.dateTo)
+
   const evaluatorSelectOptions = [
     { value: '', label: 'Tất cả người chấm' },
     ...evaluatorOptions.map((user) => ({
@@ -634,6 +635,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         placeholder="Tất cả người chấm"
                         searchPlaceholder="Tìm tên hoặc mã người chấm..."
                         selectedOption={selectedEvaluatorOption}
+                        showDescriptions={false}
                         value={submittedByUserId}
                       />
                     </label>}
@@ -645,18 +647,29 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         options={departmentOptions}
                         placeholder="Tất cả khoa/phòng"
                         searchPlaceholder="Tìm khoa/phòng..."
+                        showDescriptions={false}
                         value={departmentId}
                       />
                     </label>}
-                    <label className="aqh-filter-field">
-                      <span>Kết quả</span>
-                      <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
-                        {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-                      </select>
-                    </label>
+                    <FilterSelectField
+                      label="Kết quả"
+                      value={result}
+                      onChange={(value) => updateQuery({ result: value })}
+                      options={RESULT_OPTIONS}
+                    />
                     <label className="aqh-filter-field"><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} onChange={(val) => updateQuery({ dateFrom: val })} /></label>
                     <label className="aqh-filter-field"><span>Đến ngày</span><KeyboardDatePicker value={dateTo} onChange={(val) => updateQuery({ dateTo: val })} /></label>
-                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize), dateFrom: defaultDateRange.dateFrom, dateTo: defaultDateRange.dateTo }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
+                    <FilterActionButtons
+                      onApply={() => setIsFilterOpen(false)}
+                      onReset={() => {
+                        setKeywordInput('')
+                        setSearchParams({
+                          size: String(pageSize),
+                          dateFrom: defaultDateRange.dateFrom,
+                          dateTo: defaultDateRange.dateTo
+                        }, { replace: true })
+                      }}
+                    />
                     </div>
                   )}
                 </div>

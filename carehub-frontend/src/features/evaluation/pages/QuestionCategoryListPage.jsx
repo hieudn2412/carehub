@@ -8,6 +8,8 @@ import {
   PlusCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -192,19 +194,18 @@ export default function QuestionCategoryListPage() {
           searchPlaceholder="Tìm danh mục..."
           searchValue={keyword}
         >
-              <label className="admin-control-toolbar__field">
-                <span>Trạng thái</span>
-                <select
-                  className="qcl-filter-select"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                >
-                  <option value="">Tất cả trạng thái</option>
-                  <option value="ACTIVE">Hoạt động</option>
-                  <option value="INACTIVE">Tạm ngưng</option>
-                  <option value="ARCHIVED">Đã lưu trữ</option>
-                </select>
-              </label>
+              <FilterSelectField
+                label="Trạng thái"
+                value={status}
+                onChange={(value) => setStatus(value)}
+                options={[
+                  { value: '', label: 'Tất cả trạng thái' },
+                  { value: 'ACTIVE', label: 'Hoạt động' },
+                  { value: 'INACTIVE', label: 'Tạm ngưng' },
+                  { value: 'ARCHIVED', label: 'Đã lưu trữ' },
+                ]}
+                placeholder="Tất cả trạng thái"
+              />
         </AppliedFilterToolbar>
 
         {/* Table Card */}
@@ -371,15 +372,16 @@ export default function QuestionCategoryListPage() {
               <div className="qcl-modal-row">
                 <div className="qcl-modal-group">
                   <label>Trạng thái</label>
-                  <select
+                  <FormSelectField
                     className="qcl-input-red"
                     value={modalForm.status}
-                    onChange={(e) => updateModalField('status', e.target.value)}
+                    onChange={(value) => updateModalField('status', value)}
                     disabled={isSaving}
-                  >
-                    <option value="ACTIVE">Hoạt động</option>
-                    <option value="INACTIVE">Tạm ngưng</option>
-                  </select>
+                    options={[
+                      { value: 'ACTIVE', label: 'Hoạt động' },
+                      { value: 'INACTIVE', label: 'Tạm ngưng' }
+                    ]}
+                  />
                 </div>
               </div>
 

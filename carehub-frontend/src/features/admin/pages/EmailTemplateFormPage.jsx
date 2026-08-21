@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EmailTemplateFormPage.css'
@@ -238,38 +239,45 @@ function EmailTemplateFormPage() {
                         required
                       />
                     </div>
-                    <div className="etf-field">
-                      <label className="etf-label">Sự kiện kích hoạt</label>
-                      <select className="etf-select" value={form.eventType} onChange={(event) => handleEventChange(event.target.value)} disabled={systemManaged}>
-                        {Object.entries(eventOptions).map(([value, option]) => (
-                          <option key={value} value={value}>{option.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="etf-field">
-                      <label className="etf-label">Đối tượng nhận</label>
-                      <select
-                        className="etf-select"
-                        value={form.audience}
-                        onChange={(event) => { setAllowedVariables([]); updateField('audience', event.target.value) }}
-                        disabled={systemManaged || eventDefinition.audiences.length === 1}
-                      >
-                        {eventDefinition.audiences.map((audience) => (
-                          <option key={audience} value={audience}>{AUDIENCE_LABELS[audience]}</option>
-                        ))}
-                      </select>
-                    </div>
+                      <div className="etf-field">
+                        <label className="etf-label" id="eventType-label">Sự kiện kích hoạt</label>
+                        <SearchableSelect
+                          value={form.eventType}
+                          onChange={handleEventChange}
+                          disabled={systemManaged}
+                          options={Object.entries(eventOptions).map(([value, option]) => ({ value, label: option.label }))}
+                          ariaLabelledBy="eventType-label"
+                          searchable={true}
+                        />
+                      </div>
+                      <div className="etf-field">
+                        <label className="etf-label" id="audience-label">Đối tượng nhận</label>
+                        <SearchableSelect
+                          value={form.audience}
+                          onChange={(value) => { setAllowedVariables([]); updateField('audience', value) }}
+                          disabled={systemManaged || eventDefinition.audiences.length === 1}
+                          options={eventDefinition.audiences.map((audience) => ({ value: audience, label: AUDIENCE_LABELS[audience] }))}
+                          ariaLabelledBy="audience-label"
+                          searchable={true}
+                        />
+                      </div>
                     <div className="etf-field">
                       <label className="etf-label">Danh mục</label>
                       <input className="etf-input" value={CATEGORY_LABELS[form.category]} disabled />
                     </div>
-                    <div className="etf-field">
-                      <label className="etf-label">Trạng thái</label>
-                      <select className="etf-select" value={form.active ? 'ACTIVE' : 'INACTIVE'} onChange={(event) => updateField('active', event.target.value === 'ACTIVE')}>
-                        <option value="ACTIVE">Hoạt động</option>
-                        <option value="INACTIVE">Ngừng hoạt động</option>
-                      </select>
-                    </div>
+                      <div className="etf-field">
+                        <label className="etf-label" id="active-label">Trạng thái</label>
+                        <SearchableSelect
+                          value={form.active ? 'ACTIVE' : 'INACTIVE'}
+                          onChange={(value) => updateField('active', value === 'ACTIVE')}
+                          options={[
+                            { value: 'ACTIVE', label: 'Hoạt động' },
+                            { value: 'INACTIVE', label: 'Ngưng hoạt động' }
+                          ]}
+                          ariaLabelledBy="active-label"
+                          searchable={false}
+                        />
+                      </div>
                   </div>
 
                   <div className="etf-field">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import {
   CheckCircleOutlined,
@@ -1082,16 +1083,18 @@ function FormBuilderPage() {
                               <div className="fbp-item-header">
                                 <div className="fbp-item-selector-group">
                                   <span className="fbp-item-number">#{itemIdx + 1}</span>
-                                  <select
+                                  <SearchableSelect
                                     className="fbp-mini-select"
                                     value={item.itemType}
-                                    onChange={(e) => handleItemChange(secIdx, itemIdx, 'itemType', e.target.value)}
-                                  >
-                                    <option value="QUESTION">Câu hỏi</option>
-                                    <option value="TITLE_DESCRIPTION">Tiêu đề và mô tả</option>
-                                    <option value="IMAGE">Hình ảnh</option>
-                                    <option value="INSTRUCTION">Hướng dẫn</option>
-                                  </select>
+                                    onChange={(value) => handleItemChange(secIdx, itemIdx, 'itemType', value)}
+                                    options={[
+                                      { value: 'QUESTION', label: 'Câu hỏi' },
+                                      { value: 'TITLE_DESCRIPTION', label: 'Tiêu đề và mô tả' },
+                                      { value: 'IMAGE', label: 'Hình ảnh' },
+                                      { value: 'INSTRUCTION', label: 'Hướng dẫn' }
+                                    ]}
+                                    searchable={false}
+                                  />
                                 </div>
                                 <div className="fbp-item-actions">
                                   {item.itemType === 'QUESTION' && item.question && (
