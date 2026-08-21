@@ -85,6 +85,10 @@ class AnalyticsApiSystemTest extends AbstractApiSystemTest {
         JsonNode page = data(response);
         assertThat(page.get("content").isArray()).isTrue();
         assertThat(page.get("size").asInt()).isEqualTo(10);
+        page.get("content").forEach(item -> {
+            assertThat(item.get("targetPercent").asDouble()).isBetween(0.0, 100.0);
+            assertThat(item.get("targetSource").asText()).isIn("DEFAULT", "HOSPITAL", "DEPARTMENT");
+        });
     }
 
     @DisplayName("L3-ANL-05 | Query-Correctness: GET /dashboard/forms/trend?granularity=day as ADMIN → 200 with bucketed points")

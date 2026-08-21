@@ -5,11 +5,10 @@ import {
   CloseOutlined,
   DeleteOutlined,
   EditOutlined,
-  FilterOutlined,
   PlusCircleOutlined,
   PlusOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -30,6 +29,7 @@ export default function QuestionCategoryListPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
 
@@ -58,13 +58,13 @@ export default function QuestionCategoryListPage() {
   const filteredCategories = useMemo(() => {
     return categories.filter((item) => {
       const matchesKeyword =
-        item.name.toLowerCase().includes(keyword.toLowerCase()) ||
-        (item.description || '').toLowerCase().includes(keyword.toLowerCase()) ||
-        (item.code || '').toLowerCase().includes(keyword.toLowerCase())
-      const matchesStatus = status === '' || item.status === status
+        item.name.toLowerCase().includes(appliedFilters.keyword.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(appliedFilters.keyword.toLowerCase()) ||
+        (item.code || '').toLowerCase().includes(appliedFilters.keyword.toLowerCase())
+      const matchesStatus = appliedFilters.status === '' || item.status === appliedFilters.status
       return matchesKeyword && matchesStatus
     })
-  }, [categories, keyword, status])
+  }, [appliedFilters, categories])
 
   // Pagination calculations
   const pageSize = 10
@@ -154,6 +154,16 @@ export default function QuestionCategoryListPage() {
   }
 
   const breadcrumbs = [{ label: 'Danh mục câu hỏi' }]
+  const applyFilters = () => {
+    setPage(0)
+    setAppliedFilters({ keyword: keyword.trim(), status })
+  }
+  const resetFilters = () => {
+    setKeyword('')
+    setStatus('')
+    setPage(0)
+    setAppliedFilters({ keyword: '', status: '' })
+  }
 
   return (
     <AppShell breadcrumbs={breadcrumbs}>
@@ -165,50 +175,29 @@ export default function QuestionCategoryListPage() {
         </div>
 
         {/* Filter Bar */}
-        <div className="qcl-filter-bar admin-control-toolbar">
-          <div className="admin-control-toolbar__main">
-            <div className="admin-control-toolbar__controls">
-              <div className="qcl-search admin-control-toolbar__search">
-                <span className="qcl-search-icon">
-                  <SearchOutlined />
-                </span>
-                <input
-                  type="text"
-                  className="qcl-search-input"
-                  placeholder="Tìm danh mục..."
-                  value={keyword}
-                  onChange={(e) => {
-                    setKeyword(e.target.value)
-                    setPage(0)
-                  }}
-                />
-              </div>
-              <button
-                aria-controls="question-category-filter-panel"
-                aria-expanded={isFilterOpen}
-                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                onClick={() => setIsFilterOpen((current) => !current)}
-                type="button"
-              >
-                <FilterOutlined /> Bộ lọc
-                {status && <span className="admin-control-toolbar__filter-count">1</span>}
-              </button>
-            </div>
-            <button className="qcl-btn-add" onClick={handleOpenCreateModal}>
+        <AppliedFilterToolbar
+          activeCount={status ? 1 : 0}
+          actions={<button className="qcl-btn-add" onClick={handleOpenCreateModal}>
               <PlusCircleOutlined /> Thêm danh mục
-            </button>
-          </div>
-          {isFilterOpen && (
-            <div className="admin-control-toolbar__panel" id="question-category-filter-panel">
+            </button>}
+          className="qcl-filter-bar"
+          isOpen={isFilterOpen}
+          onApply={applyFilters}
+          onReset={resetFilters}
+          onSearchChange={setKeyword}
+          onToggle={() => setIsFilterOpen((current) => !current)}
+          panelId="question-category-filter-panel"
+          searchAriaLabel="Tìm danh mục câu hỏi"
+          searchClassName="qcl-search"
+          searchPlaceholder="Tìm danh mục..."
+          searchValue={keyword}
+        >
               <label className="admin-control-toolbar__field">
                 <span>Trạng thái</span>
                 <select
                   className="qcl-filter-select"
                   value={status}
-                  onChange={(e) => {
-                    setStatus(e.target.value)
-                    setPage(0)
-                  }}
+                  onChange={(e) => setStatus(e.target.value)}
                 >
                   <option value="">Tất cả trạng thái</option>
                   <option value="ACTIVE">Hoạt động</option>
@@ -216,9 +205,7 @@ export default function QuestionCategoryListPage() {
                   <option value="ARCHIVED">Đã lưu trữ</option>
                 </select>
               </label>
-            </div>
-          )}
-        </div>
+        </AppliedFilterToolbar>
 
         {/* Table Card */}
         <div className="qcl-table-card">
