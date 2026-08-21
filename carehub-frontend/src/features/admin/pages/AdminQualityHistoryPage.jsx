@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   CheckCircleOutlined,
-  ReloadOutlined,
-  SearchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
@@ -74,12 +73,15 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
   const dateTo = searchParams.get('dateTo') || defaults.dateTo
   const keyword = searchParams.get('keyword') || ''
   const [keywordInput, setKeywordInput] = useState(keyword)
+  const [draftDateFrom, setDraftDateFrom] = useState(dateFrom)
+  const [draftDateTo, setDraftDateTo] = useState(dateTo)
   const [history, setHistory] = useState({ content: [], page: 0, totalElements: 0, totalPages: 0 })
   const [selectedForm, setSelectedForm] = useState(null)
   const [versions, setVersions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   const updateQuery = (changes) => {
     setSearchParams((current) => {
@@ -93,13 +95,10 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (keywordInput.trim() !== keyword) updateQuery({ keyword: keywordInput.trim(), page: 0 })
-    }, 300)
-    return () => window.clearTimeout(timer)
-    // updateQuery intentionally uses current URL state.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, keywordInput])
+    setKeywordInput(keyword)
+    setDraftDateFrom(dateFrom)
+    setDraftDateTo(dateTo)
+  }, [dateFrom, dateTo, keyword])
 
   useEffect(() => {
     let alive = true
@@ -163,6 +162,44 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
   const selectForm = (form) => updateQuery({ formId: form.formId })
   const clearForm = () => updateQuery({ formId: null })
   const versionQuery = new URLSearchParams({ dateFrom, dateTo }).toString()
+  const activeFilterCount = [
+    !requestedFormId && keyword,
+    dateFrom !== defaults.dateFrom,
+    dateTo !== defaults.dateTo,
+  ].filter(Boolean).length
+
+  function applyFilters() {
+    if (draftDateFrom && draftDateTo && draftDateFrom > draftDateTo) {
+      setError('Từ ngày không được sau đến ngày')
+      return
+    }
+    setError('')
+    updateQuery({
+      keyword: requestedFormId ? keyword : keywordInput.trim(),
+      dateFrom: draftDateFrom,
+      dateTo: draftDateTo,
+      page: 0,
+    })
+    setIsFilterOpen(false)
+  }
+
+  function resetFilters() {
+    setKeywordInput('')
+    setDraftDateFrom(defaults.dateFrom)
+    setDraftDateTo(defaults.dateTo)
+    updateQuery({ keyword: '', dateFrom: defaults.dateFrom, dateTo: defaults.dateTo, page: 0 })
+  }
+
+  const filterFields = (
+    <>
+      <label className="admin-control-toolbar__field"><span>Từ ngày</span>
+        <KeyboardDatePicker value={draftDateFrom} max={draftDateTo} onChange={setDraftDateFrom} />
+      </label>
+      <label className="admin-control-toolbar__field"><span>Đến ngày</span>
+        <KeyboardDatePicker value={draftDateTo} min={draftDateFrom} onChange={setDraftDateTo} />
+      </label>
+    </>
+  )
 
   return (
     <AppShell
@@ -180,17 +217,21 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
           {!requestedFormId && <strong>{history.totalElements} bảng kiểm</strong>}
         </section>
 
-        <section className="aqh-history-toolbar">
-          {!requestedFormId && (
-            <label className="aqh-main-search">
-              <SearchOutlined />
-              <input value={keywordInput} onChange={(event) => setKeywordInput(event.target.value)} placeholder="Tìm theo tên hoặc mã quy trình..." />
-            </label>
-          )}
-          <label><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} max={dateTo} onChange={(val) => updateQuery({ dateFrom: val, page: 0 })} /></label>
-          <label><span>Đến ngày</span><KeyboardDatePicker value={dateTo} min={dateFrom} onChange={(val) => updateQuery({ dateTo: val, page: 0 })} /></label>
-          <button type="button" onClick={() => updateQuery({ dateFrom: defaults.dateFrom, dateTo: defaults.dateTo, page: 0 })}><ReloadOutlined /> Năm hiện tại</button>
-        </section>
+        <AppliedFilterToolbar
+          activeCount={activeFilterCount}
+          ariaLabel="Công cụ lịch sử đánh giá"
+          isOpen={isFilterOpen}
+          onApply={applyFilters}
+          onReset={resetFilters}
+          onSearchChange={requestedFormId ? undefined : setKeywordInput}
+          onToggle={() => setIsFilterOpen((current) => !current)}
+          panelId="quality-history-filter-panel"
+          searchAriaLabel="Tìm theo tên hoặc mã quy trình"
+          searchPlaceholder="Tìm theo tên hoặc mã quy trình..."
+          searchValue={keywordInput}
+        >
+          {filterFields}
+        </AppliedFilterToolbar>
 
         {error ? (
           <section className="aqh-error-state" role="alert"><WarningOutlined /><strong>Không thể tải dữ liệu</strong><span>{error}</span><button type="button" onClick={() => setRefreshKey((value) => value + 1)}>Thử lại</button></section>

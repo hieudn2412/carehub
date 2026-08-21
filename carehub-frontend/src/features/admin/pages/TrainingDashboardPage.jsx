@@ -22,6 +22,7 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
@@ -133,17 +134,24 @@ function DashboardContent({ role }) {
     asOf: today,
     status: '',
   })
+  const [appliedManagerFilters, setAppliedManagerFilters] = useState({
+    departmentId: '',
+    professionalFieldId: '',
+    asOf: today,
+    status: '',
+  })
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const managerDepartmentId = profile?.departmentId || ''
+  const effectiveFilters = isManager ? appliedManagerFilters : filters
   const activeFilterCount = [
-    !isManager && filters.departmentId,
-    filters.professionalFieldId,
-    filters.asOf && filters.asOf !== today,
-    filters.status,
+    !isManager && effectiveFilters.departmentId,
+    effectiveFilters.professionalFieldId,
+    effectiveFilters.asOf && effectiveFilters.asOf !== today,
+    effectiveFilters.status,
   ].filter(Boolean).length
 
   useEffect(() => {
@@ -183,10 +191,10 @@ function DashboardContent({ role }) {
       const response = await trainingApi.getTrainingDashboardSummary({
         departmentId: isManager
           ? managerDepartmentId
-          : filters.departmentId || undefined,
-        professionalFieldId: filters.professionalFieldId || undefined,
-        complianceStatus: filters.status || undefined,
-        asOf: filters.asOf || undefined,
+          : effectiveFilters.departmentId || undefined,
+        professionalFieldId: effectiveFilters.professionalFieldId || undefined,
+        complianceStatus: effectiveFilters.status || undefined,
+        asOf: effectiveFilters.asOf || undefined,
       })
       setSummary(responsePayload(response))
     } catch {
@@ -195,7 +203,7 @@ function DashboardContent({ role }) {
     } finally {
       setLoading(false)
     }
-  }, [filters.asOf, filters.departmentId, filters.professionalFieldId, filters.status, isManager, managerDepartmentId])
+  }, [effectiveFilters.asOf, effectiveFilters.departmentId, effectiveFilters.professionalFieldId, effectiveFilters.status, isManager, managerDepartmentId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadData, 0)
@@ -257,10 +265,10 @@ function DashboardContent({ role }) {
     setError('')
     try {
       const rows = await fetchAll({
-        departmentId: isManager ? managerDepartmentId : filters.departmentId || undefined,
-        professionalFieldId: filters.professionalFieldId || undefined,
-        complianceStatus: filters.status || undefined,
-        asOf: filters.asOf || undefined,
+        departmentId: isManager ? managerDepartmentId : effectiveFilters.departmentId || undefined,
+        professionalFieldId: effectiveFilters.professionalFieldId || undefined,
+        complianceStatus: effectiveFilters.status || undefined,
+        asOf: effectiveFilters.asOf || undefined,
       })
       exportCsv(rows.map(normalizeEmployee))
     } catch {
@@ -270,9 +278,94 @@ function DashboardContent({ role }) {
     }
   }
 
+  function resetManagerFilters() {
+    const initialFilters = { departmentId: '', professionalFieldId: '', asOf: today, status: '' }
+    setFilters(initialFilters)
+    setAppliedManagerFilters(initialFilters)
+  }
+
+  function applyManagerFilters() {
+    setAppliedManagerFilters({ ...filters })
+    setIsFilterOpen(false)
+  }
+
+  const exportButton = (
+    <button
+      type="button"
+      className="training-dashboard__export"
+      onClick={handleExport}
+      disabled={loading || exporting || metrics.total === 0}
+    >
+      {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+      {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
+    </button>
+  )
+
+  const filterFields = (
+    <>
+      <label>
+        <span>Khoa/Phòng</span>
+        {isManager ? (
+          <div>{profile?.departmentName || 'Khoa của tôi'}</div>
+        ) : (
+          <SearchableSelect
+            value={filters.departmentId}
+            onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
+            options={[
+              { value: '', label: 'Toàn viện' },
+              ...departments.map((department) => ({ value: department.id, label: department.name })),
+            ]}
+            placeholder="Toàn viện"
+            searchPlaceholder="Tìm tên khoa/phòng..."
+            ariaLabel="Tìm và chọn khoa/phòng"
+          />
+        )}
+      </label>
+      <label>
+        <span>Lĩnh vực chuyên môn</span>
+        <SearchableSelect
+          value={filters.professionalFieldId}
+          onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
+          options={[
+            { value: '', label: 'Tất cả lĩnh vực' },
+            ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+          ]}
+          placeholder="Tất cả lĩnh vực"
+          searchPlaceholder="Tìm tên lĩnh vực..."
+          ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
+        />
+      </label>
+      <label>
+        <span>Tính đến ngày</span>
+        <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
+      </label>
+      <label>
+        <span>Trạng thái</span>
+        <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
+          <option value="">Tất cả trạng thái</option>
+          <option value="COMPLIANT">Đạt</option>
+          <option value="NON_COMPLIANT">Chưa đạt</option>
+        </select>
+      </label>
+    </>
+  )
+
   return (
     <div className="training-dashboard">
-      <section className="training-dashboard__toolbar admin-control-toolbar" aria-label="Công cụ dashboard giờ đào tạo">
+      {isManager ? <AppliedFilterToolbar
+        activeCount={activeFilterCount}
+        actions={exportButton}
+        ariaLabel="Công cụ dashboard giờ đào tạo"
+        className="training-dashboard__toolbar"
+        isOpen={isFilterOpen}
+        onApply={applyManagerFilters}
+        onReset={resetManagerFilters}
+        onToggle={() => setIsFilterOpen((current) => !current)}
+        panelClassName="training-dashboard__filter-panel"
+        panelId="training-dashboard-filter-panel"
+      >
+        {filterFields}
+      </AppliedFilterToolbar> : <section className="training-dashboard__toolbar admin-control-toolbar" aria-label="Công cụ dashboard giờ đào tạo">
         <div className="admin-control-toolbar__main">
           <div className="admin-control-toolbar__controls">
             <button
@@ -289,15 +382,7 @@ function DashboardContent({ role }) {
               )}
             </button>
           </div>
-          <button
-            type="button"
-            className="training-dashboard__export"
-            onClick={handleExport}
-            disabled={loading || exporting || metrics.total === 0}
-          >
-            {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
-            {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
-          </button>
+          {exportButton}
         </div>
 
         {isFilterOpen && (
@@ -305,53 +390,10 @@ function DashboardContent({ role }) {
             id="training-dashboard-filter-panel"
             className="training-dashboard__filter-panel admin-control-toolbar__panel"
           >
-            <label>
-              <span>Khoa/Phòng</span>
-              {isManager ? (
-                <div>{profile?.departmentName || 'Khoa của tôi'}</div>
-              ) : (
-                <SearchableSelect
-                  value={filters.departmentId}
-                  onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
-                  options={[
-                    { value: '', label: 'Toàn viện' },
-                    ...departments.map((department) => ({ value: department.id, label: department.name })),
-                  ]}
-                  placeholder="Toàn viện"
-                  searchPlaceholder="Tìm tên khoa/phòng..."
-                  ariaLabel="Tìm và chọn khoa/phòng"
-                />
-              )}
-            </label>
-            <label>
-              <span>Lĩnh vực chuyên môn</span>
-              <SearchableSelect
-                value={filters.professionalFieldId}
-                onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
-                options={[
-                  { value: '', label: 'Tất cả lĩnh vực' },
-                  ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                ]}
-                placeholder="Tất cả lĩnh vực"
-                searchPlaceholder="Tìm tên lĩnh vực..."
-                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-              />
-            </label>
-            <label>
-              <span>Tính đến ngày</span>
-              <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
-            </label>
-            <label>
-              <span>Trạng thái</span>
-              <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-                <option value="">Tất cả trạng thái</option>
-                <option value="COMPLIANT">Đạt</option>
-                <option value="NON_COMPLIANT">Chưa đạt</option>
-              </select>
-            </label>
+            {filterFields}
           </div>
         )}
-      </section>
+      </section>}
 
       {error && <div className="training-dashboard__alert"><ExclamationCircleOutlined /> {error}</div>}
 

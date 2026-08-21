@@ -3,14 +3,13 @@ import {
   CalculatorOutlined,
   CheckCircleOutlined,
   EditOutlined,
-  FilterOutlined,
   LoadingOutlined,
   ReloadOutlined,
-  SearchOutlined,
   SettingOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -55,8 +54,8 @@ function ScoringFormulaPage() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [keyword, setKeyword] = useState('')
-  const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -73,8 +72,8 @@ function ScoringFormulaPage() {
     try {
       setErrorMessage('')
       const response = await adminApi.getFormScoringConfigurations({
-        keyword: search || undefined,
-        status: status || undefined,
+        keyword: appliedFilters.keyword || undefined,
+        status: appliedFilters.status || undefined,
         page,
         size: 20,
         sort: 'updatedAt,desc',
@@ -88,7 +87,7 @@ function ScoringFormulaPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [page, search, status])
+  }, [appliedFilters, page])
 
   useEffect(() => {
     const timer = window.setTimeout(() => loadRows(), 0)
@@ -166,6 +165,18 @@ function ScoringFormulaPage() {
     }
   }
 
+  const applyFilters = () => {
+    setPage(0)
+    setAppliedFilters({ keyword: keyword.trim(), status })
+  }
+
+  const resetFilters = () => {
+    setKeyword('')
+    setStatus('')
+    setPage(0)
+    setAppliedFilters({ keyword: '', status: '' })
+  }
+
   return (
     <AppShell
       className="dashboard-layout scoring-formula-page"
@@ -173,51 +184,35 @@ function ScoringFormulaPage() {
       breadcrumbs={[{ label: 'Chất lượng' }, { label: 'Công thức chỉ số' }]}
     >
       <div className="sfp-main">
-          <section className="sfp-toolbar" aria-label="Bộ lọc công thức">
-            <div className="sfp-toolbar-main">
-              <div className="sfp-search-filter-group">
-                <div className="sfp-search">
-                  <SearchOutlined />
-                  <input
-                    aria-label="Tìm quy trình hoặc phiên bản"
-                    onChange={(event) => {
-                      setKeyword(event.target.value)
-                      setSearch(event.target.value.trim())
-                      setPage(0)
-                    }}
-                    placeholder="Tìm theo mã hoặc tên quy trình..."
-                    value={keyword}
-                  />
-                </div>
-                <button
-                  type="button"
-                  className={`sfp-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                  aria-expanded={isFilterOpen}
-                  aria-controls="scoring-formula-filter-panel"
-                  onClick={() => setIsFilterOpen((current) => !current)}
-                >
-                  <FilterOutlined /> Bộ lọc
-                  {status && <span className="sfp-filter-count">1</span>}
-                </button>
-              </div>
-              <div className="sfp-toolbar-actions">
+          <AppliedFilterToolbar
+            activeCount={status ? 1 : 0}
+            actions={<div className="sfp-toolbar-actions">
                 <span className="sfp-result-count">{totalElements} phiên bản</span>
                 <button className="sfp-refresh" onClick={() => loadRows()} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" type="button">
                   <ReloadOutlined />
                 </button>
-              </div>
-            </div>
-            {isFilterOpen && (
-              <div className="sfp-filter-panel" id="scoring-formula-filter-panel">
+              </div>}
+            ariaLabel="Bộ lọc công thức"
+            className="sfp-toolbar"
+            isOpen={isFilterOpen}
+            onApply={applyFilters}
+            onReset={resetFilters}
+            onSearchChange={setKeyword}
+            onToggle={() => setIsFilterOpen((current) => !current)}
+            panelClassName="sfp-filter-panel"
+            panelId="scoring-formula-filter-panel"
+            searchAriaLabel="Tìm quy trình hoặc phiên bản"
+            searchClassName="sfp-search"
+            searchPlaceholder="Tìm theo mã hoặc tên quy trình..."
+            searchValue={keyword}
+          >
                 <label>
                   <span>Trạng thái</span>
-                  <select value={status} onChange={(event) => { setPage(0); setStatus(event.target.value) }}>
+                  <select value={status} onChange={(event) => setStatus(event.target.value)}>
                     {STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
-              </div>
-            )}
-          </section>
+          </AppliedFilterToolbar>
 
           {errorMessage && <div className="sfp-alert"><WarningOutlined /> {errorMessage}</div>}
 

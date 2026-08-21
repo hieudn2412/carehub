@@ -20,5 +20,7 @@ public record DashboardFormPerformanceResponse(
         long uniqueSubjectCount,
         BigDecimal passRate,
         BigDecimal averageConvertedScore,
-        Instant lastSubmittedAt
+        Instant lastSubmittedAt,
+        BigDecimal targetPercent,
+        String targetSource
 ) {}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
-import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { adminApi } from '../api/adminApi'
 import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
@@ -111,6 +111,8 @@ function ImportLogsListPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [appliedFilters, setAppliedFilters] = useState({ file: 'all', status: 'all', dateFrom: '', dateTo: '' })
 
   // Details Modal State
   const [selectedLog, setSelectedLog] = useState(null)
@@ -162,26 +164,27 @@ function ImportLogsListPage() {
   // Local filtering logic for Mock Data
   const applyMockFilters = () => {
     let filtered = [...mockDatabase]
+    const { file, status, dateFrom: appliedDateFrom, dateTo: appliedDateTo } = appliedFilters
 
     // 1. Filter by source file
-    if (fileFilter !== 'all') {
-      filtered = filtered.filter(log => log.sourceFile === fileFilter)
+    if (file !== 'all') {
+      filtered = filtered.filter(log => log.sourceFile === file)
     }
 
     // 2. Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(log => log.status === statusFilter)
+    if (status !== 'all') {
+      filtered = filtered.filter(log => log.status === status)
     }
 
     // 3. Filter by dateFrom
-    if (dateFrom) {
-      const fromTime = new Date(dateFrom + 'T00:00:00').getTime()
+    if (appliedDateFrom) {
+      const fromTime = new Date(appliedDateFrom + 'T00:00:00').getTime()
       filtered = filtered.filter(log => new Date(log.createdAt).getTime() >= fromTime)
     }
 
     // 4. Filter by dateTo
-    if (dateTo) {
-      const toTime = new Date(dateTo + 'T23:59:59').getTime()
+    if (appliedDateTo) {
+      const toTime = new Date(appliedDateTo + 'T23:59:59').getTime()
       filtered = filtered.filter(log => new Date(log.createdAt).getTime() <= toTime)
     }
 
@@ -208,18 +211,18 @@ function ImportLogsListPage() {
 
     // Prepare parameters for API
     let apiStatus = undefined
-    if (statusFilter === 'SUCCESS') {
+    if (appliedFilters.status === 'SUCCESS') {
       apiStatus = 'COMPLETED'
-    } else if (statusFilter === 'PARTIAL') {
+    } else if (appliedFilters.status === 'PARTIAL') {
       apiStatus = 'COMPLETED_WITH_ERRORS'
-    } else if (statusFilter === 'FAILED') {
+    } else if (appliedFilters.status === 'FAILED') {
       apiStatus = 'FAILED'
     }
 
     const params = {
       page: page - 1, // 0-indexed in backend
       size: 10,
-      q: fileFilter !== 'all' ? fileFilter : undefined,
+      q: appliedFilters.file !== 'all' ? appliedFilters.file : undefined,
       status: apiStatus
     }
 
@@ -230,12 +233,12 @@ function ImportLogsListPage() {
           let apiLogs = responseData.content
 
           // Apply client-side date filtering if specified
-          if (dateFrom) {
-            const fromTime = new Date(dateFrom + 'T00:00:00').getTime()
+          if (appliedFilters.dateFrom) {
+            const fromTime = new Date(appliedFilters.dateFrom + 'T00:00:00').getTime()
             apiLogs = apiLogs.filter(log => new Date(log.createdAt).getTime() >= fromTime)
           }
-          if (dateTo) {
-            const toTime = new Date(dateTo + 'T23:59:59').getTime()
+          if (appliedFilters.dateTo) {
+            const toTime = new Date(appliedFilters.dateTo + 'T23:59:59').getTime()
             apiLogs = apiLogs.filter(log => new Date(log.createdAt).getTime() <= toTime)
           }
 
@@ -253,13 +256,7 @@ function ImportLogsListPage() {
         setUseMock(true)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, fileFilter, statusFilter, dateFrom, dateTo, useMock])
-
-  // Reset page to 1 when filters change
-  useEffect(() => {
-
-    setPage(1)
-  }, [fileFilter, statusFilter, dateFrom, dateTo])
+  }, [page, appliedFilters, useMock])
 
   // Re-apply filters for mock data when page or filters change
   useEffect(() => {
@@ -268,7 +265,7 @@ function ImportLogsListPage() {
       applyMockFilters()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, fileFilter, statusFilter, dateFrom, dateTo, useMock])
+  }, [page, appliedFilters, useMock])
 
   // Open details modal
   const handleOpenDetailModal = (log) => {
@@ -389,6 +386,20 @@ function ImportLogsListPage() {
     }
   }
 
+  const applyFilters = () => {
+    setPage(1)
+    setAppliedFilters({ file: fileFilter, status: statusFilter, dateFrom, dateTo })
+  }
+
+  const resetFilters = () => {
+    setFileFilter('all')
+    setStatusFilter('all')
+    setDateFrom('')
+    setDateTo('')
+    setPage(1)
+    setAppliedFilters({ file: 'all', status: 'all', dateFrom: '', dateTo: '' })
+  }
+
   return (
     <AppShell breadcrumbs={breadcrumbs}>
             <div className="il-page">
@@ -412,14 +423,21 @@ function ImportLogsListPage() {
               </div>
 
               {/* Filters Block */}
-              <div className="il-filter-bar">
-                <AdminFilterDisclosure
+              <AppliedFilterToolbar
                   activeCount={[
                     fileFilter !== 'all',
                     statusFilter !== 'all',
                     Boolean(dateFrom),
                     Boolean(dateTo),
                   ].filter(Boolean).length}
+                  actions={<span className="il-results-count">{totalElements} kết quả</span>}
+                  className="il-filter-bar"
+                  isOpen={isFilterOpen}
+                  onApply={applyFilters}
+                  onReset={resetFilters}
+                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  panelClassName="il-filter-panel"
+                  panelId="import-log-filter-panel"
                 >
                   <div className="il-filter-field">
                   <span className="il-filter-label">Loại dữ liệu nhập</span>
@@ -466,9 +484,7 @@ function ImportLogsListPage() {
                   />
                 </div>
 
-                </AdminFilterDisclosure>
-                <span className="il-results-count">{totalElements} kết quả</span>
-              </div>
+              </AppliedFilterToolbar>
 
               {/* Table Card */}
               <div className="il-table-card">

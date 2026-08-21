@@ -228,7 +228,7 @@ class CompetencyServiceTest {
     }
 
     @Test
-    void groupsTechniqueResultsBySubjectAndAppliesFormFilter() {
+    void groupsTechniqueResultsBySubjectAndAppliesDepartmentAndFormFilters() {
         User evaluator = User.builder()
                 .id(90L)
                 .employeeCode("QL090")
@@ -406,7 +406,8 @@ class CompetencyServiceTest {
         third.setConvertedScore(new BigDecimal("9.04"));
 
         when(userRepository.findById(338L)).thenReturn(Optional.of(subject));
-        when(submissionRepository.findScoredEvaluationsForSubject(eq(338L), eq("VD01011"), any(), any()))
+        when(submissionRepository.findScoredEvaluationsForSubject(
+                eq(338L), eq("VD01011"), any(), any()))
                 .thenReturn(List.of(first, second, third));
 
         var response = service.getEmployeeByTechnique(
