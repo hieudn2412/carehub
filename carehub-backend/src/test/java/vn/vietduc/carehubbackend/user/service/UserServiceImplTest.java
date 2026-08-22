@@ -8,6 +8,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
@@ -16,6 +17,7 @@ import vn.vietduc.carehubbackend.notification.config.MailProperties;
 import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UpdateMyProfileRequest;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Role;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -66,6 +68,9 @@ class UserServiceImplTest {
     @Mock
     private SecurityUtils securityUtils;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private UserServiceImpl service;
     private Department department;
     private Role userRole;
@@ -84,7 +89,8 @@ class UserServiceImplTest {
                 roleRepository,
                 emailProducer,
                 securityUtils,
-                new BrandedEmailRenderer(mailProperties)
+                new BrandedEmailRenderer(mailProperties),
+                refreshTokenService
         );
         department = Department.builder().id(3L).departmentCode("ICU").name("ICU").build();
         userRole = Role.builder().code("USER").name("User").build();
@@ -154,12 +160,44 @@ class UserServiceImplTest {
         service.changePassword(changePassword("old-password", "new-password", "new-password"));
 
         assertEquals("new-hash", user.getPassword());
+        assertEquals(1L, user.getAuthVersion());
         verify(userRepository).save(user);
+        verify(refreshTokenService).revokeAllUserTokens(user);
 
         assertThrows(BadRequestException.class,
                 () -> service.changePassword(changePassword("old-password", "old-password", "old-password")));
         assertThrows(BadRequestException.class,
                 () -> service.changePassword(changePassword("old-password", "new-password", "different")));
+    }
+
+    @Test
+    void updateCurrentUserProfileAllowsBlankEmailAndPhone() {
+        User user = User.builder()
+                .id(9L)
+                .employeeCode("EMP009")
+                .name("Employee Nine")
+                .email("old@example.com")
+                .phone("0912345678")
+                .status(UserStatus.ACTIVE)
+                .build();
+        when(securityUtils.getCurrentUserId()).thenReturn(9L);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userRoleRepository.findRolesByUserId(9L)).thenReturn(List.of(userRole));
+
+        var response = service.updateCurrentUserProfile(new UpdateMyProfileRequest(
+                "Employee Nine",
+                " ",
+                "",
+                null,
+                null
+        ));
+
+        assertNull(response.email());
+        assertNull(response.phone());
+        assertNull(user.getEmail());
+        assertNull(user.getPhone());
+        verify(userRepository, never()).existsByEmailAndIsDeletedFalseAndIdNot(anyString(), anyLong());
     }
 
     @Test

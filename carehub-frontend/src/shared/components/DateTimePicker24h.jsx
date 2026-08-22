@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
+import KeyboardDatePicker from './KeyboardDatePicker.jsx'
 import './DateTimePicker24h.css'
-
-const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
 
 export default function DateTimePicker24h({
   value,
@@ -22,28 +20,65 @@ export default function DateTimePicker24h({
     }
   }, [value])
 
-  const handleDateChange = (e) => {
-    const newDate = e.target.value
+  const [timeInput, setTimeInput] = useState(`${hour}:${minute}`)
+
+  useEffect(() => {
+    setTimeInput(`${hour}:${minute}`)
+  }, [hour, minute])
+
+  const handleDateChange = (newDate) => {
     if (!newDate) {
       onChange('')
       return
     }
-    const h = hour || '08'
-    const m = minute || '00'
-    onChange(`${newDate}T${h}:${m}`)
+    onChange(`${newDate}T${hour}:${minute}`)
   }
 
-  const handleHourChange = (e) => {
-    const h = e.target.value
-    const d = date || new Date().toISOString().slice(0, 10)
-    onChange(`${d}T${h}:${minute || '00'}`)
-  }
+  const handleTimeChange = (e) => {
+    let raw = e.target.value;
 
-  const handleMinuteChange = (e) => {
-    const m = e.target.value
-    const d = date || new Date().toISOString().slice(0, 10)
-    onChange(`${d}T${hour || '08'}:${m}`)
-  }
+    // Only allow numbers and colons
+    raw = raw.replace(/[^\d:]/g, '');
+
+    // Auto-insert colons
+    if (raw.length > timeInput.length) {
+      if (raw.length === 2 && !raw.includes(':')) {
+        raw = raw + ':';
+      }
+    }
+
+    if (raw.length > 5) {
+      raw = raw.slice(0, 5);
+    }
+
+    setTimeInput(raw);
+
+    // Validate
+    const match = raw.match(/^(\d{2}):(\d{2})$/);
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        const d = date || new Date().toISOString().slice(0, 10);
+        onChange(`${d}T${match[1]}:${match[2]}`);
+      }
+    }
+  };
+
+  const handleTimeBlur = () => {
+    const match = timeInput.match(/^(\d{2}):(\d{2})$/);
+    let isValid = false;
+    if (match) {
+      const h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        isValid = true;
+      }
+    }
+    if (!isValid) {
+      setTimeInput(`${hour}:${minute}`);
+    }
+  };
 
   const handleClear = () => {
     onChange('')
@@ -51,39 +86,26 @@ export default function DateTimePicker24h({
 
   return (
     <div className={`dt24-picker ${disabled ? 'dt24-picker--disabled' : ''} ${className}`}>
-      <input
+      <KeyboardDatePicker
         id={id}
-        type="date"
         className="dt24-input dt24-input--date"
         value={date}
         onChange={handleDateChange}
         disabled={disabled}
       />
       <div className="dt24-time-group">
-        <span className="dt24-time-icon" title="Chọn giờ & phút (24h)">🕒</span>
-        <select
-          className="dt24-time-select"
-          value={hour}
-          onChange={handleHourChange}
+        <span className="dt24-time-icon" title="Nhập giờ & phút (24h)">🕒</span>
+        <input
+          type="text"
+          className="dt24-time-input"
+          value={timeInput}
+          onChange={handleTimeChange}
+          onBlur={handleTimeBlur}
           disabled={disabled}
-          title="Chọn giờ (00-23)"
-        >
-          {HOURS.map((h) => (
-            <option key={h} value={h}>{h}</option>
-          ))}
-        </select>
-        <span className="dt24-sep">:</span>
-        <select
-          className="dt24-time-select"
-          value={minute}
-          onChange={handleMinuteChange}
-          disabled={disabled}
-          title="Chọn phút (00-59)"
-        >
-          {MINUTES.map((m) => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
+          placeholder="hh:mm"
+          maxLength={5}
+          title="Nhập giờ & phút (hh:mm)"
+        />
       </div>
       {date && !disabled && (
         <button

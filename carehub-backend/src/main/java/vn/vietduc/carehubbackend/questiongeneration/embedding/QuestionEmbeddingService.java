@@ -78,13 +78,24 @@ public class QuestionEmbeddingService {
         this.self = self;
     }
 
+    /**
+     * Dùng khi câu hỏi vừa được THÊM vào tập đã duyệt. Cache chỉ cần nhận thêm một vector, không
+     * phải nạp lại cả bảng — xem {@link EmbeddingCache#appendAfterCommit}. Với câu hỏi đã tồn tại
+     * mà nội dung thay đổi, dùng {@link #refreshStemEmbedding} thay cho hàm này.
+     */
     @Transactional
     public void saveStemEmbedding(QuestionBankQuestion question) {
         try {
-            persistStemEmbedding(question);
+            QuestionEmbeddingSnapshot created = persistStemEmbedding(question);
+            if (created != null) {
+                embeddingCache.appendAfterCommit(created);
+            } else {
+                // Không tạo vector mới, nhưng tập câu ĐÃ DUYỆT có thể vừa đổi (ví dụ câu cũ được
+                // duyệt lại và vector cũ vẫn còn dùng được) nên cache vẫn phải nạp lại.
+                embeddingCache.invalidate();
+            }
         } catch (RuntimeException ex) {
             log.warn("Không tạo được embedding cho question {}: {}", question == null ? null : question.getId(), ex.getMessage());
-        } finally {
             embeddingCache.invalidate();
         }
     }
@@ -95,16 +106,25 @@ public class QuestionEmbeddingService {
             return;
         }
         embeddingRepository.deleteByQuestionAndTextType(question, STEM_TEXT_TYPE);
-        saveStemEmbedding(question);
+        try {
+            persistStemEmbedding(question);
+        } catch (RuntimeException ex) {
+            log.warn("Không tạo được embedding cho question {}: {}", question.getId(), ex.getMessage());
+        } finally {
+            // Luôn invalidate: vector CŨ vừa bị xoá nên bản trong cache không còn đúng, append
+            // thêm bản mới sẽ để lại hai bản ghi cho cùng một câu hỏi.
+            embeddingCache.invalidate();
+        }
     }
 
-    private PersistResult persistStemEmbedding(QuestionBankQuestion question) {
+    /** @return snapshot của vector vừa tạo, hoặc {@code null} nếu không phải tạo mới. */
+    private QuestionEmbeddingSnapshot persistStemEmbedding(QuestionBankQuestion question) {
         if (!properties.isE5Provider() || question == null || question.getId() == null) {
-            return PersistResult.SKIPPED;
+            return null;
         }
         String normalizedText = E5TextPreprocessor.normalize(question.getStem());
         if (normalizedText.isBlank()) {
-            return PersistResult.SKIPPED;
+            return null;
         }
         String hash = sha256(normalizedText);
         if (embeddingRepository
@@ -115,11 +135,11 @@ public class QuestionEmbeddingService {
                         hash
                 )
                 .isPresent()) {
-            return PersistResult.SKIPPED;
+            return null;
         }
         double[] vector = embeddingModelService.embedSymmetric(question.getStem());
         embeddingRepository.save(buildEmbedding(question, normalizedText, hash, vector));
-        return PersistResult.CREATED;
+        return new QuestionEmbeddingSnapshot(question.getId(), question.getStem(), vector);
     }
 
     /**
@@ -167,8 +187,7 @@ public class QuestionEmbeddingService {
         int failed = 0;
         for (QuestionBankQuestion question : questions) {
             try {
-                PersistResult result = persistStemEmbedding(question);
-                if (result == PersistResult.CREATED) {
+                if (persistStemEmbedding(question) != null) {
                     created++;
                 } else {
                     skipped++;
@@ -382,10 +401,5 @@ public class QuestionEmbeddingService {
     }
 
     public record BackfillResult(int created, int skipped, int failed) {
-    }
-
-    private enum PersistResult {
-        CREATED,
-        SKIPPED
     }
 }

@@ -227,7 +227,8 @@ class CandidateReviewServiceTest {
     @Test
     void candidateResponseUsesConfiguredDuplicateThresholds() {
         DocumentQuestionCandidate candidate = approvedCandidate();
-        candidate.setDuplicateMaxSimilarity(0.90);
+        // Trong dải xem lại: >= reviewMin (0.93) nhưng < strongMin (0.97).
+        candidate.setDuplicateMaxSimilarity(0.94);
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
 
         var response = service.get(candidate.getId());

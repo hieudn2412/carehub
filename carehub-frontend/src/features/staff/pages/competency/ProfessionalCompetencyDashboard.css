@@ -27,6 +27,15 @@
   padding: 16px 18px;
 }
 
+.pc-toolbar .pc-applied-toolbar {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pc-toolbar .pc-applied-toolbar .admin-control-toolbar__main {
+  gap: 10px;
+}
+
 .pc-toolbar__title {
   display: grid;
   gap: 4px;

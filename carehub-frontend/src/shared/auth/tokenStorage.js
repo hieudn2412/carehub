@@ -1,10 +1,9 @@
-const ACCESS_TOKEN_KEY = 'carehub.accessToken'
-const REFRESH_TOKEN_KEY = 'carehub.refreshToken'
-const REQUIRES_FIRST_LOGIN_SETUP_KEY = 'carehub.requiresFirstLoginSetup'
+let accessToken = null
+let requiresFirstLoginSetup = false
 
 export const tokenStorage = {
   getAccessToken() {
-    return window.sessionStorage.getItem(ACCESS_TOKEN_KEY)
+    return accessToken
   },
 
   hasAccessToken() {
@@ -12,37 +11,31 @@ export const tokenStorage = {
   },
 
   setAccessToken(token) {
-    if (!token) {
-      window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
-      return
-    }
-    window.sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
+    accessToken = token || null
   },
 
   getRefreshToken() {
-    return window.sessionStorage.getItem(REFRESH_TOKEN_KEY)
+    return null
   },
 
-  setRefreshToken(token) {
-    if (!token) {
-      window.sessionStorage.removeItem(REFRESH_TOKEN_KEY)
-      return
-    }
-    window.sessionStorage.setItem(REFRESH_TOKEN_KEY, token)
+  setRefreshToken() {
+    // Refresh credentials live only in the HttpOnly carehub_refresh cookie.
   },
 
   getRequiresFirstLoginSetup() {
-    return window.sessionStorage.getItem(REQUIRES_FIRST_LOGIN_SETUP_KEY) === 'true'
+    return requiresFirstLoginSetup
   },
 
   setRequiresFirstLoginSetup(value) {
-    window.sessionStorage.setItem(REQUIRES_FIRST_LOGIN_SETUP_KEY, value ? 'true' : 'false')
+    requiresFirstLoginSetup = Boolean(value)
   },
 
   clear() {
-    window.sessionStorage.removeItem(ACCESS_TOKEN_KEY)
-    window.sessionStorage.removeItem(REFRESH_TOKEN_KEY)
-    window.sessionStorage.removeItem(REQUIRES_FIRST_LOGIN_SETUP_KEY)
+    accessToken = null
+    requiresFirstLoginSetup = false
+    window.sessionStorage.removeItem('carehub.accessToken')
+    window.sessionStorage.removeItem('carehub.refreshToken')
+    window.sessionStorage.removeItem('carehub.requiresFirstLoginSetup')
     window.localStorage.removeItem('token')
   },
 }

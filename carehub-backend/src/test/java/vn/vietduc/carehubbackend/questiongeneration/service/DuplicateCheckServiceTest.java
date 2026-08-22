@@ -38,8 +38,9 @@ import static org.mockito.Mockito.when;
 /**
  * L1 unit tests — sheet {@code DuplicateCheckService}, Test ID prefix {@code L1-DUP}.
  *
- * <p>Boundary references: BV-07 (duplicate.strong-min = 0.93) and BV-08 (duplicate.review-min = 0.80)
- * in SRS 4.5 Boundary Value Register.
+ * <p>Boundary references: BV-07 (duplicate.strong-min = 0.97) and BV-08 (duplicate.review-min = 0.93)
+ * in SRS 4.5 Boundary Value Register. Hai ngưỡng được hiệu chỉnh theo phân bố láng giềng gần nhất
+ * (nn-max), không theo phân bố cặp — xem {@code ValidationRulesProperties.Duplicate}.
  *
  * <p>Similarity is controlled exactly rather than approximately: {@code CosineUtil.cosine} is a plain
  * dot product (it assumes L2-normalised E5 vectors), so scoring a candidate {@code [1, 0]} against a
@@ -83,12 +84,12 @@ class DuplicateCheckServiceTest {
     // ── Block: configured thresholds (BV-07 / BV-08 / BV-09) ──────────────────
 
     @Test
-    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.95, reviewMin 0.88, qualityReject 0.55")
+    @DisplayName("L1-DUP-01 | BV-07/08/09: default thresholds are strongMin 0.97, reviewMin 0.93, qualityReject 0.55")
     void defaultThresholdsMatchTheBoundaryRegister() {
         ValidationRulesProperties defaults = new ValidationRulesProperties();
 
-        assertThat(defaults.getDuplicate().getStrongMin()).isEqualTo(0.95);
-        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.88);
+        assertThat(defaults.getDuplicate().getStrongMin()).isEqualTo(0.97);
+        assertThat(defaults.getDuplicate().getReviewMin()).isEqualTo(0.93);
         assertThat(defaults.getQuality().getRejectMin()).isEqualTo(0.55);
     }
 
@@ -97,12 +98,12 @@ class DuplicateCheckServiceTest {
     @ParameterizedTest(name = "similarity={0} → strong={1}, review={2}")
     @CsvSource({
             "1.00, true,  true",   // identical stem
-            "0.96, true,  true",   // BVA-Max+1: just above strongMin
-            "0.95, true,  true",   // BVA-Max: exactly strongMin — inclusive
-            "0.94, false, true",   // BVA-Max-1: just below strongMin, still needs review
-            "0.89, false, true",   // inside the review band
-            "0.88, false, true",   // BVA-Min: exactly reviewMin — inclusive
-            "0.87, false, false",  // BVA-Min-1: just below reviewMin
+            "0.98, true,  true",   // BVA-Max+1: just above strongMin
+            "0.97, true,  true",   // BVA-Max: exactly strongMin — inclusive
+            "0.96, false, true",   // BVA-Max-1: just below strongMin, still needs review
+            "0.94, false, true",   // inside the review band
+            "0.93, false, true",   // BVA-Min: exactly reviewMin — inclusive
+            "0.92, false, false",  // BVA-Min-1: just below reviewMin
             "0.00, false, false"   // no similarity at all
     })
     @DisplayName("L1-DUP-02 | BVA: strongDuplicate/needsReview flags across every threshold edge")
@@ -128,14 +129,14 @@ class DuplicateCheckServiceTest {
         when(embeddingCache.approvedStemEmbeddings()).thenReturn(List.of(
                 new QuestionEmbeddingSnapshot(10L, "Nguồn gốc cần bỏ qua", new double[]{1.0, 0.0}),
                 new QuestionEmbeddingSnapshot(11L, "Đối chiếu hai thông tin nhận diện người bệnh",
-                        new double[]{0.96, 0.0})
+                        new double[]{0.98, 0.0})
         ));
 
         DuplicateCheckResult result = service.check(STEM, Set.of(10L));
 
         assertThat(result.checker()).isEqualTo("e5");
         assertThat(result.matchedQuestionId()).isEqualTo(11L);
-        assertThat(result.maxSimilarity()).isCloseTo(0.96, within(1e-12));
+        assertThat(result.maxSimilarity()).isCloseTo(0.98, within(1e-12));
         assertThat(result.strongDuplicate()).isTrue();
         assertThat(result.needsReview()).isTrue();
         assertThat(result.warning()).isNull();
@@ -411,23 +412,24 @@ class DuplicateCheckServiceTest {
     }
 
     @Test
-    @DisplayName("L1-DUP-21 | BC-TRUE: a candidate-batch duplicate beats a weaker semantic match")
-    void candidateBatchDuplicateOverridesWeakerSemanticMatch() {
+    @DisplayName("L1-DUP-21 | Guard: the E5 path never mixes a Jaccard candidate score into a cosine result")
+    void semanticCheckDoesNotFallBackToJaccardOnCandidates() {
+        // Ứng viên trùng NGUYÊN VĂN (Jaccard = 1.0) trong khi ngân hàng chỉ hơi giống (cosine 0.40).
+        // Đường cũ trả về 1.0 của thang Jaccard; hai thang không so được với nhau bằng phép `>`,
+        // nên kết quả bây giờ phải giữ nguyên điểm cosine và không đụng tới bảng ứng viên.
         when(embeddingService.embedCandidateStem("Rửa tay thường quy")).thenReturn(CANDIDATE_VECTOR);
         when(embeddingCache.approvedStemEmbeddings()).thenReturn(List.of(
                 new QuestionEmbeddingSnapshot(11L, "Câu chỉ hơi giống", new double[]{0.40, 0.0})
         ));
-        when(candidateRepository.findByStatusIn(
-                org.mockito.ArgumentMatchers.<Collection<CandidateStatus>>any(), any(Pageable.class)))
-                .thenReturn(List.of(candidate(90L, "Rửa tay thường quy")))
-                .thenReturn(List.of());
 
         DuplicateCheckResult result = service.check("Rửa tay thường quy");
 
-        assertThat(result.checker()).isEqualTo("lexical-candidate");
-        assertThat(result.matchedQuestionId()).isEqualTo(90L);
-        assertThat(result.maxSimilarity()).isEqualTo(1.0);
-        assertThat(result.strongDuplicate()).isTrue();
+        assertThat(result.checker()).isEqualTo("e5");
+        assertThat(result.matchedQuestionId()).isEqualTo(11L);
+        assertThat(result.maxSimilarity()).isCloseTo(0.40, within(1e-12));
+        assertThat(result.strongDuplicate()).isFalse();
+        verify(candidateRepository, never()).findByStatusIn(
+                org.mockito.ArgumentMatchers.<Collection<CandidateStatus>>any(), any(Pageable.class));
     }
 
     @ParameterizedTest(name = "lexicalPageSize={0}")
@@ -452,15 +454,18 @@ class DuplicateCheckServiceTest {
     void potentialMatchesReturnAllReviewLevelMatchesInOrder() {
         when(embeddingService.embedCandidateStem(STEM)).thenReturn(CANDIDATE_VECTOR);
         when(embeddingCache.approvedStemEmbeddings()).thenReturn(List.of(
-                new QuestionEmbeddingSnapshot(10L, "Câu nghi vấn", new double[]{0.90, 0.0}),
-                new QuestionEmbeddingSnapshot(11L, "Câu dưới ngưỡng", new double[]{0.87, 0.0}),
-                new QuestionEmbeddingSnapshot(12L, "Câu trùng mạnh", new double[]{0.97, 0.0})
+                new QuestionEmbeddingSnapshot(10L, "Câu nghi vấn", new double[]{0.95, 0.0}),
+                new QuestionEmbeddingSnapshot(11L, "Câu dưới ngưỡng", new double[]{0.92, 0.0}),
+                new QuestionEmbeddingSnapshot(12L, "Câu trùng mạnh", new double[]{0.98, 0.0})
         ));
 
         List<DuplicateMatchResult> matches = service.findPotentialMatches(STEM, Set.of(), Set.of(), 20);
 
         assertThat(matches).extracting(DuplicateMatchResult::sourceId).containsExactly(12L, 10L);
         assertThat(matches).extracting(DuplicateMatchResult::strongDuplicate).containsExactly(true, false);
+        // Danh sách trả về phải nằm trên MỘT thang điểm: không trộn thêm điểm Jaccard của ứng viên.
+        verify(candidateRepository, never()).findByStatusIn(
+                org.mockito.ArgumentMatchers.<Collection<CandidateStatus>>any(), any(Pageable.class));
     }
 
     @Test

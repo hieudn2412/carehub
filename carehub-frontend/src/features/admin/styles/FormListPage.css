@@ -328,36 +328,6 @@
   font-weight: 650;
 }
 
-.flp-filter-panel {
-  display: grid;
-  width: 100%;
-  box-sizing: border-box;
-  grid-template-columns: repeat(2, minmax(220px, 300px)) auto;
-  align-items: end;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.flp-filter-panel .flp-filter-group {
-  display: grid;
-  gap: 6px;
-}
-
-.flp-filter-panel .flp-filter-group > span {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.flp-filter-panel .flp-select,
-.flp-filter-panel .flp-department-filter {
-  width: 100%;
-  min-height: 44px;
-}
-
 .flp-filter-group {
   display: flex;
   align-items: center;
@@ -391,10 +361,23 @@
 }
 
 .flp-department-filter .searchable-select > input {
-  height: 36px;
+  min-height: 42px;
+  height: 42px;
   border-color: var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   font-size: 13px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.flp-department-filter .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.flp-department-filter .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .flp-clear-filters {
@@ -413,6 +396,7 @@
 
 /* Table Card */
 .flp-table-card {
+  container-type: inline-size;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -426,9 +410,10 @@
 
 .flp-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 0;
   border-collapse: collapse;
   font-size: 13.5px;
+  table-layout: fixed;
 }
 
 .flp-table th {
@@ -459,8 +444,42 @@
   background: #fafbfc;
 }
 
-.flp-table th:nth-child(1) {
-  width: 24%;
+.flp-table .flp-col-name {
+  width: 32%;
+}
+
+.flp-table .flp-col-version {
+  width: 82px;
+}
+
+.flp-table .flp-col-created {
+  width: 112px;
+}
+
+.flp-table .flp-col-assignees {
+  width: 150px;
+}
+
+.flp-table .flp-col-responses {
+  width: 108px;
+}
+
+.flp-table .flp-col-score {
+  width: 100px;
+}
+
+.flp-table .flp-col-status {
+  width: 118px;
+}
+
+.flp-table .flp-col-actions {
+  width: 156px;
+}
+
+.flp-table th.flp-col-actions,
+.flp-table td.flp-col-actions {
+  padding-right: 12px;
+  padding-left: 12px;
 }
 
 .flp-table__actions-heading {
@@ -481,17 +500,24 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .flp-form-title {
+  overflow: hidden;
   font-weight: 500;
   color: var(--text);
+  text-overflow: ellipsis;
 }
 
 .flp-form-desc {
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 12px;
   color: var(--text-soft);
   line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .flp-version-badge {
@@ -581,12 +607,16 @@
 
 /* Action Cells */
 .flp-actions-cell {
-  display: grid;
-  grid-template-columns: repeat(3, 92px);
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
-  min-width: 288px;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
+.flp-table .flp-actions-cell.admin-table-actions {
+  flex-wrap: nowrap;
 }
 
 .flp-btn-action {
@@ -612,8 +642,7 @@
 }
 
 .flp-btn-detail {
-  grid-column: 2;
-  width: 92px;
+  width: 34px;
   color: var(--navy);
 }
 
@@ -624,8 +653,7 @@
 }
 
 .flp-btn-evaluate {
-  grid-column: 1;
-  width: 92px;
+  width: 34px;
   border-color: #0f8065;
   background: #0f8065;
   color: #ffffff;
@@ -639,8 +667,7 @@
 }
 
 .flp-btn-delete {
-  grid-column: 3;
-  width: 92px;
+  width: 34px;
   color: var(--red);
   border-color: #f3b9b7;
 }
@@ -649,6 +676,76 @@
   background: var(--red);
   color: #ffffff;
   border-color: var(--red);
+}
+
+@container (max-width: 1120px) {
+  .flp-table .flp-col-version {
+    display: none;
+  }
+
+  .flp-table .flp-col-name {
+    width: 36%;
+  }
+}
+
+@container (max-width: 1020px) {
+  .flp-table .flp-col-created {
+    display: none;
+  }
+
+  .flp-table .flp-col-name {
+    width: 40%;
+  }
+}
+
+@container (max-width: 900px) {
+  .flp-table .flp-col-status {
+    display: none;
+  }
+
+  .flp-table .flp-col-name {
+    width: 44%;
+  }
+}
+
+@container (max-width: 780px) {
+  .flp-table .flp-col-responses {
+    display: none;
+  }
+
+  .flp-table .flp-col-name {
+    width: 48%;
+  }
+}
+
+@container (max-width: 660px) {
+  .flp-table .flp-col-score {
+    display: none;
+  }
+
+  .flp-table .flp-col-name {
+    width: auto;
+  }
+}
+
+@container (max-width: 540px) {
+  .flp-table .flp-col-assignees {
+    display: none;
+  }
+
+  .flp-table th,
+  .flp-table td {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .flp-table .flp-col-actions {
+    width: 140px;
+  }
+
+  .flp-actions-cell {
+    gap: 6px;
+  }
 }
 
 .flp-table-empty {
@@ -727,417 +824,6 @@
   cursor: not-allowed;
 }
 
-.flp-assignment-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.38);
-}
-
-.flp-assignment-modal {
-  width: min(920px, 100%);
-  max-height: min(820px, calc(100vh - 48px));
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
-}
-
-.flp-assignment-modal__body {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding-bottom: 24px;
-}
-
-.flp-assignment-modal__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 22px 24px 18px;
-  border-bottom: 1px solid var(--border-light);
-}
-
-.flp-assignment-modal__eyebrow {
-  margin: 0 0 5px;
-  color: #0f6e56;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.flp-assignment-modal h2 {
-  margin: 0;
-  color: var(--navy);
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.flp-assignment-modal__header span {
-  display: block;
-  margin-top: 6px;
-  color: var(--text-soft);
-  font-size: 13px;
-}
-
-.flp-assignment-modal__close {
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #ffffff;
-  color: var(--text-soft);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.flp-assignment-loading,
-.flp-assignment-error,
-.flp-assignment-message,
-.flp-assignment-field,
-.flp-assignment-validity,
-.flp-assignment-recipient-prompt,
-.flp-assignment-list-head,
-.flp-assignment-list,
-.flp-assignment-actions {
-  margin-left: 24px;
-  margin-right: 24px;
-}
-
-.flp-assignment-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 220px;
-  color: var(--text-soft);
-  font-size: 14px;
-}
-
-.flp-assignment-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-  padding: 10px 12px;
-  border: 1px solid #fecaca;
-  border-radius: 10px;
-  background: var(--red-bg);
-  color: #b42318;
-  font-size: 13px;
-}
-
-.flp-assignment-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 18px;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  font-size: 13px;
-}
-
-.flp-assignment-message--error {
-  border-color: #fecaca;
-  background: var(--red-bg);
-  color: #b42318;
-}
-
-.flp-assignment-message--success {
-  border-color: #b7e4d7;
-  background: #effaf6;
-  color: #0f6e56;
-}
-
-.flp-assignment-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin-top: 18px;
-}
-
-.flp-assignment-field > span {
-  color: var(--navy);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.flp-assignment-field > select,
-.flp-assignment-field > input {
-  min-height: 42px;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: #ffffff;
-  color: var(--text);
-  font-size: 13.5px;
-  outline: none;
-}
-
-.flp-assignment-field > select:focus,
-.flp-assignment-field > input:focus {
-  border-color: #0f6e56;
-  box-shadow: 0 0 0 3px rgba(20, 134, 109, 0.12);
-}
-
-.flp-assignment-field small {
-  color: var(--text-soft);
-  font-size: 12px;
-}
-
-.flp-assignment-field .searchable-select > input {
-  min-height: 42px;
-  padding-right: 38px;
-  padding-left: 38px;
-}
-
-.flp-assignment-validity {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.flp-assignment-validity .flp-assignment-field {
-  margin-right: 0;
-  margin-left: 0;
-}
-
-.flp-assignment-recipient-prompt {
-  margin-top: 22px;
-  padding: 34px 18px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  background: #fbfdfc;
-  color: var(--text-soft);
-  text-align: center;
-  font-size: 13.5px;
-}
-
-.flp-assignment-list-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid var(--border-light);
-}
-
-.flp-assignment-list-head strong,
-.flp-assignment-list-head span {
-  display: block;
-}
-
-.flp-assignment-list-head strong {
-  color: var(--navy);
-  font-size: 14px;
-}
-
-.flp-assignment-list-head span {
-  margin-top: 3px;
-  color: var(--text-soft);
-  font-size: 12.5px;
-}
-
-.flp-assignment-list-head button {
-  border: 0;
-  background: transparent;
-  color: #0f6e56;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.flp-assignment-list {
-  min-height: 130px;
-  max-height: 280px;
-  overflow-y: auto;
-  margin-top: 12px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fbfdfc;
-}
-
-.flp-assignment-empty {
-  padding: 28px 18px;
-  color: var(--text-soft);
-  text-align: center;
-  font-size: 13.5px;
-}
-
-.flp-assignment-empty .anticon {
-  margin-right: 7px;
-}
-
-.flp-assignment-option {
-  display: grid;
-  grid-template-columns: 20px 1fr auto;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 14px;
-  border-bottom: 1px solid var(--border-light);
-  cursor: pointer;
-}
-
-.flp-assignment-option:last-child {
-  border-bottom: 0;
-}
-
-.flp-assignment-option:hover {
-  background: #f5faf8;
-}
-
-.flp-assignment-option--assigned {
-  cursor: default;
-  background: #f8fcfa;
-}
-
-.flp-assignment-option__assigned-mark {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 5px;
-  background: #dff4ed;
-  color: #0f6e56;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.flp-assignment-option input {
-  width: 16px;
-  height: 16px;
-  accent-color: #10a37f;
-}
-
-.flp-assignment-option__body {
-  min-width: 0;
-}
-
-.flp-assignment-option__body strong,
-.flp-assignment-option__body small {
-  display: block;
-}
-
-.flp-assignment-option__body strong {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13.5px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.flp-assignment-option__body small {
-  margin-top: 3px;
-  color: var(--text-soft);
-  font-size: 12px;
-}
-
-.flp-assignment-option__status {
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: var(--green-bg);
-  color: #0f6e56;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.flp-assignment-option__status--available {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.flp-assignment-option__assigned-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.flp-assignment-option__validity {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--text-soft);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.flp-assignment-option__assigned-actions > button {
-  display: inline-flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid #f2b8b5;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #c73535;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.flp-assignment-option__assigned-actions > button:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
-
-.flp-assignment-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 18px;
-  padding: 16px 0 22px;
-  border-top: 1px solid var(--border-light);
-}
-
-.flp-assignment-cancel,
-.flp-assignment-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 9px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.flp-assignment-cancel {
-  border: 1px solid var(--border);
-  background: #ffffff;
-  color: var(--text-soft);
-}
-
-.flp-assignment-submit {
-  border: 1px solid #0f6e56;
-  background: #0f6e56;
-  color: #ffffff;
-}
-
-.flp-assignment-cancel:disabled,
-.flp-assignment-submit:disabled,
-.flp-assignment-list-head button:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
-}
-
 /* bp-md */
 @media (max-width: 1024px) {
   .flp-toolbar-main,
@@ -1151,9 +837,6 @@
   .flp-toolbar-actions > .flp-import-menu,
   .flp-toolbar-actions .flp-btn-import {
     width: 100%;
-  }
-  .flp-filter-panel {
-    grid-template-columns: 1fr;
   }
   .flp-header-card {
     flex-direction: column;
@@ -1233,55 +916,5 @@
     max-width: 100%;
     overflow-x: auto;
     padding-bottom: 2px;
-  }
-  .flp-assignment-backdrop {
-    align-items: stretch;
-    padding: 12px;
-  }
-  .flp-assignment-modal {
-    max-height: calc(100vh - 24px);
-  }
-  .flp-assignment-modal__body {
-    padding-bottom: 16px;
-  }
-  .flp-assignment-modal__header,
-  .flp-assignment-actions {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-  .flp-assignment-loading,
-  .flp-assignment-error,
-  .flp-assignment-message,
-  .flp-assignment-field,
-  .flp-assignment-validity,
-  .flp-assignment-recipient-prompt,
-  .flp-assignment-list-head,
-  .flp-assignment-list,
-  .flp-assignment-actions {
-    margin-left: 16px;
-    margin-right: 16px;
-  }
-  .flp-assignment-option {
-    grid-template-columns: 20px 1fr;
-  }
-  .flp-assignment-option__status {
-    grid-column: 2;
-    width: fit-content;
-  }
-  .flp-assignment-validity {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .flp-assignment-option__assigned-actions {
-    grid-column: 2;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-  .flp-assignment-actions {
-    flex-direction: column-reverse;
-  }
-  .flp-assignment-cancel,
-  .flp-assignment-submit {
-    width: 100%;
   }
 }

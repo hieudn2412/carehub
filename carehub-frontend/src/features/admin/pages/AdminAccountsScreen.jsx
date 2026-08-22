@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { adminApi } from '../api/adminApi'
 import {
-  SearchOutlined,
   EyeOutlined,
   LeftOutlined,
   RightOutlined,
@@ -18,7 +20,6 @@ import {
   UnlockOutlined,
   DeleteOutlined,
   KeyOutlined,
-  FilterOutlined,
   DownloadOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -68,11 +69,16 @@ function AdminAccountsScreen() {
 
   // Filters State
   const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('all')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: '',
+    departmentId: 'all',
+    roleId: 'all',
+    status: 'all',
+  })
 
   // Selected User Detail Modal State
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -124,15 +130,6 @@ function AdminAccountsScreen() {
     setIsFormModalOpen(false)
     navigate('/admin/reference/departments')
   }
-
-  // Debounce search keyword
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearch(search)
-      setPage(1)
-    }, 500)
-    return () => clearTimeout(handler)
-  }, [search])
 
   // Load static reference data on mount
   useEffect(() => {
@@ -186,10 +183,10 @@ function AdminAccountsScreen() {
     const params = {
       page: page - 1,
       size: 10,
-      keyword: debouncedSearch || undefined,
-      departmentId: deptFilter !== 'all' ? deptFilter : undefined,
-      roleId: roleFilter !== 'all' ? roleFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
+      keyword: appliedFilters.search || undefined,
+      departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
+      roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
+      status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
     }
 
     adminApi.getUsers(params)
@@ -212,7 +209,19 @@ function AdminAccountsScreen() {
 
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, debouncedSearch, deptFilter, roleFilter, statusFilter])
+  }, [page, appliedFilters])
+
+  useEffect(() => {
+    const nextSearch = search.trim()
+    if (nextSearch === appliedFilters.search) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(1)
+      setAppliedFilters((current) => (
+        current.search === nextSearch ? current : { ...current, search: nextSearch }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.search, search])
 
   // Load detail data when select user changes
   useEffect(() => {
@@ -515,10 +524,10 @@ function AdminAccountsScreen() {
   // Handle Export CSV
   const handleExport = () => {
     const params = {
-      keyword: debouncedSearch || undefined,
-      departmentId: deptFilter !== 'all' ? deptFilter : undefined,
-      roleId: roleFilter !== 'all' ? roleFilter : undefined,
-      status: statusFilter !== 'all' ? statusFilter : undefined,
+      keyword: appliedFilters.search || undefined,
+      departmentId: appliedFilters.departmentId !== 'all' ? appliedFilters.departmentId : undefined,
+      roleId: appliedFilters.roleId !== 'all' ? appliedFilters.roleId : undefined,
+      status: appliedFilters.status !== 'all' ? appliedFilters.status : undefined,
     }
 
     adminApi.exportUsers(params)
@@ -553,6 +562,25 @@ function AdminAccountsScreen() {
         console.error('Lỗi khi xuất danh sách:', err)
         showToast('Có lỗi xảy ra khi xuất tệp dữ liệu.', 'error')
       })
+  }
+
+  const applyFilters = () => {
+    setPage(1)
+    setAppliedFilters({
+      search: search.trim(),
+      departmentId: deptFilter,
+      roleId: roleFilter,
+      status: statusFilter,
+    })
+  }
+
+  const resetFilters = () => {
+    setSearch('')
+    setDeptFilter('all')
+    setRoleFilter('all')
+    setStatusFilter('all')
+    setPage(1)
+    setAppliedFilters({ search: '', departmentId: 'all', roleId: 'all', status: 'all' })
   }
 
   // Render Pill badges for roles
@@ -617,38 +645,9 @@ function AdminAccountsScreen() {
               </div>
 
               {/* Filters Block */}
-              <div className="am-filter-bar">
-                <div className="am-toolbar-main">
-                  <div className="am-search-filter-group">
-                    <div className="am-search">
-                      <span className="am-search-icon">
-                        <SearchOutlined />
-                      </span>
-                      <input
-                        type="text"
-                        className="am-search-input"
-                        placeholder="Tìm theo tên hoặc ID..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`am-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="account-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length > 0 && (
-                        <span className="am-filter-count">
-                          {[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="am-toolbar-actions">
+              <AppliedFilterToolbar
+                activeCount={[deptFilter !== 'all', roleFilter !== 'all', statusFilter !== 'all'].filter(Boolean).length}
+                actions={<div className="am-toolbar-actions">
                     <span className="am-results-count">{totalElements} kết quả</span>
                     <button className="am-btn-primary" onClick={handleOpenCreateModal}>
                       <PlusOutlined /> Thêm tài khoản
@@ -669,20 +668,26 @@ function AdminAccountsScreen() {
                     >
                       <UploadOutlined />
                     </button>
-                  </div>
-                </div>
-
-                {isFilterOpen && (
-                  <div className="am-filter-panel" id="account-filter-panel">
-                    <div className="am-filter-department">
-                      <span className="am-filter-label">Phòng ban</span>
-                      <SearchableSelect
+                  </div>}
+                className="am-filter-bar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setSearch}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="am-filter-panel"
+                panelId="account-filter-panel"
+                searchAriaLabel="Tìm tài khoản theo tên hoặc ID"
+                searchClassName="am-search"
+                searchPlaceholder="Tìm theo tên hoặc ID..."
+                searchValue={search}
+              >
+                    <FilterSelectField
+                        className="am-filter-department"
+                        label="Phòng ban"
                         id="account-department-filter"
                         value={deptFilter}
-                        onChange={(value) => {
-                          setDeptFilter(value || 'all')
-                          setPage(1)
-                        }}
+                        onChange={(value) => setDeptFilter(value || 'all')}
                         disabled={departmentLoading}
                         options={[
                           { value: 'all', label: 'Tất cả phòng ban' },
@@ -692,41 +697,27 @@ function AdminAccountsScreen() {
                           })),
                         ]}
                         placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tất cả phòng ban'}
+                        searchable
                         searchPlaceholder="Tìm tên phòng ban..."
                         emptyMessage="Không tìm thấy phòng ban phù hợp"
-                        ariaLabel="Tìm và chọn phòng ban"
                       />
-                    </div>
-                    <label className="am-filter-field">
-                      <span className="am-filter-label">Vai trò</span>
-                      <select
-                        className="am-filter-select"
-                        value={roleFilter}
-                        onChange={(e) => { setRoleFilter(e.target.value); setPage(1) }}
-                      >
-                        <option value="all">Tất cả vai trò</option>
-                        {roles.map(r => {
-                          const roleLabel = r.name || r.code
-                          return <option key={r.id} value={r.id}>{roleLabel}</option>
-                        })}
-                      </select>
-                    </label>
-                    <label className="am-filter-field">
-                      <span className="am-filter-label">Trạng thái</span>
-                      <select
-                        className="am-filter-select"
-                        value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-                      >
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="ACTIVE">Hoạt động</option>
-                        <option value="INACTIVE">Ngưng hoạt động</option>
-                        <option value="LOCKED">Đã khoá</option>
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Vai trò"
+                      value={roleFilter}
+                      onChange={setRoleFilter}
+                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: role.name || role.code }))]}
+                      placeholder="Tất cả vai trò"
+                    />
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Trạng thái"
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      options={[{ value: 'all', label: 'Tất cả trạng thái' }, { value: 'ACTIVE', label: 'Hoạt động' }, { value: 'INACTIVE', label: 'Ngưng hoạt động' }, { value: 'LOCKED', label: 'Đã khoá' }]}
+                      placeholder="Tất cả trạng thái"
+                    />
+              </AppliedFilterToolbar>
 
               {/* Table Card */}
               <div className="am-table-card">
@@ -1034,41 +1025,36 @@ function AdminAccountsScreen() {
 
                   {editingUser && (
                     <>
-                      <div className="am-form-group">
-                        <label className="am-form-label">Chức danh</label>
-                        <select
-                          className="am-form-select"
-                          value={formPositionId}
-                          onChange={(e) => setFormPositionId(e.target.value)}
-                        >
-                          <option value="">Chọn chức danh...</option>
-                          {positions.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <FormSelectField
+                        label="Chức danh"
+                        value={formPositionId}
+                        onChange={setFormPositionId}
+                        options={[
+                          { value: '', label: 'Chọn chức danh...' },
+                          ...positions.map(p => ({ value: p.id, label: p.name }))
+                        ]}
+                        placeholder="Chọn chức danh..."
+                        searchable={true}
+                      />
 
-                      <div className="am-form-group">
-                        <label className="am-form-label">Trình độ học vấn</label>
-                        <select
-                          className="am-form-select"
-                          value={formEduLevelId}
-                          onChange={(e) => setFormEduLevelId(e.target.value)}
-                        >
-                          <option value="">Chọn trình độ...</option>
-                          {educationLevels.map(el => (
-                            <option key={el.id} value={el.id}>{el.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <FormSelectField
+                        label="Trình độ học vấn"
+                        value={formEduLevelId}
+                        onChange={setFormEduLevelId}
+                        options={[
+                          { value: '', label: 'Chọn trình độ...' },
+                          ...educationLevels.map(el => ({ value: el.id, label: el.name }))
+                        ]}
+                        placeholder="Chọn trình độ..."
+                        searchable={true}
+                      />
 
                       <div className="am-form-group">
                         <label className="am-form-label">Ngày sinh</label>
-                        <input
-                          type="date"
+                        <KeyboardDatePicker
                           className="am-form-input"
                           value={formBirthday}
-                          onChange={(e) => setFormBirthday(e.target.value)}
+                          onChange={(val) => setFormBirthday(val)}
                         />
                       </div>
 

@@ -1,4 +1,7 @@
 import { SearchOutlined } from '@ant-design/icons'
+import KeyboardDatePicker from '../../../../../shared/components/KeyboardDatePicker.jsx'
+import FilterActionButtons from '../../../../../shared/components/FilterActionButtons.jsx'
+import FilterSelectField from '../../../../../shared/components/FilterSelectField.jsx'
 import { createEmptyTrainingFilters, countActiveFilterGroups } from '../utils/trainingRecordQuery.js'
 
 const STATUS_OPTIONS = [
@@ -51,42 +54,48 @@ function TrainingSearchFilters({
         </div>
       ) : (
         <div className="th-mobile-search-form__grid">
-          <label className="th-mobile-search-form__field">
-            <span>Trạng thái hồ sơ</span>
-            <select value={filters.status} onChange={event => updateFilter('status', event.target.value)} aria-label="Bộ lọc trạng thái">
-              {STATUS_OPTIONS.map(option => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
+          <FilterSelectField
+            className="th-mobile-search-form__field"
+            label="Trạng thái hồ sơ"
+            value={filters.status}
+            onChange={value => updateFilter('status', value)}
+            options={STATUS_OPTIONS}
+          />
           <label className="th-mobile-search-form__field">
             <span>Từ ngày</span>
-            <input type="date" value={filters.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Bộ lọc từ ngày" />
+            <KeyboardDatePicker value={filters.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Bộ lọc từ ngày" />
           </label>
           <label className="th-mobile-search-form__field">
             <span>Đến ngày</span>
-            <input type="date" value={filters.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Bộ lọc đến ngày" />
+            <KeyboardDatePicker value={filters.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Bộ lọc đến ngày" />
           </label>
-          <label className="th-mobile-search-form__field">
-            <span>Lĩnh vực chuyên môn</span>
-            <select value={filters.professionalFieldId} onChange={event => updateFilter('professionalFieldId', event.target.value)} aria-label="Bộ lọc lĩnh vực chuyên môn">
-              <option value="">Tất cả lĩnh vực</option>
-              {filterOptions.professionalFields.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-            </select>
-          </label>
-          <label className="th-mobile-search-form__field">
-            <span>Hình thức đào tạo</span>
-            <select value={filters.activityTypeId} onChange={event => updateFilter('activityTypeId', event.target.value)} aria-label="Bộ lọc hình thức đào tạo">
-              <option value="">Tất cả hình thức</option>
-              {filterOptions.activityTypes.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-            </select>
-          </label>
+          <FilterSelectField
+            className="th-mobile-search-form__field"
+            label="Lĩnh vực chuyên môn"
+            value={filters.professionalFieldId}
+            onChange={value => updateFilter('professionalFieldId', value)}
+            searchable
+            options={[
+              { value: '', label: 'Tất cả lĩnh vực' },
+              ...filterOptions.professionalFields.map(option => ({ value: option.id, label: option.name || option.label })),
+            ]}
+          />
+          <FilterSelectField
+            className="th-mobile-search-form__field"
+            label="Hình thức đào tạo"
+            value={filters.activityTypeId}
+            onChange={value => updateFilter('activityTypeId', value)}
+            searchable
+            options={[
+              { value: '', label: 'Tất cả hình thức' },
+              ...filterOptions.activityTypes.map(option => ({ value: option.id, label: option.name || option.label })),
+            ]}
+          />
         </div>
       )}
 
       {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
-      <div className="th-mobile-search-form__actions">
-        <button type="button" className="th-mobile-search-form__clear" onClick={onClear}>Xóa bộ lọc</button>
-        <button type="button" className="th-mobile-search-form__apply" onClick={onApply}>Áp dụng</button>
-      </div>
+      <FilterActionButtons className="th-mobile-search-form__actions" onReset={onClear} onApply={onApply} />
     </div>
   )
 }

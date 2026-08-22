@@ -4,22 +4,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.auth.dto.request.LoginRequest;
-import vn.vietduc.carehubbackend.auth.dto.request.LogoutRequest;
-import vn.vietduc.carehubbackend.auth.dto.request.RefreshTokenRequest;
 import vn.vietduc.carehubbackend.auth.dto.response.AccessTokenResult;
 import vn.vietduc.carehubbackend.auth.dto.response.AuthResponse;
 import vn.vietduc.carehubbackend.auth.entity.RefreshToken;
-import vn.vietduc.carehubbackend.auth.repository.RefreshTokenRepository;
 import vn.vietduc.carehubbackend.auth.service.AuthService;
 import vn.vietduc.carehubbackend.auth.service.JwtTokenService;
 import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
-import vn.vietduc.carehubbackend.exception.TokenException;
 import vn.vietduc.carehubbackend.exception.UnauthorizedException;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.user.entity.UserStatus;
 import vn.vietduc.carehubbackend.user.repository.UserRepository;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -32,7 +29,6 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenService refreshTokenService;
-    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public AuthResponse login(LoginRequest request) {
@@ -46,54 +42,62 @@ public class AuthServiceImpl implements AuthService {
         if (user.getStatus() == UserStatus.LOCKED) {
             throw new UnauthorizedException("Tài khoản đã bị khóa");
         }
+        if (user.getStatus() != UserStatus.ACTIVE && !isPendingFirstLoginActivation(user)) {
+            throw new UnauthorizedException("Tài khoản chưa được kích hoạt");
+        }
 
+        activateFirstLoginAccountIfNeeded(user);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
         AccessTokenResult accessToken = jwtTokenService.generateAccessToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-        return AuthResponse.builder()
-                .accessToken(accessToken.token())
-                .expiresIn(accessToken.expiresInSeconds())
-                .refreshToken(refreshToken.getToken())
-                .tokenType("Bearer")
-                .requiresFirstLoginSetup(user.requiresFirstLoginSetup())
-                .build();
+        return buildResponse(user, accessToken, refreshToken);
     }
 
     @Override
-    public AuthResponse refreshToken(RefreshTokenRequest request) {
-        RefreshToken refreshToken = refreshTokenService.findToken(request.getRefreshToken());
-        if (refreshToken.getRevoked()) {
-            throw new TokenException("Token đã bị thu hồi");
-        }
-        if (refreshToken.getExpiredAt().isBefore(LocalDateTime.now())) {
-            throw new TokenException("Token đã hết hạn");
-        }
-
+    public AuthResponse refreshToken(String credential) {
+        RefreshToken refreshToken = refreshTokenService.rotateRefreshToken(credential);
         User user = refreshToken.getUser();
-        if (user.getStatus() == UserStatus.LOCKED) {
-            throw new UnauthorizedException("Tài khoản đã bị khóa");
-        }
-        if (user.getStatus() != UserStatus.ACTIVE && !user.requiresFirstLoginSetup()) {
-            throw new UnauthorizedException("Tài khoản chưa được kích hoạt");
-        }
-
         AccessTokenResult accessToken = jwtTokenService.generateAccessToken(user);
+        return buildResponse(user, accessToken, refreshToken);
+    }
 
+    @Override
+    public void logout(String credential) {
+        refreshTokenService.revokeRefreshToken(credential);
+    }
+
+    private AuthResponse buildResponse(User user, AccessTokenResult accessToken, RefreshToken refreshToken) {
         return AuthResponse.builder()
                 .accessToken(accessToken.token())
                 .expiresIn(accessToken.expiresInSeconds())
                 .refreshToken(refreshToken.getToken())
+                .refreshExpiresInSeconds(refreshExpiresInSeconds(refreshToken))
                 .tokenType("Bearer")
                 .requiresFirstLoginSetup(user.requiresFirstLoginSetup())
                 .build();
     }
 
-    @Override
-    public void logout(LogoutRequest request) {
-        RefreshToken refreshToken = refreshTokenService.findToken(request.getRefreshToken());
-        refreshToken.setRevoked(true);
-        refreshTokenRepository.save(refreshToken);
+    private boolean isPendingFirstLoginActivation(User user) {
+        return user.getStatus() == UserStatus.INACTIVE && user.isFirstLogin();
+    }
+
+    private void activateFirstLoginAccountIfNeeded(User user) {
+        if (!isPendingFirstLoginActivation(user)) {
+            return;
+        }
+
+        user.setFirstLogin(false);
+        user.setStatus(UserStatus.ACTIVE);
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
+    }
+
+    private Long refreshExpiresInSeconds(RefreshToken refreshToken) {
+        return Math.max(
+                0,
+                Duration.between(LocalDateTime.now(), refreshToken.getExpiredAt()).getSeconds()
+        );
     }
 }

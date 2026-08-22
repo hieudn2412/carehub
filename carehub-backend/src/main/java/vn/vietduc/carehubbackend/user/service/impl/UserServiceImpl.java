@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.vietduc.carehubbackend.auth.service.RefreshTokenService;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.notification.messaging.EmailMessage;
@@ -49,6 +50,7 @@ public class UserServiceImpl implements UserService {
     private final EmailProducer emailProducer;
     private final SecurityUtils securityUtils;
     private final BrandedEmailRenderer emailRenderer;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     @Transactional
@@ -169,6 +171,9 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.getStatus() != null) {
+            if (user.getStatus() != request.getStatus()) {
+                invalidateUserSessions(user);
+            }
             user.setStatus(request.getStatus());
         }
 
@@ -208,6 +213,8 @@ public class UserServiceImpl implements UserService {
 
         String encodedPassword = passwordEncoder.encode(newPassword);
         user.setPassword(encodedPassword);
+        user.setLastChangePassword(java.time.LocalDateTime.now());
+        invalidateUserSessions(user);
         userRepository.save(user);
     }
 
@@ -238,6 +245,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(Long id) {
         User user = findUser(id);
         user.setDeleted(true);
+        invalidateUserSessions(user);
         userRepository.save(user);
     }
 
@@ -245,6 +253,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDetailResponse lockUser(Long id) {
         User user = findUser(id);
+        if (user.getStatus() != UserStatus.LOCKED) {
+            invalidateUserSessions(user);
+        }
         user.setStatus(UserStatus.LOCKED);
         return toDetailResponse(userRepository.save(user));
     }
@@ -263,6 +274,8 @@ public class UserServiceImpl implements UserService {
         User user = findUser(id);
         String randomPassword = createRandomPassword();
         user.setPassword(passwordEncoder.encode(randomPassword));
+        user.setLastChangePassword(java.time.LocalDateTime.now());
+        invalidateUserSessions(user);
         userRepository.save(user);
         return randomPassword;
     }
@@ -283,6 +296,8 @@ public class UserServiceImpl implements UserService {
                 .role(role)
                 .build());
 
+        invalidateUserSessions(user);
+        userRepository.save(user);
         return toDetailResponse(user);
     }
 
@@ -298,6 +313,8 @@ public class UserServiceImpl implements UserService {
         }
 
         userRoleRepository.deleteByUser_IdAndRole_Id(userId, roleId);
+        invalidateUserSessions(user);
+        userRepository.save(user);
         return toDetailResponse(user);
     }
 
@@ -310,14 +327,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDetailResponse updateCurrentUserProfile(UpdateMyProfileRequest request) {
         User user = findUser(securityUtils.getCurrentUserId());
-        String email = request.email().trim();
-        if (userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
+        String email = normalizeOptionalText(request.email());
+        if (email != null && userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
             throw new ConflictException("Email này đã được sử dụng");
         }
 
         user.setName(request.fullName().trim());
         user.setEmail(email);
-        user.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
+        user.setPhone(normalizeOptionalText(request.phone()));
         user.setBirthday(request.birthday());
         if (request.gender() != null) {
             user.setGender(request.gender());
@@ -391,6 +408,15 @@ public class UserServiceImpl implements UserService {
         if (value == null || value.isBlank()) {
             throw new BadRequestException(fieldName + " là bắt buộc");
         }
+    }
+
+    private void invalidateUserSessions(User user) {
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
+    }
+
+    private String normalizeOptionalText(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
 }

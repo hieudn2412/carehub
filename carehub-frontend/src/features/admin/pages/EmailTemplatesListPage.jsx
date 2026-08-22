@@ -11,6 +11,8 @@ import {
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/EmailTemplatesListPage.css'
@@ -93,6 +95,18 @@ function EmailTemplatesListPage() {
     }
   }
 
+  const handleApplyFilters = () => {
+    setPage(1)
+    setReloadToken((value) => value + 1)
+  }
+
+  const handleClearFilters = () => {
+    setCategoryFilter('')
+    setStatusFilter('')
+    setSearch('')
+    setPage(1)
+  }
+
   return (
     <AppShell breadcrumbs={[{ label: 'Danh sách biểu mẫu email thông báo' }]}>
             <div className="etl-page">
@@ -136,31 +150,28 @@ function EmailTemplatesListPage() {
 
                 {isFilterOpen && (
                   <div id="email-template-filter-panel" className="etl-filter-panel admin-control-toolbar__panel">
-                    <label className="admin-control-toolbar__field">
-                      <span>Danh mục</span>
-                      <select
-                        className="etl-filter-select"
-                        value={categoryFilter}
-                        onChange={(event) => { setCategoryFilter(event.target.value); setPage(1) }}
-                      >
-                        <option value="">Tất cả danh mục</option>
-                        <option value="TRAINING">Đào tạo</option>
-                        <option value="EVALUATION">Đánh giá</option>
-                        <option value="QUALITY">Chất lượng</option>
-                      </select>
-                    </label>
-                    <label className="admin-control-toolbar__field">
-                      <span>Trạng thái</span>
-                      <select
-                        className="etl-filter-select"
-                        value={statusFilter}
-                        onChange={(event) => { setStatusFilter(event.target.value); setPage(1) }}
-                      >
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="ACTIVE">Hoạt động</option>
-                        <option value="INACTIVE">Ngừng</option>
-                      </select>
-                    </label>
+                    <FilterSelectField
+                      label="Danh mục"
+                      value={categoryFilter}
+                      onChange={(value) => { setCategoryFilter(value); setPage(1) }}
+                      options={[
+                        { value: '', label: 'Tất cả danh mục' },
+                        { value: 'TRAINING', label: 'Đào tạo' },
+                        { value: 'EVALUATION', label: 'Đánh giá' },
+                        { value: 'QUALITY', label: 'Chất lượng' },
+                      ]}
+                    />
+                    <FilterSelectField
+                      label="Trạng thái"
+                      value={statusFilter}
+                      onChange={(value) => { setStatusFilter(value); setPage(1) }}
+                      options={[
+                        { value: '', label: 'Tất cả trạng thái' },
+                        { value: 'ACTIVE', label: 'Hoạt động' },
+                        { value: 'INACTIVE', label: 'Ngừng' },
+                      ]}
+                    />
+                    <FilterActionButtons onApply={handleApplyFilters} onReset={handleClearFilters} />
                   </div>
                 )}
               </section>

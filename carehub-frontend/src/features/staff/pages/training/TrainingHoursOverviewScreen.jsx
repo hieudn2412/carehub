@@ -15,6 +15,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../shared/auth/jwt.js'
@@ -259,15 +260,13 @@ function TrainingHoursOverviewScreen() {
             </div>
             <label className="th-overview-year-select">
               <span>Năm biểu đồ</span>
-              <select
-                value={chartYear}
-                onChange={event => setChartYear(Number(event.target.value))}
-                aria-label="Năm biểu đồ"
-              >
-                {chartAvailableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={String(chartYear)}
+                onChange={val => setChartYear(Number(val))}
+                ariaLabel="Năm biểu đồ"
+                searchable={false}
+                options={chartAvailableYears.map(year => ({ value: String(year), label: String(year) }))}
+              />
             </label>
           </div>
           {chartLoading ? (
@@ -391,6 +390,18 @@ function TrainingHoursOverviewScreen() {
           </div>
         </section>
 
+        {/* Thao tác chính của màn hình này là khai báo giờ, nên nút nằm ngay dưới thẻ tiến độ
+            thay vì trong header thẻ hồ sơ — trên mobile người dùng không phải cuộn để thấy nó. */}
+        <div className="th-overview-primary-action">
+          <button
+            type="button"
+            className="th-btn-primary"
+            onClick={() => navigate('/staff/training/new')}
+          >
+            <PlusOutlined /> Cập nhật giờ đào tạo
+          </button>
+        </div>
+
         <section className="th-overview-card th-overview-card--latest th-table-card" data-overview-section="latest" aria-labelledby="training-latest-title">
           <div className="th-overview-card__header">
             <div className="th-overview-card__header-copy">
@@ -400,13 +411,6 @@ function TrainingHoursOverviewScreen() {
               </h2>
             </div>
             <div className="th-overview-card__actions">
-              <button
-                type="button"
-                className="th-btn-primary"
-                onClick={() => navigate('/staff/training/new')}
-              >
-                <PlusOutlined /> Cập nhật giờ đào tạo
-              </button>
               <button
                 type="button"
                 className="th-overview-link"

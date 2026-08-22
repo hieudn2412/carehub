@@ -29,6 +29,8 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 
   /* Theme variables (bộ cũ — giữ làm alias, giá trị không đổi) */
   --navy: #16324f;

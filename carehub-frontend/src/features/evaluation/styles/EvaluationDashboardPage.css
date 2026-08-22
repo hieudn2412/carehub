@@ -30,6 +30,24 @@
   box-sizing: border-box;
 }
 
+.evd-competency-toolbar .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.evd-competency-toolbar .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.evd-competency-toolbar .searchable-select__search-icon {
+  display: block;
+  left: 12px;
+}
+
 .evd-competency-toolbar__count {
   color: #64748b;
   font-size: 13px;
@@ -522,13 +540,6 @@
 .exam-dashboard-page .dashboard-layout__content { min-width: 0; overflow-y: auto; }
 .exam-dashboard { min-height: 100%; padding: 24px; background: #f4f7fa; color: #172033; }
 .exam-dashboard__toolbar { padding: 16px 20px; border: 1px solid #dbe3ee; border-radius: 8px; background: #fff; }
-.exam-dashboard__filter-panel { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
-.exam-dashboard__filter-panel label { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
-.exam-dashboard__filter-panel label > span { color: #526174; font-size: 12px; font-weight: 600; }
-.exam-dashboard__filter-panel > label > input,
-.exam-dashboard__filter-panel > label > select { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #d6e0e8; border-radius: 6px; background: #fff; color: #172033; }
-.exam-dashboard__filter-panel .searchable-select > input { height: 42px; }
-.exam-dashboard__filter-panel .is-unavailable { opacity: .68; }
 .exam-dashboard__notice { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 11px 13px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; color: #1d4ed8; font-size: 13px; }
 .exam-dashboard__notice--error { border-color: #fecaca; background: #fff1f2; color: #b91c1c; }
 .exam-dashboard__loading { display: flex; min-height: 300px; align-items: center; justify-content: center; gap: 10px; color: #68778b; }
@@ -563,9 +574,9 @@
 .exam-dashboard__table td:nth-child(2) span, .exam-dashboard__muted { color: #8a97a7; font-size: 11px; }
 .exam-dashboard__empty-row { height: 110px; color: #8a97a7 !important; text-align: center !important; }
 /* bp-lg */
-@media (max-width: 1280px) { .exam-dashboard__filter-panel, .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1280px) { .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* bp-sm */
-@media (max-width: 768px) { .exam-dashboard { padding: 14px; } .exam-dashboard__filter-panel, .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .exam-dashboard { padding: 14px; } .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
 
 /* ============================================================
    .evd-x-* — lớp thay cho inline style chặn responsive của cụm
@@ -734,33 +745,6 @@
   opacity: .55;
 }
 
-.competency-dashboard-filter-panel {
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select, .searchable-select > input) {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  background: #fff;
-  color: #334155;
-  font: inherit;
-  font-size: 13.5px;
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select) {
-  padding: 0 12px;
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select, .searchable-select > input):focus {
-  border-color: #16a085;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
-}
-
 .competency-dashboard-weight {
   display: grid;
   min-width: 0;
@@ -869,9 +853,6 @@
     grid-template-columns: 1fr;
   }
 
-  .competency-dashboard-filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 768px) {
@@ -883,12 +864,40 @@
     flex: 0 0 auto;
   }
 
-  .competency-dashboard-toolbar__actions {
-    justify-content: space-between;
+  .competency-dashboard-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .competency-dashboard-filter-panel {
-    grid-template-columns: 1fr;
+  .competency-dashboard-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .competency-dashboard-toolbar .competency-dashboard-search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .competency-dashboard-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
+  .competency-dashboard-toolbar__actions {
+    justify-content: flex-end !important;
+    gap: 10px;
+    margin-top: 4px;
   }
 
   .competency-dashboard-table-card {
@@ -937,6 +946,34 @@
   white-space: nowrap;
 }
 
+.compliance-toolbar__export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid #0f766e;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.compliance-toolbar__export:hover:not(:disabled) {
+  border-color: #0b5f59;
+  background: #0b5f59;
+}
+
+.compliance-toolbar__export:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
 .compliance-toolbar__reload {
   display: inline-grid;
   width: 44px;
@@ -960,48 +997,6 @@
   opacity: .55;
 }
 
-.compliance-filter-panel {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-}
-
-.compliance-filter-panel :is(input[type='date'], .searchable-select > input) {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  background-color: #fff;
-  color: #334155;
-  font: inherit;
-  font-size: 13.5px;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.compliance-filter-panel input[type='date'] {
-  padding: 0 12px;
-}
-
-.compliance-filter-panel :is(input[type='date'], .searchable-select > input):focus {
-  border-color: #16a085;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
-}
-
-.compliance-filter-panel__fixed {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .compliance-table-card {
   max-height: calc(100dvh - 205px);
   overflow: auto;
@@ -1016,12 +1011,46 @@
 }
 
 @media (max-width: 768px) {
-  .compliance-toolbar__actions {
-    justify-content: space-between;
+  .compliance-toolbar .admin-control-toolbar__main {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
   }
 
-  .compliance-filter-panel {
-    grid-template-columns: 1fr;
+  .compliance-toolbar .admin-control-toolbar__controls {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px;
+  }
+
+  .compliance-toolbar .compliance-toolbar__search {
+    flex: 1 1 200px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .compliance-toolbar .admin-control-toolbar__filter-trigger {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    border-radius: 6px !important;
+  }
+
+  .compliance-toolbar__actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .compliance-toolbar__export {
+    height: 38px;
+    padding: 0 12px;
   }
 
   .compliance-table-card {

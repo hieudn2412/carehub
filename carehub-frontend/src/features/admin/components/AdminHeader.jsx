@@ -26,7 +26,7 @@ function getFallbackLink(label, roles = []) {
   const lbl = String(label).toLowerCase().trim()
 
   if (lbl === 'đánh giá' || lbl === 'evaluation') {
-    return isAdm ? '/admin/evaluation/question-documents' : '/manager/quality/history'
+    return isAdm ? '/admin/evaluation/question-documents' : '/manager/reports/checklist-dashboard'
   }
   if (lbl.includes('quy tắc phân loại')) {
     return '/admin/evaluation/classification-rules'
@@ -53,7 +53,7 @@ function getFallbackLink(label, roles = []) {
     return '/training/employees'
   }
   if (lbl.includes('lịch sử')) {
-    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
+    return isAdm ? '/admin/reports/checklist-dashboard' : '/manager/reports/checklist-dashboard'
   }
   if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
     return isAdm ? '/admin/reference/employees' : '/manager/employees'

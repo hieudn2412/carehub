@@ -97,6 +97,14 @@
   background: #edf1ef;
 }
 
+.account-dropdown__error {
+  color: #c92f27;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 6px;
+}
+
 /* bp-xs */
 @media (max-width: 560px) {
   .account-dropdown__trigger .dashboard-header__info {

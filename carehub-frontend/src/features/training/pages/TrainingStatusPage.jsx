@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
@@ -78,23 +79,21 @@ function TrainingStatusPage() {
               value={employeeInput}
             />
           </label>
-          <label>
-            Lĩnh vực chuyên môn
-            <SearchableSelect
-              onChange={setProfessionalFieldId}
-              value={professionalFieldId}
-              options={[
-                { value: '', label: 'Mặc định' },
-                ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-              ]}
-              placeholder="Mặc định"
-              searchPlaceholder="Tìm tên lĩnh vực..."
-              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-            />
-          </label>
+          <FilterSelectField
+            label="Lĩnh vực chuyên môn"
+            onChange={setProfessionalFieldId}
+            value={professionalFieldId}
+            options={[
+              { value: '', label: 'Mặc định' },
+              ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+            ]}
+            placeholder="Mặc định"
+            searchable
+            searchPlaceholder="Tìm tên lĩnh vực..."
+          />
           <label>
             As of
-            <input onChange={(event) => setAsOf(event.target.value)} type="date" value={asOf} />
+            <KeyboardDatePicker onChange={(val) => setAsOf(val)} value={asOf} />
           </label>
           <div className="training-form-actions">
             <button className="training-button training-button--primary" type="submit">

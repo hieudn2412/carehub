@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { trainingApi } from '../api/trainingApi.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -371,26 +374,26 @@ function TrainingEmployeeStatusDetailPage() {
                         )}
                       </div>
                       <div className="ted-status-scope__fields">
-                        <label>
-                          <span>Lĩnh vực chuyên môn</span>
-                          <select
-                            aria-label="Lọc tổng hợp theo lĩnh vực chuyên môn"
-                            disabled={filterOptionsLoading}
-                            onChange={event => updateStatusFilter('professionalFieldId', event.target.value)}
-                            value={statusFilters.professionalFieldId}
-                          >
-                            <option value="">Tất cả lĩnh vực</option>
-                            {filterOptions.professionalFields.map(option => (
-                              <option key={option.id} value={option.id}>{option.name || option.label}</option>
-                            ))}
-                          </select>
-                        </label>
+                        <FilterSelectField
+                          ariaLabel="Lọc tổng hợp theo lĩnh vực chuyên môn"
+                          label="Lĩnh vực chuyên môn"
+                          disabled={filterOptionsLoading}
+                          onChange={value => updateStatusFilter('professionalFieldId', value)}
+                          value={statusFilters.professionalFieldId}
+                          searchable
+                          options={[
+                            { value: '', label: 'Tất cả lĩnh vực' },
+                            ...filterOptions.professionalFields.map(option => ({
+                              value: option.id,
+                              label: option.name || option.label,
+                            })),
+                          ]}
+                        />
                         <label>
                           <span>Tính đến ngày</span>
-                          <input
+                          <KeyboardDatePicker
                             aria-label="Tính tổng hợp đến ngày"
-                            onChange={event => updateStatusFilter('asOf', event.target.value)}
-                            type="date"
+                            onChange={val => updateStatusFilter('asOf', val)}
                             value={statusFilters.asOf}
                           />
                         </label>
@@ -543,71 +546,90 @@ function TrainingEmployeeStatusDetailPage() {
                             <div className="ted-filter-state ted-filter-state--error" role="alert">{filterOptionsError} Các bộ lọc còn lại vẫn có thể sử dụng.</div>
                           )}
                           <div className="ted-filter-grid">
-                              <label>
-                                <span>Trạng thái hồ sơ</span>
-                                <select value={filterDraft.workflowStatus} onChange={event => updateFilter('workflowStatus', event.target.value)} aria-label="Lọc theo trạng thái hồ sơ">
-                                  <option value="">Tất cả trạng thái</option>
-                                  <option value="SUBMITTED">Đã nộp</option>
-                                  <option value="DRAFT">Bản nháp</option>
-                                  <option value="CANCELLED">Đã hủy</option>
-                                </select>
-                              </label>
+                              <FilterSelectField
+                                ariaLabel="Lọc theo trạng thái hồ sơ"
+                                label="Trạng thái hồ sơ"
+                                value={filterDraft.workflowStatus}
+                                onChange={value => updateFilter('workflowStatus', value)}
+                                options={[
+                                  { value: '', label: 'Tất cả trạng thái' },
+                                  { value: 'SUBMITTED', label: 'Đã nộp' },
+                                  { value: 'DRAFT', label: 'Bản nháp' },
+                                  { value: 'CANCELLED', label: 'Đã hủy' },
+                                ]}
+                              />
                               <label>
                                 <span>Từ ngày</span>
-                                <input type="date" value={filterDraft.dateFrom} onChange={event => updateFilter('dateFrom', event.target.value)} aria-label="Lọc từ ngày" />
+                                <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Lọc từ ngày" />
                               </label>
                               <label>
                                 <span>Đến ngày</span>
-                                <input type="date" value={filterDraft.dateTo} onChange={event => updateFilter('dateTo', event.target.value)} aria-label="Lọc đến ngày" />
+                                <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Lọc đến ngày" />
                               </label>
-                              <label>
-                                <span>Lĩnh vực chuyên môn</span>
-                                <select disabled={filterOptionsLoading || filterOptions.professionalFields.length === 0} value={filterDraft.professionalFieldId} onChange={event => updateFilter('professionalFieldId', event.target.value)} aria-label="Lọc theo lĩnh vực chuyên môn">
-                                  <option value="">Tất cả lĩnh vực</option>
-                                  {filterOptions.professionalFields.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-                                </select>
-                              </label>
-                              <label>
-                                <span>Hình thức đào tạo</span>
-                                <select disabled={filterOptionsLoading || filterOptions.activityTypes.length === 0} value={filterDraft.activityTypeId} onChange={event => updateFilter('activityTypeId', event.target.value)} aria-label="Lọc theo hình thức đào tạo">
-                                  <option value="">Tất cả hình thức</option>
-                                  {filterOptions.activityTypes.map(option => <option key={option.id} value={option.id}>{option.name || option.label}</option>)}
-                                </select>
-                              </label>
-                              <label>
-                                <span>Minh chứng</span>
-                                <select value={filterDraft.hasEvidence} onChange={event => updateFilter('hasEvidence', event.target.value)} aria-label="Lọc theo tình trạng minh chứng">
-                                  <option value="">Tất cả hồ sơ</option>
-                                  <option value="true">Có minh chứng</option>
-                                  <option value="false">Chưa có minh chứng</option>
-                                </select>
-                              </label>
-                              <label>
-                                <span>Kết quả minh chứng</span>
-                                <select value={filterDraft.moderationStatus} onChange={event => updateFilter('moderationStatus', event.target.value)} aria-label="Lọc theo kết quả minh chứng">
-                                  <option value="">Tất cả kết quả</option>
-                                  <option value="PENDING">Chờ kiểm tra</option>
-                                  <option value="PASSED">Đạt</option>
-                                  <option value="FAILED">Không đạt</option>
-                                  <option value="ERROR">Có lỗi</option>
-                                  <option value="NOT_REQUESTED">Chưa yêu cầu kiểm tra</option>
-                                </select>
-                              </label>
-                              <label>
-                                <span>Nguồn dữ liệu</span>
-                                <select value={filterDraft.sourceType} onChange={event => updateFilter('sourceType', event.target.value)} aria-label="Lọc theo nguồn dữ liệu">
-                                  <option value="">Tất cả nguồn</option>
-                                  <option value="MANUAL">Nhân viên khai báo</option>
-                                  <option value="LEGACY_IMPORT">Dữ liệu cũ nhập khẩu</option>
-                                  <option value="ADMIN_IMPORT">Admin nhập khẩu</option>
-                                </select>
-                              </label>
+                              <FilterSelectField
+                                ariaLabel="Lọc theo lĩnh vực chuyên môn"
+                                label="Lĩnh vực chuyên môn"
+                                disabled={filterOptionsLoading || filterOptions.professionalFields.length === 0}
+                                value={filterDraft.professionalFieldId}
+                                onChange={value => updateFilter('professionalFieldId', value)}
+                                searchable
+                                options={[
+                                  { value: '', label: 'Tất cả lĩnh vực' },
+                                  ...filterOptions.professionalFields.map(option => ({ value: option.id, label: option.name || option.label })),
+                                ]}
+                              />
+                              <FilterSelectField
+                                ariaLabel="Lọc theo hình thức đào tạo"
+                                label="Hình thức đào tạo"
+                                disabled={filterOptionsLoading || filterOptions.activityTypes.length === 0}
+                                value={filterDraft.activityTypeId}
+                                onChange={value => updateFilter('activityTypeId', value)}
+                                searchable
+                                options={[
+                                  { value: '', label: 'Tất cả hình thức' },
+                                  ...filterOptions.activityTypes.map(option => ({ value: option.id, label: option.name || option.label })),
+                                ]}
+                              />
+                              <FilterSelectField
+                                ariaLabel="Lọc theo tình trạng minh chứng"
+                                label="Minh chứng"
+                                value={filterDraft.hasEvidence}
+                                onChange={value => updateFilter('hasEvidence', value)}
+                                options={[
+                                  { value: '', label: 'Tất cả hồ sơ' },
+                                  { value: 'true', label: 'Có minh chứng' },
+                                  { value: 'false', label: 'Chưa có minh chứng' },
+                                ]}
+                              />
+                              <FilterSelectField
+                                ariaLabel="Lọc theo kết quả minh chứng"
+                                label="Kết quả minh chứng"
+                                value={filterDraft.moderationStatus}
+                                onChange={value => updateFilter('moderationStatus', value)}
+                                options={[
+                                  { value: '', label: 'Tất cả kết quả' },
+                                  { value: 'PENDING', label: 'Chờ kiểm tra' },
+                                  { value: 'PASSED', label: 'Đạt' },
+                                  { value: 'FAILED', label: 'Không đạt' },
+                                  { value: 'ERROR', label: 'Có lỗi' },
+                                  { value: 'NOT_REQUESTED', label: 'Chưa yêu cầu kiểm tra' },
+                                ]}
+                              />
+                              <FilterSelectField
+                                ariaLabel="Lọc theo nguồn dữ liệu"
+                                label="Nguồn dữ liệu"
+                                value={filterDraft.sourceType}
+                                onChange={value => updateFilter('sourceType', value)}
+                                options={[
+                                  { value: '', label: 'Tất cả nguồn' },
+                                  { value: 'MANUAL', label: 'Nhân viên khai báo' },
+                                  { value: 'LEGACY_IMPORT', label: 'Dữ liệu cũ nhập khẩu' },
+                                  { value: 'ADMIN_IMPORT', label: 'Admin nhập khẩu' },
+                                ]}
+                              />
                           </div>
                           {filterDateError && <p className="ted-filter-error" role="alert">{filterDateError}</p>}
-                          <div className="ted-filter-actions">
-                            <button type="button" className="ted-filter-clear" onClick={handleClearFilters}>Xóa bộ lọc</button>
-                            <button type="button" className="ted-filter-apply" onClick={handleApplyFilters}>Áp dụng</button>
-                          </div>
+                          <FilterActionButtons className="ted-filter-actions" onReset={handleClearFilters} onApply={handleApplyFilters} />
                         </div>
                       )}
 

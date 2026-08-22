@@ -75,7 +75,7 @@ class AuthControllerIntegrationTest {
                 .build());
     }
 
-    @DisplayName("L2-AUTH-01 | Happy Path: login → refresh → logout persists refresh-token revocation; replayed refresh → 401 AUTH_001")
+    @DisplayName("L2-AUTH-01 | Happy Path: login → refresh rotates → logout persists session revocation; replayed refresh → 401 AUTH_SESSION_INVALID")
     @Test
     void loginRefreshAndLogoutLifecyclePersistsRevocation() throws Exception {
         String loginBody = """
@@ -98,20 +98,31 @@ class AuthControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.refreshToken", is(refreshToken)))
+                .andExpect(jsonPath("$.data.refreshToken", not(blankOrNullString())))
+                .andExpect(jsonPath("$.data.refreshToken", not(refreshToken)))
                 .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())));
+        String rotatedToken = JsonPath.read(
+                mockMvc.perform(post("/api/v1/auth/refresh-token")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
+                        .andExpect(status().isOk())
+                        .andReturn()
+                        .getResponse()
+                        .getContentAsString(),
+                "$.data.refreshToken"
+        );
 
         mockMvc.perform(post("/api/v1/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
+                        .content("{\"refreshToken\":\"%s\"}".formatted(rotatedToken)))
                 .andExpect(status().isOk());
 
-        assertTrue(refreshTokenRepository.findByToken(refreshToken).orElseThrow().getRevoked());
+        assertTrue(latestSessionFor(activeUser).getRevoked());
         mockMvc.perform(post("/api/v1/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"%s\"}".formatted(refreshToken)))
+                        .content("{\"refreshToken\":\"%s\"}".formatted(rotatedToken)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error_code", is("AUTH_001")));
+                .andExpect(jsonPath("$.error_code", is("AUTH_SESSION_INVALID")));
     }
 
     @DisplayName("L2-AUTH-02 | Query Correctness: a second login keeps the first session's refresh token valid (concurrent sessions)")
@@ -121,14 +132,43 @@ class AuthControllerIntegrationTest {
         String secondRefreshToken = loginAndGetRefreshToken();
 
         assertNotEquals(firstRefreshToken, secondRefreshToken);
-        assertFalse(refreshTokenRepository.findByToken(firstRefreshToken).orElseThrow().getRevoked());
-        assertFalse(refreshTokenRepository.findByToken(secondRefreshToken).orElseThrow().getRevoked());
+        assertEquals(2, refreshTokenRepository.findAll().stream()
+                .filter(token -> token.getUser().getId().equals(activeUser.getId()))
+                .filter(token -> !token.getRevoked())
+                .count());
 
         mockMvc.perform(post("/api/v1/auth/refresh-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"%s\"}".formatted(firstRefreshToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())));
+    }
+
+    @DisplayName("L2-AUTH-02B | Happy Path: imported first-login employee logs in without email setup and becomes ACTIVE")
+    @Test
+    void importedFirstLoginEmployeeLoginActivatesAccount() throws Exception {
+        User importedUser = userRepository.save(User.builder()
+                .employeeCode("NEWLOGIN001")
+                .name("New Login User")
+                .password(passwordEncoder.encode("Correct123"))
+                .firstLogin(true)
+                .status(UserStatus.INACTIVE)
+                .build());
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"employeeCode":"NEWLOGIN001","password":"Correct123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())))
+                .andExpect(jsonPath("$.data.refreshToken", not(blankOrNullString())))
+                .andExpect(jsonPath("$.data.requiresFirstLoginSetup", is(false)));
+
+        User reloaded = userRepository.findById(importedUser.getId()).orElseThrow();
+        assertEquals(UserStatus.ACTIVE, reloaded.getStatus());
+        assertFalse(reloaded.isFirstLogin());
+        assertNull(reloaded.getEmail());
     }
 
     @DisplayName("L2-AUTH-03 | Negative: LOCKED account → 401; blank payload → 422 VAL_001")
@@ -139,8 +179,8 @@ class AuthControllerIntegrationTest {
                         .content("""
                                 {"employeeCode":"LOCK001","password":"Correct123"}
                                 """))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error_code", is("AUTH_001")));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error_code", is("AUTH_ACCOUNT_DISABLED")));
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -189,6 +229,13 @@ class AuthControllerIntegrationTest {
                 .getResponse()
                 .getContentAsString();
         return JsonPath.read(response, "$.data.refreshToken");
+    }
+
+    private vn.vietduc.carehubbackend.auth.entity.RefreshToken latestSessionFor(User sessionUser) {
+        return refreshTokenRepository.findAll().stream()
+                .filter(token -> token.getUser().getId().equals(sessionUser.getId()))
+                .max(java.util.Comparator.comparing(vn.vietduc.carehubbackend.auth.entity.RefreshToken::getId))
+                .orElseThrow();
     }
 
     @TestConfiguration

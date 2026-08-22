@@ -792,21 +792,38 @@
     overflow: visible;
   }
 
-  .exp-title-card,
-  .exp-filter-bar {
+  .exp-title-card {
     flex-direction: column;
     align-items: stretch;
   }
 
+  .exp-filter-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
   .exp-search {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
+    flex: 1 1 150px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 38px !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .exp-search input {
+    height: 100% !important;
+    font-size: 13px !important;
   }
 
   .exp-filter-bar > .admin-filter-disclosure,
   .exp-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
-    width: 100%;
+    width: auto !important;
+    flex: 0 0 auto !important;
   }
 
   .exp-view-switch {

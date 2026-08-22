@@ -3,7 +3,6 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import vn.vietduc.carehubbackend.common.util.CosineUtil;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
@@ -115,24 +114,38 @@ public class DuplicateCheckService {
                 double[] candidateVector = questionEmbeddingService.embedCandidateStem(stem);
                 List<QuestionEmbeddingSnapshot> embeddings = embeddingCache.approvedStemEmbeddings();
                 if (embeddings.isEmpty()) {
-                    collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+                    collectLexicalMatches(stem, excludedQuestionIds, excludedCandidateIds, matches);
                 } else {
+                    // CHỈ ngân hàng câu hỏi: ứng viên chưa có embedding nên không chấm được trên
+                    // cùng thang cosine. Trộn thêm điểm Jaccard vào đây sẽ tạo một danh sách xếp
+                    // hạng lẫn hai thang điểm — xem ghi chú ở semanticCheck().
                     collectSemanticQuestionMatches(candidateVector, embeddings, excludedQuestionIds, matches);
                 }
             } catch (RuntimeException ex) {
                 log.warn("Không lấy được danh sách câu trùng ngữ nghĩa, dùng kiểm tra từ khóa: {}", ex.getMessage());
-                collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+                matches.clear();
+                collectLexicalMatches(stem, excludedQuestionIds, excludedCandidateIds, matches);
             }
         } else {
-            collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+            collectLexicalMatches(stem, excludedQuestionIds, excludedCandidateIds, matches);
         }
-        collectLexicalCandidateMatches(stem, excludedCandidateIds, matches);
         return matches.stream()
                 .sorted(Comparator.comparingDouble(DuplicateMatchResult::similarity).reversed()
                         .thenComparing(match -> match.sourceType().name())
                         .thenComparing(DuplicateMatchResult::sourceId))
                 .limit(limit)
                 .toList();
+    }
+
+    /** Cả hai nguồn đều chấm bằng Jaccard nên nằm chung một thang điểm. */
+    private void collectLexicalMatches(
+            String stem,
+            Set<Long> excludedQuestionIds,
+            Set<Long> excludedCandidateIds,
+            List<DuplicateMatchResult> matches
+    ) {
+        collectLexicalQuestionMatches(stem, excludedQuestionIds, matches);
+        collectLexicalCandidateMatches(stem, excludedCandidateIds, matches);
     }
 
     private void collectSemanticQuestionMatches(
@@ -348,13 +361,12 @@ public class DuplicateCheckService {
             matchedStem = scan.stem();
         }
 
-        // Chỉ lexical candidate check nếu chưa strong duplicate
-        if (best < properties.getDuplicate().getStrongMin()) {
-            DuplicateCheckResult candidateBatchDuplicate = lexicalCandidateCheck(stem, excludedCandidateIds);
-            if (candidateBatchDuplicate.maxSimilarity() > best) {
-                return candidateBatchDuplicate;
-            }
-        }
+        // KHÔNG so tiếp với ứng viên bằng Jaccard ở đây. Jaccard và cosine là hai thang điểm khác
+        // nhau: cosine nền của E5 giữa hai câu bất kỳ đã là ~0,83, nên một điểm Jaccard chỉ thắng
+        // được phép so `>` khi hai câu gần như trùng nguyên văn — toàn bộ vùng Jaccard 0,50–0,83
+        // (chính vùng lexical-review-min muốn bắt) bị nuốt im lặng, đổi lại là một lượt quét toàn
+        // bộ bảng ứng viên ở gần như mọi lần gọi. Trùng trong cùng lô sinh ra đã được
+        // checkWithinBatch() bắt bằng đúng vector E5.
         return new DuplicateCheckResult(
                 best,
                 matchedId,
@@ -457,45 +469,6 @@ public class DuplicateCheckService {
                 matchedStem,
                 best >= properties.getDuplicate().getLexicalStrongMin(),
                 best >= properties.getDuplicate().getLexicalReviewMin()
-        );
-    }
-
-    private DuplicateCheckResult lexicalCandidateCheck(String stem, Set<Long> excludedCandidateIds) {
-        double best = 0;
-        Long matchedId = null;
-        String matchedStem = null;
-        int page = 0;
-        int pageSize = Math.max(1, embeddingProperties.getLexicalPageSize());
-
-        List<DocumentQuestionCandidate> candidatePage;
-        do {
-            candidatePage = candidateRepository.findByStatusIn(
-                    COMPARABLE_CANDIDATE_STATUSES, PageRequest.of(page++, pageSize));
-            for (DocumentQuestionCandidate candidate : candidatePage) {
-                if (excludedCandidateIds.contains(candidate.getId())) {
-                    continue;
-                }
-                double score = similarity(stem, candidate.getStem());
-                if (score > best) {
-                    best = score;
-                    matchedId = candidate.getId();
-                    matchedStem = candidate.getStem();
-                }
-                if (best >= properties.getDuplicate().getLexicalStrongMin()) {
-                    break;
-                }
-            }
-        } while (!candidatePage.isEmpty() && candidatePage.size() == pageSize
-                && best < properties.getDuplicate().getLexicalStrongMin());
-
-        return new DuplicateCheckResult(
-                best,
-                matchedId,
-                matchedStem,
-                best >= properties.getDuplicate().getLexicalStrongMin(),
-                best >= properties.getDuplicate().getLexicalReviewMin(),
-                null,
-                "lexical-candidate"
         );
     }
 

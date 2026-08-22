@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  DownloadOutlined,
   EyeOutlined,
-  FilterOutlined,
   ReloadOutlined,
-  SearchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
@@ -14,11 +15,55 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
 import '../styles/EvaluationDashboardPage.css'
 
 const today = new Date().toISOString().slice(0, 10)
 const yearStart = `${new Date().getFullYear()}-01-01`
+const TECHNIQUE_PAGE_SIZE = 100
+
+async function loadAllTechniqueRows(params) {
+  const firstResponse = await competencyApi.getByTechnique({
+    ...params,
+    page: 0,
+    size: TECHNIQUE_PAGE_SIZE,
+  })
+  const firstPage = apiData(firstResponse, null)
+  if (!firstPage) return null
+
+  const totalPages = Math.max(1, Number(firstPage.totalPages) || 1)
+  if (totalPages === 1) return firstPage
+
+  const remainingResponses = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => (
+      competencyApi.getByTechnique({
+        ...params,
+        page: index + 1,
+        size: TECHNIQUE_PAGE_SIZE,
+      })
+    )),
+  )
+
+  return {
+    ...firstPage,
+    items: [
+      ...(firstPage.items || []),
+      ...remainingResponses.flatMap((response) => apiData(response, {})?.items || []),
+    ],
+  }
+}
+
+const EXPORT_HEADERS = [
+  'Mã NV',
+  'Họ và tên',
+  'Khoa / Phòng',
+  'Tổng số lần được kiểm tra',
+  'Số lần đạt',
+  'Tỷ lệ tuân thủ (%)',
+  'Từ ngày',
+  'Đến ngày',
+]
 
 function ComplianceByTechniquePage() {
   const navigate = useNavigate()
@@ -38,8 +83,11 @@ function ComplianceByTechniquePage() {
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-
-  const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
+  const [appliedFilters, setAppliedFilters] = useState({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
+  const effectiveDepartmentId = isAdmin ? appliedFilters.departmentId : departmentId
+  const effectiveKeyword = appliedFilters.keyword
+  const effectiveFromDate = appliedFilters.fromDate
+  const effectiveToDate = appliedFilters.toDate
 
   useEffect(() => {
     const timer = window.setTimeout(async () => {
@@ -68,6 +116,17 @@ function ComplianceByTechniquePage() {
     return () => window.clearTimeout(timer)
   }, [isAdmin, showToast])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const loadData = useCallback(async () => {
     if (!departmentId && !isAdmin) {
       showToast('Vui lòng chọn khoa/phòng', 'warning')
@@ -75,20 +134,19 @@ function ComplianceByTechniquePage() {
     }
     setLoading(true)
     try {
-      const response = await competencyApi.getByTechnique({
-        departmentId,
-        keyword: keyword || undefined,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
+      const responseData = await loadAllTechniqueRows({
+        departmentId: effectiveDepartmentId || undefined,
+        keyword: effectiveKeyword || undefined,
+        fromDate: effectiveFromDate || undefined,
+        toDate: effectiveToDate || undefined,
       })
-      const responseData = apiData(response, null)
       setData(responseData)
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setLoading(false)
     }
-  }, [departmentId, fromDate, isAdmin, keyword, toDate, showToast])
+  }, [departmentId, effectiveDepartmentId, effectiveFromDate, effectiveKeyword, effectiveToDate, isAdmin, showToast])
 
   useEffect(() => {
     if (!departmentId && !isAdmin) return undefined
@@ -96,96 +154,104 @@ function ComplianceByTechniquePage() {
     return () => window.clearTimeout(timer)
   }, [departmentId, isAdmin, loadData])
 
+  // `data.items` chính là kết quả của bộ lọc đang áp dụng (backend lọc theo khoa, từ khóa và
+  // khoảng ngày), nên file xuất ra luôn khớp đúng những gì đang hiển thị trên bảng.
+  const handleExport = () => {
+    const rows = (data?.items || []).map((item) => [
+      item.employeeCode,
+      item.employeeName,
+      item.departmentName || data?.departmentName || '',
+      item.evaluationCount || 0,
+      item.passCount || 0,
+      item.passRate != null ? item.passRate : 0,
+      effectiveFromDate,
+      effectiveToDate,
+    ])
+    downloadCsv(exportFileName('tuan-thu-chung'), EXPORT_HEADERS, rows)
+  }
+
   const breadcrumbs = [
-    { label: 'Dashboard', link: dashboardPath },
-    { label: 'Đánh giá' },
-    { label: 'Tuân thủ quy trình, quy định' },
+    { label: 'Giám sát tuân thủ' },
+    { label: 'Tuân thủ chung' },
   ]
 
-  const totalCount = data?.items ? data.items.length : 0
+  const totalCount = Number(data?.totalElements) || data?.items?.length || 0
   const activeFilterCount = [
-    isAdmin && departmentId,
-    fromDate && fromDate !== yearStart,
-    toDate && toDate !== today,
+    effectiveKeyword,
+    isAdmin && appliedFilters.departmentId,
+    effectiveFromDate && effectiveFromDate !== yearStart,
+    effectiveToDate && effectiveToDate !== today,
   ].filter(Boolean).length
 
-  return (
-    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ quy trình, quy định' : undefined}>
-            <div className="evd-page">
-              <section className="compliance-toolbar admin-control-toolbar" aria-label="Công cụ tuân thủ theo nhân viên">
-                <div className="admin-control-toolbar__main">
-                  <div className="admin-control-toolbar__controls">
-                    <div className="compliance-toolbar__search admin-control-toolbar__search">
-                      <SearchOutlined />
-                      <input
-                        aria-label="Tìm theo tên nhân viên"
-                        value={keyword}
-                        onChange={(event) => setKeyword(event.target.value)}
-                        placeholder="Tìm theo tên nhân viên..."
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-controls="compliance-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined />
-                      Bộ lọc
-                      {activeFilterCount > 0 && (
-                        <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
-                      )}
-                    </button>
-                  </div>
-                  <div className="compliance-toolbar__actions">
-                    <span>{totalCount} nhân viên</span>
-                    <button
-                      type="button"
-                      className="compliance-toolbar__reload"
-                      onClick={loadData}
-                      disabled={loading}
-                      aria-label="Tải lại dữ liệu"
-                      title="Tải lại"
-                    >
-                      <ReloadOutlined spin={loading} />
-                    </button>
-                  </div>
-                </div>
+  function applyFilters() {
+    if (fromDate && toDate && fromDate > toDate) {
+      showToast('Từ ngày không được sau đến ngày', 'warning')
+      return
+    }
+    setAppliedFilters({ departmentId, keyword: keyword.trim(), fromDate, toDate })
+    setIsFilterOpen(false)
+  }
 
-                {isFilterOpen && (
-                  <div id="compliance-filter-panel" className="compliance-filter-panel admin-control-toolbar__panel">
-                    <label className="admin-control-toolbar__field">
-                      <span>Khoa/phòng</span>
-                      {isAdmin ? (
-                        <SearchableSelect
-                          value={departmentId}
-                          onChange={setDepartmentId}
-                          options={[
-                            { value: '', label: 'Toàn viện' },
-                            ...departments.map((department) => ({ value: department.id, label: department.name })),
-                          ]}
-                          placeholder="Toàn viện"
-                          searchPlaceholder="Tìm tên khoa/phòng..."
-                          ariaLabel="Tìm và chọn khoa/phòng"
-                        />
-                      ) : (
-                        <div className="compliance-filter-panel__fixed">
-                          {departments[0]?.name || 'Khoa của tôi'}
-                        </div>
-                      )}
-                    </label>
-                    <label className="admin-control-toolbar__field">
-                      <span>Từ ngày</span>
-                      <input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => setFromDate(event.target.value)} />
-                    </label>
-                    <label className="admin-control-toolbar__field">
-                      <span>Đến ngày</span>
-                      <input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => setToDate(event.target.value)} />
-                    </label>
-                  </div>
-                )}
-              </section>
+  function resetFilters() {
+    setKeyword('')
+    setFromDate(yearStart)
+    setToDate(today)
+    setDepartmentId(isAdmin ? '' : departmentId)
+    setAppliedFilters({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
+  }
+
+  const toolbarActions = (
+    <div className="compliance-toolbar__actions">
+      <span>{totalCount} nhân viên</span>
+      <button type="button" className="compliance-toolbar__export" onClick={handleExport}
+        disabled={loading || totalCount === 0} title="Xuất danh sách đang lọc ra file Excel">
+        <DownloadOutlined /> Xuất Excel
+      </button>
+      <button type="button" className="compliance-toolbar__reload" onClick={loadData}
+        disabled={loading} aria-label="Tải lại dữ liệu" title="Tải lại">
+        <ReloadOutlined spin={loading} />
+      </button>
+    </div>
+  )
+
+  const filterFields = (
+    <>
+      {isAdmin ? (
+          <FilterSelectField label="Khoa/phòng" value={departmentId} onChange={setDepartmentId}
+            options={[{ value: '', label: 'Toàn viện' }, ...departments.map((department) => ({ value: department.id, label: department.name }))]}
+            placeholder="Toàn viện" searchable searchPlaceholder="Tìm tên khoa/phòng..." />
+        ) : <label className="admin-control-toolbar__field"><span>Khoa/phòng</span><div className="compliance-filter-panel__fixed">{departments[0]?.name || 'Khoa của tôi'}</div></label>}
+      <label className="admin-control-toolbar__field"><span>Từ ngày</span>
+        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={setFromDate} />
+      </label>
+      <label className="admin-control-toolbar__field"><span>Đến ngày</span>
+        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={setToDate} />
+      </label>
+    </>
+  )
+
+  return (
+    <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? 'Tuân thủ chung' : undefined}>
+            <div className="evd-page">
+              <AppliedFilterToolbar
+                activeCount={activeFilterCount}
+                actions={toolbarActions}
+                ariaLabel="Công cụ tuân thủ chung"
+                className="compliance-toolbar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setKeyword}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="compliance-filter-panel"
+                panelId="compliance-filter-panel"
+                searchAriaLabel="Tìm theo tên nhân viên"
+                searchClassName="compliance-toolbar__search"
+                searchPlaceholder="Tìm theo tên nhân viên..."
+                searchValue={keyword}
+              >
+                {filterFields}
+              </AppliedFilterToolbar>
 
               <div className="evd-card evd-x-table-card compliance-table-card">
                 <table className="evd-table admin-table-uppercase">
@@ -207,7 +273,7 @@ function ComplianceByTechniquePage() {
                     ) : !data || !data.items || data.items.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="ch-empty">
-                          {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
+                          {!departmentId ? 'Vui lòng chọn khoa/phòng.' : 'Chưa có dữ liệu tuân thủ chung.'}
                         </td>
                       </tr>
                     ) : (
@@ -226,8 +292,8 @@ function ComplianceByTechniquePage() {
                               className="evd-btn-text admin-table-action admin-table-action--icon admin-table-action--primary"
                               onClick={() => {
                                 const params = new URLSearchParams()
-                                params.set('from', fromDate)
-                                params.set('to', toDate)
+                                params.set('from', effectiveFromDate)
+                                params.set('to', effectiveToDate)
                                 navigate(
                                   isAdmin
                                     ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`

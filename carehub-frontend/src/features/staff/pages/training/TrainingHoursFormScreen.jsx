@@ -14,6 +14,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
 import { getApiErrorMessage } from '../../../../shared/api/apiError.js'
@@ -54,6 +55,58 @@ const clampDraftToToday = (draft) => {
 const formatDisplayDate = (value) => {
   const { year, month, day } = getDateParts(value)
   return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`
+}
+
+function MobileCustomSelect({ value, onChange, options }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [isOpen])
+
+  const selectedOption = options.find(opt => opt.value === value)
+
+  return (
+    <div className="th-mobile-custom-select-container" ref={containerRef} onClick={e => e.stopPropagation()}>
+      <button
+        type="button"
+        className="th-mobile-custom-select-trigger"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span>{selectedOption ? selectedOption.label : value}</span>
+        <DownOutlined className="th-mobile-custom-select-arrow" />
+      </button>
+
+      {isOpen && (
+        <ul className="th-mobile-custom-select-options" role="listbox">
+          {options.map(opt => (
+            <li
+              key={opt.value}
+              className={`th-mobile-custom-select-option${opt.value === value ? ' is-selected' : ''}`}
+              role="option"
+              aria-selected={opt.value === value}
+              onClick={() => {
+                onChange(opt.value)
+                setIsOpen(false)
+              }}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function SearchableDropdown({
@@ -740,11 +793,10 @@ function TrainingHoursFormScreen() {
                         Ngày đào tạo liên tục <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <div className="th-desktop-date-picker" style={{ position: 'relative' }}>
-                        <input
-                          type="date"
+                        <KeyboardDatePicker
                           value={form.date}
                           max={todayIso()}
-                          onChange={e => setForm({ ...form, date: e.target.value })}
+                          onChange={val => setForm({ ...form, date: val })}
                           style={{ ...fieldStyle('date'), paddingLeft: 38 }}
                         />
                         <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}>
@@ -1066,44 +1118,47 @@ function TrainingHoursFormScreen() {
             <div className="th-mobile-date-fields">
               <label>
                 <span>Ngày</span>
-                <select
+                <MobileCustomSelect
                   value={mobileDateDraft.day}
-                  onChange={event => updateMobileDateDraft({ day: Number(event.target.value) })}
-                >
-                  {(() => {
+                  onChange={val => updateMobileDateDraft({ day: val })}
+                  options={(() => {
                     const today = getDateParts(todayIso())
                     const isCurrentMonth = mobileDateDraft.year === today.year && mobileDateDraft.month === today.month
                     const maxDay = isCurrentMonth
                       ? today.day
                       : new Date(mobileDateDraft.year, mobileDateDraft.month, 0).getDate()
-                    return Array.from({ length: maxDay }, (_, index) => index + 1)
-                      .map(day => <option key={day} value={day}>{day}</option>)
+                    return Array.from({ length: maxDay }, (_, index) => {
+                      const d = index + 1
+                      return { value: d, label: String(d).padStart(2, '0') }
+                    })
                   })()}
-                </select>
+                />
               </label>
               <label>
                 <span>Tháng</span>
-                <select
+                <MobileCustomSelect
                   value={mobileDateDraft.month}
-                  onChange={event => updateMobileDateDraft({ month: Number(event.target.value) })}
-                >
-                  {(() => {
+                  onChange={val => updateMobileDateDraft({ month: val })}
+                  options={(() => {
                     const today = getDateParts(todayIso())
                     const maxMonth = mobileDateDraft.year === today.year ? today.month : 12
-                    return Array.from({ length: maxMonth }, (_, index) => index + 1)
-                      .map(month => <option key={month} value={month}>Tháng {month}</option>)
+                    return Array.from({ length: maxMonth }, (_, index) => {
+                      const m = index + 1
+                      return { value: m, label: `Tháng ${m}` }
+                    })
                   })()}
-                </select>
+                />
               </label>
               <label>
                 <span>Năm</span>
-                <select
+                <MobileCustomSelect
                   value={mobileDateDraft.year}
-                  onChange={event => updateMobileDateDraft({ year: Number(event.target.value) })}
-                >
-                  {Array.from({ length: 21 }, (_, index) => new Date().getFullYear() - index)
-                    .map(year => <option key={year} value={year}>{year}</option>)}
-                </select>
+                  onChange={val => updateMobileDateDraft({ year: val })}
+                  options={Array.from({ length: 21 }, (_, index) => {
+                    const y = new Date().getFullYear() - index
+                    return { value: y, label: String(y) }
+                  })}
+                />
               </label>
             </div>
 

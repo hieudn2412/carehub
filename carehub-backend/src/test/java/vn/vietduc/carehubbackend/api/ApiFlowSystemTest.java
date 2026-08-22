@@ -260,7 +260,7 @@ class ApiFlowSystemTest extends AbstractApiSystemTest {
         // Step 4: refreshing is now refused.
         assertError(post(API + "/auth/refresh-token", null, """
                 {"refreshToken":"%s"}
-                """.formatted(refreshToken)), HttpStatus.UNAUTHORIZED, "AUTH_001");
+                """.formatted(refreshToken)), HttpStatus.UNAUTHORIZED, "AUTH_SESSION_INVALID");
 
         // Step 5: the access token issued before logout still authenticates — there is no server-side
         // session or token blacklist, so it stays valid for its remaining 15-minute lifetime. Clients

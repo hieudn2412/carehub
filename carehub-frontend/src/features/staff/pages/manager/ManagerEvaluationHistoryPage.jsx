@@ -39,7 +39,7 @@ function getVisiblePages(currentPage, totalPages) {
 }
 
 function ManagerEvaluationHistoryPage({
-  historyPath = '/manager/quality/history',
+  historyPath = '/staff/quality/history',
 }) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')

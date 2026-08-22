@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import ActivityTypeListPage from './ActivityTypeListPage.jsx'
 import { trainingApi } from '../api/trainingApi.js'
@@ -54,5 +54,25 @@ describe('ActivityTypeListPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Quy tắc tính giờ' })).not.toBeInTheDocument()
     expect(screen.queryByText('Tối đa 8 giờ')).not.toBeInTheDocument()
     expect(screen.getAllByRole('columnheader')).toHaveLength(4)
+  })
+
+  it('only requests filtered data after the draft filters are applied', async () => {
+    render(<ActivityTypeListPage />)
+
+    await waitFor(() => expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(1))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Tìm cách thức đào tạo' }), { target: { value: 'trực tiếp' } })
+    expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bộ lọc' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'Trạng thái' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Hoạt động' }))
+    expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+    await waitFor(() => expect(trainingApi.getActivityTypes).toHaveBeenCalledTimes(2))
+    expect(trainingApi.getActivityTypes).toHaveBeenLastCalledWith(expect.objectContaining({
+      keyword: 'trực tiếp',
+      isActive: true,
+    }))
   })
 })

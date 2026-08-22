@@ -5,20 +5,16 @@ import { configureHttpClientAuth, httpClient } from './httpClient.js'
 
 const session = {
   accessToken: null,
-  refreshToken: null,
   requiresFirstLoginSetup: false,
 }
 
 const tokenStorage = {
   clear() {
     session.accessToken = null
-    session.refreshToken = null
     session.requiresFirstLoginSetup = false
   },
   getAccessToken: () => session.accessToken,
-  getRefreshToken: () => session.refreshToken,
   setAccessToken: value => { session.accessToken = value || null },
-  setRefreshToken: value => { session.refreshToken = value || null },
   setRequiresFirstLoginSetup: value => { session.requiresFirstLoginSetup = Boolean(value) },
 }
 
@@ -103,10 +99,10 @@ describe('httpClient response interceptor — silent refresh', () => {
 
   it('L1-FE-04 | BC-TRUE: 401 → refresh succeeds → original request is retried with the new token', async () => {
     tokenStorage.setAccessToken('stale')
-    tokenStorage.setRefreshToken('refresh-1')
     let ordersCalls = 0
     let refreshCalls = 0
     let retryAuthorization = null
+    let refreshBody = null
 
     server.use(
       http.get(`${API_BASE_URL}/orders`, ({ request }) => {
@@ -117,10 +113,11 @@ describe('httpClient response interceptor — silent refresh', () => {
         retryAuthorization = request.headers.get('Authorization')
         return HttpResponse.json({ data: ['ok'] })
       }),
-      http.post(`${API_BASE_URL}/auth/refresh-token`, () => {
+      http.post(`${API_BASE_URL}/auth/refresh-token`, async ({ request }) => {
         refreshCalls += 1
+        refreshBody = await request.json()
         return HttpResponse.json({
-          data: { accessToken: 'fresh', refreshToken: 'refresh-2', requiresFirstLoginSetup: false },
+          data: { accessToken: 'fresh', refreshToken: 'deprecated-refresh-2', requiresFirstLoginSetup: false },
         })
       }),
     )
@@ -128,16 +125,15 @@ describe('httpClient response interceptor — silent refresh', () => {
     const response = await httpClient.get('/orders')
 
     expect(refreshCalls).toBe(1)
+    expect(refreshBody).toEqual({})
     expect(ordersCalls).toBe(2)
     expect(retryAuthorization).toBe('Bearer fresh')
     expect(response.data.data).toEqual(['ok'])
     expect(tokenStorage.getAccessToken()).toBe('fresh')
-    expect(tokenStorage.getRefreshToken()).toBe('refresh-2')
   })
 
   it('L1-FE-05 | BC-FALSE + Negative: 401 → refresh fails → session cleared and redirected to login', async () => {
     tokenStorage.setAccessToken('stale')
-    tokenStorage.setRefreshToken('refresh-1')
     server.use(
       http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })),
       http.post(`${API_BASE_URL}/auth/refresh-token`, () => new HttpResponse(null, { status: 401 })),
@@ -146,30 +142,36 @@ describe('httpClient response interceptor — silent refresh', () => {
     await expect(httpClient.get('/orders')).rejects.toBeDefined()
 
     expect(tokenStorage.getAccessToken()).toBeNull()
-    expect(tokenStorage.getRefreshToken()).toBeNull()
     expect(window.location.replace).toHaveBeenCalledWith('/auth/login')
   })
 
-  it('L1-FE-06 | CC-TRUE + Negative: 401 with no refresh token → no refresh attempt, straight to login', async () => {
+  it('L1-FE-06 | Cookie session: 401 with no refresh token in storage still attempts refresh', async () => {
     tokenStorage.setAccessToken('stale')
     let refreshCalls = 0
+    let retryAuthorization = null
     server.use(
-      http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })),
+      http.get(`${API_BASE_URL}/orders`, ({ request }) => {
+        if (refreshCalls > 0) {
+          retryAuthorization = request.headers.get('Authorization')
+          return HttpResponse.json({ data: 'ok' })
+        }
+        return new HttpResponse(null, { status: 401 })
+      }),
       http.post(`${API_BASE_URL}/auth/refresh-token`, () => {
         refreshCalls += 1
         return HttpResponse.json({ data: { accessToken: 'fresh' } })
       }),
     )
 
-    await expect(httpClient.get('/orders')).rejects.toBeDefined()
+    await expect(httpClient.get('/orders')).resolves.toMatchObject({ data: { data: 'ok' } })
 
-    expect(refreshCalls).toBe(0)
-    expect(window.location.replace).toHaveBeenCalledWith('/auth/login')
+    expect(refreshCalls).toBe(1)
+    expect(retryAuthorization).toBe('Bearer fresh')
+    expect(window.location.replace).not.toHaveBeenCalled()
   })
 
   it('L1-FE-07 | EP-Invalid + Negative: refresh response without accessToken → treated as a failure', async () => {
     tokenStorage.setAccessToken('stale')
-    tokenStorage.setRefreshToken('refresh-1')
     server.use(
       http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })),
       http.post(`${API_BASE_URL}/auth/refresh-token`, () => HttpResponse.json({ data: {} })),
@@ -190,7 +192,6 @@ describe('httpClient response interceptor — silent refresh', () => {
     '/auth/forgot-password',
     '/auth/reset-password',
   ])('L1-FE-08 | CC-TRUE: a 401 on %s never triggers a refresh', async (path) => {
-    tokenStorage.setRefreshToken('refresh-1')
     let refreshCalls = 0
     server.use(
       http.post(`${API_BASE_URL}${path}`, () => new HttpResponse(null, { status: 401 })),
@@ -206,14 +207,13 @@ describe('httpClient response interceptor — silent refresh', () => {
   })
 
   it('L1-FE-53 | CC-TRUE: a 401 from /auth/refresh-token itself is not retried', async () => {
-    tokenStorage.setRefreshToken('refresh-1')
     let refreshCalls = 0
     server.use(http.post(`${API_BASE_URL}/auth/refresh-token`, () => {
       refreshCalls += 1
       return new HttpResponse(null, { status: 401 })
     }))
 
-    await expect(httpClient.post('/auth/refresh-token', { refreshToken: 'refresh-1' }))
+    await expect(httpClient.post('/auth/refresh-token', {}))
       .rejects.toBeDefined()
 
     // Exactly one call: the ignore-list keeps the interceptor from refreshing the refresh call.
@@ -223,7 +223,6 @@ describe('httpClient response interceptor — silent refresh', () => {
 
   it('L1-FE-09 | CC-TRUE: a retried request that 401s again is rejected instead of looping', async () => {
     tokenStorage.setAccessToken('stale')
-    tokenStorage.setRefreshToken('refresh-1')
     let ordersCalls = 0
     let refreshCalls = 0
     server.use(
@@ -246,7 +245,6 @@ describe('httpClient response interceptor — silent refresh', () => {
 
   it('L1-FE-10 | CC-FALSE: a non-401 error is passed through untouched', async () => {
     tokenStorage.setAccessToken('access-1')
-    tokenStorage.setRefreshToken('refresh-1')
     let refreshCalls = 0
     server.use(
       http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 500 })),
@@ -265,7 +263,6 @@ describe('httpClient response interceptor — silent refresh', () => {
 
   it('L1-FE-11 | State: two concurrent 401s share a single refresh call (dedup)', async () => {
     tokenStorage.setAccessToken('stale')
-    tokenStorage.setRefreshToken('refresh-1')
     const callCounts = { orders: 0, exams: 0 }
     let refreshCalls = 0
 
@@ -284,7 +281,7 @@ describe('httpClient response interceptor — silent refresh', () => {
       }),
       http.post(`${API_BASE_URL}/auth/refresh-token`, async () => {
         refreshCalls += 1
-        return HttpResponse.json({ data: { accessToken: 'fresh', refreshToken: 'refresh-2' } })
+        return HttpResponse.json({ data: { accessToken: 'fresh', refreshToken: 'deprecated-refresh-2' } })
       }),
     )
 
@@ -301,11 +298,29 @@ describe('httpClient response interceptor — silent refresh', () => {
   it('L1-FE-12 | BC-FALSE: already on /auth/login → session cleared without a redundant redirect', async () => {
     window.location.pathname = '/auth/login'
     tokenStorage.setAccessToken('stale')
-    server.use(http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })))
+    server.use(
+      http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })),
+      http.post(`${API_BASE_URL}/auth/refresh-token`, () => new HttpResponse(null, { status: 401 })),
+    )
 
     await expect(httpClient.get('/orders')).rejects.toBeDefined()
 
     expect(tokenStorage.getAccessToken()).toBeNull()
+    expect(window.location.replace).not.toHaveBeenCalled()
+  })
+
+  it('Network/5xx refresh failures keep the in-memory session so the app can show retry UI', async () => {
+    tokenStorage.setAccessToken('stale')
+    server.use(
+      http.get(`${API_BASE_URL}/orders`, () => new HttpResponse(null, { status: 401 })),
+      http.post(`${API_BASE_URL}/auth/refresh-token`, () => new HttpResponse(null, { status: 503 })),
+    )
+
+    await expect(httpClient.get('/orders')).rejects.toMatchObject({
+      response: { status: 503 },
+    })
+
+    expect(tokenStorage.getAccessToken()).toBe('stale')
     expect(window.location.replace).not.toHaveBeenCalled()
   })
 })

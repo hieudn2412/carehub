@@ -10,6 +10,9 @@ import vn.vietduc.carehubbackend.training.dto.response.TrainingDashboardSummaryR
 import vn.vietduc.carehubbackend.training.service.TrainingStatusService;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.repository.DepartmentRepository;
+import vn.vietduc.carehubbackend.user.repository.UserRepository;
+import vn.vietduc.carehubbackend.user.entity.User;
+import vn.vietduc.carehubbackend.user.entity.UserStatus;
 
 import java.math.BigDecimal;
 import java.time.Clock;
@@ -31,6 +34,7 @@ class ManagerDashboardServiceTest {
     private final TrainingStatusService trainingStatusService = mock(TrainingStatusService.class);
     private final EvaluationDashboardService evaluationDashboardService = mock(EvaluationDashboardService.class);
     private final DepartmentRepository departmentRepository = mock(DepartmentRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-07-25T03:00:00Z"), ZoneOffset.UTC);
     private ManagerDashboardService service;
 
@@ -41,8 +45,28 @@ class ManagerDashboardServiceTest {
                 trainingStatusService,
                 evaluationDashboardService,
                 departmentRepository,
+                userRepository,
                 clock
         );
+    }
+
+    @Test
+    void employeeLookupOnlyReturnsAnActiveEmployeeFromTheManagersDepartment() {
+        Department ownDepartment = Department.builder().id(10L).name("Khoa A").build();
+        Department otherDepartment = Department.builder().id(11L).name("Khoa B").build();
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus("NV01", UserStatus.ACTIVE))
+                .thenReturn(Optional.of(User.builder().id(7L).employeeCode("NV01").name("Nhân viên A")
+                        .department(ownDepartment).build()));
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus("nv01", UserStatus.ACTIVE))
+                .thenReturn(Optional.of(User.builder().id(7L).employeeCode("NV01").name("Nhân viên A")
+                        .department(ownDepartment).build()));
+        when(userRepository.findByEmployeeCodeIgnoreCaseAndIsDeletedFalseAndStatus("NV02", UserStatus.ACTIVE))
+                .thenReturn(Optional.of(User.builder().id(8L).employeeCode("NV02").name("Nhân viên B")
+                        .department(otherDepartment).build()));
+
+        assertThat(service.findEmployee(10L, " nv01 ").found()).isTrue();
+        assertThat(service.findEmployee(10L, "NV01").employeeId()).isEqualTo(7L);
+        assertThat(service.findEmployee(10L, "NV02").found()).isFalse();
     }
 
     @Test
@@ -132,6 +156,8 @@ class ManagerDashboardServiceTest {
                         new BigDecimal("75.00"),
                         new BigDecimal("70.00")
                 ),
+                List.of(),
+                List.of(),
                 List.of()
         );
     }

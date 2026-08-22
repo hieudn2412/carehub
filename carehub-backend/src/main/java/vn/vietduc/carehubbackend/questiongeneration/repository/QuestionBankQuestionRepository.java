@@ -3,6 +3,7 @@ package vn.vietduc.carehubbackend.questiongeneration.repository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionBankQuestion;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionDocument;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.QuestionBankStatus;
@@ -18,7 +19,13 @@ public interface QuestionBankQuestionRepository extends JpaRepository<QuestionBa
     @Deprecated
     List<QuestionBankQuestion> findTop100ByStatus(QuestionBankStatus status);
 
-    List<QuestionBankQuestion> findByStatus(QuestionBankStatus status, Pageable pageable);
+    /**
+     * ORDER BY nằm trong câu truy vấn chứ không để nơi gọi tự truyền {@code Sort}: mọi nơi gọi đều
+     * phân trang để quét HẾT bảng, mà PostgreSQL không đảm bảo thứ tự ổn định giữa các trang khi
+     * không có ORDER BY — trang sau có thể lặp lại hoặc bỏ sót dòng của trang trước.
+     */
+    @Query("SELECT q FROM QuestionBankQuestion q WHERE q.status = :status ORDER BY q.id")
+    List<QuestionBankQuestion> findByStatus(@Param("status") QuestionBankStatus status, Pageable pageable);
 
     List<QuestionBankQuestion> findTop500ByStatusOrderByIdAsc(QuestionBankStatus status);
 

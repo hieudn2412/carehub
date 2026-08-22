@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  FilterOutlined,
   LoadingOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
@@ -22,10 +21,12 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/TrainingDashboardPage.css'
 
 const PAGE_SIZE = 100
@@ -132,17 +133,24 @@ function DashboardContent({ role }) {
     asOf: today,
     status: '',
   })
+  const [appliedFilters, setAppliedFilters] = useState({
+    departmentId: '',
+    professionalFieldId: '',
+    asOf: today,
+    status: '',
+  })
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const managerDepartmentId = profile?.departmentId || ''
+  const effectiveFilters = appliedFilters
   const activeFilterCount = [
-    !isManager && filters.departmentId,
-    filters.professionalFieldId,
-    filters.asOf && filters.asOf !== today,
-    filters.status,
+    !isManager && effectiveFilters.departmentId,
+    effectiveFilters.professionalFieldId,
+    effectiveFilters.asOf && effectiveFilters.asOf !== today,
+    effectiveFilters.status,
   ].filter(Boolean).length
 
   useEffect(() => {
@@ -182,10 +190,10 @@ function DashboardContent({ role }) {
       const response = await trainingApi.getTrainingDashboardSummary({
         departmentId: isManager
           ? managerDepartmentId
-          : filters.departmentId || undefined,
-        professionalFieldId: filters.professionalFieldId || undefined,
-        complianceStatus: filters.status || undefined,
-        asOf: filters.asOf || undefined,
+          : effectiveFilters.departmentId || undefined,
+        professionalFieldId: effectiveFilters.professionalFieldId || undefined,
+        complianceStatus: effectiveFilters.status || undefined,
+        asOf: effectiveFilters.asOf || undefined,
       })
       setSummary(responsePayload(response))
     } catch {
@@ -194,7 +202,7 @@ function DashboardContent({ role }) {
     } finally {
       setLoading(false)
     }
-  }, [filters.asOf, filters.departmentId, filters.professionalFieldId, filters.status, isManager, managerDepartmentId])
+  }, [effectiveFilters.asOf, effectiveFilters.departmentId, effectiveFilters.professionalFieldId, effectiveFilters.status, isManager, managerDepartmentId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadData, 0)
@@ -226,6 +234,26 @@ function DashboardContent({ role }) {
       .slice(0, 12)
   }, [summary])
 
+  const professionalFieldData = useMemo(() => {
+    return (summary?.byProfessionalField || [])
+      .map((item) => ({
+        name: item.professionalFieldName || 'Chưa xác định',
+        hours: Number(item.submittedHours) || 0,
+      }))
+      .sort((left, right) => right.hours - left.hours)
+      .slice(0, 12)
+  }, [summary])
+
+  const activityTypeData = useMemo(() => {
+    return (summary?.byActivityType || [])
+      .map((item) => ({
+        name: item.activityTypeName || 'Chưa xác định',
+        hours: Number(item.submittedHours) || 0,
+      }))
+      .sort((left, right) => right.hours - left.hours)
+      .slice(0, 12)
+  }, [summary])
+
   const completionData = [
     { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
     { name: 'Chưa đạt', value: metrics.total - metrics.completed, color: '#ef4444' },
@@ -236,10 +264,10 @@ function DashboardContent({ role }) {
     setError('')
     try {
       const rows = await fetchAll({
-        departmentId: isManager ? managerDepartmentId : filters.departmentId || undefined,
-        professionalFieldId: filters.professionalFieldId || undefined,
-        complianceStatus: filters.status || undefined,
-        asOf: filters.asOf || undefined,
+        departmentId: isManager ? managerDepartmentId : effectiveFilters.departmentId || undefined,
+        professionalFieldId: effectiveFilters.professionalFieldId || undefined,
+        complianceStatus: effectiveFilters.status || undefined,
+        asOf: effectiveFilters.asOf || undefined,
       })
       exportCsv(rows.map(normalizeEmployee))
     } catch {
@@ -249,88 +277,89 @@ function DashboardContent({ role }) {
     }
   }
 
+  function resetFilters() {
+    const initialFilters = { departmentId: '', professionalFieldId: '', asOf: today, status: '' }
+    setFilters(initialFilters)
+    setAppliedFilters(initialFilters)
+  }
+
+  function applyFilters() {
+    setAppliedFilters({ ...filters })
+    setIsFilterOpen(false)
+  }
+
+  const exportButton = (
+    <button
+      type="button"
+      className="training-dashboard__export"
+      onClick={handleExport}
+      disabled={loading || exporting || metrics.total === 0}
+    >
+      {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+      {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
+    </button>
+  )
+
+  const filterFields = (
+    <>
+      {isManager ? (
+        <label className="admin-control-toolbar__field"><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
+      ) : (
+          <FilterSelectField
+            label="Khoa/Phòng"
+            value={filters.departmentId}
+            onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
+            options={[
+              { value: '', label: 'Toàn viện' },
+              ...departments.map((department) => ({ value: department.id, label: department.name })),
+            ]}
+            placeholder="Toàn viện"
+            searchable
+            searchPlaceholder="Tìm tên khoa/phòng..."
+          />
+      )}
+        <FilterSelectField
+          label="Lĩnh vực chuyên môn"
+          value={filters.professionalFieldId}
+          onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
+          options={[
+            { value: '', label: 'Tất cả lĩnh vực' },
+            ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
+          ]}
+          placeholder="Tất cả lĩnh vực"
+          searchable
+          searchPlaceholder="Tìm tên lĩnh vực..."
+        />
+      <label className="admin-control-toolbar__field">
+        <span>Tính đến ngày</span>
+        <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
+      </label>
+      <FilterSelectField
+        label="Trạng thái"
+        value={filters.status}
+        onChange={(value) => setFilters((current) => ({ ...current, status: value }))}
+        options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'COMPLIANT', label: 'Đạt' }, { value: 'NON_COMPLIANT', label: 'Chưa đạt' }]}
+        placeholder="Tất cả trạng thái"
+      />
+    </>
+  )
+
   return (
     <div className="training-dashboard">
-      <section className="training-dashboard__toolbar admin-control-toolbar" aria-label="Công cụ dashboard giờ đào tạo">
-        <div className="admin-control-toolbar__main">
-          <div className="admin-control-toolbar__controls">
-            <button
-              type="button"
-              className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-              aria-expanded={isFilterOpen}
-              aria-controls="training-dashboard-filter-panel"
-              onClick={() => setIsFilterOpen((current) => !current)}
-            >
-              <FilterOutlined />
-              Bộ lọc
-              {activeFilterCount > 0 && (
-                <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
-              )}
-            </button>
-          </div>
-          <button
-            type="button"
-            className="training-dashboard__export"
-            onClick={handleExport}
-            disabled={loading || exporting || metrics.total === 0}
-          >
-            {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
-            {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
-          </button>
-        </div>
-
-        {isFilterOpen && (
-          <div
-            id="training-dashboard-filter-panel"
-            className="training-dashboard__filter-panel admin-control-toolbar__panel"
-          >
-            <label>
-              <span>Khoa/Phòng</span>
-              {isManager ? (
-                <div>{profile?.departmentName || 'Khoa của tôi'}</div>
-              ) : (
-                <SearchableSelect
-                  value={filters.departmentId}
-                  onChange={(value) => setFilters((current) => ({ ...current, departmentId: value }))}
-                  options={[
-                    { value: '', label: 'Toàn viện' },
-                    ...departments.map((department) => ({ value: department.id, label: department.name })),
-                  ]}
-                  placeholder="Toàn viện"
-                  searchPlaceholder="Tìm tên khoa/phòng..."
-                  ariaLabel="Tìm và chọn khoa/phòng"
-                />
-              )}
-            </label>
-            <label>
-              <span>Lĩnh vực chuyên môn</span>
-              <SearchableSelect
-                value={filters.professionalFieldId}
-                onChange={(value) => setFilters((current) => ({ ...current, professionalFieldId: value }))}
-                options={[
-                  { value: '', label: 'Tất cả lĩnh vực' },
-                  ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                ]}
-                placeholder="Tất cả lĩnh vực"
-                searchPlaceholder="Tìm tên lĩnh vực..."
-                ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-              />
-            </label>
-            <label>
-              <span>Tính đến ngày</span>
-              <input type="date" value={filters.asOf} max={today} onChange={(event) => setFilters((current) => ({ ...current, asOf: event.target.value }))} />
-            </label>
-            <label>
-              <span>Trạng thái</span>
-              <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
-                <option value="">Tất cả trạng thái</option>
-                <option value="COMPLIANT">Đạt</option>
-                <option value="NON_COMPLIANT">Chưa đạt</option>
-              </select>
-            </label>
-          </div>
-        )}
-      </section>
+      <AppliedFilterToolbar
+        activeCount={activeFilterCount}
+        actions={exportButton}
+        ariaLabel="Công cụ dashboard giờ đào tạo"
+        className="training-dashboard__toolbar"
+        isOpen={isFilterOpen}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        onToggle={() => setIsFilterOpen((current) => !current)}
+        panelClassName="training-dashboard__filter-panel"
+        panelId="training-dashboard-filter-panel"
+      >
+        {filterFields}
+      </AppliedFilterToolbar>
 
       {error && <div className="training-dashboard__alert"><ExclamationCircleOutlined /> {error}</div>}
 
@@ -397,6 +426,46 @@ function DashboardContent({ role }) {
               )}
             </section>
           )}
+
+          <section className="training-dashboard__charts training-dashboard__charts--equal">
+            <article className="training-chart-card">
+              <header><h2>Tổng giờ đào tạo theo lĩnh vực</h2><span>Tối đa 12 lĩnh vực</span></header>
+              {professionalFieldData.length === 0 ? (
+                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo lĩnh vực trong phạm vi này.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={310}>
+                  <BarChart data={professionalFieldData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                    <Bar dataKey="hours" fill="#0284c7" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </article>
+
+            <article className="training-chart-card">
+              <header><h2>Tổng giờ đào tạo theo hình thức</h2><span>Tối đa 12 hình thức</span></header>
+              {activityTypeData.length === 0 ? (
+                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo hình thức trong phạm vi này.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={310}>
+                  <BarChart data={activityTypeData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                    <Bar dataKey="hours" fill="#0f9f7a" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </article>
+          </section>
         </>
       )}
     </div>

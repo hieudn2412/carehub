@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DownloadOutlined, EyeOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationImportApi } from '../api/evaluationImportApi.js'
@@ -82,13 +83,13 @@ function EvaluationImportHistoryPage() {
                   <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm file, người import, mã import..." />
                 </div>
                 <AdminFilterDisclosure activeCount={status ? 1 : 0}>
-                  <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                    <option value="">Trạng thái</option>
-                    <option value="PREVIEWED">Đã preview</option>
-                    <option value="COMMITTED">Đã import</option>
-                    <option value="FAILED">Thất bại</option>
-                    <option value="CANCELLED">Đã hủy</option>
-                  </select>
+                  <FilterSelectField
+                    label="Trạng thái"
+                    value={status}
+                    onChange={setStatus}
+                    options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'PREVIEWED', label: 'Đã preview' }, { value: 'COMMITTED', label: 'Đã import' }, { value: 'FAILED', label: 'Thất bại' }, { value: 'CANCELLED', label: 'Đã hủy' }]}
+                    placeholder="Tất cả trạng thái"
+                  />
                 </AdminFilterDisclosure>
               </div>
 

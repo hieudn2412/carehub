@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { trainingApi } from '../api/trainingApi.js'
 import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import '../styles/training.css'
 
@@ -180,22 +182,21 @@ function TrainingRecordFormPage() {
               </div>
             ) : null}
 
-            <label>
-              Activity type
-              <select
-                onChange={(event) => updateField('activityTypeId', event.target.value)}
-                required
-                value={form.activityTypeId}
-              >
-                <option value="">Select activity type</option>
-                {(options.activityTypes || []).map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-              {selectedActivityType?.requiresEvidence ? <small>Evidence is required before submit.</small> : null}
-            </label>
+            <FormSelectField
+              label="Activity type"
+              onChange={(value) => updateField('activityTypeId', value)}
+              required
+              value={form.activityTypeId}
+              options={[
+                { value: '', label: 'Select activity type' },
+                ...(options.activityTypes || []).map((item) => ({
+                  value: item.id,
+                  label: item.name
+                }))
+              ]}
+              searchable={false}
+              helpText={selectedActivityType?.requiresEvidence ? 'Evidence is required before submit.' : ''}
+            />
 
             <label>
               Title
@@ -210,18 +211,16 @@ function TrainingRecordFormPage() {
             <div className="training-form-grid training-form-grid--compact">
               <label>
                 Start date
-                <input
-                  onChange={(event) => updateField('startDate', event.target.value)}
+                <KeyboardDatePicker
+                  onChange={(val) => updateField('startDate', val)}
                   required
-                  type="date"
                   value={form.startDate}
                 />
               </label>
               <label>
                 End date
-                <input
-                  onChange={(event) => updateField('endDate', event.target.value)}
-                  type="date"
+                <KeyboardDatePicker
+                  onChange={(val) => updateField('endDate', val)}
                   value={form.endDate}
                 />
               </label>
@@ -239,16 +238,16 @@ function TrainingRecordFormPage() {
             </div>
 
             <div className="training-form-grid training-form-grid--compact">
-              <label>
-                Duration unit
-                <select onChange={(event) => updateField('durationUnit', event.target.value)} value={form.durationUnit}>
-                  {['HOUR', 'LESSON', 'CREDIT', 'DAY', 'MONTH', 'YEAR', 'OTHER'].map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <FormSelectField
+                label="Duration unit"
+                onChange={(value) => updateField('durationUnit', value)}
+                value={form.durationUnit}
+                options={['HOUR', 'LESSON', 'CREDIT', 'DAY', 'MONTH', 'YEAR', 'OTHER'].map((unit) => ({
+                  value: unit,
+                  label: unit
+                }))}
+                searchable={false}
+              />
             </div>
 
             <div className="training-form-grid training-form-grid--compact">

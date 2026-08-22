@@ -100,35 +100,6 @@
   font-weight: 650;
 }
 
-.qbl-filter-panel {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(180px, 260px)) auto;
-  align-items: end;
-  gap: 12px;
-  margin-top: 12px;
-  width: 100%;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 8px;
-  background: #f8fafc;
-  box-sizing: border-box;
-}
-
-.qbl-filter-panel label {
-  display: grid;
-  gap: 6px;
-}
-
-.qbl-filter-panel label > span {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.qbl-filter-panel .qbl-btn-clear {
-  justify-self: start;
-}
-
 .qbl-search-input {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -825,11 +796,6 @@
   }
 
   .qbl-filter-trigger {
-    width: 100%;
-  }
-
-  .qbl-filter-panel {
-    grid-template-columns: 1fr;
     width: 100%;
   }
 

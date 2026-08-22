@@ -6,9 +6,12 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiEmbeddingProperties;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -57,6 +60,52 @@ public class EmbeddingCache {
             annIndex.rebuild(result, versionAtLoad);
         }
         return result;
+    }
+
+    /**
+     * Thêm một câu vừa được duyệt vào cache thay vì xoá sạch rồi nạp lại cả bảng.
+     *
+     * <p>Xoá sạch sau MỖI lần ghi biến một lượt import N dòng thành O(N²) lượt đọc DB: dòng nào
+     * cũng nạp lại toàn bộ embedding chỉ để so trùng rồi lại tự xoá cache của chính mình.</p>
+     *
+     * <p>Chỉ dùng khi tập câu đã duyệt được THÊM vào. Sửa nội dung hay gỡ khỏi APPROVED thì phải
+     * gọi {@link #invalidate()}, vì bản ghi cũ trong cache không còn đúng nữa.</p>
+     *
+     * <p>Hoãn tới sau khi transaction commit: nếu transaction rollback, câu hỏi không tồn tại
+     * nhưng cache vẫn giữ vector của nó và mọi câu sau sẽ bị báo trùng với một bóng ma.</p>
+     */
+    public void appendAfterCommit(QuestionEmbeddingSnapshot snapshot) {
+        if (cache == null || snapshot == null) {
+            return;
+        }
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            append(snapshot);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                append(snapshot);
+            }
+
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    invalidate();
+                }
+            }
+        });
+    }
+
+    /** Copy-on-write: nơi gọi đang lặp trên danh sách cũ nên không được sửa tại chỗ. */
+    private void append(QuestionEmbeddingSnapshot snapshot) {
+        dataVersion.incrementAndGet();
+        cache.asMap().computeIfPresent(APPROVED_STEMS_KEY, (key, cached) -> {
+            List<QuestionEmbeddingSnapshot> updated = new ArrayList<>(cached.size() + 1);
+            updated.addAll(cached);
+            updated.add(snapshot);
+            return List.copyOf(updated);
+        });
     }
 
     /**

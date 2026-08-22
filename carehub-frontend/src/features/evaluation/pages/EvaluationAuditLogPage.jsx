@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { EyeOutlined, FilterOutlined, HistoryOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { EyeOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { evaluationAuditLogApi } from '../api/evaluationAuditLogApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../utils/documentQuestionUi.js'
@@ -37,13 +39,14 @@ function EvaluationAuditLogPage() {
   const [logs, setLogs] = useState([])
   const [selectedLog, setSelectedLog] = useState(null)
   const [filters, setFilters] = useState({ q: '', action: '', entityType: '', actor: '' })
+  const [appliedFilters, setAppliedFilters] = useState({ q: '', action: '', entityType: '', actor: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   const loadLogs = useCallback(async () => {
     setIsLoading(true)
     try {
-      const response = await evaluationAuditLogApi.list(filters)
+      const response = await evaluationAuditLogApi.list(appliedFilters)
       const rows = apiData(response, [])
       setLogs(rows)
       setSelectedLog((current) => rows.find((row) => row.id === current?.id) || rows[0] || null)
@@ -52,47 +55,38 @@ function EvaluationAuditLogPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [filters, showToast])
+  }, [appliedFilters, showToast])
 
   useEffect(() => {
     loadLogs()
   }, [loadLogs])
 
+  useEffect(() => {
+    const nextQuery = filters.q.trim()
+    if (nextQuery === appliedFilters.q) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.q === nextQuery ? current : { ...current, q: nextQuery }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.q, filters.q])
+
   const detailJson = useMemo(() => formatJson(selectedLog?.detailJson), [selectedLog])
   const breadcrumbs = [{ label: 'Audit đánh giá' }]
+  const applyFilters = () => setAppliedFilters({ ...filters, q: filters.q.trim(), actor: filters.actor.trim() })
+  const resetFilters = () => {
+    const emptyFilters = { q: '', action: '', entityType: '', actor: '' }
+    setFilters(emptyFilters)
+    setAppliedFilters(emptyFilters)
+  }
 
   return (
     <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
       <div className="eal-page">
-              <section className="eal-toolbar admin-control-toolbar" aria-label="Công cụ audit đánh giá">
-                <div className="admin-control-toolbar__main">
-                  <div className="admin-control-toolbar__controls">
-                    <div className="eal-toolbar__search admin-control-toolbar__search">
-                      <SearchOutlined />
-                      <input
-                        aria-label="Tìm audit đánh giá"
-                        value={filters.q}
-                        onChange={(event) => setFilters((current) => ({ ...current, q: event.target.value }))}
-                        placeholder="Tìm hành động, người thao tác hoặc mô tả..."
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-controls="evaluation-audit-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined />
-                      Bộ lọc
-                      {[filters.action, filters.entityType, filters.actor].filter(Boolean).length > 0 && (
-                        <span className="admin-control-toolbar__filter-count">
-                          {[filters.action, filters.entityType, filters.actor].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  <div className="eal-toolbar__actions">
+              <AppliedFilterToolbar
+                activeCount={[filters.action, filters.entityType, filters.actor].filter(Boolean).length}
+                actions={<div className="eal-toolbar__actions">
                     <span>{logs.length} bản ghi</span>
                     <button
                       type="button"
@@ -104,33 +98,22 @@ function EvaluationAuditLogPage() {
                     >
                       <ReloadOutlined spin={isLoading} />
                     </button>
-                  </div>
-                </div>
-
-                {isFilterOpen && (
-                  <div id="evaluation-audit-filter-panel" className="eal-filter-panel admin-control-toolbar__panel">
-                  <label>
-                    <span>Hành động</span>
-                    <select
-                      value={filters.action}
-                      onChange={(event) => setFilters((current) => ({ ...current, action: event.target.value }))}
-                    >
-                      {ACTION_OPTIONS.map((option) => (
-                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Đối tượng</span>
-                    <select
-                      value={filters.entityType}
-                      onChange={(event) => setFilters((current) => ({ ...current, entityType: event.target.value }))}
-                    >
-                      {ENTITY_OPTIONS.map((option) => (
-                        <option key={option.value || 'all'} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
+                  </div>}
+                className="eal-toolbar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={(value) => setFilters((current) => ({ ...current, q: value }))}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="eal-filter-panel"
+                panelId="evaluation-audit-filter-panel"
+                searchAriaLabel="Tìm audit đánh giá"
+                searchClassName="eal-toolbar__search"
+                searchPlaceholder="Tìm hành động, người thao tác hoặc mô tả..."
+                searchValue={filters.q}
+              >
+                  <FilterSelectField label="Hành động" value={filters.action} onChange={(value) => setFilters((current) => ({ ...current, action: value }))} options={ACTION_OPTIONS} placeholder="Tất cả hành động" />
+                  <FilterSelectField label="Đối tượng" value={filters.entityType} onChange={(value) => setFilters((current) => ({ ...current, entityType: value }))} options={ENTITY_OPTIONS} placeholder="Tất cả đối tượng" />
                   <label>
                     <span>Người thao tác</span>
                     <input
@@ -139,9 +122,7 @@ function EvaluationAuditLogPage() {
                       placeholder="Tên đăng nhập"
                     />
                   </label>
-                  </div>
-                )}
-              </section>
+              </AppliedFilterToolbar>
 
               <section className="eal-content">
                 <div className="eal-table-panel">

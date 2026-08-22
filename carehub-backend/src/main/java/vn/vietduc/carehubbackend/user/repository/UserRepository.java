@@ -56,6 +56,86 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             FROM User u
             WHERE u.isDeleted = false
               AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+              AND EXISTS (
+                  SELECT ur.id
+                  FROM UserRole ur
+                  WHERE ur.user = u
+                    AND (
+                        UPPER(ur.role.code) = 'STAFF'
+                        OR UPPER(ur.role.code) = 'USER'
+                        OR UPPER(ur.role.code) = 'MANAGER'
+                        OR UPPER(ur.role.code) = 'ROLE_STAFF'
+                        OR UPPER(ur.role.code) = 'ROLE_USER'
+                        OR UPPER(ur.role.code) = 'ROLE_MANAGER'
+                    )
+                    AND (
+                        :roleCode IS NULL
+                        OR UPPER(ur.role.code) = :roleCode
+                        OR UPPER(ur.role.code) = CONCAT('ROLE_', :roleCode)
+                        OR (:roleCode = 'USER' AND UPPER(ur.role.code) IN ('STAFF', 'ROLE_STAFF'))
+                        OR (:roleCode = 'STAFF' AND UPPER(ur.role.code) IN ('USER', 'ROLE_USER'))
+                    )
+              )
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
+            ORDER BY u.name ASC, u.employeeCode ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (:departmentId IS NULL OR u.department.id = :departmentId)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+              AND EXISTS (
+                  SELECT ur.id
+                  FROM UserRole ur
+                  WHERE ur.user = u
+                    AND (
+                        UPPER(ur.role.code) = 'STAFF'
+                        OR UPPER(ur.role.code) = 'USER'
+                        OR UPPER(ur.role.code) = 'MANAGER'
+                        OR UPPER(ur.role.code) = 'ROLE_STAFF'
+                        OR UPPER(ur.role.code) = 'ROLE_USER'
+                        OR UPPER(ur.role.code) = 'ROLE_MANAGER'
+                    )
+                    AND (
+                        :roleCode IS NULL
+                        OR UPPER(ur.role.code) = :roleCode
+                        OR UPPER(ur.role.code) = CONCAT('ROLE_', :roleCode)
+                        OR (:roleCode = 'USER' AND UPPER(ur.role.code) IN ('STAFF', 'ROLE_STAFF'))
+                        OR (:roleCode = 'STAFF' AND UPPER(ur.role.code) IN ('USER', 'ROLE_USER'))
+                    )
+              )
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
+            """)
+    Page<User> searchFormAssignmentAssigneeCandidates(
+            @Param("keyword") String keyword,
+            @Param("departmentId") Long departmentId,
+            @Param("roleCode") String roleCode,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
               AND u.id <> :excludedUserId
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:keyword IS NULL
@@ -78,6 +158,36 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             @Param("keyword") String keyword,
             @Param("excludedUserId") Long excludedUserId,
             @Param("departmentId") Long departmentId,
+            Pageable pageable);
+
+    @EntityGraph(attributePaths = {"department", "position"})
+    @Query(value = """
+            SELECT u
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            ORDER BY u.name ASC, u.id ASC
+            """,
+            countQuery = """
+            SELECT COUNT(u)
+            FROM User u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND u.id <> :excludedUserId
+              AND (:departmentIds IS NULL OR u.department.id IN :departmentIds)
+              AND (:keyword IS NULL
+                   OR LOWER(u.name) LIKE :keyword
+                   OR LOWER(u.employeeCode) LIKE :keyword)
+            """)
+    Page<User> searchActiveFormSubjectsInDepartments(
+            @Param("keyword") String keyword,
+            @Param("excludedUserId") Long excludedUserId,
+            @Param("departmentIds") Collection<Long> departmentIds,
             Pageable pageable);
 
     @Query("""

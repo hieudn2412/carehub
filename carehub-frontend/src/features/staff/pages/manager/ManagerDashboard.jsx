@@ -7,6 +7,7 @@ import { competencyApi } from '../../../evaluation/api/examAssignmentApi.js'
 import { trainingApi } from '../../../training/api/trainingApi.js'
 import { loadCompetencyOverview } from '../../../dashboard/utils/competencyOverview.js'
 import { loadAllDashboardItems } from '../../../dashboard/utils/paginatedDashboard.js'
+import { mapChecklistPerformance } from '../../../dashboard/utils/dashboardChecklistPerformance.js'
 
 function payload(response) {
   return response?.data?.data || {}
@@ -93,15 +94,23 @@ export default function ManagerDashboard() {
         departmentId: filters.departmentId,
         keyword: filters.employeeCode.trim() || undefined,
       }
-      const [competencyResult] = await Promise.allSettled([
+      const employeeFilterActive = Boolean(filters.employeeCode.trim())
+      const [competencyResult, employeeResult] = await Promise.allSettled([
         loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+        employeeFilterActive
+          ? staffApi.getManagerDashboardEmployee({ employeeCode: filters.employeeCode.trim() })
+          : Promise.resolve(null),
       ])
       const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
       if (requestId !== dashboardRequestId.current) return
-      const employeeFilterActive = Boolean(filters.employeeCode.trim())
-      const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+      const matchedEmployee = employeeResult.status === 'fulfilled'
+        ? payload(employeeResult.value)
+        : null
+      const subjectUserId = employeeFilterActive && matchedEmployee?.found
+        ? matchedEmployee.employeeId
+        : employeeFilterActive ? -1 : undefined
       const employeeNotFound = employeeFilterActive
-        && competencyResult.status === 'fulfilled'
+        && employeeResult.status === 'fulfilled'
         && subjectUserId === -1
       setFilteredEmployeeId(subjectUserId)
       const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
@@ -117,14 +126,19 @@ export default function ManagerDashboard() {
           subjectUserId,
         }),
         loadAllDashboardItems(
-          staffApi.getQualityChecklistDashboard,
-          { ...qualityParams, view: 'FILTERED' },
+          staffApi.getManagerQualityHistory,
+          {
+            dateFrom: qualityParams.fromDate,
+            dateTo: qualityParams.toDate,
+            subjectUserId,
+          },
         ),
       ])
       if (requestId !== dashboardRequestId.current) return
       if ([trainingResult, qualityResult, checklistResult, competencyResult]
         .every((result) => result.status === 'rejected')) throw trainingResult.reason
       const checklistItems = checklistResult.status === 'fulfilled' ? checklistResult.value : []
+      const { chart: qualityChart } = mapChecklistPerformance(checklistItems)
       const training = trainingResult.status === 'fulfilled'
         ? payload(trainingResult.value)?.totals || {}
         : {}
@@ -166,16 +180,21 @@ export default function ManagerDashboard() {
           path: '/manager/reports/checklist-dashboard',
         } : unavailable('Không thể tải dữ liệu checklist trong khoa.'),
       })
-      setComplianceChart(checklistItems.map((item) => ({
-        id: item.formId,
-        name: item.formTitle || item.formCode || `Bảng kiểm ${item.formId}`,
-        target: Number(item.targetPercent) || 0,
-        actual: Number(item.complianceRate) || 0,
-        passed: Number(item.passedCount) || 0,
-        total: Number(item.monitoringCount) || 0,
-      })))
-      if (employeeNotFound) {
+      setComplianceChart(qualityChart)
+      if (employeeFilterActive && employeeResult.status === 'rejected') {
+        setError('Không thể xác minh mã nhân viên trong khoa. Vui lòng thử lại.')
+      } else if (employeeNotFound) {
         setError(`Không tìm thấy nhân viên có mã "${filters.employeeCode.trim()}" trong khoa của bạn.`)
+      } else {
+        const failedDomains = [
+          trainingResult.status === 'rejected' && 'giờ đào tạo',
+          qualityResult.status === 'rejected' && 'tổng hợp lịch sử bảng kiểm',
+          checklistResult.status === 'rejected' && 'chi tiết lịch sử bảng kiểm',
+          competencyResult.status === 'rejected' && 'năng lực chuyên môn',
+        ].filter(Boolean)
+        if (failedDomains.length) {
+          setError(`Không thể tải dữ liệu ${failedDomains.join(', ')}. Các chỉ số còn lại vẫn được hiển thị.`)
+        }
       }
     } catch {
       if (requestId !== dashboardRequestId.current) return
@@ -198,7 +217,7 @@ export default function ManagerDashboard() {
 
   const loadComplianceTrend = useCallback(async (formId) => {
     const defaultDates = currentYearRange()
-    const response = await staffApi.getQualityChecklistTrend({
+    const response = await staffApi.getDashboardFormTrend({
       fromDate: filters.fromDate || defaultDates.fromDate,
       toDate: filters.toDate || defaultDates.toDate,
       departmentId: filters.departmentId,

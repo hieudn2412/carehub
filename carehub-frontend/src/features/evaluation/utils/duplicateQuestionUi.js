@@ -1,5 +1,7 @@
-const DUPLICATE_REVIEW_THRESHOLD = 0.88
-const STRONG_DUPLICATE_THRESHOLD = 0.95
+// Chỉ dùng khi backend không trả về cờ boolean. Giữ khớp với validation.duplicate.* ở
+// application.yaml — hai ngưỡng này được hiệu chỉnh theo phân bố láng giềng gần nhất.
+const DUPLICATE_REVIEW_THRESHOLD = 0.93
+const STRONG_DUPLICATE_THRESHOLD = 0.97
 
 export function hasPotentialDuplicate(candidate) {
   if (typeof candidate?.duplicateNeedsReview === 'boolean') {
