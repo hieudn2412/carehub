@@ -9,7 +9,6 @@ import {
   FormOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
-  SyncOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -86,13 +85,8 @@ function QuestionBankListPage() {
   const [questions, setQuestions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [apiAvailable, setApiAvailable] = useState(true)
-  const [jobQuestionId, setJobQuestionId] = useState(null)
   const [detailQuestion, setDetailQuestion] = useState(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
-  const [paraphraseTarget, setParaphraseTarget] = useState(null)
-  const [paraphraseForm, setParaphraseForm] = useState({ requestedCount: 3, changeStrength: 'medium' })
-  const [modelStatus, setModelStatus] = useState(null)
-  const [isModelStatusLoading, setIsModelStatusLoading] = useState(false)
   const [importFile, setImportFile] = useState(null)
   const [importPreview, setImportPreview] = useState(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -198,48 +192,6 @@ function QuestionBankListPage() {
       showToast(apiErrorMessage(error), 'error')
     } finally {
       setIsDetailLoading(false)
-    }
-  }
-
-  async function openParaphraseModal(item) {
-    if (!item.backend) {
-      showToast('Chỉ câu hỏi từ backend mới tạo được phiên diễn đạt lại.', 'warning')
-      return
-    }
-    setParaphraseTarget(item)
-    setParaphraseForm({ requestedCount: 3, changeStrength: 'medium' })
-    setIsModelStatusLoading(true)
-    try {
-      const response = await questionBankApi.getModelRuntimeStatus()
-      setModelStatus(apiData(response))
-    } catch (error) {
-      setModelStatus(null)
-      showToast(apiErrorMessage(error), 'warning')
-    } finally {
-      setIsModelStatusLoading(false)
-    }
-  }
-
-  async function createParaphraseJob() {
-    if (!paraphraseTarget) return
-    const requestedCount = Math.min(10, Math.max(1, Number(paraphraseForm.requestedCount) || 3))
-    setJobQuestionId(paraphraseTarget.id)
-    try {
-      const response = await questionBankApi.createParaphraseJob(paraphraseTarget.id, {
-        requestedCount,
-        changeStrength: paraphraseForm.changeStrength,
-      })
-      const result = apiData(response)
-      const job = result
-      setParaphraseTarget(null)
-      showToast('Đã xếp hàng phiên diễn đạt lại. Hệ thống sẽ tự động cập nhật kết quả.', 'success')
-      if (job?.id) {
-        navigate(`/admin/evaluation/paraphrase-jobs/${job.id}`)
-      }
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setJobQuestionId(null)
     }
   }
 
@@ -564,16 +516,6 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="admin-table-action admin-table-action--icon"
-                                onClick={() => openParaphraseModal(item)}
-                                disabled={!item.backend || jobQuestionId === item.id}
-                                aria-label="Tạo câu hỏi diễn đạt lại"
-                                title={item.backend ? 'Tạo câu hỏi tương tự' : 'Chỉ áp dụng cho câu hỏi đã lưu'}
-                              >
-                                {jobQuestionId === item.id ? <LoadingOutlined /> : <SyncOutlined />}
-                              </button>
-                              <button
-                                type="button"
                                 className="admin-table-action admin-table-action--icon admin-table-action--success"
                                 onClick={() => openDetailModal(item)}
                                 aria-label="Xem chi tiết câu hỏi"
@@ -623,67 +565,6 @@ function QuestionBankListPage() {
               </div>
         </div>
       </AppShell>
-      {paraphraseTarget && (
-        <div className="qbl-modal-backdrop">
-          <div className="qbl-modal" role="dialog" aria-modal="true" aria-labelledby="create-paraphrase-title">
-            <h2 id="create-paraphrase-title">Tạo phiên diễn đạt lại</h2>
-            <p className="qbl-modal-subtitle">{paraphraseTarget.content}</p>
-
-            {modelStatus?.paraphrase?.provider === 'mock' && (
-              <div className="qbl-model-warning">
-                Hệ thống đang dùng dữ liệu mô phỏng. Kết quả chỉ phù hợp để kiểm thử giao diện.
-              </div>
-            )}
-
-            <label className="qbl-field">
-              <span>Số biến thể tối đa</span>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={paraphraseForm.requestedCount}
-                onChange={(event) => setParaphraseForm((current) => ({ ...current, requestedCount: event.target.value }))}
-              />
-            </label>
-
-            <label className="qbl-field">
-              <span>Mức thay đổi</span>
-              <select
-                value={paraphraseForm.changeStrength}
-                onChange={(event) => setParaphraseForm((current) => ({ ...current, changeStrength: event.target.value }))}
-              >
-                <option value="low">Nhẹ</option>
-                <option value="medium">Vừa</option>
-                <option value="high">Nhiều</option>
-              </select>
-            </label>
-
-            <div className="qbl-modal-actions">
-              <button
-                type="button"
-                className="qbl-btn-secondary"
-                onClick={() => setParaphraseTarget(null)}
-                disabled={jobQuestionId === paraphraseTarget.id}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="qbl-btn-primary"
-                onClick={createParaphraseJob}
-                disabled={
-                  jobQuestionId === paraphraseTarget.id
-                  || isModelStatusLoading
-                  || !modelStatus?.paraphrase?.filesPresent
-                }
-              >
-                {jobQuestionId === paraphraseTarget.id ? <LoadingOutlined /> : <SyncOutlined />}
-                <span>Tạo câu hỏi tương tự</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {isImportModalOpen && (
         <div className="qbl-modal-backdrop">
           <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">

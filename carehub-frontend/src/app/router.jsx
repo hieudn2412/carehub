@@ -34,7 +34,6 @@ import ExamManagementPage from '../features/evaluation/pages/ExamManagementPage.
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
-import ParaphraseJobReviewPage from '../features/evaluation/pages/ParaphraseJobReviewPage.jsx'
 import CompetencyThresholdPage from '../features/evaluation/pages/CompetencyThresholdPage.jsx'
 import CompetencyDepartmentPage from '../features/evaluation/pages/CompetencyDepartmentPage.jsx'
 import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFieldPage.jsx'
@@ -237,7 +236,6 @@ function AppRouter() {
       <Route path="/admin/evaluation/imports" element={evaluationElement(<EvaluationImportHistoryPage />)} />
       <Route path="/admin/evaluation/question-documents/:documentId" element={evaluationElement(<QuestionDocumentDetailPage />)} />
       <Route path="/admin/evaluation/document-question-jobs/:jobId" element={evaluationElement(<DocumentQuestionJobReviewPage />)} />
-      <Route path="/admin/evaluation/paraphrase-jobs/:jobId" element={evaluationElement(<ParaphraseJobReviewPage />)} />
       <Route path="/admin/evaluation/categories" element={evaluationElement(<QuestionCategoryListPage />)} />
       <Route path="/admin/evaluation/question-bank" element={evaluationElement(<QuestionBankListPage />)} />
       <Route path="/admin/evaluation/question-bank/new" element={evaluationElement(<QuestionFormPage />)} />

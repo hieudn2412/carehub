@@ -33,6 +33,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,7 +71,7 @@ class QuestionBankServiceTest {
     }
 
     @Test
-    void createApprovedQuestionPersistsAndRefreshesEmbedding() {
+    void createApprovedQuestionPersistsAndSavesEmbedding() {
         var response = service.create(validRequest("APPROVED"), "admin");
 
         assertThat(response.id()).isNotNull();
@@ -78,7 +79,10 @@ class QuestionBankServiceTest {
         assertThat(response.statusText()).isEqualTo("Đã duyệt");
         assertThat(response.correctAnswer()).isEqualTo("A");
         verify(questionRepository).save(any(QuestionBankQuestion.class));
-        verify(embeddingService).refreshStemEmbedding(any(QuestionBankQuestion.class));
+        // Câu mới đi đường save (chỉ THÊM vào cache), không phải refresh (xoá sạch cache rồi nạp
+        // lại cả bảng) — nếu không, import N dòng thành O(N²) lượt đọc DB.
+        verify(embeddingService).saveStemEmbedding(any(QuestionBankQuestion.class));
+        verify(embeddingService, never()).refreshStemEmbedding(any(QuestionBankQuestion.class));
     }
 
     @Test

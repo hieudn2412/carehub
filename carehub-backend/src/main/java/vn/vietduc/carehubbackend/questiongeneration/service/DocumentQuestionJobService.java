@@ -798,8 +798,8 @@ public class DocumentQuestionJobService {
         long persistCandidateMs = 0;
         String categoryTopic = job.getCategory() != null ? job.getCategory().getName() : null;
         // Nhúng cả lô stem của chunk trong một lần chạy model thay vì mỗi câu một lần.
-        double[][] candidateVectors = duplicateCheckService.precomputeVectors(
-                questions.stream().map(GeneratedQuestion::stem).toList());
+        List<String> stems = questions.stream().map(GeneratedQuestion::stem).toList();
+        double[][] candidateVectors = duplicateCheckService.precomputeVectors(stems);
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
             ProfessionalField questionProfessionalField = resolveGeneratedProfessionalField(job, question.professionalFieldCode());
@@ -845,7 +845,7 @@ public class DocumentQuestionJobService {
                     Set.of()
             );
             DuplicateCheckResult inBatchDuplicate = duplicateCheckService.checkWithinBatch(
-                    questions.stream().map(GeneratedQuestion::stem).toList(),
+                    stems,
                     candidateVectors,
                     i
             );
