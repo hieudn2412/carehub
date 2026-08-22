@@ -30,6 +30,33 @@
   box-sizing: border-box;
 }
 
+.evd-competency-toolbar .searchable-select > input,
+.exam-dashboard__filter-panel .searchable-select > input,
+.competency-dashboard-filter-panel .searchable-select > input,
+.compliance-filter-panel .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.evd-competency-toolbar .searchable-select--static > input,
+.exam-dashboard__filter-panel .searchable-select--static > input,
+.competency-dashboard-filter-panel .searchable-select--static > input,
+.compliance-filter-panel .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.evd-competency-toolbar .searchable-select__search-icon,
+.exam-dashboard__filter-panel .searchable-select__search-icon,
+.competency-dashboard-filter-panel .searchable-select__search-icon,
+.compliance-filter-panel .searchable-select__search-icon {
+  display: block;
+  left: 12px;
+}
+
 .evd-competency-toolbar__count {
   color: #64748b;
   font-size: 13px;
@@ -1055,6 +1082,30 @@
 .compliance-filter-panel :is(input[type='date'], .searchable-select > input):focus {
   border-color: #16a085;
   box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
+}
+
+.exam-dashboard__filter-panel .searchable-select > input,
+.competency-dashboard-filter-panel .searchable-select > input,
+.compliance-filter-panel .searchable-select > input {
+  min-height: 42px;
+  height: 42px;
+  border-radius: 6px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.exam-dashboard__filter-panel .searchable-select--static > input,
+.competency-dashboard-filter-panel .searchable-select--static > input,
+.compliance-filter-panel .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.exam-dashboard__filter-panel .searchable-select__search-icon,
+.competency-dashboard-filter-panel .searchable-select__search-icon,
+.compliance-filter-panel .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .compliance-filter-panel__fixed {

@@ -124,6 +124,7 @@ describe('OverviewDashboard navigation regression', () => {
 
     const filterButton = screen.getByRole('button', { name: /Bộ lọc/ })
     expect(filterButton).toHaveTextContent('5')
+    fireEvent.click(filterButton)
     fireEvent.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }))
     expect(onFilterChange).toHaveBeenCalledWith('departmentId', '')
     expect(onFilterChange).toHaveBeenCalledWith('employeeCode', '')

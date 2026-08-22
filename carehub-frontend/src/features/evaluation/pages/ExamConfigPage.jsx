@@ -24,6 +24,7 @@ import { adminApi } from '../../admin/api/adminApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { apiData, apiErrorMessage, formatCognitiveWarningText } from '../utils/documentQuestionUi.js'
 import '../styles/ExamPaperPages.css'
 import '../styles/ExamConfigPage.css'
@@ -641,11 +642,15 @@ export default function ExamConfigPage() {
                         <div className="exp-schedule-row exp-schedule-row--bottom">
                           <div className="exp-schedule-field exp-schedule-field--wide">
                             <label className="exp-schedule-label">Công bố kết quả</label>
-                            <select className="ch-input" value={resultVisibility} onChange={(e) => setResultVisibility(e.target.value)}>
-                              <option value="SCORE_ONLY">Xem điểm ngay sau khi nộp</option>
-                              <option value="SCORE_AND_ANSWERS">Xem điểm và đáp án sau khi đợt thi kết thúc</option>
-                              <option value="HIDDEN_UNTIL_END">Ẩn kết quả đến khi đợt thi kết thúc</option>
-                            </select>
+                            <FormSelectField
+                              value={resultVisibility}
+                              onChange={setResultVisibility}
+                              options={[
+                                { value: 'SCORE_ONLY', label: 'Xem điểm ngay sau khi nộp' },
+                                { value: 'SCORE_AND_ANSWERS', label: 'Xem điểm và đáp án sau khi đợt thi kết thúc' },
+                                { value: 'HIDDEN_UNTIL_END', label: 'Ẩn kết quả đến khi đợt thi kết thúc' }
+                              ]}
+                            />
                             <small className="exp-field-hint">Áp dụng cho toàn bộ nhân viên trong đợt giao đề.</small>
                           </div>
                         </div>

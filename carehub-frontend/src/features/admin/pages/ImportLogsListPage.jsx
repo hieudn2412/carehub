@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { adminApi } from '../api/adminApi'
 import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
 import '../styles/ImportLogsListPage.css'
@@ -439,32 +440,23 @@ function ImportLogsListPage() {
                   panelClassName="il-filter-panel"
                   panelId="import-log-filter-panel"
                 >
-                  <div className="il-filter-field">
-                  <span className="il-filter-label">Loại dữ liệu nhập</span>
-                  <select
-                    className="il-filter-select"
+                  <FilterSelectField
+                    className="il-filter-field"
+                    label="Loại dữ liệu nhập"
                     value={fileFilter}
-                    onChange={(e) => setFileFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả loại dữ liệu</option>
-                    <option value="nhan_vien_goc.xlsx">Nhân viên tham chiếu (nhan_vien_goc.xlsx)</option>
-                    <option value="phong_ban_goc.xlsx">Phòng ban tham chiếu (phong_ban_goc.xlsx)</option>
-                  </select>
-                </div>
+                    onChange={setFileFilter}
+                    options={[{ value: 'all', label: 'Tất cả loại dữ liệu' }, { value: 'nhan_vien_goc.xlsx', label: 'Nhân viên tham chiếu (nhan_vien_goc.xlsx)' }, { value: 'phong_ban_goc.xlsx', label: 'Phòng ban tham chiếu (phong_ban_goc.xlsx)' }]}
+                    placeholder="Tất cả loại dữ liệu"
+                  />
 
-                <div className="il-filter-field">
-                  <span className="il-filter-label">Trạng thái</span>
-                  <select
-                    className="il-filter-select"
+                <FilterSelectField
+                    className="il-filter-field"
+                    label="Trạng thái"
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="SUCCESS">Thành công</option>
-                    <option value="PARTIAL">Lỗi một phần</option>
-                    <option value="FAILED">Thất bại</option>
-                  </select>
-                </div>
+                    onChange={setStatusFilter}
+                    options={[{ value: 'all', label: 'Tất cả trạng thái' }, { value: 'SUCCESS', label: 'Thành công' }, { value: 'PARTIAL', label: 'Lỗi một phần' }, { value: 'FAILED', label: 'Thất bại' }]}
+                    placeholder="Tất cả trạng thái"
+                  />
 
                 <div className="il-filter-field">
                   <span className="il-filter-label">Từ ngày</span>
@@ -662,17 +654,20 @@ function ImportLogsListPage() {
                     <div className="il-row-results-header">
                       <h3>Kết quả chi tiết từng dòng ({parsedRowResults.length})</h3>
                       <div className="il-row-filters">
-                        <select
-                          className="il-filter-select il-row-filter-select"
+                        <FilterSelectField
+                          ariaLabel="Lọc kết quả nhập theo trạng thái"
+                          className="il-row-filter-select"
+                          label="Trạng thái"
                           value={rowStatusFilter}
-                          onChange={(e) => setRowStatusFilter(e.target.value)}
-                        >
-                          <option value="ALL">Tất cả trạng thái</option>
-                          <option value="INSERTED">Thêm mới</option>
-                          <option value="UPDATED">Cập nhật</option>
-                          <option value="UNCHANGED">Không đổi</option>
-                          <option value="FAILED">Thất bại</option>
-                        </select>
+                          onChange={setRowStatusFilter}
+                          options={[
+                            { value: 'ALL', label: 'Tất cả trạng thái' },
+                            { value: 'INSERTED', label: 'Thêm mới' },
+                            { value: 'UPDATED', label: 'Cập nhật' },
+                            { value: 'UNCHANGED', label: 'Không đổi' },
+                            { value: 'FAILED', label: 'Thất bại' },
+                          ]}
+                        />
                         <input
                           type="text"
                           className="il-row-search-input"

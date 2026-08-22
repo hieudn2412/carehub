@@ -18,9 +18,12 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
+import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
 import './StaffComplianceDashboardPage.css'
@@ -74,10 +77,7 @@ function SearchForm({ filters, onChange, onApply, onClear, dateError, mobile = f
         <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={today()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
       </label>
       {dateError && <p className="scd-search-error" role="alert">{dateError}</p>}
-      <div className="scd-search-actions">
-        <button type="button" className="scd-button scd-button--ghost" onClick={onClear}>Xóa bộ lọc</button>
-        <button type="button" className="scd-button scd-button--primary" onClick={onApply}>Áp dụng</button>
-      </div>
+      <FilterActionButtons className="scd-search-actions" onReset={onClear} onApply={onApply} />
     </div>
   )
 }
@@ -110,6 +110,7 @@ function StaffComplianceDashboardPage() {
   const [overviewError, setOverviewError] = useState('')
   const [draftFilters, setDraftFilters] = useState({ q: '', dateFrom: defaultFrom(), dateTo: today() })
   const [dateError, setDateError] = useState('')
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true)
@@ -208,7 +209,32 @@ function StaffComplianceDashboardPage() {
             <span>Đánh giá tuân thủ cá nhân</span>
             <strong>{defaultFrom()} → {today()}</strong>
           </div>
-          <SearchForm filters={draftFilters} onChange={updateFilters} onClear={clearFilters} onApply={applyFilters} dateError={dateError} />
+          <AppliedFilterToolbar
+            activeCount={Number(Boolean(draftFilters.dateFrom && draftFilters.dateFrom !== defaultFrom()))
+              + Number(Boolean(draftFilters.dateTo && draftFilters.dateTo !== today()))}
+            ariaLabel="Bộ lọc tuân thủ cá nhân"
+            className="scd-applied-toolbar"
+            isOpen={isFilterOpen}
+            onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
+            onReset={clearFilters}
+            onSearchChange={value => updateFilters({ q: value })}
+            onToggle={() => setIsFilterOpen(current => !current)}
+            panelClassName="scd-filter-panel"
+            panelId="staff-compliance-dashboard-filter-panel"
+            searchAriaLabel="Tìm tên bảng kiểm"
+            searchPlaceholder="Tìm tên bảng kiểm..."
+            searchValue={draftFilters.q}
+          >
+            <label className="admin-control-toolbar__field">
+              <span>Từ ngày</span>
+              <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={val => updateFilters({ dateFrom: val })} aria-label="Từ ngày tuân thủ" />
+            </label>
+            <label className="admin-control-toolbar__field">
+              <span>Đến ngày</span>
+              <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today()} onChange={val => updateFilters({ dateTo: val })} aria-label="Đến ngày tuân thủ" />
+            </label>
+            {dateError && <p className="scd-search-error" role="alert">{dateError}</p>}
+          </AppliedFilterToolbar>
         </section>
 
         <section className="scd-summary-grid" aria-label="Tổng quan tuân thủ" data-compliance-section="summary">
@@ -231,9 +257,13 @@ function StaffComplianceDashboardPage() {
             </div>
             <label className="scd-year-select">
               <span>Năm biểu đồ</span>
-              <select value={chartYear} onChange={event => setChartYear(Number(event.target.value))} aria-label="Năm biểu đồ tuân thủ">
-                {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
-              </select>
+              <SearchableSelect
+                value={String(chartYear)}
+                onChange={val => setChartYear(Number(val))}
+                ariaLabel="Năm biểu đồ tuân thủ"
+                searchable={false}
+                options={availableYears.map(year => ({ value: String(year), label: String(year) }))}
+              />
             </label>
           </header>
           {chartLoading ? <div className="scd-chart-state"><LoadingState label="Đang tải biểu đồ..." /></div> : chartError ? (

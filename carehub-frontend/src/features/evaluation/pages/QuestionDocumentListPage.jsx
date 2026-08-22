@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmDialog from '../../../shared/components/ConfirmDialog.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -430,18 +431,15 @@ function QuestionDocumentListPage() {
                   <PlusOutlined /> Thêm mới
                 </button>
               </div>
-              <select
+              <FormSelectField
                 value={selectedCategoryId}
-                onChange={(event) => setSelectedCategoryId(event.target.value)}
+                onChange={setSelectedCategoryId}
                 disabled={isCreatingJob}
-              >
-                <option value="">-- Chọn danh mục --</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '-- Chọn danh mục --' },
+                  ...categories.map((cat) => ({ value: String(cat.id), label: cat.name }))
+                ]}
+              />
               <small className="qdoc-field-help">Tất cả câu hỏi sinh từ tài liệu sẽ được lưu vào danh mục này.</small>
             </div>
             <label className="qdoc-field">

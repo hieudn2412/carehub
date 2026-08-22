@@ -4,7 +4,8 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import DepartmentCombobox from '../../../shared/components/DepartmentCombobox.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { adminApi } from '../api/adminApi'
 import {
@@ -669,9 +670,9 @@ function AdminAccountsScreen() {
                 searchPlaceholder="Tìm theo tên hoặc ID..."
                 searchValue={search}
               >
-                    <div className="am-filter-department">
-                      <span className="am-filter-label">Phòng ban</span>
-                      <SearchableSelect
+                    <FilterSelectField
+                        className="am-filter-department"
+                        label="Phòng ban"
                         id="account-department-filter"
                         value={deptFilter}
                         onChange={(value) => setDeptFilter(value || 'all')}
@@ -684,38 +685,26 @@ function AdminAccountsScreen() {
                           })),
                         ]}
                         placeholder={departmentLoading ? 'Đang tải phòng ban...' : 'Tất cả phòng ban'}
+                        searchable
                         searchPlaceholder="Tìm tên phòng ban..."
                         emptyMessage="Không tìm thấy phòng ban phù hợp"
-                        ariaLabel="Tìm và chọn phòng ban"
                       />
-                    </div>
-                    <label className="am-filter-field">
-                      <span className="am-filter-label">Vai trò</span>
-                      <select
-                        className="am-filter-select"
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                      >
-                        <option value="all">Tất cả vai trò</option>
-                        {roles.map(r => {
-                          const roleLabel = r.name || r.code
-                          return <option key={r.id} value={r.id}>{roleLabel}</option>
-                        })}
-                      </select>
-                    </label>
-                    <label className="am-filter-field">
-                      <span className="am-filter-label">Trạng thái</span>
-                      <select
-                        className="am-filter-select"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                      >
-                        <option value="all">Tất cả trạng thái</option>
-                        <option value="ACTIVE">Hoạt động</option>
-                        <option value="INACTIVE">Ngưng hoạt động</option>
-                        <option value="LOCKED">Đã khoá</option>
-                      </select>
-                    </label>
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Vai trò"
+                      value={roleFilter}
+                      onChange={setRoleFilter}
+                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: role.name || role.code }))]}
+                      placeholder="Tất cả vai trò"
+                    />
+                    <FilterSelectField
+                      className="am-filter-field"
+                      label="Trạng thái"
+                      value={statusFilter}
+                      onChange={setStatusFilter}
+                      options={[{ value: 'all', label: 'Tất cả trạng thái' }, { value: 'ACTIVE', label: 'Hoạt động' }, { value: 'INACTIVE', label: 'Ngưng hoạt động' }, { value: 'LOCKED', label: 'Đã khoá' }]}
+                      placeholder="Tất cả trạng thái"
+                    />
               </AppliedFilterToolbar>
 
               {/* Table Card */}
@@ -1024,33 +1013,29 @@ function AdminAccountsScreen() {
 
                   {editingUser && (
                     <>
-                      <div className="am-form-group">
-                        <label className="am-form-label">Chức danh</label>
-                        <select
-                          className="am-form-select"
-                          value={formPositionId}
-                          onChange={(e) => setFormPositionId(e.target.value)}
-                        >
-                          <option value="">Chọn chức danh...</option>
-                          {positions.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <FormSelectField
+                        label="Chức danh"
+                        value={formPositionId}
+                        onChange={setFormPositionId}
+                        options={[
+                          { value: '', label: 'Chọn chức danh...' },
+                          ...positions.map(p => ({ value: p.id, label: p.name }))
+                        ]}
+                        placeholder="Chọn chức danh..."
+                        searchable={true}
+                      />
 
-                      <div className="am-form-group">
-                        <label className="am-form-label">Trình độ học vấn</label>
-                        <select
-                          className="am-form-select"
-                          value={formEduLevelId}
-                          onChange={(e) => setFormEduLevelId(e.target.value)}
-                        >
-                          <option value="">Chọn trình độ...</option>
-                          {educationLevels.map(el => (
-                            <option key={el.id} value={el.id}>{el.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                      <FormSelectField
+                        label="Trình độ học vấn"
+                        value={formEduLevelId}
+                        onChange={setFormEduLevelId}
+                        options={[
+                          { value: '', label: 'Chọn trình độ...' },
+                          ...educationLevels.map(el => ({ value: el.id, label: el.name }))
+                        ]}
+                        placeholder="Chọn trình độ..."
+                        searchable={true}
+                      />
 
                       <div className="am-form-group">
                         <label className="am-form-label">Ngày sinh</label>

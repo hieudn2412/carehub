@@ -5,7 +5,9 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import '../styles/ActivityTypeListPage.css'
 
 const EMPTY_FORM = {
@@ -206,18 +208,13 @@ function ActivityTypeListPage() {
                 searchPlaceholder="Tìm theo cách thức..."
                 searchValue={keyword}
               >
-                    <label>
-                      <span>Trạng thái</span>
-                      <select
-                        className="atl-filter-select"
-                        value={status}
-                        onChange={(event) => setStatus(event.target.value)}
-                      >
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="true">Hoạt động</option>
-                        <option value="false">Ngưng hoạt động</option>
-                      </select>
-                    </label>
+                    <FilterSelectField
+                      label="Trạng thái"
+                      value={status}
+                      onChange={setStatus}
+                      options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'true', label: 'Hoạt động' }, { value: 'false', label: 'Ngưng hoạt động' }]}
+                      placeholder="Tất cả trạng thái"
+                    />
               </AppliedFilterToolbar>
 
               {/* Feedback Alerts */}
@@ -363,17 +360,17 @@ function ActivityTypeListPage() {
                     placeholder="Nhập tên cách thức đào tạo..."
                   />
                 </div>
-                <div className="atl-modal-group">
-                  <label>Trạng thái</label>
-                  <select
-                    className="atl-input-red"
-                    value={modalForm.active.toString()}
-                    onChange={(e) => updateModalField('active', e.target.value === 'true')}
-                  >
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
-                  </select>
-                </div>
+                <FormSelectField
+                  label="Trạng thái"
+                  className="atl-modal-group"
+                  value={modalForm.active.toString()}
+                  onChange={(value) => updateModalField('active', value === 'true')}
+                  options={[
+                    { value: 'true', label: 'Hoạt động' },
+                    { value: 'false', label: 'Ngưng hoạt động' }
+                  ]}
+                  searchable={false}
+                />
               </div>
 
               <div className="atl-modal-group">

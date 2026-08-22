@@ -15,6 +15,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
 import { trainingApi } from '../../../../features/training/api/trainingApi'
 import { staffApi } from '../../api/staffApi.js'
 import { getRolesFromAccessToken } from '../../../../shared/auth/jwt.js'
@@ -259,15 +260,13 @@ function TrainingHoursOverviewScreen() {
             </div>
             <label className="th-overview-year-select">
               <span>Năm biểu đồ</span>
-              <select
-                value={chartYear}
-                onChange={event => setChartYear(Number(event.target.value))}
-                aria-label="Năm biểu đồ"
-              >
-                {chartAvailableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={String(chartYear)}
+                onChange={val => setChartYear(Number(val))}
+                ariaLabel="Năm biểu đồ"
+                searchable={false}
+                options={chartAvailableYears.map(year => ({ value: String(year), label: String(year) }))}
+              />
             </label>
           </div>
           {chartLoading ? (

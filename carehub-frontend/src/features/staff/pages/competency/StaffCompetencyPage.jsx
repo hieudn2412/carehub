@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CheckCircleFilled, CloseOutlined, EyeOutlined, FilterOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
+import { CheckCircleFilled, CloseOutlined, EyeOutlined, SafetyCertificateOutlined, SearchOutlined, WarningFilled } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import LoadingState from '../../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../../shared/components/EmptyState.jsx'
+import FilterActionButtons from '../../../../shared/components/FilterActionButtons.jsx'
 import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { indexAnswersByQuestion, resolveStepRating } from '../../utils/checklistRating.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
@@ -135,10 +137,11 @@ export default function StaffCompetencyPage() {
         <label className="th-mobile-search-form__field"><span>Đến ngày</span><KeyboardDatePicker value={draftFilters.dateTo} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} aria-label="Đến ngày" /></label>
       </div>
       {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
-      <div className="th-mobile-search-form__actions">
-        <button type="button" className="th-mobile-search-form__clear" onClick={() => { clearFilters(); close() }}>Xóa bộ lọc</button>
-        <button type="button" className="th-mobile-search-form__apply" onClick={() => { const valid = applyFilters(); if (valid !== false) close() }}>Áp dụng</button>
-      </div>
+      <FilterActionButtons
+        className="th-mobile-search-form__actions"
+        onReset={() => { clearFilters(); close() }}
+        onApply={() => { const valid = applyFilters(); if (valid !== false) close() }}
+      />
     </div>
   )
 
@@ -186,25 +189,22 @@ export default function StaffCompetencyPage() {
       }}
     >
       <div className="sc-page">
-        <section className="sc-toolbar admin-control-toolbar" aria-label="Bộ lọc tuân thủ cá nhân">
-          <div className="admin-control-toolbar__main">
-            <div className="admin-control-toolbar__controls">
-              <div className="sc-search-input admin-control-toolbar__search"><SearchOutlined aria-hidden="true" /><input value={draftFilters.q} onChange={event => setDraftFilters(current => ({ ...current, q: event.target.value }))} onKeyDown={event => event.key === 'Enter' && applyFilters()} placeholder="Tìm tên bảng kiểm..." aria-label="Tìm tên bảng kiểm" /></div>
-              <button
-                type="button"
-                className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                aria-controls="staff-compliance-filter-panel"
-                aria-expanded={isFilterOpen}
-                onClick={() => setIsFilterOpen(current => !current)}
-              >
-                <FilterOutlined aria-hidden="true" />
-                Bộ lọc
-                <span className="admin-control-toolbar__filter-count">{Number(Boolean(fromDate)) + Number(Boolean(toDate))}</span>
-              </button>
-            </div>
-          </div>
-          {isFilterOpen && (
-            <div id="staff-compliance-filter-panel" className="sc-toolbar__filter-panel admin-control-toolbar__panel">
+        <AppliedFilterToolbar
+          activeCount={Number(Boolean(fromDate && fromDate !== `${new Date().getFullYear()}-01-01`)) + Number(Boolean(toDate && toDate !== today))}
+          ariaLabel="Bộ lọc tuân thủ cá nhân"
+          className="sc-toolbar"
+          isOpen={isFilterOpen}
+          onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
+          onReset={clearFilters}
+          onSearchChange={value => setDraftFilters(current => ({ ...current, q: value }))}
+          onToggle={() => setIsFilterOpen(current => !current)}
+          panelClassName="sc-toolbar__filter-panel"
+          panelId="staff-compliance-filter-panel"
+          searchAriaLabel="Tìm tên bảng kiểm"
+          searchClassName="sc-search-input"
+          searchPlaceholder="Tìm tên bảng kiểm..."
+          searchValue={draftFilters.q}
+        >
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
                 <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} />
@@ -213,14 +213,8 @@ export default function StaffCompetencyPage() {
                 <span>Đến ngày</span>
                 <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} />
               </label>
-              <div className="sc-toolbar__filter-actions">
-                <button type="button" className="sc-filter__btn sc-filter__btn--secondary" onClick={clearFilters}>Xóa bộ lọc</button>
-                <button type="button" className="sc-filter__btn sc-filter__btn--primary" onClick={applyFilters}>Áp dụng</button>
-              </div>
               {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
-            </div>
-          )}
-        </section>
+        </AppliedFilterToolbar>
         <section className="sc-personal-metrics sc-personal-metrics--compact" aria-label="Tổng quan tuân thủ">
           <article className="sc-personal-metric sc-personal-metric--primary"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tỷ lệ tuân thủ chung</span><strong>{formatNumber(totals.rate)}%</strong></div></article>
           <article className="sc-personal-metric"><span className="sc-personal-metric__icon"><CheckCircleFilled /></span><div><span>Số lượt đạt</span><strong>{totals.passed}</strong></div></article>

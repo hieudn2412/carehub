@@ -13,6 +13,7 @@ public record AssignedFormResponse(
         String formCode,
         String title,
         BigDecimal complianceTargetPercent,
+        String complianceTargetSource,
         Instant validFrom,
         Instant validUntil,
         FormVersionResponse version

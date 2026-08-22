@@ -5,7 +5,7 @@ import { CheckCircleOutlined, EyeOutlined, FileTextOutlined, PieChartOutlined, S
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 
 const COMPETENCY_COLORS = {
   NOT_COMPETENT: ['#ef4444', '#fef2f2'],
@@ -130,14 +130,22 @@ function ExamHistoryScreen() {
             <span className="eh-search-icon"><SearchOutlined /></span>
             <input className="eh-search-input" placeholder="Tìm theo tên bài thi..." value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">Tất cả trạng thái</option>
-            <option value="pass">Đạt</option>
-            <option value="fail">Không đạt</option>
-            <option value="expired">Hết thời gian</option>
-          </select>
           <div className="eh-field-filter">
-            <SearchableSelect
+            <FilterSelectField
+              label="Trạng thái"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { value: 'all', label: 'Tất cả trạng thái' },
+                { value: 'pass', label: 'Đạt' },
+                { value: 'fail', label: 'Không đạt' },
+                { value: 'expired', label: 'Hết thời gian' },
+              ]}
+            />
+          </div>
+          <div className="eh-field-filter">
+            <FilterSelectField
+              label="Lĩnh vực chuyên môn"
               value={professionalFieldId}
               onChange={setProfessionalFieldId}
               options={[
@@ -145,8 +153,8 @@ function ExamHistoryScreen() {
                 ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
               ]}
               placeholder="Tất cả lĩnh vực chuyên môn"
+              searchable
               searchPlaceholder="Tìm tên lĩnh vực..."
-              ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
             />
           </div>
         </div>

@@ -40,7 +40,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
     List<FormAssignmentItem> findAllByFormVersion_IdAndStatus(Long versionId, FormAssignmentStatus status);
     Optional<FormAssignmentItem> findFirstByAssignment_Manager_IdAndFormVersion_IdAndStatusOrderByIdDesc(
             Long assigneeId, Long formVersionId, FormAssignmentStatus status);
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
     @Query("select i from FormAssignmentItem i where i.id = :id")
     Optional<FormAssignmentItem> findDetailById(@Param("id") Long id);
 
@@ -57,7 +57,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"assignment", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
     @Query("""
             select i from FormAssignmentItem i
             where i.assignment.manager.id = :managerId
@@ -78,7 +78,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
     @Query("""
             select i from FormAssignmentItem i
             where i.id = :id

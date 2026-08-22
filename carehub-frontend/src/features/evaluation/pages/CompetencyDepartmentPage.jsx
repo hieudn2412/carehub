@@ -5,7 +5,7 @@ import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
 import { adminApi } from '../../admin/api/adminApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 function CompetencyDepartmentPage() {
@@ -69,21 +69,19 @@ function CompetencyDepartmentPage() {
 
         {/* Department selector */}
         <section className="evd-panel evd-department-picker">
-          <div className="evd-department-picker__label">
-            <TeamOutlined aria-hidden="true" />
-            <label htmlFor="competency-department">Chọn khoa/phòng</label>
-          </div>
-          <SearchableSelect
+          <FilterSelectField
             id="competency-department"
+            label="Chọn khoa/phòng"
+            icon={<TeamOutlined />}
             value={selectedDeptId}
             onChange={setSelectedDeptId}
             options={departments.map((department) => ({ value: department.id, label: department.name }))}
             placeholder="Chọn khoa/phòng"
+            searchable
             searchPlaceholder="Tìm theo tên khoa/phòng..."
-            ariaLabel="Tìm và chọn khoa/phòng"
             disabled={loading && departments.length === 0}
+            helpText="Chọn một khoa/phòng để xem phân bố năng lực hiện tại."
           />
-          <span className="evd-department-picker__hint">Chọn một khoa/phòng để xem phân bố năng lực hiện tại.</span>
         </section>
 
         {loading || deptLoading ? (

@@ -1,4 +1,5 @@
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
+import FilterActionButtons from './FilterActionButtons.jsx'
 
 function AppliedFilterToolbar({
   activeCount = 0,
@@ -34,7 +35,7 @@ function AppliedFilterToolbar({
                 value={searchValue}
                 onChange={(event) => onSearchChange(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') onApply()
+                  if (event.key === 'Enter') onApply?.()
                 }}
                 placeholder={searchPlaceholder}
               />
@@ -56,11 +57,10 @@ function AppliedFilterToolbar({
 
       {showFilter && isOpen && (
         <div id={panelId} className={`applied-filter-toolbar__panel admin-control-toolbar__panel${panelClassName ? ` ${panelClassName}` : ''}`}>
-          {children}
-          <div className="applied-filter-toolbar__actions">
-            <button type="button" className="applied-filter-toolbar__reset" onClick={onReset}>Xóa bộ lọc</button>
-            <button type="button" className="applied-filter-toolbar__apply" onClick={onApply}>Áp dụng</button>
+          <div className="applied-filter-toolbar__fields">
+            {children}
           </div>
+          <FilterActionButtons className="applied-filter-toolbar__actions" onReset={onReset} onApply={onApply} />
         </div>
       )}
     </section>

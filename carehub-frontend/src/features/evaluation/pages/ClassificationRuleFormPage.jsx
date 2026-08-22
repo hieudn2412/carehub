@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { WarningOutlined } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { classificationRuleApi } from '../api/classificationRuleApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
@@ -175,20 +176,17 @@ function ClassificationRuleFormPage() {
                 <label>
                   Danh mục câu hỏi <span className="crf-required-star">*</span>
                 </label>
-                <select
+                <FormSelectField
                   className="crf-input-red"
                   required
                   value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
+                  onChange={setCategoryId}
                   disabled={isLoading || isSaving}
-                >
-                  <option value="">Chọn danh mục</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: 'Chọn danh mục' },
+                    ...categories.map((category) => ({ value: category.id, label: category.name }))
+                  ]}
+                />
               </div>
             </div>
 
@@ -236,15 +234,16 @@ function ClassificationRuleFormPage() {
               </div>
               <div className="crf-form-group">
                 <label>Trạng thái</label>
-                <select
+                <FormSelectField
                   className="crf-input-red"
                   value={enabled.toString()}
-                  onChange={(e) => setEnabled(e.target.value === 'true')}
+                  onChange={(val) => setEnabled(val === 'true')}
                   disabled={isLoading || isSaving}
-                >
-                  <option value="true">Hoạt động</option>
-                  <option value="false">Tạm ngưng</option>
-                </select>
+                  options={[
+                    { value: 'true', label: 'Hoạt động' },
+                    { value: 'false', label: 'Tạm ngưng' }
+                  ]}
+                />
               </div>
             </div>
 

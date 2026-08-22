@@ -113,10 +113,23 @@
 }
 
 .rel-department-filter .searchable-select > input {
-  height: 38px;
+  min-height: 42px;
+  height: 42px;
   border-color: #cbd5e1;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13.5px;
+  padding: 0 34px 0 38px !important;
+  text-align: left;
+}
+
+.rel-department-filter .searchable-select--static > input {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.rel-department-filter .searchable-select__search-icon {
+  display: block;
+  left: 12px;
 }
 
 .rel-results-count {

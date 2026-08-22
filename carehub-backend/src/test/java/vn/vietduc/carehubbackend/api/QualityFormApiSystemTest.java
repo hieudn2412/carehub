@@ -239,6 +239,42 @@ class QualityFormApiSystemTest extends AbstractApiSystemTest {
         assertThat(assigned.toString()).contains(String.valueOf(assignmentItemId));
     }
 
+    @DisplayName("L3-QLT-14b | Contract: GET /assigned-forms resolves the active department compliance target, not the legacy form field")
+    @Test
+    void assignedFormsUseDepartmentComplianceTargetInsteadOfLegacyFormTarget() {
+        long formId = createForm();
+        assertOk(put(API + "/forms/" + formId + "/compliance-target",
+                adminToken, "{\"targetPercent\":95.00}"));
+        long versionId = createVersion(formId);
+        assertOk(post(API + "/forms/" + formId + "/versions/" + versionId + "/publication", adminToken, null));
+        assertOk(put(API + "/quality/compliance-targets/forms/" + formId + "/hospital",
+                adminToken, "{\"targetPercent\":85.00,\"lockVersion\":null}"));
+        assertOk(put(API + "/quality/compliance-targets/forms/" + formId
+                        + "/departments/" + manager.getDepartment().getId(),
+                adminToken, "{\"targetPercent\":70.00,\"lockVersion\":null}"));
+
+        ResponseEntity<String> assignment = post(API + "/form-assignments", adminToken, """
+                {"managerId":%d,"formVersionIds":[%d]}
+                """.formatted(manager.getId(), versionId));
+        assertThat(assignment.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        long assignmentItemId = data(assignment).get("items").get(0).get("assignmentItemId").asLong();
+
+        JsonNode listItem = null;
+        for (JsonNode item : data(get(API + "/assigned-forms", managerToken)).get("content")) {
+            if (item.get("assignmentItemId").asLong() == assignmentItemId) {
+                listItem = item;
+                break;
+            }
+        }
+        assertThat(listItem).isNotNull();
+        assertThat(listItem.get("complianceTargetPercent").decimalValue()).isEqualByComparingTo("70.00");
+        assertThat(listItem.get("complianceTargetSource").asText()).isEqualTo("DEPARTMENT");
+
+        JsonNode detail = data(get(API + "/assigned-forms/" + assignmentItemId, managerToken));
+        assertThat(detail.get("complianceTargetPercent").decimalValue()).isEqualByComparingTo("70.00");
+        assertThat(detail.get("complianceTargetSource").asText()).isEqualTo("DEPARTMENT");
+    }
+
     @DisplayName("L3-QLT-15 | Not-Found: reading someone else's assigned form detail → 404 SYS_404 (ownership is hidden, not 403)")
     @Test
     void anotherUsersAssignedFormReads404() {

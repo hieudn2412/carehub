@@ -1,3 +1,5 @@
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+
 function sortByDisplayOrder(items = []) {
   return [...items].sort(
     (left, right) => (left.displayOrder ?? 0) - (right.displayOrder ?? 0),
@@ -55,17 +57,15 @@ function ReadOnlyQuestionField({ question }) {
 
   if (question.fieldType === 'DROPDOWN') {
     return (
-      <select disabled value="">
-        <option value="">Chọn một tùy chọn</option>
-        {options.map((option, optionIndex) => (
-          <option
-            key={option.optionKey || option.id || `${option.value}-${optionIndex}`}
-            value={option.value}
-          >
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <SearchableSelect
+        disabled
+        value=""
+        options={[
+          { value: '', label: 'Chọn một tùy chọn' },
+          ...options.map((option) => ({ value: option.value, label: option.label }))
+        ]}
+        searchable={false}
+      />
     )
   }
 

@@ -6,8 +6,8 @@ import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import { AUTH_ROLE, hasAnyRole } from '../../auth/utils/authNavigation.js'
 import { DownloadOutlined, EyeOutlined, LoadingOutlined } from '@ant-design/icons'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/TrainingEmployeeStatusListPage.css'
 
 const EXPORT_PAGE_SIZE = 100
@@ -276,44 +276,56 @@ function TrainingEmployeeStatusListPage() {
                 searchPlaceholder="Tìm theo tên/mã nhân viên..."
                 searchValue={keyword}
               >
-                    <div className="tes-department-filter">
-                      <span className="tes-filter-label">Khoa/phòng</span>
-                      <SearchableSelect
-                        value={departmentId}
-                        onChange={setDepartmentId}
-                        options={[
-                          { value: '', label: 'Tất cả khoa/phòng' },
-                          ...departments.map((department) => ({ value: department.id, label: department.name })),
-                        ]}
-                        placeholder="Tất cả khoa/phòng"
-                        searchPlaceholder="Tìm tên khoa/phòng..."
-                        ariaLabel="Tìm và chọn khoa/phòng"
-                      />
-                    </div>
-                    {professionalFields.length > 0 && (
-                      <div className="tes-field-filter">
-                        <span className="tes-filter-label">Lĩnh vực chuyên môn</span>
-                        <SearchableSelect
-                          value={professionalFieldId}
-                          onChange={setProfessionalFieldId}
-                          options={[
-                            { value: '', label: 'Tất cả lĩnh vực' },
-                            ...professionalFields.map((field) => ({ value: field.id, label: field.name })),
-                          ]}
-                          placeholder="Tất cả lĩnh vực"
-                          searchPlaceholder="Tìm tên lĩnh vực..."
-                          ariaLabel="Tìm và chọn lĩnh vực chuyên môn"
-                        />
-                      </div>
-                    )}
-                    <label className="tes-filter-field">
-                      <span className="tes-filter-label">Trạng thái</span>
-                      <select className="tes-filter-select" value={complianceStatus} onChange={e => setComplianceStatus(e.target.value)}>
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="COMPLIANT">Đạt</option>
-                        <option value="NON_COMPLIANT">Chưa đạt</option>
-                      </select>
-                    </label>
+                <FilterSelectField
+                  ariaLabel="Khoa/phòng"
+                  className="tes-department-filter"
+                  label="Khoa/phòng"
+                  onChange={setDepartmentId}
+                  options={[
+                    { value: '', label: 'Tất cả khoa/phòng' },
+                    ...departments.map((department) => ({
+                      value: department.id,
+                      label: department.name,
+                      searchText: department.code,
+                    })),
+                  ]}
+                  placeholder="Tất cả khoa/phòng"
+                  searchPlaceholder="Gõ tên khoa/phòng..."
+                  value={departmentId}
+                />
+                {professionalFields.length > 0 && (
+                  <FilterSelectField
+                    ariaLabel="Lĩnh vực chuyên môn"
+                    className="tes-field-filter"
+                    label="Lĩnh vực chuyên môn"
+                    onChange={setProfessionalFieldId}
+                    options={[
+                      { value: '', label: 'Tất cả lĩnh vực' },
+                      ...professionalFields.map((field) => ({
+                        value: field.id,
+                        label: field.name,
+                        searchText: field.code,
+                      })),
+                    ]}
+                    placeholder="Tất cả lĩnh vực"
+                    searchPlaceholder="Gõ tên lĩnh vực..."
+                    value={professionalFieldId}
+                  />
+                )}
+                <FilterSelectField
+                  ariaLabel="Trạng thái"
+                  className="tes-filter-field"
+                  label="Trạng thái"
+                  onChange={setComplianceStatus}
+                  options={[
+                    { value: '', label: 'Tất cả trạng thái' },
+                    { value: 'COMPLIANT', label: 'Đạt' },
+                    { value: 'NON_COMPLIANT', label: 'Chưa đạt' },
+                  ]}
+                  placeholder="Tất cả trạng thái"
+                  searchable={false}
+                  value={complianceStatus}
+                />
               </AppliedFilterToolbar>
 
               {exportError && <div className="tes-export-error" role="alert">{exportError}</div>}

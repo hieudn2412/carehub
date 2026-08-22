@@ -6,7 +6,6 @@ import {
   CloseCircleOutlined,
   FileDoneOutlined,
   FileTextOutlined,
-  FilterOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   TrophyOutlined,
@@ -21,6 +20,7 @@ import {
   YAxis,
 } from 'recharts'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import { evaluationDashboardApi } from '../api/evaluationDashboardApi.js'
 import { examAssignmentApi } from '../api/examAssignmentApi.js'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -29,7 +29,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
@@ -57,6 +57,16 @@ function unwrapList(response) {
   return Array.isArray(data?.content) ? data.content : []
 }
 
+const DEFAULT_EVALUATION_DASHBOARD_FILTERS = {
+  departmentId: '',
+  employeeId: '',
+  fromDate: '',
+  paperId: '',
+  professionalFieldId: '',
+  resultStatus: '',
+  toDate: '',
+}
+
 function EvaluationDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
   const { showToast } = useToast()
@@ -68,15 +78,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const [loading, setLoading] = useState(true)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
-  const [filters, setFilters] = useState({
-    fromDate: '',
-    toDate: '',
-    departmentId: '',
-    paperId: '',
-    professionalFieldId: '',
-    employeeId: '',
-    resultStatus: '',
-  })
+  const [filters, setFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
 
   useEffect(() => {
     let active = true
@@ -114,13 +117,18 @@ function EvaluationDashboardPage({ role = 'admin' }) {
           setPapers([...paperMap.values()])
           setProfessionalFields([...fieldMap.values()])
           if (managerProfile?.departmentId) {
+            const managerDepartmentId = String(managerProfile.departmentId)
             setDepartments([{
               id: managerProfile.departmentId,
               name: managerProfile.departmentName || 'Khoa của tôi',
             }])
             setFilters((current) => ({
               ...current,
-              departmentId: String(managerProfile.departmentId),
+              departmentId: managerDepartmentId,
+            }))
+            setAppliedFilters((current) => ({
+              ...current,
+              departmentId: managerDepartmentId,
             }))
           } else {
             setError('Tài khoản manager chưa được gán khoa/phòng.')
@@ -147,24 +155,24 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   }, [isManager])
 
   const loadDashboard = useCallback(async () => {
-    if (isManager && !filters.departmentId) {
+    if (isManager && !appliedFilters.departmentId) {
       setLoading(false)
       return
     }
     setLoading(true)
     setError('')
     const params = {
-      fromDate: filters.fromDate ? `${filters.fromDate}T00:00:00` : undefined,
-      toDate: filters.toDate ? `${filters.toDate}T23:59:59` : undefined,
-      departmentId: filters.departmentId || undefined,
-      paperId: filters.paperId || undefined,
-      professionalFieldId: filters.professionalFieldId || undefined,
+      fromDate: appliedFilters.fromDate ? `${appliedFilters.fromDate}T00:00:00` : undefined,
+      toDate: appliedFilters.toDate ? `${appliedFilters.toDate}T23:59:59` : undefined,
+      departmentId: appliedFilters.departmentId || undefined,
+      paperId: appliedFilters.paperId || undefined,
+      professionalFieldId: appliedFilters.professionalFieldId || undefined,
     }
     try {
       const response = await evaluationDashboardApi.getExamOverview({
         ...params,
-        employeeId: filters.employeeId || undefined,
-        resultStatus: filters.resultStatus || undefined,
+        employeeId: appliedFilters.employeeId || undefined,
+        resultStatus: appliedFilters.resultStatus || undefined,
       })
       const data = apiData(response, null)
       setOverview(data)
@@ -182,13 +190,13 @@ function EvaluationDashboardPage({ role = 'admin' }) {
       setLoading(false)
     }
   }, [
-    filters.departmentId,
-    filters.employeeId,
-    filters.fromDate,
-    filters.paperId,
-    filters.professionalFieldId,
-    filters.resultStatus,
-    filters.toDate,
+    appliedFilters.departmentId,
+    appliedFilters.employeeId,
+    appliedFilters.fromDate,
+    appliedFilters.paperId,
+    appliedFilters.professionalFieldId,
+    appliedFilters.resultStatus,
+    appliedFilters.toDate,
     isManager,
     showToast,
   ])
@@ -213,14 +221,37 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
   const activeFilterCount = [
-    filters.fromDate,
-    filters.toDate,
-    !isManager && filters.departmentId,
-    filters.paperId,
-    filters.professionalFieldId,
-    filters.employeeId,
-    filters.resultStatus,
+    appliedFilters.fromDate,
+    appliedFilters.toDate,
+    !isManager && appliedFilters.departmentId,
+    appliedFilters.paperId,
+    appliedFilters.professionalFieldId,
+    appliedFilters.employeeId,
+    appliedFilters.resultStatus,
   ].filter(Boolean).length
+
+  function resetFilters() {
+    const managerDepartmentId = isManager
+      ? String(departments[0]?.id || filters.departmentId || appliedFilters.departmentId || '')
+      : ''
+    const nextFilters = {
+      ...DEFAULT_EVALUATION_DASHBOARD_FILTERS,
+      departmentId: managerDepartmentId,
+    }
+    setFilters(nextFilters)
+    setAppliedFilters(nextFilters)
+    setError('')
+  }
+
+  function applyFilters() {
+    if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
+      setError('Từ ngày không được sau đến ngày.')
+      return
+    }
+    setError('')
+    setAppliedFilters({ ...filters })
+    setIsFilterOpen(false)
+  }
 
   const pageTitle = 'Dashboard lý thuyết'
 
@@ -230,38 +261,27 @@ function EvaluationDashboardPage({ role = 'admin' }) {
       title={isManager ? pageTitle : undefined}
     >
         <div className="exam-dashboard">
-          <section className="exam-dashboard__toolbar admin-control-toolbar" aria-label="Bộ lọc dashboard năng lực chuyên môn">
-            <div className="admin-control-toolbar__main">
-              <div className="admin-control-toolbar__controls">
-                <button
-                  type="button"
-                  className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                  aria-controls="exam-dashboard-filter-panel"
-                  aria-expanded={isFilterOpen}
-                  onClick={() => setIsFilterOpen((current) => !current)}
-                >
-                  <FilterOutlined />
-                  Bộ lọc
-                  {activeFilterCount > 0 && (
-                    <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {isFilterOpen && (
-              <div
-                id="exam-dashboard-filter-panel"
-                className="exam-dashboard__filter-panel admin-control-toolbar__panel"
-              >
+          <AppliedFilterToolbar
+            activeCount={activeFilterCount}
+            ariaLabel="Bộ lọc dashboard năng lực chuyên môn"
+            className="exam-dashboard__toolbar"
+            isOpen={isFilterOpen}
+            onApply={applyFilters}
+            onReset={resetFilters}
+            onToggle={() => setIsFilterOpen((current) => !current)}
+            panelClassName="exam-dashboard__filter-panel"
+            panelId="exam-dashboard-filter-panel"
+            showFilter
+          >
                 <Filter label="Từ ngày"><KeyboardDatePicker value={filters.fromDate} onChange={(val) => setFilters({ ...filters, fromDate: val })} /></Filter>
                 <Filter label="Đến ngày"><KeyboardDatePicker value={filters.toDate} onChange={(val) => setFilters({ ...filters, toDate: val })} /></Filter>
-                <Filter label="Khoa/phòng">
-                  <SearchableSelect
+                <FilterSelectField
+                    label="Khoa/phòng"
                     value={filters.departmentId}
                     disabled={isManager}
                     onChange={(value) => setFilters({ ...filters, departmentId: value })}
                     placeholder={isManager ? 'Khoa của tôi' : 'Toàn viện'}
+                    searchable
                     searchPlaceholder="Gõ tên khoa/phòng..."
                     options={[
                       ...(!isManager ? [{ value: '', label: 'Toàn viện' }] : []),
@@ -271,13 +291,13 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                         searchText: department.code || department.departmentCode,
                       })),
                     ]}
-                  />
-                </Filter>
-                <Filter label="Bài kiểm tra">
-                  <SearchableSelect
+                />
+                <FilterSelectField
+                    label="Bài kiểm tra"
                     value={filters.paperId}
                     onChange={(value) => setFilters({ ...filters, paperId: value })}
                     placeholder="Tất cả bài kiểm tra"
+                    searchable
                     searchPlaceholder="Gõ tên bài kiểm tra..."
                     options={[
                       { value: '', label: 'Tất cả bài kiểm tra' },
@@ -288,13 +308,13 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                         searchText: paper.code,
                       })),
                     ]}
-                  />
-                </Filter>
-                <Filter label="Lĩnh vực chuyên môn">
-                  <SearchableSelect
+                />
+                <FilterSelectField
+                    label="Lĩnh vực chuyên môn"
                     value={filters.professionalFieldId}
                     onChange={(value) => setFilters({ ...filters, professionalFieldId: value })}
                     placeholder="Tất cả lĩnh vực"
+                    searchable
                     searchPlaceholder="Gõ tên lĩnh vực..."
                     options={[
                       { value: '', label: 'Tất cả lĩnh vực' },
@@ -304,13 +324,13 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                         searchText: field.code,
                       })),
                     ]}
-                  />
-                </Filter>
-                <Filter label="Nhân viên">
-                  <SearchableSelect
+                />
+                <FilterSelectField
+                    label="Nhân viên"
                     value={filters.employeeId}
                     onChange={(value) => setFilters({ ...filters, employeeId: value })}
                     placeholder="Tất cả nhân viên"
+                    searchable
                     searchPlaceholder="Gõ tên hoặc mã nhân viên..."
                     options={[
                       { value: '', label: 'Tất cả nhân viên' },
@@ -321,18 +341,15 @@ function EvaluationDashboardPage({ role = 'admin' }) {
                         searchText: employee.employeeCode,
                       })),
                     ]}
-                  />
-                </Filter>
-                <Filter label="Trạng thái kết quả">
-                  <select value={filters.resultStatus} onChange={(event) => setFilters({ ...filters, resultStatus: event.target.value })}>
-                    <option value="">Tất cả kết quả</option>
-                    <option value="PASSED">Đạt</option>
-                    <option value="FAILED">Không đạt</option>
-                  </select>
-                </Filter>
-              </div>
-            )}
-          </section>
+                />
+                <FilterSelectField
+                  label="Trạng thái kết quả"
+                  value={filters.resultStatus}
+                  onChange={(value) => setFilters({ ...filters, resultStatus: value })}
+                  options={[{ value: '', label: 'Tất cả kết quả' }, { value: 'PASSED', label: 'Đạt' }, { value: 'FAILED', label: 'Không đạt' }]}
+                  placeholder="Tất cả kết quả"
+                />
+          </AppliedFilterToolbar>
 
           {error && <div className="exam-dashboard__notice exam-dashboard__notice--error"><InfoCircleOutlined /> {error}</div>}
 
