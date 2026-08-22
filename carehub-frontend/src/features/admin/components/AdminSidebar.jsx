@@ -21,6 +21,7 @@ import {
   LineChartOutlined,
   MailOutlined,
   UserOutlined,
+  UserSwitchOutlined,
   AppstoreOutlined,
   DownOutlined,
   LeftOutlined,
@@ -66,6 +67,7 @@ const navSections = [
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
       { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
       { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/admin/reports/checklist-dashboard' },
+      { icon: <UserSwitchOutlined />, label: 'Giao bảng kiểm', path: '/admin/quality/checklist-assignments' },
     ],
   },
   {

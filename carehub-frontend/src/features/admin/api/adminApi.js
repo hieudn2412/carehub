@@ -440,6 +440,71 @@ export const adminApi = {
     })
   },
 
+  getFormAssignmentOverview() {
+    return httpClient.get('/form-assignments/overview', {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormAssignmentForms(params) {
+    return httpClient.get('/form-assignments/forms', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentAssignees(params) {
+    return httpClient.get('/form-assignments/assignees', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentItems(params) {
+    return httpClient.get('/form-assignments/items', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentFormCandidates(params) {
+    return httpClient.get('/form-assignments/form-candidates', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentAssigneeCandidates(params) {
+    return httpClient.get('/form-assignments/assignee-candidates', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  previewBulkFormAssignment(data) {
+    return httpClient.post('/form-assignments/preview', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  bulkAssignForms(data) {
+    return httpClient.post('/form-assignments/bulk', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormAssignmentItemValidity(data) {
+    return httpClient.patch('/form-assignment-items/bulk-validity', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  bulkRevokeFormAssignmentItems(data) {
+    return httpClient.post('/form-assignment-items/bulk-revoke', data, {
+      headers: authHeaders(),
+    })
+  },
+
   getFormSubmissions(params) {
     return httpClient.get('/form-submissions', {
       headers: authHeaders(),

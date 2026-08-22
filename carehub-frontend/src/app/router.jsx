@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import EmailConfirmOtpScreen from '../features/auth/pages/EmailConfirmOtpScreen.jsx'
 import EmailConfirmResetScreen from '../features/auth/pages/EmailConfirmResetScreen.jsx'
 import EmailConfirmScreen from '../features/auth/pages/EmailConfirmScreen.jsx'
@@ -77,7 +77,7 @@ import EmailTemplateFormPage from '../features/admin/pages/EmailTemplateFormPage
 import ImportModal from '../features/admin/pages/ImportModal.jsx'
 import ChecklistCreatePage from '../features/admin/pages/ChecklistCreatePage.jsx'
 import FormListPage from '../features/admin/pages/FormListPage.jsx'
-import FormAssignmentManagementPage from '../features/admin/pages/FormAssignmentManagementPage.jsx'
+import ChecklistAssignmentPage from '../features/admin/pages/ChecklistAssignmentPage.jsx'
 import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.jsx'
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
@@ -127,6 +127,14 @@ function evaluationElement(element) {
 function AdminTrainingEvidenceRedirect() {
   const { id } = useParams()
   return <Navigate to={`/training/records/${id}#evidence`} replace />
+}
+
+function ChecklistAssignmentRedirect() {
+  const { id } = useParams()
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  params.set('formId', id)
+  return <Navigate to={`/admin/quality/checklist-assignments?${params.toString()}`} replace />
 }
 
 
@@ -214,7 +222,8 @@ function AppRouter() {
       <Route path="/admin/quality/checklists" element={adminElement(<FormListPage />)} />
       <Route path="/admin/quality/checklists/new" element={adminElement(<ChecklistCreatePage />)} />
       <Route path="/admin/quality/checklists/:id/detail" element={adminElement(<ChecklistCreatePage />)} />
-      <Route path="/admin/quality/checklists/:id/assignments" element={adminElement(<FormAssignmentManagementPage />)} />
+      <Route path="/admin/quality/checklists/:id/assignments" element={adminElement(<ChecklistAssignmentRedirect />)} />
+      <Route path="/admin/quality/checklist-assignments" element={adminElement(<ChecklistAssignmentPage />)} />
       <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />

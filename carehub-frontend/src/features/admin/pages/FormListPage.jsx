@@ -817,13 +817,6 @@ function FormListPage() {
                   </p>
                 </div>
                 <div className="flp-header-actions">
-                  <button
-                    className="flp-btn-assign"
-                    onClick={openAssignmentModal}
-                    type="button"
-                  >
-                    <UserSwitchOutlined /> Giao checklist
-                  </button>
                   <div
                     className={`flp-import-menu${importMenuOpen ? ' is-open' : ''}`}
                     onBlur={(event) => {
@@ -925,9 +918,6 @@ function FormListPage() {
               <AppliedFilterToolbar
                 activeCount={[status !== 'all', departmentId !== 'all'].filter(Boolean).length}
                 actions={<div className="flp-toolbar-actions">
-                    <button className="flp-btn-assign" onClick={openAssignmentModal} type="button">
-                      <UserSwitchOutlined /> Giao checklist
-                    </button>
                     <div
                       className={`flp-import-menu${importMenuOpen ? ' is-open' : ''}`}
                       onBlur={(event) => {
@@ -1064,7 +1054,7 @@ function FormListPage() {
                             <td className="flp-col-assignees">
                               <button
                                 className="flp-stat-link"
-                                onClick={() => setPermissionForm(form)}
+                                onClick={() => navigate(`/admin/quality/checklist-assignments?formId=${form.id}`)}
                                 title={`Quản lý người được giao ${form.title}`}
                                 type="button"
                               >
@@ -1190,7 +1180,7 @@ function FormListPage() {
         }}
         onCancel={() => setConfirmModal({ isOpen: false, form: null })}
       />
-      {permissionForm && (
+      {false && permissionForm && (
         <FormVersionAssignmentModal
           form={permissionForm}
           onAssignmentCountChange={(formId, count) => {
@@ -1205,7 +1195,7 @@ function FormListPage() {
           onClose={() => setPermissionForm(null)}
         />
       )}
-      {assignmentModalOpen && (
+      {false && assignmentModalOpen && (
         <div className="flp-assignment-backdrop" role="presentation" onMouseDown={closeAssignmentModal}>
           <form
             aria-modal="true"

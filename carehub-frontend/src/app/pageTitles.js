@@ -32,6 +32,7 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/quality/checklists/new', 'Tạo bảng kiểm'],
   ['/admin/quality/checklists/:id/detail', 'Chi tiết bảng kiểm'],
   ['/admin/quality/checklists/:id/assignments', 'Phân công bảng kiểm'],
+  ['/admin/quality/checklist-assignments', 'Giao bảng kiểm'],
   ['/admin/quality/checklists/:id/edit', 'Cấu hình bảng kiểm'],
   ['/admin/quality/checklists/:id/builder/:versionId', 'Thiết kế bảng kiểm'],
   ['/admin/quality/checklists/:id/preview', 'Xem trước bảng kiểm'],
