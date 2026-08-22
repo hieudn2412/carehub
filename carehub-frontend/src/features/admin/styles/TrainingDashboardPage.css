@@ -39,63 +39,6 @@
   cursor: not-allowed;
 }
 
-.training-dashboard__filter-panel {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.training-dashboard__filter-panel label {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-}
-
-.training-dashboard__filter-panel label > span {
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.training-dashboard__filter-panel select,
-.training-dashboard__filter-panel input,
-.training-dashboard__filter-panel label > div:not(.searchable-select) {
-  width: 100%;
-  min-height: 42px;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid #d8e2ec;
-  border-radius: 9px;
-  background: #fff;
-  color: #263247;
-  font: inherit;
-  outline: none;
-}
-
-.training-dashboard__filter-panel label > div:not(.searchable-select) {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
-}
-
-.training-dashboard__filter-panel .searchable-select > input {
-  min-height: 42px;
-  height: 42px;
-  padding: 0 34px 0 38px !important;
-  border-radius: 6px;
-  text-align: left;
-}
-
-.training-dashboard__filter-panel .searchable-select--static > input {
-  padding-left: 12px !important;
-  padding-right: 34px !important;
-}
-
-.training-dashboard__filter-panel .searchable-select__search-icon {
-  display: block;
-  left: 12px;
-}
-
 .training-dashboard__alert,
 .training-dashboard__loading {
   display: flex;
@@ -268,7 +211,6 @@
 }
 
 @media (max-width: 1280px) {
-  .training-dashboard__filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__charts { grid-template-columns: 1fr; }
 }
@@ -277,7 +219,6 @@
 @media (max-width: 768px) {
   .training-dashboard { padding: 14px; }
   .training-dashboard__export { width: 100%; }
-  .training-dashboard__filter-panel,
   .training-dashboard__kpis { grid-template-columns: 1fr; }
 }
 

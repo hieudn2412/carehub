@@ -144,6 +144,33 @@ class AuthControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())));
     }
 
+    @DisplayName("L2-AUTH-02B | Happy Path: imported first-login employee logs in without email setup and becomes ACTIVE")
+    @Test
+    void importedFirstLoginEmployeeLoginActivatesAccount() throws Exception {
+        User importedUser = userRepository.save(User.builder()
+                .employeeCode("NEWLOGIN001")
+                .name("New Login User")
+                .password(passwordEncoder.encode("Correct123"))
+                .firstLogin(true)
+                .status(UserStatus.INACTIVE)
+                .build());
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"employeeCode":"NEWLOGIN001","password":"Correct123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken", not(blankOrNullString())))
+                .andExpect(jsonPath("$.data.refreshToken", not(blankOrNullString())))
+                .andExpect(jsonPath("$.data.requiresFirstLoginSetup", is(false)));
+
+        User reloaded = userRepository.findById(importedUser.getId()).orElseThrow();
+        assertEquals(UserStatus.ACTIVE, reloaded.getStatus());
+        assertFalse(reloaded.isFirstLogin());
+        assertNull(reloaded.getEmail());
+    }
+
     @DisplayName("L2-AUTH-03 | Negative: LOCKED account → 401; blank payload → 422 VAL_001")
     @Test
     void loginRejectsLockedAccountAndInvalidPayload() throws Exception {

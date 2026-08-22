@@ -145,6 +145,22 @@ function ProfessionalCompetencyDashboard() {
 
   useEffect(() => setDraftFilters(filters), [filters])
 
+  useEffect(() => {
+    const nextQuery = draftFilters.q.trim()
+    if (nextQuery === filters.q) return undefined
+    const timer = window.setTimeout(() => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        if (nextQuery) next.set('q', nextQuery)
+        else next.delete('q')
+        if (draftFilters.dateFrom) next.set('dateFrom', draftFilters.dateFrom)
+        if (draftFilters.dateTo) next.set('dateTo', draftFilters.dateTo)
+        return next
+      }, { replace: true })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [draftFilters.dateFrom, draftFilters.dateTo, draftFilters.q, filters.q, setSearchParams])
+
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true)
     setSummaryError('')

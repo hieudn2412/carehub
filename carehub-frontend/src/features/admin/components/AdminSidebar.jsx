@@ -21,6 +21,7 @@ import {
   LineChartOutlined,
   MailOutlined,
   UserOutlined,
+  UserSwitchOutlined,
   AppstoreOutlined,
   DownOutlined,
   LeftOutlined,
@@ -41,15 +42,16 @@ const navSections = [
   },
   {
     label: 'TÀI KHOẢN',
-    items: [
-      { icon: <TeamOutlined />, label: 'Danh sách tài khoản', path: '/admin/accounts' },
-    ],
+    items: [],
   },
   {
     label: 'DỮ LIỆU NỀN',
     items: [
+      { icon: <TeamOutlined />, label: 'Danh sách tài khoản', path: '/admin/accounts' },
       { icon: <BankOutlined />, label: 'Danh mục phòng ban', path: '/admin/reference/departments' },
       { icon: <HistoryOutlined />, label: 'Lịch sử đồng bộ', path: '/admin/reference/sync-history' },
+      { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
+      { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
   {
@@ -57,17 +59,15 @@ const navSections = [
     items: [
       { icon: <BookOutlined />, label: 'Đào tạo liên tục', path: '/training/employees' },
       { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
-      { icon: <SlidersOutlined />, label: 'Hình thức đào tạo', path: '/admin/training/activity-types' },
-      { icon: <DatabaseOutlined />, label: 'Lĩnh vực chuyên môn', path: '/admin/training/professional-fields' },
     ],
   },
   {
     label: 'GIÁM SÁT TUÂN THỦ',
     items: [
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
       { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/admin/quality/checklists' },
-      { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/admin/quality/history' },
-      { icon: <CalculatorOutlined />, label: 'Cài đặt điểm sàn quy trình kỹ thuật', path: '/admin/quality/formulas' },
-      { icon: <SlidersOutlined />, label: 'Cài đặt mục tiêu tuân thủ', path: '/admin/quality/compliance-targets' },
+      { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/admin/reports/checklist-dashboard' },
+      { icon: <UserSwitchOutlined />, label: 'Giao bảng kiểm', path: '/admin/quality/checklist-assignments' },
     ],
   },
   {
@@ -123,8 +123,6 @@ const navSections = [
     items: [
       { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/admin/reports/training-dashboard' },
       { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/admin/reports/checklist-dashboard' },
-      { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/admin/evaluation/compliance-by-technique' },
       {
         icon: <BarChartOutlined />,
         label: 'Chất lượng chăm sóc',
@@ -136,7 +134,9 @@ const navSections = [
   {
     label: 'HỆ THỐNG',
     items: [
-      { icon: <SettingOutlined />, label: 'Cấu hình hệ thống', path: '/admin/system-settings' },
+      { icon: <ScheduleOutlined />, label: 'Cấu hình giờ đào tạo', path: '/admin/system-settings/training' },
+      { icon: <SlidersOutlined />, label: 'Cấu hình giám sát tuân thủ', path: '/admin/system-settings/compliance' },
+      { icon: <LineChartOutlined />, label: 'Cấu hình năng lực chuyên môn', path: '/admin/system-settings/competency' },
       {
         icon: <HistoryOutlined />,
         label: 'Audit đánh giá',
@@ -171,13 +171,22 @@ const navGroups = [
     id: 'management',
     label: 'Quản lý',
     icon: <AppstoreOutlined />,
-    sections: navSections.slice(0, 7),
+    sections: [
+      navSections[0],
+      navSections[3],
+      navSections[4],
+      navSections[5],
+      navSections[6],
+    ],
   },
   {
     id: 'system',
     label: 'Hệ thống',
     icon: <SettingOutlined />,
-    sections: navSections.slice(7),
+    sections: [
+      navSections[2],
+      ...navSections.slice(7),
+    ],
   },
 ]
 

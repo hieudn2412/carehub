@@ -311,23 +311,59 @@ class E5SimilarityCalibrationTest {
                     ? recommendedStrongMin
                     : (!Double.isNaN(lowestNearZeroThreshold) ? lowestNearZeroThreshold : 0.98);
 
-            report.text("ĐỀ XUẤT strongMin = %.2f — đây là ngưỡng thấp nhất trong dải quét mà số cặp KHÁC BÀI vượt",
-                    strongMinProposal);
-            report.text("bằng 0 (hoặc dưới 0.01%). Ở mức này việc LOẠI THẲNG câu ứng viên là an toàn: không có cặp");
-            report.text("khác chủ đề nào đạt tới đó, nên điểm cao chỉ có thể đến từ trùng lặp thật.");
+            double[] nearestNeighbour = nearestNeighbourScores(queryVectors);
+            report.text("Đọc theo CẶP: ở mức %.2f có %d cặp khác bài vượt, p99 của nhóm khác bài là %.4f.",
+                    strongMinProposal, countAtLeast(crossLesson, strongMinProposal), crossP99);
             report.text("");
-            report.text("ĐỀ XUẤT reviewMin = %.2f — làm tròn lên từ p99 của nhóm khác bài (%.4f). Đặt thấp hơn mức này",
-                    recommendedReviewMin, crossP99);
-            report.text("sẽ đẩy hơn 1% số cặp KHÔNG liên quan vào hàng đợi xem lại; đặt cao hơn thì bỏ lọt vùng xám");
-            report.text("giữa \"diễn đạt lại\" và \"trùng thật\" mà con người cần phán.");
+            report.text("KHÔNG chọn ngưỡng từ bảng này. Bảng đếm theo CẶP, còn lúc chạy thật mỗi câu được chấm");
+            report.text("bằng MAX cosine trên toàn bộ ngân hàng — xem phần C2. Hai cách đếm lệch nhau cả chục lần:");
+            report.text("ngưỡng %.2f chỉ vượt bởi %.1f%% số CẶP, nhưng gắn cờ %.1f%% số CÂU.",
+                    recommendedReviewMin,
+                    100d * countAtLeast(crossLesson, recommendedReviewMin) / Math.max(1, crossLessonCount),
+                    100d * countAtLeast(nearestNeighbour, recommendedReviewMin) / questionCount);
+
+            // ── C2. Phân bố láng giềng gần nhất — CƠ SỞ CHỌN NGƯỠNG ──
+            report.section("C2. Phân bố láng giềng gần nhất (nn-max) — cơ sở chọn ngưỡng");
+            report.text("Với mỗi câu: cosine LỚN NHẤT so với %d câu còn lại (leave-one-out). Đây đúng là đại lượng",
+                    questionCount - 1);
+            report.text("mà `DuplicateCheckService` tính lúc chạy thật, nên tỉ lệ gắn cờ đọc được ở đây là tỉ lệ thật.");
             report.text("");
-            report.text("So với cấu hình hiện tại (strongMin=%.2f, reviewMin=%.2f): chênh %+.2f / %+.2f.",
-                    currentStrongMin, currentReviewMin,
-                    strongMinProposal - currentStrongMin, recommendedReviewMin - currentReviewMin);
-            report.text("LƯU Ý: đây là đề xuất rút ra từ %d câu hỏi SEED của một học phần. Ngân hàng câu hỏi thật của",
+            report.columns("p05", "p25", "p50", "p75", "p95", "min", "max");
+            report.row(BenchmarkReport.percentileOf(nearestNeighbour, 0.05),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.25),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.50),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.75),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.95),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 0.00),
+                    BenchmarkReport.percentileOf(nearestNeighbour, 1.00));
+            report.text("");
+            report.columns("ngưỡng", "số câu bị gắn cờ", "tỉ lệ câu (%)");
+            for (double threshold : new double[]{0.86, 0.88, 0.90, 0.92, 0.93, 0.95, 0.97}) {
+                int flagged = countAtLeast(nearestNeighbour, threshold);
+                report.row(String.format(Locale.ROOT, "%.2f", threshold),
+                        flagged, 100d * flagged / questionCount);
+            }
+            report.text("");
+
+            // reviewMin đặt ở p90 của nn-max: khoảng 10% số câu vào hàng đợi — khối lượng một đội
+            // duyệt được. Đây là tham số VẬN HÀNH (sức duyệt), không phải hằng số của model.
+            double nnReviewMin = Math.round(BenchmarkReport.percentileOf(nearestNeighbour, 0.90) * 100) / 100d;
+            report.text("ĐỀ XUẤT reviewMin = %.2f — p90 của nn-max, tức khoảng 10%% số câu bị gắn cờ.",
+                    nnReviewMin);
+            report.text("Đây là tham số VẬN HÀNH: chọn phân vị khớp với sức duyệt của đội, không phải hằng số model.");
+            report.text("");
+            report.text("ĐỀ XUẤT strongMin: đặt CAO (0.97+) và coi việc loại thẳng là ngoại lệ hiếm. Lý do nằm ở");
+            report.text("bảng D: cặp điểm cao nhất toàn corpus lại là cặp KHÁC BÀI, tức dương tính giả. Không có");
+            report.text("ngưỡng nào vừa loại được câu trùng thật vừa không loại nhầm — mà loại thẳng thì không ai");
+            report.text("xem lại, còn gắn cờ sai thì chỉ tốn một lượt duyệt. Bất đối xứng đó nghiêng về ngưỡng cao.");
+            report.text("");
+            report.text("So với cấu hình hiện tại (strongMin=%.2f, reviewMin=%.2f): reviewMin chênh %+.2f.",
+                    currentStrongMin, currentReviewMin, nnReviewMin - currentReviewMin);
+            report.text("LƯU Ý 1: tỉ lệ gắn cờ TĂNG theo kích thước ngân hàng — ngân hàng càng nhiều câu thì láng");
+            report.text("giềng gần nhất của mỗi câu càng gần. Phải đo lại khi ngân hàng lớn lên đáng kể.");
+            report.text("LƯU Ý 2: đây là %d câu SEED của một học phần. Ngân hàng thật của bệnh viện trải nhiều",
                     questionCount);
-            report.text("bệnh viện trải rộng nhiều chuyên khoa và có nhiều câu diễn đạt lại hơn, nên PHẢI chạy lại phép");
-            report.text("đo này trên dữ liệu thật trước khi chốt giá trị vào `application.yaml`.");
+            report.text("chuyên khoa, nên PHẢI chạy lại phép đo này trước khi chốt giá trị vào `application.yaml`.");
 
             // ── D. Top 15 cặp giống nhau nhất ──
             report.section("D. Top 15 cặp giống nhau nhất (đối xứng)");
@@ -585,6 +621,25 @@ class E5SimilarityCalibrationTest {
             lessonSizes.merge(lesson, 1, Integer::sum);
         }
         return new Corpus(List.copyOf(stems), List.copyOf(lessons), lessonSizes);
+    }
+
+    /**
+     * Với mỗi câu: cosine lớn nhất so với các câu CÒN LẠI (leave-one-out). Đây là đại lượng
+     * {@code DuplicateCheckService} thực sự tính lúc chạy — ngưỡng phải hiệu chỉnh trên phân bố
+     * này, không phải trên phân bố của từng cặp.
+     */
+    private static double[] nearestNeighbourScores(double[][] vectors) {
+        double[] nearest = new double[vectors.length];
+        for (int i = 0; i < vectors.length; i++) {
+            double best = 0;
+            for (int j = 0; j < vectors.length; j++) {
+                if (i != j) {
+                    best = Math.max(best, CosineUtil.cosine(vectors[i], vectors[j]));
+                }
+            }
+            nearest[i] = best;
+        }
+        return nearest;
     }
 
     private static int countAtLeast(double[] values, double threshold) {

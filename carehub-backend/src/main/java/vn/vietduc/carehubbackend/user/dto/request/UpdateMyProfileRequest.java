@@ -13,7 +13,6 @@ public record UpdateMyProfileRequest(
         @Size(max = 150, message = "Họ và tên không được vượt quá 150 ký tự")
         String fullName,
 
-        @NotBlank(message = "Email không được để trống")
         @Email(message = "Email không hợp lệ")
         @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
         String email,

@@ -116,6 +116,17 @@ function ProfessionalFieldManagementPage() {
     return () => window.clearTimeout(timer)
   }, [loadFields, loadPendingCount])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const closeFormModal = useCallback(() => {
     if (saving) return
     setEditingId(null)

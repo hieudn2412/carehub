@@ -27,6 +27,7 @@ function SearchableSelect({
   searchable = true,
   showDescriptions = true,
   showSelectedChips = true,
+  keepSearchOnSelect = false,
   ariaLabel,
   ariaDescribedBy,
   ariaInvalid,
@@ -119,8 +120,10 @@ function SearchableSelect({
           ? normalizedValues.filter((selectedValue) => selectedValue !== optionValue)
           : [...normalizedValues, optionValue],
       )
-      setQuery('')
-      onSearch?.('')
+      if (!keepSearchOnSelect) {
+        setQuery('')
+        onSearch?.('')
+      }
       setActiveIndex(-1)
       setIsOpen(true)
       window.setTimeout(() => inputRef.current?.focus(), 0)

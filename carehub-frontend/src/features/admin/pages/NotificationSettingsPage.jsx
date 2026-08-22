@@ -150,7 +150,7 @@ function NotificationSettingsPage() {
                                 <span className="ns-row-desc">Hệ thống gửi lại nếu điều kiện cảnh báo vẫn còn tồn tại.</span>
                               </div>
                               <SearchableSelect
-                                className="ns-select"
+                                className="ns-dropdown"
                                 value={policy.cadence}
                                 onChange={(value) => updatePolicy(item.eventType, { cadence: value })}
                                 options={[
@@ -169,7 +169,7 @@ function NotificationSettingsPage() {
                                 <span className="ns-row-title">Mức tuân thủ mục tiêu (%)</span>
                               </div>
                               <input
-                                className="ns-select"
+                                className="ns-number-input"
                                 type="number"
                                 min="0"
                                 max="100"

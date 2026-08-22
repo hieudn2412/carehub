@@ -18,7 +18,7 @@
  * đạt". Chỉ có thể phân biệt bằng cách kiểm tra `answers[]` có chứa questionKey đó hay không.
  */
 
-export const RATING_LEVELS = [
+const RATING_LEVELS = [
   { score: -1, label: 'Không thực hiện', tone: 'critical' },
   { score: 0, label: 'Thực hiện nhưng không đạt', tone: 'failed' },
   { score: 1, label: 'Đạt', tone: 'passed' },
@@ -26,7 +26,7 @@ export const RATING_LEVELS = [
   { score: 1.5, label: 'Rất tốt', tone: 'excellent' },
 ]
 
-export const UNANSWERED_RATING = { label: 'Chưa trả lời', tone: 'unanswered' }
+const UNANSWERED_RATING = { label: 'Chưa trả lời', tone: 'unanswered' }
 
 const TONE_BY_LABEL = new Map(
   RATING_LEVELS.map(level => [level.label.toLowerCase(), level.tone]),

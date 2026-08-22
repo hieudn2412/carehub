@@ -49,6 +49,22 @@ export default function StaffCompetencyPage() {
     setDraftFilters({ q: query, dateFrom: fromDate, dateTo: toDate })
   }, [fromDate, query, toDate])
 
+  useEffect(() => {
+    const nextQuery = draftFilters.q.trim()
+    if (nextQuery === query) return undefined
+    const timer = window.setTimeout(() => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        if (nextQuery) next.set('q', nextQuery)
+        else next.delete('q')
+        if (draftFilters.dateFrom) next.set('dateFrom', draftFilters.dateFrom)
+        if (draftFilters.dateTo) next.set('dateTo', draftFilters.dateTo)
+        return next
+      }, { replace: true })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [draftFilters.dateFrom, draftFilters.dateTo, draftFilters.q, query, setSearchParams])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
