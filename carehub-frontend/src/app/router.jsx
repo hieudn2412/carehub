@@ -67,6 +67,7 @@ import AdminDashboard from '../features/admin/pages/AdminDashboard.jsx'
 import AdminAccountsScreen from '../features/admin/pages/AdminAccountsScreen.jsx'
 import ImportLogsListPage from '../features/admin/pages/ImportLogsListPage.jsx'
 import SystemSettingsScreen from '../features/admin/pages/SystemSettingsScreen.jsx'
+import ComplianceMonitoringSettingsPage from '../features/admin/pages/ComplianceMonitoringSettingsPage.jsx'
 import ReferenceEmployeesListPage from '../features/admin/pages/ReferenceEmployeesListPage.jsx'
 import ReferenceEmployeeDetailPage from '../features/admin/pages/ReferenceEmployeeDetailPage.jsx'
 import ReferenceDepartmentsListPage from '../features/admin/pages/ReferenceDepartmentsListPage.jsx'
@@ -199,7 +200,10 @@ function AppRouter() {
       <Route path="/admin/accounts" element={adminElement(<AdminAccountsScreen />)} />
       <Route path="/admin/system/import-logs" element={adminElement(<ImportLogsListPage />)} />
       <Route path="/admin/reference/sync-history" element={adminElement(<ImportLogsListPage />)} />
-      <Route path="/admin/system-settings" element={adminElement(<SystemSettingsScreen />)} />
+      <Route path="/admin/system-settings" element={adminElement(<Navigate to="/admin/system-settings/training" replace />)} />
+      <Route path="/admin/system-settings/training" element={adminElement(<SystemSettingsScreen mode="training" />)} />
+      <Route path="/admin/system-settings/compliance" element={adminElement(<ComplianceMonitoringSettingsPage />)} />
+      <Route path="/admin/system-settings/competency" element={adminElement(<SystemSettingsScreen mode="competency" />)} />
       <Route path="/admin/reference/employees" element={adminElement(<ReferenceEmployeesListPage />)} />
       <Route path="/admin/reference/employees/:id" element={adminElement(<ReferenceEmployeeDetailPage />)} />
       <Route path="/admin/reference/departments" element={adminElement(<ReferenceDepartmentsListPage />)} />
@@ -290,6 +294,10 @@ function AppRouter() {
         element={adminElement(<ChecklistQualityDashboardPage />)}
       />
       <Route
+        path="/admin/reports/checklist-dashboard/results/forms/:formId/versions/:versionId"
+        element={adminElement(<AdminQualityHistoryVersionPage source="technical-compliance" />)}
+      />
+      <Route
         path="/admin/reports/competency-dashboard"
         element={evaluationElement(<CompetencySummaryPage />)}
       />
@@ -316,6 +324,10 @@ function AppRouter() {
       <Route
         path="/manager/reports/checklist-dashboard"
         element={managerOrAdminElement(<ChecklistQualityDashboardPage role="manager" />)}
+      />
+      <Route
+        path="/manager/reports/checklist-dashboard/results/forms/:formId/versions/:versionId"
+        element={managerOrAdminElement(<AdminQualityHistoryVersionPage role="manager" source="technical-compliance" />)}
       />
       <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />

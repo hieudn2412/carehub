@@ -134,6 +134,18 @@ function QuestionBankListPage() {
     loadQuestions()
   }, [loadQuestions])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const categories = useMemo(
     () => Array.from(new Set(questions.map((question) => question.category).filter(Boolean))),
     [questions],

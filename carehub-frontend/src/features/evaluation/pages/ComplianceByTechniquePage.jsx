@@ -89,8 +89,6 @@ function ComplianceByTechniquePage() {
   const effectiveFromDate = appliedFilters.fromDate
   const effectiveToDate = appliedFilters.toDate
 
-  const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
-
   useEffect(() => {
     const timer = window.setTimeout(async () => {
       try {
@@ -117,6 +115,17 @@ function ComplianceByTechniquePage() {
     }, 0)
     return () => window.clearTimeout(timer)
   }, [isAdmin, showToast])
+
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
 
   const loadData = useCallback(async () => {
     if (!departmentId && !isAdmin) {
@@ -162,8 +171,7 @@ function ComplianceByTechniquePage() {
   }
 
   const breadcrumbs = [
-    { label: 'Dashboard', link: dashboardPath },
-    { label: 'Đánh giá' },
+    { label: 'Giám sát tuân thủ' },
     { label: 'Tuân thủ chung' },
   ]
 

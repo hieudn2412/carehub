@@ -2158,6 +2158,10 @@
   background: #f8fafc;
 }
 
+.aqh-results-filter {
+  margin-bottom: 18px;
+}
+
 .aqh-filter-field {
   display: grid;
   min-width: 0;

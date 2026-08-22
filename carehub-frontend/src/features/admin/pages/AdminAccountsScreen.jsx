@@ -211,6 +211,18 @@ function AdminAccountsScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, appliedFilters])
 
+  useEffect(() => {
+    const nextSearch = search.trim()
+    if (nextSearch === appliedFilters.search) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(1)
+      setAppliedFilters((current) => (
+        current.search === nextSearch ? current : { ...current, search: nextSearch }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.search, search])
+
   // Load detail data when select user changes
   useEffect(() => {
     if (!selectedUserId) {

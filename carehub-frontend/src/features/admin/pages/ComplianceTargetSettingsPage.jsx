@@ -100,6 +100,16 @@ function ComplianceTargetSettingsPage() {
   }, [appliedKeyword, statusFilter])
 
   useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedKeyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedKeyword(nextKeyword)
+      setPage(0)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedKeyword, keyword])
+
+  useEffect(() => {
     if (isFilterOpen) setDraftStatusFilter(statusFilter)
   }, [isFilterOpen, statusFilter])
 
@@ -174,7 +184,8 @@ function ComplianceTargetSettingsPage() {
   const activeFilterCount = [statusFilter].filter(Boolean).length
 
   const breadcrumbs = useMemo(() => [
-    { label: 'Giám sát tuân thủ' },
+    { label: 'Cấu hình hệ thống' },
+    { label: 'Cấu hình giám sát tuân thủ', link: '/admin/system-settings/compliance' },
     { label: 'Cài đặt mục tiêu tuân thủ' },
   ], [])
 

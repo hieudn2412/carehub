@@ -50,6 +50,17 @@ function ExamPaperListPage({
     return () => window.clearTimeout(timer)
   }, [loadPapers])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const filteredPapers = useMemo(() => {
     const normalized = appliedFilters.keyword.toLowerCase()
     return papers.filter((paper) => {

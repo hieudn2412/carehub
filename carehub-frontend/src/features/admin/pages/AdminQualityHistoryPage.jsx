@@ -101,6 +101,22 @@ function AdminQualityHistoryPage({ role = 'admin' }) {
   }, [dateFrom, dateTo, keyword])
 
   useEffect(() => {
+    if (requestedFormId) return undefined
+    const nextKeyword = keywordInput.trim()
+    if (nextKeyword === keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        if (nextKeyword) next.set('keyword', nextKeyword)
+        else next.delete('keyword')
+        next.set('page', '0')
+        return next
+      }, { replace: true })
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [keyword, keywordInput, requestedFormId, setSearchParams])
+
+  useEffect(() => {
     let alive = true
     setLoading(true)
     setError('')

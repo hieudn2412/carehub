@@ -134,6 +134,18 @@ function CompetencySummaryPage() {
     return () => window.clearTimeout(timer)
   }, [isAdmin, showToast, loadCategories])
 
+  useEffect(() => {
+    const nextSearchTerm = searchTerm.trim()
+    if (nextSearchTerm === appliedFilters.searchTerm) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.searchTerm === nextSearchTerm ? current : { ...current, searchTerm: nextSearchTerm }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.searchTerm, searchTerm])
+
   const loadData = useCallback(async () => {
     if (!isAdmin && !departmentId) return
     setLoading(true)

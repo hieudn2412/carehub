@@ -150,11 +150,10 @@ function Sidebar({ alertSummary = {} }) {
       {
         label: 'Giám sát tuân thủ',
         items: [
-          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/manager/reports/checklist-dashboard' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
           { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
-          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
       {
@@ -363,11 +362,6 @@ function Sidebar({ alertSummary = {} }) {
               icon: <FileDoneOutlined />,
               label: 'Bảng kiểm giám sát',
               route: '/staff/checklists',
-            },
-            {
-              icon: <HistoryOutlined />,
-              label: 'Lịch sử đánh giá',
-              route: '/staff/quality/history',
             },
           ] : []),
         ],
