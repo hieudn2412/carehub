@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import EmailConfirmOtpScreen from '../features/auth/pages/EmailConfirmOtpScreen.jsx'
 import EmailConfirmResetScreen from '../features/auth/pages/EmailConfirmResetScreen.jsx'
 import EmailConfirmScreen from '../features/auth/pages/EmailConfirmScreen.jsx'
@@ -76,12 +76,11 @@ import EmailTemplateFormPage from '../features/admin/pages/EmailTemplateFormPage
 import ImportModal from '../features/admin/pages/ImportModal.jsx'
 import ChecklistCreatePage from '../features/admin/pages/ChecklistCreatePage.jsx'
 import FormListPage from '../features/admin/pages/FormListPage.jsx'
-import FormAssignmentManagementPage from '../features/admin/pages/FormAssignmentManagementPage.jsx'
+import ChecklistAssignmentPage from '../features/admin/pages/ChecklistAssignmentPage.jsx'
 import FormMetadataFormPage from '../features/admin/pages/FormMetadataFormPage.jsx'
 import FormBuilderPage from '../features/admin/pages/FormBuilderPage.jsx'
 import FormPreviewPage from '../features/admin/pages/FormPreviewPage.jsx'
 import FormImportWizardPage from '../features/admin/pages/FormImportWizardPage.jsx'
-import AdminQualityHistoryPage from '../features/admin/pages/AdminQualityHistoryPage.jsx'
 import AdminQualityHistoryVersionPage from '../features/admin/pages/AdminQualityHistoryVersionPage.jsx'
 import AdminQualityHistoryDetailPage from '../features/admin/pages/AdminQualityHistoryDetailPage.jsx'
 import ScoringFormulaPage from '../features/admin/pages/ScoringFormulaPage.jsx'
@@ -126,6 +125,14 @@ function evaluationElement(element) {
 function AdminTrainingEvidenceRedirect() {
   const { id } = useParams()
   return <Navigate to={`/training/records/${id}#evidence`} replace />
+}
+
+function ChecklistAssignmentRedirect() {
+  const { id } = useParams()
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  params.set('formId', id)
+  return <Navigate to={`/admin/quality/checklist-assignments?${params.toString()}`} replace />
 }
 
 
@@ -213,7 +220,8 @@ function AppRouter() {
       <Route path="/admin/quality/checklists" element={adminElement(<FormListPage />)} />
       <Route path="/admin/quality/checklists/new" element={adminElement(<ChecklistCreatePage />)} />
       <Route path="/admin/quality/checklists/:id/detail" element={adminElement(<ChecklistCreatePage />)} />
-      <Route path="/admin/quality/checklists/:id/assignments" element={adminElement(<FormAssignmentManagementPage />)} />
+      <Route path="/admin/quality/checklists/:id/assignments" element={adminElement(<ChecklistAssignmentRedirect />)} />
+      <Route path="/admin/quality/checklist-assignments" element={adminElement(<ChecklistAssignmentPage />)} />
       <Route path="/admin/quality/checklists/:id/edit" element={adminElement(<FormMetadataFormPage />)} />
       <Route path="/admin/quality/checklists/:id/builder/:versionId" element={adminElement(<FormBuilderPage />)} />
       <Route path="/admin/quality/checklists/:id/preview" element={adminElement(<FormPreviewPage />)} />
@@ -268,9 +276,6 @@ function AppRouter() {
       <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
 
-      <Route path="/admin/quality/history" element={adminElement(<AdminQualityHistoryPage />)} />
-      <Route path="/admin/quality/history/forms/:formId/versions/:versionId" element={adminElement(<AdminQualityHistoryVersionPage />)} />
-      <Route path="/admin/quality/history/:id" element={adminElement(<AdminQualityHistoryDetailPage />)} />
       <Route
         path="/admin/quality/formulas"
         element={adminElement(<ScoringFormulaPage />)}
@@ -293,7 +298,11 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/checklist-dashboard/results/forms/:formId/versions/:versionId"
-        element={adminElement(<AdminQualityHistoryVersionPage source="technical-compliance" />)}
+        element={adminElement(<AdminQualityHistoryVersionPage />)}
+      />
+      <Route
+        path="/admin/reports/checklist-dashboard/results/:id"
+        element={adminElement(<AdminQualityHistoryDetailPage />)}
       />
       <Route
         path="/admin/reports/competency-dashboard"
@@ -325,7 +334,11 @@ function AppRouter() {
       />
       <Route
         path="/manager/reports/checklist-dashboard/results/forms/:formId/versions/:versionId"
-        element={managerOrAdminElement(<AdminQualityHistoryVersionPage role="manager" source="technical-compliance" />)}
+        element={managerOrAdminElement(<AdminQualityHistoryVersionPage role="manager" />)}
+      />
+      <Route
+        path="/manager/reports/checklist-dashboard/results/:id"
+        element={managerOrAdminElement(<AdminQualityHistoryDetailPage role="manager" />)}
       />
       <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
@@ -335,12 +348,6 @@ function AppRouter() {
       <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
       <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
       <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
-      <Route path="/manager/quality/history" element={managerOrAdminElement(<AdminQualityHistoryPage role="manager" />)} />
-      <Route
-        path="/manager/quality/history/forms/:formId/versions/:versionId"
-        element={managerOrAdminElement(<AdminQualityHistoryVersionPage role="manager" />)}
-      />
-      <Route path="/manager/quality/history/:id" element={managerOrAdminElement(<AdminQualityHistoryDetailPage role="manager" />)} />
       <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />
       <Route path="/manager/competency-by-field/:employeeId" element={managerOrAdminElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/manager/compliance-by-technique" element={managerOrAdminElement(<ComplianceByTechniquePage />)} />

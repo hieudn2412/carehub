@@ -32,7 +32,7 @@ function formatAnswer(answer) {
   return 'Chưa trả lời'
 }
 
-function ManagerEvaluationHistoryDetailPage({ historyPath = '/manager/quality/history' }) {
+function ManagerEvaluationHistoryDetailPage({ historyPath = '/staff/quality/history' }) {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
 

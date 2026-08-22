@@ -171,19 +171,16 @@ function getPaginationItems(currentPage, totalPages) {
   ))
 }
 
-function AdminQualityHistoryVersionPage({ role = 'admin', source = '' }) {
+function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const navigate = useNavigate()
   const location = useLocation()
   const { formId, versionId } = useParams()
   const isManager = role === 'manager'
-  const historyBasePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
   const technicalDashboardPath = isManager ? '/manager/reports/checklist-dashboard' : '/admin/reports/checklist-dashboard'
   const defaultDateRange = useMemo(() => getDefaultDateRange(), [])
   const [searchParams, setSearchParams] = useSearchParams()
-  const isTechnicalComplianceFlow = source === 'technical-compliance' || searchParams.get('source') === 'technical-compliance'
-  const versionBasePath = isTechnicalComplianceFlow
-    ? `${technicalDashboardPath}/results`
-    : historyBasePath
+  const versionBasePath = `${technicalDashboardPath}/results`
+  const detailBasePath = `${technicalDashboardPath}/results`
   const page = parsePage(searchParams.get('page'))
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(searchParams.get('size')))
     ? Number(searchParams.get('size'))
@@ -677,20 +674,12 @@ function AdminQualityHistoryVersionPage({ role = 'admin', source = '' }) {
   if (result) dashboardBackParams.set('result', result)
   if (searchParams.get('subjectUserId')) dashboardBackParams.set('subjectUserId', numericParam(searchParams.get('subjectUserId')))
   if (submittedByUserId) dashboardBackParams.set('submittedByUserId', submittedByUserId)
-  const shellBack = isTechnicalComplianceFlow
-    ? { to: `${technicalDashboardPath}?${dashboardBackParams.toString()}`, label: 'Quay lại' }
-    : { to: `${historyBasePath}?formId=${encodeURIComponent(formId)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`, label: 'Quay lại' }
-  const shellBreadcrumbs = isTechnicalComplianceFlow
-    ? [
-        { label: 'Giám sát tuân thủ' },
-        { label: 'Tuân thủ theo kỹ thuật', link: technicalDashboardPath },
-        { label: `Kết quả phiên bản v${version?.versionNumber || ''}` },
-      ]
-    : [
-        { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: historyBasePath },
-        { label: `Phiên bản v${version?.versionNumber || ''}` },
-      ]
+  const shellBack = { to: `${technicalDashboardPath}?${dashboardBackParams.toString()}`, label: 'Quay lại' }
+  const shellBreadcrumbs = [
+    { label: 'Giám sát tuân thủ' },
+    { label: 'Tuân thủ theo kỹ thuật', link: technicalDashboardPath },
+    { label: `Kết quả phiên bản v${version?.versionNumber || ''}` },
+  ]
 
   return (
     <AppShell
@@ -810,8 +799,8 @@ function AdminQualityHistoryVersionPage({ role = 'admin', source = '' }) {
                         value={draftResult}
                       />
                     </label>
-                    <label className="admin-control-toolbar__field"><span>Từ ngày</span><KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} /></label>
-                    <label className="admin-control-toolbar__field"><span>Đến ngày</span><KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} /></label>
                 </AppliedFilterToolbar>
 
                 {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}
@@ -870,7 +859,10 @@ function AdminQualityHistoryVersionPage({ role = 'admin', source = '' }) {
                                   <button
                                     aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
                                     className="admin-table-action admin-table-action--icon admin-table-action--primary"
-                                    onClick={() => navigate(`${historyBasePath}/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
+                                    onClick={() => {
+                                      const detailParams = new URLSearchParams({ returnTo })
+                                      navigate(`${detailBasePath}/${item.id}?${detailParams.toString()}`)
+                                    }}
                                     title="Xem chi tiết"
                                     type="button"
                                   ><EyeOutlined /></button>
