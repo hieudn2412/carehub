@@ -36,10 +36,6 @@
   gap: 10px;
 }
 
-.pc-filter-panel .applied-filter-toolbar__fields {
-  grid-template-columns: repeat(2, minmax(180px, 1fr));
-}
-
 .pc-toolbar__title {
   display: grid;
   gap: 4px;

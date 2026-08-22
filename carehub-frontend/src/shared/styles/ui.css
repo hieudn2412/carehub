@@ -602,7 +602,7 @@ textarea.ch-input {
   display: grid;
   width: 100%;
   box-sizing: border-box;
-  grid-template-columns: minmax(220px, 300px);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   align-items: end;
   gap: 12px;
   padding: 14px;
@@ -627,16 +627,55 @@ textarea.ch-input {
 .admin-control-toolbar__field input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid #d6e0e8;
+  border-radius: 6px;
   background-color: #ffffff;
-  color: #1e293b;
+  color: #263247;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
+}
+
+.admin-control-toolbar__field > div:not(.searchable-select) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  align-items: center;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid #d6e0e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #263247;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.applied-filter-toolbar__fields > label > div:not(.searchable-select) {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  align-items: center;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px solid #d6e0e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #263247;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-control-toolbar__field select:focus,
@@ -714,11 +753,11 @@ textarea.ch-input {
 }
 
 .applied-filter-toolbar.admin-control-toolbar > .applied-filter-toolbar__panel {
-  align-items: end;
+  align-items: stretch;
   box-sizing: border-box;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
   width: 100%;
 }
@@ -910,15 +949,131 @@ textarea.ch-input {
   background: #f1f5f9;
 }
 
+.applied-filter-toolbar__fields :is(.admin-control-toolbar__field, .checklist-quality-filter, .filter-select-field),
+.applied-filter-toolbar__fields > label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  width: 100%;
+}
+
+.applied-filter-toolbar__fields .searchable-select {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.applied-filter-toolbar__fields :is(.admin-control-toolbar__field > span, .checklist-quality-filter > span, .filter-select-field__label),
+.applied-filter-toolbar__fields > label > span {
+  color: #526176;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.applied-filter-toolbar__fields :is(
+  .admin-control-toolbar__field > input,
+  .admin-control-toolbar__field > select,
+  .admin-control-toolbar__field > .searchable-select > input,
+  .checklist-quality-filter > input,
+  .checklist-quality-filter > select,
+  .checklist-quality-filter > .searchable-select > input,
+  .filter-select-field__select > input,
+  label > input,
+  label > select,
+  label > .searchable-select > input
+) {
+  box-sizing: border-box;
+  height: 42px !important;
+  min-height: 42px !important;
+  border: 1px solid #d6e0e8 !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+  color: #263247 !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  text-align: left !important;
+}
+
+.applied-filter-toolbar__fields :is(
+  .admin-control-toolbar__field > .searchable-select > input,
+  .checklist-quality-filter > .searchable-select > input,
+  .filter-select-field__select > input,
+  label > .searchable-select > input
+) {
+  padding: 0 34px 0 38px !important;
+}
+
+.applied-filter-toolbar__fields :is(
+  .admin-control-toolbar__field > .searchable-select.searchable-select--static > input,
+  .checklist-quality-filter > .searchable-select.searchable-select--static > input,
+  .filter-select-field__select.searchable-select--static > input,
+  label > .searchable-select.searchable-select--static > input
+) {
+  padding-left: 12px !important;
+  padding-right: 34px !important;
+}
+
+.applied-filter-toolbar__fields :is(
+  .admin-control-toolbar__field > .searchable-select > .searchable-select__search-icon,
+  .checklist-quality-filter > .searchable-select > .searchable-select__search-icon,
+  .filter-select-field__select > .searchable-select__search-icon,
+  label > .searchable-select > .searchable-select__search-icon
+) {
+  display: block;
+  left: 12px;
+}
+
+.applied-filter-toolbar__fields :is(
+  .admin-control-toolbar__field > .searchable-select > .searchable-select__arrow,
+  .checklist-quality-filter > .searchable-select > .searchable-select__arrow,
+  .filter-select-field__select > .searchable-select__arrow,
+  label > .searchable-select > .searchable-select__arrow
+) {
+  right: 12px;
+}
+
+.applied-filter-toolbar__fields .checklist-quality-filter > div:not(.searchable-select) {
+  box-sizing: border-box;
+  height: 42px !important;
+  min-height: 42px !important;
+  border: 1px solid #d6e0e8 !important;
+  border-radius: 6px !important;
+  padding: 0 12px !important;
+}
+
+.applied-filter-toolbar__fields .checklist-quality-filter > div:not(.searchable-select) input {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  height: 40px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+}
+
+.applied-filter-toolbar__fields .checklist-quality-filter > div:not(.searchable-select) > .searchable-select > input {
+  border: 0 !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+}
+
+.applied-filter-toolbar__fields .checklist-quality-filter > div:not(.searchable-select) > .searchable-select .searchable-select__search-icon {
+  display: none;
+}
+
 .applied-filter-toolbar__actions {
-  align-self: end;
+  align-self: start;
   align-items: center;
   display: flex;
   flex-wrap: nowrap;
   gap: 10px;
-  justify-content: flex-end;
-  justify-self: end;
-  margin-left: auto;
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+  justify-self: start;
+  margin-left: 0;
   max-width: 100%;
   width: fit-content;
 }
@@ -928,9 +1083,9 @@ textarea.ch-input {
   display: flex;
   flex-wrap: nowrap;
   gap: 10px;
-  justify-content: flex-end !important;
-  justify-self: end;
-  margin-left: auto;
+  justify-content: flex-start !important;
+  justify-self: start;
+  margin-left: 0;
   min-width: 0;
 }
 
@@ -965,8 +1120,8 @@ textarea.ch-input {
 
 .filter-action-buttons__apply:hover:not(:disabled),
 .filter-action-buttons__apply:focus-visible {
-  background: #066b59 !important;
-  border-color: #066b59 !important;
+  background: #087f6a !important;
+  border-color: #087f6a !important;
 }
 
 .filter-action-buttons__reset:hover:not(:disabled),
@@ -1005,24 +1160,24 @@ textarea.ch-input {
   color: #526176 !important;
 }
 
-.applied-filter-toolbar__apply:hover { background: #066b59 !important; border-color: #066b59 !important; }
+.applied-filter-toolbar__apply:hover { background: #087f6a !important; border-color: #087f6a !important; }
 .applied-filter-toolbar__reset:hover { border-color: #15977d !important; color: #087f6a !important; }
 
 .admin-control-toolbar__panel > .filter-action-buttons,
 .applied-filter-toolbar__panel > .filter-action-buttons {
-  justify-self: end;
-  margin-left: auto;
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-left: 0;
 }
 
 @media (max-width: 1024px) {
   .applied-filter-toolbar.admin-control-toolbar > .applied-filter-toolbar__panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .applied-filter-toolbar__actions {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
-    justify-self: end;
+    justify-content: flex-start;
+    justify-self: start;
   }
 }
 
@@ -1070,7 +1225,7 @@ textarea.ch-input {
   }
 
   .admin-control-toolbar__panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)) !important;
     gap: 10px !important;
     padding: 12px !important;
   }
@@ -1081,15 +1236,15 @@ textarea.ch-input {
 
   .admin-control-toolbar__field input,
   .admin-control-toolbar__field select {
-    min-height: 38px !important;
-    height: 38px !important;
+    min-height: 42px !important;
+    height: 42px !important;
     font-size: 13px !important;
   }
 
   .applied-filter-toolbar__actions {
     grid-column: 1 / -1 !important;
-    justify-content: flex-end !important;
-    justify-self: end !important;
+    justify-content: flex-start !important;
+    justify-self: start !important;
     width: fit-content !important;
   }
 
@@ -1113,15 +1268,15 @@ textarea.ch-input {
   }
 
   .applied-filter-toolbar__fields {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)) !important;
   }
 
   .filter-select-field__control {
-    min-height: 38px;
+    min-height: 42px;
   }
 
   .filter-select-field__select > input {
-    height: 36px !important;
+    height: 42px !important;
   }
 
   .applied-filter-toolbar__apply,
@@ -1202,11 +1357,27 @@ textarea.ch-input {
   min-width: 180px;
 }
 
+@media (max-width: 560px) {
+  .admin-control-toolbar__panel,
+  .applied-filter-toolbar__fields {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.admin-filter-disclosure__panel::after {
+  content: '';
+  flex: 0 0 100%;
+  order: 9;
+  width: 100%;
+  height: 0;
+}
+
 .admin-filter-disclosure__panel > button:last-child {
   flex: 0 0 auto;
+  order: 10;
   justify-content: center;
-  justify-self: end;
-  margin-left: auto;
+  justify-self: start;
+  margin-left: 0;
   border-color: #087f6a;
   background: #087f6a;
   color: #fff;
@@ -1214,8 +1385,8 @@ textarea.ch-input {
 
 .admin-filter-disclosure__panel > button:last-child:hover:not(:disabled),
 .admin-filter-disclosure__panel > button:last-child:focus-visible {
-  border-color: #066b59;
-  background: #066b59;
+  border-color: #087f6a;
+  background: #087f6a;
   color: #fff;
 }
 
@@ -1230,8 +1401,8 @@ textarea.ch-input {
   }
 
   .admin-filter-disclosure__panel > button:last-child {
-    justify-self: end;
-    margin-left: auto;
+    justify-self: start;
+    margin-left: 0;
     width: auto;
   }
 

@@ -30,10 +30,7 @@
   box-sizing: border-box;
 }
 
-.evd-competency-toolbar .searchable-select > input,
-.exam-dashboard__filter-panel .searchable-select > input,
-.competency-dashboard-filter-panel .searchable-select > input,
-.compliance-filter-panel .searchable-select > input {
+.evd-competency-toolbar .searchable-select > input {
   min-height: 42px;
   height: 42px;
   border-radius: 6px;
@@ -41,18 +38,12 @@
   text-align: left;
 }
 
-.evd-competency-toolbar .searchable-select--static > input,
-.exam-dashboard__filter-panel .searchable-select--static > input,
-.competency-dashboard-filter-panel .searchable-select--static > input,
-.compliance-filter-panel .searchable-select--static > input {
+.evd-competency-toolbar .searchable-select--static > input {
   padding-left: 12px !important;
   padding-right: 34px !important;
 }
 
-.evd-competency-toolbar .searchable-select__search-icon,
-.exam-dashboard__filter-panel .searchable-select__search-icon,
-.competency-dashboard-filter-panel .searchable-select__search-icon,
-.compliance-filter-panel .searchable-select__search-icon {
+.evd-competency-toolbar .searchable-select__search-icon {
   display: block;
   left: 12px;
 }
@@ -549,13 +540,6 @@
 .exam-dashboard-page .dashboard-layout__content { min-width: 0; overflow-y: auto; }
 .exam-dashboard { min-height: 100%; padding: 24px; background: #f4f7fa; color: #172033; }
 .exam-dashboard__toolbar { padding: 16px 20px; border: 1px solid #dbe3ee; border-radius: 8px; background: #fff; }
-.exam-dashboard__filter-panel { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
-.exam-dashboard__filter-panel label { display: flex; min-width: 0; flex-direction: column; gap: 6px; }
-.exam-dashboard__filter-panel label > span { color: #526174; font-size: 12px; font-weight: 600; }
-.exam-dashboard__filter-panel > label > input,
-.exam-dashboard__filter-panel > label > select { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #d6e0e8; border-radius: 6px; background: #fff; color: #172033; }
-.exam-dashboard__filter-panel .searchable-select > input { height: 42px; }
-.exam-dashboard__filter-panel .is-unavailable { opacity: .68; }
 .exam-dashboard__notice { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 11px 13px; border: 1px solid #bfdbfe; border-radius: 6px; background: #eff6ff; color: #1d4ed8; font-size: 13px; }
 .exam-dashboard__notice--error { border-color: #fecaca; background: #fff1f2; color: #b91c1c; }
 .exam-dashboard__loading { display: flex; min-height: 300px; align-items: center; justify-content: center; gap: 10px; color: #68778b; }
@@ -590,9 +574,9 @@
 .exam-dashboard__table td:nth-child(2) span, .exam-dashboard__muted { color: #8a97a7; font-size: 11px; }
 .exam-dashboard__empty-row { height: 110px; color: #8a97a7 !important; text-align: center !important; }
 /* bp-lg */
-@media (max-width: 1280px) { .exam-dashboard__filter-panel, .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1280px) { .exam-dashboard__metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 /* bp-sm */
-@media (max-width: 768px) { .exam-dashboard { padding: 14px; } .exam-dashboard__filter-panel, .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .exam-dashboard { padding: 14px; } .exam-dashboard__metrics, .exam-dashboard__analytics { grid-template-columns: 1fr; } }
 
 /* ============================================================
    .evd-x-* — lớp thay cho inline style chặn responsive của cụm
@@ -761,33 +745,6 @@
   opacity: .55;
 }
 
-.competency-dashboard-filter-panel {
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select, .searchable-select > input) {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  background: #fff;
-  color: #334155;
-  font: inherit;
-  font-size: 13.5px;
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select) {
-  padding: 0 12px;
-}
-
-.competency-dashboard-filter-panel :is(input[type='date'], select, .searchable-select > input):focus {
-  border-color: #16a085;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
-}
-
 .competency-dashboard-weight {
   display: grid;
   min-width: 0;
@@ -896,9 +853,6 @@
     grid-template-columns: 1fr;
   }
 
-  .competency-dashboard-filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 768px) {
@@ -944,19 +898,6 @@
     justify-content: flex-end !important;
     gap: 10px;
     margin-top: 4px;
-  }
-
-  .competency-dashboard-filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 10px !important;
-    padding: 12px !important;
-  }
-
-  .competency-dashboard-filter-panel .admin-control-toolbar__field input,
-  .competency-dashboard-filter-panel .admin-control-toolbar__field select {
-    min-height: 38px !important;
-    height: 38px !important;
-    font-size: 13px !important;
   }
 
   .competency-dashboard-table-card {
@@ -1056,72 +997,6 @@
   opacity: .55;
 }
 
-.compliance-filter-panel {
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-}
-
-.compliance-filter-panel :is(input[type='date'], .searchable-select > input) {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  background-color: #fff;
-  color: #334155;
-  font: inherit;
-  font-size: 13.5px;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-
-.compliance-filter-panel input[type='date'] {
-  padding: 0 12px;
-}
-
-.compliance-filter-panel :is(input[type='date'], .searchable-select > input):focus {
-  border-color: #16a085;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
-}
-
-.exam-dashboard__filter-panel .searchable-select > input,
-.competency-dashboard-filter-panel .searchable-select > input,
-.compliance-filter-panel .searchable-select > input {
-  min-height: 42px;
-  height: 42px;
-  border-radius: 6px;
-  padding: 0 34px 0 38px !important;
-  text-align: left;
-}
-
-.exam-dashboard__filter-panel .searchable-select--static > input,
-.competency-dashboard-filter-panel .searchable-select--static > input,
-.compliance-filter-panel .searchable-select--static > input {
-  padding-left: 12px !important;
-  padding-right: 34px !important;
-}
-
-.exam-dashboard__filter-panel .searchable-select__search-icon,
-.competency-dashboard-filter-panel .searchable-select__search-icon,
-.compliance-filter-panel .searchable-select__search-icon {
-  display: block;
-  left: 12px;
-}
-
-.compliance-filter-panel__fixed {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 0 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .compliance-table-card {
   max-height: calc(100dvh - 205px);
   overflow: auto;
@@ -1176,22 +1051,6 @@
   .compliance-toolbar__export {
     height: 38px;
     padding: 0 12px;
-  }
-
-  .compliance-filter-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    padding: 12px;
-  }
-
-  .compliance-filter-panel .admin-control-toolbar__field:first-child:nth-last-child(3) {
-    grid-column: span 2;
-  }
-
-  .compliance-filter-panel .admin-control-toolbar__field input {
-    min-height: 38px !important;
-    height: 38px !important;
-    font-size: 13px !important;
   }
 
   .compliance-table-card {

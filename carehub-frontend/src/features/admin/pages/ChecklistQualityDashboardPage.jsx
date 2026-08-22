@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ApartmentOutlined,
+  ArrowLeftOutlined,
   BarChartOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   EditOutlined,
+  EyeOutlined,
   FileSearchOutlined,
   FilterOutlined,
   LoadingOutlined,
@@ -60,6 +63,11 @@ function numberOrNull(value) {
   if (value === null || value === undefined || value === '') return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+function numericParam(value) {
+  const match = String(value || '').match(/^\d+/)
+  return match ? match[0] : ''
 }
 
 function formatPercent(value) {
@@ -124,26 +132,31 @@ function downloadChecklistCsv(rows) {
 }
 
 function ChecklistQualityDashboardPage({ role = 'admin' }) {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const isAdmin = role === 'admin'
   const isManager = role === 'manager'
   const isUser = role === 'user'
-  const canConfigureTargets = isAdmin
   const [departments, setDepartments] = useState([])
-  const [departmentId, setDepartmentId] = useState('')
-  const [fromDate, setFromDate] = useState(yearStart)
-  const [toDate, setToDate] = useState(today)
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [departmentId, setDepartmentId] = useState(() => numericParam(searchParams.get('departmentId')))
+  const [fromDate, setFromDate] = useState(() => searchParams.get('dateFrom') || yearStart)
+  const [toDate, setToDate] = useState(() => searchParams.get('dateTo') || today)
+  const [search, setSearch] = useState(() => searchParams.get('keyword') || '')
   const [filterOptions, setFilterOptions] = useState({ forms: [], subjects: [], evaluators: [] })
   const [forms, setForms] = useState([])
   const [pageInfo, setPageInfo] = useState({ page: 0, size: 10, totalElements: 0, totalPages: 0 })
   const [page, setPage] = useState(0)
   const [size, setSize] = useState(10)
-  const [processId, setProcessId] = useState('')
-  const [resultStatus, setResultStatus] = useState('')
-  const [subjectUserId, setSubjectUserId] = useState('')
-  const [submittedByUserId, setSubmittedByUserId] = useState('')
-  const [selectedFormId, setSelectedFormId] = useState('')
+  const [processId, setProcessId] = useState(() => numericParam(searchParams.get('processId') || searchParams.get('formId')))
+  const [resultStatus, setResultStatus] = useState(() => searchParams.get('resultStatus') || searchParams.get('result') || '')
+  const [subjectUserId, setSubjectUserId] = useState(() => numericParam(searchParams.get('subjectUserId')))
+  const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
+  const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
+  const [filteredSelectedFormId, setFilteredSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
+  const [forceFilteredView, setForceFilteredView] = useState(() => Boolean(numericParam(searchParams.get('selectedFormId'))))
+  const [selectedDetailForm, setSelectedDetailForm] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
   const [trendItems, setTrendItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [trendLoading, setTrendLoading] = useState(false)
@@ -151,22 +164,17 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
-  const [targetModalForm, setTargetModalForm] = useState(null)
-  const usesAppliedFilters = isUser || isManager
+  const usesAppliedFilters = true
   const [appliedRoleFilters, setAppliedRoleFilters] = useState({
-    fromDate: yearStart,
-    processId: '',
-    resultStatus: '',
-    search: '',
-    submittedByUserId: '',
-    subjectUserId: '',
-    toDate: today,
+    departmentId,
+    fromDate,
+    processId,
+    resultStatus,
+    search: search.trim(),
+    submittedByUserId,
+    subjectUserId,
+    toDate,
   })
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedSearch(search.trim()), 300)
-    return () => window.clearTimeout(timer)
-  }, [search])
 
   useEffect(() => {
     let active = true
@@ -180,7 +188,11 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
             ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
             : null
           setDepartments(normalized ? [normalized] : [])
-          if (isManager && normalized) setDepartmentId(String(normalized.id))
+          if (isManager && normalized) {
+            const normalizedId = String(normalized.id)
+            setDepartmentId(normalizedId)
+            setAppliedRoleFilters((current) => ({ ...current, departmentId: current.departmentId || normalizedId }))
+          }
           return
         }
         const response = await adminApi.getDepartments()
@@ -195,52 +207,80 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     return () => { active = false }
   }, [isAdmin, isManager])
 
-  const effectiveSearch = usesAppliedFilters ? appliedRoleFilters.search : debouncedSearch
-  const effectiveFromDate = usesAppliedFilters ? appliedRoleFilters.fromDate : fromDate
-  const effectiveToDate = usesAppliedFilters ? appliedRoleFilters.toDate : toDate
-  const effectiveProcessId = usesAppliedFilters ? appliedRoleFilters.processId : processId
-  const effectiveResultStatus = usesAppliedFilters ? appliedRoleFilters.resultStatus : resultStatus
-  const effectiveSubjectUserId = usesAppliedFilters ? appliedRoleFilters.subjectUserId : subjectUserId
-  const effectiveSubmittedByUserId = usesAppliedFilters ? appliedRoleFilters.submittedByUserId : submittedByUserId
+  const effectiveSearch = appliedRoleFilters.search
+  const effectiveFromDate = appliedRoleFilters.fromDate
+  const effectiveToDate = appliedRoleFilters.toDate
+  const effectiveDepartmentId = appliedRoleFilters.departmentId
+  const effectiveProcessId = appliedRoleFilters.processId
+  const effectiveResultStatus = appliedRoleFilters.resultStatus
+  const effectiveSubjectUserId = appliedRoleFilters.subjectUserId
+  const effectiveSubmittedByUserId = appliedRoleFilters.submittedByUserId
 
   const activeFilterCount = useMemo(() => [
     effectiveSearch.trim(),
     effectiveFromDate !== yearStart,
     effectiveToDate !== today,
-    isAdmin && departmentId,
+    isAdmin && effectiveDepartmentId,
     effectiveProcessId,
     effectiveResultStatus,
     effectiveSubjectUserId,
     !isUser && effectiveSubmittedByUserId,
   ].filter(Boolean).length, [
-    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
     effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, isAdmin, isUser,
   ])
-  const view = activeFilterCount > 0 ? 'FILTERED' : 'LATEST'
+  const view = activeFilterCount > 0 || forceFilteredView ? 'FILTERED' : 'LATEST'
 
   const requestParams = useMemo(() => ({
     view,
     keyword: effectiveSearch || undefined,
     fromDate: effectiveFromDate,
     toDate: effectiveToDate,
-    departmentId: isAdmin ? departmentId || undefined : isManager ? departmentId || undefined : undefined,
+    departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? effectiveDepartmentId || undefined : undefined,
     formId: effectiveProcessId || undefined,
     resultStatus: effectiveResultStatus || undefined,
     subjectUserId: effectiveSubjectUserId || undefined,
     submittedByUserId: !isUser && effectiveSubmittedByUserId ? effectiveSubmittedByUserId : undefined,
   }), [
-    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
     effectiveSearch, effectiveSubjectUserId, effectiveToDate, isAdmin, isManager,
     isUser, effectiveSubmittedByUserId, view,
   ])
 
   useEffect(() => { setPage(0) }, [
-    departmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
+    effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
     effectiveSearch, effectiveSubjectUserId, effectiveSubmittedByUserId, effectiveToDate, view,
   ])
 
   useEffect(() => {
-    if (isManager && !departmentId) return undefined
+    if (view !== 'FILTERED') {
+      setFilteredSelectedFormId('')
+      setSelectedDetailForm(null)
+      setDetailError('')
+      setDetailLoading(false)
+      setTrendItems([])
+    }
+  }, [view])
+
+  useEffect(() => {
+    const nextSearch = search.trim()
+    if (nextSearch === appliedRoleFilters.search) return undefined
+    const timer = window.setTimeout(() => {
+      setFilteredSelectedFormId('')
+      setSelectedDetailForm(null)
+      setDetailError('')
+      setDetailLoading(false)
+      setTrendItems([])
+      setForceFilteredView(Boolean(nextSearch))
+      setAppliedRoleFilters((current) => (
+        current.search === nextSearch ? current : { ...current, search: nextSearch }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedRoleFilters.search, search])
+
+  useEffect(() => {
+    if (isManager && !effectiveDepartmentId) return undefined
     let active = true
     async function load() {
       setLoading(true)
@@ -272,15 +312,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     }
     load()
     return () => { active = false }
-  }, [departmentId, isManager, page, reloadKey, requestParams, size, view])
+  }, [effectiveDepartmentId, isManager, page, reloadKey, requestParams, size, view])
 
   useEffect(() => {
-    if (isManager && !departmentId) return undefined
+    if (!filteredSelectedFormId) return
+    if (loading || forms.length === 0) return
+    if (!forms.some((item) => String(item.formId) === String(filteredSelectedFormId))) {
+      setFilteredSelectedFormId('')
+    }
+  }, [filteredSelectedFormId, forms, loading])
+
+  useEffect(() => {
+    if (isManager && !effectiveDepartmentId) return undefined
     let active = true
     adminApi.getQualityChecklistFilterOptions({
       fromDate: effectiveFromDate,
       toDate: effectiveToDate,
-      departmentId: isAdmin ? departmentId || undefined : isManager ? departmentId || undefined : undefined,
+      departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? effectiveDepartmentId || undefined : undefined,
     }).then((response) => {
       if (!active) return
       const data = apiData(response, {})
@@ -289,11 +337,60 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       if (active) setError(apiErrorMessage(requestError))
     })
     return () => { active = false }
-  }, [departmentId, effectiveFromDate, effectiveToDate, isAdmin, isManager, reloadKey])
+  }, [effectiveDepartmentId, effectiveFromDate, effectiveToDate, isAdmin, isManager, reloadKey])
 
   const selectedForm = forms.find((item) => String(item.formId) === String(selectedFormId)) || forms[0] || null
+  const filteredSelectedSummary = view === 'FILTERED'
+    ? forms.find((item) => String(item.formId) === String(filteredSelectedFormId)) || null
+    : null
+  const hasFilteredSelection = Boolean(filteredSelectedFormId)
+  const detailForm = hasFilteredSelection ? selectedDetailForm : selectedForm
+  const displayedForms = hasFilteredSelection && filteredSelectedSummary ? [filteredSelectedSummary] : forms
+
+  const loadSelectedChecklistDetail = useCallback(async (formId) => {
+    if (!formId) return
+    setDetailLoading(true)
+    setTrendLoading(true)
+    setDetailError('')
+    setSelectedDetailForm(null)
+    setTrendItems([])
+    try {
+      const [dashboardResponse, trendResponse] = await Promise.all([
+        adminApi.getQualityChecklistDashboard({
+          ...requestParams,
+          formId,
+          page: 0,
+          size: 1,
+          view: 'FILTERED',
+        }),
+        adminApi.getQualityChecklistTrend({
+          ...requestParams,
+          bucket: 'MONTH',
+          formId,
+          keyword: undefined,
+          view: undefined,
+        }),
+      ])
+      const detail = pageData(dashboardResponse).content[0] || null
+      setSelectedDetailForm(detail)
+      setTrendItems(apiData(trendResponse, {})?.items || [])
+      if (!detail) setDetailError('Không tìm thấy dữ liệu dashboard của bảng kiểm đã chọn.')
+    } catch (requestError) {
+      setDetailError(apiErrorMessage(requestError))
+    } finally {
+      setDetailLoading(false)
+      setTrendLoading(false)
+    }
+  }, [requestParams])
 
   useEffect(() => {
+    if (view !== 'FILTERED') return
+    if (!filteredSelectedFormId || !filteredSelectedSummary) return
+    loadSelectedChecklistDetail(filteredSelectedFormId)
+  }, [filteredSelectedFormId, filteredSelectedSummary, loadSelectedChecklistDetail, view])
+
+  useEffect(() => {
+    if (view !== 'LATEST') return undefined
     if (!selectedForm?.formId) {
       setTrendItems([])
       return undefined
@@ -309,7 +406,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       })
       .finally(() => { if (active) setTrendLoading(false) })
     return () => { active = false }
-  }, [requestParams, selectedForm?.formId])
+  }, [requestParams, selectedForm?.formId, view])
 
   function resetFilters() {
     setSearch('')
@@ -320,8 +417,15 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setResultStatus('')
     setSubjectUserId('')
     setSubmittedByUserId('')
+    setFilteredSelectedFormId('')
+    setForceFilteredView(false)
+    setSelectedDetailForm(null)
+    setDetailError('')
+    setDetailLoading(false)
+    setTrendItems([])
     if (usesAppliedFilters) {
       setAppliedRoleFilters({
+        departmentId: isAdmin ? '' : departmentId,
         fromDate: yearStart,
         processId: '',
         resultStatus: '',
@@ -339,7 +443,14 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       return
     }
     setError('')
+    setFilteredSelectedFormId('')
+    setForceFilteredView(true)
+    setSelectedDetailForm(null)
+    setDetailError('')
+    setDetailLoading(false)
+    setTrendItems([])
     setAppliedRoleFilters({
+      departmentId,
       fromDate,
       processId,
       resultStatus,
@@ -369,7 +480,44 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     }
   }
 
-  const pageTitle = isUser ? 'Chất lượng chăm sóc cá nhân' : 'Dashboard chất lượng chăm sóc'
+  async function handleViewResults(item) {
+    if (!item?.formId || isUser) return
+    let versionId = item.currentPublishedVersionId
+    try {
+      if (!versionId) {
+        const response = await adminApi.getFormHistoryVersions(item.formId, {
+          dateFrom: effectiveFromDate,
+          dateTo: effectiveToDate,
+        })
+        const versions = Array.isArray(response?.data?.data) ? response.data.data : []
+        const latestVersion = [...versions].sort((left, right) => (
+          Number(right.versionNumber || 0) - Number(left.versionNumber || 0)
+        ))[0]
+        versionId = latestVersion?.versionId
+      }
+      if (!versionId) {
+        setError('Chưa tìm thấy phiên bản để xem kết quả của bảng kiểm này.')
+        return
+      }
+      const basePath = isManager
+        ? '/manager/reports/checklist-dashboard/results'
+        : '/admin/reports/checklist-dashboard/results'
+      const params = new URLSearchParams()
+      params.set('dateFrom', effectiveFromDate)
+      params.set('dateTo', effectiveToDate)
+      params.set('selectedFormId', item.formId)
+      if (effectiveSearch) params.set('dashboardKeyword', effectiveSearch)
+      if (isAdmin && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
+      if (effectiveResultStatus) params.set('result', effectiveResultStatus)
+      if (effectiveSubjectUserId) params.set('subjectUserId', effectiveSubjectUserId)
+      if (!isUser && effectiveSubmittedByUserId) params.set('submittedByUserId', effectiveSubmittedByUserId)
+      navigate(`${basePath}/forms/${item.formId}/versions/${versionId}?${params.toString()}`)
+    } catch (requestError) {
+      setError(apiErrorMessage(requestError))
+    }
+  }
+
+  const pageTitle = isUser ? 'Chất lượng chăm sóc cá nhân' : 'Tuân thủ theo kỹ thuật'
   const toolbarActions = (
     <div className="checklist-quality-toolbar__actions">
       <span className="checklist-quality-toolbar__count"><FileSearchOutlined />
@@ -429,13 +577,13 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   return (
     <AppShell
       title={pageTitle}
-      breadcrumbs={isAdmin ? [{ label: 'Dashboard & Báo cáo' }, { label: 'Chất lượng chăm sóc' }] : undefined}
+      breadcrumbs={isAdmin ? [{ label: 'Giám sát tuân thủ' }, { label: 'Tuân thủ theo kỹ thuật' }] : undefined}
     >
       <div className="checklist-quality-dashboard">
         {usesAppliedFilters ? <AppliedFilterToolbar
           activeCount={activeFilterCount}
           actions={toolbarActions}
-          ariaLabel="Công cụ dashboard chất lượng chăm sóc"
+          ariaLabel="Công cụ tuân thủ theo kỹ thuật"
           className="checklist-quality-toolbar"
           isOpen={isFilterOpen}
           onApply={applyRoleFilters}
@@ -450,7 +598,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           searchValue={search}
         >
           {filterFields}
-        </AppliedFilterToolbar> : <section className="checklist-quality-toolbar admin-control-toolbar" aria-label="Công cụ dashboard chất lượng chăm sóc">
+        </AppliedFilterToolbar> : <section className="checklist-quality-toolbar admin-control-toolbar" aria-label="Công cụ tuân thủ theo kỹ thuật">
           <div className="admin-control-toolbar__main">
             <div className="admin-control-toolbar__controls">
               <div className="checklist-quality-search admin-control-toolbar__search">
@@ -477,47 +625,81 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         {error && <div className="checklist-quality-alert"><CloseCircleOutlined /><span>{error}</span>
           <button type="button" onClick={() => setReloadKey((value) => value + 1)}>Thử lại</button></div>}
 
-        <div className="checklist-quality-workspace">
+        <div className={[
+          'checklist-quality-workspace',
+          view === 'FILTERED' ? 'checklist-quality-workspace--filtered' : '',
+          hasFilteredSelection ? 'checklist-quality-workspace--filtered-detail' : '',
+        ].filter(Boolean).join(' ')}>
           <section className="checklist-quality-processes">
             <div className="checklist-quality-section-heading">
-              <div><h2>{view === 'LATEST' ? 'Bảng kiểm đã chấm gần nhất' : 'Danh sách bảng kiểm phù hợp'}</h2>
-                <p>{view === 'LATEST' ? 'Tính từ đầu năm đến hiện tại.' : 'Số liệu cập nhật theo toàn bộ bộ lọc đang chọn.'}</p></div>
+              <div>
+                {hasFilteredSelection && <button
+                  className="checklist-quality-back-list"
+                  onClick={() => {
+                    setFilteredSelectedFormId('')
+                    setSelectedDetailForm(null)
+                    setDetailError('')
+                    setDetailLoading(false)
+                    setTrendItems([])
+                  }}
+                  type="button"
+                >
+                  <ArrowLeftOutlined /> Danh sách bảng kiểm đã lọc
+                </button>}
+                <h2>{view === 'LATEST' ? 'Bảng kiểm đã chấm gần nhất' : hasFilteredSelection ? 'Bảng kiểm đã chọn' : 'Danh sách bảng kiểm'}</h2>
+                <p>{view === 'LATEST' ? 'Tính từ đầu năm đến hiện tại.' : 'Số liệu cập nhật theo toàn bộ bộ lọc đang chọn.'}</p>
+              </div>
               <span>{pageInfo.totalElements} quy trình</span>
             </div>
             {loading ? <LoadingState /> : forms.length === 0
               ? <EmptyState isUser={isUser} filtered={view === 'FILTERED'} />
-              : <div className={`checklist-quality-process-grid${view === 'LATEST' ? ' checklist-quality-process-grid--latest' : ''}`}>
-                {forms.map((item) => <ProcessCard key={item.formId} item={item}
-                  active={String(selectedForm?.formId) === String(item.formId)}
-                  canConfigure={canConfigureTargets} onSelect={() => setSelectedFormId(String(item.formId))}
-                  onConfigure={canConfigureTargets ? () => setTargetModalForm(item) : undefined} />)}
+              : <div className={`checklist-quality-process-grid${view === 'LATEST' || hasFilteredSelection ? ' checklist-quality-process-grid--latest' : ''}`}>
+                {displayedForms.map((item) => <ProcessCard key={item.formId} item={item}
+                  active={hasFilteredSelection
+                    ? String(filteredSelectedFormId) === String(item.formId)
+                    : view === 'LATEST' && String(detailForm?.formId) === String(item.formId)}
+                  actionIcon={!isUser ? <EyeOutlined /> : undefined}
+                  actionLabel={!isUser ? 'Xem kết quả' : undefined}
+                  onAction={!isUser ? () => handleViewResults(item) : undefined}
+                  onSelect={() => {
+                    setSelectedFormId(String(item.formId))
+                    if (view === 'FILTERED') setFilteredSelectedFormId(String(item.formId))
+                  }} />)}
               </div>}
-            {view === 'FILTERED' && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
+            {view === 'FILTERED' && !hasFilteredSelection && pageInfo.totalPages > 0 && <Pagination page={page} size={size}
               totalElements={pageInfo.totalElements} totalPages={pageInfo.totalPages}
               onPage={setPage} onSize={(nextSize) => { setSize(nextSize); setPage(0) }} />}
           </section>
 
-          {selectedForm ? <section className="checklist-quality-detail">
+          {hasFilteredSelection && (detailLoading || detailError || !detailForm) ? <section className="checklist-quality-detail checklist-quality-detail--loading" aria-live="polite">
+            {detailLoading ? <>
+              <LoadingOutlined spin />
+              <strong>Đang tải dữ liệu bảng kiểm đã chọn...</strong>
+            </> : <>
+              <FileSearchOutlined />
+              <strong>{detailError || 'Chưa có dữ liệu dashboard cho bảng kiểm đã chọn.'}</strong>
+            </>}
+          </section> : (view === 'LATEST' || hasFilteredSelection) && detailForm ? <section className="checklist-quality-detail">
             <header className="checklist-quality-detail__header">
-              <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{selectedForm.formTitle}</h2>
-                <p>{selectedForm.formCode} · Phiên bản v{selectedForm.versionNumber || '—'}</p></div>
+              <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{detailForm.formTitle}</h2>
+                <p>{detailForm.formCode} · Phiên bản v{detailForm.versionNumber || '—'}</p></div>
               <span className="checklist-quality-detail__rate">
-                {selectedForm.monitoringCount > 0 ? `${formatPercent(selectedForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
+                {detailForm.monitoringCount > 0 ? `${formatPercent(detailForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
               </span>
             </header>
             <div className="checklist-quality-metrics">
-              <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={selectedForm.monitoringCount} note="Kết quả đã nộp" />
-              <Metric icon={<CheckCircleOutlined />} label="Đạt / Tổng" value={`${selectedForm.passedCount}/${selectedForm.monitoringCount}`} note="Tỷ lệ tuân thủ" tone="success" />
-              <Metric icon={<CloseCircleOutlined />} label="Chưa đạt" value={selectedForm.failedCount} note="Điểm hoặc câu trọng yếu" tone="danger" />
-              <Metric icon={<TeamOutlined />} label="Nhân viên được đánh giá" value={selectedForm.uniqueSubjectCount} note="Nhân viên duy nhất" />
-              <Metric icon={<BarChartOutlined />} label={targetSourceLabel(selectedForm.targetSource)} value={formatPercent(selectedForm.targetPercent)} note="Mục tiêu đang áp dụng" />
+              <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={detailForm.monitoringCount} note="Kết quả đã nộp" />
+              <Metric icon={<CheckCircleOutlined />} label="Đạt / Tổng" value={`${detailForm.passedCount}/${detailForm.monitoringCount}`} note="Tỷ lệ tuân thủ" tone="success" />
+              <Metric icon={<CloseCircleOutlined />} label="Chưa đạt" value={detailForm.failedCount} note="Điểm hoặc câu trọng yếu" tone="danger" />
+              <Metric icon={<TeamOutlined />} label="Nhân viên được đánh giá" value={detailForm.uniqueSubjectCount} note="Nhân viên duy nhất" />
+              <Metric icon={<BarChartOutlined />} label={targetSourceLabel(detailForm.targetSource)} value={formatPercent(detailForm.targetPercent)} note="Mục tiêu đang áp dụng" />
             </div>
             <div className="checklist-quality-chart-grid">
               <article className="checklist-quality-panel">
                 <div className="checklist-quality-panel__heading"><div><h3>Phân bố kết quả</h3><p>Đạt và chưa đạt trong phạm vi hiện tại.</p></div></div>
                 <div className="checklist-quality-result-bars">
-                  <ResultBar label="Đạt" value={selectedForm.passedCount} total={selectedForm.monitoringCount} tone="success" />
-                  <ResultBar label="Chưa đạt" value={selectedForm.failedCount} total={selectedForm.monitoringCount} tone="danger" />
+                  <ResultBar label="Đạt" value={detailForm.passedCount} total={detailForm.monitoringCount} tone="success" />
+                  <ResultBar label="Chưa đạt" value={detailForm.failedCount} total={detailForm.monitoringCount} tone="danger" />
                 </div>
               </article>
               <article className="checklist-quality-panel">
@@ -525,7 +707,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
                 {trendLoading ? <LoadingState compact /> : <TrendChart items={trendItems} />}
               </article>
             </div>
-          </section> : !loading && <section className="checklist-quality-detail checklist-quality-detail--empty">
+          </section> : view === 'LATEST' && !loading && <section className="checklist-quality-detail checklist-quality-detail--empty">
             <FileSearchOutlined />
             <strong>Chưa có dữ liệu dashboard</strong>
             <span>Hãy điều chỉnh bộ lọc để chọn một bảng kiểm có dữ liệu phù hợp.</span>
@@ -533,9 +715,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
         </div>
       </div>
 
-      {canConfigureTargets && targetModalForm && <ComplianceTargetModal form={targetModalForm} isAdmin={isAdmin}
-        departments={departments} currentDepartmentId={departmentId || null}
-        onClose={() => setTargetModalForm(null)} onSaved={() => { setTargetModalForm(null); setReloadKey((value) => value + 1) }} />}
     </AppShell>
   )
 }
@@ -556,7 +735,7 @@ function SelectFilter({ label, children }) {
   return <label className="checklist-quality-filter"><span>{label}</span>{children}</label>
 }
 
-function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
+function ProcessCard({ item, active, actionIcon, actionLabel, onSelect, onAction }) {
   const hasData = Number(item.monitoringCount) > 0
   function handleKeyDown(event) {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -568,8 +747,8 @@ function ProcessCard({ item, active, canConfigure, onSelect, onConfigure }) {
     role="button" tabIndex={0} onClick={onSelect} onKeyDown={handleKeyDown}>
     <div className="checklist-quality-process-card__top">
       <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
-      {canConfigure && <button type="button" onClick={(event) => { event.stopPropagation(); onConfigure?.() }}>
-        <EditOutlined /> Cấu hình mục tiêu
+      {actionLabel && <button type="button" onClick={(event) => { event.stopPropagation(); onAction?.() }}>
+        {actionIcon} {actionLabel}
       </button>}
     </div>
     <strong>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>

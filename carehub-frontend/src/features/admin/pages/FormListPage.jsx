@@ -335,6 +335,20 @@ function FormListPage() {
   }, [])
 
   useEffect(() => {
+    const nextKeyword = resolveChecklistSearchKeyword(keyword.trim())
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setErrorMessage('')
+      setLoading(true)
+      setPage(1)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
+  useEffect(() => {
     let ignoreResponse = false
     let keepLoading = false
     const params = {

@@ -81,6 +81,15 @@ function TrainingHoursListScreen() {
   }, [urlQuery, queryFilters])
 
   useEffect(() => {
+    const nextSearch = search.trim()
+    if (nextSearch === queryFilters.q) return undefined
+    const timer = window.setTimeout(() => {
+      setUrlSearchParams(serializeTrainingQuery({ ...queryFilters, q: nextSearch, page: 1 }))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [queryFilters, search, setUrlSearchParams])
+
+  useEffect(() => {
     setProfileResolved(false)
     staffApi.getProfile()
       .then(res => {

@@ -303,7 +303,7 @@ function DashboardContent({ role }) {
   const filterFields = (
     <>
       {isManager ? (
-        <label><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
+        <label className="admin-control-toolbar__field"><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
       ) : (
           <FilterSelectField
             label="Khoa/Phòng"
@@ -330,7 +330,7 @@ function DashboardContent({ role }) {
           searchable
           searchPlaceholder="Tìm tên lĩnh vực..."
         />
-      <label>
+      <label className="admin-control-toolbar__field">
         <span>Tính đến ngày</span>
         <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
       </label>

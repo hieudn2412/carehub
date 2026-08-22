@@ -75,6 +75,18 @@ function ActivityTypeListPage() {
     fetchActivityTypes()
   }, [fetchActivityTypes])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const applyFilters = () => {
     setPage(0)
     setAppliedFilters({ keyword: keyword.trim(), status })

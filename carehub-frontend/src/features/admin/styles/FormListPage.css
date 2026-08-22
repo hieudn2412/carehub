@@ -328,36 +328,6 @@
   font-weight: 650;
 }
 
-.flp-filter-panel {
-  display: grid;
-  width: 100%;
-  box-sizing: border-box;
-  grid-template-columns: repeat(2, minmax(220px, 300px)) auto;
-  align-items: end;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.flp-filter-panel .flp-filter-group {
-  display: grid;
-  gap: 6px;
-}
-
-.flp-filter-panel .flp-filter-group > span {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.flp-filter-panel .flp-select,
-.flp-filter-panel .flp-department-filter {
-  width: 100%;
-  min-height: 44px;
-}
-
 .flp-filter-group {
   display: flex;
   align-items: center;
@@ -1278,9 +1248,6 @@
   .flp-toolbar-actions > .flp-import-menu,
   .flp-toolbar-actions .flp-btn-import {
     width: 100%;
-  }
-  .flp-filter-panel {
-    grid-template-columns: 1fr;
   }
   .flp-header-card {
     flex-direction: column;

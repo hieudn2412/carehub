@@ -95,6 +95,18 @@ function ScoringFormulaPage() {
     return () => window.clearTimeout(timer)
   }, [loadRows])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const hasActiveJobs = useMemo(() => rows.some((row) => (
     ACTIVE_JOB_STATUSES.has(row.latestJob?.status)
   )), [rows])
@@ -182,7 +194,11 @@ function ScoringFormulaPage() {
     <AppShell
       className="dashboard-layout scoring-formula-page"
       title="Cài đặt điểm sàn quy trình kỹ thuật"
-      breadcrumbs={[{ label: 'Giám sát tuân thủ' }, { label: 'Cài đặt điểm sàn quy trình kỹ thuật' }]}
+      breadcrumbs={[
+        { label: 'Cấu hình hệ thống' },
+        { label: 'Cấu hình giám sát tuân thủ', link: '/admin/system-settings/compliance' },
+        { label: 'Cài đặt điểm sàn quy trình kỹ thuật' },
+      ]}
     >
       <div className="sfp-main">
           <AppliedFilterToolbar
