@@ -134,28 +134,33 @@ input:checked + .ns-slider:before {
   transform: translateX(22px);
 }
 
-/* Dropdown */
-.ns-select {
+/* Form controls */
+.ns-dropdown {
+  flex: 0 1 480px;
+  width: min(100%, 480px);
+}
+
+.ns-dropdown.searchable-select > input {
+  height: 42px;
+  border-radius: 8px;
+}
+
+.ns-number-input {
+  flex: 0 0 180px;
+  width: 180px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 8px 32px 8px 12px;
+  padding: 8px 12px;
   font-size: 13.5px;
   outline: none;
   color: #334155;
-  min-width: 180px;
-  height: 38px;
-  cursor: pointer;
+  height: 42px;
   background: #fff;
   transition: all 0.15s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 14px;
   box-sizing: border-box;
 }
 
-.ns-select:focus {
+.ns-number-input:focus {
   border-color: #7c3aed;
   box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.15);
 }
@@ -224,8 +229,10 @@ input:checked + .ns-slider:before {
     gap: 12px;
   }
 
-  .ns-select {
+  .ns-dropdown,
+  .ns-number-input {
     flex: 1 1 100%;
+    width: 100%;
     min-width: 0;
   }
 
