@@ -343,6 +343,25 @@ function ChecklistAssignmentPage() {
     loadDrawerItems(nextDrawer)
   }, [drawer, initialFormId, loadDrawerItems])
 
+  const closeDrawer = useCallback(() => {
+    setDrawer(null)
+    setDrawerItems([])
+    setSelectedItemIds([])
+    setDrawerValidUntil('')
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('formId')
+    setSearchParams(nextParams, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!drawer) return undefined
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') closeDrawer()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [closeDrawer, drawer])
+
   const openDrawer = (type, row) => {
     const nextDrawer = {
       type,
@@ -355,6 +374,12 @@ function ChecklistAssignmentPage() {
         : row.employeeCode,
     }
     setDrawer(nextDrawer)
+    if (type === TAB_FORMS) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.set('tab', TAB_FORMS)
+      nextParams.set('formId', String(nextDrawer.id))
+      setSearchParams(nextParams, { replace: true })
+    }
     loadDrawerItems(nextDrawer)
   }
 
@@ -760,15 +785,17 @@ function ChecklistAssignmentPage() {
       </div>
 
       {drawer && (
-        <div className="cap-assignment-overlay" role="presentation">
-          <aside className="cap-assignment-drawer" aria-label="Chi tiết quyền giao bảng kiểm">
+        <div className="cap-assignment-overlay" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) closeDrawer()
+        }}>
+          <aside className="cap-assignment-drawer" role="dialog" aria-modal="true" aria-label="Chi tiết quyền giao bảng kiểm" onMouseDown={(event) => event.stopPropagation()}>
             <header>
               <div>
                 <span>{drawer.type === TAB_FORMS ? 'Chi tiết theo bảng kiểm' : 'Chi tiết theo người nhận'}</span>
                 <h2>{drawer.title}</h2>
                 {drawer.subtitle && <p>{drawer.subtitle}</p>}
               </div>
-              <button type="button" onClick={() => setDrawer(null)} aria-label="Đóng chi tiết"><CloseOutlined /></button>
+              <button type="button" onClick={closeDrawer} aria-label="Đóng chi tiết"><CloseOutlined /></button>
             </header>
             <div className="cap-assignment-drawer__body">
               {drawerLoading ? (
