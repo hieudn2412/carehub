@@ -73,7 +73,6 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/evaluation/question-documents/:documentId', 'Chi tiết tài liệu câu hỏi'],
   ['/admin/evaluation/question-documents', 'Tài liệu câu hỏi'],
   ['/admin/evaluation/document-question-jobs/:jobId', 'Duyệt câu hỏi từ tài liệu'],
-  ['/admin/evaluation/paraphrase-jobs/:jobId', 'Duyệt câu hỏi diễn giải'],
   ['/admin/evaluation/dashboard', 'Tổng quan đánh giá năng lực'],
   ['/admin/evaluation/audit-logs', 'Nhật ký đánh giá'],
   ['/admin/evaluation/imports', 'Lịch sử nhập câu hỏi'],

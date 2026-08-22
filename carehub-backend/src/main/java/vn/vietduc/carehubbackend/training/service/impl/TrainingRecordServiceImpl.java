@@ -359,39 +359,46 @@ public class TrainingRecordServiceImpl implements TrainingRecordService {
                     .filter(pf -> pf.getName().equalsIgnoreCase(trimmedName))
                     .findFirst()
                     .orElseGet(() -> {
+                        boolean selfApproved = isAdmin();
                         String cleanCode = "CUSTOM_" + System.currentTimeMillis();
                         ProfessionalField newPf = ProfessionalField.builder()
                                 .code(cleanCode)
                                 .name(trimmedName)
-                                .description("Tự đề xuất bởi nhân viên: " + actor.getName() + " (Chờ duyệt)")
-                                .active(false)
-                                .moderationStatus(ProfessionalFieldModerationStatus.PENDING)
+                                .description(selfApproved
+                                        ? "Tạo bởi quản trị viên: " + actor.getName()
+                                        : "Tự đề xuất bởi nhân viên: " + actor.getName() + " (Chờ duyệt)")
+                                .active(selfApproved)
+                                .moderationStatus(selfApproved
+                                        ? ProfessionalFieldModerationStatus.APPROVED
+                                        : ProfessionalFieldModerationStatus.PENDING)
                                 .version(0L)
                                 .build();
                         return professionalFieldRepository.save(newPf);
                     });
 
-            try {
-                List<User> admins = userRoleRepository.findAll().stream()
-                        .filter(ur -> ur.getRole() != null && "ADMIN".equals(ur.getRole().getCode()))
-                        .map(ur -> ur.getUser())
-                        .filter(u -> u != null && !u.isDeleted())
-                        .toList();
-                String title = "Đề xuất lĩnh vực chuyên môn mới";
-                String content = "Nhân viên " + actor.getName() + " đã đề xuất lĩnh vực chuyên môn mới: \"" + trimmedName + "\". Vui lòng kiểm tra và duyệt.";
-                String deepLink = "/admin/training/professional-fields?tab=pending";
-                for (User admin : admins) {
-                    notificationService.createInAppNotification(
-                            admin.getId(),
-                            "SYSTEM",
-                            title,
-                            content,
-                            deepLink,
-                            "CUSTOM_PF_" + savedPf.getId() + "_" + admin.getId()
-                    );
+            if (savedPf.getModerationStatus() == ProfessionalFieldModerationStatus.PENDING) {
+                try {
+                    List<User> admins = userRoleRepository.findAll().stream()
+                            .filter(ur -> ur.getRole() != null && "ADMIN".equals(ur.getRole().getCode()))
+                            .map(ur -> ur.getUser())
+                            .filter(u -> u != null && !u.isDeleted())
+                            .toList();
+                    String title = "Đề xuất lĩnh vực chuyên môn mới";
+                    String content = "Nhân viên " + actor.getName() + " đã đề xuất lĩnh vực chuyên môn mới: \"" + trimmedName + "\". Vui lòng kiểm tra và duyệt.";
+                    String deepLink = "/admin/training/professional-fields?tab=pending";
+                    for (User admin : admins) {
+                        notificationService.createInAppNotification(
+                                admin.getId(),
+                                "SYSTEM",
+                                title,
+                                content,
+                                deepLink,
+                                "CUSTOM_PF_" + savedPf.getId() + "_" + admin.getId()
+                        );
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to send admin notifications for new professional field", e);
                 }
-            } catch (Exception e) {
-                log.error("Failed to send admin notifications for new professional field", e);
             }
 
             return savedPf;

@@ -248,8 +248,10 @@ input:checked + .ns-slider:before {
     gap: 12px;
   }
 
-  .ns-select {
+  .ns-dropdown,
+  .ns-number-input {
     flex: 1 1 100%;
+    width: 100%;
     min-width: 0;
   }
 
