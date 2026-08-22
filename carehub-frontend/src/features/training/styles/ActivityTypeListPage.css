@@ -153,34 +153,6 @@
   font-weight: 650;
 }
 
-.atl-filter-panel {
-  display: grid;
-  width: 100%;
-  box-sizing: border-box;
-  grid-template-columns: minmax(220px, 300px);
-  align-items: end;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.atl-filter-panel label {
-  display: grid;
-  gap: 6px;
-}
-
-.atl-filter-panel label > span {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.atl-filter-panel .atl-filter-select {
-  width: 100%;
-  min-height: 44px;
-}
-
 .atl-btn-add {
   display: inline-flex;
   align-items: center;
@@ -642,10 +614,6 @@ select.atl-input-green {
   .atl-btn-add {
     width: 100%;
     min-width: 0;
-  }
-
-  .atl-filter-panel {
-    grid-template-columns: 1fr;
   }
 
   .atl-filter-left {

@@ -4,6 +4,8 @@
 .scd-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; }
 .scd-toolbar__title { display: grid; gap: 4px; color: #647b74; font-size: 12px; white-space: nowrap; }
 .scd-toolbar__title strong { color: #1c4137; font-size: 14px; }
+.scd-toolbar .scd-applied-toolbar { flex: 1 1 auto; min-width: 0; }
+.scd-toolbar .scd-applied-toolbar .admin-control-toolbar__main { gap: 10px; }
 .scd-toolbar .scd-search-form { flex: 1; justify-content: flex-end; }
 .scd-search-form { display: grid; grid-template-columns: minmax(220px, 1.3fr) minmax(130px, .8fr) minmax(130px, .8fr) auto; align-items: end; gap: 10px; }
 .scd-search-form label { display: grid; gap: 5px; color: #637871; font-size: 11px; font-weight: 700; }

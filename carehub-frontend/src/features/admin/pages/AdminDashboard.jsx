@@ -7,6 +7,7 @@ import { trainingApi } from '../../training/api/trainingApi.js'
 import { competencyApi } from '../../evaluation/api/examAssignmentApi.js'
 import { loadCompetencyOverview } from '../../dashboard/utils/competencyOverview.js'
 import { loadAllDashboardItems } from '../../dashboard/utils/paginatedDashboard.js'
+import { findExactEmployee, mapChecklistPerformance } from '../../dashboard/utils/dashboardChecklistPerformance.js'
 
 function payload(response) {
   return response?.data?.data || {}
@@ -85,15 +86,24 @@ export default function AdminDashboard() {
       departmentId: filters.departmentId || undefined,
       keyword: filters.employeeCode.trim() || undefined,
     }
-    const [competencyResult] = await Promise.allSettled([
+    const employeeFilterActive = Boolean(filters.employeeCode.trim())
+    const [competencyResult, employeeResult] = await Promise.allSettled([
       loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+      employeeFilterActive
+        ? loadAllDashboardItems(adminApi.getUsers, {
+            keyword: filters.employeeCode.trim(),
+            departmentId: filters.departmentId || undefined,
+          })
+        : Promise.resolve([]),
     ])
     const competency = competencyResult.status === 'fulfilled' ? competencyResult.value : null
     if (requestId !== dashboardRequestId.current) return
-    const employeeFilterActive = Boolean(filters.employeeCode.trim())
-    const subjectUserId = employeeFilterActive ? (competency?.matchedEmployeeId ?? -1) : undefined
+    const matchedEmployee = employeeResult.status === 'fulfilled'
+      ? findExactEmployee(employeeResult.value, filters.employeeCode)
+      : null
+    const subjectUserId = employeeFilterActive ? (matchedEmployee?.id ?? -1) : undefined
     const employeeNotFound = employeeFilterActive
-      && competencyResult.status === 'fulfilled'
+      && employeeResult.status === 'fulfilled'
       && subjectUserId === -1
     setFilteredEmployeeId(subjectUserId)
     const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
@@ -105,8 +115,8 @@ export default function AdminDashboard() {
     const [trainingResult, checklistResult] = await Promise.allSettled([
       trainingApi.getTrainingDashboardSummary(trainingScope),
       loadAllDashboardItems(
-        adminApi.getQualityChecklistDashboard,
-        { ...qualityParams, view: 'FILTERED' },
+        adminApi.getDashboardFormPerformance,
+        qualityParams,
       ),
     ])
     if (requestId !== dashboardRequestId.current) return
@@ -120,14 +130,7 @@ export default function AdminDashboard() {
       + (Number(trainingTotals.atRiskCount) || 0)
       + (Number(trainingTotals.notConfiguredCount) || 0)
     const checklistItems = checklistResult.status === 'fulfilled' ? checklistResult.value : []
-    const qualityTotals = checklistItems.reduce((totals, item) => {
-      const monitoringCount = Number(item.monitoringCount) || 0
-      totals.total += monitoringCount
-      totals.passed += Number(item.passedCount) || 0
-      totals.failed += Number(item.failedCount) || 0
-      totals.convertedScoreSum += (Number(item.averageConvertedScore) || 0) * monitoringCount
-      return totals
-    }, { total: 0, passed: 0, failed: 0, convertedScoreSum: 0 })
+    const { totals: qualityTotals, chart: qualityChart } = mapChecklistPerformance(checklistItems)
     const qualityAverageScore = qualityTotals.total
       ? qualityTotals.convertedScoreSum / qualityTotals.total
       : 0
@@ -162,19 +165,23 @@ export default function AdminDashboard() {
           }
         : emptyDomain('Không thể tải dữ liệu tuân thủ quy trình.'),
     })
-    setComplianceChart(checklistItems.map((item) => ({
-      id: item.formId,
-      name: item.formTitle || item.formCode || `Bảng kiểm ${item.formId}`,
-      target: Number(item.targetPercent) || 0,
-      actual: Number(item.complianceRate) || 0,
-      passed: Number(item.passedCount) || 0,
-      total: Number(item.monitoringCount) || 0,
-    })))
+    setComplianceChart(qualityChart)
 
     if ([trainingResult, checklistResult, competencyResult].every((result) => result.status === 'rejected')) {
       setError('Không thể tải dashboard. Vui lòng kiểm tra kết nối đến máy chủ rồi thử lại.')
+    } else if (employeeFilterActive && employeeResult.status === 'rejected') {
+      setError('Không thể xác minh mã nhân viên. Vui lòng thử lại.')
     } else if (employeeNotFound) {
       setError(`Không tìm thấy nhân viên có mã "${filters.employeeCode.trim()}" trong phạm vi đang chọn.`)
+    } else {
+      const failedDomains = [
+        trainingResult.status === 'rejected' && 'giờ đào tạo',
+        checklistResult.status === 'rejected' && 'lịch sử bảng kiểm',
+        competencyResult.status === 'rejected' && 'năng lực chuyên môn',
+      ].filter(Boolean)
+      if (failedDomains.length) {
+        setError(`Không thể tải dữ liệu ${failedDomains.join(', ')}. Các chỉ số còn lại vẫn được hiển thị.`)
+      }
     }
     setLoading(false)
   }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
@@ -192,7 +199,7 @@ export default function AdminDashboard() {
 
   const loadComplianceTrend = useCallback(async (formId) => {
     const defaultDates = currentYearRange()
-    const response = await adminApi.getQualityChecklistTrend({
+    const response = await adminApi.getDashboardFormTrend({
       fromDate: filters.fromDate || defaultDates.fromDate,
       toDate: filters.toDate || defaultDates.toDate,
       departmentId: filters.departmentId || undefined,

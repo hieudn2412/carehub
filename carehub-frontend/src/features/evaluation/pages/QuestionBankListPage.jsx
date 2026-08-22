@@ -6,15 +6,15 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   ExportOutlined,
-  FilterOutlined,
   FormOutlined,
   LoadingOutlined,
   PlusCircleOutlined,
-  SearchOutlined,
-  SyncOutlined,
   UploadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { questionBankApi } from '../api/questionBankApi.js'
@@ -87,13 +87,8 @@ function QuestionBankListPage() {
   const [questions, setQuestions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [apiAvailable, setApiAvailable] = useState(true)
-  const [jobQuestionId, setJobQuestionId] = useState(null)
   const [detailQuestion, setDetailQuestion] = useState(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
-  const [paraphraseTarget, setParaphraseTarget] = useState(null)
-  const [paraphraseForm, setParaphraseForm] = useState({ requestedCount: 3, changeStrength: 'medium' })
-  const [modelStatus, setModelStatus] = useState(null)
-  const [isModelStatusLoading, setIsModelStatusLoading] = useState(false)
   const [importFile, setImportFile] = useState(null)
   const [importPreview, setImportPreview] = useState(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -104,6 +99,7 @@ function QuestionBankListPage() {
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [cognitiveLevelFilter, setCognitiveLevelFilter] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', category: '', cognitiveLevel: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [questionToArchive, setQuestionToArchive] = useState(null)
@@ -132,26 +128,37 @@ function QuestionBankListPage() {
     loadQuestions()
   }, [loadQuestions])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const categories = useMemo(
     () => Array.from(new Set(questions.map((question) => question.category).filter(Boolean))),
     [questions],
   )
 
   const filteredQuestions = useMemo(() => {
-    const normalizedKeyword = normalizeText(keyword)
+    const normalizedKeyword = normalizeText(appliedFilters.keyword)
     return questions.filter((question) => {
       const matchesKeyword = !normalizedKeyword || normalizeText(question.content).includes(normalizedKeyword)
-      const matchesCategory = !categoryFilter || question.category === categoryFilter
-      const matchesCognitiveLevel = !cognitiveLevelFilter || question.cognitiveLevel === cognitiveLevelFilter
+      const matchesCategory = !appliedFilters.category || question.category === appliedFilters.category
+      const matchesCognitiveLevel = !appliedFilters.cognitiveLevel || question.cognitiveLevel === appliedFilters.cognitiveLevel
       return matchesKeyword && matchesCategory && matchesCognitiveLevel
     })
-  }, [questions, keyword, categoryFilter, cognitiveLevelFilter])
+  }, [appliedFilters, questions])
 
   const pageSize = 10
   const totalElements = filteredQuestions.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = filteredQuestions.slice(page * pageSize, (page + 1) * pageSize)
-  const hasActiveFilters = Boolean(categoryFilter || cognitiveLevelFilter)
   const activeFilterCount = [categoryFilter, cognitiveLevelFilter].filter(Boolean).length
 
   async function handleDelete(item) {
@@ -202,52 +209,10 @@ function QuestionBankListPage() {
     }
   }
 
-  async function openParaphraseModal(item) {
-    if (!item.backend) {
-      showToast('Chỉ câu hỏi từ backend mới tạo được phiên diễn đạt lại.', 'warning')
-      return
-    }
-    setParaphraseTarget(item)
-    setParaphraseForm({ requestedCount: 3, changeStrength: 'medium' })
-    setIsModelStatusLoading(true)
-    try {
-      const response = await questionBankApi.getModelRuntimeStatus()
-      setModelStatus(apiData(response))
-    } catch (error) {
-      setModelStatus(null)
-      showToast(apiErrorMessage(error), 'warning')
-    } finally {
-      setIsModelStatusLoading(false)
-    }
-  }
-
-  async function createParaphraseJob() {
-    if (!paraphraseTarget) return
-    const requestedCount = Math.min(10, Math.max(1, Number(paraphraseForm.requestedCount) || 3))
-    setJobQuestionId(paraphraseTarget.id)
-    try {
-      const response = await questionBankApi.createParaphraseJob(paraphraseTarget.id, {
-        requestedCount,
-        changeStrength: paraphraseForm.changeStrength,
-      })
-      const result = apiData(response)
-      const job = result
-      setParaphraseTarget(null)
-      showToast('Đã xếp hàng phiên diễn đạt lại. Hệ thống sẽ tự động cập nhật kết quả.', 'success')
-      if (job?.id) {
-        navigate(`/admin/evaluation/paraphrase-jobs/${job.id}`)
-      }
-    } catch (error) {
-      showToast(apiErrorMessage(error), 'error')
-    } finally {
-      setJobQuestionId(null)
-    }
-  }
-
   async function exportQuestions() {
     setIsExporting(true)
     try {
-      const response = await questionBankApi.exportQuestions({ status: 'ALL', q: keyword || undefined })
+      const response = await questionBankApi.exportQuestions({ status: 'ALL', q: appliedFilters.keyword || undefined })
       const url = window.URL.createObjectURL(response.data)
       const link = document.createElement('a')
       link.href = url
@@ -394,9 +359,16 @@ function QuestionBankListPage() {
   }
 
   function resetFilters() {
+    setKeyword('')
     setCategoryFilter('')
     setCognitiveLevelFilter('')
     setPage(0)
+    setAppliedFilters({ keyword: '', category: '', cognitiveLevel: '' })
+  }
+
+  function applyFilters() {
+    setPage(0)
+    setAppliedFilters({ keyword: keyword.trim(), category: categoryFilter, cognitiveLevel: cognitiveLevelFilter })
   }
 
   function getVisiblePages() {
@@ -431,38 +403,9 @@ function QuestionBankListPage() {
                 </div>
               )}
 
-              <div className="qbl-filter-bar">
-                <div className="qbl-toolbar-main">
-                  <div className="qbl-search-filter-group">
-                    <div className="qbl-search">
-                      <span className="qbl-search-icon">
-                        <SearchOutlined />
-                      </span>
-                      <input
-                        type="text"
-                        className="qbl-search-input"
-                        placeholder="Tìm theo nội dung câu hỏi..."
-                        value={keyword}
-                        onChange={(event) => {
-                          setKeyword(event.target.value)
-                          setPage(0)
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      className={`qbl-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="question-bank-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                        <FilterOutlined /> Bộ lọc
-                        {activeFilterCount > 0 && <span className="qbl-filter-count">{activeFilterCount}</span>}
-                    </button>
-                  </div>
-
-                  <div className="qbl-toolbar-actions">
+              <AppliedFilterToolbar
+                activeCount={activeFilterCount}
+                actions={<div className="qbl-toolbar-actions">
                     <span className="qbl-results-count">{totalElements} kết quả</span>
                     <button type="button" className="qbl-btn-add" onClick={() => navigate('/admin/evaluation/question-bank/new')}>
                       <PlusCircleOutlined /> Thêm câu hỏi
@@ -486,48 +429,43 @@ function QuestionBankListPage() {
                     >
                       {isExporting ? <LoadingOutlined /> : <UploadOutlined />}
                     </button>
-                  </div>
-                </div>
-                {isFilterOpen && (
-                  <div className="qbl-filter-panel" id="question-bank-filter-panel">
-                    <label>
-                      <span>Danh mục</span>
-                      <select
-                        className="qbl-filter-select"
+                  </div>}
+                className="qbl-filter-bar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setKeyword}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="qbl-filter-panel"
+                panelId="question-bank-filter-panel"
+                searchAriaLabel="Tìm theo nội dung câu hỏi"
+                searchClassName="qbl-search"
+                searchPlaceholder="Tìm theo nội dung câu hỏi..."
+                searchValue={keyword}
+              >
+                    <div className="applied-filter-toolbar__fields">
+                      <FilterSelectField
+                        label="Danh mục"
                         value={categoryFilter}
-                        onChange={(event) => {
-                          setCategoryFilter(event.target.value)
-                          setPage(0)
-                        }}
-                      >
-                        <option value="">Tất cả danh mục</option>
-                        {categories.map((category) => (
-                          <option key={category} value={category}>{category}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Mức độ nhận thức</span>
-                      <select
-                        className="qbl-filter-select"
+                        onChange={(value) => setCategoryFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả danh mục' },
+                          ...categories.map((category) => ({ value: category, label: category }))
+                        ]}
+                        placeholder="Tất cả danh mục"
+                      />
+                      <FilterSelectField
+                        label="Mức độ nhận thức"
                         value={cognitiveLevelFilter}
-                        onChange={(event) => {
-                          setCognitiveLevelFilter(event.target.value)
-                          setPage(0)
-                        }}
-                      >
-                        <option value="">Tất cả mức độ nhận thức</option>
-                        {COGNITIVE_LEVELS.map((level) => (
-                          <option key={level.value} value={level.value}>{level.label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    {hasActiveFilters && (
-                      <button type="button" className="qbl-btn-clear" onClick={resetFilters}>Xóa bộ lọc</button>
-                    )}
-                  </div>
-                )}
-              </div>
+                        onChange={(value) => setCognitiveLevelFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả mức độ nhận thức' },
+                          ...COGNITIVE_LEVELS
+                        ]}
+                        placeholder="Tất cả mức độ nhận thức"
+                      />
+                    </div>
+              </AppliedFilterToolbar>
 
               <div className="qbl-table-card">
                 <table className="qbl-table qbl-question-table admin-table-uppercase">
@@ -588,16 +526,6 @@ function QuestionBankListPage() {
                               </button>
                               <button
                                 type="button"
-                                className="admin-table-action admin-table-action--icon"
-                                onClick={() => openParaphraseModal(item)}
-                                disabled={!item.backend || jobQuestionId === item.id}
-                                aria-label="Tạo câu hỏi diễn đạt lại"
-                                title={item.backend ? 'Tạo câu hỏi tương tự' : 'Chỉ áp dụng cho câu hỏi đã lưu'}
-                              >
-                                {jobQuestionId === item.id ? <LoadingOutlined /> : <SyncOutlined />}
-                              </button>
-                              <button
-                                type="button"
                                 className="admin-table-action admin-table-action--icon admin-table-action--success"
                                 onClick={() => openDetailModal(item)}
                                 aria-label="Xem chi tiết câu hỏi"
@@ -647,67 +575,6 @@ function QuestionBankListPage() {
               </div>
         </div>
       </AppShell>
-      {paraphraseTarget && (
-        <div className="qbl-modal-backdrop">
-          <div className="qbl-modal" role="dialog" aria-modal="true" aria-labelledby="create-paraphrase-title">
-            <h2 id="create-paraphrase-title">Tạo phiên diễn đạt lại</h2>
-            <p className="qbl-modal-subtitle">{paraphraseTarget.content}</p>
-
-            {modelStatus?.paraphrase?.provider === 'mock' && (
-              <div className="qbl-model-warning">
-                Hệ thống đang dùng dữ liệu mô phỏng. Kết quả chỉ phù hợp để kiểm thử giao diện.
-              </div>
-            )}
-
-            <label className="qbl-field">
-              <span>Số biến thể tối đa</span>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                value={paraphraseForm.requestedCount}
-                onChange={(event) => setParaphraseForm((current) => ({ ...current, requestedCount: event.target.value }))}
-              />
-            </label>
-
-            <label className="qbl-field">
-              <span>Mức thay đổi</span>
-              <select
-                value={paraphraseForm.changeStrength}
-                onChange={(event) => setParaphraseForm((current) => ({ ...current, changeStrength: event.target.value }))}
-              >
-                <option value="low">Nhẹ</option>
-                <option value="medium">Vừa</option>
-                <option value="high">Nhiều</option>
-              </select>
-            </label>
-
-            <div className="qbl-modal-actions">
-              <button
-                type="button"
-                className="qbl-btn-secondary"
-                onClick={() => setParaphraseTarget(null)}
-                disabled={jobQuestionId === paraphraseTarget.id}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="qbl-btn-primary"
-                onClick={createParaphraseJob}
-                disabled={
-                  jobQuestionId === paraphraseTarget.id
-                  || isModelStatusLoading
-                  || !modelStatus?.paraphrase?.filesPresent
-                }
-              >
-                {jobQuestionId === paraphraseTarget.id ? <LoadingOutlined /> : <SyncOutlined />}
-                <span>Tạo câu hỏi tương tự</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       {isImportModalOpen && (
         <div className="qbl-modal-backdrop">
           <div className="qbl-modal qbl-modal--wide" role="dialog" aria-modal="true" aria-labelledby="import-question-bank-title">
@@ -729,11 +596,15 @@ function QuestionBankListPage() {
 
             <label className="qbl-field">
               <span>Khi gặp câu hỏi trùng mạnh</span>
-              <select value={importDuplicateMode} onChange={(event) => setImportDuplicateMode(event.target.value)}>
-                <option value="BLOCK">Báo lỗi dòng trùng</option>
-                <option value="SKIP_DUPLICATES">Bỏ qua dòng trùng</option>
-                <option value="IMPORT_DUPLICATES_AS_DRAFT">Lưu dòng trùng thành bản nháp</option>
-              </select>
+              <FormSelectField
+                value={importDuplicateMode}
+                onChange={setImportDuplicateMode}
+                options={[
+                  { value: 'BLOCK', label: 'Báo lỗi dòng trùng' },
+                  { value: 'SKIP_DUPLICATES', label: 'Bỏ qua dòng trùng' },
+                  { value: 'IMPORT_DUPLICATES_AS_DRAFT', label: 'Lưu dòng trùng thành bản nháp' }
+                ]}
+              />
             </label>
 
             {(importPreview?.sourceHeaders || []).length > 0 && (
@@ -743,15 +614,14 @@ function QuestionBankListPage() {
                   {IMPORT_MAPPING_FIELDS.map((field) => (
                     <label key={field.key} className="qbl-field">
                       <span>{field.label}</span>
-                      <select
+                      <FormSelectField
                         value={importColumnMapping[field.key] || ''}
-                        onChange={(event) => updateImportColumnMapping(field.key, event.target.value)}
-                      >
-                        <option value="">Tự nhận theo header</option>
-                        {(importPreview.sourceHeaders || []).map((header) => (
-                          <option key={`${field.key}-${header}`} value={header}>{header}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => updateImportColumnMapping(field.key, value)}
+                        options={[
+                          { value: '', label: 'Tự nhận theo header' },
+                          ...(importPreview.sourceHeaders || []).map((header) => ({ value: header, label: header }))
+                        ]}
+                      />
                     </label>
                   ))}
                 </div>

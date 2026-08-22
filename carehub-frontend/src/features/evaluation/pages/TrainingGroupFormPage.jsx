@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { trainingGroupApi } from '../api/trainingGroupApi.js'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import '../styles/TrainingGroupFormPage.css'
 
 function TrainingGroupFormPage({ group, onClose }) {
@@ -96,14 +97,15 @@ function TrainingGroupFormPage({ group, onClose }) {
             </div>
             <div className="ch-field">
               <label>Trạng thái</label>
-              <select
+              <FormSelectField
                 className="ch-input"
                 value={form.active ? 'active' : 'inactive'}
-                onChange={e => setForm({ ...form, active: e.target.value === 'active' })}
-              >
-                <option value="active">Hoạt động</option>
-                <option value="inactive">Khóa</option>
-              </select>
+                onChange={val => setForm({ ...form, active: val === 'active' })}
+                options={[
+                  { value: 'active', label: 'Hoạt động' },
+                  { value: 'inactive', label: 'Khóa' }
+                ]}
+              />
             </div>
             <div className="ch-field">
               <label>Thành viên ({form.memberIds.length} đã chọn)</label>

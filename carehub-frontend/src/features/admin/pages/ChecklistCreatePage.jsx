@@ -770,10 +770,10 @@ function ChecklistCreatePage() {
                   {isDetailMode && (
                     <button
                       className="ccp-manage-button ccp-manage-button--permissions"
-                      onClick={() => navigate(`/admin/quality/checklists/${id}/assignments`)}
+                      onClick={() => navigate(`/admin/quality/checklist-assignments?formId=${id}`)}
                       type="button"
                     >
-                      <UserSwitchOutlined /> Quản lý phân quyền
+                      <UserSwitchOutlined /> Giao bảng kiểm
                     </button>
                   )}
                   {isDetailMode && (

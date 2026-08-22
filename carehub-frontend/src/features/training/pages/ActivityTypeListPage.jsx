@@ -4,7 +4,10 @@ import { getApiErrorMessage } from '../../../shared/api/apiError.js'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import EmptyState from '../../../shared/components/EmptyState.jsx'
-import { SearchOutlined, EditOutlined, FilterOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { EditOutlined, PlusCircleOutlined, PlusOutlined, CloseOutlined } from '@ant-design/icons'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import '../styles/ActivityTypeListPage.css'
 
 const EMPTY_FORM = {
@@ -33,23 +36,14 @@ function generateCodeFromName(name) {
 
 function ActivityTypeListPage() {
   const [keyword, setKeyword] = useState('')
-  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   const [status, setStatus] = useState('') // '', 'true', 'false'
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
   const [page, setPage] = useState(0)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [data, setData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
-
-  // Debounce keyword search
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedKeyword(keyword)
-      setPage(0)
-    }, 300)
-    return () => clearTimeout(handler)
-  }, [keyword])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -63,8 +57,8 @@ function ActivityTypeListPage() {
 
     try {
       const response = await trainingApi.getActivityTypes({
-        keyword: debouncedKeyword || undefined,
-        isActive: status === '' ? undefined : status === 'true',
+        keyword: appliedFilters.keyword || undefined,
+        isActive: appliedFilters.status === '' ? undefined : appliedFilters.status === 'true',
         page,
         size: 10,
         sort: 'sortOrder,asc',
@@ -75,15 +69,34 @@ function ActivityTypeListPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [debouncedKeyword, page, status])
+  }, [appliedFilters, page])
 
   useEffect(() => {
     fetchActivityTypes()
   }, [fetchActivityTypes])
 
-  const handleStatusChange = (e) => {
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
+  const applyFilters = () => {
     setPage(0)
-    setStatus(e.target.value)
+    setAppliedFilters({ keyword: keyword.trim(), status })
+  }
+
+  const resetFilters = () => {
+    setKeyword('')
+    setStatus('')
+    setPage(0)
+    setAppliedFilters({ keyword: '', status: '' })
   }
 
   // Modal Actions
@@ -186,58 +199,35 @@ function ActivityTypeListPage() {
               </div>
 
               {/* Filter Bar */}
-              <div className="atl-filter-bar">
-                <div className="atl-toolbar-main">
-                  <div className="atl-filter-left">
-                    <div className="atl-search">
-                      <span className="atl-search-icon">
-                        <SearchOutlined />
-                      </span>
-                      <input
-                        type="text"
-                        className="atl-search-input"
-                        placeholder="Tìm theo cách thức..."
-                        value={keyword}
-                        onChange={(e) => setKeyword(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`atl-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-expanded={isFilterOpen}
-                      aria-controls="activity-type-filter-panel"
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {status && <span className="atl-filter-count">1</span>}
-                    </button>
-                  </div>
-
-                  <button
+              <AppliedFilterToolbar
+                activeCount={status ? 1 : 0}
+                actions={<button
                     className="atl-btn-add"
                     onClick={handleOpenCreateModal}
                   >
                     <PlusCircleOutlined /> Thêm cách thức
-                  </button>
-                </div>
-
-                {isFilterOpen && (
-                  <div className="atl-filter-panel" id="activity-type-filter-panel">
-                    <label>
-                      <span>Trạng thái</span>
-                      <select
-                        className="atl-filter-select"
-                        value={status}
-                        onChange={handleStatusChange}
-                      >
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="true">Hoạt động</option>
-                        <option value="false">Ngưng hoạt động</option>
-                      </select>
-                    </label>
-                  </div>
-                )}
-              </div>
+                  </button>}
+                className="atl-filter-bar"
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setKeyword}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="atl-filter-panel"
+                panelId="activity-type-filter-panel"
+                searchAriaLabel="Tìm cách thức đào tạo"
+                searchClassName="atl-search"
+                searchPlaceholder="Tìm theo cách thức..."
+                searchValue={keyword}
+              >
+                    <FilterSelectField
+                      label="Trạng thái"
+                      value={status}
+                      onChange={setStatus}
+                      options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'true', label: 'Hoạt động' }, { value: 'false', label: 'Ngưng hoạt động' }]}
+                      placeholder="Tất cả trạng thái"
+                    />
+              </AppliedFilterToolbar>
 
               {/* Feedback Alerts */}
               {errorMessage && (
@@ -257,7 +247,7 @@ function ActivityTypeListPage() {
                   <LoadingState label="Đang tải danh sách cách thức đào tạo..." />
                 ) : rows.length === 0 ? (
                   <EmptyState>
-                    {debouncedKeyword || status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có cách thức đào tạo nào.'}
+                    {appliedFilters.keyword || appliedFilters.status ? 'Không tìm thấy kết quả phù hợp.' : 'Chưa có cách thức đào tạo nào.'}
                   </EmptyState>
                 ) : (
                   <>
@@ -382,17 +372,17 @@ function ActivityTypeListPage() {
                     placeholder="Nhập tên cách thức đào tạo..."
                   />
                 </div>
-                <div className="atl-modal-group">
-                  <label>Trạng thái</label>
-                  <select
-                    className="atl-input-red"
-                    value={modalForm.active.toString()}
-                    onChange={(e) => updateModalField('active', e.target.value === 'true')}
-                  >
-                    <option value="true">Hoạt động</option>
-                    <option value="false">Ngưng hoạt động</option>
-                  </select>
-                </div>
+                <FormSelectField
+                  label="Trạng thái"
+                  className="atl-modal-group"
+                  value={modalForm.active.toString()}
+                  onChange={(value) => updateModalField('active', value === 'true')}
+                  options={[
+                    { value: 'true', label: 'Hoạt động' },
+                    { value: 'false', label: 'Ngưng hoạt động' }
+                  ]}
+                  searchable={false}
+                />
               </div>
 
               <div className="atl-modal-group">

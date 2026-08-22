@@ -17,7 +17,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
@@ -146,24 +146,18 @@ function CompetencyByFieldPage() {
                   </div>
                   <div className="admin-control-toolbar__controls">
                     <AdminFilterDisclosure activeCount={Number(Boolean(selectedCategory)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
-                      <label className="admin-control-toolbar__field">
-                        <span>Khoa/phòng</span>
-                        <div>
-                          <SearchableSelect
+                      <FilterSelectField
+                            label="Khoa/phòng"
                             value={selectedDeptId}
                             onChange={setSelectedDeptId}
                             disabled={!isAdmin}
                             options={departments.map((department) => ({ value: department.id, label: department.name }))}
                             placeholder="Chọn khoa/phòng"
+                            searchable
                             searchPlaceholder="Tìm tên khoa/phòng..."
-                            ariaLabel="Tìm và chọn khoa/phòng"
                           />
-                        </div>
-                      </label>
-                      <label className="admin-control-toolbar__field">
-                        <span>Lĩnh vực chuyên môn</span>
-                        <div>
-                          <SearchableSelect
+                      <FilterSelectField
+                            label="Lĩnh vực chuyên môn"
                             value={selectedCategory}
                             onChange={setSelectedCategory}
                             options={[
@@ -171,11 +165,9 @@ function CompetencyByFieldPage() {
                               ...categories.map((category) => ({ value: category.id, label: category.name })),
                             ]}
                             placeholder="Tất cả lĩnh vực"
+                            searchable
                             searchPlaceholder="Tìm tên lĩnh vực..."
-                            ariaLabel="Tìm và chọn lĩnh vực"
                           />
-                        </div>
-                      </label>
                       <label className="admin-control-toolbar__field">
                         <span>Từ ngày</span>
                         <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={val => setFromDate(val)} />
@@ -184,7 +176,7 @@ function CompetencyByFieldPage() {
                         <span>Đến ngày</span>
                         <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={val => setToDate(val)} />
                       </label>
-                      <button className="evd-btn" type="button" onClick={loadData}>Áp dụng</button>
+                      <button className="evd-btn filter-action-buttons__apply" type="button" onClick={loadData}>Áp dụng</button>
                     </AdminFilterDisclosure>
                     <span className="evd-competency-toolbar__count">{filteredItems.length} nhân viên</span>
                     <button className="evd-icon-btn" type="button" onClick={loadData} disabled={loading} title="Tải lại" aria-label="Tải lại">

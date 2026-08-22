@@ -116,7 +116,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             select s from FormSubmission s
             join s.subjectContext context
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and s.formVersion.form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and (context.subjectUser.id = :userId
                    or (context.subjectUser is null and lower(context.employeeCode) = lower(:employeeCode)))
@@ -154,7 +154,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             join s.subjectContext context
             join context.subjectUser subject
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and s.formVersion.form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and subject.department.id = :departmentId
             order by s.submittedAt desc
@@ -171,7 +171,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             join s.subjectContext context
             join context.subjectUser subject
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and s.formVersion.form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
@@ -186,7 +186,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             join s.subjectContext context
             join context.subjectUser subject
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and s.formVersion.form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and (:departmentId is null or subject.department.id = :departmentId)
               and (:formId is null or s.formVersion.form.id = :formId)
@@ -213,7 +213,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             join s.formVersion version
             join version.form form
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and (:departmentId is null or subject.department.id = :departmentId)
             order by form.title
@@ -255,7 +255,7 @@ public interface FormSubmissionRepository extends JpaRepository<FormSubmission, 
             join s.subjectContext context
             join context.subjectUser subject
             where s.status = 'SUBMITTED'
-              and s.scoringStatus = 'CALCULATED'
+              and s.formVersion.form.deleted = false
               and s.submittedAt between :fromDate and :toDate
               and subject.id in :userIds
               and (:formId is null or s.formVersion.form.id = :formId)

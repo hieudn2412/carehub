@@ -35,12 +35,22 @@ describe('ExamAssignmentFormPage', () => {
     const { default: ExamAssignmentFormPage } = await import('./ExamAssignmentFormPage.jsx')
     render(<MemoryRouter><ExamAssignmentFormPage /></MemoryRouter>)
 
-    await screen.findByRole('option', { name: /EP-041/ })
-    await screen.findByRole('option', { name: /Điều dưỡng dưới 3 năm/ })
+    const comboboxes = await screen.findAllByRole('combobox')
+
+    fireEvent.click(comboboxes[0])
+    const paperOption = await screen.findByRole('option', { name: /EP-041/ })
+    fireEvent.click(paperOption)
+
+    fireEvent.click(comboboxes[1])
+    const audienceOption = await screen.findByRole('option', { name: /Điều dưỡng dưới 3 năm/ })
+    fireEvent.click(audienceOption)
+
     fireEvent.change(screen.getByRole('textbox', { name: /Tên đợt giao đề/i }), { target: { value: 'Đợt kiểm tra tháng 8' } })
-    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: '41' } })
-    fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: '11' } })
-    fireEvent.change(screen.getByLabelText('Cách mở đề'), { target: { value: 'OPEN' } })
+
+    fireEvent.click(comboboxes[3])
+    const openOption = await screen.findByRole('option', { name: /Mở giao ngay/ })
+    fireEvent.click(openOption)
+
     fireEvent.click(screen.getByRole('button', { name: /Giao đề kiểm tra/ }))
 
     await waitFor(() => expect(createAssignment).toHaveBeenCalledTimes(1))

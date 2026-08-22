@@ -23,7 +23,6 @@ import {
   hasAnyRole,
 } from '../../auth/utils/authNavigation.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import { staffApi } from '../api/staffApi.js'
 import logo from '../../../assets/logo.png'
 import '../styles/StaffDashBoardScreen.css'
 
@@ -54,49 +53,8 @@ function Sidebar({ alertSummary = {} }) {
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
-  const [assignedChecklistAccess, setAssignedChecklistAccess] = useState({
-    accessToken: null,
-    hasAssignment: false,
-  })
-  const hasAssignedChecklist = assignedChecklistAccess.accessToken === accessToken
-    && assignedChecklistAccess.hasAssignment
   const unreadCount = Number(alertSummary.unreadCount) || 0
   const pendingExamCount = Number(alertSummary.pendingExamCount) || 0
-
-  useEffect(() => {
-    let active = true
-
-    if (isManager) {
-      return () => {
-        active = false
-      }
-    }
-
-    staffApi.getAssignedForms({ page: 0, size: 1, sort: 'id,desc' })
-      .then((response) => {
-        if (!active) {
-          return
-        }
-
-        const page = response.data?.data
-        const content = Array.isArray(page?.content) ? page.content : []
-        const totalElements = Number(page?.totalElements)
-
-        setAssignedChecklistAccess({
-          accessToken,
-          hasAssignment: Number.isFinite(totalElements) ? totalElements > 0 : content.length > 0,
-        })
-      })
-      .catch(() => {
-        if (active) {
-          setAssignedChecklistAccess({ accessToken, hasAssignment: false })
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [isManager, accessToken])
 
   const isLinkActive = (itemPath) => {
     if (itemPath === '/staff/professional-competency') {
@@ -131,7 +89,7 @@ function Sidebar({ alertSummary = {} }) {
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
           { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists' },
         ] : []),
-        ...(!isManager && hasAssignedChecklist ? [
+        ...(!isManager ? [
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
         ] : []),
       ],
@@ -150,11 +108,10 @@ function Sidebar({ alertSummary = {} }) {
       {
         label: 'Giám sát tuân thủ',
         items: [
-          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/manager/reports/checklist-dashboard' },
-          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ theo kỹ thuật', path: '/manager/compliance-by-technique' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
           { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
-          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
       {
@@ -180,9 +137,14 @@ function Sidebar({ alertSummary = {} }) {
     section.items.some((item) => isLinkActive(item.path))
   )
 
-  const [expandedSectionLabel, setExpandedSectionLabel] = useState(
-    activeSection ? activeSection.label : null
-  )
+  const activeSectionLabel = activeSection?.label ?? null
+  const [expandedSectionLabel, setExpandedSectionLabel] = useState(activeSectionLabel)
+
+  useLayoutEffect(() => {
+    if (!activeSectionLabel) return
+
+    setExpandedSectionLabel(activeSectionLabel)
+  }, [activeSectionLabel])
 
   // Restore scroll position
   useEffect(() => {
@@ -358,18 +320,11 @@ function Sidebar({ alertSummary = {} }) {
       {
         title: 'Giám sát tuân thủ',
         items: [
-          ...(hasAssignedChecklist ? [
-            {
-              icon: <FileDoneOutlined />,
-              label: 'Bảng kiểm giám sát',
-              route: '/staff/checklists',
-            },
-            {
-              icon: <HistoryOutlined />,
-              label: 'Lịch sử đánh giá',
-              route: '/staff/quality/history',
-            },
-          ] : []),
+          {
+            icon: <FileDoneOutlined />,
+            label: 'Bảng kiểm giám sát',
+            route: '/staff/checklists',
+          },
         ],
       },
     ] : []),

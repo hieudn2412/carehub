@@ -104,6 +104,13 @@ export const staffApi = {
     })
   },
 
+  getManagerDashboardEmployee(params) {
+    return httpClient.get('/dashboard/manager/employee', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
   getQualityChecklistDashboard(params) {
     return httpClient.get('/dashboard/quality/checklists', {
       headers: authHeaders(),
@@ -120,6 +127,20 @@ export const staffApi = {
 
   getManagerQualityHistorySummary(params) {
     return httpClient.get('/forms/history/summary', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getManagerQualityHistory(params) {
+    return httpClient.get('/forms/history', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getDashboardFormTrend(params) {
+    return httpClient.get('/dashboard/forms/trend', {
       headers: authHeaders(),
       params,
     })

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  SearchOutlined,
   ReloadOutlined,
   WarningFilled,
   CheckCircleFilled,
@@ -10,7 +9,6 @@ import {
   CaretUpOutlined,
   CaretDownOutlined,
   EyeOutlined,
-  FilterOutlined,
   LeftOutlined,
   RightOutlined,
 } from '@ant-design/icons'
@@ -25,6 +23,7 @@ import {
   Cell,
 } from 'recharts'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { competencyApi } from '../api/examAssignmentApi.js'
@@ -34,7 +33,7 @@ import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestionUi.js'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
-import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
@@ -74,8 +73,15 @@ function CompetencySummaryPage() {
 
   // Search filter
   const [searchTerm, setSearchTerm] = useState('')
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [page, setPage] = useState(0)
+  const [appliedFilters, setAppliedFilters] = useState({
+    departmentId: '',
+    fromDate: yearStart,
+    searchTerm: '',
+    selectedCategory: '',
+    selectedFormId: '',
+    toDate: today,
+  })
 
   // Sorting
   const [sortColumn, setSortColumn] = useState('overallScore')
@@ -83,6 +89,12 @@ function CompetencySummaryPage() {
 
   const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
   const detailPathField = isAdmin ? '/admin/evaluation/competency-by-field' : '/manager/competency-by-field'
+  const effectiveDepartmentId = isAdmin ? appliedFilters.departmentId : departmentId
+  const effectiveFromDate = appliedFilters.fromDate
+  const effectiveToDate = appliedFilters.toDate
+  const effectiveSearchTerm = appliedFilters.searchTerm
+  const effectiveSelectedCategory = appliedFilters.selectedCategory
+  const effectiveSelectedFormId = appliedFilters.selectedFormId
 
   const loadCategories = useCallback(async () => {
     try {
@@ -123,12 +135,16 @@ function CompetencySummaryPage() {
   }, [isAdmin, showToast, loadCategories])
 
   useEffect(() => {
+    const nextSearchTerm = searchTerm.trim()
+    if (nextSearchTerm === appliedFilters.searchTerm) return undefined
     const timer = window.setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm.trim())
       setPage(0)
-    }, 350)
+      setAppliedFilters((current) => (
+        current.searchTerm === nextSearchTerm ? current : { ...current, searchTerm: nextSearchTerm }
+      ))
+    }, 300)
     return () => window.clearTimeout(timer)
-  }, [searchTerm])
+  }, [appliedFilters.searchTerm, searchTerm])
 
   const loadData = useCallback(async () => {
     if (!isAdmin && !departmentId) return
@@ -137,10 +153,10 @@ function CompetencySummaryPage() {
     try {
       if (reportType === 'summary') {
         const response = await competencyApi.getSummary({
-          departmentId: departmentId || undefined,
-          fromDate: fromDate || undefined,
-          toDate: toDate || undefined,
-          keyword: debouncedSearchTerm || undefined,
+          departmentId: effectiveDepartmentId || undefined,
+          fromDate: effectiveFromDate || undefined,
+          toDate: effectiveToDate || undefined,
+          keyword: effectiveSearchTerm || undefined,
           page,
           size: PAGE_SIZE,
         })
@@ -148,25 +164,25 @@ function CompetencySummaryPage() {
         setData(responseData)
       } else if (reportType === 'field') {
         const params = {
-          departmentId: departmentId || undefined,
-          fromDate: fromDate || undefined,
-          toDate: toDate || undefined,
-          keyword: debouncedSearchTerm || undefined,
+          departmentId: effectiveDepartmentId || undefined,
+          fromDate: effectiveFromDate || undefined,
+          toDate: effectiveToDate || undefined,
+          keyword: effectiveSearchTerm || undefined,
           page,
           size: PAGE_SIZE,
         }
-        if (selectedCategory) {
-          params.categoryId = selectedCategory
+        if (effectiveSelectedCategory) {
+          params.categoryId = effectiveSelectedCategory
         }
         const response = await competencyApi.getByField(params)
         setData(apiData(response, null))
       } else if (reportType === 'technique') {
         const response = await competencyApi.getByTechnique({
-          departmentId: departmentId || undefined,
-          formId: selectedFormId || undefined,
-          fromDate: fromDate || undefined,
-          toDate: toDate || undefined,
-          keyword: debouncedSearchTerm || undefined,
+          departmentId: effectiveDepartmentId || undefined,
+          formId: effectiveSelectedFormId || undefined,
+          fromDate: effectiveFromDate || undefined,
+          toDate: effectiveToDate || undefined,
+          keyword: effectiveSearchTerm || undefined,
           page,
           size: PAGE_SIZE,
         })
@@ -180,8 +196,8 @@ function CompetencySummaryPage() {
       setLoading(false)
     }
   }, [
-    reportType, departmentId, fromDate, toDate, selectedCategory, selectedFormId,
-    debouncedSearchTerm, page, isAdmin, showToast,
+    reportType, departmentId, effectiveDepartmentId, effectiveFromDate, effectiveToDate, effectiveSelectedCategory,
+    effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, showToast,
   ])
 
   useEffect(() => {
@@ -189,8 +205,8 @@ function CompetencySummaryPage() {
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
   }, [
-    departmentId, reportType, fromDate, toDate, selectedCategory, selectedFormId,
-    debouncedSearchTerm, page, isAdmin, loadData,
+    departmentId, reportType, effectiveFromDate, effectiveToDate, effectiveSelectedCategory,
+    effectiveSelectedFormId, effectiveSearchTerm, page, isAdmin, loadData,
   ])
 
   const handleSort = (column) => {
@@ -219,8 +235,16 @@ function CompetencySummaryPage() {
     return Object.entries(counts)
       .map(([name, count]) => {
         const item = data.items.find(i => (i.competencyLabel || 'Chưa xếp loại') === name)
+
+        const shortNameMap = {
+          'Chưa đạt năng lực': 'Chưa đạt',
+          'Chưa xếp loại': 'Chưa xếp',
+        }
+        const displayName = shortNameMap[name] || name
+
         return {
-          name,
+          name: displayName,
+          fullName: name,
           count,
           fill: item?.colorHex || '#6b7280',
         }
@@ -252,11 +276,12 @@ function CompetencySummaryPage() {
   const belowCount = data?.items ? data.items.filter(i => i.belowTarget).length : 0
   const totalCount = data?.items ? data.items.length : 0
   const activeFilterCount = [
-    isAdmin && departmentId,
-    fromDate && fromDate !== yearStart,
-    toDate && toDate !== today,
-    reportType === 'field' && selectedCategory,
-    reportType === 'technique' && selectedFormId,
+    isAdmin && appliedFilters.departmentId,
+    effectiveSearchTerm,
+    effectiveFromDate && effectiveFromDate !== yearStart,
+    effectiveToDate && effectiveToDate !== today,
+    reportType === 'field' && effectiveSelectedCategory,
+    reportType === 'technique' && effectiveSelectedFormId,
   ].filter(Boolean).length
 
   const visiblePages = () => {
@@ -337,149 +362,124 @@ function CompetencySummaryPage() {
     : reportType === 'field' ? 'Năng lực theo lĩnh vực'
     : 'Tuân thủ kỹ thuật'
 
+  function selectReportType(nextReportType) {
+    setReportType(nextReportType)
+    setSearchTerm('')
+    setAppliedFilters((current) => ({ ...current, searchTerm: '' }))
+    setPage(0)
+  }
+
+  function applyFilters() {
+    if (fromDate && toDate && fromDate > toDate) {
+      showToast('Từ ngày không được sau đến ngày', 'warning')
+      return
+    }
+    setAppliedFilters({
+      departmentId,
+      fromDate,
+      searchTerm: searchTerm.trim(),
+      selectedCategory,
+      selectedFormId,
+      toDate,
+    })
+    setPage(0)
+    setIsFilterOpen(false)
+  }
+
+  function resetFilters() {
+    setFromDate(yearStart)
+    setToDate(today)
+    setSearchTerm('')
+    setSelectedCategory('')
+    setSelectedFormId('')
+    if (isAdmin) setDepartmentId('')
+    setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedCategory: '', selectedFormId: '', toDate: today })
+    setPage(0)
+  }
+
+  const reportTabs = (
+    <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
+      {[
+        { key: 'summary', label: 'Lý thuyết + thực hành' },
+        { key: 'field', label: 'Năng lực theo lĩnh vực' },
+        { key: 'technique', label: 'Tuân thủ kỹ thuật' },
+      ].map(tab => (
+        <button key={tab.key} onClick={() => selectReportType(tab.key)}
+          className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
+          role="tab" aria-selected={reportType === tab.key}>
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  const toolbarActions = (
+    <div className="competency-dashboard-toolbar__actions">
+      <span>{totalElements} kết quả</span>
+      <button type="button" className="competency-dashboard-reload" onClick={loadData}
+        disabled={loading} aria-label="Tải lại dữ liệu" title="Tải lại">
+        <ReloadOutlined spin={loading} />
+      </button>
+    </div>
+  )
+
+  const filterFields = (
+    <>
+      <FilterSelectField label="Khoa/phòng" value={departmentId} onChange={(value) => { setDepartmentId(value); setPage(0) }}
+          disabled={!isAdmin}
+          options={[...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []), ...departments.map((department) => ({ value: department.id, label: department.name }))]}
+          placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'} searchable searchPlaceholder="Tìm tên khoa/phòng..." />
+      <label className="admin-control-toolbar__field"><span>Từ ngày</span>
+        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={(value) => {
+          setFromDate(value)
+          if (!isManager) setPage(0)
+        }} />
+      </label>
+      <label className="admin-control-toolbar__field"><span>Đến ngày</span>
+        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={(value) => {
+          setToDate(value)
+          if (!isManager) setPage(0)
+        }} />
+      </label>
+      {reportType === 'field' && <FilterSelectField label="Lĩnh vực" value={selectedCategory} onChange={(value) => {
+          setSelectedCategory(value)
+          if (!isManager) setPage(0)
+        }}
+          options={[{ value: '', label: 'Tất cả lĩnh vực' }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
+          placeholder="Tất cả lĩnh vực" searchable searchPlaceholder="Tìm tên lĩnh vực..." />}
+      {reportType === 'technique' && <FilterSelectField label="Kỹ thuật" value={selectedFormId} onChange={(value) => {
+          setSelectedFormId(value)
+          if (!isManager) setPage(0)
+        }} options={[{ value: '', label: 'Tất cả kỹ thuật' }, ...forms.map((form) => ({ value: form.id, label: form.title }))]} placeholder="Tất cả kỹ thuật" searchable searchPlaceholder="Tìm tên kỹ thuật..." />}
+      {reportType === 'summary' && data && <div className="competency-dashboard-weight">
+        <span>Trọng số hiện tại</span><strong>Lý thuyết {knowledgeWeight}% · Thực hành {skillWeight}%</strong>
+      </div>}
+    </>
+  )
+
   return (
     <AppShell breadcrumbs={isAdmin ? breadcrumbs : undefined} title={isManager ? pageTitle : undefined}>
             <div className="evd-page">
-              <section className="competency-dashboard-toolbar admin-control-toolbar" aria-label="Công cụ dashboard năng lực">
-                <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
-                  {[
-                    { key: 'summary', label: 'Lý thuyết + thực hành' },
-                    { key: 'field', label: 'Năng lực theo lĩnh vực' },
-                    { key: 'technique', label: 'Tuân thủ kỹ thuật' }
-                  ].map(tab => (
-                    <button
-                      key={tab.key}
-                      onClick={() => {
-                        setReportType(tab.key)
-                        setSearchTerm('')
-                        setPage(0)
-                      }}
-                      className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
-                      role="tab"
-                      aria-selected={reportType === tab.key}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="admin-control-toolbar__main">
-                  <div className="admin-control-toolbar__controls">
-                    <div className="competency-dashboard-search admin-control-toolbar__search">
-                      <SearchOutlined />
-                      <input
-                        aria-label="Tìm theo tên hoặc mã nhân viên"
-                        type="text"
-                        placeholder="Tìm theo tên hoặc mã nhân viên..."
-                        value={searchTerm}
-                        onChange={(event) => setSearchTerm(event.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      aria-controls="competency-dashboard-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                    >
-                      <FilterOutlined />
-                      Bộ lọc
-                      {activeFilterCount > 0 && (
-                        <span className="admin-control-toolbar__filter-count">{activeFilterCount}</span>
-                      )}
-                    </button>
-                  </div>
-                  <div className="competency-dashboard-toolbar__actions">
-                    <span>{totalElements} kết quả</span>
-                    <button
-                      type="button"
-                      className="competency-dashboard-reload"
-                      onClick={loadData}
-                      disabled={loading}
-                      aria-label="Tải lại dữ liệu"
-                      title="Tải lại"
-                    >
-                      <ReloadOutlined spin={loading} />
-                    </button>
-                  </div>
-                </div>
-
-                {isFilterOpen && (
-                  <div id="competency-dashboard-filter-panel" className="competency-dashboard-filter-panel admin-control-toolbar__panel">
-                    <label className="admin-control-toolbar__field">
-                      <span>Khoa/phòng</span>
-                      <SearchableSelect
-                        value={departmentId}
-                        onChange={(value) => {
-                          setDepartmentId(value)
-                          setPage(0)
-                        }}
-                        disabled={!isAdmin}
-                        options={[
-                          ...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []),
-                          ...departments.map((department) => ({ value: department.id, label: department.name })),
-                        ]}
-                        placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'}
-                        searchPlaceholder="Tìm tên khoa/phòng..."
-                        ariaLabel="Tìm và chọn khoa/phòng"
-                      />
-                    </label>
-                    <label className="admin-control-toolbar__field">
-                      <span>Từ ngày</span>
-                      <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={(val) => {
-                        setFromDate(val)
-                        setPage(0)
-                      }} />
-                    </label>
-                    <label className="admin-control-toolbar__field">
-                      <span>Đến ngày</span>
-                      <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={(val) => {
-                        setToDate(val)
-                        setPage(0)
-                      }} />
-                    </label>
-                    {reportType === 'field' && (
-                      <label className="admin-control-toolbar__field">
-                        <span>Lĩnh vực</span>
-                        <SearchableSelect
-                          value={selectedCategory}
-                          onChange={(value) => {
-                            setSelectedCategory(value)
-                            setPage(0)
-                          }}
-                          options={[
-                            { value: '', label: 'Tất cả lĩnh vực' },
-                            ...categories.map((category) => ({ value: category.id, label: category.name })),
-                          ]}
-                          placeholder="Tất cả lĩnh vực"
-                          searchPlaceholder="Tìm tên lĩnh vực..."
-                          ariaLabel="Tìm và chọn lĩnh vực"
-                        />
-                      </label>
-                    )}
-                    {reportType === 'technique' && (
-                      <label className="admin-control-toolbar__field">
-                        <span>Kỹ thuật</span>
-                        <select value={selectedFormId} onChange={(event) => {
-                          setSelectedFormId(event.target.value)
-                          setPage(0)
-                        }}>
-                          <option value="">Tất cả kỹ thuật</option>
-                          {forms.map((form) => (
-                            <option key={form.id} value={form.id}>{form.title}</option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-                    {reportType === 'summary' && data && (
-                      <div className="competency-dashboard-weight">
-                        <span>Trọng số hiện tại</span>
-                        <strong>Lý thuyết {knowledgeWeight}% · Thực hành {skillWeight}%</strong>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
+              <AppliedFilterToolbar
+                activeCount={activeFilterCount}
+                actions={toolbarActions}
+                ariaLabel="Công cụ dashboard năng lực"
+                className="competency-dashboard-toolbar"
+                header={reportTabs}
+                isOpen={isFilterOpen}
+                onApply={applyFilters}
+                onReset={resetFilters}
+                onSearchChange={setSearchTerm}
+                onToggle={() => setIsFilterOpen((current) => !current)}
+                panelClassName="competency-dashboard-filter-panel"
+                panelId="competency-dashboard-filter-panel"
+                searchAriaLabel="Tìm theo tên hoặc mã nhân viên"
+                searchClassName="competency-dashboard-search"
+                searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
+                searchValue={searchTerm}
+              >
+                {filterFields}
+              </AppliedFilterToolbar>
 
               {/* REPORT TYPE: 1. SUMMARY VIEW */}
               {reportType === 'summary' && (
@@ -504,22 +504,32 @@ function CompetencySummaryPage() {
                       <strong>
                         Phân bố trên trang hiện tại — {data.departmentName || 'Khoa đã chọn'}
                       </strong>
-                      <ResponsiveContainer width="100%" height={190}>
-                        <BarChart data={distribution} layout="vertical" margin={{ left: 100, right: 20, top: 5, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                          <XAxis type="number" allowDecimals={false} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={100} />
-                          <Tooltip
-                            formatter={(value) => [`${value} Điều dưỡng`, 'Số lượng']}
-                            contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                          />
-                          <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
-                            {distribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} />
-                            ))}
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
+                      {(() => {
+                        const maxLabelLength = distribution.reduce((max, item) => Math.max(max, (item.name || '').length), 0);
+                        const yAxisWidth = Math.min(100, Math.max(55, maxLabelLength * 7.5));
+                        return (
+                          <ResponsiveContainer width="100%" height={190}>
+                            <BarChart data={distribution} layout="vertical" margin={{ left: yAxisWidth, right: 20, top: 5, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                              <XAxis type="number" allowDecimals={false} />
+                              <YAxis type="category" dataKey="name" tick={{ fontSize: 13, fill: '#374151' }} width={yAxisWidth} />
+                              <Tooltip
+                                labelFormatter={(label) => {
+                                  const item = distribution.find((d) => d.name === label)
+                                  return item ? item.fullName : label
+                                }}
+                                formatter={(value) => [`${value} Điều dưỡng`, 'Số lượng']}
+                                contentStyle={{ fontSize: 13, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                              />
+                              <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={28}>
+                                {distribution.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
                     </section>
                   )}
                   </div>

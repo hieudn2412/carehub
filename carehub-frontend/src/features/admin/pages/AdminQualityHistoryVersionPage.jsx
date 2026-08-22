@@ -6,16 +6,15 @@ import {
   CloseOutlined,
   EyeOutlined,
   FileExcelOutlined,
-  FilterOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SearchOutlined,
   StopOutlined,
   UserSwitchOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
@@ -93,6 +92,15 @@ function getVersionStatusClass(status) {
   return 'draft'
 }
 
+function normalizeVersionHistoryItem(version) {
+  if (!version) return null
+  return {
+    ...version,
+    versionId: version.versionId ?? version.id,
+    versionNumber: version.versionNumber,
+  }
+}
+
 function getResultLabel(result) {
   if (result === 'PASSED') return 'Đạt'
   if (result === 'FAILED_SCORE') return 'Chưa đạt điểm'
@@ -148,6 +156,11 @@ function parsePage(value, fallback = 0) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback
 }
 
+function numericParam(value) {
+  const match = String(value || '').match(/^\d+/)
+  return match ? match[0] : ''
+}
+
 function getPaginationItems(currentPage, totalPages) {
   if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index)
   const pages = [...new Set([0, totalPages - 1, currentPage - 1, currentPage, currentPage + 1])]
@@ -163,23 +176,33 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const location = useLocation()
   const { formId, versionId } = useParams()
   const isManager = role === 'manager'
-  const basePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
+  const technicalDashboardPath = isManager ? '/manager/reports/checklist-dashboard' : '/admin/reports/checklist-dashboard'
   const defaultDateRange = useMemo(() => getDefaultDateRange(), [])
   const [searchParams, setSearchParams] = useSearchParams()
+  const versionBasePath = `${technicalDashboardPath}/results`
+  const detailBasePath = `${technicalDashboardPath}/results`
   const page = parsePage(searchParams.get('page'))
   const pageSize = PAGE_SIZE_OPTIONS.includes(Number(searchParams.get('size')))
     ? Number(searchParams.get('size'))
     : 10
   const keyword = searchParams.get('keyword') || ''
-  const submittedByUserId = isManager ? '' : searchParams.get('submittedByUserId') || ''
-  const departmentId = isManager ? '' : searchParams.get('departmentId') || ''
+  const dashboardKeyword = searchParams.get('dashboardKeyword') || ''
+  const submittedByUserId = isManager ? '' : numericParam(searchParams.get('submittedByUserId'))
+  const departmentId = isManager ? '' : numericParam(searchParams.get('departmentId'))
   const result = searchParams.get('result') || ''
   const dateFrom = searchParams.get('dateFrom') || defaultDateRange.dateFrom
   const dateTo = searchParams.get('dateTo') || defaultDateRange.dateTo
 
   const [keywordInput, setKeywordInput] = useState(keyword)
+  const [draftVersionId, setDraftVersionId] = useState(versionId)
+  const [draftSubmittedByUserId, setDraftSubmittedByUserId] = useState(submittedByUserId)
+  const [draftDepartmentId, setDraftDepartmentId] = useState(departmentId)
+  const [draftResult, setDraftResult] = useState(result)
+  const [draftDateFrom, setDraftDateFrom] = useState(dateFrom)
+  const [draftDateTo, setDraftDateTo] = useState(dateTo)
   const [form, setForm] = useState(null)
   const [version, setVersion] = useState(null)
+  const [versions, setVersions] = useState([])
   const [summary, setSummary] = useState({ total: 0, passed: 0, failed: 0, averageConvertedScore: null })
   const [submissionData, setSubmissionData] = useState({ content: [], page: 0, size: pageSize, totalElements: 0, totalPages: 0 })
   const [metadataLoading, setMetadataLoading] = useState(true)
@@ -198,6 +221,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const evaluatorRequestId = useRef(0)
 
   const [assignments, setAssignments] = useState([])
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false)
   const [managerUsers, setManagerUsers] = useState([])
   const [managerUsersLoaded, setManagerUsersLoaded] = useState(false)
   const [managerModalOpen, setManagerModalOpen] = useState(false)
@@ -221,55 +245,64 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   }, [setSearchParams])
 
   useEffect(() => {
+    setKeywordInput(keyword)
+    setDraftVersionId(versionId)
+    setDraftSubmittedByUserId(submittedByUserId)
+    setDraftDepartmentId(departmentId)
+    setDraftResult(result)
+    setDraftDateFrom(dateFrom)
+    setDraftDateTo(dateTo)
+  }, [dateFrom, dateTo, departmentId, keyword, result, submittedByUserId, versionId])
+
+  useEffect(() => {
+    const nextKeyword = keywordInput.trim()
+    if (nextKeyword === keyword) return undefined
     const timer = window.setTimeout(() => {
-      if (keywordInput.trim() !== keyword) updateQuery({ keyword: keywordInput.trim() })
+      updateQuery({ keyword: nextKeyword, page: 0 }, false)
     }, 300)
     return () => window.clearTimeout(timer)
   }, [keyword, keywordInput, updateQuery])
 
   const loadAssignments = useCallback(async () => {
-    const nextAssignments = await fetchAllPages(
-      (params) => adminApi.getFormAssignmentsByForm(formId, params),
-      { status: 'ACTIVE' },
-    )
-    setAssignments(nextAssignments.filter((item) => (
-      String(item.formVersionId) === String(versionId)
-      && item.effectiveStatus === 'ACTIVE'
-      && item.itemStatus === 'ACTIVE'
-    )))
+    setAssignmentsLoading(true)
+    try {
+      const nextAssignments = await fetchAllPages(
+        (params) => adminApi.getFormAssignmentsByForm(formId, params),
+        { status: 'ACTIVE' },
+      )
+      setAssignments(nextAssignments.filter((item) => (
+        String(item.formVersionId) === String(versionId)
+        && item.effectiveStatus === 'ACTIVE'
+        && item.itemStatus === 'ACTIVE'
+      )))
+    } finally {
+      setAssignmentsLoading(false)
+    }
   }, [formId, versionId])
 
   useEffect(() => {
     let alive = true
     const loadMetadata = async () => {
       if (isManager) {
-        const [formResponse, versionsResponse] = await Promise.all([
+        const [formResponse, versionResponse] = await Promise.all([
           adminApi.getFormHistoryById(formId),
-          adminApi.getFormHistoryVersions(formId, { dateFrom, dateTo }),
+          adminApi.getFormHistoryVersionById(formId, versionId),
         ])
-        const versionHistory = Array.isArray(versionsResponse?.data?.data) ? versionsResponse.data.data : []
         return {
           form: formResponse?.data?.data || null,
-          version: versionHistory.find((item) => String(item.versionId) === String(versionId)) || null,
-          departments: [],
-          assignments: [],
+          version: versionResponse?.data?.data || null,
+          versions: [],
         }
       }
-      const [formResponse, versionResponse, departmentResponse, nextAssignments] = await Promise.all([
+      const [formResponse, versionResponse] = await Promise.all([
         adminApi.getFormById(formId),
         adminApi.getFormVersionById(formId, versionId),
-        adminApi.getDepartments(),
-        fetchAllPages((params) => adminApi.getFormAssignmentsByForm(formId, params), { status: 'ACTIVE' }),
       ])
+      const selectedVersion = versionResponse.data?.data || null
       return {
         form: formResponse.data?.data || null,
-        version: versionResponse.data?.data || null,
-        departments: normalizeDepartments(departmentResponse),
-        assignments: nextAssignments.filter((item) => (
-          String(item.formVersionId) === String(versionId)
-          && item.effectiveStatus === 'ACTIVE'
-          && item.itemStatus === 'ACTIVE'
-        )),
+        version: selectedVersion,
+        versions: selectedVersion ? [normalizeVersionHistoryItem(selectedVersion)] : [],
       }
     }
     loadMetadata()
@@ -277,8 +310,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
         if (!alive) return
         setForm(metadata.form)
         setVersion(metadata.version)
-        setDepartments(metadata.departments)
-        setAssignments(metadata.assignments)
+        setVersions(metadata.versions || [])
         setMetadataError('')
       })
       .catch((error) => {
@@ -291,7 +323,55 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     return () => {
       alive = false
     }
-  }, [dateFrom, dateTo, formId, isManager, refreshKey, versionId])
+  }, [formId, isManager, refreshKey, versionId])
+
+  useEffect(() => {
+    if (!version) return undefined
+    let alive = true
+    adminApi.getFormHistoryVersions(formId, { dateFrom, dateTo })
+      .then((response) => {
+        if (!alive) return
+        const versionHistory = Array.isArray(response?.data?.data) ? response.data.data : []
+        const normalizedVersions = versionHistory.map(normalizeVersionHistoryItem).filter(Boolean)
+        if (version && !normalizedVersions.some((item) => String(item.versionId) === String(versionId))) {
+          normalizedVersions.push(normalizeVersionHistoryItem(version))
+        }
+        setVersions(normalizedVersions)
+      })
+      .catch(() => {
+        if (alive && version) setVersions([normalizeVersionHistoryItem(version)].filter(Boolean))
+      })
+    return () => {
+      alive = false
+    }
+  }, [dateFrom, dateTo, formId, version, versionId])
+
+  useEffect(() => {
+    if (isManager) return undefined
+    let alive = true
+    setAssignments([])
+    loadAssignments().catch(() => {
+      if (alive) setAssignments([])
+    })
+    return () => {
+      alive = false
+    }
+  }, [isManager, loadAssignments, refreshKey])
+
+  useEffect(() => {
+    if (isManager || !isFilterOpen || departments.length > 0) return undefined
+    let alive = true
+    adminApi.getDepartments()
+      .then((response) => {
+        if (alive) setDepartments(normalizeDepartments(response))
+      })
+      .catch(() => {
+        if (alive) setDepartments([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [departments.length, isFilterOpen, isManager])
 
   const requestParams = useMemo(() => ({
     status: 'SUBMITTED',
@@ -396,9 +476,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const availableManagers = useMemo(() => (
     managerUsers.filter((manager) => !assignedManagerIds.has(String(manager.id)))
   ), [assignedManagerIds, managerUsers])
-  const effectiveSelectedManagerIds = selectedManagerIds.filter((id) => (
+  const effectiveSelectedManagerIds = useMemo(() => selectedManagerIds.filter((id) => (
     availableManagers.some((manager) => String(manager.id) === String(id))
-  ))
+  )), [availableManagers, selectedManagerIds])
+  const selectedManagerOptions = useMemo(() => effectiveSelectedManagerIds
+    .map((id) => managerUsers.find((manager) => String(manager.id) === String(id)))
+    .filter(Boolean)
+    .map((manager) => ({
+      value: manager.id,
+      label: getManagerName(manager),
+      description: manager.employeeCode || 'Chưa có mã nhân viên',
+    })), [effectiveSelectedManagerIds, managerUsers])
+
+  const removeSelectedManager = (managerId) => {
+    setSelectedManagerIds((current) => current.filter((id) => String(id) !== String(managerId)))
+  }
 
   const openManagerModal = async () => {
     setManagerModalOpen(true)
@@ -487,8 +579,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     }
   }
 
-  const hasFilters = Boolean(keyword || result || (!isManager && (submittedByUserId || departmentId))
-    || dateFrom !== defaultDateRange.dateFrom || dateTo !== defaultDateRange.dateTo)
+
   const evaluatorSelectOptions = [
     { value: '', label: 'Tất cả người chấm' },
     ...evaluatorOptions.map((user) => ({
@@ -506,27 +597,95 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
       description: department.code || '',
     })),
   ]
-  const selectedEvaluator = evaluatorOptions.find((user) => String(user.id) === String(submittedByUserId))
-    || (String(selectedEvaluatorFallback?.id) === String(submittedByUserId) ? selectedEvaluatorFallback : null)
+  const selectedEvaluator = evaluatorOptions.find((user) => String(user.id) === String(draftSubmittedByUserId))
+    || (String(selectedEvaluatorFallback?.id) === String(draftSubmittedByUserId) ? selectedEvaluatorFallback : null)
   const selectedEvaluatorOption = selectedEvaluator ? {
     value: selectedEvaluator.id,
     label: getManagerName(selectedEvaluator),
     description: selectedEvaluator.employeeCode || 'Chưa có mã nhân viên',
   } : undefined
+  const sortedVersions = useMemo(() => (
+    versions
+      .map(normalizeVersionHistoryItem)
+      .filter((item) => item?.versionId)
+      .sort((left, right) => Number(right.versionNumber || 0) - Number(left.versionNumber || 0))
+  ), [versions])
+  const latestVersionId = sortedVersions[0]?.versionId ? String(sortedVersions[0].versionId) : ''
+  const versionFilterOptions = sortedVersions.map((item) => ({
+    value: String(item.versionId),
+    label: `Phiên bản v${item.versionNumber || '—'}`,
+    status: item.status,
+  }))
+  const versionFilterActive = Boolean(latestVersionId && String(versionId) !== latestVersionId)
+  const historyFilterCount = [
+    versionFilterActive,
+    isManager ? '' : submittedByUserId,
+    isManager ? '' : departmentId,
+    result,
+    dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
+    dateTo !== defaultDateRange.dateTo ? dateTo : '',
+  ].filter(Boolean).length
+  const applyHistoryFilters = () => {
+    if (draftDateFrom && draftDateTo && draftDateFrom > draftDateTo) {
+      setResultsError('Từ ngày không được sau đến ngày.')
+      return
+    }
+    const nextParams = new URLSearchParams()
+    nextParams.set('size', String(pageSize))
+    nextParams.set('dateFrom', draftDateFrom || defaultDateRange.dateFrom)
+    nextParams.set('dateTo', draftDateTo || defaultDateRange.dateTo)
+    if (keywordInput.trim()) nextParams.set('keyword', keywordInput.trim())
+    if (!isManager && draftSubmittedByUserId) nextParams.set('submittedByUserId', draftSubmittedByUserId)
+    if (!isManager && draftDepartmentId) nextParams.set('departmentId', draftDepartmentId)
+    if (draftResult) nextParams.set('result', draftResult)
+    if (searchParams.get('source')) nextParams.set('source', searchParams.get('source'))
+    if (dashboardKeyword) nextParams.set('dashboardKeyword', dashboardKeyword)
+    setResultsLoading(true)
+    setIsFilterOpen(false)
+    navigate(`${versionBasePath}/forms/${formId}/versions/${draftVersionId || versionId}?${nextParams.toString()}`, { replace: true })
+  }
+  const resetHistoryFilters = () => {
+    setKeywordInput('')
+    setResultsLoading(true)
+    setIsFilterOpen(false)
+    const nextParams = new URLSearchParams({
+      size: String(pageSize),
+      dateFrom: defaultDateRange.dateFrom,
+      dateTo: defaultDateRange.dateTo,
+    })
+    if (searchParams.get('source')) nextParams.set('source', searchParams.get('source'))
+    if (dashboardKeyword) nextParams.set('dashboardKeyword', dashboardKeyword)
+    if (versionFilterActive && latestVersionId) {
+      navigate(`${versionBasePath}/forms/${formId}/versions/${latestVersionId}?${nextParams.toString()}`, { replace: true })
+      return
+    }
+    setSearchParams(nextParams, { replace: true })
+  }
   const resultFrom = submissionData.totalElements === 0 ? 0 : submissionData.page * submissionData.size + 1
   const resultTo = Math.min((submissionData.page + 1) * submissionData.size, submissionData.totalElements)
   const pageItems = getPaginationItems(submissionData.page, submissionData.totalPages)
   const returnTo = `${location.pathname}${location.search}`
+  const dashboardBackParams = new URLSearchParams()
+  dashboardBackParams.set('dateFrom', dateFrom)
+  dashboardBackParams.set('dateTo', dateTo)
+  dashboardBackParams.set('selectedFormId', formId)
+  if (dashboardKeyword) dashboardBackParams.set('keyword', dashboardKeyword)
+  if (departmentId) dashboardBackParams.set('departmentId', departmentId)
+  if (result) dashboardBackParams.set('result', result)
+  if (searchParams.get('subjectUserId')) dashboardBackParams.set('subjectUserId', numericParam(searchParams.get('subjectUserId')))
+  if (submittedByUserId) dashboardBackParams.set('submittedByUserId', submittedByUserId)
+  const shellBack = { to: `${technicalDashboardPath}?${dashboardBackParams.toString()}`, label: 'Quay lại' }
+  const shellBreadcrumbs = [
+    { label: 'Giám sát tuân thủ' },
+    { label: 'Tuân thủ theo kỹ thuật', link: technicalDashboardPath },
+    { label: `Kết quả phiên bản v${version?.versionNumber || ''}` },
+  ]
 
   return (
     <AppShell
       className="admin-quality-history-page"
-      back={{ to: `${basePath}?formId=${encodeURIComponent(formId)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`, label: 'Quay lại' }}
-      breadcrumbs={[
-        { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: basePath },
-        { label: `Phiên bản v${version?.versionNumber || ''}` },
-      ]}
+      back={shellBack}
+      breadcrumbs={shellBreadcrumbs}
     >
         <div className="admin-quality-history admin-quality-history--version">
           {metadataLoading ? (
@@ -556,7 +715,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                   <article><span>Điểm trung bình</span><strong>{resultsLoading ? '…' : formatScore(summary.averageConvertedScore)}</strong><small>Thang điểm 10</small></article>
                   {!isManager && (
                     <button className="aqh-summary-manager" onClick={openManagerModal} type="button">
-                      <span><UserSwitchOutlined /> Người được giao</span><strong>{managers.length}</strong><small>Nhấn để quản lý</small>
+                      <span><UserSwitchOutlined /> Người được giao</span><strong>{assignmentsLoading ? '…' : managers.length}</strong><small>Nhấn để quản lý</small>
                     </button>
                   )}
                 </div>
@@ -578,76 +737,71 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                   )}
                 </div>
 
-                <div className="aqh-history-filters">
-                  <div className="aqh-history-filter-toolbar">
-                    <div className="aqh-history-search">
-                      <SearchOutlined />
-                      <input
-                        aria-label="Tìm nhân viên được đánh giá"
-                        type="text"
-                        value={keywordInput}
-                        onChange={(event) => setKeywordInput(event.target.value)}
-                        placeholder="Tìm theo tên hoặc mã nhân viên..."
-                      />
-                    </div>
-                    <button
-                      aria-controls="quality-history-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      className={`aqh-history-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                      type="button"
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {[isManager ? '' : submittedByUserId, isManager ? '' : departmentId, result,
-                        dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
-                        dateTo !== defaultDateRange.dateTo ? dateTo : ''].filter(Boolean).length > 0 && (
-                        <span className="aqh-history-filter-count">
-                          {[isManager ? '' : submittedByUserId, isManager ? '' : departmentId, result,
-                            dateFrom !== defaultDateRange.dateFrom ? dateFrom : '',
-                            dateTo !== defaultDateRange.dateTo ? dateTo : ''].filter(Boolean).length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                  {isFilterOpen && (
-                    <div className="aqh-history-filter-panel" id="quality-history-filter-panel">
-                    {!isManager && <label className="aqh-filter-field">
+                <AppliedFilterToolbar
+                  activeCount={historyFilterCount}
+                  ariaLabel="Bộ lọc kết quả đánh giá"
+                  className="aqh-results-filter"
+                  isOpen={isFilterOpen}
+                  onApply={applyHistoryFilters}
+                  onReset={resetHistoryFilters}
+                  onSearchChange={setKeywordInput}
+                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  panelClassName="aqh-results-filter-panel"
+                  panelId="quality-history-filter-panel"
+                  searchAriaLabel="Tìm nhân viên được đánh giá"
+                  searchClassName="aqh-results-search"
+                  searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
+                  searchValue={keywordInput}
+                >
+                    {versionFilterOptions.length > 0 && <label className="admin-control-toolbar__field">
+                      <span>Phiên bản</span>
+                      <select value={String(draftVersionId)} onChange={(event) => setDraftVersionId(event.target.value)}>
+                        {versionFilterOptions.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>}
+                    {!isManager && <label className="admin-control-toolbar__field">
                       <span>Người thực hiện chấm</span>
                       <SearchableSelect
                         ariaLabel="Lọc theo người thực hiện chấm"
                         loading={evaluatorsLoading}
-                        onChange={(value) => updateQuery({ submittedByUserId: value })}
+                        onChange={setDraftSubmittedByUserId}
                         onSearch={setEvaluatorQuery}
                         options={evaluatorSelectOptions}
                         placeholder="Tất cả người chấm"
                         searchPlaceholder="Tìm tên hoặc mã người chấm..."
                         selectedOption={selectedEvaluatorOption}
-                        value={submittedByUserId}
+                        showDescriptions={false}
+                        value={draftSubmittedByUserId}
                       />
                     </label>}
-                    {!isManager && <label className="aqh-filter-field">
+                    {!isManager && <label className="admin-control-toolbar__field">
                       <span>Khoa/phòng</span>
                       <SearchableSelect
                         ariaLabel="Lọc theo khoa phòng"
-                        onChange={(value) => updateQuery({ departmentId: value })}
+                        onChange={setDraftDepartmentId}
                         options={departmentOptions}
                         placeholder="Tất cả khoa/phòng"
                         searchPlaceholder="Tìm khoa/phòng..."
-                        value={departmentId}
+                        showDescriptions={false}
+                        value={draftDepartmentId}
                       />
                     </label>}
-                    <label className="aqh-filter-field">
+                    <label className="admin-control-toolbar__field">
                       <span>Kết quả</span>
-                      <select value={result} onChange={(event) => updateQuery({ result: event.target.value })}>
-                        {RESULT_OPTIONS.map((option) => <option key={option.value || 'all'} value={option.value}>{option.label}</option>)}
-                      </select>
+                      <SearchableSelect
+                        ariaLabel="Lọc theo kết quả"
+                        onChange={setDraftResult}
+                        options={RESULT_OPTIONS}
+                        searchable={false}
+                        showDescriptions={false}
+                        value={draftResult}
+                      />
                     </label>
-                    <label className="aqh-filter-field"><span>Từ ngày</span><KeyboardDatePicker value={dateFrom} onChange={(val) => updateQuery({ dateFrom: val })} /></label>
-                    <label className="aqh-filter-field"><span>Đến ngày</span><KeyboardDatePicker value={dateTo} onChange={(val) => updateQuery({ dateTo: val })} /></label>
-                    {hasFilters && <button className="aqh-filter-reset" onClick={() => { setKeywordInput(''); setSearchParams({ size: String(pageSize), dateFrom: defaultDateRange.dateFrom, dateTo: defaultDateRange.dateTo }, { replace: true }) }} type="button"><ReloadOutlined /> Xóa lọc</button>}
-                    </div>
-                  )}
-                </div>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} /></label>
+                </AppliedFilterToolbar>
 
                 {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}
                 {resultsError ? (
@@ -662,50 +816,53 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       <table className="aqh-results-table admin-table-uppercase">
                         <thead>
                           <tr>
-                            <th>Nhân viên</th>
-                            <th>Khoa/phòng</th>
-                            <th>Người chấm</th>
-                            <th>Ngày nộp</th>
-                            <th>Điểm</th>
-                            <th>Kết quả</th>
-                            <th>Hành động</th>
+                            <th className="aqh-result-col-employee">Nhân viên</th>
+                            <th className="aqh-result-col-department">Khoa/phòng</th>
+                            <th className="aqh-result-col-grader">Người chấm</th>
+                            <th className="aqh-result-col-submitted">Ngày nộp</th>
+                            <th className="aqh-result-col-score">Điểm</th>
+                            <th className="aqh-result-col-result">Kết quả</th>
+                            <th className="aqh-result-col-actions">Hành động</th>
                           </tr>
                         </thead>
                         <tbody>
                           {submissionData.content.map((item) => (
                             <tr key={item.id}>
-                              <td>
+                              <td className="aqh-result-col-employee">
                                 <div className="aqh-results-table__person">
                                   <strong>{item.subject?.fullName || 'Chưa có tên'}</strong>
                                   <small>{item.subject?.employeeCode || 'Chưa có mã'}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-department">
                                 <div className="aqh-results-table__inline">
                                   <ApartmentOutlined />
                                   <span>{item.subject?.department || 'Chưa xác định'}</span>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-grader">
                                 <div className="aqh-results-table__person">
                                   <span>{item.submittedBy?.fullName || 'Chưa xác định'}</span>
                                   <small>{item.submittedBy?.employeeCode || ''}</small>
                                 </div>
                               </td>
-                              <td>
+                              <td className="aqh-result-col-submitted">
                                 <div className="aqh-results-table__inline">
                                   <ClockCircleOutlined />
                                   <span>{formatDateTime(item.submittedAt || item.updatedAt)}</span>
                                 </div>
                               </td>
-                              <td><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
-                              <td><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
-                              <td>
+                              <td className="aqh-result-col-score"><strong className="aqh-response-score">{formatScore(item.convertedScore)}/10</strong></td>
+                              <td className="aqh-result-col-result"><span className={`admin-quality-history__badge admin-quality-history__badge--${getResultClass(item.result)}`}>{getResultLabel(item.result)}</span></td>
+                              <td className="aqh-result-col-actions">
                                 <div className="admin-table-actions">
                                   <button
                                     aria-label={`Xem chi tiết kết quả của ${item.subject?.fullName || 'nhân viên'}`}
                                     className="admin-table-action admin-table-action--icon admin-table-action--primary"
-                                    onClick={() => navigate(`${basePath}/${item.id}?returnTo=${encodeURIComponent(returnTo)}`)}
+                                    onClick={() => {
+                                      const detailParams = new URLSearchParams({ returnTo })
+                                      navigate(`${detailBasePath}/${item.id}?${detailParams.toString()}`)
+                                    }}
                                     title="Xem chi tiết"
                                     type="button"
                                   ><EyeOutlined /></button>
@@ -758,10 +915,21 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                       onChange={setSelectedManagerIds}
                       options={availableManagers.map((manager) => ({ value: manager.id, label: getManagerName(manager), description: manager.employeeCode || 'Chưa có mã nhân viên', searchText: `${manager.employeeCode || ''} ${manager.departmentName || manager.department?.name || ''}` }))}
                       placeholder={managerBusy && !managerUsersLoaded ? 'Đang tải danh sách...' : 'Tìm theo tên hoặc mã nhân viên...'}
+                      selectedOptions={selectedManagerOptions}
+                      showSelectedChips={false}
                       value={selectedManagerIds}
                     />
                   </div>
                   <div className="aqh-manager-assign__field"><label htmlFor="aqh-manager-valid-until">Hiệu lực đến</label><DateTimePicker24h disabled={managerBusy} id="aqh-manager-valid-until" onChange={setValidUntil} value={validUntil} /></div>
+                  <div className="aqh-manager-selected-box" aria-label="Danh sách người nhận đã chọn">
+                    <div className="aqh-manager-selected-box__header"><span>Đã chọn</span><strong>{selectedManagerOptions.length}</strong></div>
+                    {selectedManagerOptions.length > 0 ? <div className="aqh-manager-selected-box__list">
+                      {selectedManagerOptions.map((manager) => <article key={manager.value}>
+                        <span className="aqh-manager-selected-box__identity"><strong>{manager.label}</strong></span>
+                        <button type="button" aria-label={`Bỏ chọn ${manager.label}`} onClick={() => removeSelectedManager(manager.value)}>×</button>
+                      </article>)}
+                    </div> : <p>Chưa chọn người nhận nào.</p>}
+                  </div>
                   <button className="aqh-manager-assign__submit" disabled={managerBusy || effectiveSelectedManagerIds.length === 0} type="submit">{managerBusy ? <LoadingOutlined spin /> : <PlusOutlined />} Thêm người nhận</button>
                 </form>
               ) : <div className="aqh-manager-modal__notice">Phiên bản không còn hoạt động nên không thể thêm phân quyền mới.</div>}

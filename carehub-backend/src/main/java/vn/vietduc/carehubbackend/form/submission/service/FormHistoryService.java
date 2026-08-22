@@ -50,11 +50,12 @@ public class FormHistoryService {
 
     @Transactional(readOnly = true)
     public Page<FormHistorySummaryResponse> searchForms(
-            String keyword, LocalDate dateFrom, LocalDate dateTo, Pageable pageable) {
+            String keyword, LocalDate dateFrom, LocalDate dateTo, Long subjectUserId, Pageable pageable) {
         Pageable normalized = normalize(pageable);
         FormHistoryAccessPolicy.Scope scope = accessPolicy.requireHistoryScope();
         Period period = period(dateFrom, dateTo);
         MapSqlParameterSource params = params(scope, period, keyword)
+                .addValue("subjectUserId", subjectUserId, Types.BIGINT)
                 .addValue("limit", normalized.getPageSize())
                 .addValue("offset", normalized.getOffset());
 
@@ -70,6 +71,7 @@ public class FormHistoryService {
                       and s.submitted_at >= :fromInstant
                       and s.submitted_at < :toInstant
                       and (:isAdmin = true or subject_user.department_id = :departmentId)
+                      and (:subjectUserId is null or subject_user.id = :subjectUserId)
                 ), aggregate_submissions as (
                     select form_id,
                            count(*) as monitoring_count,

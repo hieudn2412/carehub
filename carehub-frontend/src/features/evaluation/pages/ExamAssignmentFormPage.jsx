@@ -8,6 +8,7 @@ import { examPaperApi } from '../api/examPaperApi.js'
 import ExamDeliveryFlow from '../components/ExamDeliveryFlow.jsx'
 import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import '../styles/ExamPaperPages.css'
 
@@ -274,33 +275,33 @@ export default function ExamAssignmentFormPage() {
                   </label>
                   <label>
                     <span>Đề kiểm tra đã phát hành <b>*</b></span>
-                    <select
+                    <FormSelectField
                       required
                       value={form.examPaperId}
-                      onChange={(event) => update('examPaperId', event.target.value)}
-                    >
-                      <option value="">Chọn đề kiểm tra đã phát hành</option>
-                      {papers.map((paper) => (
-                        <option key={paper.id} value={paper.id}>
-                          {paper.code} — {paper.name} ({paper.totalQuestions} câu{paper.generationBatchId ? `, mã ${paper.variantIndex || 1}` : ''})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => update('examPaperId', value)}
+                      options={[
+                        { value: '', label: 'Chọn đề kiểm tra đã phát hành' },
+                        ...papers.map((paper) => ({
+                          value: String(paper.id),
+                          label: `${paper.code} — ${paper.name} (${paper.totalQuestions} câu${paper.generationBatchId ? `, mã ${paper.variantIndex || 1}` : ''})`
+                        }))
+                      ]}
+                    />
                   </label>
                   <label>
                     <span>Nhóm nhận đề <b>*</b></span>
-                    <select
+                    <FormSelectField
                       required
                       value={form.audienceId}
-                      onChange={(event) => update('audienceId', event.target.value)}
-                    >
-                      <option value="">Chọn nhóm nhận đang hoạt động</option>
-                      {audiences.map((audience) => (
-                        <option key={audience.id} value={audience.id}>
-                          {audience.name}{audienceMemberCount(audience) != null ? ` · ${audienceMemberCount(audience)} nhân viên` : ''}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => update('audienceId', value)}
+                      options={[
+                        { value: '', label: 'Chọn nhóm nhận đang hoạt động' },
+                        ...audiences.map((audience) => ({
+                          value: String(audience.id),
+                          label: `${audience.name}${audienceMemberCount(audience) != null ? ` · ${audienceMemberCount(audience)} nhân viên` : ''}`
+                        }))
+                      ]}
+                    />
                     <small className="exp-field-hint">
                       Chưa có nhóm phù hợp? <a href="/admin/evaluation/audiences" target="_blank" rel="noreferrer">Tạo nhóm nhận đề mới</a> (theo khoa phòng hoặc mã nhân viên).
                     </small>
@@ -399,35 +400,38 @@ export default function ExamAssignmentFormPage() {
                 <div className="exp-form-grid exp-form-grid--2col">
                   <label>
                     <span>Công bố kết quả</span>
-                    <select
+                    <FormSelectField
                       value={form.resultVisibility}
-                      onChange={(event) => update('resultVisibility', event.target.value)}
-                    >
-                      <option value="SCORE_ONLY">Hiển thị điểm sau khi nộp</option>
-                      <option value="AFTER_DUE_DATE">Chỉ hiển thị sau hạn hoàn thành</option>
-                      <option value="HIDDEN">Không hiển thị cho nhân viên</option>
-                    </select>
+                      onChange={(value) => update('resultVisibility', value)}
+                      options={[
+                        { value: 'SCORE_ONLY', label: 'Hiển thị điểm sau khi nộp' },
+                        { value: 'AFTER_DUE_DATE', label: 'Chỉ hiển thị sau hạn hoàn thành' },
+                        { value: 'HIDDEN', label: 'Không hiển thị cho nhân viên' }
+                      ]}
+                    />
                   </label>
                   <label>
                     <span>Cách mở đề</span>
-                    <select
+                    <FormSelectField
                       value={form.status}
-                      onChange={(event) => update('status', event.target.value)}
-                    >
-                      <option value="DRAFT">Lưu nháp để kiểm tra</option>
-                      <option value="OPEN">Mở giao ngay</option>
-                    </select>
+                      onChange={(value) => update('status', value)}
+                      options={[
+                        { value: 'DRAFT', label: 'Lưu nháp để kiểm tra' },
+                        { value: 'OPEN', label: 'Mở giao ngay' }
+                      ]}
+                    />
                   </label>
                   <label>
                     <span>Phân phối mã đề</span>
-                    <select
+                    <FormSelectField
                       value={form.variantPolicy}
                       disabled={!hasMultipleVariants}
-                      onChange={(event) => update('variantPolicy', event.target.value)}
-                    >
-                      <option value="STABLE_USER_HASH">Ổn định theo từng nhân viên</option>
-                      <option value="FIXED_PAPER">Dùng một mã đề</option>
-                    </select>
+                      onChange={(value) => update('variantPolicy', value)}
+                      options={[
+                        { value: 'STABLE_USER_HASH', label: 'Ổn định theo từng nhân viên' },
+                        { value: 'FIXED_PAPER', label: 'Dùng một mã đề' }
+                      ]}
+                    />
                     <small className="exp-field-hint">
                       {hasMultipleVariants
                         ? 'Hệ thống tự chọn mã đề ổn định cho từng nhân viên.'
@@ -436,13 +440,14 @@ export default function ExamAssignmentFormPage() {
                   </label>
                   <label>
                     <span>Khi làm lại</span>
-                    <select
+                    <FormSelectField
                       value={form.retakeVariantPolicy}
-                      onChange={(event) => update('retakeVariantPolicy', event.target.value)}
-                    >
-                      <option value="KEEP_VARIANT">Giữ nguyên mã đề</option>
-                      <option value="ROTATE_VARIANT">Đổi sang mã đề kế tiếp</option>
-                    </select>
+                      onChange={(value) => update('retakeVariantPolicy', value)}
+                      options={[
+                        { value: 'KEEP_VARIANT', label: 'Giữ nguyên mã đề' },
+                        { value: 'ROTATE_VARIANT', label: 'Đổi sang mã đề kế tiếp' }
+                      ]}
+                    />
                   </label>
                   <label className="exp-form-grid__wide">
                     <span>Ghi chú cho đợt giao</span>

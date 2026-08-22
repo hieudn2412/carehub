@@ -5,13 +5,13 @@ import {
   CloseCircleOutlined,
   CloseOutlined,
   EditOutlined,
-  FilterOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { adminApi } from '../api/adminApi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import '../styles/ProfessionalFieldManagementPage.css'
@@ -48,6 +48,7 @@ function ProfessionalFieldManagementPage() {
   const [fields, setFields] = useState([])
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
@@ -70,12 +71,12 @@ function ProfessionalFieldManagementPage() {
     setLoading(true)
     const apiActive = activeTab === 'pending' || activeTab === 'rejected'
       ? 'false'
-      : (statusFilter === '' ? undefined : statusFilter)
+      : (appliedFilters.status === '' ? undefined : appliedFilters.status)
 
     adminApi.getProfessionalFields({
       page: 0,
       size: 100,
-      keyword: keyword || undefined,
+      keyword: appliedFilters.keyword || undefined,
       active: apiActive,
     })
       .then(response => {
@@ -91,7 +92,7 @@ function ProfessionalFieldManagementPage() {
       })
       .catch(error => showToast(error?.response?.data?.message || 'Không thể tải lĩnh vực chuyên môn', 'error'))
       .finally(() => setLoading(false))
-  }, [activeTab, statusFilter, keyword, showToast])
+  }, [activeTab, appliedFilters, showToast])
 
   const loadPendingCount = useCallback(() => {
     adminApi.getProfessionalFields({
@@ -114,6 +115,17 @@ function ProfessionalFieldManagementPage() {
     }, 250)
     return () => window.clearTimeout(timer)
   }, [loadFields, loadPendingCount])
+
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
 
   const closeFormModal = useCallback(() => {
     if (saving) return
@@ -246,6 +258,16 @@ function ProfessionalFieldManagementPage() {
     }
   }
 
+  const applyFilters = () => {
+    setAppliedFilters({ keyword: keyword.trim(), status: statusFilter })
+  }
+
+  const resetFilters = () => {
+    setKeyword('')
+    setStatusFilter('')
+    setAppliedFilters({ keyword: '', status: '' })
+  }
+
   return (
     <AppShell
       className="dashboard-layout"
@@ -285,50 +307,38 @@ function ProfessionalFieldManagementPage() {
                     Đã từ chối {rejectedCount > 0 && <span className="pfm-tab-badge pfm-tab-badge--rejected">{rejectedCount}</span>}
                   </button>
                 </div>
-                <div className="pfm-search-box">
-                  <div className="pfm-toolbar-main">
-                    <div className="pfm-search-filter-group">
-                      <div className="pfm-search">
-                        <SearchOutlined />
-                        <input value={keyword} onChange={e => setKeyword(e.target.value)} placeholder="Tìm theo mã hoặc tên..." />
-                      </div>
-                      {activeTab === 'existing' && (
-                        <button
-                          type="button"
-                          className={`pfm-filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                          aria-expanded={isFilterOpen}
-                          aria-controls="professional-field-filter-panel"
-                          onClick={() => setIsFilterOpen((current) => !current)}
-                        >
-                          <FilterOutlined /> Bộ lọc
-                          {statusFilter && <span className="pfm-filter-count">1</span>}
-                        </button>
-                      )}
-                    </div>
-                    <div className="pfm-toolbar-actions">
+                <AppliedFilterToolbar
+                  activeCount={statusFilter ? 1 : 0}
+                  actions={<div className="pfm-toolbar-actions">
                       <button className="pfm-create-btn" type="button" onClick={createField}>
                         <PlusOutlined /> Tạo mới lĩnh vực
                       </button>
                       <button type="button" onClick={loadFields}><ReloadOutlined /> Tải lại</button>
-                    </div>
-                  </div>
-                  {activeTab === 'existing' && isFilterOpen && (
-                    <div className="pfm-filter-panel" id="professional-field-filter-panel">
-                      <label>
-                        <span>Trạng thái</span>
-                        <select
-                          value={statusFilter}
-                          onChange={e => setStatusFilter(e.target.value)}
-                          className="pfm-status-select"
-                        >
-                          <option value="">Tất cả trạng thái</option>
-                          <option value="true">Đang dùng</option>
-                          <option value="false">Ngừng dùng</option>
-                        </select>
-                      </label>
-                    </div>
+                    </div>}
+                  className="pfm-search-box"
+                  isOpen={activeTab === 'existing' && isFilterOpen}
+                  onApply={applyFilters}
+                  onReset={resetFilters}
+                  onSearchChange={setKeyword}
+                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  panelClassName="pfm-filter-panel"
+                  panelId="professional-field-filter-panel"
+                  searchAriaLabel="Tìm lĩnh vực theo mã hoặc tên"
+                  searchClassName="pfm-search"
+                  searchPlaceholder="Tìm theo mã hoặc tên..."
+                  searchValue={keyword}
+                  showFilter={activeTab === 'existing'}
+                >
+                  {activeTab === 'existing' && (
+                      <FilterSelectField
+                        label="Trạng thái"
+                        value={statusFilter}
+                        onChange={setStatusFilter}
+                        options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'true', label: 'Đang dùng' }, { value: 'false', label: 'Ngừng dùng' }]}
+                        placeholder="Tất cả trạng thái"
+                      />
                   )}
-                </div>
+                </AppliedFilterToolbar>
               </div>
               <div className="pfm-table-container">
                 <table className="admin-table-uppercase">

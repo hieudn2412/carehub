@@ -14,6 +14,9 @@ import {
 import AppShell from '../../../shared/components/AppShell.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import FormSelectField from '../../../shared/components/FormSelectField.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -138,6 +141,17 @@ function DocumentQuestionJobReviewPage() {
   const selectedSavableIds = selectedCandidates
     .filter((candidate) => candidate.status === 'APPROVED' && !hasStrongDuplicate(candidate))
     .map((candidate) => candidate.id)
+  const handleApplyFilters = () => {
+    // Immediate filter is used, so apply just confirms
+  }
+
+  const handleClearFilters = () => {
+    setKeyword('')
+    setStatusFilter('')
+    setProfessionalFieldFilter('')
+    setCognitiveLevelFilter('')
+  }
+
   const canRetryNoNewQuestions = jobDetail?.status === 'PARTIALLY_COMPLETED'
     && Number(jobDetail?.candidateCount || 0) === 0
     && jobDetail?.errorMessage?.includes('không có câu hỏi mới')
@@ -479,40 +493,41 @@ function DocumentQuestionJobReviewPage() {
                       />
                     </div>
                     <div className="qdoc-toolbar-filters">
-                      <select className="qdoc-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="GOOD">Đạt</option>
-                        <option value="NEED_REVIEW">Cần xem xét</option>
-                        <option value="REJECTED">Đã từ chối</option>
-                        <option value="APPROVED">Đã duyệt</option>
-                        <option value="SAVED">Đã lưu</option>
-                      </select>
-                      <select className="qdoc-select" value={professionalFieldFilter} onChange={(event) => setProfessionalFieldFilter(event.target.value)}>
-                        <option value="">Tất cả lĩnh vực chuyên môn</option>
-                        {professionalFields.map((field) => (
-                          <option key={field.id} value={String(field.id)}>{field.code} · {field.name}</option>
-                        ))}
-                      </select>
-                      <select className="qdoc-select" value={cognitiveLevelFilter} onChange={(event) => setCognitiveLevelFilter(event.target.value)}>
-                        <option value="">Tất cả mức độ nhận thức</option>
-                        {COGNITIVE_LEVELS.map((level) => (
-                          <option key={level.value} value={level.value}>{level.label}</option>
-                        ))}
-                      </select>
-                      {(keyword || statusFilter || professionalFieldFilter || cognitiveLevelFilter) && (
-                        <button
-                          type="button"
-                          className="qdoc-secondary-btn"
-                          onClick={() => {
-                            setKeyword('')
-                            setStatusFilter('')
-                            setProfessionalFieldFilter('')
-                            setCognitiveLevelFilter('')
-                          }}
-                        >
-                          <span>Xóa bộ lọc</span>
-                        </button>
-                      )}
+                      <FilterSelectField
+                        label="Trạng thái"
+                        value={statusFilter}
+                        onChange={(value) => setStatusFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả trạng thái' },
+                          { value: 'GOOD', label: 'Đạt' },
+                          { value: 'NEED_REVIEW', label: 'Cần xem xét' },
+                          { value: 'REJECTED', label: 'Đã từ chối' },
+                          { value: 'APPROVED', label: 'Đã duyệt' },
+                          { value: 'SAVED', label: 'Đã lưu' },
+                        ]}
+                        placeholder="Tất cả trạng thái"
+                      />
+                      <FilterSelectField
+                        label="Lĩnh vực chuyên môn"
+                        value={professionalFieldFilter}
+                        onChange={(value) => setProfessionalFieldFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả lĩnh vực chuyên môn' },
+                          ...professionalFields.map((field) => ({ value: String(field.id), label: `${field.code} · ${field.name}` }))
+                        ]}
+                        placeholder="Tất cả lĩnh vực chuyên môn"
+                      />
+                      <FilterSelectField
+                        label="Mức độ nhận thức"
+                        value={cognitiveLevelFilter}
+                        onChange={(value) => setCognitiveLevelFilter(value)}
+                        options={[
+                          { value: '', label: 'Tất cả mức độ nhận thức' },
+                          ...COGNITIVE_LEVELS
+                        ]}
+                        placeholder="Tất cả mức độ nhận thức"
+                      />
+                      <FilterActionButtons onApply={handleApplyFilters} onReset={handleClearFilters} />
                     </div>
                   </section>
 
@@ -638,12 +653,14 @@ function DocumentQuestionJobReviewPage() {
               </label>
               <label className="qdoc-field">
                 <span>Mức độ nhận thức</span>
-                <select value={editForm.cognitiveLevel} onChange={(event) => setEditFormField('cognitiveLevel', event.target.value)}>
-                  <option value="">-- Chọn mức độ --</option>
-                  {COGNITIVE_LEVELS.map((level) => (
-                    <option key={level.value} value={level.value}>{level.label}</option>
-                  ))}
-                </select>
+                <FormSelectField
+                  value={editForm.cognitiveLevel}
+                  onChange={(value) => setEditFormField('cognitiveLevel', value)}
+                  options={[
+                    { value: '', label: '-- Chọn mức độ --' },
+                    ...COGNITIVE_LEVELS
+                  ]}
+                />
               </label>
 
             </div>

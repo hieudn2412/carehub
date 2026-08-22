@@ -177,8 +177,10 @@ describe('TrainingHoursOverviewScreen', () => {
     ))
 
     const yearSelect = screen.getByRole('combobox', { name: 'Năm biểu đồ' })
-    fireEvent.change(yearSelect, { target: { value: currentYear - 1 } })
-    fireEvent.change(yearSelect, { target: { value: currentYear - 2 } })
+    fireEvent.click(yearSelect)
+    fireEvent.click(screen.getByRole('option', { name: String(currentYear - 1) }))
+    fireEvent.click(yearSelect)
+    fireEvent.click(screen.getByRole('option', { name: String(currentYear - 2) }))
 
     await act(async () => {
       newestResponse.resolve(chartResponse(currentYear - 2, 'Dữ liệu mới nhất', 30))

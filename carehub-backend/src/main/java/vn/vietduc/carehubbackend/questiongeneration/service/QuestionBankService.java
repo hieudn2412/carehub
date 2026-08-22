@@ -221,7 +221,9 @@ public class QuestionBankService {
                 .reviewedBy(status == QuestionBankStatus.APPROVED ? actor : null)
                 .build();
         QuestionBankQuestion saved = questionRepository.save(question);
-        refreshEmbeddingIfApproved(saved);
+        // Câu mới thì không có vector cũ để xoá, nên dùng đường save (chỉ THÊM vào cache) thay vì
+        // refresh (xoá sạch cache). Import hàng trăm dòng đi qua đây, mỗi dòng một transaction.
+        saveEmbeddingIfApproved(saved);
         return withWarnings(saved, duplicate, false);
     }
 
@@ -390,6 +392,16 @@ public class QuestionBankService {
                     ? "Câu hỏi bị trùng mạnh với ngân hàng câu hỏi"
                     : "Câu hỏi bị trùng mạnh với câu đã có: " + duplicate.matchedQuestionStem();
             throw new ConflictException(message);
+        }
+    }
+
+    /**
+     * Cho câu hỏi VỪA TẠO. Dùng cho câu đã tồn tại sẽ để lại vector cũ trong bảng: nội dung đổi
+     * làm hash đổi, bản ghi cũ không bị ghi đè mà thành bản ghi thứ hai cho cùng câu hỏi.
+     */
+    private void saveEmbeddingIfApproved(QuestionBankQuestion question) {
+        if (question.getStatus() == QuestionBankStatus.APPROVED) {
+            questionEmbeddingService.saveStemEmbedding(question);
         }
     }
 

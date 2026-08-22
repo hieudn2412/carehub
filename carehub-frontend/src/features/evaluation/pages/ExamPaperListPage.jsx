@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SearchOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined, FilterOutlined } from '@ant-design/icons'
+import { DeleteOutlined, DownloadOutlined, PlusCircleOutlined, ReloadOutlined, SendOutlined, EyeOutlined, CloseOutlined, FileTextOutlined } from '@ant-design/icons'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import Modal from '../../../shared/components/Modal.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
+import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
+import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import ExamManagementViewSwitch from '../components/ExamManagementViewSwitch.jsx'
 import { examPaperApi } from '../api/examPaperApi.js'
@@ -24,6 +26,7 @@ function ExamPaperListPage({
   const [isLoading, setIsLoading] = useState(true)
   const [keyword, setKeyword] = useState('')
   const [status, setStatus] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [showAnswers, setShowAnswers] = useState(false)
@@ -47,17 +50,28 @@ function ExamPaperListPage({
     return () => window.clearTimeout(timer)
   }, [loadPapers])
 
+  useEffect(() => {
+    const nextKeyword = keyword.trim()
+    if (nextKeyword === appliedFilters.keyword) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.keyword, keyword])
+
   const filteredPapers = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase()
+    const normalized = appliedFilters.keyword.toLowerCase()
     return papers.filter((paper) => {
       const matchesKeyword = !normalized
         || (paper.name || '').toLowerCase().includes(normalized)
         || (paper.code || '').toLowerCase().includes(normalized)
         || (paper.examConfigName || '').toLowerCase().includes(normalized)
-      const matchesStatus = !status || paper.status === status
+      const matchesStatus = !appliedFilters.status || paper.status === appliedFilters.status
       return matchesKeyword && matchesStatus
     })
-  }, [keyword, papers, status])
+  }, [appliedFilters, papers])
 
   const expandedPaper = expandedId ? papers.find((p) => p.id === expandedId) : null
 
@@ -134,6 +148,12 @@ function ExamPaperListPage({
   }
 
   const breadcrumbs = [{ label: 'Quản lý bài kiểm tra' }]
+  const applyFilters = () => setAppliedFilters({ keyword: keyword.trim(), status })
+  const resetFilters = () => {
+    setKeyword('')
+    setStatus('')
+    setAppliedFilters({ keyword: '', status: '' })
+  }
 
   return (
     <AppShell className="dashboard-layout" breadcrumbs={breadcrumbs}>
@@ -146,47 +166,36 @@ function ExamPaperListPage({
                   onChange={onViewChange}
                 />
 
-                <div className="exp-filter-bar admin-control-toolbar">
-                <div className="admin-control-toolbar__main">
-                  <div className="admin-control-toolbar__controls">
-                    <div className="exp-search admin-control-toolbar__search">
-                      <SearchOutlined />
-                      <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="Tìm mã đề, tên đề, cấu hình" />
-                    </div>
-                    <button
-                      aria-controls="exam-paper-filter-panel"
-                      aria-expanded={isFilterOpen}
-                      className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                      onClick={() => setIsFilterOpen((current) => !current)}
-                      type="button"
-                    >
-                      <FilterOutlined /> Bộ lọc
-                      {status && <span className="admin-control-toolbar__filter-count">1</span>}
-                    </button>
-                  </div>
-                  <div className="exp-title-actions">
+                <AppliedFilterToolbar
+                  activeCount={status ? 1 : 0}
+                  actions={<div className="exp-title-actions">
                     <button type="button" className="exp-btn-primary" onClick={() => navigate('/admin/evaluation/exam-management/new')}>
                       <PlusCircleOutlined /> Tạo bài kiểm tra mới
                     </button>
                     <button type="button" className="exp-btn-secondary" onClick={loadPapers} disabled={isLoading}>
                       <ReloadOutlined /> Tải lại
                     </button>
-                  </div>
-                </div>
-                {isFilterOpen && (
-                  <div className="admin-control-toolbar__panel" id="exam-paper-filter-panel">
-                    <label className="admin-control-toolbar__field">
-                      <span>Trạng thái</span>
-                      <select value={status} onChange={(event) => setStatus(event.target.value)}>
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="DRAFT">Bản nháp</option>
-                        <option value="PUBLISHED">Đã phát hành</option>
-                        <option value="ARCHIVED">Đã lưu trữ</option>
-                      </select>
-                    </label>
-                  </div>
-                  )}
-                </div>
+                  </div>}
+                  className="exp-filter-bar"
+                  isOpen={isFilterOpen}
+                  onApply={applyFilters}
+                  onReset={resetFilters}
+                  onSearchChange={setKeyword}
+                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  panelId="exam-paper-filter-panel"
+                  searchAriaLabel="Tìm mã đề, tên đề hoặc cấu hình"
+                  searchClassName="exp-search"
+                  searchPlaceholder="Tìm mã đề, tên đề, cấu hình"
+                  searchValue={keyword}
+                >
+                    <FilterSelectField
+                      label="Trạng thái"
+                      value={status}
+                      onChange={setStatus}
+                      options={[{ value: '', label: 'Tất cả trạng thái' }, { value: 'DRAFT', label: 'Bản nháp' }, { value: 'PUBLISHED', label: 'Đã phát hành' }, { value: 'ARCHIVED', label: 'Đã lưu trữ' }]}
+                      placeholder="Tất cả trạng thái"
+                    />
+                </AppliedFilterToolbar>
 
                 <div className="exp-table-card">
                 <table className="exp-table admin-table-uppercase">

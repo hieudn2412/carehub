@@ -119,7 +119,11 @@ ai:
     # Model native nặng; không chặn HTTP readiness khi khởi động bình thường.
     # Bật rõ E5_PRELOAD=true ở môi trường cần warm-up trước request đầu tiên.
     preload: ${E5_PRELOAD:false}
-    backfill-on-startup: ${E5_BACKFILL_ON_STARTUP:false}
+    # BẬT: câu hỏi được lưu trong một phiên chạy mà E5 không hoạt động (provider=lexical, thiếu file
+    # model...) sẽ KHÔNG có embedding và im lặng biến mất khỏi so trùng — đo trên DB dev 22/08/2026:
+    # 77/457 câu đã duyệt bị thiếu. Backfill chạy nền (backfill-async) nên không chặn readiness, và
+    # bỏ qua câu đã có vector bằng một truy vấn khoá/lô nên gần như miễn phí khi mọi thứ đã đủ.
+    backfill-on-startup: ${E5_BACKFILL_ON_STARTUP:true}
     max-length: ${E5_MAX_LENGTH:512}
     timeout-seconds: ${E5_TIMEOUT_SECONDS:30}
     fallback-provider: ${E5_FALLBACK_PROVIDER:lexical}
@@ -139,7 +143,7 @@ ai:
     intra-op-threads: ${E5_INTRA_OP_THREADS:-1}
     inter-op-threads: ${E5_INTER_OP_THREADS:1}
   paraphrase:
-    provider: ${PARAPHRASE_PROVIDER:vietquill}
+    provider: ${PARAPHRASE_PROVIDER:disabled}
     model: ${PARAPHRASE_MODEL:ngwgsang/vietquill-vit5-base-tsubaki}
     model-path: ${VIETQUILL_MODEL_PATH:models/ngwgsang/vietquill-vit5-base-tsubaki}
     # VietQuill warm-up chạy đồng bộ và có thể mất hàng chục giây.
@@ -179,14 +183,18 @@ document:
 
 validation:
   # Ngưỡng cosine cho chống trùng ngữ nghĩa (embedding E5, thang 0-1).
-  # Hiệu chỉnh trên 270 câu hỏi seed thật (36.315 cặp): p50=0,832  p99=0,889  max=0,973.
-  # Thang điểm của E5 bị nén trong dải hẹp nên ngưỡng cũ 0,80 nằm DƯỚI trung vị và gắn cờ
-  # "có khả năng trùng" cho 94,7% số cặp — hàng đợi duyệt ngập cảnh báo giả.
-  # Đây là số từ dữ liệu seed. Đo lại trên ngân hàng thật bằng:
+  # HIỆU CHỈNH THEO PHÂN BỐ LÁNG GIỀNG GẦN NHẤT (nn-max), KHÔNG theo phân bố cặp: mỗi lần kiểm tra
+  # là max trên toàn bộ câu đã duyệt, nên một câu chỉ cần có MỘT láng giềng vượt ngưỡng là bị gắn cờ.
+  # Chọn ngưỡng từ phân vị của cặp là sai — nó cho tỉ lệ gắn cờ thấp hơn thực tế cả chục lần.
+  # Đo trên 270 câu seed (leave-one-out): nn-max p05=0,870  p50=0,897  p95=0,938.
+  #   ngưỡng 0,88 -> 82,6% số câu bị gắn cờ   |   0,93 -> ~10%   |   0,97 -> 0,4%
+  # Tỉ lệ gắn cờ TĂNG theo kích thước ngân hàng. Đo lại trên ngân hàng thật bằng:
   #   RUN_E5_CALIBRATION=true ./mvnw.cmd test -Dtest=E5SimilarityCalibrationTest
   duplicate:
-    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.95}   # >= : loại thẳng (~0,01% số cặp)
-    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.88}   # >= : gắn cờ xem lại (~2,4% số cặp)
+    # Loại thẳng, không ai xem lại. Đặt cao có chủ đích: cặp điểm cao nhất trong corpus seed (0,973)
+    # lại là dương tính giả, nên không có ngưỡng nào an toàn tuyệt đối cho việc loại tự động.
+    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.97}   # >= : loại thẳng (~0,4% số câu)
+    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.93}   # >= : gắn cờ xem lại (~10% số câu)
     # Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ, KHÁC thang cosine ở trên).
     # Chỉ dùng khi provider=lexical hoặc E5 lỗi/chưa backfill xong.
     # Hiệu chỉnh trên 270 câu seed — xem developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md

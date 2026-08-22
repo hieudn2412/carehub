@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
+import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import { adminApi } from '../api/adminApi'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -148,15 +149,17 @@ function NotificationSettingsPage() {
                                 <span className="ns-row-title">Tần suất cảnh báo</span>
                                 <span className="ns-row-desc">Hệ thống gửi lại nếu điều kiện cảnh báo vẫn còn tồn tại.</span>
                               </div>
-                              <select
-                                className="ns-select"
+                              <SearchableSelect
+                                className="ns-dropdown"
                                 value={policy.cadence}
-                                onChange={(event) => updatePolicy(item.eventType, { cadence: event.target.value })}
-                              >
-                                <option value="DAILY">Hàng ngày</option>
-                                <option value="WEEKLY">Hàng tuần</option>
-                                <option value="MONTHLY">Hàng tháng</option>
-                              </select>
+                                onChange={(value) => updatePolicy(item.eventType, { cadence: value })}
+                                options={[
+                                  { value: 'DAILY', label: 'Hàng ngày' },
+                                  { value: 'WEEKLY', label: 'Hàng tuần' },
+                                  { value: 'MONTHLY', label: 'Hàng tháng' }
+                                ]}
+                                searchable={false}
+                              />
                             </div>
                           )}
 
@@ -166,7 +169,7 @@ function NotificationSettingsPage() {
                                 <span className="ns-row-title">Mức tuân thủ mục tiêu (%)</span>
                               </div>
                               <input
-                                className="ns-select"
+                                className="ns-number-input"
                                 type="number"
                                 min="0"
                                 max="100"

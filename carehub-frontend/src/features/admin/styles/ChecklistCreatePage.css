@@ -835,15 +835,17 @@
 
 .ccp-readonly-options {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  align-items: center;
 }
 
 .ccp-readonly-options label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 9px;
   color: #344054;
+  white-space: nowrap;
 }
 
 .ccp-readonly-options input {
@@ -984,5 +986,13 @@
 
   .ccp-readonly-badges {
     justify-content: flex-start;
+  }
+
+  .ccp-readonly-options {
+    gap: 10px 18px;
+  }
+
+  .ccp-readonly-options label {
+    white-space: normal;
   }
 }

@@ -124,6 +124,7 @@ describe('OverviewDashboard navigation regression', () => {
 
     const filterButton = screen.getByRole('button', { name: /Bộ lọc/ })
     expect(filterButton).toHaveTextContent('5')
+    fireEvent.click(filterButton)
     fireEvent.click(screen.getByRole('button', { name: 'Xóa bộ lọc' }))
     expect(onFilterChange).toHaveBeenCalledWith('departmentId', '')
     expect(onFilterChange).toHaveBeenCalledWith('employeeCode', '')
@@ -189,6 +190,32 @@ describe('OverviewDashboard navigation regression', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Giờ đào tạo liên tục' })).toBeInTheDocument()
+    })
+  })
+
+  it('keeps the personal tracking section open after navigating to evaluation history', async () => {
+    const payload = window.btoa(JSON.stringify({ roles: ['USER'] }))
+    tokenStorage.setAccessToken(`header.${payload}.signature`)
+
+    render(
+      <MemoryRouter initialEntries={['/staff/dashboard']}>
+        <Sidebar />
+        <Routes>
+          <Route path="/staff/dashboard" element={<h1>Dashboard</h1>} />
+          <Route path="/staff/quality/history" element={<h1>Lịch sử đánh giá</h1>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const desktopNavigation = document.querySelector('.sidebar__nav')
+    const trackingTrigger = within(desktopNavigation).getByRole('button', { name: /Theo dõi cá nhân/ })
+
+    fireEvent.click(trackingTrigger)
+    fireEvent.click(within(desktopNavigation).getByRole('link', { name: /Lịch sử đánh giá/ }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Lịch sử đánh giá' })).toBeInTheDocument()
+      expect(trackingTrigger).toHaveAttribute('aria-expanded', 'true')
     })
   })
 
