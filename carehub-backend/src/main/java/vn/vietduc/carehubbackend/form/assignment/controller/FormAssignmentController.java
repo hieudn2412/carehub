@@ -99,24 +99,4 @@ public class FormAssignmentController {
         return ApiResponse.success("Bulk assign forms successfully", service.bulkAssign(request));
     }
 
-    @PatchMapping("/items/bulk-validity")
-    public ApiResponse<Integer> bulkValidity(@Valid @RequestBody BulkFormAssignmentValidityRequest request) {
-        return ApiResponse.success("Update form assignment validity successfully", service.updateItemValidity(request));
-    }
-
-    @PostMapping("/items/bulk-revoke")
-    public ApiResponse<Integer> bulkRevoke(@Valid @RequestBody BulkFormAssignmentItemIdsRequest request) {
-        return ApiResponse.success("Revoke form assignment items successfully", service.revokeItems(request));
-    }
-
-    @GetMapping("/{id}")
-    public ApiResponse<FormAssignmentResponse> get(@PathVariable Long id) {
-        return ApiResponse.success("Get form assignment successfully", service.get(id));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> revoke(@PathVariable Long id) {
-        service.revoke(id);
-        return ResponseEntity.noContent().build();
-    }
 }

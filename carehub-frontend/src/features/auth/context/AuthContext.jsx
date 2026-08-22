@@ -142,5 +142,3 @@ export function useAuth() {
   }
   return context
 }
-
-export { AUTH_STATUS }

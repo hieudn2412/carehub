@@ -1,6 +1,6 @@
 import { matchPath } from 'react-router-dom'
 
-export const APPLICATION_NAME = 'Quản lý điều dưỡng Việt Đức'
+const APPLICATION_NAME = 'Quản lý điều dưỡng Việt Đức'
 
 const PAGE_TITLE_ROUTES = [
   // Authentication
@@ -39,13 +39,11 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/quality/checklists/:id/evaluate/:versionId', 'Thực hiện đánh giá'],
   ['/admin/quality/checklists', 'Quản lý bảng kiểm'],
   ['/admin/form-imports/new', 'Nhập bảng kiểm'],
-  ['/admin/quality/history/forms/:formId/versions/:versionId', 'Chi tiết phiên bản đánh giá'],
-  ['/admin/quality/history/:id', 'Chi tiết lịch sử đánh giá'],
-  ['/admin/quality/history', 'Lịch sử đánh giá chất lượng'],
   ['/admin/quality/compliance-targets', 'Cài đặt mục tiêu tuân thủ'],
   ['/admin/quality/formulas', 'Cài đặt điểm sàn quy trình kỹ thuật'],
   ['/admin/reports/training-dashboard', 'Báo cáo đào tạo'],
   ['/admin/reports/quality-dashboard', 'Báo cáo chất lượng'],
+  ['/admin/reports/checklist-dashboard/results/:id', 'Chi tiết kết quả tuân thủ theo kỹ thuật'],
   ['/admin/reports/checklist-dashboard/results/forms/:formId/versions/:versionId', 'Kết quả tuân thủ theo kỹ thuật'],
   ['/admin/reports/checklist-dashboard', 'Tuân thủ theo kỹ thuật'],
   ['/admin/reports/competency-dashboard', 'Báo cáo năng lực'],
@@ -102,6 +100,7 @@ const PAGE_TITLE_ROUTES = [
   ['/manager/dashboard', 'Tổng quan quản lý'],
   ['/manager/reports/training-dashboard', 'Báo cáo đào tạo'],
   ['/manager/reports/quality-dashboard', 'Báo cáo chất lượng'],
+  ['/manager/reports/checklist-dashboard/results/:id', 'Chi tiết kết quả tuân thủ theo kỹ thuật'],
   ['/manager/reports/checklist-dashboard/results/forms/:formId/versions/:versionId', 'Kết quả tuân thủ theo kỹ thuật'],
   ['/manager/reports/checklist-dashboard', 'Tuân thủ theo kỹ thuật'],
   ['/manager/reports/exam-dashboard', 'Báo cáo bài kiểm tra'],
@@ -111,9 +110,6 @@ const PAGE_TITLE_ROUTES = [
   ['/manager/exam-results', 'Kết quả kiểm tra'],
   ['/manager/quality/checklists/:id/evaluate', 'Thực hiện đánh giá'],
   ['/manager/quality/checklists', 'Bảng kiểm chất lượng'],
-  ['/manager/quality/history/forms/:formId/versions/:versionId', 'Chi tiết phiên bản đánh giá'],
-  ['/manager/quality/history/:id', 'Chi tiết lịch sử đánh giá'],
-  ['/manager/quality/history', 'Lịch sử đánh giá'],
   ['/manager/competency-by-field/:employeeId', 'Chi tiết năng lực nhân viên'],
   ['/manager/competency-by-field', 'Năng lực theo lĩnh vực'],
   ['/manager/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ chung'],

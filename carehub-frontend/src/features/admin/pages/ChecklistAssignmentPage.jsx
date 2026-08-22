@@ -701,7 +701,6 @@ function ChecklistAssignmentPage() {
                     <tr key={row.formId}>
                       <td data-label="Bảng kiểm">
                         <strong>{row.formTitle || row.title}</strong>
-                        <span>{getChecklistDisplayCode(row.formCode || row.code)}</span>
                       </td>
                       <td data-label="Phiên bản">v{row.versionNumber || '-'}</td>
                       <td data-label="Khoa sở hữu">{row.ownerDepartmentName || 'Chưa có'}</td>

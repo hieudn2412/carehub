@@ -422,18 +422,6 @@ export const adminApi = {
     })
   },
 
-  getFormAssignmentById(id) {
-    return httpClient.get(`/form-assignments/${id}`, {
-      headers: authHeaders(),
-    })
-  },
-
-  revokeFormAssignment(id) {
-    return httpClient.delete(`/form-assignments/${id}`, {
-      headers: authHeaders(),
-    })
-  },
-
   revokeFormAssignmentItem(id) {
     return httpClient.delete(`/form-assignment-items/${id}`, {
       headers: authHeaders(),
@@ -507,13 +495,6 @@ export const adminApi = {
 
   getFormSubmissions(params) {
     return httpClient.get('/form-submissions', {
-      headers: authHeaders(),
-      params,
-    })
-  },
-
-  getFormHistory(params) {
-    return httpClient.get('/forms/history', {
       headers: authHeaders(),
       params,
     })

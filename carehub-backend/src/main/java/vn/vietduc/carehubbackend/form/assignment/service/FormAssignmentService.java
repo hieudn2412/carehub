@@ -361,23 +361,6 @@ public class FormAssignmentService {
         return items.size();
     }
 
-    @Transactional(readOnly = true)
-    public FormAssignmentResponse get(Long id) {
-        return toResponse(assignmentRepository.findDetailById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Form assignment not found")));
-    }
-
-    @Transactional
-    public void revoke(Long id) {
-        FormAssignment assignment = assignmentRepository.findDetailById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Form assignment not found"));
-        if (assignment.getStatus() != FormAssignmentStatus.ACTIVE) return;
-        assignment.setStatus(FormAssignmentStatus.REVOKED);
-        assignment.setRevokedAt(Instant.now(clock));
-        assignment.getItems().stream().filter(i -> i.getStatus() == FormAssignmentStatus.ACTIVE)
-                .forEach(i -> i.setStatus(FormAssignmentStatus.REVOKED));
-    }
-
     @Transactional
     public void revokeItem(Long id) {
         FormAssignmentItem item = itemRepository.findDetailById(id)

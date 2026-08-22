@@ -94,7 +94,8 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [expandedSections, setExpandedSections] = useState(new Set())
   const isManager = role === 'manager'
-  const basePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
+  const technicalDashboardPath = isManager ? '/manager/reports/checklist-dashboard' : '/admin/reports/checklist-dashboard'
+  const basePath = `${technicalDashboardPath}/results`
 
   useEffect(() => {
     let alive = true
@@ -143,6 +144,11 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   const returnTo = searchParams.get('returnTo') || ''
   const backTarget = getBackTarget(submission, returnTo, basePath)
   const allExpanded = sections.length > 0 && expandedSections.size === sections.length
+  const breadcrumbs = [
+    { label: 'Giám sát tuân thủ' },
+    { label: 'Tuân thủ theo kỹ thuật', link: technicalDashboardPath },
+    { label: 'Chi tiết kết quả' },
+  ]
 
   const toggleSection = (sectionKey) => {
     setExpandedSections((current) => {
@@ -156,12 +162,8 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   return (
     <AppShell
       className="admin-quality-history-page"
-      back={{ label: 'Quay lại', onClick: () => navigate(backTarget) }}
-      breadcrumbs={[
-        { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: basePath },
-        { label: 'Chi tiết kết quả' },
-      ]}
+      back={{ label: 'Quay lại', onClick: () => navigate(backTarget, { replace: true }) }}
+      breadcrumbs={breadcrumbs}
     >
         <div className="admin-quality-history admin-quality-history--detail">
           {loading ? (
@@ -245,7 +247,7 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
                                   <div className="aqh-readonly-question__main">
                                     <div className="aqh-readonly-question__title">
                                       <span>{itemIndex + 1}</span>
-                                      <div><strong>{question.title || item.title || `Câu hỏi ${itemIndex + 1}`}</strong>{question.code && <small>{question.code}</small>}</div>
+                                      <div><strong>{question.title || item.title || `Câu hỏi ${itemIndex + 1}`}</strong></div>
                                       {question.critical && <em>Trọng yếu</em>}
                                       {question.excludeFromScore && <em className="is-neutral">Không tính điểm</em>}
                                     </div>

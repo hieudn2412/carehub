@@ -32,7 +32,7 @@ function getFallbackLink(label, roles = []) {
     return '/training/employees'
   }
   if (lbl.includes('đánh giá') || lbl.includes('lịch sử')) {
-    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
+    return isAdm ? '/admin/reports/checklist-dashboard' : '/manager/reports/checklist-dashboard'
   }
   if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
     return isAdm ? '/admin/reference/employees' : '/manager/employees'
