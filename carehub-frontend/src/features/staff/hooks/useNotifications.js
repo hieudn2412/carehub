@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { notificationsApi } from '../api/notificationsApi.js'
+import { staffApi } from '../api/staffApi.js'
 
 const NOTIFICATION_SYNC_EVENT = 'carehub:notification-state-changed'
 
@@ -136,5 +137,5 @@ export function useNotifications() {
     }
   }
 
-  return { notifications, unreadCount, pendingExamCount, loading, error, markAllAsRead, markAsRead, reload: load }
+  return { notifications, unreadCount, pendingExamCount, hasChecklistAssignment, loading, error, markAllAsRead, markAsRead, reload: load }
 }
