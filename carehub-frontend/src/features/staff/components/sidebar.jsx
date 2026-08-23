@@ -110,7 +110,6 @@ function Sidebar({ alertSummary = {} }) {
         items: [
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
-          { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
           { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
         ],
       },
@@ -118,6 +117,9 @@ function Sidebar({ alertSummary = {} }) {
         label: 'Năng lực chuyên môn',
         items: [
           { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+          // Mục này trước đây tên "Chất lượng chăm sóc" và nằm trong nhóm giám sát tuân thủ,
+          // nhưng nội dung là dashboard năng lực nên thuộc về nhóm này.
+          { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
           { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         ],
       },

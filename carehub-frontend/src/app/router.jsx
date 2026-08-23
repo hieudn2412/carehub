@@ -269,9 +269,11 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
+      {/* Tổng hợp năng lực nằm trong nhóm năng lực chuyên môn; "Chất lượng chăm sóc"
+          (/admin/reports/competency-dashboard) nay là chỉ số theo bảng kiểm. */}
       <Route
         path="/admin/evaluation/competency-summary"
-        element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
+        element={evaluationElement(<CompetencySummaryPage />)}
       />
       <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
@@ -306,7 +308,7 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/competency-dashboard"
-        element={evaluationElement(<CompetencySummaryPage />)}
+        element={adminElement(<AdminDashboard variant="care-quality" />)}
       />
       <Route
         path="/admin/reports/export-training"
