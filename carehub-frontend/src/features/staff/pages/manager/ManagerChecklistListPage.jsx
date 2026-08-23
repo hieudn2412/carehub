@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  ApartmentOutlined,
   CalendarOutlined,
+  CheckCircleOutlined,
   FileTextOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
@@ -9,6 +11,7 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../../shared/components/AppShell.jsx'
+import Modal from '../../../../shared/components/Modal.jsx'
 import { staffApi } from '../../api/staffApi.js'
 import '../../styles/ManagerPages.css'
 
@@ -52,12 +55,6 @@ function getVersionNumber(checklist) {
     || null
 }
 
-function targetSourceLabel(source) {
-  if (source === 'DEPARTMENT') return 'Mục tiêu khoa'
-  if (source === 'HOSPITAL') return 'Mục tiêu bệnh viện'
-  return 'Mục tiêu'
-}
-
 function ManagerChecklistListPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -69,6 +66,7 @@ function ManagerChecklistListPage() {
   const [checklists, setChecklists] = useState([])
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
+  const [selectedDeptChecklist, setSelectedDeptChecklist] = useState(null)
 
   const fetchAssignedForms = async () => {
     const response = await staffApi.getAssignedForms({
@@ -88,9 +86,12 @@ function ManagerChecklistListPage() {
 
         try {
           const detailResponse = await staffApi.getAssignedForm(checklist.assignmentItemId)
+          const detailData = detailResponse.data?.data || {}
           return {
             ...checklist,
-            version: detailResponse.data?.data?.version || checklist.version,
+            version: detailData.version || checklist.version,
+            allDepartments: detailData.allDepartments ?? checklist.allDepartments,
+            allowedDepartments: detailData.allowedDepartments ?? checklist.allowedDepartments,
           }
         } catch {
           return checklist
@@ -218,14 +219,6 @@ function ManagerChecklistListPage() {
                         v{getVersionNumber(checklist)}
                       </span>
                     )}
-                    {checklist.version?.passingScore !== undefined && checklist.version?.passingScore !== null && (
-                      <span className="mgr-badge" style={{ fontSize: 11, background: '#ecfdf5', color: '#10b981', border: '1px solid #a7f3d0' }}>
-                        Sàn: {Number(checklist.version.passingScore).toFixed(1)}/10
-                      </span>
-                    )}
-                    <span className="mgr-badge" style={{ fontSize: 11, background: '#fff7ed', color: '#b45309', border: '1px solid #fed7aa' }}>
-                      {targetSourceLabel(checklist.complianceTargetSource)}: {Number(checklist.complianceTargetPercent ?? 80).toLocaleString('vi-VN')}%
-                    </span>
                   </div>
                   <span className="mgr-badge mgr-badge--green" style={{ fontSize: 11 }}>Đang hiệu lực</span>
                 </div>
@@ -240,6 +233,37 @@ function ManagerChecklistListPage() {
                   <div>
                     <CalendarOutlined />
                     <span><strong>Hết hạn:</strong> {formatDateTime(checklist.validUntil)}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <ApartmentOutlined />
+                    <span><strong>Khoa/phòng:</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDeptChecklist(checklist)}
+                      className="mgr-scope-pill-btn"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        padding: '2px 9px',
+                        borderRadius: 6,
+                        border: '1px solid #087f6a',
+                        background: '#f0fdf9',
+                        color: '#087f6a',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        lineHeight: 1.4,
+                        transition: 'all 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#ccfbf1'; e.currentTarget.style.borderColor = '#0f766e' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = '#f0fdf9'; e.currentTarget.style.borderColor = '#087f6a' }}
+                      title="Nhấn để xem danh sách khoa/phòng"
+                    >
+                      {checklist.allDepartments || !checklist.allowedDepartments || checklist.allowedDepartments.length === 0
+                        ? 'Tất cả khoa/phòng'
+                        : `${checklist.allowedDepartments.length} khoa/phòng`}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -257,6 +281,47 @@ function ManagerChecklistListPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {selectedDeptChecklist && (
+        <Modal
+          title={`Khoa/phòng áp dụng: ${selectedDeptChecklist.title}`}
+          onClose={() => setSelectedDeptChecklist(null)}
+          size="md"
+          footer={
+            <button
+              type="button"
+              className="training-button"
+              onClick={() => setSelectedDeptChecklist(null)}
+            >
+              Đóng
+            </button>
+          }
+        >
+          {selectedDeptChecklist.allDepartments || !selectedDeptChecklist.allowedDepartments || selectedDeptChecklist.allowedDepartments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 16px' }}>
+              <CheckCircleOutlined style={{ fontSize: 40, color: '#16a34a', marginBottom: 12 }} />
+              <h4 style={{ margin: 0, fontSize: 16, color: '#0f172a', fontWeight: 700 }}>Áp dụng cho tất cả khoa/phòng</h4>
+              <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>
+                Bạn được phân quyền thực hiện giám sát đánh giá bảng kiểm này đối với nhân viên của tất cả các khoa/phòng trong toàn viện.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p style={{ margin: '0 0 14px', fontSize: 13, color: '#64748b' }}>
+                Danh sách các khoa/phòng bạn được phân quyền thực hiện chấm ({selectedDeptChecklist.allowedDepartments.length} khoa):
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, maxHeight: 320, overflowY: 'auto', padding: 2 }}>
+                {selectedDeptChecklist.allowedDepartments.map((dept, idx) => (
+                  <div key={dept.departmentId || idx} style={{ padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <ApartmentOutlined style={{ color: '#087f6a', fontSize: 16 }} />
+                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{dept.departmentName || `Khoa #${dept.departmentId}`}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Modal>
       )}
     </AppShell>
   )

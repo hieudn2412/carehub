@@ -105,13 +105,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
                   </div>
                   <div className="evd-detail-summary__metrics">
                     <span>Điểm TB kỹ năng <strong>{overallAvg != null ? formatNumber(overallAvg) : '—'}</strong></span>
-                    <span>Mục tiêu khoa <strong>{complianceTarget}%</strong></span>
-                    {totalItems > 0 && belowTargetItems > 0 && (
-                      <span className="is-danger">
-                        <ExclamationCircleFilled aria-hidden="true" />
-                        {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
-                      </span>
-                    )}
                   </div>
                   <button className="evd-btn" onClick={loadData} disabled={loading}>
                     <ReloadOutlined /> Tải lại

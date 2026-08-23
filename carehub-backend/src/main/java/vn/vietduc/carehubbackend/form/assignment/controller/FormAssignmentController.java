@@ -13,6 +13,7 @@ import vn.vietduc.carehubbackend.form.assignment.dto.*;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentService;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("${app.api-prefix}/form-assignments")
@@ -87,6 +88,11 @@ public class FormAssignmentController {
             @PageableDefault(size = 20) Pageable pageable) {
         return ApiResponse.success("Get assignee candidates successfully",
                 PageResponse.from(service.assigneeCandidates(keyword, departmentId, roleCode, pageable)));
+    }
+
+    @GetMapping("/manager-candidate-ids")
+    public ApiResponse<List<FormAssignmentCandidateResponse>> managerCandidates() {
+        return ApiResponse.success("Get manager candidates successfully", service.managerCandidates());
     }
 
     @PostMapping("/preview")

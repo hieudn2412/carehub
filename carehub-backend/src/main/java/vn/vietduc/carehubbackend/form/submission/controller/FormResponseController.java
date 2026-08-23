@@ -19,7 +19,7 @@ import java.time.LocalDate;
 @RestController
 @RequestMapping("${app.api-prefix}/forms")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'STAFF', 'USER')")
 public class FormResponseController {
     private final FormSubmissionService service;
 
@@ -68,6 +68,40 @@ public class FormResponseController {
                 "Get form version response summary successfully",
                 service.summarizeByFormVersion(
                         formId, versionId, keyword, submittedByUserId, departmentId,
+                        result, dateFrom, dateTo)
+        );
+    }
+
+    @GetMapping("/evaluations/history")
+    public ApiResponse<PageResponse<FormSubmissionResponse>> listEvaluationsHistory(
+            @RequestParam(required = false) Long formId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success("Get evaluations history successfully",
+                PageResponse.from(service.searchEvaluationsHistory(
+                        formId, keyword, submittedByUserId, departmentId,
+                        result, dateFrom, dateTo, pageable)));
+    }
+
+    @GetMapping("/evaluations/history/summary")
+    public ApiResponse<FormSubmissionSummaryResponse> summarizeEvaluationsHistory(
+            @RequestParam(required = false) Long formId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long submittedByUserId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String result,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
+    ) {
+        return ApiResponse.success(
+                "Get evaluations history summary successfully",
+                service.summarizeEvaluationsHistory(
+                        formId, keyword, submittedByUserId, departmentId,
                         result, dateFrom, dateTo)
         );
     }

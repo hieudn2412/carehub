@@ -107,6 +107,8 @@ const PAGE_TITLE_ROUTES = [
   ['/manager/employees', 'Quản lý nhân viên'],
   ['/manager/exam-results/detail/:id', 'Chi tiết kết quả kiểm tra'],
   ['/manager/exam-results', 'Kết quả kiểm tra'],
+  ['/manager/quality/history/:id', 'Chi tiết lịch sử đánh giá'],
+  ['/manager/quality/history', 'Lịch sử đánh giá'],
   ['/manager/quality/checklists/:id/evaluate', 'Thực hiện đánh giá'],
   ['/manager/quality/checklists', 'Bảng kiểm chất lượng'],
   ['/manager/competency-by-field/:employeeId', 'Chi tiết năng lực nhân viên'],

@@ -81,7 +81,7 @@ public class FormSubmissionService {
         if (subject.getId().equals(actorId)) {
             throw ValidationException.field("subject.userId", "Người đánh giá không thể tự đánh giá chính mình");
         }
-        requireEvaluatorSubjectScope(actor, subject, selectedVersion.getForm().getId());
+        requireEvaluatorSubjectScope(actor, subject, item);
         boolean draftExists = item != null
                 ? submissionRepository.existsByAssignmentItem_IdAndSubmittedBy_IdAndSubjectContext_SubjectUser_IdAndStatus(
                         item.getId(), actorId, subject.getId(), FormSubmissionStatus.DRAFT)
@@ -224,16 +224,16 @@ public class FormSubmissionService {
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
 
-        if (historyAccessPolicy.isManager()) {
-            historyAccessPolicy.requireFormAccess(formId);
+        if (historyAccessPolicy.isRestrictedUser()) {
             if (status != FormSubmissionStatus.SUBMITTED) {
-                throw new ForbiddenException("Manager chỉ được xem kết quả đánh giá đã nộp");
+                throw new ForbiddenException("Bạn chỉ được xem kết quả đánh giá đã nộp");
             }
         }
-        Long scopedDepartmentId = historyAccessPolicy.resolveDepartmentScope(departmentId);
+        FormHistoryAccessPolicy.DepartmentScope departmentScope =
+                historyAccessPolicy.resolveDepartmentScope(formId, departmentId);
 
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
-                keyword, submittedByUserId, scopedDepartmentId, result, dateFrom, dateTo);
+                keyword, submittedByUserId, departmentScope.requestedDepartmentId(), result, dateFrom, dateTo);
         if (status != FormSubmissionStatus.SUBMITTED) {
             FormSubmissionResult exactResult = criteria.filterResults() && criteria.results().size() == 1
                     ? criteria.results().get(0)
@@ -249,6 +249,8 @@ public class FormSubmissionService {
                         criteria.keyword(),
                         criteria.submittedByUserId(),
                         criteria.departmentId(),
+                        departmentScope.filterDepartmentIds(),
+                        departmentScope.departmentIds(),
                         criteria.filterResults(),
                         criteria.results(),
                         criteria.fromInclusive(),
@@ -274,16 +276,80 @@ public class FormSubmissionService {
         versionRepository.findByIdAndForm_Id(versionId, formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form version not found"));
 
-        if (historyAccessPolicy.isManager()) {
-            historyAccessPolicy.requireFormAccess(formId);
-        }
-        Long scopedDepartmentId = historyAccessPolicy.resolveDepartmentScope(departmentId);
+        FormHistoryAccessPolicy.DepartmentScope departmentScope =
+                historyAccessPolicy.resolveDepartmentScope(formId, departmentId);
 
         FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
-                keyword, submittedByUserId, scopedDepartmentId, result, dateFrom, dateTo);
+                keyword, submittedByUserId, departmentScope.requestedDepartmentId(), result, dateFrom, dateTo);
         var summary = submissionRepository.summarizeHistoryByFormVersion(
                 formId,
                 versionId,
+                criteria.keyword(),
+                criteria.submittedByUserId(),
+                criteria.departmentId(),
+                departmentScope.filterDepartmentIds(),
+                departmentScope.departmentIds(),
+                criteria.filterResults(),
+                criteria.results(),
+                criteria.fromInclusive(),
+                criteria.toExclusive(),
+                FormSubmissionResult.PASSED,
+                List.of(FormSubmissionResult.FAILED_SCORE, FormSubmissionResult.FAILED_CRITICAL)
+        );
+
+        return new FormSubmissionSummaryResponse(
+                summary == null || summary.getTotal() == null ? 0 : summary.getTotal(),
+                summary == null || summary.getPassed() == null ? 0 : summary.getPassed(),
+                summary == null || summary.getFailed() == null ? 0 : summary.getFailed(),
+                summary == null || summary.getAverageConvertedScore() == null
+                        ? null
+                        : BigDecimal.valueOf(summary.getAverageConvertedScore()).setScale(4, RoundingMode.HALF_UP)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FormSubmissionResponse> searchEvaluationsHistory(
+            Long formId,
+            String keyword,
+            Long submittedByUserId,
+            Long departmentId,
+            String result,
+            LocalDate dateFrom,
+            LocalDate dateTo,
+            Pageable pageable
+    ) {
+        Long effectiveSubmittedBy = isAdmin() ? submittedByUserId : securityUtils.getCurrentUserId();
+        FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
+                keyword, effectiveSubmittedBy, departmentId, result, dateFrom, dateTo);
+        return submissionRepository.searchEvaluationsHistory(
+                        formId,
+                        criteria.keyword(),
+                        criteria.submittedByUserId(),
+                        criteria.departmentId(),
+                        criteria.filterResults(),
+                        criteria.results(),
+                        criteria.fromInclusive(),
+                        criteria.toExclusive(),
+                        normalize(pageable)
+                )
+                .map(submission -> toResponse(submission, false));
+    }
+
+    @Transactional(readOnly = true)
+    public FormSubmissionSummaryResponse summarizeEvaluationsHistory(
+            Long formId,
+            String keyword,
+            Long submittedByUserId,
+            Long departmentId,
+            String result,
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
+        Long effectiveSubmittedBy = isAdmin() ? submittedByUserId : securityUtils.getCurrentUserId();
+        FormSubmissionHistoryCriteria criteria = FormSubmissionHistoryCriteria.of(
+                keyword, effectiveSubmittedBy, departmentId, result, dateFrom, dateTo);
+        var summary = submissionRepository.summarizeEvaluationsHistory(
+                formId,
                 criteria.keyword(),
                 criteria.submittedByUserId(),
                 criteria.departmentId(),
@@ -325,17 +391,11 @@ public class FormSubmissionService {
         }
         long actorId = securityUtils.getCurrentUserId();
         User subject = resolveSubjectUser(subjectUserId, employeeCode);
-        Long formId = null;
+        FormAssignmentItem item = null;
         if (assignmentItemId != null) {
-            var item = assignmentAccessService.requireActiveOwnedItem(assignmentItemId, actorId);
-            formId = item.getForm().getId();
-        } else if (formVersionId != null) {
-            var version = versionRepository.findById(formVersionId).orElse(null);
-            if (version != null) {
-                formId = version.getForm().getId();
-            }
+            item = assignmentAccessService.requireActiveOwnedItem(assignmentItemId, actorId);
         }
-        requireEvaluatorSubjectScope(activeUser(actorId), subject, formId);
+        requireEvaluatorSubjectScope(activeUser(actorId), subject, item);
 
         Optional<FormSubmission> draft;
         if (assignmentItemId != null) {
@@ -385,7 +445,7 @@ public class FormSubmissionService {
         }
         FormSubmissionContext subjectContext = submission.getSubjectContext();
         if (subjectContext != null && subjectContext.getSubjectUser() != null) {
-            requireEvaluatorSubjectScope(activeUser(actorId), subjectContext.getSubjectUser(), submission.getFormVersion().getForm().getId());
+            requireEvaluatorSubjectScope(activeUser(actorId), subjectContext.getSubjectUser(), submission.getAssignmentItem());
         }
         FormAssignmentItem item = submission.getAssignmentItem();
         if (item == null) {
@@ -544,17 +604,25 @@ public class FormSubmissionService {
                 .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
-    private void requireEvaluatorSubjectScope(User actor, User subject, Long formId) {
+    private void requireEvaluatorSubjectScope(User actor, User subject, FormAssignmentItem item) {
         if (isAdmin()) return;
-        if (actor.getDepartment() == null) {
-            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
-        }
         if (subject.getDepartment() == null) {
             throw new ForbiddenException("Nhân viên đối tượng đánh giá chưa được gán khoa/phòng");
         }
-        // If it is via assignment (formId is provided), we allow evaluating all departments
-        if (formId != null) {
+        if (item != null) {
+            Set<Long> allowedDepartmentIds = item.getAllowedDepartments().stream()
+                    .map(Department::getId)
+                    .collect(Collectors.toSet());
+            if (allowedDepartmentIds.isEmpty()) {
+                throw new ForbiddenException("Quyền giao bảng kiểm chưa có khoa/phòng được phép chấm");
+            }
+            if (!allowedDepartmentIds.contains(subject.getDepartment().getId())) {
+                throw new ForbiddenException("Bạn chỉ được đánh giá nhân viên thuộc khoa/phòng được giao");
+            }
             return;
+        }
+        if (actor.getDepartment() == null) {
+            throw new ForbiddenException("Người đánh giá chưa được gán khoa/phòng");
         }
         if (actor.getDepartment().getId().equals(subject.getDepartment().getId())) {
             return;
@@ -564,21 +632,41 @@ public class FormSubmissionService {
 
     private FormSubmissionResponse toResponse(FormSubmission submission, boolean detail) {
         FormSubmissionContext context = submission.getSubjectContext();
+        String subjectDept = context != null ? context.getDepartment() : null;
+        Long subjectDeptId = null;
+        if (context != null && context.getSubjectUser() != null && context.getSubjectUser().getDepartment() != null) {
+            subjectDeptId = context.getSubjectUser().getDepartment().getId();
+            if (subjectDept == null) {
+                subjectDept = context.getSubjectUser().getDepartment().getName();
+            }
+        }
+        String formTitle = submission.getFormVersion().getForm() != null ? submission.getFormVersion().getForm().getTitle() : null;
+        if (formTitle == null) {
+            formTitle = submission.getFormVersion().getTitle();
+        }
         return FormSubmissionResponse.builder().id(submission.getId())
                 .assignmentItemId(submission.getAssignmentItem() == null ? null : submission.getAssignmentItem().getId())
                 .formId(submission.getFormVersion().getForm().getId())
                 .formCode(submission.getFormVersion().getForm().getCode())
+                .formTitle(formTitle)
                 .formVersionId(submission.getFormVersion().getId())
-                .versionNumber(submission.getFormVersion().getVersionNumber()).title(submission.getFormVersion().getTitle())
+                .versionNumber(submission.getFormVersion().getVersionNumber())
+                .title(formTitle)
                 .status(submission.getStatus())
                 .submittedBy(FormSubmissionResponse.ActorSnapshot.builder()
                         .id(submission.getSubmittedBy().getId())
                         .employeeCode(submission.getSubmittedBy().getEmployeeCode())
                         .fullName(submission.getSubmittedBy().getName())
                         .build())
-                .subject(FormSubmissionResponse.SubjectSnapshot.builder()
-                        .type(context.getSubjectType()).employeeCode(context.getEmployeeCode()).fullName(context.getFullName())
-                        .position(context.getPosition()).department(context.getDepartment()).build())
+                .subject(context == null ? null : FormSubmissionResponse.SubjectSnapshot.builder()
+                        .type(context.getSubjectType())
+                        .employeeCode(context.getEmployeeCode())
+                        .fullName(context.getFullName())
+                        .position(context.getPosition())
+                        .department(subjectDept)
+                        .departmentName(subjectDept)
+                        .departmentId(subjectDeptId)
+                        .build())
                 .scoringStatus(submission.getScoringStatus()).result(submission.getResult())
                 .totalScore(display(submission.getTotalScore())).maxScore(display(submission.getMaxScore()))
                 .passingScore(display(submission.getPassingScore())).convertedScore(display(submission.getConvertedScore()))
