@@ -56,9 +56,12 @@ const navSections = [
   },
   {
     label: 'ĐÀO TẠO LIÊN TỤC',
+    // Dashboard giờ đào tạo đứng trên trang giờ đào tạo nhân viên; giờ đào tạo của chính
+    // người dùng nằm cuối nhóm.
     items: [
-      { icon: <BookOutlined />, label: 'Đào tạo liên tục', path: '/training/employees' },
-      { icon: <ScheduleOutlined />, label: 'Cập nhật giờ đào tạo', path: '/staff/training' },
+      { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/admin/reports/training-dashboard' },
+      { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
+      { icon: <ScheduleOutlined />, label: 'Giờ đào tạo cá nhân', path: '/staff/training' },
     ],
   },
   {
@@ -116,17 +119,12 @@ const navSections = [
         path: '/admin/evaluation/competency',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
-    ],
-  },
-  {
-    label: 'DASHBOARD & BÁO CÁO THỐNG KÊ',
-    items: [
-      { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/admin/reports/training-dashboard' },
-      { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
+      // Dashboard năng lực trước đây nằm ở mục "Chất lượng chăm sóc" — nội dung là năng lực
+      // chuyên môn nên chuyển về đúng nhóm này.
       {
-        icon: <BarChartOutlined />,
-        label: 'Chất lượng chăm sóc',
-        path: '/admin/reports/competency-dashboard',
+        icon: <LineChartOutlined />,
+        label: 'Dashboard năng lực',
+        path: '/admin/evaluation/competency-summary',
         requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
     ],
@@ -176,7 +174,6 @@ const navGroups = [
       navSections[3],
       navSections[4],
       navSections[5],
-      navSections[6],
     ],
   },
   {
@@ -185,7 +182,7 @@ const navGroups = [
     icon: <SettingOutlined />,
     sections: [
       navSections[2],
-      ...navSections.slice(7),
+      ...navSections.slice(6),
     ],
   },
 ]

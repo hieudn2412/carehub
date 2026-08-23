@@ -39,6 +39,73 @@
   cursor: not-allowed;
 }
 
+/* Đường dẫn sang trang giờ đào tạo nhân viên, đứng cạnh nút xuất danh sách. */
+.training-dashboard__details {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #b9ddd5;
+  border-radius: 8px;
+  background: #f1fbf8;
+  color: #087f6d;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.training-dashboard__details:hover {
+  border-color: #087f6d;
+  background: #e5f7f2;
+}
+
+.training-dashboard__filter-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.training-dashboard__filter-panel label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.training-dashboard__filter-panel label > span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.training-dashboard__filter-panel select,
+.training-dashboard__filter-panel input,
+.training-dashboard__filter-panel label > div:not(.searchable-select) {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d8e2ec;
+  border-radius: 9px;
+  background: #fff;
+  color: #263247;
+  font: inherit;
+  outline: none;
+}
+
+.training-dashboard__filter-panel label > div:not(.searchable-select) {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+}
+
+.training-dashboard__filter-panel .searchable-select > input {
+  min-height: 42px;
+  padding: 0 34px;
+  border-radius: 9px;
+}
+
 .training-dashboard__alert,
 .training-dashboard__loading {
   display: flex;
@@ -125,6 +192,8 @@
   gap: 14px;
 }
 
+/* Hai biểu đồ theo lĩnh vực / hình thức chia đôi bề ngang, mỗi bên 50%.
+   (Dưới 1280px thì media query phía dưới xếp chồng lại như các biểu đồ khác.) */
 .training-dashboard__charts--equal {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -160,6 +229,30 @@
 /* Thẻ chứa bảng "Nhân sự trong khoa" của Manager */
 .training-chart-card .dtst {
   margin-top: 14px;
+}
+
+/* Biểu đồ cột theo khoa / lĩnh vực / hình thức: mỗi cột được cấp một bề ngang tối thiểu để
+   nhãn không chồng nhau, phần dư ra thì cuộn ngang trong thẻ. */
+.training-chart-card__scroll {
+  min-width: 0;
+  margin-top: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+}
+
+/* Bề rộng tối thiểu và chiều cao do component đặt inline theo số cột. */
+.training-chart-card__canvas {
+  width: 100%;
+}
+
+.training-chart-card__scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.training-chart-card__scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #cbd8e5;
 }
 
 .training-chart-card__legend {
@@ -211,6 +304,7 @@
 }
 
 @media (max-width: 1280px) {
+  .training-dashboard__filter-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .training-dashboard__charts { grid-template-columns: 1fr; }
 }
@@ -218,35 +312,8 @@
 /* bp-sm */
 @media (max-width: 768px) {
   .training-dashboard { padding: 14px; }
-  .training-dashboard__export { width: 100%; }
+  .training-dashboard__export,
+  .training-dashboard__details { width: 100%; }
+  .training-dashboard__filter-panel,
   .training-dashboard__kpis { grid-template-columns: 1fr; }
-}
-
-/* bp-sm (overrides cho Manager trên di động) */
-@media (max-width: 768px) {
-  .app-shell--manager .training-dashboard {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .app-shell--manager .training-dashboard__kpis {
-    display: contents;
-  }
-
-  .app-shell--manager .training-dashboard__charts {
-    display: contents;
-  }
-
-  .app-shell--manager .training-chart-card:not(.training-chart-card--wide) {
-    order: 10;
-  }
-
-  .app-shell--manager .training-kpi {
-    order: 20;
-  }
-
-  .app-shell--manager .training-chart-card--wide {
-    order: 30;
-  }
 }
