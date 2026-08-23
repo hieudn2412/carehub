@@ -340,7 +340,7 @@
 }
 
 .overview-compliance-chart__actions > button,
-.overview-checklist-details > header > button {
+.overview-checklist-details__back {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
@@ -358,7 +358,7 @@
 }
 
 .overview-compliance-chart__actions > button:hover,
-.overview-checklist-details > header > button:hover {
+.overview-checklist-details__back:hover {
   border-color: #0d8a78;
   background: #e8f8f4;
 }
@@ -413,6 +413,55 @@
   color: var(--overview-muted);
   font-size: 12px;
 }
+
+/* Nút xuất Excel luôn nằm sát mép phải của header, kể cả khi không có nút quay lại. */
+.overview-checklist-details__export {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 0 15px;
+  border: 1px solid #0d8a78;
+  border-radius: 8px;
+  background: #0d8a78;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.overview-checklist-details__export:hover:not(:disabled) {
+  border-color: #0a6d5f;
+  background: #0a6d5f;
+}
+
+.overview-checklist-details__export:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.overview-checklist-details__empty {
+  display: flex;
+  min-height: 240px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #8490a3;
+  text-align: center;
+}
+
+.overview-checklist-details__empty > span:first-child {
+  color: #0b937b;
+  font-size: 28px;
+}
+
+.overview-checklist-details__empty strong { color: #475467; font-size: 14px; }
+.overview-checklist-details__empty span:last-child { font-size: 12px; }
 
 .overview-checklist-details__grid {
   display: grid;

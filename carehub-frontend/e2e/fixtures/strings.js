@@ -25,7 +25,7 @@ export const LOGIN = {
 export const HEADER_TITLES = {
   staffDashboard: 'Năng lực của tôi',
   managerDashboard: 'Dashboard tổng quan',
-  adminDashboardBreadcrumb: 'Dashboard tổng quan',
+  adminDashboardBreadcrumb: 'Dashboard chất lượng chăm sóc',
   trainingStatus: 'Tiến độ giờ đào tạo',
   examList: 'Năng lực chuyên môn',
   examTake: 'Làm bài thi',

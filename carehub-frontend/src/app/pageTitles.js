@@ -14,7 +14,7 @@ const PAGE_TITLE_ROUTES = [
   ['/auth/email-confirm-success', 'Xác nhận email thành công'],
 
   // Administration
-  ['/admin/dashboard', 'Tổng quan quản trị'],
+  ['/admin/dashboard', 'Dashboard chất lượng chăm sóc'],
   ['/admin/accounts', 'Quản lý tài khoản'],
   ['/admin/system/import-logs', 'Lịch sử nhập dữ liệu'],
   ['/admin/reference/sync-history', 'Lịch sử đồng bộ'],
@@ -41,12 +41,12 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/form-imports/new', 'Nhập bảng kiểm'],
   ['/admin/quality/compliance-targets', 'Cài đặt mục tiêu tuân thủ'],
   ['/admin/quality/formulas', 'Cài đặt điểm sàn quy trình kỹ thuật'],
-  ['/admin/reports/training-dashboard', 'Báo cáo đào tạo'],
+  ['/admin/reports/training-dashboard', 'Dashboard giờ đào tạo'],
   ['/admin/reports/quality-dashboard', 'Báo cáo chất lượng'],
   ['/admin/reports/checklist-dashboard/results/:id', 'Chi tiết kết quả tuân thủ theo kỹ thuật'],
   ['/admin/reports/checklist-dashboard/results/forms/:formId/versions/:versionId', 'Kết quả tuân thủ theo kỹ thuật'],
   ['/admin/reports/checklist-dashboard', 'Tuân thủ theo kỹ thuật'],
-  ['/admin/reports/competency-dashboard', 'Báo cáo năng lực'],
+  ['/admin/reports/competency-dashboard', 'Chất lượng chăm sóc'],
   ['/admin/reports/export-training', 'Xuất báo cáo đào tạo'],
   ['/admin/reports/export-quality', 'Xuất báo cáo chất lượng'],
   ['/admin/profile', 'Hồ sơ quản trị viên'],
