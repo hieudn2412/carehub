@@ -475,6 +475,12 @@ export const adminApi = {
     })
   },
 
+  getFormAssignmentManagerCandidates() {
+    return httpClient.get('/form-assignments/manager-candidate-ids', {
+      headers: authHeaders(),
+    })
+  },
+
   previewBulkFormAssignment(data) {
     return httpClient.post('/form-assignments/preview', data, {
       headers: authHeaders(),
