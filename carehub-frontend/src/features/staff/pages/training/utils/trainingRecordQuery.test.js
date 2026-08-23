@@ -22,7 +22,7 @@ describe('training record query helpers', () => {
       })
     expect(parseTrainingQuery('?status=unknown&dateFrom=2026-02-30&page=0')).toMatchObject({
       status: '',
-      dateFrom: '',
+      dateFrom: '2026-01-01',
       page: 1,
     })
   })

@@ -24,6 +24,7 @@ import FilterActionButtons from '../../../shared/components/FilterActionButtons.
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/ChecklistQualityDashboardPage.css'
 
 function localDate(date = new Date()) {
@@ -98,10 +99,8 @@ function normalizeDepartment(item) {
   }
 }
 
-function targetSourceLabel(source) {
-  if (source === 'DEPARTMENT') return 'Mục tiêu khoa'
-  if (source === 'HOSPITAL') return 'Mục tiêu bệnh viện'
-  return 'Mặc định hệ thống'
+function targetSourceLabel() {
+  return 'Mục tiêu'
 }
 
 function csvCell(value) {
@@ -138,6 +137,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
   const isUser = role === 'user'
   const [departments, setDepartments] = useState([])
+  const [ownDepartmentId, setOwnDepartmentId] = useState('')
   const [departmentId, setDepartmentId] = useState(() => numericParam(searchParams.get('departmentId')))
   const [fromDate, setFromDate] = useState(() => searchParams.get('dateFrom') || yearStart)
   const [toDate, setToDate] = useState(() => searchParams.get('dateTo') || today)
@@ -153,7 +153,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
   const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
   const [filteredSelectedFormId, setFilteredSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
-  const [forceFilteredView, setForceFilteredView] = useState(() => Boolean(numericParam(searchParams.get('selectedFormId'))))
+  const [forceFilteredView, setForceFilteredView] = useState(() => true)
   const [selectedDetailForm, setSelectedDetailForm] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
@@ -163,6 +163,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const usesAppliedFilters = true
   const [appliedRoleFilters, setAppliedRoleFilters] = useState({
@@ -177,27 +178,24 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   })
 
   useEffect(() => {
+    if (isAdmin || ownDepartmentId || departments.length > 0) return undefined
     let active = true
     async function loadScope() {
       try {
-        if (!isAdmin) {
-          const response = await staffApi.getProfile()
-          const profile = apiData(response, null)
-          if (!active) return
-          const normalized = profile?.departmentId
-            ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
-            : null
+        const response = await staffApi.getProfile()
+        const profile = apiData(response, null)
+        if (!active) return
+        const normalized = profile?.departmentId
+          ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
+          : null
+        if (isManager && normalized) {
+          const normalizedId = String(normalized.id)
+          setOwnDepartmentId(normalizedId)
+          setDepartmentId(normalizedId)
+          setAppliedRoleFilters((current) => ({ ...current, departmentId: normalizedId }))
+          setDepartments([normalized])
+        } else {
           setDepartments(normalized ? [normalized] : [])
-          if (isManager && normalized) {
-            const normalizedId = String(normalized.id)
-            setDepartmentId(normalizedId)
-            setAppliedRoleFilters((current) => ({ ...current, departmentId: current.departmentId || normalizedId }))
-          }
-          return
-        }
-        const response = await adminApi.getDepartments()
-        if (active) {
-          setDepartments(pageItems(response).map(normalizeDepartment).filter((item) => item.id && item.name))
         }
       } catch (requestError) {
         if (active) setError(apiErrorMessage(requestError))
@@ -205,12 +203,25 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     }
     loadScope()
     return () => { active = false }
-  }, [isAdmin, isManager])
+  }, [departments.length, isAdmin, isManager, ownDepartmentId])
+
+  useEffect(() => {
+    if (!isAdmin || !isFilterOpen || departments.length > 0) return undefined
+    let active = true
+    adminApi.getDepartments()
+      .then((response) => {
+        if (active) setDepartments(pageItems(response).map(normalizeDepartment).filter((item) => item.id && item.name))
+      })
+      .catch((requestError) => {
+        if (active) setError(apiErrorMessage(requestError))
+      })
+    return () => { active = false }
+  }, [departments.length, isAdmin, isFilterOpen])
 
   const effectiveSearch = appliedRoleFilters.search
   const effectiveFromDate = appliedRoleFilters.fromDate
   const effectiveToDate = appliedRoleFilters.toDate
-  const effectiveDepartmentId = appliedRoleFilters.departmentId
+  const effectiveDepartmentId = isManager ? (ownDepartmentId || appliedRoleFilters.departmentId) : appliedRoleFilters.departmentId
   const effectiveProcessId = appliedRoleFilters.processId
   const effectiveResultStatus = appliedRoleFilters.resultStatus
   const effectiveSubjectUserId = appliedRoleFilters.subjectUserId
@@ -236,7 +247,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     keyword: effectiveSearch || undefined,
     fromDate: effectiveFromDate,
     toDate: effectiveToDate,
-    departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? effectiveDepartmentId || undefined : undefined,
+    departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? ownDepartmentId || undefined : undefined,
     formId: effectiveProcessId || undefined,
     resultStatus: effectiveResultStatus || undefined,
     subjectUserId: effectiveSubjectUserId || undefined,
@@ -244,7 +255,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }), [
     effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
     effectiveSearch, effectiveSubjectUserId, effectiveToDate, isAdmin, isManager,
-    isUser, effectiveSubmittedByUserId, view,
+    isUser, effectiveSubmittedByUserId, ownDepartmentId, view,
   ])
 
   useEffect(() => { setPage(0) }, [
@@ -261,23 +272,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       setTrendItems([])
     }
   }, [view])
-
-  useEffect(() => {
-    const nextSearch = search.trim()
-    if (nextSearch === appliedRoleFilters.search) return undefined
-    const timer = window.setTimeout(() => {
-      setFilteredSelectedFormId('')
-      setSelectedDetailForm(null)
-      setDetailError('')
-      setDetailLoading(false)
-      setTrendItems([])
-      setForceFilteredView(Boolean(nextSearch))
-      setAppliedRoleFilters((current) => (
-        current.search === nextSearch ? current : { ...current, search: nextSearch }
-      ))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedRoleFilters.search, search])
 
   useEffect(() => {
     if (isManager && !effectiveDepartmentId) return undefined
@@ -323,6 +317,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }, [filteredSelectedFormId, forms, loading])
 
   useEffect(() => {
+    if (!isFilterOpen) return undefined
     if (isManager && !effectiveDepartmentId) return undefined
     let active = true
     adminApi.getQualityChecklistFilterOptions({
@@ -337,7 +332,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       if (active) setError(apiErrorMessage(requestError))
     })
     return () => { active = false }
-  }, [effectiveDepartmentId, effectiveFromDate, effectiveToDate, isAdmin, isManager, reloadKey])
+  }, [effectiveDepartmentId, effectiveFromDate, effectiveToDate, isAdmin, isFilterOpen, isManager, reloadKey])
 
   const selectedForm = forms.find((item) => String(item.formId) === String(selectedFormId)) || forms[0] || null
   const filteredSelectedSummary = view === 'FILTERED'
@@ -347,34 +342,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const detailForm = hasFilteredSelection ? selectedDetailForm : selectedForm
   const displayedForms = hasFilteredSelection && filteredSelectedSummary ? [filteredSelectedSummary] : forms
 
-  const loadSelectedChecklistDetail = useCallback(async (formId) => {
+  const loadSelectedChecklistDetail = useCallback(async (formId, summary) => {
     if (!formId) return
     setDetailLoading(true)
     setTrendLoading(true)
     setDetailError('')
-    setSelectedDetailForm(null)
+    setSelectedDetailForm(summary || null)
     setTrendItems([])
     try {
-      const [dashboardResponse, trendResponse] = await Promise.all([
-        adminApi.getQualityChecklistDashboard({
-          ...requestParams,
-          formId,
-          page: 0,
-          size: 1,
-          view: 'FILTERED',
-        }),
-        adminApi.getQualityChecklistTrend({
-          ...requestParams,
-          bucket: 'MONTH',
-          formId,
-          keyword: undefined,
-          view: undefined,
-        }),
-      ])
-      const detail = pageData(dashboardResponse).content[0] || null
-      setSelectedDetailForm(detail)
+      const trendResponse = await adminApi.getQualityChecklistTrend({
+        ...requestParams,
+        bucket: 'MONTH',
+        formId,
+        keyword: undefined,
+        view: undefined,
+      })
       setTrendItems(apiData(trendResponse, {})?.items || [])
-      if (!detail) setDetailError('Không tìm thấy dữ liệu dashboard của bảng kiểm đã chọn.')
+      if (!summary) setDetailError('Không tìm thấy dữ liệu dashboard của bảng kiểm đã chọn.')
     } catch (requestError) {
       setDetailError(apiErrorMessage(requestError))
     } finally {
@@ -386,7 +370,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   useEffect(() => {
     if (view !== 'FILTERED') return
     if (!filteredSelectedFormId || !filteredSelectedSummary) return
-    loadSelectedChecklistDetail(filteredSelectedFormId)
+    loadSelectedChecklistDetail(filteredSelectedFormId, filteredSelectedSummary)
   }, [filteredSelectedFormId, filteredSelectedSummary, loadSelectedChecklistDetail, view])
 
   useEffect(() => {
@@ -413,6 +397,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setFromDate(yearStart)
     setToDate(today)
     if (isAdmin) setDepartmentId('')
+    if (isManager) setDepartmentId(ownDepartmentId)
     setProcessId('')
     setResultStatus('')
     setSubjectUserId('')
@@ -423,9 +408,10 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setDetailError('')
     setDetailLoading(false)
     setTrendItems([])
+    setFilterError('')
     if (usesAppliedFilters) {
       setAppliedRoleFilters({
-        departmentId: isAdmin ? '' : departmentId,
+        departmentId: isAdmin ? '' : isManager ? ownDepartmentId : departmentId,
         fromDate: yearStart,
         processId: '',
         resultStatus: '',
@@ -438,11 +424,12 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }
 
   function applyRoleFilters() {
-    if (fromDate && toDate && fromDate > toDate) {
-      setError('Từ ngày không được sau đến ngày')
+    const dateError = validateHistoricalDateRange(fromDate, toDate, { maxDate: today })
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
-    setError('')
+    setFilterError('')
     setFilteredSelectedFormId('')
     setForceFilteredView(true)
     setSelectedDetailForm(null)
@@ -507,7 +494,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       params.set('dateTo', effectiveToDate)
       params.set('selectedFormId', item.formId)
       if (effectiveSearch) params.set('dashboardKeyword', effectiveSearch)
-      if (isAdmin && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
+      if ((isAdmin || isManager) && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
       if (effectiveResultStatus) params.set('result', effectiveResultStatus)
       if (effectiveSubjectUserId) params.set('subjectUserId', effectiveSubjectUserId)
       if (!isUser && effectiveSubmittedByUserId) params.set('submittedByUserId', effectiveSubmittedByUserId)
@@ -532,14 +519,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   )
   const filterFields = (
     <>
-      <DateFilter label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={setFromDate} />
-      <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={setToDate} />
+      <DateFilter label="Từ ngày" value={fromDate} max={toDate || today} onChange={(value) => { setFilterError(''); setFromDate(value) }} />
+      <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} max={today} onChange={(value) => { setFilterError(''); setToDate(value) }} />
       {isAdmin && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
-        <SearchableSelect value={departmentId} onChange={setDepartmentId} placeholder="Toàn viện"
+        <SearchableSelect value={departmentId} onChange={setDepartmentId}
+          placeholder="Toàn viện"
           searchPlaceholder="Gõ tên khoa/phòng..." options={[
             { value: '', label: 'Toàn viện' },
             ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
           ]} showDescriptions={false} />
+      </SelectFilter>}
+      {isManager && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
+        <SearchableSelect
+          value={ownDepartmentId}
+          disabled
+          options={departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code }))}
+          showDescriptions={false}
+        />
       </SelectFilter>}
       <SelectFilter label="Kết quả" icon={<CheckCircleOutlined />}>
         <SearchableSelect
@@ -585,11 +581,15 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           actions={toolbarActions}
           ariaLabel="Công cụ tuân thủ theo kỹ thuật"
           className="checklist-quality-toolbar"
+          errorMessage={filterError}
           isOpen={isFilterOpen}
           onApply={applyRoleFilters}
           onReset={resetFilters}
           onSearchChange={setSearch}
-          onToggle={() => setIsFilterOpen((current) => !current)}
+          onToggle={() => {
+            setFilterError('')
+            setIsFilterOpen((current) => !current)
+          }}
           panelClassName="checklist-quality-filter-panel"
           panelId="checklist-quality-filter-panel"
           searchAriaLabel="Tìm theo tên hoặc mã quy trình"
@@ -682,10 +682,22 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           </section> : (view === 'LATEST' || hasFilteredSelection) && detailForm ? <section className="checklist-quality-detail">
             <header className="checklist-quality-detail__header">
               <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{detailForm.formTitle}</h2>
-                <p>{detailForm.formCode} · Phiên bản v{detailForm.versionNumber || '—'}</p></div>
-              <span className="checklist-quality-detail__rate">
-                {detailForm.monitoringCount > 0 ? `${formatPercent(detailForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
-              </span>
+                <p>Phiên bản v{detailForm.versionNumber || '—'}</p></div>
+              {detailForm.monitoringCount > 0 ? (
+                <span
+                  className={`checklist-quality-detail__rate ${
+                    Number(detailForm.complianceRate) >= Number(detailForm.targetPercent ?? 80)
+                      ? 'checklist-quality-detail__rate--pass'
+                      : 'checklist-quality-detail__rate--fail'
+                  }`}
+                >
+                  {formatPercent(detailForm.complianceRate)} tuân thủ
+                </span>
+              ) : (
+                <span className="checklist-quality-detail__rate checklist-quality-detail__rate--empty">
+                  Chưa có dữ liệu
+                </span>
+              )}
             </header>
             <div className="checklist-quality-metrics">
               <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={detailForm.monitoringCount} note="Kết quả đã nộp" />
@@ -727,7 +739,7 @@ function userOptions(items, allLabel) {
 
 function DateFilter({ label, value, min, max, onChange }) {
   return <label className="checklist-quality-filter"><span>{label}</span><div><CalendarOutlined />
-    <KeyboardDatePicker value={value} min={min} max={max} onChange={(val) => onChange(val)} />
+    <KeyboardDatePicker allowInvalidValue value={value} min={min} max={max} onChange={(val) => onChange(val)} />
   </div></label>
 }
 
@@ -746,12 +758,11 @@ function ProcessCard({ item, active, actionIcon, actionLabel, onSelect, onAction
   return <article className={`checklist-quality-process-card${active ? ' checklist-quality-process-card--active' : ''}`}
     role="button" tabIndex={0} onClick={onSelect} onKeyDown={handleKeyDown}>
     <div className="checklist-quality-process-card__top">
-      <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
+      <strong style={{ margin: 0, minHeight: 'unset', fontSize: 15 }}>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
       {actionLabel && <button type="button" onClick={(event) => { event.stopPropagation(); onAction?.() }}>
         {actionIcon} {actionLabel}
       </button>}
     </div>
-    <strong>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
     {hasData && <p className="checklist-quality-process-card__submitted-at">
       <CalendarOutlined />
       <span>Chấm gần nhất:</span>

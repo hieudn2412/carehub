@@ -6,6 +6,7 @@ import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.js
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -22,11 +23,11 @@ import '../styles/TrainingEmployeeStatusDetailPage.css'
 
 const TODAY = getLocalDateInputValue()
 
-const EMPTY_RECORD_FILTERS = {
+const DEFAULT_RECORD_FILTERS = {
   keyword: '',
   workflowStatus: '',
-  dateFrom: '',
-  dateTo: '',
+  dateFrom: `${new Date().getFullYear()}-01-01`,
+  dateTo: TODAY,
   professionalFieldId: '',
   activityTypeId: '',
   hasEvidence: '',
@@ -37,17 +38,13 @@ const EMPTY_RECORD_FILTERS = {
 function countActiveRecordFilters(filters) {
   return [
     filters.workflowStatus,
-    filters.dateFrom || filters.dateTo,
+    filters.dateFrom !== DEFAULT_RECORD_FILTERS.dateFrom || filters.dateTo !== DEFAULT_RECORD_FILTERS.dateTo,
     filters.professionalFieldId,
     filters.activityTypeId,
     filters.hasEvidence,
     filters.moderationStatus,
     filters.sourceType,
   ].filter(Boolean).length
-}
-
-function isValidDateRange(dateFrom, dateTo) {
-  return !dateFrom || !dateTo || dateFrom <= dateTo
 }
 
 function getLocalDateInputValue(date = new Date()) {
@@ -92,8 +89,8 @@ function TrainingEmployeeStatusDetailPage() {
   const [totalElements, setTotalElements] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [filterDraft, setFilterDraft] = useState(EMPTY_RECORD_FILTERS)
-  const [appliedFilters, setAppliedFilters] = useState(EMPTY_RECORD_FILTERS)
+  const [filterDraft, setFilterDraft] = useState(DEFAULT_RECORD_FILTERS)
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_RECORD_FILTERS)
   const [filterOptions, setFilterOptions] = useState({ activityTypes: [], professionalFields: [] })
   const [filterOptionsLoading, setFilterOptionsLoading] = useState(true)
   const [filterOptionsError, setFilterOptionsError] = useState('')
@@ -275,8 +272,9 @@ function TrainingEmployeeStatusDetailPage() {
   }
 
   const handleApplyFilters = () => {
-    if (!isValidDateRange(filterDraft.dateFrom, filterDraft.dateTo)) {
-      setFilterDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(filterDraft.dateFrom, filterDraft.dateTo, { maxDate: TODAY })
+    if (validationError) {
+      setFilterDateError(validationError)
       return
     }
     setPage(0)
@@ -287,8 +285,8 @@ function TrainingEmployeeStatusDetailPage() {
 
   const handleClearFilters = () => {
     setPage(0)
-    setFilterDraft({ ...EMPTY_RECORD_FILTERS })
-    setAppliedFilters({ ...EMPTY_RECORD_FILTERS })
+    setFilterDraft({ ...DEFAULT_RECORD_FILTERS })
+    setAppliedFilters({ ...DEFAULT_RECORD_FILTERS })
     setFilterDateError('')
   }
 
@@ -560,11 +558,11 @@ function TrainingEmployeeStatusDetailPage() {
                               />
                               <label>
                                 <span>Từ ngày</span>
-                                <KeyboardDatePicker value={filterDraft.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Lọc từ ngày" />
+                                <KeyboardDatePicker allowInvalidValue value={filterDraft.dateFrom} max={filterDraft.dateTo || TODAY} onChange={val => updateFilter('dateFrom', val)} aria-label="Lọc từ ngày" />
                               </label>
                               <label>
                                 <span>Đến ngày</span>
-                                <KeyboardDatePicker value={filterDraft.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Lọc đến ngày" />
+                                <KeyboardDatePicker allowInvalidValue value={filterDraft.dateTo} min={filterDraft.dateFrom || undefined} max={TODAY} onChange={val => updateFilter('dateTo', val)} aria-label="Lọc đến ngày" />
                               </label>
                               <FilterSelectField
                                 ariaLabel="Lọc theo lĩnh vực chuyên môn"

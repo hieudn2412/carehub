@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { AUTH_EVENTS, dispatchAuthEvent } from '../auth/authEvents.js'
+import { createInflightDedupeAdapter } from './inflightRequestDedupe.js'
 
 const emptyTokenStorage = {
   clear() {},
@@ -48,6 +49,13 @@ export const httpClient = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+// React StrictMode remounts effects in development. Share identical GETs while
+// they are still in flight so the remount does not hit the API twice. Completed
+// responses are not cached and manual reload continues to request fresh data.
+httpClient.defaults.adapter = createInflightDedupeAdapter(
+  axios.getAdapter(httpClient.defaults.adapter),
+)
 
 function isSessionInvalidRefreshError(error) {
   return error?.response?.status === 401 || error?.response?.status === 403

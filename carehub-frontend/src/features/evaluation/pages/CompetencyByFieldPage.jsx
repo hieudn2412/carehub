@@ -19,7 +19,11 @@ import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclosure.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
+
+const DEFAULT_FIELD_DATES = currentYearDateRange()
 
 function CompetencyByFieldPage() {
   const { showToast } = useToast()
@@ -34,8 +38,10 @@ function CompetencyByFieldPage() {
   const [selectedDeptId, setSelectedDeptId] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [categories, setCategories] = useState([])
-  const [fromDate, setFromDate] = useState(`${new Date().getFullYear()}-01-01`)
-  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10))
+  const [fromDate, setFromDate] = useState(DEFAULT_FIELD_DATES.fromDate)
+  const [toDate, setToDate] = useState(DEFAULT_FIELD_DATES.toDate)
+  const [filterError, setFilterError] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ departmentId: '', categoryId: '', ...DEFAULT_FIELD_DATES })
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -50,7 +56,9 @@ function CompetencyByFieldPage() {
         const depts = apiData(response, [])
         setDepartments(depts)
         if (depts.length > 0) {
-          setSelectedDeptId(current => current || String(depts[0].id))
+          const initialDepartmentId = String(depts[0].id)
+          setSelectedDeptId(current => current || initialDepartmentId)
+          setAppliedFilters(current => current.departmentId ? current : { ...current, departmentId: initialDepartmentId })
         }
         return
       }
@@ -58,13 +66,14 @@ function CompetencyByFieldPage() {
       const response = await staffApi.getProfile()
       const profile = apiData(response, null)
       if (!profile?.departmentId) {
-        throw new Error('Manager chưa được gán khoa/phòng')
+        throw new Error('Quản lý cấp Khoa chưa được gán khoa/phòng')
       }
       setDepartments([{
         id: profile.departmentId,
         name: profile.departmentName || 'Khoa của tôi',
       }])
       setSelectedDeptId(String(profile.departmentId))
+      setAppliedFilters(current => ({ ...current, departmentId: String(profile.departmentId) }))
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
@@ -82,16 +91,16 @@ function CompetencyByFieldPage() {
   }, [])
 
   const loadData = useCallback(async () => {
-    if (!selectedDeptId) return
+    if (!appliedFilters.departmentId) return
     setLoading(true)
     try {
       const params = {
-        departmentId: selectedDeptId,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
+        departmentId: appliedFilters.departmentId,
+        fromDate: appliedFilters.fromDate,
+        toDate: appliedFilters.toDate,
       }
-      if (selectedCategory) {
-        params.categoryId = selectedCategory
+      if (appliedFilters.categoryId) {
+        params.categoryId = appliedFilters.categoryId
       }
       const response = await competencyApi.getByField(params)
       setData(apiData(response, null))
@@ -100,7 +109,7 @@ function CompetencyByFieldPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedDeptId, selectedCategory, fromDate, toDate, showToast])
+  }, [appliedFilters, showToast])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -111,10 +120,32 @@ function CompetencyByFieldPage() {
   }, [loadDepartments, loadCategories])
 
   useEffect(() => {
-    if (!selectedDeptId) return undefined
+    if (!appliedFilters.departmentId) return undefined
     const timer = window.setTimeout(loadData, 0)
     return () => window.clearTimeout(timer)
-  }, [selectedDeptId, loadData])
+  }, [appliedFilters.departmentId, loadData])
+
+  const applyFilters = () => {
+    const validationError = validateHistoricalDateRange(fromDate, toDate, { maxDate: DEFAULT_FIELD_DATES.toDate })
+    if (validationError) {
+      setFilterError(validationError)
+      return
+    }
+    if (!selectedDeptId) {
+      setFilterError('Vui lòng chọn khoa/phòng.')
+      return
+    }
+    setFilterError('')
+    setAppliedFilters({ departmentId: selectedDeptId, categoryId: selectedCategory, fromDate, toDate })
+  }
+
+  const resetFilters = () => {
+    setSelectedCategory('')
+    setFromDate(DEFAULT_FIELD_DATES.fromDate)
+    setToDate(DEFAULT_FIELD_DATES.toDate)
+    setFilterError('')
+    setAppliedFilters({ departmentId: selectedDeptId, categoryId: '', ...DEFAULT_FIELD_DATES })
+  }
 
   const breadcrumbs = [
     { label: 'Dashboard', link: dashboardPath },
@@ -145,7 +176,7 @@ function CompetencyByFieldPage() {
                     />
                   </div>
                   <div className="admin-control-toolbar__controls">
-                    <AdminFilterDisclosure activeCount={Number(Boolean(selectedCategory)) + Number(Boolean(fromDate)) + Number(Boolean(toDate))}>
+                    <AdminFilterDisclosure activeCount={Number(Boolean(appliedFilters.categoryId)) + Number(appliedFilters.fromDate !== DEFAULT_FIELD_DATES.fromDate) + Number(appliedFilters.toDate !== DEFAULT_FIELD_DATES.toDate)}>
                       <FilterSelectField
                             label="Khoa/phòng"
                             value={selectedDeptId}
@@ -170,13 +201,14 @@ function CompetencyByFieldPage() {
                           />
                       <label className="admin-control-toolbar__field">
                         <span>Từ ngày</span>
-                        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={val => setFromDate(val)} />
+                        <KeyboardDatePicker allowInvalidValue value={fromDate} max={toDate || DEFAULT_FIELD_DATES.toDate} onChange={val => { setFilterError(''); setFromDate(val) }} />
                       </label>
                       <label className="admin-control-toolbar__field">
                         <span>Đến ngày</span>
-                        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={val => setToDate(val)} />
+                        <KeyboardDatePicker allowInvalidValue value={toDate} min={fromDate || undefined} max={DEFAULT_FIELD_DATES.toDate} onChange={val => { setFilterError(''); setToDate(val) }} />
                       </label>
-                      <button className="evd-btn filter-action-buttons__apply" type="button" onClick={loadData}>Áp dụng</button>
+                      {filterError && <p className="applied-filter-toolbar__error" role="alert">{filterError}</p>}
+                      <FilterActionButtons onReset={resetFilters} onApply={applyFilters} />
                     </AdminFilterDisclosure>
                     <span className="evd-competency-toolbar__count">{filteredItems.length} nhân viên</span>
                     <button className="evd-icon-btn" type="button" onClick={loadData} disabled={loading} title="Tải lại" aria-label="Tải lại">

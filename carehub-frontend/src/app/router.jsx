@@ -269,9 +269,11 @@ function AppRouter() {
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />
       <Route path="/admin/evaluation/compliance-by-technique/:employeeId" element={evaluationElement(<ComplianceEmployeeTechniqueDetailPage />)} />
+      {/* Tổng hợp năng lực nằm trong nhóm năng lực chuyên môn; "Chất lượng chăm sóc"
+          (/admin/reports/competency-dashboard) nay là chỉ số theo bảng kiểm. */}
       <Route
         path="/admin/evaluation/competency-summary"
-        element={evaluationElement(<Navigate to="/admin/reports/competency-dashboard" replace />)}
+        element={evaluationElement(<CompetencySummaryPage />)}
       />
       <Route path="/admin/evaluation/training-groups" element={evaluationElement(<TrainingGroupListPage />)} />
       {/* Placeholder routes - sidebar has these entries, real pages can replace them later */}
@@ -306,7 +308,7 @@ function AppRouter() {
       />
       <Route
         path="/admin/reports/competency-dashboard"
-        element={evaluationElement(<CompetencySummaryPage />)}
+        element={adminElement(<AdminDashboard variant="care-quality" />)}
       />
       <Route
         path="/admin/reports/export-training"
@@ -338,7 +340,7 @@ function AppRouter() {
       />
       <Route
         path="/manager/reports/checklist-dashboard/results/:id"
-        element={managerOrAdminElement(<AdminQualityHistoryDetailPage role="manager" />)}
+        element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage historyPath="/manager/reports/checklist-dashboard" />)}
       />
       <Route path="/manager/reports/exam-dashboard" element={managerOrAdminElement(<Navigate to="/manager/reports/quality-dashboard" replace />)} />
       <Route path="/manager/employees" element={managerOrAdminElement(<ManagerEmployeeListPage />)} />
@@ -346,6 +348,18 @@ function AppRouter() {
 
       <Route path="/manager/exam-results" element={managerOrAdminElement(<ManagerExamResultsPage />)} />
       <Route path="/manager/exam-results/detail/:id" element={managerOrAdminElement(<ManagerExamResultDetailPage />)} />
+      <Route
+        path="/manager/quality/history"
+        element={managerOrAdminElement(<ManagerEvaluationHistoryPage historyPath="/manager/quality/history" />)}
+      />
+      <Route
+        path="/manager/quality/history/:id"
+        element={managerOrAdminElement(<ManagerEvaluationHistoryDetailPage historyPath="/manager/quality/history" />)}
+      />
+      <Route
+        path="/manager/reports/evaluation-history"
+        element={managerOrAdminElement(<Navigate to="/manager/quality/history" replace />)}
+      />
       <Route path="/manager/quality/checklists" element={managerOrAdminElement(<ManagerChecklistListPage />)} />
       <Route path="/manager/quality/checklists/:id/evaluate" element={managerOrAdminElement(<ManagerChecklistEvaluationPage />)} />
       <Route path="/manager/competency-by-field" element={managerOrAdminElement(<CompetencyByFieldPage />)} />

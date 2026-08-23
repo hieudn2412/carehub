@@ -133,6 +133,33 @@ describe('OverviewDashboard navigation regression', () => {
     expect(onFilterChange).toHaveBeenCalledWith('toDate', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
   })
 
+  it('keeps typed dates as drafts and reports an invalid date before applying', () => {
+    const onFilterChange = vi.fn()
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          loading={false}
+          error=""
+          filters={{ departmentId: '', employeeCode: '', content: 'all', fromDate: '2026-01-01', toDate: '2026-08-24' }}
+          departments={[]}
+          onFilterChange={onFilterChange}
+          domains={managementDomains}
+          complianceChart={[]}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/ }))
+    fireEvent.change(screen.getByLabelText('Từ ngày'), { target: { value: '31/02/2026' } })
+
+    expect(onFilterChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Từ ngày không hợp lệ')
+    expect(onFilterChange).not.toHaveBeenCalled()
+  })
+
   it('does not enter a render loop when a staff dashboard omits compliance chart data', () => {
     let commitCount = 0
 
@@ -280,7 +307,7 @@ describe('OverviewDashboard navigation regression', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: /Xem chi tiết/ }))
-    expect(screen.getByRole('heading', { name: 'Chi tiết tuân thủ theo bảng kiểm' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Chỉ số chất lượng chăm sóc' })).toBeInTheDocument()
 
     rerender(
       <MemoryRouter>
@@ -293,7 +320,63 @@ describe('OverviewDashboard navigation regression', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Chất lượng chăm sóc' })).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Chi tiết tuân thủ theo bảng kiểm' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Chỉ số chất lượng chăm sóc' })).not.toBeInTheDocument()
     })
+  })
+
+  it('opens straight into the checklist detail when complianceOnly is set', async () => {
+    const onLoadComplianceTrend = vi.fn().mockResolvedValue([])
+    const chart = [{ id: 1, name: 'Bảng kiểm A', target: 80, actual: 70, total: 1, passed: 0 }]
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          profile={null}
+          loading={false}
+          error=""
+          filters={{ departmentId: '', employeeCode: '', content: 'all' }}
+          summary={{ total: 0, passed: 0, failed: 0, rate: 0 }}
+          domains={{
+            training: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+            exams: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+            quality: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+          }}
+          complianceChart={chart}
+          onLoadComplianceTrend={onLoadComplianceTrend}
+          complianceOnly
+        />
+      </MemoryRouter>,
+    )
+
+    // Không phải bấm "Xem chi tiết", và cũng không còn nút quay lại biểu đồ.
+    expect(screen.getByRole('heading', { name: 'Chỉ số chất lượng chăm sóc' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Quay lại biểu đồ/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Xuất Excel/ })).toBeEnabled()
+    await waitFor(() => expect(onLoadComplianceTrend).toHaveBeenCalledWith(1))
+  })
+
+  it('shows an empty state instead of the grid when no checklist matches the filter', () => {
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          profile={null}
+          loading={false}
+          error=""
+          filters={{ departmentId: '', employeeCode: '', content: 'all' }}
+          summary={{ total: 0, passed: 0, failed: 0, rate: 0 }}
+          domains={{
+            training: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+            exams: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+            quality: { available: false, total: 0, passed: 0, failed: 0, rate: 0 },
+          }}
+          complianceChart={[]}
+          complianceOnly
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Chưa có dữ liệu bảng kiểm trong phạm vi này')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Xuất Excel/ })).toBeDisabled()
   })
 })

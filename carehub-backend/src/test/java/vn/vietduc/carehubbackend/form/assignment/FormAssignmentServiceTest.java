@@ -34,6 +34,7 @@ class FormAssignmentServiceTest {
     @Mock FormRepository formRepository;
     @Mock FormVersionRepository versionRepository;
     @Mock UserRepository userRepository;
+    @Mock DepartmentRepository departmentRepository;
     @Mock UserRoleRepository userRoleRepository;
     @Mock SecurityUtils securityUtils;
     @Mock FormAssignmentAccessService accessService;
@@ -48,7 +49,7 @@ class FormAssignmentServiceTest {
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-06-21T00:00:00Z"), ZoneOffset.UTC);
         service = new FormAssignmentService(assignmentRepository, itemRepository, formRepository, versionRepository,
-                userRepository, userRoleRepository, securityUtils, accessService, formMapper,
+                userRepository, departmentRepository, userRoleRepository, securityUtils, accessService, formMapper,
                 complianceTargetService, clock, notificationService);
         manager = User.builder().id(5L).employeeCode("M01").name("Manager").status(UserStatus.ACTIVE).build();
         admin = User.builder().id(1L).employeeCode("ADMIN").name("Admin").status(UserStatus.ACTIVE).build();
@@ -56,6 +57,8 @@ class FormAssignmentServiceTest {
         lenient().when(userRoleRepository.findRolesByUserId(5L)).thenReturn(List.of(Role.builder().code("MANAGER").build()));
         lenient().when(securityUtils.getCurrentUserId()).thenReturn(1L);
         lenient().when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        lenient().when(departmentRepository.findAll()).thenReturn(List.of(
+                Department.builder().id(20L).name("Khoa mặc định").build()));
     }
 
     @Test

@@ -263,7 +263,7 @@ public class QualityChecklistDashboardService {
 
     private String scopedSubmissionSelect(Scope scope) {
         String departmentPredicate = scope.metricDepartmentId() == null
-                ? "" : "and subject_user.department_id = :metricDepartmentId";
+                ? "" : "and (subject_user.department_id = :metricDepartmentId or subject_user.id is null)";
         String evaluatorPredicate = scope.role() == Role.USER
                 ? "and s.submitted_by_user_id = :actorId"
                 : "and (:submittedByUserId is null or s.submitted_by_user_id = :submittedByUserId)";
@@ -315,9 +315,6 @@ public class QualityChecklistDashboardService {
         Long ownDepartmentId = actor.getDepartment() == null ? null : actor.getDepartment().getId();
         if (roles.contains("MANAGER")) {
             if (ownDepartmentId == null) throw new ForbiddenException("Manager chưa được gán khoa/phòng");
-            if (requestedDepartmentId != null && !requestedDepartmentId.equals(ownDepartmentId)) {
-                throw new ForbiddenException("Manager chỉ được xem dữ liệu của khoa mình");
-            }
             return new Scope(Role.MANAGER, actorId, ownDepartmentId, ownDepartmentId);
         }
         if (roles.contains("USER")) return new Scope(Role.USER, actorId, null, ownDepartmentId);
