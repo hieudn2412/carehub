@@ -216,6 +216,8 @@ function DashboardContent({ role }) {
   const [fieldLimit, setFieldLimit] = useState('12')
   const [typeSort, setTypeSort] = useState('desc')
   const [typeLimit, setTypeLimit] = useState('12')
+  const [deptSort, setDeptSort] = useState('desc')
+  const [deptLimit, setDeptLimit] = useState('12')
 
   const managerDepartmentId = profile?.departmentId || ''
   const effectiveFilters = appliedFilters
@@ -297,15 +299,23 @@ function DashboardContent({ role }) {
   }
 
   const departmentData = useMemo(() => {
-    return (summary?.byDepartment || [])
+    let data = (summary?.byDepartment || [])
       .map((item) => ({
         name: item.departmentName || 'Chưa xác định',
         total: Number(item.employeeCount) || 0,
         rate: Number(item.complianceRate) || 0,
       }))
-      .sort((left, right) => right.total - left.total)
-      .slice(0, 12)
-  }, [summary])
+    if (deptSort === 'asc') {
+      data = data.sort((left, right) => left.rate - right.rate)
+    } else {
+      data = data.sort((left, right) => right.rate - left.rate)
+    }
+    if (deptLimit !== 'all') {
+      const limit = parseInt(deptLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, deptSort, deptLimit])
 
   const professionalFieldData = useMemo(() => {
     let data = (summary?.byProfessionalField || [])
@@ -490,22 +500,6 @@ function DashboardContent({ role }) {
             </section>
           ) : (
             <section className={`training-dashboard__charts${isManager ? ' training-dashboard__charts--manager' : ''}`}>
-              {!isManager && (
-                <article className="training-chart-card">
-                  <header><h2>Phân bố Đạt/Chưa đạt</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
-                  <ResponsiveContainer width="100%" height={270}>
-                    <PieChart>
-                      <Pie data={completionData} dataKey="value" nameKey="name" innerRadius={72} outerRadius={102} paddingAngle={2} stroke="none">
-                        {completionData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [`${value} nhân viên`, name]} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="training-chart-card__legend">
-                    {completionData.map((entry) => <span key={entry.name}><i style={{ background: entry.color }} />{entry.name}: <b>{entry.value}</b></span>)}
-                  </div>
-                </article>
-              )}
 
               {/* Manager chỉ quản lý một khoa nên biểu đồ so sánh giữa các khoa không có ý
                   nghĩa; chỗ này dành cho danh sách nhân sự trong khoa. */}
@@ -523,8 +517,16 @@ function DashboardContent({ role }) {
                   />
                 </article>
               ) : (
-                <article className="training-chart-card training-chart-card--wide">
-                  <header><h2>Tỷ lệ hoàn thành theo khoa</h2><span>Tối đa 12 khoa</span></header>
+                <article className="training-chart-card training-chart-card--full">
+                  <header>
+                    <h2>Tỷ lệ hoàn thành theo khoa</h2>
+                    <ChartConfigPanel
+                      sortOrder={deptSort}
+                      onSortOrderChange={setDeptSort}
+                      displayLimit={deptLimit}
+                      onDisplayLimitChange={setDeptLimit}
+                    />
+                  </header>
                   {departmentData.length === 0 ? (
                     <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo khoa trong phạm vi này.</div>
                   ) : (
