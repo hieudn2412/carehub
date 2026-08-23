@@ -32,6 +32,7 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(8, 127, 109, 0.18);
+  margin-left: 8px;
 }
 
 .training-dashboard__export:disabled {
@@ -210,10 +211,9 @@
   grid-template-columns: 1fr;
 }
 
-/* Hai biểu đồ theo lĩnh vực / hình thức chia đôi bề ngang, mỗi bên 50%.
-   (Dưới 1280px thì media query phía dưới xếp chồng lại như các biểu đồ khác.) */
+/* Hai biểu đồ theo lĩnh vực / hình thức mỗi biểu đồ chiếm một dòng riêng, trải dài hết chiều ngang. */
 .training-dashboard__charts--equal {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .training-chart-card {
@@ -223,6 +223,11 @@
   border-radius: 12px;
   background: #fff;
   box-shadow: 0 10px 28px rgba(29, 54, 82, 0.05);
+}
+
+/* Thẻ biểu đồ trải dài hết chiều ngang (dùng cho biểu đồ theo khoa và Manager) */
+.training-chart-card--full {
+  grid-column: 1 / -1;
 }
 
 .training-chart-card header {
