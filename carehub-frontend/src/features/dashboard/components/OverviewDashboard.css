@@ -256,6 +256,7 @@
 }
 
 .overview-management-kpi__label {
+  display: block;
   max-width: 230px;
   font-size: 20px;
   font-weight: 650;
@@ -283,7 +284,9 @@
   font-weight: 700;
 }
 
-.overview-management-kpi > small {
+.overview-management-kpi small {
+  display: block;
+  margin-top: 6px;
   color: #7b8798;
   font-size: 11px;
   line-height: 1.45;

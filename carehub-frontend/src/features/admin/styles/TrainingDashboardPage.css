@@ -131,7 +131,7 @@
 
 .training-dashboard__kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -164,21 +164,35 @@
   margin: 0;
 }
 
+.training-kpi__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.training-kpi__metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 5px;
+}
+
 .training-kpi p {
   color: #64748b;
   font-size: 13px;
+  margin: 0;
 }
 
 .training-kpi strong {
-  margin-top: 5px;
   font-size: 24px;
   font-weight: 650;
+  margin: 0;
 }
 
 .training-kpi small {
-  margin-top: 6px;
   color: #8190a5;
   font-size: 12px;
+  margin: 0;
 }
 
 .training-kpi--blue .training-kpi__icon { background: #eaf7ff; color: #0284c7; }
@@ -190,6 +204,10 @@
   display: grid;
   grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.65fr);
   gap: 14px;
+}
+
+.training-dashboard__charts--manager {
+  grid-template-columns: 1fr;
 }
 
 /* Hai biểu đồ theo lĩnh vực / hình thức chia đôi bề ngang, mỗi bên 50%.
