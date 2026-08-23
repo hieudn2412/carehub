@@ -130,15 +130,6 @@ const navSections = [
     ],
   },
   {
-    label: 'DASHBOARD & BÁO CÁO THỐNG KÊ',
-    items: [
-      { icon: <LineChartOutlined />, label: 'Năng lực chuyên môn', path: '/admin/reports/quality-dashboard' },
-      // Nội dung là chỉ số theo bảng kiểm nên trang này chỉ dành cho ADMIN, giống các
-      // dashboard bảng kiểm khác — không còn mở theo quyền đánh giá.
-      { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/admin/reports/competency-dashboard' },
-    ],
-  },
-  {
     label: 'HỆ THỐNG',
     items: [
       { icon: <ScheduleOutlined />, label: 'Cấu hình giờ đào tạo', path: '/admin/system-settings/training' },
@@ -183,7 +174,6 @@ const navGroups = [
       navSections[3],
       navSections[4],
       navSections[5],
-      navSections[6],
     ],
   },
   {
@@ -192,7 +182,7 @@ const navGroups = [
     icon: <SettingOutlined />,
     sections: [
       navSections[2],
-      ...navSections.slice(7),
+      ...navSections.slice(6),
     ],
   },
 ]
