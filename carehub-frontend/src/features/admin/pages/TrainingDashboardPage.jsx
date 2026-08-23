@@ -23,6 +23,7 @@ import {
   YAxis,
 } from 'recharts'
 import ProgressRing from '../../../shared/components/ProgressRing.jsx'
+import ChartConfigPanel from '../components/ChartConfigPanel.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
@@ -211,6 +212,11 @@ function DashboardContent({ role }) {
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [fieldSort, setFieldSort] = useState('desc')
+  const [fieldLimit, setFieldLimit] = useState('12')
+  const [typeSort, setTypeSort] = useState('desc')
+  const [typeLimit, setTypeLimit] = useState('12')
+
   const managerDepartmentId = profile?.departmentId || ''
   const effectiveFilters = appliedFilters
   const activeFilterCount = [
@@ -302,24 +308,43 @@ function DashboardContent({ role }) {
   }, [summary])
 
   const professionalFieldData = useMemo(() => {
-    return (summary?.byProfessionalField || [])
+    let data = (summary?.byProfessionalField || [])
       .map((item) => ({
         name: item.professionalFieldName || 'Chưa xác định',
         hours: Number(item.submittedHours) || 0,
       }))
-      .sort((left, right) => right.hours - left.hours)
-      .slice(0, 12)
-  }, [summary])
+    if (fieldSort === 'asc') {
+      data = data.sort((left, right) => left.hours - right.hours)
+    } else {
+      data = data.sort((left, right) => right.hours - left.hours)
+    }
+
+    if (fieldLimit !== 'all') {
+      const limit = parseInt(fieldLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, fieldSort, fieldLimit])
 
   const activityTypeData = useMemo(() => {
-    return (summary?.byActivityType || [])
+    let data = (summary?.byActivityType || [])
       .map((item) => ({
         name: item.activityTypeName || 'Chưa xác định',
         hours: Number(item.submittedHours) || 0,
       }))
-      .sort((left, right) => right.hours - left.hours)
-      .slice(0, 12)
-  }, [summary])
+
+    if (typeSort === 'asc') {
+      data = data.sort((left, right) => left.hours - right.hours)
+    } else {
+      data = data.sort((left, right) => right.hours - left.hours)
+    }
+
+    if (typeLimit !== 'all') {
+      const limit = parseInt(typeLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, typeSort, typeLimit])
 
   const completionData = [
     { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
@@ -524,7 +549,15 @@ function DashboardContent({ role }) {
           {!isManager && (
             <section className="training-dashboard__charts training-dashboard__charts--equal">
               <article className="training-chart-card">
-                <header><h2>Tổng giờ đào tạo theo lĩnh vực</h2><span>Tối đa 12 lĩnh vực</span></header>
+                <header>
+                  <h2>Tổng giờ đào tạo theo lĩnh vực</h2>
+                  <ChartConfigPanel
+                    sortOrder={fieldSort}
+                    onSortOrderChange={setFieldSort}
+                    displayLimit={fieldLimit}
+                    onDisplayLimitChange={setFieldLimit}
+                  />
+                </header>
                 {professionalFieldData.length === 0 ? (
                   <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo lĩnh vực trong phạm vi này.</div>
                 ) : (
@@ -543,7 +576,15 @@ function DashboardContent({ role }) {
               </article>
 
               <article className="training-chart-card">
-                <header><h2>Tổng giờ đào tạo theo hình thức</h2><span>Tối đa 12 hình thức</span></header>
+                <header>
+                  <h2>Tổng giờ đào tạo theo hình thức</h2>
+                  <ChartConfigPanel
+                    sortOrder={typeSort}
+                    onSortOrderChange={setTypeSort}
+                    displayLimit={typeLimit}
+                    onDisplayLimitChange={setTypeLimit}
+                  />
+                </header>
                 {activityTypeData.length === 0 ? (
                   <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo hình thức trong phạm vi này.</div>
                 ) : (
