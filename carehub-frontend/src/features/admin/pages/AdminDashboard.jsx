@@ -33,7 +33,12 @@ const emptyDomain = (message) => ({
   emptyMessage: message,
 })
 
-export default function AdminDashboard() {
+/**
+ * `variant="care-quality"` là màn hình "Chất lượng chăm sóc": mở thẳng phần chi tiết theo
+ * bảng kiểm của dashboard, nên chỉ cần dữ liệu bảng kiểm — bỏ qua giờ đào tạo và năng lực.
+ */
+export default function AdminDashboard({ variant = 'overview' }) {
+  const complianceOnly = variant === 'care-quality'
   const navigate = useNavigate()
   const dashboardRequestId = useRef(0)
   const [filters, setFilters] = useState(() => ({
@@ -88,7 +93,9 @@ export default function AdminDashboard() {
     }
     const employeeFilterActive = Boolean(filters.employeeCode.trim())
     const [competencyResult, employeeResult] = await Promise.allSettled([
-      loadCompetencyOverview(competencyApi.getSummary, scopedParams),
+      complianceOnly
+        ? Promise.resolve(null)
+        : loadCompetencyOverview(competencyApi.getSummary, scopedParams),
       employeeFilterActive
         ? loadAllDashboardItems(adminApi.getUsers, {
             keyword: filters.employeeCode.trim(),
@@ -113,7 +120,9 @@ export default function AdminDashboard() {
       asOf: dateParams.toDate,
     }
     const [trainingResult, checklistResult] = await Promise.allSettled([
-      trainingApi.getTrainingDashboardSummary(trainingScope),
+      complianceOnly
+        ? Promise.resolve(null)
+        : trainingApi.getTrainingDashboardSummary(trainingScope),
       loadAllDashboardItems(
         adminApi.getDashboardFormPerformance,
         qualityParams,
@@ -184,7 +193,7 @@ export default function AdminDashboard() {
       }
     }
     setLoading(false)
-  }, [filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
+  }, [complianceOnly, filters.departmentId, filters.employeeCode, filters.fromDate, filters.toDate])
 
   useEffect(() => {
     const timer = window.setTimeout(loadDashboard, 350)
@@ -211,9 +220,13 @@ export default function AdminDashboard() {
   }, [filteredEmployeeId, filters.departmentId, filters.fromDate, filters.toDate])
 
   return (
-    <AppShell className="dashboard-layout" breadcrumbs={[{ label: 'Dashboard tổng quan' }]}>
+    <AppShell
+      className="dashboard-layout"
+      breadcrumbs={[{ label: complianceOnly ? 'Chất lượng chăm sóc' : 'Dashboard chất lượng chăm sóc' }]}
+    >
       <OverviewDashboard
         role="admin"
+        complianceOnly={complianceOnly}
         loading={loading}
         error={error || departmentsError}
         filters={filters}

@@ -352,15 +352,15 @@ function CompetencySummaryPage() {
     { label: 'Dashboard', link: dashboardPath },
     { label: 'Đánh giá' },
     {
-      label: reportType === 'summary' ? 'Dashboard năng lực'
+      label: reportType === 'summary' ? 'Năng lực chuyên môn'
         : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-        : 'Tuân thủ kỹ thuật'
+        : 'Kỹ năng chuyên môn'
     },
   ]
 
-  const pageTitle = reportType === 'summary' ? 'Dashboard năng lực'
+  const pageTitle = reportType === 'summary' ? 'Năng lực chuyên môn'
     : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-    : 'Tuân thủ kỹ thuật'
+    : 'Kỹ năng chuyên môn'
 
   function selectReportType(nextReportType) {
     setReportType(nextReportType)
@@ -400,9 +400,9 @@ function CompetencySummaryPage() {
   const reportTabs = (
     <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
       {[
-        { key: 'summary', label: 'Lý thuyết + thực hành' },
+        { key: 'summary', label: 'Năng lực chuyên môn' },
         { key: 'field', label: 'Năng lực theo lĩnh vực' },
-        { key: 'technique', label: 'Tuân thủ kỹ thuật' },
+        { key: 'technique', label: 'Kỹ năng chuyên môn' },
       ].map(tab => (
         <button key={tab.key} onClick={() => selectReportType(tab.key)}
           className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
@@ -723,7 +723,7 @@ function CompetencySummaryPage() {
                       )}
                       {totalCount === 0 && data && (
                         <div style={{ fontSize: 14, color: '#9ca3af' }}>
-                          Chưa có dữ liệu tuân thủ kỹ thuật trong khoảng thời gian đã chọn.
+                          Chưa có dữ liệu kỹ năng chuyên môn trong khoảng thời gian đã chọn.
                         </div>
                       )}
                     </section>
@@ -769,7 +769,7 @@ function CompetencySummaryPage() {
                             <td colSpan={isAdmin ? 10 : 9} className="ch-empty">
                               {!isAdmin && !departmentId
                                 ? 'Vui lòng chọn khoa/phòng.'
-                                : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
+                                : 'Chưa có dữ liệu kỹ năng chuyên môn.'}
                             </td>
                           </tr>
                         ) : (
@@ -813,7 +813,7 @@ function CompetencySummaryPage() {
                                     className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                     type="button"
                                     title="Xem chi tiết"
-                                    aria-label={`Xem chi tiết tuân thủ của ${item.employeeName || item.employeeCode}`}
+                                    aria-label={`Xem chi tiết kỹ năng chuyên môn của ${item.employeeName || item.employeeCode}`}
                                     onClick={() => {
                                       const params = new URLSearchParams()
                                       params.set('from', fromDate)
