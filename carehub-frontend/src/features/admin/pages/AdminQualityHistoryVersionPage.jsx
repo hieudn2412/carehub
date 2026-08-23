@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ApartmentOutlined,
   ClockCircleOutlined,
   CloseOutlined,
   EyeOutlined,
@@ -256,15 +255,6 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     setDraftDateTo(dateTo)
   }, [dateFrom, dateTo, departmentId, keyword, result, submittedByUserId, versionId])
 
-  useEffect(() => {
-    const nextKeyword = keywordInput.trim()
-    if (nextKeyword === keyword) return undefined
-    const timer = window.setTimeout(() => {
-      updateQuery({ keyword: nextKeyword, page: 0 }, false)
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [keyword, keywordInput, updateQuery])
-
   const loadAssignments = useCallback(async () => {
     setAssignmentsLoading(true)
     try {
@@ -349,7 +339,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   }, [dateFrom, dateTo, formId, version, versionId])
 
   useEffect(() => {
-    if (isManager) return undefined
+    if (isManager || !isFilterOpen) return undefined
     let alive = true
     setAssignments([])
     loadAssignments().catch(() => {
@@ -358,7 +348,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     return () => {
       alive = false
     }
-  }, [isManager, loadAssignments, refreshKey])
+  }, [isFilterOpen, isManager, loadAssignments, refreshKey])
 
   useEffect(() => {
     if ((!isFilterOpen && !(isManager && departmentId)) || departments.length > 0) return undefined
@@ -446,7 +436,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
         })
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [evaluatorQuery, isManager])
+  }, [evaluatorQuery, isFilterOpen, isManager])
 
   useEffect(() => {
     if (isManager) return
@@ -991,10 +981,6 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
       />}
     </AppShell>
   )
-}
-
-function CheckCircleIcon() {
-  return <span className="aqh-results-empty__icon">✓</span>
 }
 
 export default AdminQualityHistoryVersionPage

@@ -1,4 +1,3 @@
-import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -129,6 +128,8 @@ describe('ManagerEvaluationHistoryPage', () => {
     expect(await screen.findByText('NamHaiPham')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
+
+    await screen.findByRole('option', { name: 'Phòng Hành chính' })
 
     const deptSelect = screen.getByLabelText('Lọc theo khoa phòng')
     expect(deptSelect).toBeInTheDocument()

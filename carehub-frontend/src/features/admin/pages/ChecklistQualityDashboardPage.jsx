@@ -178,30 +178,24 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   })
 
   useEffect(() => {
+    if (isAdmin || ownDepartmentId || departments.length > 0) return undefined
     let active = true
     async function loadScope() {
       try {
-        if (!isAdmin) {
-          const response = await staffApi.getProfile()
-          const profile = apiData(response, null)
-          if (!active) return
-          const normalized = profile?.departmentId
-            ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
-            : null
-          if (isManager && normalized) {
-            const normalizedId = String(normalized.id)
-            setOwnDepartmentId(normalizedId)
-            setDepartmentId(normalizedId)
-            setAppliedRoleFilters((current) => ({ ...current, departmentId: normalizedId }))
-            setDepartments([normalized])
-          } else {
-            setDepartments(normalized ? [normalized] : [])
-          }
-          return
-        }
-        const response = await adminApi.getDepartments()
-        if (active) {
-          setDepartments(pageItems(response).map(normalizeDepartment).filter((item) => item.id && item.name))
+        const response = await staffApi.getProfile()
+        const profile = apiData(response, null)
+        if (!active) return
+        const normalized = profile?.departmentId
+          ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
+          : null
+        if (isManager && normalized) {
+          const normalizedId = String(normalized.id)
+          setOwnDepartmentId(normalizedId)
+          setDepartmentId(normalizedId)
+          setAppliedRoleFilters((current) => ({ ...current, departmentId: normalizedId }))
+          setDepartments([normalized])
+        } else {
+          setDepartments(normalized ? [normalized] : [])
         }
       } catch (requestError) {
         if (active) setError(apiErrorMessage(requestError))
@@ -209,7 +203,20 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     }
     loadScope()
     return () => { active = false }
-  }, [isAdmin, isManager])
+  }, [departments.length, isAdmin, isManager, ownDepartmentId])
+
+  useEffect(() => {
+    if (!isAdmin || !isFilterOpen || departments.length > 0) return undefined
+    let active = true
+    adminApi.getDepartments()
+      .then((response) => {
+        if (active) setDepartments(pageItems(response).map(normalizeDepartment).filter((item) => item.id && item.name))
+      })
+      .catch((requestError) => {
+        if (active) setError(apiErrorMessage(requestError))
+      })
+    return () => { active = false }
+  }, [departments.length, isAdmin, isFilterOpen])
 
   const effectiveSearch = appliedRoleFilters.search
   const effectiveFromDate = appliedRoleFilters.fromDate
@@ -248,7 +255,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }), [
     effectiveDepartmentId, effectiveFromDate, effectiveProcessId, effectiveResultStatus,
     effectiveSearch, effectiveSubjectUserId, effectiveToDate, isAdmin, isManager,
-    isUser, effectiveSubmittedByUserId, view,
+    isUser, effectiveSubmittedByUserId, ownDepartmentId, view,
   ])
 
   useEffect(() => { setPage(0) }, [
@@ -265,23 +272,6 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       setTrendItems([])
     }
   }, [view])
-
-  useEffect(() => {
-    const nextSearch = search.trim()
-    if (nextSearch === appliedRoleFilters.search) return undefined
-    const timer = window.setTimeout(() => {
-      setFilteredSelectedFormId('')
-      setSelectedDetailForm(null)
-      setDetailError('')
-      setDetailLoading(false)
-      setTrendItems([])
-      setForceFilteredView(Boolean(nextSearch))
-      setAppliedRoleFilters((current) => (
-        current.search === nextSearch ? current : { ...current, search: nextSearch }
-      ))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedRoleFilters.search, search])
 
   useEffect(() => {
     if (isManager && !effectiveDepartmentId) return undefined
@@ -327,6 +317,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }, [filteredSelectedFormId, forms, loading])
 
   useEffect(() => {
+    if (!isFilterOpen) return undefined
     if (isManager && !effectiveDepartmentId) return undefined
     let active = true
     adminApi.getQualityChecklistFilterOptions({
@@ -341,7 +332,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       if (active) setError(apiErrorMessage(requestError))
     })
     return () => { active = false }
-  }, [effectiveDepartmentId, effectiveFromDate, effectiveToDate, isAdmin, isManager, reloadKey])
+  }, [effectiveDepartmentId, effectiveFromDate, effectiveToDate, isAdmin, isFilterOpen, isManager, reloadKey])
 
   const selectedForm = forms.find((item) => String(item.formId) === String(selectedFormId)) || forms[0] || null
   const filteredSelectedSummary = view === 'FILTERED'
@@ -351,34 +342,23 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const detailForm = hasFilteredSelection ? selectedDetailForm : selectedForm
   const displayedForms = hasFilteredSelection && filteredSelectedSummary ? [filteredSelectedSummary] : forms
 
-  const loadSelectedChecklistDetail = useCallback(async (formId) => {
+  const loadSelectedChecklistDetail = useCallback(async (formId, summary) => {
     if (!formId) return
     setDetailLoading(true)
     setTrendLoading(true)
     setDetailError('')
-    setSelectedDetailForm(null)
+    setSelectedDetailForm(summary || null)
     setTrendItems([])
     try {
-      const [dashboardResponse, trendResponse] = await Promise.all([
-        adminApi.getQualityChecklistDashboard({
-          ...requestParams,
-          formId,
-          page: 0,
-          size: 1,
-          view: 'FILTERED',
-        }),
-        adminApi.getQualityChecklistTrend({
-          ...requestParams,
-          bucket: 'MONTH',
-          formId,
-          keyword: undefined,
-          view: undefined,
-        }),
-      ])
-      const detail = pageData(dashboardResponse).content[0] || null
-      setSelectedDetailForm(detail)
+      const trendResponse = await adminApi.getQualityChecklistTrend({
+        ...requestParams,
+        bucket: 'MONTH',
+        formId,
+        keyword: undefined,
+        view: undefined,
+      })
       setTrendItems(apiData(trendResponse, {})?.items || [])
-      if (!detail) setDetailError('Không tìm thấy dữ liệu dashboard của bảng kiểm đã chọn.')
+      if (!summary) setDetailError('Không tìm thấy dữ liệu dashboard của bảng kiểm đã chọn.')
     } catch (requestError) {
       setDetailError(apiErrorMessage(requestError))
     } finally {
@@ -390,7 +370,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   useEffect(() => {
     if (view !== 'FILTERED') return
     if (!filteredSelectedFormId || !filteredSelectedSummary) return
-    loadSelectedChecklistDetail(filteredSelectedFormId)
+    loadSelectedChecklistDetail(filteredSelectedFormId, filteredSelectedSummary)
   }, [filteredSelectedFormId, filteredSelectedSummary, loadSelectedChecklistDetail, view])
 
   useEffect(() => {

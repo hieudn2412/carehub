@@ -4,7 +4,6 @@ import {
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
-  ExclamationCircleFilled,
   CloseCircleFilled,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -54,10 +53,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
     { label: 'Tuân thủ chung', link: backPath },
     { label: data?.employeeName || 'Chi tiết' },
   ]
-
-  const complianceTarget = data?.complianceTarget || 80.0
-  const belowTargetItems = data?.items ? data.items.filter(i => i.belowTarget).length : 0
-  const totalItems = data?.items ? data.items.length : 0
 
   const toggleExpand = (idx) => {
     setExpandedRow(expandedRow === idx ? null : idx)

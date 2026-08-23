@@ -144,11 +144,6 @@ describe('ChecklistQualityDashboardPage', () => {
     expect(workspace).toContainElement(container.querySelector('.checklist-quality-processes'))
     expect(workspace).toContainElement(container.querySelector('.checklist-quality-detail'))
     await waitFor(() => {
-      expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
-        formId: '19',
-        resultStatus: 'PASSED',
-        view: 'FILTERED',
-      }))
       expect(adminApi.getQualityChecklistTrend).toHaveBeenCalledWith(expect.objectContaining({
         formId: '19',
       }))
@@ -184,7 +179,7 @@ describe('ChecklistQualityDashboardPage', () => {
     expect(adminApi.getQualityChecklistTrend).not.toHaveBeenCalled()
   })
 
-  it('automatically searches checklists when typing in the search box', async () => {
+  it('searches checklists only after applying the draft keyword', async () => {
     renderDashboard(<ChecklistQualityDashboardPage />)
 
     expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
@@ -193,6 +188,10 @@ describe('ChecklistQualityDashboardPage', () => {
     fireEvent.change(screen.getByLabelText('Tìm theo tên hoặc mã quy trình'), {
       target: { value: 'thay bang' },
     })
+    expect(adminApi.getQualityChecklistDashboard).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
 
     await waitFor(() => {
       expect(adminApi.getQualityChecklistDashboard).toHaveBeenCalledWith(expect.objectContaining({
