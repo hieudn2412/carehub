@@ -39,16 +39,18 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingExamCount, setPendingExamCount] = useState(0)
+  const [hasChecklistAssignment, setHasChecklistAssignment] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [listResponse, countResponse, assignmentResponse] = await Promise.all([
+      const [listResponse, countResponse, assignmentResponse, assignedFormsResponse] = await Promise.all([
         notificationsApi.list({ page: 0, size: 8 }),
         notificationsApi.getUnreadCount(),
         myExamApi.listAssignments().catch(() => ({ data: { data: [] } })),
+        staffApi.getAssignedForms({ page: 0, size: 1 }).catch(() => ({ data: { data: { totalElements: 0 } } })),
       ])
       setNotifications((listResponse.data?.data?.content || []).map(mapNotification))
       setUnreadCount(countResponse.data?.data?.unreadCount || 0)
@@ -56,6 +58,7 @@ export function useNotifications() {
       setPendingExamCount((Array.isArray(assignments) ? assignments : []).filter((assignment) => (
         assignment.actionable
       )).length)
+      setHasChecklistAssignment((assignedFormsResponse.data?.data?.totalElements || 0) > 0)
       setError(null)
     } catch (requestError) {
       console.error('Không thể tải thông báo', requestError)

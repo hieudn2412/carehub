@@ -89,29 +89,26 @@
 }
 
 .staff-home-metric {
-  position: relative;
-  display: block;
+  display: grid;
   min-width: 0;
-  min-height: 174px;
-  padding: 20px;
-  overflow: hidden;
-  border: 1px solid #dce7e3;
-  border-radius: 16px;
+  min-height: 142px;
+  align-content: space-between;
+  gap: 16px;
+  padding: 22px 24px;
+  border: 1px solid #dce5ec;
+  border-radius: 8px;
+  border-top: 3px solid var(--metric-accent);
   background: #fff;
   color: inherit;
   font: inherit;
   text-align: left;
-  box-shadow: 0 5px 20px rgba(25, 58, 49, 0.05);
+  box-shadow: none;
   cursor: pointer;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
 .staff-home-metric::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 4px;
-  background: var(--metric-accent);
-  content: '';
+  display: none;
 }
 
 .staff-home-metric:hover {
@@ -131,50 +128,45 @@
 .staff-home-metric--skill { --metric-accent: #d27a16; }
 
 .staff-home-metric__heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  display: block;
 }
 
 .staff-home-metric__heading h2 {
   margin: 0;
-  font-size: 17px;
-  font-weight: 700;
+  max-width: 230px;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: #172033;
 }
 
 .staff-home-metric__icon {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  place-items: center;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--metric-accent) 10%, white);
-  color: var(--metric-accent);
-  font-size: 19px;
+  display: none;
 }
 
 .staff-home-metric__values {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 19px;
+  gap: 18px;
+  margin-top: 0;
 }
 
-/* The right-hand figure is the measurement; the left-hand one only annotates it,
-   so the right one carries the larger type. */
 .staff-home-metric__values strong {
-  color: var(--metric-accent);
-  font-size: 19px;
-  line-height: 1;
+  overflow: hidden;
+  color: inherit;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .staff-home-metric__values span {
-  color: #20322c;
-  font-size: 30px;
-  font-weight: 800;
-  line-height: 1;
+  color: #087e68;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .staff-home-metric__mobile-ring {
@@ -197,9 +189,10 @@
 }
 
 .staff-home-metric p {
-  margin: 12px 0 0;
-  color: #73827d;
-  font-size: 13px;
+  margin: 0;
+  color: #7b8798;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .staff-home-overall {
@@ -284,6 +277,14 @@
   white-space: nowrap;
 }
 
+.staff-home-footer {
+  margin-top: 32px;
+  padding-bottom: 24px;
+  color: #8b96a7;
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   /* The shell reserves a full viewport height, so a short dashboard used to leave a dead
      strip under the last card. Letting the body flex and the metric grid absorb the slack
@@ -291,7 +292,7 @@
   .staff-home-shell .app-shell__body {
     display: flex;
     flex-direction: column;
-    padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
+    padding: 8px 8px calc(32px + env(safe-area-inset-bottom));
   }
 
   .staff-home-dashboard {
@@ -364,106 +365,50 @@
   }
 
   .staff-home-dashboard__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .staff-home-metric {
-    min-height: 102px;
-    padding: 10px;
-    border-radius: 12px;
-  }
-
-  .staff-home-metric::before {
-    width: 3px;
-  }
-
-  .staff-home-metric__heading {
-    gap: 6px;
+    min-height: 104px;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 8px;
+    display: grid;
+    align-content: space-between;
   }
 
   .staff-home-metric__heading h2 {
-    overflow: hidden;
-    font-size: 12px;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .staff-home-metric__icon {
-    width: 26px;
-    height: 26px;
-    flex-basis: 26px;
-    border-radius: 8px;
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .staff-home-metric__values {
-    gap: 4px;
-    margin-top: 10px;
+    gap: 14px;
   }
 
   .staff-home-metric__values strong {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .staff-home-metric__values span {
-    font-size: 19px;
+    font-size: 23px;
   }
 
   .staff-home-metric--training .staff-home-metric__primary,
   .staff-home-metric--training .staff-home-metric__progress {
-    display: none;
-  }
-
-  .staff-home-metric--training .staff-home-metric__values {
-    align-items: center;
-    justify-content: flex-start;
-    margin-top: 6px;
-  }
-
-  .staff-home-metric--training .staff-home-metric__values > span:last-child {
-    margin-left: auto;
-    white-space: nowrap;
+    display: block;
   }
 
   .staff-home-metric--training .staff-home-metric__mobile-ring {
-    position: relative;
-    display: grid;
-    width: 38px;
-    height: 38px;
-    flex: 0 0 38px;
-    place-items: center;
-    border-radius: 50%;
-    background: conic-gradient(
-      var(--metric-accent) 0 var(--metric-progress),
-      #e6eeeb var(--metric-progress) 360deg
-    );
-  }
-
-  .staff-home-metric--training .staff-home-metric__mobile-ring::after {
-    position: absolute;
-    inset: 4px;
-    border-radius: 50%;
-    background: #fff;
-    content: '';
-  }
-
-  .staff-home-metric--training .staff-home-metric__mobile-ring strong {
-    position: relative;
-    z-index: 1;
-    color: var(--metric-accent);
-    font-size: 11px;
-    line-height: 1;
+    display: none;
   }
 
   .staff-home-metric__progress {
-    height: 4px;
-    margin-top: 8px;
+    display: none;
   }
 
   .staff-home-metric p {
-    display: none;
+    display: block;
   }
 
   .staff-home-overall {
@@ -529,24 +474,30 @@
     font-size: 10px;
     white-space: nowrap;
   }
+
+  .staff-home-footer {
+    margin-top: 16px;
+    padding-bottom: 24px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 380px) {
   .staff-home-metric {
-    min-height: 98px;
-    padding-inline: 8px;
+    min-height: unset;
+    padding-inline: 12px;
   }
 
   .staff-home-metric__heading h2 {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .staff-home-metric__values strong {
-    font-size: 12px;
+    font-size: 14px;
   }
 
   .staff-home-metric__values span {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   .staff-home-overall__content > span {
