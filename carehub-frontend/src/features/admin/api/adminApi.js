@@ -455,6 +455,12 @@ export const adminApi = {
     })
   },
 
+  getFormAssignmentItemAllowedDepartments(itemId) {
+    return httpClient.get(`/form-assignment-items/${itemId}/allowed-departments`, {
+      headers: authHeaders(),
+    })
+  },
+
   getFormAssignmentFormCandidates(params) {
     return httpClient.get('/form-assignments/form-candidates', {
       headers: authHeaders(),
@@ -536,6 +542,20 @@ export const adminApi = {
   getFormSubmission(id) {
     return httpClient.get(`/form-submissions/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  getEvaluationHistory(params) {
+    return httpClient.get('/forms/evaluations/history', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEvaluationHistorySummary(params) {
+    return httpClient.get('/forms/evaluations/history/summary', {
+      headers: authHeaders(),
+      params,
     })
   },
 

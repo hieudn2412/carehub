@@ -936,7 +936,7 @@ function FormBuilderPage() {
                       <span>
                         <strong>Tra cứu đối tượng bằng mã nhân viên</strong>
                         <small>
-                          Manager nhập mã nhân viên khi đánh giá; hệ thống tự lấy mã, họ tên, chức vụ và khoa/phòng.
+                          Quản lý cấp Khoa nhập mã nhân viên khi đánh giá; hệ thống tự lấy mã, họ tên, chức vụ và khoa/phòng.
                         </small>
                       </span>
                     </label>

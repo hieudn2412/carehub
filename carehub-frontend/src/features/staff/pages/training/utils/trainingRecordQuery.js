@@ -30,11 +30,12 @@ function normalizeDate(value) {
 }
 
 function createEmptyTrainingFilters() {
+  const dateRange = currentYearDateRange()
   return {
     q: '',
     status: '',
-    dateFrom: '',
-    dateTo: '',
+    dateFrom: dateRange.fromDate,
+    dateTo: dateRange.toDate,
     professionalFieldId: '',
     activityTypeId: '',
     page: 1,
@@ -43,14 +44,15 @@ function createEmptyTrainingFilters() {
 
 function parseTrainingQuery(search = '') {
   const params = search instanceof URLSearchParams ? search : new URLSearchParams(search)
+  const dateRange = currentYearDateRange()
   const rawPage = Number(params.get('page'))
   const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1
 
   return {
     q: (params.get('q') || '').trim(),
     status: normalizeStatus(params.get('status')),
-    dateFrom: normalizeDate(params.get('dateFrom')),
-    dateTo: normalizeDate(params.get('dateTo')),
+    dateFrom: normalizeDate(params.get('dateFrom')) || dateRange.fromDate,
+    dateTo: normalizeDate(params.get('dateTo')) || dateRange.toDate,
     professionalFieldId: normalizePositiveInteger(params.get('professionalFieldId')),
     activityTypeId: normalizePositiveInteger(params.get('activityTypeId')),
     page,
@@ -99,15 +101,14 @@ function toTrainingListApiParams(filters = {}, employeeId, size = 10) {
 }
 
 function isDateRangeValid(dateFrom, dateTo) {
-  const from = normalizeDate(dateFrom)
-  const to = normalizeDate(dateTo)
-  return Boolean((!dateFrom || from) && (!dateTo || to)) && (!from || !to || from <= to)
+  return !validateHistoricalDateRange(dateFrom, dateTo)
 }
 
 function countActiveFilterGroups(filters = {}) {
+  const dateRange = currentYearDateRange()
   return [
     Boolean(normalizeStatus(filters.status)),
-    Boolean(normalizeDate(filters.dateFrom) || normalizeDate(filters.dateTo)),
+    normalizeDate(filters.dateFrom) !== dateRange.fromDate || normalizeDate(filters.dateTo) !== dateRange.toDate,
     Boolean(normalizePositiveInteger(filters.professionalFieldId)),
     Boolean(normalizePositiveInteger(filters.activityTypeId)),
   ].filter(Boolean).length
@@ -122,3 +123,4 @@ export {
   serializeTrainingQuery,
   toTrainingListApiParams,
 }
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../../../shared/utils/dateRange.js'

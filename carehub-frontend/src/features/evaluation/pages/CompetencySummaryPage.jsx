@@ -34,11 +34,13 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
-const today = new Date().toISOString().slice(0, 10)
-const yearStart = `${new Date().getFullYear()}-01-01`
+const defaultDateRange = currentYearDateRange()
+const today = defaultDateRange.toDate
+const yearStart = defaultDateRange.fromDate
 
 function formatScore(value) {
   const score = Number(value)
@@ -62,6 +64,7 @@ function CompetencySummaryPage() {
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterError, setFilterError] = useState('')
 
   // Field specific states
   const [categories, setCategories] = useState([])
@@ -370,10 +373,12 @@ function CompetencySummaryPage() {
   }
 
   function applyFilters() {
-    if (fromDate && toDate && fromDate > toDate) {
-      showToast('Từ ngày không được sau đến ngày', 'warning')
+    const dateError = validateHistoricalDateRange(fromDate, toDate, { maxDate: today })
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
+    setFilterError('')
     setAppliedFilters({
       departmentId,
       fromDate,
@@ -394,6 +399,7 @@ function CompetencySummaryPage() {
     setSelectedFormId('')
     if (isAdmin) setDepartmentId('')
     setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedCategory: '', selectedFormId: '', toDate: today })
+    setFilterError('')
     setPage(0)
   }
 
@@ -430,13 +436,15 @@ function CompetencySummaryPage() {
           options={[...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []), ...departments.map((department) => ({ value: department.id, label: department.name }))]}
           placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'} searchable searchPlaceholder="Tìm tên khoa/phòng..." />
       <label className="admin-control-toolbar__field"><span>Từ ngày</span>
-        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={(value) => {
+        <KeyboardDatePicker allowInvalidValue value={fromDate} max={toDate || today} onChange={(value) => {
+          setFilterError('')
           setFromDate(value)
           if (!isManager) setPage(0)
         }} />
       </label>
       <label className="admin-control-toolbar__field"><span>Đến ngày</span>
-        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={(value) => {
+        <KeyboardDatePicker allowInvalidValue value={toDate} min={fromDate || undefined} max={today} onChange={(value) => {
+          setFilterError('')
           setToDate(value)
           if (!isManager) setPage(0)
         }} />
@@ -465,12 +473,16 @@ function CompetencySummaryPage() {
                 actions={toolbarActions}
                 ariaLabel="Công cụ dashboard năng lực"
                 className="competency-dashboard-toolbar"
+                errorMessage={filterError}
                 header={reportTabs}
                 isOpen={isFilterOpen}
                 onApply={applyFilters}
                 onReset={resetFilters}
                 onSearchChange={setSearchTerm}
-                onToggle={() => setIsFilterOpen((current) => !current)}
+                onToggle={() => {
+                  setFilterError('')
+                  setIsFilterOpen((current) => !current)
+                }}
                 panelClassName="competency-dashboard-filter-panel"
                 panelId="competency-dashboard-filter-panel"
                 searchAriaLabel="Tìm theo tên hoặc mã nhân viên"
@@ -816,8 +828,8 @@ function CompetencySummaryPage() {
                                     aria-label={`Xem chi tiết kỹ năng chuyên môn của ${item.employeeName || item.employeeCode}`}
                                     onClick={() => {
                                       const params = new URLSearchParams()
-                                      params.set('from', fromDate)
-                                      params.set('to', toDate)
+                                      params.set('from', effectiveFromDate)
+                                      params.set('to', effectiveToDate)
                                       navigate(
                                         isAdmin
                                           ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`

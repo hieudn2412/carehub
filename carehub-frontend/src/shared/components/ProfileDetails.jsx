@@ -9,6 +9,7 @@ import {
   PhoneOutlined,
   UserOutlined,
 } from '@ant-design/icons'
+import { formatRoleLabels } from '../utils/roleLabels.js'
 
 const INFO_FIELDS = [
   { key: 'employeeCode', label: 'Mã nhân viên', icon: <IdcardOutlined />, color: 'blue' },
@@ -59,7 +60,7 @@ function ProfileDetails({
 }) {
   const displayName = profile?.fullName || 'Chưa cập nhật'
   const initials = getInitials(profile?.fullName, fallbackInitials)
-  const displayRole = profile?.roles?.map((role) => role.name).filter(Boolean).join(', ') || fallbackRole
+  const displayRole = formatRoleLabels(profile?.roles, fallbackRole)
   const isActive = profile?.status === 'ACTIVE'
   const displayStatus = profile?.status
     ? (isActive ? 'Hoạt động' : 'Bị khóa')

@@ -27,7 +27,7 @@ function AdminProfilePage() {
         profile={profile}
         loading={loading}
         errorMessage={errorMessage}
-        fallbackRole="Quản trị viên"
+        fallbackRole="Quản lý cấp Bệnh Viện"
         fallbackInitials="AD"
         onChangePassword={() => setIsModalOpen(true)}
       />

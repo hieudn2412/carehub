@@ -3,10 +3,12 @@ import { EyeOutlined, FilterOutlined, LoadingOutlined, LockOutlined, PlayCircleO
 import { useLocation, useNavigate } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import '../styles/ExamHistoryScreen.css'
 import { myExamApi } from '../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime, formatNumber } from '../../../shared/utils/apiUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 
 export default function ExamTakeListScreen() {
   const navigate = useNavigate()
@@ -18,6 +20,9 @@ export default function ExamTakeListScreen() {
   // toDate = hôm nay thì mọi bài còn hạn (dueAt trong tương lai) đều bị ẩn.
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [draftFromDate, setDraftFromDate] = useState('')
+  const [draftToDate, setDraftToDate] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [loading, setLoading] = useState(true)
   const [startingId, setStartingId] = useState(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -46,6 +51,29 @@ export default function ExamTakeListScreen() {
     notTaken: filtered.filter(item => item.assessmentStatus === 'NOT_TAKEN').length,
   }), [filtered])
   const activeFilterCount = Number(Boolean(fromDate)) + Number(Boolean(toDate))
+
+  const applyDateFilters = () => {
+    const dateError = validateHistoricalDateRange(draftFromDate, draftToDate, {
+      maxDate: null,
+      required: false,
+    })
+    if (dateError) {
+      setFilterError(dateError)
+      return
+    }
+    setFilterError('')
+    setFromDate(draftFromDate)
+    setToDate(draftToDate)
+    setIsFilterOpen(false)
+  }
+
+  const resetDateFilters = () => {
+    setFilterError('')
+    setDraftFromDate('')
+    setDraftToDate('')
+    setFromDate('')
+    setToDate('')
+  }
 
   const openAttempt = attemptId => navigate(`/staff/exam/take/${attemptId}`, {
     state: { from: `${location.pathname}${location.search}` },
@@ -117,7 +145,12 @@ export default function ExamTakeListScreen() {
             className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
             aria-expanded={isFilterOpen}
             aria-controls="staff-exam-filter-panel"
-            onClick={() => setIsFilterOpen(current => !current)}
+            onClick={() => {
+              setFilterError('')
+              setDraftFromDate(fromDate)
+              setDraftToDate(toDate)
+              setIsFilterOpen(current => !current)
+            }}
           >
             <FilterOutlined />
             Bộ lọc
@@ -128,12 +161,14 @@ export default function ExamTakeListScreen() {
           <div id="staff-exam-filter-panel" className="eh-filter-panel admin-control-toolbar__panel">
             <label className="admin-control-toolbar__field">
               <span>Từ ngày</span>
-              <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={val => setFromDate(val)} />
+              <KeyboardDatePicker allowInvalidValue value={draftFromDate} max={draftToDate || undefined} onChange={val => { setFilterError(''); setDraftFromDate(val) }} />
             </label>
             <label className="admin-control-toolbar__field">
               <span>Đến ngày</span>
-              <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={val => setToDate(val)} />
+              <KeyboardDatePicker allowInvalidValue value={draftToDate} min={draftFromDate || undefined} onChange={val => { setFilterError(''); setDraftToDate(val) }} />
             </label>
+            <FilterActionButtons onApply={applyDateFilters} onReset={resetDateFilters} />
+            {filterError && <p className="applied-filter-toolbar__error" role="alert">{filterError}</p>}
           </div>
         )}
       </div>

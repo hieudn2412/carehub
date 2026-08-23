@@ -6,9 +6,11 @@ import AppShell from '../../../shared/components/AppShell.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/training.css'
 
 const STATUS_OPTIONS = ['DRAFT', 'SUBMITTED', 'CANCELLED']
+const DEFAULT_RECORD_DATES = currentYearDateRange()
 
 function TrainingRecordListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -21,30 +23,20 @@ function TrainingRecordListPage() {
 
   const filters = useMemo(() => ({
     keyword: searchParams.get('keyword') ?? '',
-    dateFrom: searchParams.get('dateFrom') ?? '',
-    dateTo: searchParams.get('dateTo') ?? '',
+    dateFrom: searchParams.get('dateFrom') ?? DEFAULT_RECORD_DATES.fromDate,
+    dateTo: searchParams.get('dateTo') ?? DEFAULT_RECORD_DATES.toDate,
     activityTypeId: searchParams.get('activityTypeId') ?? '',
     workflowStatus: searchParams.get('workflowStatus') ?? '',
     hasEvidence: searchParams.get('hasEvidence') ?? '',
     page: Number(searchParams.get('page') ?? 0),
     size: Number(searchParams.get('size') ?? 10),
   }), [searchParams])
+  const [filterDraft, setFilterDraft] = useState(filters)
+  const [filterError, setFilterError] = useState('')
 
-  // Debounce keyword before updating URL params
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const next = new URLSearchParams(searchParams)
-      if (keywordInput) {
-        next.set('keyword', keywordInput)
-      } else {
-        next.delete('keyword')
-      }
-      next.set('page', '0')
-      setSearchParams(next)
-    }, 300)
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keywordInput])
+    setFilterDraft(filters)
+  }, [filters])
 
   // Load reference data (activity types, professional fields) once on mount
   useEffect(() => {
@@ -85,14 +77,8 @@ function TrainingRecordListPage() {
   }, [filters])
 
   const updateFilter = (name, value) => {
-    const next = new URLSearchParams(searchParams)
-    if (value) {
-      next.set(name, value)
-    } else {
-      next.delete(name)
-    }
-    next.set('page', '0')
-    setSearchParams(next)
+    setFilterError('')
+    setFilterDraft((current) => ({ ...current, [name]: value }))
   }
 
   const goToPage = (page) => {
@@ -102,14 +88,28 @@ function TrainingRecordListPage() {
   }
 
   const handleApplyFilters = () => {
-    const next = new URLSearchParams(searchParams)
+    const validationError = validateHistoricalDateRange(filterDraft.dateFrom, filterDraft.dateTo)
+    if (validationError) {
+      setFilterError(validationError)
+      return
+    }
+    setFilterError('')
+    const next = new URLSearchParams()
+    if (keywordInput.trim()) next.set('keyword', keywordInput.trim())
+    ;['dateFrom', 'dateTo', 'activityTypeId', 'workflowStatus', 'hasEvidence'].forEach((key) => {
+      if (filterDraft[key]) next.set(key, String(filterDraft[key]))
+    })
+    next.set('size', String(filters.size))
     next.set('page', '0')
     setSearchParams(next)
   }
 
   const handleClearFilters = () => {
     setKeywordInput('')
-    setSearchParams(new URLSearchParams())
+    const nextDraft = { ...filterDraft, keyword: '', dateFrom: DEFAULT_RECORD_DATES.fromDate, dateTo: DEFAULT_RECORD_DATES.toDate, activityTypeId: '', workflowStatus: '', hasEvidence: '', page: 0 }
+    setFilterDraft(nextDraft)
+    setFilterError('')
+    setSearchParams(new URLSearchParams({ dateFrom: DEFAULT_RECORD_DATES.fromDate, dateTo: DEFAULT_RECORD_DATES.toDate }))
   }
 
   return (
@@ -142,15 +142,15 @@ function TrainingRecordListPage() {
           </label>
           <label>
             From
-            <KeyboardDatePicker onChange={(val) => updateFilter('dateFrom', val)} value={filters.dateFrom} />
+            <KeyboardDatePicker allowInvalidValue max={filterDraft.dateTo || DEFAULT_RECORD_DATES.toDate} onChange={(val) => updateFilter('dateFrom', val)} value={filterDraft.dateFrom} />
           </label>
           <label>
             To
-            <KeyboardDatePicker onChange={(val) => updateFilter('dateTo', val)} value={filters.dateTo} />
+            <KeyboardDatePicker allowInvalidValue min={filterDraft.dateFrom || undefined} max={DEFAULT_RECORD_DATES.toDate} onChange={(val) => updateFilter('dateTo', val)} value={filterDraft.dateTo} />
           </label>
           <FilterSelectField
             label="Activity"
-            value={filters.activityTypeId}
+            value={filterDraft.activityTypeId}
             onChange={(value) => updateFilter('activityTypeId', value)}
             searchable
             options={[
@@ -160,7 +160,7 @@ function TrainingRecordListPage() {
           />
           <FilterSelectField
             label="Status"
-            value={filters.workflowStatus}
+            value={filterDraft.workflowStatus}
             onChange={(value) => updateFilter('workflowStatus', value)}
             options={[
               { value: '', label: 'All' },
@@ -169,7 +169,7 @@ function TrainingRecordListPage() {
           />
           <FilterSelectField
             label="Evidence"
-            value={filters.hasEvidence}
+            value={filterDraft.hasEvidence}
             onChange={(value) => updateFilter('hasEvidence', value)}
             options={[
               { value: '', label: 'All' },
@@ -178,6 +178,7 @@ function TrainingRecordListPage() {
             ]}
           />
           <FilterActionButtons onApply={handleApplyFilters} onReset={handleClearFilters} />
+          {filterError && <p className="applied-filter-toolbar__error" role="alert">{filterError}</p>}
         </div>
 
         {errorMessage ? <div className="training-message training-message--error">{errorMessage}</div> : null}

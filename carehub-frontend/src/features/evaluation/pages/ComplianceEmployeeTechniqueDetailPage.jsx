@@ -4,7 +4,6 @@ import {
   WarningFilled,
   CheckCircleFilled,
   ReloadOutlined,
-  ExclamationCircleFilled,
   CloseCircleFilled,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -55,10 +54,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
     { label: data?.employeeName || 'Chi tiết' },
   ]
 
-  const complianceTarget = data?.complianceTarget || 80.0
-  const belowTargetItems = data?.items ? data.items.filter(i => i.belowTarget).length : 0
-  const totalItems = data?.items ? data.items.length : 0
-
   const toggleExpand = (idx) => {
     setExpandedRow(expandedRow === idx ? null : idx)
   }
@@ -105,13 +100,6 @@ function ComplianceEmployeeTechniqueDetailPage() {
                   </div>
                   <div className="evd-detail-summary__metrics">
                     <span>Điểm TB kỹ năng <strong>{overallAvg != null ? formatNumber(overallAvg) : '—'}</strong></span>
-                    <span>Mục tiêu khoa <strong>{complianceTarget}%</strong></span>
-                    {totalItems > 0 && belowTargetItems > 0 && (
-                      <span className="is-danger">
-                        <ExclamationCircleFilled aria-hidden="true" />
-                        {belowTargetItems}/{totalItems} kỹ thuật dưới mục tiêu
-                      </span>
-                    )}
                   </div>
                   <button className="evd-btn" onClick={loadData} disabled={loading}>
                     <ReloadOutlined /> Tải lại

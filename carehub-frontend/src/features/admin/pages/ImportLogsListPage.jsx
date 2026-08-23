@@ -5,7 +5,10 @@ import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolba
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { adminApi } from '../api/adminApi'
 import { EyeOutlined, LeftOutlined, RightOutlined, LoadingOutlined } from '@ant-design/icons'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/ImportLogsListPage.css'
+
+const DEFAULT_IMPORT_LOG_DATES = currentYearDateRange()
 
 // Helper to generate 248 mock import logs for offline/fallback mode
 const generateMockLogs = () => {
@@ -110,10 +113,11 @@ function ImportLogsListPage() {
   // Filters State
   const [fileFilter, setFileFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom, setDateFrom] = useState(DEFAULT_IMPORT_LOG_DATES.fromDate)
+  const [dateTo, setDateTo] = useState(DEFAULT_IMPORT_LOG_DATES.toDate)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [appliedFilters, setAppliedFilters] = useState({ file: 'all', status: 'all', dateFrom: '', dateTo: '' })
+  const [filterError, setFilterError] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ file: 'all', status: 'all', ...DEFAULT_IMPORT_LOG_DATES })
 
   // Details Modal State
   const [selectedLog, setSelectedLog] = useState(null)
@@ -388,17 +392,25 @@ function ImportLogsListPage() {
   }
 
   const applyFilters = () => {
+    const validationError = validateHistoricalDateRange(dateFrom, dateTo, { maxDate: DEFAULT_IMPORT_LOG_DATES.toDate })
+    if (validationError) {
+      setFilterError(validationError)
+      return
+    }
+    setFilterError('')
     setPage(1)
     setAppliedFilters({ file: fileFilter, status: statusFilter, dateFrom, dateTo })
+    setIsFilterOpen(false)
   }
 
   const resetFilters = () => {
     setFileFilter('all')
     setStatusFilter('all')
-    setDateFrom('')
-    setDateTo('')
+    setDateFrom(DEFAULT_IMPORT_LOG_DATES.fromDate)
+    setDateTo(DEFAULT_IMPORT_LOG_DATES.toDate)
+    setFilterError('')
     setPage(1)
-    setAppliedFilters({ file: 'all', status: 'all', dateFrom: '', dateTo: '' })
+    setAppliedFilters({ file: 'all', status: 'all', ...DEFAULT_IMPORT_LOG_DATES })
   }
 
   return (
@@ -428,15 +440,19 @@ function ImportLogsListPage() {
                   activeCount={[
                     fileFilter !== 'all',
                     statusFilter !== 'all',
-                    Boolean(dateFrom),
-                    Boolean(dateTo),
+                    dateFrom !== DEFAULT_IMPORT_LOG_DATES.fromDate,
+                    dateTo !== DEFAULT_IMPORT_LOG_DATES.toDate,
                   ].filter(Boolean).length}
                   actions={<span className="il-results-count">{totalElements} kết quả</span>}
                   className="il-filter-bar"
+                  errorMessage={filterError}
                   isOpen={isFilterOpen}
                   onApply={applyFilters}
                   onReset={resetFilters}
-                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  onToggle={() => {
+                    setFilterError('')
+                    setIsFilterOpen((current) => !current)
+                  }}
                   panelClassName="il-filter-panel"
                   panelId="import-log-filter-panel"
                 >
@@ -461,18 +477,23 @@ function ImportLogsListPage() {
                 <div className="il-filter-field">
                   <span className="il-filter-label">Từ ngày</span>
                   <KeyboardDatePicker
+                    allowInvalidValue
                     className="il-filter-date"
                     value={dateFrom}
-                    onChange={(val) => setDateFrom(val)}
+                    max={dateTo || DEFAULT_IMPORT_LOG_DATES.toDate}
+                    onChange={(val) => { setFilterError(''); setDateFrom(val) }}
                   />
                 </div>
 
                 <div className="il-filter-field">
                   <span className="il-filter-label">Đến ngày</span>
                   <KeyboardDatePicker
+                    allowInvalidValue
                     className="il-filter-date"
                     value={dateTo}
-                    onChange={(val) => setDateTo(val)}
+                    min={dateFrom || undefined}
+                    max={DEFAULT_IMPORT_LOG_DATES.toDate}
+                    onChange={(val) => { setFilterError(''); setDateTo(val) }}
                   />
                 </div>
 

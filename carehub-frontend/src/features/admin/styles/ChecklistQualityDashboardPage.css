@@ -510,6 +510,9 @@
 .checklist-quality-detail { display: grid; gap: 20px; }
 .checklist-quality-detail__header > div > span { color: #0a8b74; font-size: 12px; font-weight: 700; letter-spacing: .05em; }
 .checklist-quality-detail__rate { background: #e7f8f2; border-radius: 18px; color: #078768; font-weight: 700; padding: 9px 13px; }
+.checklist-quality-detail__rate--pass { background: #e7f8f2; color: #078768; }
+.checklist-quality-detail__rate--fail { background: #fef2f2; color: #dc2626; }
+.checklist-quality-detail__rate--empty { background: #f1f5f9; color: #64748b; }
 
 .checklist-quality-metrics {
   display: grid;
