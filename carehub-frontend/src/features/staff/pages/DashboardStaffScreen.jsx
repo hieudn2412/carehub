@@ -276,6 +276,10 @@ export default function DashboardStaffScreen() {
             <span>Điểm sàn {formatScore(metrics.targetScore)}/10</span>
           </div>
         </section>
+
+        <footer className="staff-home-footer">
+          &copy; {new Date().getFullYear()} Hệ thống quản lý điều dưỡng - VietDuc Care
+        </footer>
       </div>
     </AppShell>
   )

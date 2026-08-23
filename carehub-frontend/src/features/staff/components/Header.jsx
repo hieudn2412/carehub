@@ -107,13 +107,14 @@ function Header({
     notifications,
     unreadCount,
     pendingExamCount,
+    hasChecklistAssignment,
     markAllAsRead,
     markAsRead,
   } = useNotifications()
 
   useEffect(() => {
-    onAlertSummaryChange?.({ unreadCount, pendingExamCount })
-  }, [onAlertSummaryChange, pendingExamCount, unreadCount])
+    onAlertSummaryChange?.({ unreadCount, pendingExamCount, hasChecklistAssignment })
+  }, [onAlertSummaryChange, pendingExamCount, unreadCount, hasChecklistAssignment])
 
   // Xử lý đóng popover khi click ra ngoài
   useEffect(() => {

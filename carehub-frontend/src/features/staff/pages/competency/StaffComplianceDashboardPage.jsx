@@ -288,7 +288,7 @@ function StaffComplianceDashboardPage() {
                       tick={{ fontSize: isMobile ? 9 : 11, fill: '#647b74' }}
                     />
                     <YAxis domain={[0, 100]} tickFormatter={value => `${value}%`} tick={{ fontSize: 11, fill: '#647b74' }} />
-                    <Tooltip formatter={(value, name) => [`${formatPercent(value)}%`, name === 'targetPercent' ? 'Mục tiêu' : 'Tuân thủ']} labelFormatter={(_, payload) => payload?.[0]?.payload?.formName || ''} />
+                    <Tooltip formatter={(value, name) => [`${formatPercent(value)}%`, name]} labelFormatter={(_, payload) => payload?.[0]?.payload?.formName || ''} />
                     <Bar dataKey="targetPercent" name="Mục tiêu" fill="#1677c8" radius={[4, 4, 0, 0]} barSize={34} />
                     <Bar dataKey="complianceRate" name="Tuân thủ" fill="#e6a21a" radius={[4, 4, 0, 0]} barSize={34} />
                   </BarChart>
