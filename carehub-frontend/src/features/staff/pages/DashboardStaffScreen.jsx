@@ -70,9 +70,12 @@ function DashboardMetricCard({
 }) {
   const content = (
     <>
-      <div className="staff-home-metric__heading">
-        <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
-        <h2>{title}</h2>
+      <div>
+        <div className="staff-home-metric__heading">
+          <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
+          <h2>{title}</h2>
+        </div>
+        <p>{description}</p>
       </div>
       <div className="staff-home-metric__values">
         {progress != null && (
@@ -93,7 +96,6 @@ function DashboardMetricCard({
           <span style={{ width: `${clampPercentage(progress)}%` }} />
         </div>
       )}
-      <p>{description}</p>
     </>
   )
 

@@ -204,7 +204,10 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       onClick={onOpen}
       type="button"
     >
-      <span className="overview-management-kpi__label">{labels[type]}</span>
+      <div>
+        <span className="overview-management-kpi__label">{labels[type]}</span>
+        <small>{detail}</small>
+      </div>
       {available ? (
         <span className="overview-management-kpi__metrics">
           <strong>{primaryValue}</strong>
@@ -213,7 +216,6 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       ) : (
         <span className="overview-management-kpi__empty">Chưa có dữ liệu</span>
       )}
-      <small>{detail}</small>
     </button>
   )
 }
