@@ -8,6 +8,7 @@ function AppliedFilterToolbar({
   children,
   className = '',
   filterLabel = 'Bộ lọc',
+  errorMessage = '',
   header,
   isOpen,
   onApply,
@@ -60,6 +61,9 @@ function AppliedFilterToolbar({
           <div className="applied-filter-toolbar__fields">
             {children}
           </div>
+          {errorMessage && (
+            <p className="applied-filter-toolbar__error" role="alert">{errorMessage}</p>
+          )}
           <FilterActionButtons className="applied-filter-toolbar__actions" onReset={onReset} onApply={onApply} />
         </div>
       )}

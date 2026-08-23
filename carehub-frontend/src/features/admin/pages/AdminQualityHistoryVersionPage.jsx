@@ -21,6 +21,7 @@ import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/AdminQualityHistoryPage.css'
 
 const RESULT_OPTIONS = [
@@ -209,6 +210,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
   const [metadataError, setMetadataError] = useState('')
   const [resultsLoading, setResultsLoading] = useState(true)
   const [resultsError, setResultsError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState('')
@@ -634,10 +636,12 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     dateTo !== defaultDateRange.dateTo ? dateTo : '',
   ].filter(Boolean).length
   const applyHistoryFilters = () => {
-    if (draftDateFrom && draftDateTo && draftDateFrom > draftDateTo) {
-      setResultsError('Từ ngày không được sau đến ngày.')
+    const validationError = validateHistoricalDateRange(draftDateFrom, draftDateTo, { maxDate: defaultDateRange.dateTo })
+    if (validationError) {
+      setFilterError(validationError)
       return
     }
+    setFilterError('')
     const nextParams = new URLSearchParams()
     nextParams.set('size', String(pageSize))
     nextParams.set('dateFrom', draftDateFrom || defaultDateRange.dateFrom)
@@ -656,6 +660,7 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
     setKeywordInput('')
     setResultsLoading(true)
     setIsFilterOpen(false)
+    setFilterError('')
     const nextParams = new URLSearchParams({
       size: String(pageSize),
       dateFrom: defaultDateRange.dateFrom,
@@ -755,11 +760,15 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                   activeCount={historyFilterCount}
                   ariaLabel="Bộ lọc kết quả đánh giá"
                   className="aqh-results-filter"
+                  errorMessage={filterError}
                   isOpen={isFilterOpen}
                   onApply={applyHistoryFilters}
                   onReset={resetHistoryFilters}
                   onSearchChange={setKeywordInput}
-                  onToggle={() => setIsFilterOpen((current) => !current)}
+                  onToggle={() => {
+                    setFilterError('')
+                    setIsFilterOpen((current) => !current)
+                  }}
                   panelClassName="aqh-results-filter-panel"
                   panelId="quality-history-filter-panel"
                   searchAriaLabel="Tìm nhân viên được đánh giá"
@@ -814,8 +823,8 @@ function AdminQualityHistoryVersionPage({ role = 'admin' }) {
                         value={draftResult}
                       />
                     </label>
-                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} /></label>
-                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Từ ngày</span><KeyboardDatePicker allowInvalidValue value={draftDateFrom} max={draftDateTo || defaultDateRange.dateTo} onChange={(value) => { setFilterError(''); setDraftDateFrom(value) }} /></label>
+                    <label className="admin-control-toolbar__field aqh-results-filter__date"><span>Đến ngày</span><KeyboardDatePicker allowInvalidValue value={draftDateTo} min={draftDateFrom || undefined} max={defaultDateRange.dateTo} onChange={(value) => { setFilterError(''); setDraftDateTo(value) }} /></label>
                 </AppliedFilterToolbar>
 
                 {exportError && <div className="aqh-export-error" role="alert">{exportError}</div>}

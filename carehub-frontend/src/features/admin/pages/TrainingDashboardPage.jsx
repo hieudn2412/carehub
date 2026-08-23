@@ -218,7 +218,7 @@ function DashboardContent({ role }) {
           const managerProfile = responsePayload(scopeResult.value)
           setProfile(managerProfile)
           if (!managerProfile?.departmentId) {
-            setError('Tài khoản Manager chưa được gán khoa/phòng nên không thể xem dashboard.')
+            setError('Tài khoản Quản lý cấp Khoa chưa được gán khoa/phòng nên không thể xem dashboard.')
             setLoading(false)
           }
         }

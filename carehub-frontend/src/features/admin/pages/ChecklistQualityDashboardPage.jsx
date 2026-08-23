@@ -24,6 +24,7 @@ import FilterActionButtons from '../../../shared/components/FilterActionButtons.
 import { adminApi } from '../api/adminApi.js'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { apiData, apiErrorMessage } from '../../../shared/utils/apiUi.js'
+import { validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/ChecklistQualityDashboardPage.css'
 
 function localDate(date = new Date()) {
@@ -162,6 +163,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
   const usesAppliedFilters = true
   const [appliedRoleFilters, setAppliedRoleFilters] = useState({
@@ -426,6 +428,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setDetailError('')
     setDetailLoading(false)
     setTrendItems([])
+    setFilterError('')
     if (usesAppliedFilters) {
       setAppliedRoleFilters({
         departmentId: isAdmin ? '' : isManager ? ownDepartmentId : departmentId,
@@ -441,11 +444,12 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }
 
   function applyRoleFilters() {
-    if (fromDate && toDate && fromDate > toDate) {
-      setError('Từ ngày không được sau đến ngày')
+    const dateError = validateHistoricalDateRange(fromDate, toDate, { maxDate: today })
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
-    setError('')
+    setFilterError('')
     setFilteredSelectedFormId('')
     setForceFilteredView(true)
     setSelectedDetailForm(null)
@@ -535,8 +539,8 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   )
   const filterFields = (
     <>
-      <DateFilter label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={setFromDate} />
-      <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={setToDate} />
+      <DateFilter label="Từ ngày" value={fromDate} max={toDate || today} onChange={(value) => { setFilterError(''); setFromDate(value) }} />
+      <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} max={today} onChange={(value) => { setFilterError(''); setToDate(value) }} />
       {isAdmin && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
         <SearchableSelect value={departmentId} onChange={setDepartmentId}
           placeholder="Toàn viện"
@@ -597,11 +601,15 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           actions={toolbarActions}
           ariaLabel="Công cụ tuân thủ theo kỹ thuật"
           className="checklist-quality-toolbar"
+          errorMessage={filterError}
           isOpen={isFilterOpen}
           onApply={applyRoleFilters}
           onReset={resetFilters}
           onSearchChange={setSearch}
-          onToggle={() => setIsFilterOpen((current) => !current)}
+          onToggle={() => {
+            setFilterError('')
+            setIsFilterOpen((current) => !current)
+          }}
           panelClassName="checklist-quality-filter-panel"
           panelId="checklist-quality-filter-panel"
           searchAriaLabel="Tìm theo tên hoặc mã quy trình"
@@ -751,7 +759,7 @@ function userOptions(items, allLabel) {
 
 function DateFilter({ label, value, min, max, onChange }) {
   return <label className="checklist-quality-filter"><span>{label}</span><div><CalendarOutlined />
-    <KeyboardDatePicker value={value} min={min} max={max} onChange={(val) => onChange(val)} />
+    <KeyboardDatePicker allowInvalidValue value={value} min={min} max={max} onChange={(val) => onChange(val)} />
   </div></label>
 }
 

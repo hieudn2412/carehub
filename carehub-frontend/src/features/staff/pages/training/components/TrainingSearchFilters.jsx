@@ -3,6 +3,7 @@ import KeyboardDatePicker from '../../../../../shared/components/KeyboardDatePic
 import FilterActionButtons from '../../../../../shared/components/FilterActionButtons.jsx'
 import FilterSelectField from '../../../../../shared/components/FilterSelectField.jsx'
 import { createEmptyTrainingFilters, countActiveFilterGroups } from '../utils/trainingRecordQuery.js'
+import { formatLocalDate } from '../../../../../shared/utils/dateRange.js'
 
 const STATUS_OPTIONS = [
   { value: '', label: 'Tất cả trạng thái' },
@@ -63,11 +64,11 @@ function TrainingSearchFilters({
           />
           <label className="th-mobile-search-form__field">
             <span>Từ ngày</span>
-            <KeyboardDatePicker value={filters.dateFrom} onChange={val => updateFilter('dateFrom', val)} aria-label="Bộ lọc từ ngày" />
+            <KeyboardDatePicker allowInvalidValue value={filters.dateFrom} max={filters.dateTo || formatLocalDate()} onChange={val => updateFilter('dateFrom', val)} aria-label="Bộ lọc từ ngày" />
           </label>
           <label className="th-mobile-search-form__field">
             <span>Đến ngày</span>
-            <KeyboardDatePicker value={filters.dateTo} onChange={val => updateFilter('dateTo', val)} aria-label="Bộ lọc đến ngày" />
+            <KeyboardDatePicker allowInvalidValue value={filters.dateTo} min={filters.dateFrom || undefined} max={formatLocalDate()} onChange={val => updateFilter('dateTo', val)} aria-label="Bộ lọc đến ngày" />
           </label>
           <FilterSelectField
             className="th-mobile-search-form__field"

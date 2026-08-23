@@ -31,6 +31,7 @@ import { apiData, apiErrorMessage } from '../utils/documentQuestionUi.js'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
 
 function numberOrNull(value) {
@@ -57,14 +58,15 @@ function unwrapList(response) {
   return Array.isArray(data?.content) ? data.content : []
 }
 
+const DEFAULT_EVALUATION_DASHBOARD_DATES = currentYearDateRange()
 const DEFAULT_EVALUATION_DASHBOARD_FILTERS = {
   departmentId: '',
   employeeId: '',
-  fromDate: '',
+  fromDate: DEFAULT_EVALUATION_DASHBOARD_DATES.fromDate,
   paperId: '',
   professionalFieldId: '',
   resultStatus: '',
-  toDate: '',
+  toDate: DEFAULT_EVALUATION_DASHBOARD_DATES.toDate,
 }
 
 function EvaluationDashboardPage({ role = 'admin' }) {
@@ -78,6 +80,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const [loading, setLoading] = useState(true)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [filters, setFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState(DEFAULT_EVALUATION_DASHBOARD_FILTERS)
 
@@ -131,7 +134,7 @@ function EvaluationDashboardPage({ role = 'admin' }) {
               departmentId: managerDepartmentId,
             }))
           } else {
-            setError('Tài khoản manager chưa được gán khoa/phòng.')
+            setError('Tài khoản Quản lý cấp Khoa chưa được gán khoa/phòng.')
           }
           return
         }
@@ -221,8 +224,8 @@ function EvaluationDashboardPage({ role = 'admin' }) {
   const passed = numberOrNull(summary?.passedAttempts)
   const failed = numberOrNull(summary?.failedAttempts)
   const activeFilterCount = [
-    appliedFilters.fromDate,
-    appliedFilters.toDate,
+    appliedFilters.fromDate !== DEFAULT_EVALUATION_DASHBOARD_FILTERS.fromDate,
+    appliedFilters.toDate !== DEFAULT_EVALUATION_DASHBOARD_FILTERS.toDate,
     !isManager && appliedFilters.departmentId,
     appliedFilters.paperId,
     appliedFilters.professionalFieldId,
@@ -240,15 +243,16 @@ function EvaluationDashboardPage({ role = 'admin' }) {
     }
     setFilters(nextFilters)
     setAppliedFilters(nextFilters)
-    setError('')
+    setFilterError('')
   }
 
   function applyFilters() {
-    if (filters.fromDate && filters.toDate && filters.fromDate > filters.toDate) {
-      setError('Từ ngày không được sau đến ngày.')
+    const dateError = validateHistoricalDateRange(filters.fromDate, filters.toDate)
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
-    setError('')
+    setFilterError('')
     setAppliedFilters({ ...filters })
     setIsFilterOpen(false)
   }
@@ -265,16 +269,20 @@ function EvaluationDashboardPage({ role = 'admin' }) {
             activeCount={activeFilterCount}
             ariaLabel="Bộ lọc dashboard năng lực chuyên môn"
             className="exam-dashboard__toolbar"
+            errorMessage={filterError}
             isOpen={isFilterOpen}
             onApply={applyFilters}
             onReset={resetFilters}
-            onToggle={() => setIsFilterOpen((current) => !current)}
+            onToggle={() => {
+              setFilterError('')
+              setIsFilterOpen((current) => !current)
+            }}
             panelClassName="exam-dashboard__filter-panel"
             panelId="exam-dashboard-filter-panel"
             showFilter
           >
-                <Filter label="Từ ngày"><KeyboardDatePicker value={filters.fromDate} onChange={(val) => setFilters({ ...filters, fromDate: val })} /></Filter>
-                <Filter label="Đến ngày"><KeyboardDatePicker value={filters.toDate} onChange={(val) => setFilters({ ...filters, toDate: val })} /></Filter>
+                <Filter label="Từ ngày"><KeyboardDatePicker allowInvalidValue value={filters.fromDate} max={filters.toDate || DEFAULT_EVALUATION_DASHBOARD_DATES.toDate} onChange={(val) => { setFilterError(''); setFilters({ ...filters, fromDate: val }) }} /></Filter>
+                <Filter label="Đến ngày"><KeyboardDatePicker allowInvalidValue value={filters.toDate} min={filters.fromDate || undefined} max={DEFAULT_EVALUATION_DASHBOARD_DATES.toDate} onChange={(val) => { setFilterError(''); setFilters({ ...filters, toDate: val }) }} /></Filter>
                 <FilterSelectField
                     label="Khoa/phòng"
                     value={filters.departmentId}

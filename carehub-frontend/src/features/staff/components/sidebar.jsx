@@ -103,7 +103,7 @@ function Sidebar({ alertSummary = {} }) {
         { icon: <ClockCircleOutlined />, label: 'Đào tạo liên tục', path: '/staff/training' },
         { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/staff/competency' },
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
-        ...(!isManager && alertSummary.hasChecklistAssignment ? [
+        ...(!isManager ? [
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
           { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists', badge: assignedCount },
         ] : []),
@@ -337,7 +337,7 @@ function Sidebar({ alertSummary = {} }) {
         },
       ],
     },
-    ...(!isManager && alertSummary.hasChecklistAssignment ? [
+    ...(!isManager ? [
       {
         title: 'Đánh giá',
         items: [
