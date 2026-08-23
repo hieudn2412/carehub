@@ -33,6 +33,7 @@ public class FormAssignmentService {
     private final FormRepository formRepository;
     private final FormVersionRepository versionRepository;
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
     private final UserRoleRepository userRoleRepository;
     private final SecurityUtils securityUtils;
     private final FormAssignmentAccessService accessService;
@@ -93,9 +94,12 @@ public class FormAssignmentService {
             FormAssignment assignment = FormAssignment.builder()
                     .manager(assignee).assignedBy(assignedBy).assignedAt(now).effectiveFrom(from)
                     .effectiveTo(request.validUntil()).status(FormAssignmentStatus.ACTIVE).build();
+            List<Department> fallbackDepartments = departmentRepository.findAll();
             newVersions.forEach(version -> assignment.getItems().add(FormAssignmentItem.builder()
                     .assignment(assignment).form(version.getForm()).formVersion(version)
-                    .status(FormAssignmentStatus.ACTIVE).build()));
+                    .status(FormAssignmentStatus.ACTIVE)
+                    .allowedDepartments(new LinkedHashSet<>(fallbackDepartments))
+                    .build()));
             FormAssignment savedAssignment = assignmentRepository.saveAndFlush(assignment);
             FormAssignmentResponse response = toResponse(savedAssignment);
             if (firstResponse == null) firstResponse = response;
@@ -111,7 +115,7 @@ public class FormAssignmentService {
                         "Bạn đã được phân công thực hiện bảng kiểm: " + item.getFormVersion().getTitle(),
                         deepLink,
                         "form_assignment_item:" + item.getId()
-                );
+                );  
             }
         }
         if (firstResponse == null) throw new ConflictException("Không thể tạo phân công biểu mẫu");
@@ -216,15 +220,67 @@ public class FormAssignmentService {
         if ((formId == null && assigneeId == null) || (formId != null && assigneeId != null)) {
             throw ValidationException.field("scope", "Vui lòng truyền đúng một trong formId hoặc assigneeId");
         }
-        return itemRepository.searchActiveItems(
+        Page<FormAssignmentItem> itemPage = itemRepository.searchActiveItems(
                 formId,
                 assigneeId,
                 FormAssignmentStatus.ACTIVE,
                 FormStatus.PUBLISHED,
                 FormVersionStatus.PUBLISHED,
                 Instant.now(clock),
-                normalizeUnsorted(pageable))
-                .map(this::toItemRow);
+                normalizeUnsorted(pageable));
+
+        List<Long> itemIds = itemPage.getContent().stream().map(FormAssignmentItem::getId).toList();
+        Map<Long, Integer> deptCountMap = new HashMap<>();
+        if (!itemIds.isEmpty()) {
+            List<Object[]> counts = itemRepository.countAllowedDepartmentsGroupedByItemIds(itemIds);
+            for (Object[] row : counts) {
+                Long id = (Long) row[0];
+                Number cnt = (Number) row[1];
+                deptCountMap.put(id, cnt.intValue());
+            }
+        }
+
+        List<Long> userIds = itemPage.getContent().stream()
+                .map(item -> item.getAssignment().getManager().getId())
+                .distinct()
+                .toList();
+        Map<Long, List<String>> rolesMap = new HashMap<>();
+        for (Long uid : userIds) {
+            rolesMap.put(uid, roleCodes(uid));
+        }
+
+        return itemPage.map(item -> {
+            FormAssignment assignment = item.getAssignment();
+            User assignee = assignment.getManager();
+            FormVersion displayVersion = currentPublishedVersion(item);
+            return FormAssignmentItemRowResponse.builder()
+                    .assignmentId(assignment.getId())
+                    .assignmentItemId(item.getId())
+                    .formId(item.getForm().getId())
+                    .formCode(item.getForm().getCode())
+                    .formTitle(item.getForm().getTitle())
+                    .formVersionId(displayVersion == null ? null : displayVersion.getId())
+                    .versionNumber(displayVersion == null ? null : displayVersion.getVersionNumber())
+                    .assigneeId(assignee.getId())
+                    .employeeCode(assignee.getEmployeeCode())
+                    .fullName(assignee.getName())
+                    .departmentId(assignee.getDepartment() == null ? null : assignee.getDepartment().getId())
+                    .departmentName(assignee.getDepartment() == null ? null : assignee.getDepartment().getName())
+                    .roleCodes(rolesMap.getOrDefault(assignee.getId(), List.of()))
+                    .allowedDepartmentCount(deptCountMap.getOrDefault(item.getId(), 0))
+                    .allowedDepartments(List.of())
+                    .assignedAt(assignment.getAssignedAt())
+                    .validFrom(assignment.getEffectiveFrom())
+                    .validUntil(assignment.getEffectiveTo())
+                    .build();
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<FormAssignmentDepartmentScopeResponse> allowedDepartmentsForItem(Long itemId) {
+        return itemRepository.findAllowedDepartmentsByItemId(itemId).stream()
+                .map(this::departmentScope)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -268,6 +324,47 @@ public class FormAssignmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<FormAssignmentCandidateResponse> managerCandidates() {
+        return userRepository.findActiveManagerFormAssignmentCandidates().stream()
+                .map(user -> FormAssignmentCandidateResponse.builder()
+                        .id(user.getId())
+                        .employeeCode(user.getEmployeeCode())
+                        .fullName(user.getName())
+                        .departmentId(user.getDepartment() == null ? null : user.getDepartment().getId())
+                        .departmentName(user.getDepartment() == null ? null : user.getDepartment().getName())
+                        .roleCodes(roleCodes(user.getId()))
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FormAssignmentDepartmentScopeResponse> allowedDepartmentsForForm(Long formId) {
+        Instant now = Instant.now(clock);
+        formRepository.findByIdAndDeletedFalse(formId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bảng kiểm"));
+        if (currentUserIsAdmin()) {
+            return departmentRepository.findAll().stream()
+                    .sorted(Comparator.comparing(Department::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                    .map(this::departmentScope)
+                    .toList();
+        }
+        List<Department> departments = itemRepository.findActiveAllowedDepartments(
+                securityUtils.getCurrentUserId(),
+                formId,
+                FormAssignmentStatus.ACTIVE,
+                FormStatus.PUBLISHED,
+                FormVersionStatus.PUBLISHED,
+                now);
+        if (departments.isEmpty()) {
+            throw new ResourceNotFoundException("Không tìm thấy phạm vi khoa/phòng được phân quyền");
+        }
+        return departments.stream()
+                .sorted(Comparator.comparing(Department::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .map(this::departmentScope)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public BulkFormAssignmentPreviewResponse previewBulk(BulkFormAssignmentRequest request) {
         AssignmentMatrix matrix = buildMatrix(request, false);
         return previewFrom(matrix);
@@ -294,11 +391,11 @@ public class FormAssignmentService {
                 }
                 case UPDATED -> {
                     updated++;
-                    updateExistingItem(decision.item(), assignedBy, decision.version(), matrix.validUntil(), false, now);
+                    updateExistingItem(decision.item(), assignedBy, decision.version(), matrix.validUntil(), matrix.departments(), false, now);
                 }
                 case RESTORED -> {
                     restored++;
-                    updateExistingItem(decision.item(), assignedBy, decision.version(), matrix.validUntil(), true, now);
+                    updateExistingItem(decision.item(), assignedBy, decision.version(), matrix.validUntil(), matrix.departments(), true, now);
                 }
                 case UNCHANGED -> unchanged++;
             }
@@ -321,6 +418,7 @@ public class FormAssignmentService {
                     .form(version.getForm())
                     .formVersion(version)
                     .status(FormAssignmentStatus.ACTIVE)
+                    .allowedDepartments(new LinkedHashSet<>(matrix.departments()))
                     .build()));
             assignmentRepository.save(assignment);
             notifyNewAssignments(assignee, versions, now);
@@ -386,6 +484,7 @@ public class FormAssignmentService {
         Instant now = Instant.now(clock);
         List<Long> formIds = request.formIds().stream().distinct().toList();
         List<Long> assigneeIds = request.assigneeIds().stream().distinct().toList();
+        List<Department> departments = loadDepartments(request.departmentIds());
         Map<Long, Form> formsById = new LinkedHashMap<>();
         for (Long formId : formIds) {
             Form form = (lockForms ? formRepository.findActiveByIdForUpdate(formId) : formRepository.findByIdAndDeletedFalse(formId))
@@ -414,17 +513,20 @@ public class FormAssignmentService {
             for (Form form : formsById.values()) {
                 FormAssignmentItem latest = latestByForm.get(form.getId());
                 FormVersion currentVersion = form.getCurrentPublishedVersion();
-                PairAction action = classify(latest, request.validUntil(), now);
+                PairAction action = classify(latest, request.validUntil(), departments, now);
                 decisions.add(new PairDecision(form, currentVersion, assignee, latest, action));
             }
         }
         return new AssignmentMatrix(List.copyOf(formsById.values()), List.copyOf(assigneesById.values()),
-                request.validUntil(), decisions);
+                List.copyOf(departments), request.validUntil(), decisions);
     }
 
     private void validateBulkRequestShape(BulkFormAssignmentRequest request) {
         if (request.validUntil() != null && !request.validUntil().isAfter(Instant.now(clock))) {
             throw ValidationException.field("validUntil", "Ngày hết hạn phải sau thời điểm hiện tại");
+        }
+        if (request.departmentIds() == null || request.departmentIds().isEmpty()) {
+            throw ValidationException.field("departmentIds", "Vui lòng chọn ít nhất một khoa/phòng được phép chấm");
         }
         if (request.formIds().stream().distinct().count() != request.formIds().size()) {
             throw ValidationException.field("formIds", "Danh sách bảng kiểm không được trùng lặp");
@@ -432,6 +534,20 @@ public class FormAssignmentService {
         if (request.assigneeIds().stream().distinct().count() != request.assigneeIds().size()) {
             throw ValidationException.field("assigneeIds", "Danh sách người nhận không được trùng lặp");
         }
+        if (request.departmentIds().stream().distinct().count() != request.departmentIds().size()) {
+            throw ValidationException.field("departmentIds", "Danh sách khoa/phòng không được trùng lặp");
+        }
+    }
+
+    private List<Department> loadDepartments(List<Long> departmentIds) {
+        List<Long> distinct = departmentIds.stream().distinct().toList();
+        List<Department> departments = departmentRepository.findAllById(distinct);
+        if (departments.size() != distinct.size()) {
+            throw ValidationException.field("departmentIds", "Một hoặc nhiều khoa/phòng không tồn tại");
+        }
+        Map<Long, Department> byId = new HashMap<>();
+        departments.forEach(department -> byId.put(department.getId(), department));
+        return distinct.stream().map(byId::get).toList();
     }
 
     private void validateAssignee(User assignee) {
@@ -449,11 +565,23 @@ public class FormAssignmentService {
         }
     }
 
-    private PairAction classify(FormAssignmentItem latest, Instant validUntil, Instant now) {
+    private PairAction classify(FormAssignmentItem latest, Instant validUntil, List<Department> departments, Instant now) {
         if (latest == null) return PairAction.NEW;
         if (!isItemCurrentlyActive(latest, now)) return PairAction.RESTORED;
         Instant currentUntil = latest.getAssignment().getEffectiveTo();
-        return Objects.equals(currentUntil, validUntil) ? PairAction.UNCHANGED : PairAction.UPDATED;
+        return Objects.equals(currentUntil, validUntil) && sameDepartmentScope(latest, departments)
+                ? PairAction.UNCHANGED
+                : PairAction.UPDATED;
+    }
+
+    private boolean sameDepartmentScope(FormAssignmentItem item, List<Department> departments) {
+        Set<Long> currentIds = item.getAllowedDepartments().stream()
+                .map(Department::getId)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        Set<Long> requestedIds = departments.stream()
+                .map(Department::getId)
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        return currentIds.equals(requestedIds);
     }
 
     private boolean isItemCurrentlyActive(FormAssignmentItem item, Instant now) {
@@ -490,7 +618,7 @@ public class FormAssignmentService {
     }
 
     private void updateExistingItem(FormAssignmentItem item, User assignedBy, FormVersion currentVersion,
-                                    Instant validUntil, boolean restored, Instant now) {
+                                    Instant validUntil, List<Department> departments, boolean restored, Instant now) {
         Instant effectiveFrom = restored ? now : item.getAssignment().getEffectiveFrom();
         isolateItemIfNeeded(item, assignedBy, effectiveFrom, now);
         FormAssignment assignment = item.getAssignment();
@@ -505,6 +633,12 @@ public class FormAssignmentService {
         item.setStatus(FormAssignmentStatus.ACTIVE);
         item.setForm(currentVersion.getForm());
         item.setFormVersion(currentVersion);
+        replaceAllowedDepartments(item, departments);
+    }
+
+    private void replaceAllowedDepartments(FormAssignmentItem item, List<Department> departments) {
+        item.getAllowedDepartments().clear();
+        item.getAllowedDepartments().addAll(departments);
     }
 
     private void isolateItemIfNeeded(FormAssignmentItem item, User assignedBy, Instant effectiveFrom, Instant now) {
@@ -574,9 +708,20 @@ public class FormAssignmentService {
                 .departmentId(assignee.getDepartment() == null ? null : assignee.getDepartment().getId())
                 .departmentName(assignee.getDepartment() == null ? null : assignee.getDepartment().getName())
                 .roleCodes(roleCodes(assignee.getId()))
+                .allowedDepartments(item.getAllowedDepartments().stream()
+                        .sorted(Comparator.comparing(Department::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                        .map(this::departmentScope)
+                        .toList())
                 .assignedAt(assignment.getAssignedAt())
                 .validFrom(assignment.getEffectiveFrom())
                 .validUntil(assignment.getEffectiveTo())
+                .build();
+    }
+
+    private FormAssignmentDepartmentScopeResponse departmentScope(Department department) {
+        return FormAssignmentDepartmentScopeResponse.builder()
+                .departmentId(department.getId())
+                .departmentName(department.getName())
                 .build();
     }
 
@@ -614,6 +759,10 @@ public class FormAssignmentService {
         return roleCode == null ? "" : roleCode.trim().toUpperCase(Locale.ROOT);
     }
 
+    private boolean currentUserIsAdmin() {
+        return roleCodes(securityUtils.getCurrentUserId()).stream().anyMatch(this::isAdminRoleCode);
+    }
+
     private String like(String keyword) {
         if (keyword == null || keyword.isBlank()) return null;
         return "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
@@ -641,12 +790,23 @@ public class FormAssignmentService {
                 : assignment.getManager().getDepartment().getId();
         FormComplianceTargetService.AppliedTarget appliedTarget =
                 complianceTargetService.resolveAppliedTarget(item.getForm().getId(), departmentId);
+        List<FormAssignmentDepartmentScopeResponse> allowedDepts = item.getAllowedDepartments() == null
+                ? List.of()
+                : item.getAllowedDepartments().stream()
+                    .sorted(Comparator.comparing(Department::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                    .map(this::departmentScope)
+                    .toList();
+        boolean allDepts = allowedDepts.isEmpty();
+
         return AssignedFormResponse.builder().assignmentItemId(item.getId())
                 .formId(item.getForm().getId()).formCode(item.getForm().getCode()).title(displayVersion.getTitle())
                 .complianceTargetPercent(appliedTarget.targetPercent())
                 .complianceTargetSource(appliedTarget.targetSource())
                 .validFrom(assignment.getEffectiveFrom()).validUntil(assignment.getEffectiveTo())
-                .version(detail ? formMapper.toResponse(displayVersion) : null).build();
+                .version(detail ? formMapper.toResponse(displayVersion) : null)
+                .allDepartments(allDepts)
+                .allowedDepartments(allowedDepts)
+                .build();
     }
 
     private FormAssignmentResponse toResponse(FormAssignment assignment) {
@@ -729,6 +889,7 @@ public class FormAssignmentService {
     private record AssignmentMatrix(
             List<Form> forms,
             List<User> assignees,
+            List<Department> departments,
             Instant validUntil,
             List<PairDecision> decisions
     ) {

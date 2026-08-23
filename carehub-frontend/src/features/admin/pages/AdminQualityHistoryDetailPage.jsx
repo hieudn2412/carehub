@@ -192,7 +192,7 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
               )}
 
               <section className="aqh-detail-summary-grid">
-                <article><span>Nhân viên được đánh giá</span><strong>{submission.subject?.fullName || 'Chưa có tên'}</strong><small>{submission.subject?.employeeCode || 'Chưa có mã'} · {submission.subject?.department || 'Chưa xác định khoa/phòng'}</small></article>
+                <article><span>Nhân viên được đánh giá</span><strong style={{ color: '#00866b' }}>{submission.subject?.fullName || 'Chưa có tên'}</strong><small>{submission.subject?.employeeCode || 'Chưa có mã'} · {submission.subject?.department || 'Chưa xác định khoa/phòng'}</small></article>
                 <article><span>Người thực hiện chấm</span><strong>{submission.submittedBy?.fullName || 'Chưa xác định'}</strong><small>{submission.submittedBy?.employeeCode || 'Chưa có mã nhân viên'}</small></article>
                 <article><span>Thời gian nộp</span><strong>{formatDateTime(submission.submittedAt || submission.updatedAt)}</strong><small>Phiếu đã nộp</small></article>
                 <article><span>Điểm</span><strong>{formatScore(submission.convertedScore)}/10</strong><small>Điểm sàn: {formatScore(version.passingScore ?? submission.passingScore)}/10</small></article>

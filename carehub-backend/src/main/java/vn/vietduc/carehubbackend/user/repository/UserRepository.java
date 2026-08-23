@@ -131,6 +131,24 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
             Pageable pageable);
 
     @EntityGraph(attributePaths = {"department", "position"})
+    @Query("""
+            SELECT DISTINCT u
+            FROM UserRole ur
+            JOIN ur.user u
+            WHERE u.isDeleted = false
+              AND u.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              AND (UPPER(ur.role.code) = 'MANAGER' OR UPPER(ur.role.code) = 'ROLE_MANAGER')
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
+            ORDER BY u.name ASC, u.employeeCode ASC
+            """)
+    List<User> findActiveManagerFormAssignmentCandidates();
+
+    @EntityGraph(attributePaths = {"department", "position"})
     @Query(value = """
             SELECT u
             FROM User u

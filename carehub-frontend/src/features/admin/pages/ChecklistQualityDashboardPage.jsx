@@ -98,10 +98,8 @@ function normalizeDepartment(item) {
   }
 }
 
-function targetSourceLabel(source) {
-  if (source === 'DEPARTMENT') return 'Mục tiêu khoa'
-  if (source === 'HOSPITAL') return 'Mục tiêu bệnh viện'
-  return 'Mặc định hệ thống'
+function targetSourceLabel() {
+  return 'Mục tiêu'
 }
 
 function csvCell(value) {
@@ -138,6 +136,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const isManager = role === 'manager'
   const isUser = role === 'user'
   const [departments, setDepartments] = useState([])
+  const [ownDepartmentId, setOwnDepartmentId] = useState('')
   const [departmentId, setDepartmentId] = useState(() => numericParam(searchParams.get('departmentId')))
   const [fromDate, setFromDate] = useState(() => searchParams.get('dateFrom') || yearStart)
   const [toDate, setToDate] = useState(() => searchParams.get('dateTo') || today)
@@ -187,11 +186,14 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           const normalized = profile?.departmentId
             ? { id: profile.departmentId, name: profile.departmentName || 'Khoa của tôi' }
             : null
-          setDepartments(normalized ? [normalized] : [])
           if (isManager && normalized) {
             const normalizedId = String(normalized.id)
+            setOwnDepartmentId(normalizedId)
             setDepartmentId(normalizedId)
-            setAppliedRoleFilters((current) => ({ ...current, departmentId: current.departmentId || normalizedId }))
+            setAppliedRoleFilters((current) => ({ ...current, departmentId: normalizedId }))
+            setDepartments([normalized])
+          } else {
+            setDepartments(normalized ? [normalized] : [])
           }
           return
         }
@@ -210,7 +212,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const effectiveSearch = appliedRoleFilters.search
   const effectiveFromDate = appliedRoleFilters.fromDate
   const effectiveToDate = appliedRoleFilters.toDate
-  const effectiveDepartmentId = appliedRoleFilters.departmentId
+  const effectiveDepartmentId = isManager ? (ownDepartmentId || appliedRoleFilters.departmentId) : appliedRoleFilters.departmentId
   const effectiveProcessId = appliedRoleFilters.processId
   const effectiveResultStatus = appliedRoleFilters.resultStatus
   const effectiveSubjectUserId = appliedRoleFilters.subjectUserId
@@ -236,7 +238,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     keyword: effectiveSearch || undefined,
     fromDate: effectiveFromDate,
     toDate: effectiveToDate,
-    departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? effectiveDepartmentId || undefined : undefined,
+    departmentId: isAdmin ? effectiveDepartmentId || undefined : isManager ? ownDepartmentId || undefined : undefined,
     formId: effectiveProcessId || undefined,
     resultStatus: effectiveResultStatus || undefined,
     subjectUserId: effectiveSubjectUserId || undefined,
@@ -413,6 +415,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setFromDate(yearStart)
     setToDate(today)
     if (isAdmin) setDepartmentId('')
+    if (isManager) setDepartmentId(ownDepartmentId)
     setProcessId('')
     setResultStatus('')
     setSubjectUserId('')
@@ -425,7 +428,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setTrendItems([])
     if (usesAppliedFilters) {
       setAppliedRoleFilters({
-        departmentId: isAdmin ? '' : departmentId,
+        departmentId: isAdmin ? '' : isManager ? ownDepartmentId : departmentId,
         fromDate: yearStart,
         processId: '',
         resultStatus: '',
@@ -507,7 +510,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       params.set('dateTo', effectiveToDate)
       params.set('selectedFormId', item.formId)
       if (effectiveSearch) params.set('dashboardKeyword', effectiveSearch)
-      if (isAdmin && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
+      if ((isAdmin || isManager) && effectiveDepartmentId) params.set('departmentId', effectiveDepartmentId)
       if (effectiveResultStatus) params.set('result', effectiveResultStatus)
       if (effectiveSubjectUserId) params.set('subjectUserId', effectiveSubjectUserId)
       if (!isUser && effectiveSubmittedByUserId) params.set('submittedByUserId', effectiveSubmittedByUserId)
@@ -535,11 +538,20 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
       <DateFilter label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={setFromDate} />
       <DateFilter label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={setToDate} />
       {isAdmin && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
-        <SearchableSelect value={departmentId} onChange={setDepartmentId} placeholder="Toàn viện"
+        <SearchableSelect value={departmentId} onChange={setDepartmentId}
+          placeholder="Toàn viện"
           searchPlaceholder="Gõ tên khoa/phòng..." options={[
             { value: '', label: 'Toàn viện' },
             ...departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code })),
           ]} showDescriptions={false} />
+      </SelectFilter>}
+      {isManager && <SelectFilter label="Khoa/phòng" icon={<ApartmentOutlined />}>
+        <SearchableSelect
+          value={ownDepartmentId}
+          disabled
+          options={departments.map((item) => ({ value: item.id, label: item.name, searchText: item.code }))}
+          showDescriptions={false}
+        />
       </SelectFilter>}
       <SelectFilter label="Kết quả" icon={<CheckCircleOutlined />}>
         <SearchableSelect
@@ -682,10 +694,22 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
           </section> : (view === 'LATEST' || hasFilteredSelection) && detailForm ? <section className="checklist-quality-detail">
             <header className="checklist-quality-detail__header">
               <div><span>KẾT QUẢ BẢNG KIỂM ĐANG CHỌN</span><h2>{detailForm.formTitle}</h2>
-                <p>{detailForm.formCode} · Phiên bản v{detailForm.versionNumber || '—'}</p></div>
-              <span className="checklist-quality-detail__rate">
-                {detailForm.monitoringCount > 0 ? `${formatPercent(detailForm.complianceRate)} tuân thủ` : 'Chưa có dữ liệu'}
-              </span>
+                <p>Phiên bản v{detailForm.versionNumber || '—'}</p></div>
+              {detailForm.monitoringCount > 0 ? (
+                <span
+                  className={`checklist-quality-detail__rate ${
+                    Number(detailForm.complianceRate) >= Number(detailForm.targetPercent ?? 80)
+                      ? 'checklist-quality-detail__rate--pass'
+                      : 'checklist-quality-detail__rate--fail'
+                  }`}
+                >
+                  {formatPercent(detailForm.complianceRate)} tuân thủ
+                </span>
+              ) : (
+                <span className="checklist-quality-detail__rate checklist-quality-detail__rate--empty">
+                  Chưa có dữ liệu
+                </span>
+              )}
             </header>
             <div className="checklist-quality-metrics">
               <Metric icon={<BarChartOutlined />} label="Lượt giám sát" value={detailForm.monitoringCount} note="Kết quả đã nộp" />
@@ -746,12 +770,11 @@ function ProcessCard({ item, active, actionIcon, actionLabel, onSelect, onAction
   return <article className={`checklist-quality-process-card${active ? ' checklist-quality-process-card--active' : ''}`}
     role="button" tabIndex={0} onClick={onSelect} onKeyDown={handleKeyDown}>
     <div className="checklist-quality-process-card__top">
-      <span className="checklist-quality-process-card__code">{item.formCode || `Quy trình #${item.formId}`}</span>
+      <strong style={{ margin: 0, minHeight: 'unset', fontSize: 15 }}>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
       {actionLabel && <button type="button" onClick={(event) => { event.stopPropagation(); onAction?.() }}>
         {actionIcon} {actionLabel}
       </button>}
     </div>
-    <strong>{item.formTitle || 'Quy trình chưa có tiêu đề'}</strong>
     {hasData && <p className="checklist-quality-process-card__submitted-at">
       <CalendarOutlined />
       <span>Chấm gần nhất:</span>

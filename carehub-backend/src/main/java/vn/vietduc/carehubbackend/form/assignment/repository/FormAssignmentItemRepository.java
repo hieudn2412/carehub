@@ -12,6 +12,7 @@ import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentItem;
 import vn.vietduc.carehubbackend.form.assignment.entity.FormAssignmentStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormStatus;
 import vn.vietduc.carehubbackend.form.entity.enums.FormVersionStatus;
+import vn.vietduc.carehubbackend.user.entity.Department;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -56,6 +57,55 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
                                          @Param("formId") Long formId);
 
     @Query("""
+            select distinct d.id from FormAssignmentItem i
+            join i.allowedDepartments d
+            where i.assignment.manager.id = :assigneeId
+              and i.form.id = :formId
+              and i.status = :active
+              and i.assignment.status = :active
+              and i.assignment.manager.isDeleted = false
+              and i.assignment.manager.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              and i.form.deleted = false
+              and i.form.status = :publishedForm
+              and i.form.currentPublishedVersion is not null
+              and i.form.currentPublishedVersion.status = :publishedVersion
+              and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
+              and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
+            """)
+    List<Long> findActiveAllowedDepartmentIds(
+            @Param("assigneeId") Long assigneeId,
+            @Param("formId") Long formId,
+            @Param("active") FormAssignmentStatus active,
+            @Param("publishedForm") FormStatus publishedForm,
+            @Param("publishedVersion") FormVersionStatus publishedVersion,
+            @Param("now") Instant now);
+
+    @Query("""
+            select distinct d from FormAssignmentItem i
+            join i.allowedDepartments d
+            where i.assignment.manager.id = :assigneeId
+              and i.form.id = :formId
+              and i.status = :active
+              and i.assignment.status = :active
+              and i.assignment.manager.isDeleted = false
+              and i.assignment.manager.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              and i.form.deleted = false
+              and i.form.status = :publishedForm
+              and i.form.currentPublishedVersion is not null
+              and i.form.currentPublishedVersion.status = :publishedVersion
+              and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
+              and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
+            order by d.name asc
+            """)
+    List<Department> findActiveAllowedDepartments(
+            @Param("assigneeId") Long assigneeId,
+            @Param("formId") Long formId,
+            @Param("active") FormAssignmentStatus active,
+            @Param("publishedForm") FormStatus publishedForm,
+            @Param("publishedVersion") FormVersionStatus publishedVersion,
+            @Param("now") Instant now);
+
+    @Query("""
             select (count(i) > 0) from FormAssignmentItem i
             where i.assignment.manager.id = :assigneeId and i.formVersion.id = :versionId
               and i.status = :active and i.assignment.status = :active
@@ -67,14 +117,17 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
                                                @Param("active") FormAssignmentStatus active,
                                                @Param("now") Instant now);
     List<FormAssignmentItem> findAllByFormVersion_IdAndStatus(Long versionId, FormAssignmentStatus status);
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion", "allowedDepartments"})
     Optional<FormAssignmentItem> findFirstByAssignment_Manager_IdAndFormVersion_IdAndStatusOrderByIdDesc(
             Long assigneeId, Long formVersionId, FormAssignmentStatus status);
 
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion", "allowedDepartments"})
     Optional<FormAssignmentItem> findFirstByAssignment_Manager_IdAndForm_IdOrderByIdDesc(
             Long assigneeId, Long formId);
 
     long countByAssignment_Id(Long assignmentId);
 
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "form.currentPublishedVersion", "formVersion", "allowedDepartments"})
     @Query("""
             select i from FormAssignmentItem i
             where i.assignment.manager.id = :assigneeId
@@ -87,7 +140,8 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
 
     @EntityGraph(attributePaths = {
             "assignment", "assignment.manager", "assignment.manager.department",
-            "assignment.assignedBy", "form", "form.ownerDepartment", "form.currentPublishedVersion", "formVersion"
+            "assignment.assignedBy", "form", "form.ownerDepartment", "form.currentPublishedVersion", "formVersion",
+            "allowedDepartments"
     })
     List<FormAssignmentItem> findByIdIn(List<Long> ids);
 
@@ -327,11 +381,28 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
             @Param("publishedVersion") FormVersionStatus publishedVersion,
             @Param("now") Instant now,
             Pageable pageable);
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
+
+    @Query("""
+            select d from FormAssignmentItem i
+            join i.allowedDepartments d
+            where i.id = :itemId
+            order by d.name asc
+            """)
+    List<Department> findAllowedDepartmentsByItemId(@Param("itemId") Long itemId);
+
+    @Query("""
+            select i.id, count(d.id)
+            from FormAssignmentItem i
+            left join i.allowedDepartments d
+            where i.id in :itemIds
+            group by i.id
+            """)
+    List<Object[]> countAllowedDepartmentsGroupedByItemIds(@Param("itemIds") List<Long> itemIds);
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion", "allowedDepartments"})
     @Query("select i from FormAssignmentItem i where i.id = :id")
     Optional<FormAssignmentItem> findDetailById(@Param("id") Long id);
 
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.assignedBy", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.assignedBy", "form", "formVersion", "allowedDepartments"})
     @Query("""
             select i from FormAssignmentItem i
             where i.form.id = :formId
@@ -344,7 +415,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion", "allowedDepartments"})
     @Query("""
             select i from FormAssignmentItem i
             where i.assignment.manager.id = :managerId
@@ -366,7 +437,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
             Pageable pageable
     );
 
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "assignment.manager.department", "form", "formVersion", "allowedDepartments"})
     @Query("""
             select i from FormAssignmentItem i
             where i.id = :id
@@ -390,7 +461,7 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion"})
+    @EntityGraph(attributePaths = {"assignment", "assignment.manager", "form", "formVersion", "allowedDepartments"})
     @Query("""
             select i from FormAssignmentItem i
             where i.id = :id
