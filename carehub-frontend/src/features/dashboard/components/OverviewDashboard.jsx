@@ -179,8 +179,8 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
     ? '≥ 120h'
     : type === 'exams'
       ? data?.targetScore == null
-        ? 'Điểm sàn theo từng khoa'
-        : `Điểm sàn ≥ ${formatScore(data.targetScore)}/10`
+        ? 'Theo từng khoa'
+        : `≥ ${formatScore(data.targetScore)}/10`
       : `${formatNumber(passed)}/${formatNumber(total)}`
   const detail = type === 'training'
     ? 'Mục tiêu 5 năm'
@@ -197,7 +197,10 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       onClick={onOpen}
       type="button"
     >
-      <span className="overview-management-kpi__label">{labels[type]}</span>
+      <div>
+        <span className="overview-management-kpi__label">{labels[type]}</span>
+        <small>{detail}</small>
+      </div>
       {available ? (
         <span className="overview-management-kpi__metrics">
           <strong>{primaryValue}</strong>
@@ -206,7 +209,6 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       ) : (
         <span className="overview-management-kpi__empty">Chưa có dữ liệu</span>
       )}
-      <small>{detail}</small>
     </button>
   )
 }

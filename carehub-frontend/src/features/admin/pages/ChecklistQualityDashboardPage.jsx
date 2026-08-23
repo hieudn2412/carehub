@@ -153,7 +153,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
   const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
   const [filteredSelectedFormId, setFilteredSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
-  const [forceFilteredView, setForceFilteredView] = useState(() => Boolean(numericParam(searchParams.get('selectedFormId'))))
+  const [forceFilteredView, setForceFilteredView] = useState(() => isAdmin || Boolean(numericParam(searchParams.get('selectedFormId'))))
   const [selectedDetailForm, setSelectedDetailForm] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
