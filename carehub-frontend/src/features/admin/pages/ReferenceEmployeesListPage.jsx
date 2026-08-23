@@ -7,6 +7,7 @@ import { SearchOutlined, EyeOutlined, LeftOutlined, RightOutlined } from '@ant-d
 import { adminApi } from '../api/adminApi.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
+import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/ReferenceEmployeesListPage.css'
 
 function ReferenceEmployeesListPage() {
@@ -39,7 +40,7 @@ function ReferenceEmployeesListPage() {
 
           // Map to match frontend format
           const mapped = content.map(emp => {
-            const roleNames = emp.roles?.map(r => r.name).join(', ') || 'USER'
+            const roleNames = formatRoleLabels(emp.roles, 'Nhân viên')
             return {
               id: emp.id,
               employeeCode: emp.employeeCode,

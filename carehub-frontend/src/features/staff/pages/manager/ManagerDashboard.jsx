@@ -59,12 +59,12 @@ export default function ManagerDashboard() {
           departmentId: managerProfile?.departmentId ? String(managerProfile.departmentId) : '',
         }))
         if (!managerProfile?.departmentId) {
-          setError('Tài khoản Manager chưa được gán khoa/phòng nên không thể xem dashboard.')
+          setError('Tài khoản Quản lý cấp Khoa chưa được gán khoa/phòng nên không thể xem dashboard.')
           setLoading(false)
         }
       })
       .catch(() => {
-        setError('Không thể xác định khoa/phòng của Manager.')
+        setError('Không thể xác định khoa/phòng của Quản lý cấp Khoa.')
         setLoading(false)
       })
   }, [])
@@ -114,37 +114,34 @@ export default function ManagerDashboard() {
         && subjectUserId === -1
       setFilteredEmployeeId(subjectUserId)
       const qualityParams = { ...scopedParams, keyword: undefined, subjectUserId }
-      const [trainingResult, qualityResult, checklistResult] = await Promise.allSettled([
+      const [trainingResult, checklistResult] = await Promise.allSettled([
         trainingApi.getTrainingDashboardSummary({
           departmentId: filters.departmentId,
           employeeId: subjectUserId,
           asOf: dateRange.toDate,
         }),
-        staffApi.getManagerQualityHistorySummary({
-          fromDate: qualityParams.fromDate,
-          toDate: qualityParams.toDate,
-          subjectUserId,
-        }),
         loadAllDashboardItems(
-          staffApi.getManagerQualityHistory,
+          staffApi.getQualityChecklistDashboard,
           {
-            dateFrom: qualityParams.fromDate,
-            dateTo: qualityParams.toDate,
+            view: 'FILTERED',
+            fromDate: qualityParams.fromDate,
+            toDate: qualityParams.toDate,
+            departmentId: filters.departmentId,
             subjectUserId,
           },
         ),
       ])
       if (requestId !== dashboardRequestId.current) return
-      if ([trainingResult, qualityResult, checklistResult, competencyResult]
+      if ([trainingResult, checklistResult, competencyResult]
         .every((result) => result.status === 'rejected')) throw trainingResult.reason
       const checklistItems = checklistResult.status === 'fulfilled' ? checklistResult.value : []
-      const { chart: qualityChart } = mapChecklistPerformance(checklistItems)
+      const { totals: qualityTotals, chart: qualityChart } = mapChecklistPerformance(checklistItems)
       const training = trainingResult.status === 'fulfilled'
         ? payload(trainingResult.value)?.totals || {}
         : {}
-      const quality = qualityResult.status === 'fulfilled'
-        ? payload(qualityResult.value)
-        : null
+      const averageChecklistScore = qualityTotals.total > 0
+        ? qualityTotals.convertedScoreSum / qualityTotals.total
+        : 0
 
       setDomains({
         training: {
@@ -168,15 +165,15 @@ export default function ManagerDashboard() {
               path: '/manager/reports/quality-dashboard',
             }
           : unavailable('Không thể tải dữ liệu năng lực chuyên môn trong khoa.'),
-        quality: quality ? {
-          total: Number(quality.monitoringCount) || 0,
-          passed: Number(quality.passedCount) || 0,
-          failed: Number(quality.failedCount) || 0,
-          rate: Number(quality.complianceRate) || 0,
-          available: qualityResult.status === 'fulfilled',
+        quality: checklistResult.status === 'fulfilled' ? {
+          total: qualityTotals.total,
+          passed: qualityTotals.passed,
+          failed: qualityTotals.failed,
+          rate: qualityTotals.total > 0 ? (qualityTotals.passed / qualityTotals.total) * 100 : 0,
+          available: true,
           emptyMessage: 'Chưa có kết quả checklist trong phạm vi đang lọc.',
-          detail: 'Số lượt checklist đạt / tổng lượt checklist đã chấm từ đầu năm.',
-          note: `Điểm trung bình ${Number(quality.averageConvertedScore || 0).toFixed(2).replace('.', ',')}/10; kết quả đạt đã áp dụng điểm sàn và điểm liệt.`,
+          detail: 'Số lượt checklist đạt / tổng lượt checklist đã chấm trong khoa.',
+          note: `Điểm trung bình ${averageChecklistScore.toFixed(2).replace('.', ',')}/10; kết quả đạt đã áp dụng điểm sàn và điểm liệt.`,
           path: '/manager/reports/checklist-dashboard',
         } : unavailable('Không thể tải dữ liệu checklist trong khoa.'),
       })
@@ -188,8 +185,7 @@ export default function ManagerDashboard() {
       } else {
         const failedDomains = [
           trainingResult.status === 'rejected' && 'giờ đào tạo',
-          qualityResult.status === 'rejected' && 'tổng hợp lịch sử bảng kiểm',
-          checklistResult.status === 'rejected' && 'chi tiết lịch sử bảng kiểm',
+          checklistResult.status === 'rejected' && 'dashboard bảng kiểm',
           competencyResult.status === 'rejected' && 'năng lực chuyên môn',
         ].filter(Boolean)
         if (failedDomains.length) {

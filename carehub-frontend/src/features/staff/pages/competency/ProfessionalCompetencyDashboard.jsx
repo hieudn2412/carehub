@@ -22,6 +22,7 @@ import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { myExamApi } from '../../../evaluation/api/myExamApi.js'
 import { apiData, apiErrorMessage, formatDateTime } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { validateHistoricalDateRange } from '../../../../shared/utils/dateRange.js'
 import './ProfessionalCompetencyDashboard.css'
 
 const SCORE_FORMATTER = new Intl.NumberFormat('vi-VN', {
@@ -115,11 +116,11 @@ function CompetencySearchForm({ filters, onChange, onClear, onApply, dateError =
       </label>
       <label>
         <span>Từ ngày</span>
-        <KeyboardDatePicker value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày năng lực" />
+        <KeyboardDatePicker allowInvalidValue value={filters.dateFrom} max={filters.dateTo || undefined} onChange={val => onChange({ dateFrom: val })} aria-label="Từ ngày năng lực" />
       </label>
       <label>
         <span>Đến ngày</span>
-        <KeyboardDatePicker value={filters.dateTo} min={filters.dateFrom || undefined} max={localToday()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày năng lực" />
+        <KeyboardDatePicker allowInvalidValue value={filters.dateTo} min={filters.dateFrom || undefined} max={localToday()} onChange={val => onChange({ dateTo: val })} aria-label="Đến ngày năng lực" />
       </label>
       {dateError && <p className="pc-search-form__error" role="alert">{dateError}</p>}
       <FilterActionButtons className="pc-search-form__actions" onReset={onClear} onApply={onApply} />
@@ -144,22 +145,6 @@ function ProfessionalCompetencyDashboard() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
   useEffect(() => setDraftFilters(filters), [filters])
-
-  useEffect(() => {
-    const nextQuery = draftFilters.q.trim()
-    if (nextQuery === filters.q) return undefined
-    const timer = window.setTimeout(() => {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current)
-        if (nextQuery) next.set('q', nextQuery)
-        else next.delete('q')
-        if (draftFilters.dateFrom) next.set('dateFrom', draftFilters.dateFrom)
-        if (draftFilters.dateTo) next.set('dateTo', draftFilters.dateTo)
-        return next
-      }, { replace: true })
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [draftFilters.dateFrom, draftFilters.dateTo, draftFilters.q, filters.q, setSearchParams])
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true)
@@ -197,14 +182,18 @@ function ProfessionalCompetencyDashboard() {
       .slice(0, 4)
   }, [assignments, filters.q])
 
-  const updateDraftFilters = values => setDraftFilters(current => ({ ...current, ...values }))
+  const updateDraftFilters = values => {
+    setDateError('')
+    setDraftFilters(current => ({ ...current, ...values }))
+  }
   const clearFilters = () => {
     setDraftFilters({ q: '', dateFrom: defaultFromDate(), dateTo: localToday() })
     setDateError('')
   }
   const applyFilters = () => {
-    if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
-      setDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(draftFilters.dateFrom, draftFilters.dateTo, { maxDate: localToday() })
+    if (validationError) {
+      setDateError(validationError)
       return false
     }
     setDateError('')
@@ -276,11 +265,15 @@ function ProfessionalCompetencyDashboard() {
             activeCount={Number(draftFilters.dateFrom !== defaultFromDate() || draftFilters.dateTo !== localToday())}
             ariaLabel="Bộ lọc năng lực chuyên môn"
             className="pc-applied-toolbar"
+            errorMessage={dateError}
             isOpen={isFilterOpen}
             onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
             onReset={clearFilters}
             onSearchChange={value => updateDraftFilters({ q: value })}
-            onToggle={() => setIsFilterOpen(current => !current)}
+            onToggle={() => {
+              setDateError('')
+              setIsFilterOpen(current => !current)
+            }}
             panelClassName="pc-filter-panel"
             panelId="professional-competency-filter-panel"
             searchAriaLabel="Tìm bài kiểm tra"
@@ -289,13 +282,12 @@ function ProfessionalCompetencyDashboard() {
           >
             <label className="admin-control-toolbar__field">
               <span>Từ ngày</span>
-              <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || undefined} onChange={val => updateDraftFilters({ dateFrom: val })} aria-label="Từ ngày năng lực" />
+              <KeyboardDatePicker allowInvalidValue value={draftFilters.dateFrom} max={draftFilters.dateTo || localToday()} onChange={val => updateDraftFilters({ dateFrom: val })} aria-label="Từ ngày năng lực" />
             </label>
             <label className="admin-control-toolbar__field">
               <span>Đến ngày</span>
-              <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={localToday()} onChange={val => updateDraftFilters({ dateTo: val })} aria-label="Đến ngày năng lực" />
+              <KeyboardDatePicker allowInvalidValue value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={localToday()} onChange={val => updateDraftFilters({ dateTo: val })} aria-label="Đến ngày năng lực" />
             </label>
-            {dateError && <p className="pc-search-form__error" role="alert">{dateError}</p>}
           </AppliedFilterToolbar>
         </section>
 

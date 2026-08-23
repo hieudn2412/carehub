@@ -133,6 +133,33 @@ describe('OverviewDashboard navigation regression', () => {
     expect(onFilterChange).toHaveBeenCalledWith('toDate', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
   })
 
+  it('keeps typed dates as drafts and reports an invalid date before applying', () => {
+    const onFilterChange = vi.fn()
+    render(
+      <MemoryRouter>
+        <OverviewDashboard
+          role="admin"
+          loading={false}
+          error=""
+          filters={{ departmentId: '', employeeCode: '', content: 'all', fromDate: '2026-01-01', toDate: '2026-08-24' }}
+          departments={[]}
+          onFilterChange={onFilterChange}
+          domains={managementDomains}
+          complianceChart={[]}
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/ }))
+    fireEvent.change(screen.getByLabelText('Từ ngày'), { target: { value: '31/02/2026' } })
+
+    expect(onFilterChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Áp dụng' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Từ ngày không hợp lệ')
+    expect(onFilterChange).not.toHaveBeenCalled()
+  })
+
   it('does not enter a render loop when a staff dashboard omits compliance chart data', () => {
     let commitCount = 0
 

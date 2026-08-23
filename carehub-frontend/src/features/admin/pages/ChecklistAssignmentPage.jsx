@@ -22,6 +22,7 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import DateTimePicker24h from '../../../shared/components/DateTimePicker24h.jsx'
 import { adminApi } from '../api/adminApi'
 import { getChecklistDisplayCode } from '../utils/formCode.js'
+import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/ChecklistAssignmentPage.css'
 
 const PAGE_SIZE = 10
@@ -39,7 +40,7 @@ const EXPIRING_OPTIONS = [
 const ROLE_FILTER_OPTIONS = [
   { value: '', label: 'Tất cả vai trò' },
   { value: 'USER', label: 'Nhân viên' },
-  { value: 'MANAGER', label: 'Quản lý' },
+  { value: 'MANAGER', label: 'Quản lý cấp Khoa' },
 ]
 
 function getPageData(response) {
@@ -100,22 +101,7 @@ function useDebouncedValue(value, delay = 350) {
 }
 
 function getRoleText(value) {
-  const roleLabels = {
-    USER: 'Nhân viên',
-    ROLE_USER: 'Nhân viên',
-    STAFF: 'Nhân viên',
-    ROLE_STAFF: 'Nhân viên',
-    MANAGER: 'Quản lý',
-    ROLE_MANAGER: 'Quản lý',
-    ADMIN: 'Quản trị viên',
-    ROLE_ADMIN: 'Quản trị viên',
-  }
-  const formatRole = (role) => roleLabels[String(role || '').trim().toUpperCase()] || role
-  if (Array.isArray(value)) {
-    const labels = value.map(formatRole).filter(Boolean)
-    return labels.length > 0 ? Array.from(new Set(labels)).join(', ') : 'Chưa có vai trò'
-  }
-  return formatRole(value) || 'Chưa có vai trò'
+  return formatRoleLabels(Array.isArray(value) ? value : [value]) || 'Chưa có vai trò'
 }
 
 function buildFormOption(form) {

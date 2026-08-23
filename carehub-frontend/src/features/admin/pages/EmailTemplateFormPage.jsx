@@ -35,7 +35,7 @@ const EVENT_OPTIONS = {
 }
 
 const CATEGORY_LABELS = { TRAINING: 'Đào tạo', EVALUATION: 'Đánh giá', QUALITY: 'Chất lượng' }
-const AUDIENCE_LABELS = { EMPLOYEE: 'Nhân viên', MANAGER: 'Quản lý' }
+const AUDIENCE_LABELS = { EMPLOYEE: 'Nhân viên', MANAGER: 'Quản lý cấp Khoa' }
 
 function generatedCode(name) {
   const normalized = name

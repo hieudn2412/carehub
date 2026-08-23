@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import LoadingState from '../../../shared/components/LoadingState.jsx'
 import { adminApi } from '../api/adminApi.js'
+import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/ReferenceEmployeeDetailPage.css'
 
 function ReferenceEmployeeDetailPage() {
@@ -25,14 +26,14 @@ function ReferenceEmployeeDetailPage() {
           setEmployee({
             employeeCode: emp.employeeCode,
             fullName: emp.fullName,
-            cbType: emp.roles?.map(r => r.name).join(', ') || 'USER',
+            cbType: formatRoleLabels(emp.roles, 'Nhân viên'),
             gender: emp.gender ? 'Nam' : 'Nữ',
             birthday: emp.birthday ? new Date(emp.birthday).toLocaleDateString('vi-VN') : '–',
             departmentName: emp.departmentName || '–',
             blockCode: '–',
             positionName: emp.positionName || '–',
             degree: emp.educationLevelName || '–',
-            titleName: emp.roles?.map(r => r.name).join(', ') || '–'
+            titleName: formatRoleLabels(emp.roles, '–')
           })
         }
       } catch (err) {

@@ -182,10 +182,6 @@ export default function DashboardStaffScreen() {
     }
   }, [compliance, competency, training])
 
-  const roleName = profile?.roles
-    ?.map(role => role.name || role.displayName)
-    .filter(Boolean)
-    .join(', ') || 'Nhân viên'
   const competencyPassed = competency?.targetScore == null
     ? metrics.overallScore >= metrics.targetScore
     : Boolean(competency?.isPassed)
@@ -204,7 +200,6 @@ export default function DashboardStaffScreen() {
             <span>Bệnh viện Hữu nghị Việt Đức</span>
             <h1>{loading ? 'Đang tải thông tin...' : profile?.fullName || 'Nhân viên'}</h1>
             <div className="staff-home-profile__meta">
-              <span>{roleName}</span>
               <span>{profile?.employeeCode || 'Chưa có mã nhân viên'}</span>
               {profile?.departmentName && <span>{profile.departmentName}</span>}
             </div>
