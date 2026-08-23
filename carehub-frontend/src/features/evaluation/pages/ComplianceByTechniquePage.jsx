@@ -93,6 +93,7 @@ function ComplianceByTechniquePage() {
   const effectiveToDate = appliedFilters.toDate
 
   useEffect(() => {
+    if (departments.length > 0 || (isAdmin && !isFilterOpen)) return undefined
     const timer = window.setTimeout(async () => {
       try {
         if (isAdmin) {
@@ -117,18 +118,7 @@ function ComplianceByTechniquePage() {
       }
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [isAdmin, showToast])
-
-  useEffect(() => {
-    const nextKeyword = keyword.trim()
-    if (nextKeyword === appliedFilters.keyword) return undefined
-    const timer = window.setTimeout(() => {
-      setAppliedFilters((current) => (
-        current.keyword === nextKeyword ? current : { ...current, keyword: nextKeyword }
-      ))
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [appliedFilters.keyword, keyword])
+  }, [departments.length, isAdmin, isFilterOpen, showToast])
 
   const loadData = useCallback(async () => {
     if (!departmentId && !isAdmin) {

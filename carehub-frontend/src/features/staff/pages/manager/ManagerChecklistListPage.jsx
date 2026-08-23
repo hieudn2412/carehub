@@ -78,26 +78,10 @@ function ManagerChecklistListPage() {
     const content = response.data?.data?.content
     const assignedForms = Array.isArray(content) ? content : []
 
-    return Promise.all(
-      assignedForms.map(async (checklist) => {
-        if (getVersionNumber(checklist) || !checklist.assignmentItemId) {
-          return checklist
-        }
-
-        try {
-          const detailResponse = await staffApi.getAssignedForm(checklist.assignmentItemId)
-          const detailData = detailResponse.data?.data || {}
-          return {
-            ...checklist,
-            version: detailData.version || checklist.version,
-            allDepartments: detailData.allDepartments ?? checklist.allDepartments,
-            allowedDepartments: detailData.allowedDepartments ?? checklist.allowedDepartments,
-          }
-        } catch {
-          return checklist
-        }
-      }),
-    )
+    // The list endpoint already owns the card data. Fetching every assignment
+    // detail here caused an N+1 burst; the evaluation screen loads its own
+    // detail only after the user chooses a checklist.
+    return assignedForms
   }
 
   const loadAssignedForms = () => {

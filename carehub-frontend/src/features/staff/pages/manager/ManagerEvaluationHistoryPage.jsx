@@ -10,6 +10,7 @@ import AppShell from '../../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../../shared/components/KeyboardDatePicker.jsx'
 import SearchableSelect from '../../../../shared/components/SearchableSelect.jsx'
+import { validateHistoricalDateRange } from '../../../../shared/utils/dateRange.js'
 import { adminApi } from '../../../admin/api/adminApi.js'
 import '../../../../shared/styles/admin-tables.css'
 import '../../../admin/styles/AdminQualityHistoryPage.css'
@@ -124,6 +125,7 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
   const [submissionData, setSubmissionData] = useState({ content: [], page: 0, size: pageSize, totalElements: 0, totalPages: 0 })
   const [resultsLoading, setResultsLoading] = useState(true)
   const [resultsError, setResultsError] = useState('')
+  const [filterError, setFilterError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
 
@@ -150,6 +152,7 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
   }, [dateFrom, dateTo, departmentId, formId, keyword, result])
 
   useEffect(() => {
+    if (!isFilterOpen) return undefined
     let alive = true
     Promise.all([
       adminApi.getDepartments(),
@@ -163,16 +166,7 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
       })
       .catch(() => {})
     return () => { alive = false }
-  }, [dateFrom, dateTo])
-
-  useEffect(() => {
-    const nextKeyword = keywordInput.trim()
-    if (nextKeyword === keyword) return undefined
-    const timer = window.setTimeout(() => {
-      updateQuery({ keyword: nextKeyword, page: 0 }, false)
-    }, 300)
-    return () => window.clearTimeout(timer)
-  }, [keyword, keywordInput, updateQuery])
+  }, [dateFrom, dateTo, isFilterOpen])
 
   const requestParams = useMemo(() => ({
     keyword: keyword || undefined,
@@ -232,6 +226,14 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
   ].filter(Boolean).length
 
   function handleApplyFilters() {
+    const validationError = validateHistoricalDateRange(draftDateFrom, draftDateTo, {
+      maxDate: defaultDateRange.dateTo,
+    })
+    if (validationError) {
+      setFilterError(validationError)
+      return
+    }
+    setFilterError('')
     updateQuery({
       formId: draftFormId,
       departmentId: draftDepartmentId,
@@ -242,6 +244,7 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
   }
 
   function handleResetFilters() {
+    setFilterError('')
     setDraftFormId('')
     setDraftDepartmentId('')
     setDraftResult('')
@@ -327,11 +330,15 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
           <AppliedFilterToolbar
             activeCount={activeFilterCount}
             className="aqh-results-filter"
+            errorMessage={filterError}
             isOpen={isFilterOpen}
             onApply={handleApplyFilters}
             onReset={handleResetFilters}
             onSearchChange={setKeywordInput}
-            onToggle={() => setIsFilterOpen((v) => !v)}
+            onToggle={() => {
+              setFilterError('')
+              setIsFilterOpen((v) => !v)
+            }}
             searchPlaceholder="Tìm theo tên hoặc mã nhân viên..."
             searchValue={keywordInput}
           >
@@ -372,11 +379,22 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
             </label>
             <label className="admin-control-toolbar__field aqh-results-filter__date">
               <span>Từ ngày</span>
-              <KeyboardDatePicker value={draftDateFrom} onChange={setDraftDateFrom} />
+              <KeyboardDatePicker
+                allowInvalidValue
+                value={draftDateFrom}
+                max={draftDateTo || defaultDateRange.dateTo}
+                onChange={(value) => { setFilterError(''); setDraftDateFrom(value) }}
+              />
             </label>
             <label className="admin-control-toolbar__field aqh-results-filter__date">
               <span>Đến ngày</span>
-              <KeyboardDatePicker value={draftDateTo} onChange={setDraftDateTo} />
+              <KeyboardDatePicker
+                allowInvalidValue
+                value={draftDateTo}
+                min={draftDateFrom || undefined}
+                max={defaultDateRange.dateTo}
+                onChange={(value) => { setFilterError(''); setDraftDateTo(value) }}
+              />
             </label>
           </AppliedFilterToolbar>
 
@@ -424,7 +442,6 @@ function ManagerEvaluationHistoryPage({ historyPath = '/manager/quality/history'
                   <tbody>
                     {submissionData.content.map((item) => {
                       const subjectName = item.subject?.fullName || item.subjectContext?.fullName || '---'
-                      const subjectCode = item.subject?.employeeCode || item.subjectContext?.employeeCode || ''
                       const deptName = item.subject?.departmentName || item.subject?.department || item.subjectContext?.department || item.subjectContext?.subjectUser?.department?.name || '---'
                       const formTitle = item.formTitle || item.title || item.formVersion?.form?.title || item.formVersion?.title || 'Bảng kiểm'
                       const versionNum = item.versionNumber || item.formVersion?.versionNumber || 1
