@@ -186,8 +186,8 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
     ? '≥ 120h'
     : type === 'exams'
       ? data?.targetScore == null
-        ? 'Điểm sàn theo từng khoa'
-        : `Điểm sàn ≥ ${formatScore(data.targetScore)}/10`
+        ? 'Theo từng khoa'
+        : `≥ ${formatScore(data.targetScore)}/10`
       : `${formatNumber(passed)}/${formatNumber(total)}`
   const detail = type === 'training'
     ? 'Mục tiêu 5 năm'
