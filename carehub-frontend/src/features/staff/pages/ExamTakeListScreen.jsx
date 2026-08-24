@@ -178,11 +178,12 @@ export default function ExamTakeListScreen() {
           <col className="eh-take-table__due-col" />
           <col className="eh-take-table__attempt-col" />
           <col className="eh-take-table__score-col" />
+          <col className="eh-take-table__score-col" />
           <col className="eh-take-table__status-col" />
           <col className="eh-take-table__action-col" />
         </colgroup>
-        <thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm cao nhất</th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
-        {loading ? <tr><td colSpan="6">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="6">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
+        <thead><tr><th>Tên bài kiểm tra</th><th>Thời hạn hoàn thành</th><th>Lượt làm bài</th><th>Điểm đạt <small>/10</small></th><th>Điểm cao nhất <small>/10</small></th><th>Đánh giá</th><th>Hành động</th></tr></thead><tbody>
+        {loading ? <tr><td colSpan="7">Đang tải bài kiểm tra...</td></tr> : filtered.length === 0 ? <tr><td colSpan="7">{assignments.length === 0 ? 'Bạn chưa được giao bài kiểm tra nào.' : 'Không có bài kiểm tra khớp bộ lọc đã chọn.'}</td></tr> : filtered.map(item => <tr key={item.id} className={item.assessmentStatus === 'FAILED' ? 'eh-row--danger' : ''}>
           <td data-label="Tên bài kiểm tra"><strong>{item.name}</strong></td><td data-label="Thời hạn">{formatDateTime(item.dueAt)}</td>
           <td data-label="Lượt làm bài"><span className="eh-attempt-cell">
             <span className="eh-attempt-count">{item.usedAttempts ?? 0}/{item.maxAttempts ?? '—'}</span>
@@ -190,7 +191,8 @@ export default function ExamTakeListScreen() {
               ? <span className="ch-badge ch-badge--amber">{item.availabilityText || 'Đang làm'}</span>
               : !item.actionable && item.availabilityText ? <span className="ch-badge ch-badge--neutral">{item.availabilityText}</span> : null}
           </span></td>
-          <td data-label="Điểm cao nhất">{item.bestScore == null ? '—' : `${formatNumber(item.bestScore)}/10`}</td>
+          <td data-label="Điểm đạt (/10)">{item.passingScore == null ? '—' : formatNumber(item.passingScore)}</td>
+          <td data-label="Điểm cao nhất (/10)">{item.bestScore == null ? '—' : formatNumber(item.bestScore)}</td>
           <td data-label="Đánh giá"><span className={`eh-badge eh-badge--${String(item.assessmentStatus).toLowerCase()}`}>{assessmentLabel(item.assessmentStatus)}</span></td>
           <td data-label="Hành động"><span className="eh-row-actions">
             {detailIdOf(item) ? <button type="button" className="eh-btn eh-btn--view admin-table-action admin-table-action--icon admin-table-action--primary" onClick={() => openAttempt(detailIdOf(item))} title="Xem chi tiết lượt điểm cao nhất" aria-label={`Xem kết quả ${item.name}`}>
