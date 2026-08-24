@@ -20,6 +20,12 @@ export const questionBankApi = {
     })
   },
 
+  checkDuplicates(stem, excludeQuestionId = null) {
+    return httpClient.post('/questions/duplicate-check', { stem, excludeQuestionId }, {
+      headers: authHeaders(),
+    })
+  },
+
   createQuestion(payload) {
     return httpClient.post('/questions', payload, {
       headers: authHeaders(),

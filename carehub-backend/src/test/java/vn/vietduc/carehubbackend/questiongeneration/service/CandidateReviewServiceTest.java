@@ -2,6 +2,7 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
 import vn.vietduc.carehubbackend.questiongeneration.config.ValidationRulesProperties;
@@ -33,7 +34,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -89,36 +92,52 @@ class CandidateReviewServiceTest {
     }
 
     @Test
-    void saveAsQuestionRejectsUnapprovedCandidate() {
+    @DisplayName("Duyệt và lưu đã gộp nên lưu thẳng câu chưa duyệt được")
+    void saveAsQuestionAcceptsCandidateWithoutPriorApproval() {
         DocumentQuestionCandidate candidate = approvedCandidate();
         candidate.setStatus(CandidateStatus.NEED_REVIEW);
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
 
-        assertThatThrownBy(() -> service.saveAsQuestion(candidate.getId(), "admin"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("đã được duyệt");
+        var response = service.saveAsQuestion(candidate.getId(), "admin");
+
+        assertThat(response.status()).isEqualTo(CandidateStatus.SAVED.name());
     }
 
     @Test
-    void saveAsQuestionRejectsMissingSourceExcerpt() {
+    @DisplayName("Câu đã lưu rồi thì không lưu lại")
+    void saveAsQuestionRejectsAlreadySavedCandidate() {
         DocumentQuestionCandidate candidate = approvedCandidate();
-        candidate.setSourceExcerpt(" ");
+        candidate.setStatus(CandidateStatus.SAVED);
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
 
         assertThatThrownBy(() -> service.saveAsQuestion(candidate.getId(), "admin"))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("trích dẫn nguồn");
+                .hasMessageContaining("đã được lưu");
     }
 
     @Test
-    void saveAsQuestionRejectsGenericDocumentReferenceStem() {
+    @DisplayName("Câu đã từ chối thì không lưu vào ngân hàng")
+    void saveAsQuestionRejectsRejectedCandidate() {
         DocumentQuestionCandidate candidate = approvedCandidate();
+        candidate.setStatus(CandidateStatus.REJECTED);
+        when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
+
+        assertThatThrownBy(() -> service.saveAsQuestion(candidate.getId(), "admin"))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("đã bị từ chối");
+    }
+
+    @Test
+    @DisplayName("Thiếu trích dẫn nguồn hoặc stem tham chiếu tài liệu không còn chặn lúc lưu")
+    void saveAsQuestionNoLongerBlocksOnGroundingGaps() {
+        DocumentQuestionCandidate candidate = approvedCandidate();
+        candidate.setSourceExcerpt(" ");
         candidate.setStem("Theo tài liệu, nhận định nào phù hợp nhất với nội dung trong mục \"An toàn người bệnh\"?");
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
 
-        assertThatThrownBy(() -> service.saveAsQuestion(candidate.getId(), "admin"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("tự đứng độc lập");
+        var response = service.saveAsQuestion(candidate.getId(), "admin");
+
+        assertThat(response.status()).isEqualTo(CandidateStatus.SAVED.name());
     }
 
     @Test
@@ -297,5 +316,46 @@ class CandidateReviewServiceTest {
                 .warnings("[]")
                 .status(CandidateStatus.APPROVED)
                 .build();
+    }
+
+    @Test
+    @DisplayName("Kiểm tra trùng theo stem trả về câu trong ngân hàng kèm mức tương đồng")
+    void potentialDuplicatesForStemMapsQuestionBankMatches() {
+        QuestionBankQuestion existing = QuestionBankQuestion.builder()
+                .stem("Xử trí sốc phản vệ độ II gồm những bước nào?")
+                .optionA("A").optionB("B").optionC("C").optionD("D")
+                .correctAnswer("A")
+                .build();
+        existing.setId(501L);
+        when(questionRepository.findById(501L)).thenReturn(Optional.of(existing));
+        when(duplicateCheckService.findPotentialMatches(anyString(), anySet(), anySet(), anyInt()))
+                .thenReturn(List.of(new DuplicateMatchResult(
+                        DuplicateMatchResult.SourceType.QUESTION_BANK,
+                        501L,
+                        existing.getStem(),
+                        0.94,
+                        false
+                )));
+
+        var matches = service.potentialDuplicatesForStem("Xử trí sốc phản vệ độ II thế nào?", null);
+
+        assertThat(matches).singleElement().satisfies(match -> {
+            assertThat(match.sourceId()).isEqualTo(501L);
+            assertThat(match.similarity()).isEqualTo(0.94);
+            assertThat(match.strongDuplicate()).isFalse();
+            assertThat(match.optionA()).isEqualTo("A");
+        });
+    }
+
+    @Test
+    @DisplayName("Chế độ sửa thì loại chính câu đang sửa ra khỏi kết quả đối chiếu")
+    void potentialDuplicatesForStemExcludesTheEditedQuestion() {
+        when(duplicateCheckService.findPotentialMatches(anyString(), anySet(), anySet(), anyInt()))
+                .thenReturn(List.of());
+
+        service.potentialDuplicatesForStem("Câu hỏi đang sửa", 77L);
+
+        verify(duplicateCheckService).findPotentialMatches(
+                eq("Câu hỏi đang sửa"), eq(Set.of(77L)), eq(Set.of()), eq(5));
     }
 }

@@ -198,7 +198,10 @@ validation:
     # Cảnh báo mức trùng mạnh. Cặp điểm cao nhất trong corpus seed (0,973) lại là
     # dương tính giả, nên cosine không bao giờ tự từ chối; người duyệt quyết định.
     strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.97}   # >= : cảnh báo mạnh (~2,2% trên DB 457 câu)
-    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.95}   # >= : gắn cờ xem lại (~5,9% trên DB 457 câu)
+    # Hạ 0,95 -> 0,93 (25/08/2026) vì ở 0,95 reviewer gần như không còn thấy cảnh báo.
+    # Đo trên 1.168 ứng viên sinh từ tài liệu: 0,95 gắn cờ 30 câu (2,6%), 0,93 gắn cờ 77 câu (6,6%).
+    # Ngưỡng này CHỈ để cảnh báo, không tự từ chối câu nào.
+    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.93}   # >= : gắn cờ xem lại (27,4% nn-max trên DB 457 câu)
     # Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ, KHÁC thang cosine ở trên).
     # Chỉ dùng khi provider=lexical hoặc E5 lỗi/chưa backfill xong.
     # Hiệu chỉnh trên 270 câu seed — xem developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md

@@ -8,8 +8,8 @@ Model chỉ tạo vector và điểm tương đồng. Hai ngưỡng nghiệp v�
 
 | Điểm cosine cao nhất | Kết quả |
 |---|---|
-| `< 0,95` | Không hiện cảnh báo trùng ngữ nghĩa |
-| `0,95 đến dưới 0,97` | Cảnh báo “nghi vấn trùng” |
+| `< 0,93` | Không hiện cảnh báo trùng ngữ nghĩa |
+| `0,93 đến dưới 0,97` | Cảnh báo “nghi vấn trùng” |
 | `>= 0,97` | Cảnh báo “trùng mạnh” |
 
 Hai mức trên chỉ là cảnh báo. Hệ thống không tự động từ chối câu hỏi vì cosine cao; reviewer đọc câu gốc, câu đối chiếu, phương án và đáp án đúng để quyết định.
@@ -17,7 +17,8 @@ Hai mức trên chỉ là cảnh báo. Hệ thống không tự động từ ch�
 Ngưỡng hiện tại được hiệu chỉnh trên 457 câu hỏi `APPROVED` trong PostgreSQL:
 
 - 104.196 cặp được đo;
-- ngưỡng `0,95` gắn cờ 27/457 câu, tương đương 5,9%;
+- ngưỡng `0,93` đang dùng gắn cờ 125/457 câu theo nn-max, tương đương 27,4%;
+- ngưỡng `0,95` từng dùng tới 25/08/2026 gắn cờ 27/457 câu, tương đương 5,9%;
 - ngưỡng `0,97` gắn cờ mạnh 10/457 câu, tương đương 2,2%;
 - chưa có ground truth do chuyên gia gán nhãn, vì vậy chưa thể công bố precision, recall hay “độ chính xác 95%”.
 
@@ -145,7 +146,7 @@ Nếu chọn ngưỡng từ phần trăm số cặp vượt ngưỡng, ta đánh
 
 Các cặp có điểm rất cao vẫn có thể chỉ giống khuôn diễn đạt. Do chưa có ground truth đủ mạnh để chứng minh một ngưỡng loại tự động an toàn, CareHub dùng hai mức cảnh báo:
 
-- `reviewMin = 0,95`: đưa reviewer tới cặp đáng xem;
+- `reviewMin = 0,93`: đưa reviewer tới cặp đáng xem;
 - `strongMin = 0,97`: nhấn mạnh mức rủi ro cao hơn.
 
 `strongDuplicate=true` không có nghĩa “model đã kết luận trùng”. Nó có nghĩa “điểm vượt mức cảnh báo mạnh”. Reviewer vẫn có thể duyệt nếu hai câu khác nội dung.
@@ -166,7 +167,7 @@ flowchart TD
     L --> H
     H --> I{maxSimilarity >= 0.97?}
     I -- Có --> J[Cảnh báo trùng mạnh]
-    I -- Không --> K{maxSimilarity >= 0.95?}
+    I -- Không --> K{maxSimilarity >= 0.93?}
     K -- Có --> M[Cảnh báo nghi vấn trùng]
     K -- Không --> N[Không cảnh báo trùng]
     J --> R[Reviewer xem và quyết định]
@@ -217,7 +218,7 @@ function checkDuplicate(stem, excludedIds, optionalVector):
 
         return {
             maxSimilarity: best.score,
-            needsReview: best.score >= 0.95,
+            needsReview: best.score >= 0.93,
             strongDuplicate: best.score >= 0.97,
             matchedQuestion: best.question,
             checker: best.source
@@ -266,7 +267,7 @@ Ngay cả câu ít giống ai nhất vẫn có một láng giềng ở 0,854. Me
 | 0,95 | 27/457 | 5,9% |
 | 0,97 | 10/457 | 2,2% |
 
-`reviewMin = 0,95` là p90 nn-max 0,946 được làm tròn lên và chọn theo sức duyệt. `strongMin = 0,97` là mức cảnh báo hiếm hơn, không phải ngưỡng “chắc chắn trùng”.
+`reviewMin = 0,93` nằm giữa p70 (0,914) và p80 (0,934) của nn-max. Mức 0,95 (làm tròn lên từ p90 0,946) từng được dùng nhưng trong vận hành thực tế gần như không còn cảnh báo nào tới tay reviewer, nên 25/08/2026 hạ về 0,93 để đổi lấy độ phủ. `strongMin = 0,97` là mức cảnh báo hiếm hơn, không phải ngưỡng “chắc chắn trùng”.
 
 ### 5.5. Hiệu năng đo được
 
@@ -321,7 +322,7 @@ Các stem trong một response được batch-embed. Mỗi candidate được so
 1. ngân hàng câu hỏi đã duyệt;
 2. các candidate đứng trước trong cùng response.
 
-Nếu điểm vượt `0,95`, candidate chuyển sang `NEED_REVIEW`. Reviewer thấy điểm cao nhất, badge và có thể mở danh sách câu gần giống. Reviewer vẫn có nút sửa, duyệt hoặc từ chối.
+Nếu điểm vượt `0,93`, candidate chuyển sang `NEED_REVIEW`. Reviewer thấy điểm cao nhất, badge và có thể mở danh sách câu gần giống. Reviewer vẫn có nút sửa, duyệt hoặc từ chối.
 
 Các validation khác như thiếu đáp án, sai grounding hoặc sai cấu trúc vẫn có thể từ chối candidate. Quy tắc “không tự từ chối” chỉ áp dụng cho kết quả check trùng.
 
@@ -343,7 +344,7 @@ ai:
 
 validation:
   duplicate:
-    review-min: 0.95
+    review-min: 0.93
     strong-min: 0.97
     lexical-review-min: 0.50
     lexical-strong-min: 0.80
@@ -394,7 +395,7 @@ Nếu bỏ `E5_CALIBRATION_DB=true`, test dùng corpus seed `hospital-review-que
 
 Các test chính kiểm tra:
 
-- ngưỡng biên `0,95` và `0,97`;
+- ngưỡng biên `0,93` và `0,97`;
 - strong duplicate chỉ cảnh báo, không tự từ chối;
 - loại ID của chính câu đang sửa;
 - exact scan tìm đúng max dù ANN trả ứng viên chưa tối ưu;
@@ -420,7 +421,7 @@ Calibration test sẽ tự skip nếu không bật `RUN_E5_CALIBRATION=true`.
 - hai vế dùng cùng cách nhúng đối xứng;
 - batch và single embedding đồng thuận trên corpus đo;
 - runtime lấy đúng điểm max nhờ exact scan;
-- ngưỡng 0,95 và 0,97 tạo khối lượng cảnh báo lần lượt khoảng 5,9% và 2,2% trên snapshot 457 câu;
+- ngưỡng 0,93 và 0,97 tạo khối lượng cảnh báo lần lượt khoảng 27,4% và 2,2% theo nn-max trên snapshot 457 câu; trên 1.168 ứng viên sinh từ tài liệu, con số tương ứng là 6,6% và 1,1%;
 - duplicate score không tự loại câu hỏi.
 
 ### Chưa chứng minh
@@ -454,22 +455,22 @@ Chạy lại khi có một trong các thay đổi sau:
 - thay sức duyệt hoặc tỷ lệ cảnh báo mục tiêu;
 - có ground truth mới.
 
-Ngân hàng càng lớn thì nn-max có xu hướng tăng vì mỗi câu có thêm cơ hội gặp một láng giềng gần. Vì vậy `0,95` là cấu hình đã hiệu chỉnh cho snapshot hiện tại, không phải hằng số vĩnh viễn của model.
+Ngân hàng càng lớn thì nn-max có xu hướng tăng vì mỗi câu có thêm cơ hội gặp một láng giềng gần. Vì vậy `0,93` là cấu hình đã hiệu chỉnh cho snapshot hiện tại, không phải hằng số vĩnh viễn của model.
 
 ## 14. Kịch bản trình bày 3–5 phút
 
 1. **Bài toán:** so từ khóa bỏ sót câu cùng nghĩa nhưng khác cách viết.
 2. **Model:** E5 chuyển mỗi stem thành vector 384 chiều; cosine đo góc giữa hai vector.
 3. **Cách chạy:** câu mới được so với toàn bộ câu `APPROVED`, lấy điểm cao nhất và câu gần nhất.
-4. **Cách chọn ngưỡng:** dùng nn-max trên 457 câu, không dùng tỷ lệ cặp; 0,95 tạo 5,9% cảnh báo, 0,97 tạo 2,2% cảnh báo mạnh.
+4. **Cách chọn ngưỡng:** dùng nn-max trên 457 câu, không dùng tỷ lệ cặp; 0,93 tạo 27,4% cảnh báo, 0,97 tạo 2,2% cảnh báo mạnh.
 5. **An toàn:** cosine cao vẫn có false positive, nên hệ thống chỉ cảnh báo; reviewer quyết định.
 6. **Giới hạn:** chưa có ground truth chuyên gia nên chưa công bố precision/recall; bước tiếp theo là gán nhãn 150–200 cặp.
 
 ## 15. Câu hỏi thường gặp khi bảo vệ
 
-### “Ngưỡng 0,95 có nằm trong model không?”
+### “Ngưỡng 0,93 có nằm trong model không?”
 
-Không. Model chỉ trả vector. `0,95` là quyết định của hệ thống, lấy từ phân bố nn-max và khối lượng reviewer có thể xử lý.
+Không. Model chỉ trả vector. `0,93` là quyết định của hệ thống, lấy từ phân bố nn-max và khối lượng reviewer có thể xử lý.
 
 ### “Tại sao không dùng 0,8?”
 
@@ -507,4 +508,4 @@ Chi phí false positive cao: một câu hợp lệ có thể bị mất mà khô
 - Runtime decision: `DuplicateCheckService.java`.
 - Cấu hình: `carehub-backend/src/main/resources/application.yaml`.
 
-Mốc cần nhớ khi trình bày: **384 chiều → cosine → nn-max → 0,95/0,97 → chỉ cảnh báo → reviewer quyết định**.
+Mốc cần nhớ khi trình bày: **384 chiều → cosine → nn-max → 0,93/0,97 → chỉ cảnh báo → reviewer quyết định**.

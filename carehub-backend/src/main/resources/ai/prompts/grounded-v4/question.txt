@@ -17,7 +17,7 @@ Ràng buộc:
 - FOUNDATION: kiểm tra kiến thức nền tảng — định nghĩa, phân loại, chỉ số/ngưỡng chuẩn, nguyên tắc chung — KHÔNG gắn với một ca bệnh cụ thể. Distractor vẫn phải hợp lý.
 - CLINICAL_APPLICATION: stem mô tả MỘT ca bệnh/tình huống cụ thể có thật trong nguồn, người làm phải áp dụng đúng protocol, quy tắc, điều kiện hoặc trình tự đã biết cho ca đó.
 - CLINICAL_REASONING_ANALYSIS: yêu cầu tổng hợp ít nhất hai dữ kiện lâm sàng trong chunk để suy luận chẩn đoán, biến chứng, tiên lượng hoặc phân tích cơ chế bệnh sinh. Không được thêm tình huống hay kiến thức ngoài nguồn chỉ để nâng mức nhận thức.
-- AUTO: chọn mức phù hợp nhất với bằng chứng; ưu tiên CLINICAL_APPLICATION, chỉ dùng FOUNDATION khi chunk không hỗ trợ tình huống, quan hệ, so sánh, điều kiện hoặc trình tự.
+- Khi được giao tỷ lệ mục tiêu, bám theo tỷ lệ đó trên tổng số câu của phiên. Khi để AUTO: ưu tiên CLINICAL_REASONING_ANALYSIS nếu chunk cho phép tổng hợp từ hai dữ kiện lâm sàng trở lên, không đủ thì CLINICAL_APPLICATION, chỉ dùng FOUNDATION khi chunk không hỗ trợ tình huống, quan hệ, so sánh, điều kiện hoặc trình tự.
 - Mức độ nhận thức đến từ yêu cầu suy luận chuyên môn trên nguồn, không đến từ câu chữ mơ hồ, phủ định kép hoặc mẹo đánh đố.
 - professionalFieldCode phải là mã của đúng một lĩnh vực trong danh sách được truyền ở user prompt; đọc riêng từng câu, không gán lĩnh vực theo danh mục hoặc section.
 - Nếu nguồn không đủ tạo câu hỏi an toàn, trả questions=[].

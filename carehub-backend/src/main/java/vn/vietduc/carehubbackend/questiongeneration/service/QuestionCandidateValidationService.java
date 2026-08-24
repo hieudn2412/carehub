@@ -30,6 +30,13 @@ public class QuestionCandidateValidationService {
     private final ObjectMapper objectMapper;
     private final ValidationRulesProperties properties;
 
+    /**
+     * Tự động từ chối CHỈ khi câu hỏi hỏng về cấu trúc: thiếu stem, thiếu phương án,
+     * đáp án đúng không thuộc A/B/C/D, mức nhận thức không hợp lệ, hai phương án trùng
+     * nội dung, phương án chứa mẫu cấm. Mọi thiếu sót khác về grounding (trích dẫn nguồn,
+     * knowledge point, bằng chứng đáp án, stem tham chiếu tài liệu) chỉ còn là cảnh báo.
+     * Nhóm từ chối còn lại đến từ AI critic ở phần dưới hàm này.
+     */
     public CandidateValidationResult validate(GeneratedQuestion question, String chunkText) {
         List<String> warnings = new ArrayList<>();
         boolean rejected = false;
@@ -60,7 +67,6 @@ public class QuestionCandidateValidationService {
         }
         if (groundedV4 && isGenericDocumentReferenceStem(question.stem())) {
             warnings.add("Stem không tự đứng độc lập hoặc đang tham chiếu tài liệu");
-            rejected = true;
         }
         Set<String> normalizedOptions = new HashSet<>();
         for (String option : options) {
@@ -76,39 +82,30 @@ public class QuestionCandidateValidationService {
         }
         if (isBlank(question.sourceExcerpt())) {
             warnings.add("Thiếu trích dẫn nguồn");
-            rejected = true;
             evidenceStatus = "MISSING";
         } else if (groundedV4
                 ? !containsExact(chunkText, question.sourceExcerpt())
                 : !containsNormalized(chunkText, question.sourceExcerpt())) {
             warnings.add("Trích dẫn nguồn chưa khớp rõ với chunk gốc");
             evidenceStatus = "MISMATCH";
-            if (groundedV4) {
-                rejected = true;
-            }
         }
 
         if (groundedV4) {
             if (isBlank(question.questionType())) {
                 warnings.add("Thiếu loại câu hỏi Grounded v4");
-                rejected = true;
             }
             if (isBlank(question.knowledgePointId())) {
                 warnings.add("Thiếu liên kết knowledge point");
-                rejected = true;
             }
             if (isBlank(question.answerEvidence())) {
                 warnings.add("Thiếu bằng chứng hỗ trợ đáp án đúng");
-                rejected = true;
                 evidenceStatus = "MISSING";
             } else if (!containsExact(chunkText, question.answerEvidence())) {
                 warnings.add("Bằng chứng đáp án không xuất hiện nguyên văn trong chunk");
-                rejected = true;
                 evidenceStatus = "MISMATCH";
             }
             if (isBlank(question.distractorRationales())) {
                 warnings.add("Thiếu giải thích cho các distractor");
-                rejected = true;
             }
         }
 

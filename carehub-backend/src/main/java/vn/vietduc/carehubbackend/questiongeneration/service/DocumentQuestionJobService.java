@@ -200,6 +200,13 @@ public class DocumentQuestionJobService {
         TargetCognitiveLevel targetCognitiveLevel = request != null && request.targetCognitiveLevel() != null
                 ? request.targetCognitiveLevel()
                 : TargetCognitiveLevel.AUTO;
+        boolean hasCognitiveMix = request != null && request.hasCognitiveMix();
+        if (hasCognitiveMix
+                && request.cognitiveMixFoundation()
+                + request.cognitiveMixApplication()
+                + request.cognitiveMixReasoning() != 100) {
+            throw new BadRequestException("Tổng tỷ lệ ba mức nhận thức phải bằng 100%");
+        }
         QuestionCategory category = null;
         if (request != null && request.categoryId() != null) {
             category = questionCategoryRepository.findById(request.categoryId())
@@ -226,6 +233,9 @@ public class DocumentQuestionJobService {
                         : null)
                 .pipelineVersion(pipelineVersion)
                 .targetCognitiveLevel(targetCognitiveLevel)
+                .cognitiveMixFoundation(hasCognitiveMix ? request.cognitiveMixFoundation() : null)
+                .cognitiveMixApplication(hasCognitiveMix ? request.cognitiveMixApplication() : null)
+                .cognitiveMixReasoning(hasCognitiveMix ? request.cognitiveMixReasoning() : null)
                 .status(JobStatus.CREATED)
                 .questionsPerChunk(questionsPerChunk)
                 .chunkCount(chunks.size())
@@ -584,7 +594,7 @@ public class DocumentQuestionJobService {
                 job.getQuestionsPerChunk(), "vi", job.getDocument().getFilename(), chunk.getPageStart(),
                 chunk.getPageEnd(), job.getCategory() == null ? null : job.getCategory().getName(),
                 job.getCategory() == null ? null : job.getCategory().getDescription(),
-                job.getTargetCognitiveLevel() == null ? TargetCognitiveLevel.AUTO.name() : job.getTargetCognitiveLevel().name(),
+                cognitiveDirective(job),
                 job.getPipelineVersion() == null ? GenerationPipelineVersion.LEGACY_V3.name() : job.getPipelineVersion().name(),
                 professionalFieldPromptOptions(job)
         );
@@ -845,7 +855,7 @@ public class DocumentQuestionJobService {
                             chunk.getTextHash(),
                             categoryId(job),
                             job.getQuestionsPerChunk(),
-                            job.getTargetCognitiveLevel().name(),
+                            cognitiveKey(job),
                             i,
                             attemptNumber
                     )
@@ -866,6 +876,7 @@ public class DocumentQuestionJobService {
                 continue;
             }
             CandidateValidationResult validation = validationService.validate(question, chunk.getText());
+            // Chỉ còn là cảnh báo: liên kết knowledge point sai không làm hỏng cấu trúc câu hỏi.
             boolean invalidKnowledgePointLink = job.getPipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
                     && !groundedKnowledgePointKeys.contains(question.knowledgePointId());
             DuplicateCheckResult duplicate = duplicateCheckService.check(
@@ -901,20 +912,17 @@ public class DocumentQuestionJobService {
             }
             CandidateStatus status;
             CandidateLabel label;
-            if (validation.rejected() || invalidKnowledgePointLink) {
+            // NEED_REVIEW giờ CHỈ mang nghĩa "nghi ngờ trùng". Thiếu lĩnh vực/mức nhận thức/danh mục
+            // vẫn hiện bằng mini-badge cảnh báo trên thẻ câu hỏi nên không cần gắn cờ thêm ở đây.
+            if (validation.rejected()) {
                 status = CandidateStatus.REJECTED;
                 label = CandidateLabel.REJECTED;
-            } else if (questionProfessionalField == null
-                    || questionCognitiveLevel == null
-                    || job.getCategory() == null
-                    || validation.needsReview()
-                    || duplicate.needsReview()
-                    || duplicate.strongDuplicate()) {
+            } else if (duplicate.needsReview() || duplicate.strongDuplicate()) {
                 status = CandidateStatus.NEED_REVIEW;
                 label = CandidateLabel.NEED_REVIEW;
                 if (duplicate.strongDuplicate()) {
                     warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có; cần người duyệt quyết định");
-                } else if (duplicate.needsReview()) {
+                } else {
                     warnings.add("Có khả năng trùng ngữ nghĩa với câu hỏi đã có");
                 }
             } else {
@@ -950,9 +958,7 @@ public class DocumentQuestionJobService {
                     .rawJson(blankToFallback(question.rawJson(), "{}"))
                     .qualityScore(validation.qualityScore())
                     .llmValidation(question.llmValidationJson())
-                    .validationGrade(invalidKnowledgePointLink
-                            ? CandidateValidationGrade.REJECT
-                            : CandidateValidationGrade.valueOf(validation.validationGrade()))
+                    .validationGrade(CandidateValidationGrade.valueOf(validation.validationGrade()))
                     .validationSource(CandidateValidationSource.valueOf(validation.validationSource()))
                     .validationIssues(toJson(validation.warnings()))
                     .evidenceStatus(validation.evidenceStatus())
@@ -1128,6 +1134,47 @@ public class DocumentQuestionJobService {
         }
         String normalized = answer.trim().toUpperCase();
         return normalized.matches("[ABCD]") ? normalized : "";
+    }
+
+    /**
+     * Chỉ thị mức nhận thức gửi kèm prompt. Khi admin đặt tỷ lệ thì mô tả tỷ lệ đó,
+     * còn lại giữ nguyên tên mức như trước.
+     */
+    private static String cognitiveDirective(DocumentQuestionJob job) {
+        if (hasCognitiveMix(job)) {
+            return ("Phân bổ theo tỷ lệ mục tiêu trên tổng số câu của phiên: "
+                    + "FOUNDATION %d%%, CLINICAL_APPLICATION %d%%, CLINICAL_REASONING_ANALYSIS %d%%. "
+                    + "Bám tỷ lệ này khi chunk đủ dữ kiện; chunk không đủ dữ kiện thì hạ mức và "
+                    + "KHÔNG bịa thêm tình huống ngoài nguồn chỉ để đạt tỷ lệ.")
+                    .formatted(
+                            job.getCognitiveMixFoundation(),
+                            job.getCognitiveMixApplication(),
+                            job.getCognitiveMixReasoning()
+                    );
+        }
+        return job.getTargetCognitiveLevel() == null
+                ? TargetCognitiveLevel.AUTO.name()
+                : job.getTargetCognitiveLevel().name();
+    }
+
+    /** Phần mức nhận thức trong khoá chống sinh trùng; đổi tỷ lệ phải ra khoá khác. */
+    private static String cognitiveKey(DocumentQuestionJob job) {
+        if (hasCognitiveMix(job)) {
+            return "MIX:%d-%d-%d".formatted(
+                    job.getCognitiveMixFoundation(),
+                    job.getCognitiveMixApplication(),
+                    job.getCognitiveMixReasoning()
+            );
+        }
+        return job.getTargetCognitiveLevel() == null
+                ? TargetCognitiveLevel.AUTO.name()
+                : job.getTargetCognitiveLevel().name();
+    }
+
+    private static boolean hasCognitiveMix(DocumentQuestionJob job) {
+        return job.getCognitiveMixFoundation() != null
+                && job.getCognitiveMixApplication() != null
+                && job.getCognitiveMixReasoning() != null;
     }
 
     private String blankToFallback(String value, String fallback) {

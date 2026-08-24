@@ -19,6 +19,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Test render nguyên trang (ExamConfig, ExamPaperList, QuestionBankList, DocumentQuestionJobReview...)
+    // mất 1,5-2s mỗi test; chạy song song cả suite thì vượt mốc 5s mặc định và fail giả.
+    testTimeout: 20000,
     setupFiles: './src/test/setup.js',
     include: ['src/**/*.test.{js,jsx}'],
     // scripts/l1-sync-status.py reads vitest-report.json to fill the Status column

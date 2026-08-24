@@ -8,8 +8,8 @@ The model produces vectors and similarity scores; it does not define what counts
 
 | Highest cosine score | System behavior |
 |---|---|
-| `< 0.95` | No semantic-duplicate warning |
-| `0.95 to below 0.97` | “Potential duplicate” warning |
+| `< 0.93` | No semantic-duplicate warning |
+| `0.93 to below 0.97` | “Potential duplicate” warning |
 | `>= 0.97` | “Strong duplicate” warning |
 
 Both levels are warnings. A high cosine score does not automatically reject a question. A reviewer compares the question stems, answer options, and correct answers before deciding.
@@ -17,7 +17,8 @@ Both levels are warnings. A high cosine score does not automatically reject a qu
 The current thresholds were calibrated on 457 `APPROVED` questions from PostgreSQL:
 
 - 104,196 unique pairs were measured;
-- `0.95` flagged 27 of 457 questions, or 5.9%;
+- the active threshold `0.93` flags 125 of 457 questions by nn-max, or 27.4%;
+- `0.95`, used until 2026-08-25, flagged 27 of 457 questions, or 5.9%;
 - `0.97` produced a strong warning for 10 of 457 questions, or 2.2%;
 - the dataset does not yet have expert-labelled ground truth, so the project cannot claim a precision, recall, or “95% accuracy” figure.
 
@@ -145,7 +146,7 @@ Selecting a threshold from the percentage of independent pairs above that thresh
 
 Very high scores can still come from shared templates rather than duplicate meaning. Without sufficiently strong ground truth to prove a safe auto-rejection boundary, CareHub uses two warnings:
 
-- `reviewMin = 0.95` routes attention to a candidate pair;
+- `reviewMin = 0.93` routes attention to a candidate pair;
 - `strongMin = 0.97` highlights a rarer and more suspicious pair.
 
 `strongDuplicate=true` means “the score crossed the strong-warning threshold.” It does not mean “the model proved that these questions are duplicates.”
@@ -166,7 +167,7 @@ flowchart TD
     L --> H
     H --> I{maxSimilarity >= 0.97?}
     I -- Yes --> J[Strong duplicate warning]
-    I -- No --> K{maxSimilarity >= 0.95?}
+    I -- No --> K{maxSimilarity >= 0.93?}
     K -- Yes --> M[Potential duplicate warning]
     K -- No --> N[No duplicate warning]
     J --> R[Reviewer compares and decides]
@@ -217,7 +218,7 @@ function checkDuplicate(stem, excludedIds, optionalVector):
 
         return {
             maxSimilarity: best.score,
-            needsReview: best.score >= 0.95,
+            needsReview: best.score >= 0.93,
             strongDuplicate: best.score >= 0.97,
             matchedQuestion: best.question,
             checker: best.source
@@ -266,7 +267,7 @@ Even the most isolated question has a nearest neighbor at 0.854. The median near
 | 0.95 | 27/457 | 5.9% |
 | 0.97 | 10/457 | 2.2% |
 
-`reviewMin = 0.95` rounds the measured p90 nn-max of 0.946 upward and targets a manageable review queue. `strongMin = 0.97` defines a rarer warning tier; it is not a scientifically proven duplicate boundary.
+`reviewMin = 0.93` sits between the p70 (0.914) and p80 (0.934) nn-max values. The earlier 0.95 (p90 0.946 rounded up) left reviewers with almost no warnings in practice, so it was lowered to 0.93 on 2026-08-25 to trade queue size for coverage. `strongMin = 0.97` defines a rarer warning tier; it is not a scientifically proven duplicate boundary.
 
 ### 5.5. Measured runtime figures
 
@@ -321,7 +322,7 @@ All stems in one response are batch-embedded. Each candidate is compared with:
 1. the approved question bank;
 2. earlier candidates in the same response.
 
-A score of at least 0.95 routes the candidate to `NEED_REVIEW`. The reviewer sees the highest score, a warning badge, and a list of close questions. Editing, approval, and rejection remain reviewer actions.
+A score of at least 0.93 routes the candidate to `NEED_REVIEW`. The reviewer sees the highest score, a warning badge, and a list of close questions. Editing, approval, and rejection remain reviewer actions.
 
 Other validation rules, such as missing answers, invalid grounding, or malformed structure, can still reject a candidate. The no-auto-rejection rule applies specifically to duplicate similarity.
 
@@ -343,7 +344,7 @@ ai:
 
 validation:
   duplicate:
-    review-min: 0.95
+    review-min: 0.93
     strong-min: 0.97
     lexical-review-min: 0.50
     lexical-strong-min: 0.80
@@ -394,7 +395,7 @@ Without `E5_CALIBRATION_DB=true`, the test uses the seeded `hospital-review-ques
 
 The relevant tests cover:
 
-- exact boundaries at 0.95 and 0.97;
+- exact boundaries at 0.93 and 0.97;
 - strong duplicates producing warnings rather than automatic rejection;
 - exclusion of the question currently being edited;
 - exact scan finding the true maximum even when ANN returns a weaker candidate;
@@ -420,13 +421,13 @@ The calibration test skips unless `RUN_E5_CALIBRATION=true` is set.
 - both sides use the same symmetric representation;
 - batch and single embeddings agree on the measured corpus;
 - runtime obtains the true maximum through exact scan;
-- thresholds 0.95 and 0.97 create warning workloads of approximately 5.9% and 2.2% on the 457-question snapshot;
+- thresholds 0.93 and 0.97 create warning workloads of approximately 27.4% and 2.2% by nn-max on the 457-question snapshot; across 1,168 document-generated candidates the same thresholds yield 6.6% and 1.1%;
 - duplicate similarity does not automatically reject a question.
 
 ### Not yet demonstrated
 
 - precision: how many flagged pairs are real duplicates;
-- recall: how many duplicates remain below 0.95;
+- recall: how many duplicates remain below 0.93;
 - F1 or a threshold optimized against expert labels;
 - threshold stability at thousands or tens of thousands of questions;
 - accuracy when only lexical fallback is available.
@@ -454,22 +455,22 @@ Re-run calibration after any of the following changes:
 - a change in review capacity or target warning rate;
 - availability of new ground-truth labels.
 
-As the bank grows, nn-max tends to rise because every question gets more opportunities to find a close neighbor. The value `0.95` is calibrated for the current snapshot; it is not a permanent constant of E5.
+As the bank grows, nn-max tends to rise because every question gets more opportunities to find a close neighbor. The value `0.93` is calibrated for the current snapshot; it is not a permanent constant of E5.
 
 ## 14. Three-to-five-minute presentation script
 
 1. **Problem:** keyword matching misses semantically equivalent questions written with different vocabulary.
 2. **Model:** E5 turns each stem into a 384-dimensional vector; cosine measures the angle between vectors.
 3. **Runtime:** a new question is compared with every `APPROVED` question, and the nearest question is returned.
-4. **Calibration:** thresholds use nn-max over 457 questions, not independent-pair rates; 0.95 creates a 5.9% warning rate and 0.97 creates a 2.2% strong-warning rate.
+4. **Calibration:** thresholds use nn-max over 457 questions, not independent-pair rates; 0.93 creates a 27.4% warning rate and 0.97 creates a 2.2% strong-warning rate.
 5. **Safety:** high cosine still produces false positives, so the system warns and the reviewer decides.
 6. **Limitation:** no expert-labelled ground truth exists yet, so precision and recall cannot be claimed; the next step is to label 150–200 pairs.
 
 ## 15. Likely defense questions
 
-### “Does the model provide the 0.95 threshold?”
+### “Does the model provide the 0.93 threshold?”
 
-No. The model returns vectors. CareHub chooses 0.95 from the nn-max distribution and the review workload the team can handle.
+No. The model returns vectors. CareHub chooses 0.93 from the nn-max distribution and the review workload the team can handle.
 
 ### “Why not use 0.8?”
 
@@ -507,4 +508,4 @@ A false positive could silently discard a valid clinical question. A false warni
 - Runtime decision logic: `DuplicateCheckService.java`.
 - Runtime configuration: `carehub-backend/src/main/resources/application.yaml`.
 
-The core sequence to remember is: **384 dimensions → cosine → nn-max → 0.95/0.97 → warnings only → reviewer decision**.
+The core sequence to remember is: **384 dimensions → cosine → nn-max → 0.93/0.97 → warnings only → reviewer decision**.
