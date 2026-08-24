@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import vn.vietduc.carehubbackend.exception.BadRequestException;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportCommitRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportRowRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.UpsertQuestionBankQuestionRequest;
@@ -109,12 +108,6 @@ public class QuestionBankImportExportService {
             QuestionCategoryRepository categoryRepository
     ) {
         this(questionBankService, importHistoryService, objectMapper, categoryRepository, null, null);
-    }
-
-    private enum DuplicateHandlingMode {
-        BLOCK,
-        SKIP_DUPLICATES,
-        IMPORT_DUPLICATES_AS_DRAFT
     }
 
     @Transactional(readOnly = true)
@@ -268,7 +261,7 @@ public class QuestionBankImportExportService {
                         errors.add(resolution.reason());
                     }
                     boolean skipped = isOnlyCategoryResolutionError(resolution, errors);
-                    return toResult(row, resolution, fieldResolution, null, errors, skipped);
+                    return toResult(row, resolution, fieldResolution, null, "APPROVED", errors, skipped);
                 })
                 .toList();
         QuestionBankImportPreviewResponse preview = new QuestionBankImportPreviewResponse(
@@ -292,7 +285,6 @@ public class QuestionBankImportExportService {
         if (request == null || request.rows() == null || request.rows().isEmpty()) {
             throw new BadRequestException("Không có dòng import nào để lưu");
         }
-        DuplicateHandlingMode duplicateMode = parseDuplicateMode(request.duplicateHandlingMode());
         List<QuestionBankImportRowResultResponse> results = new ArrayList<>();
         for (QuestionBankImportRowRequest rawRow : request.rows()) {
             QuestionBankImportRowRequest row = normalizeAndResolve(rawRow);
@@ -306,31 +298,18 @@ public class QuestionBankImportExportService {
                 errors.add(resolution.reason());
             }
             Long createdQuestionId = null;
+            String createdStatus = "APPROVED";
             boolean skipped = isOnlyCategoryResolutionError(resolution, errors);
             if (errors.isEmpty() && !skipped) {
                 try {
                     QuestionBankQuestionResponse created = questionBankService.createInNewTransaction(toUpsertRequest(row, resolution.category(), fieldResolution.field()), actor);
                     createdQuestionId = created.id();
-                } catch (ConflictException ex) {
-                    if (duplicateMode == DuplicateHandlingMode.SKIP_DUPLICATES) {
-                        skipped = true;
-                        errors.add("Bỏ qua do trùng mạnh: " + safeMessage(ex));
-                    } else if (duplicateMode == DuplicateHandlingMode.IMPORT_DUPLICATES_AS_DRAFT) {
-                        try {
-                            QuestionBankQuestionResponse created = questionBankService
-                                    .createImportDraftAllowingDuplicateInNewTransaction(toUpsertRequest(row, resolution.category(), fieldResolution.field()), actor);
-                            createdQuestionId = created.id();
-                        } catch (Exception draftEx) {
-                            errors.add(safeMessage(draftEx));
-                        }
-                    } else {
-                        errors.add(safeMessage(ex));
-                    }
+                    createdStatus = created.status();
                 } catch (Exception ex) {
                     errors.add(safeMessage(ex));
                 }
             }
-            results.add(toResult(row, resolution, fieldResolution, createdQuestionId, errors, skipped));
+            results.add(toResult(row, resolution, fieldResolution, createdQuestionId, createdStatus, errors, skipped));
         }
         int skippedCount = (int) results.stream().filter(row -> Boolean.TRUE.equals(row.skipped())).count();
         QuestionBankImportCommitResponse commit = new QuestionBankImportCommitResponse(
@@ -609,6 +588,7 @@ public class QuestionBankImportExportService {
             CategoryResolution resolution,
             FieldResolution fieldResolution,
             Long createdQuestionId,
+            String createdStatus,
             List<String> errors,
             boolean skipped
     ) {
@@ -626,7 +606,7 @@ public class QuestionBankImportExportService {
                 category == null ? null : category.getName(),
                 "vi",
                 row.sourceDocument(),
-                "APPROVED",
+                createdStatus,
                 errors.isEmpty() && !skipped,
                 skipped,
                 createdQuestionId,
@@ -732,17 +712,6 @@ public class QuestionBankImportExportService {
         return new FieldResolution(null, byName.isEmpty()
                 ? "Không nhận diện được lĩnh vực: " + row.professionalFieldReference()
                 : "Tên lĩnh vực bị trùng; vui lòng chọn giá trị có [MÃ]");
-    }
-
-    private DuplicateHandlingMode parseDuplicateMode(String value) {
-        if (value == null || value.isBlank()) {
-            return DuplicateHandlingMode.BLOCK;
-        }
-        try {
-            return DuplicateHandlingMode.valueOf(value.trim().toUpperCase(Locale.ROOT));
-        } catch (Exception ex) {
-            throw new BadRequestException("Chế độ xử lý trùng lặp không hợp lệ");
-        }
     }
 
     private String safeMessage(Exception ex) {

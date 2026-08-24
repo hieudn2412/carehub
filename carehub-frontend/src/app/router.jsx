@@ -34,8 +34,6 @@ import ExamManagementPage from '../features/evaluation/pages/ExamManagementPage.
 import QuestionDocumentListPage from '../features/evaluation/pages/QuestionDocumentListPage.jsx'
 import QuestionDocumentDetailPage from '../features/evaluation/pages/QuestionDocumentDetailPage.jsx'
 import DocumentQuestionJobReviewPage from '../features/evaluation/pages/DocumentQuestionJobReviewPage.jsx'
-import CompetencyThresholdPage from '../features/evaluation/pages/CompetencyThresholdPage.jsx'
-import CompetencyDepartmentPage from '../features/evaluation/pages/CompetencyDepartmentPage.jsx'
 import CompetencyByFieldPage from '../features/evaluation/pages/CompetencyByFieldPage.jsx'
 import CompetencyEmployeeFieldDetailPage from '../features/evaluation/pages/CompetencyEmployeeFieldDetailPage.jsx'
 import ComplianceByTechniquePage from '../features/evaluation/pages/ComplianceByTechniquePage.jsx'
@@ -263,8 +261,6 @@ function AppRouter() {
       <Route path="/admin/evaluation/exam-assignments" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
       <Route path="/admin/evaluation/exam-assignments/new" element={evaluationElement(<ExamAssignmentFormPage />)} />
       <Route path="/admin/evaluation/exam-attempts" element={<Navigate to="/admin/evaluation/exam-management?view=assignments" replace />} />
-      <Route path="/admin/evaluation/competency-thresholds" element={evaluationElement(<CompetencyThresholdPage />)} />
-      <Route path="/admin/evaluation/competency" element={evaluationElement(<CompetencyDepartmentPage />)} />
       <Route path="/admin/evaluation/competency-by-field" element={evaluationElement(<CompetencyByFieldPage />)} />
       <Route path="/admin/evaluation/competency-by-field/:employeeId" element={evaluationElement(<CompetencyEmployeeFieldDetailPage />)} />
       <Route path="/admin/evaluation/compliance-by-technique" element={evaluationElement(<ComplianceByTechniquePage />)} />

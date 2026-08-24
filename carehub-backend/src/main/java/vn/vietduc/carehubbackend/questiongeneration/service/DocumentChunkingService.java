@@ -109,6 +109,9 @@ public class DocumentChunkingService {
         if (isTableLikeLowConfidence(text, section.confidence())) {
             flags.add(DocumentChunkQualityRules.TABLE_LIKE_LOW_CONFIDENCE);
         }
+        if (DocumentChunkQualityRules.isBibliographyLike(section.path(), text)) {
+            flags.add(DocumentChunkQualityRules.BIBLIOGRAPHY_LIKE);
+        }
         if (tokenCount > properties.getChunk().getTargetTokens()) {
             flags.add(DocumentChunkQualityRules.ABOVE_TARGET_TOKEN_RANGE);
         }

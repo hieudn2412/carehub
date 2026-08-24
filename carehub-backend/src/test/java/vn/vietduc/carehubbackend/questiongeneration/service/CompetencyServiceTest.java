@@ -14,7 +14,6 @@ import vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult;
 import vn.vietduc.carehubbackend.form.submission.repository.FormSubmissionRepository;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
 import vn.vietduc.carehubbackend.questiongeneration.entity.enums.ExamAttemptStatus;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -43,7 +42,6 @@ class CompetencyServiceTest {
     private FormSubmissionRepository submissionRepository;
     private UserRepository userRepository;
     private DepartmentRepository departmentRepository;
-    private CompetencyClassificationService classificationService;
     private SystemSettingsService systemSettingsService;
     private CompetencyService service;
     private Department department;
@@ -56,7 +54,6 @@ class CompetencyServiceTest {
         userRepository = mock(UserRepository.class);
         departmentRepository = mock(DepartmentRepository.class);
         QuestionCategoryRepository categoryRepository = mock(QuestionCategoryRepository.class);
-        classificationService = mock(CompetencyClassificationService.class);
         systemSettingsService = mock(SystemSettingsService.class);
         service = new CompetencyService(
                 attemptRepository,
@@ -65,7 +62,6 @@ class CompetencyServiceTest {
                 userRepository,
                 departmentRepository,
                 categoryRepository,
-                classificationService,
                 systemSettingsService
         );
         when(systemSettingsService.competencyTargetScore()).thenReturn(new BigDecimal("6.00"));
@@ -73,7 +69,6 @@ class CompetencyServiceTest {
 
         department = Department.builder().id(10L).name("Khoa Nội").build();
         when(departmentRepository.findById(10L)).thenReturn(Optional.of(department));
-        when(classificationService.classifyOverall(any())).thenReturn(CompetencyLevel.PROFICIENT);
     }
 
     @Test
@@ -376,8 +371,9 @@ class CompetencyServiceTest {
         assertThat(response.items()).singleElement().satisfies(item -> {
             assertThat(item.averageScore()).isEqualByComparingTo("9.52");
             assertThat(item.passRate()).isEqualTo(100.0d);
+            // 9.52 vượt điểm sàn 6.00 nên kết luận Đạt.
+            assertThat(item.isPassed()).isTrue();
         });
-        verify(classificationService).classifyOverall(new BigDecimal("9.52"));
     }
 
     @Test
@@ -427,9 +423,9 @@ class CompetencyServiceTest {
                             new BigDecimal("10.00"),
                             new BigDecimal("9.04")
                     );
+            // Trung bình 9.68 lấy từ điểm quy đổi, vượt điểm sàn 6.00 nên Đạt.
+            assertThat(item.isPassed()).isTrue();
         });
-        verify(classificationService).classifyOverall(new BigDecimal("9.68"));
-        verify(classificationService, never()).classifyOverall(new BigDecimal("1.45"));
     }
 
     private FormSubmission submission(

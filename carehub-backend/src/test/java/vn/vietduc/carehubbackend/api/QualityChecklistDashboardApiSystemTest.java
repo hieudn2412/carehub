@@ -20,8 +20,8 @@ class QualityChecklistDashboardApiSystemTest extends AbstractApiSystemTest {
     @BeforeEach
     void createActors() {
         User admin = newUser("QCD-ADMIN", "ADMIN");
-        User user = newUser("QCD-USER", "USER");
         manager = newUser("QCD-MANAGER", "MANAGER");
+        User user = newUser("QCD-USER", "USER");
         adminToken = tokenFor(admin);
         managerToken = tokenFor(manager);
         userToken = tokenFor(user);

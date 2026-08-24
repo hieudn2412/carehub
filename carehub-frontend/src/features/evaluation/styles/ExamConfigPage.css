@@ -87,6 +87,7 @@
 .exam-flow__target-title { display: flex; justify-content: space-between; align-items: center; min-height: 34px; color: #334155; font-size: 13px; margin-bottom: 6px; }
 .exam-flow__target-title span { color: #64748b; }
 .exam-flow__employee-search { width: 100%; margin-bottom: 8px; box-sizing: border-box; }
+.exam-flow__position-filter { margin-bottom: 8px; }
 
 /* Department Filter List (2 columns) */
 .exp-target-list--dept {

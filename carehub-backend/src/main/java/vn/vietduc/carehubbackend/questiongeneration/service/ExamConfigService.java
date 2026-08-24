@@ -38,9 +38,12 @@ import vn.vietduc.carehubbackend.questiongeneration.repository.EvaluationAudienc
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -284,33 +287,34 @@ public class ExamConfigService {
         }
         boolean backfill = Boolean.TRUE.equals(config.getBackfillNearestCognitiveLevel());
         int distributed = 0;
+        Set<Long> usedFamilies = new HashSet<>();
         for (ExamBlueprintField field : fields) {
             List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
             cells.sort(Comparator.comparingInt(cell -> CognitiveBackfillAllocator.order(cell.getCognitiveLevel())));
+            Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
+                    pool, field.getProfessionalField().getId(), usedFamilies);
             List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (ExamBlueprintCell cell : cells) {
-                int available = Math.toIntExact(pool.stream()
-                        .filter(q -> Objects.equals(q.getProfessionalField().getId(), field.getProfessionalField().getId())
-                                && q.getCognitiveLevel() == cell.getCognitiveLevel())
-                        .mapToLong(ExamGenerationDeterminism::familyId)
-                        .distinct()
-                        .count());
                 int required = zeroOverlap ? cell.getQuestionCount() * variantCount : cell.getQuestionCount();
-                demands.add(new CognitiveBackfillAllocator.CellDemand(cell.getCognitiveLevel(), required, available));
+                demands.add(new CognitiveBackfillAllocator.CellDemand(cell.getCognitiveLevel(), required));
             }
-            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(demands, backfill);
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(
+                    demands, familiesByLevel, backfill);
+            outcomes.stream().flatMap(outcome -> outcome.picks().stream())
+                    .map(CognitiveBackfillAllocator.FamilyPick::familyId)
+                    .forEach(usedFamilies::add);
             List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cellResponses = new ArrayList<>();
-            int availableField = 0;
+            int availableField = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
             int backfilledField = 0;
+            int fieldShortage = 0;
             for (int i = 0; i < cells.size(); i++) {
                 ExamBlueprintCell cell = cells.get(i);
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(i);
-                availableField += outcome.rawAvailable();
                 backfilledField += outcome.backfilled();
+                fieldShortage += outcome.shortage();
                 if (outcome.shortage() > 0) warnings.add(field.getProfessionalField().getName() + " / " + cell.getCognitiveLevel().name() + " thiếu " + outcome.shortage() + " câu");
                 cellResponses.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(cell.getCognitiveLevel().name(), cell.getPercentage(), cell.getQuestionCount(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
-            int fieldShortage = Math.max(0, field.getQuestionCount() - availableField);
             if (fieldShortage > 0 && cells.isEmpty()) warnings.add(field.getProfessionalField().getName() + " thiếu nguồn câu hỏi");
             distributed += field.getQuestionCount();
             responses.add(new ExamBlueprintFieldPreviewResponse(field.getProfessionalField().getId(), field.getProfessionalField().getCode(), field.getProfessionalField().getName(), field.getPercentage(), field.getQuestionCount(), availableField, fieldShortage, backfilledField, field.getDisplayOrder(), cellResponses));
@@ -327,12 +331,12 @@ public class ExamConfigService {
         List<QuestionBankQuestion> pool = directPool(request.sourceFilters(), fields.stream().map(UpsertExamConfigRequest.FieldBlueprint::professionalFieldId).filter(Objects::nonNull).collect(Collectors.toSet()));
         boolean backfill = Boolean.TRUE.equals(request.backfillNearestCognitiveLevel());
         List<ExamBlueprintFieldPreviewResponse> responses = new ArrayList<>();
+        Set<Long> usedFamilies = new HashSet<>();
         for (int i = 0; i < fields.size(); i++) {
             UpsertExamConfigRequest.FieldBlueprint draft = fields.get(i);
             ProfessionalField field = professionalFieldRepository == null ? null : professionalFieldRepository.findById(draft.professionalFieldId()).orElse(null);
             int fieldCount = i < fieldCounts.size() ? fieldCounts.get(i) : 0;
             List<Integer> cellCounts = allocateCounts(draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::percentage).toList(), draft.cognitive().stream().map(UpsertExamConfigRequest.CognitiveDistribution::questionCount).toList(), fieldCount);
-            ProfessionalField cellField = field;
             record IndexedCell(UpsertExamConfigRequest.CognitiveDistribution cell, CognitiveLevel level, int baseRequired) { }
             List<IndexedCell> orderedCognitive = new ArrayList<>();
             for (int c = 0; c < draft.cognitive().size(); c++) {
@@ -340,28 +344,49 @@ public class ExamConfigService {
                 orderedCognitive.add(new IndexedCell(cell, parseCognitive(cell.cognitiveLevel()), cellCounts.get(c)));
             }
             orderedCognitive.sort(Comparator.comparingInt(ic -> CognitiveBackfillAllocator.order(ic.level())));
+            Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
+                    pool, draft.professionalFieldId(), usedFamilies);
             List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (IndexedCell ic : orderedCognitive) {
-                int available = cellField == null ? 0 : Math.toIntExact(pool.stream().filter(q -> Objects.equals(q.getProfessionalField().getId(), cellField.getId()) && q.getCognitiveLevel() == ic.level()).mapToLong(ExamGenerationDeterminism::familyId).distinct().count());
                 int required = zeroOverlap ? ic.baseRequired() * variantCount : ic.baseRequired();
-                demands.add(new CognitiveBackfillAllocator.CellDemand(ic.level(), required, available));
+                demands.add(new CognitiveBackfillAllocator.CellDemand(ic.level(), required));
             }
-            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(demands, backfill);
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(
+                    demands, familiesByLevel, backfill);
+            outcomes.stream().flatMap(outcome -> outcome.picks().stream())
+                    .map(CognitiveBackfillAllocator.FamilyPick::familyId)
+                    .forEach(usedFamilies::add);
             List<ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse> cells = new ArrayList<>();
-            int availableField = 0;
+            int availableField = Math.toIntExact(familiesByLevel.values().stream().flatMap(Set::stream).distinct().count());
             int backfilledField = 0;
+            int fieldShortage = 0;
             for (int c = 0; c < orderedCognitive.size(); c++) {
                 IndexedCell ic = orderedCognitive.get(c);
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(c);
-                availableField += outcome.rawAvailable();
                 backfilledField += outcome.backfilled();
+                fieldShortage += outcome.shortage();
                 if (outcome.shortage() > 0) warnings.add((field == null ? "Lĩnh vực #" + draft.professionalFieldId() : field.getName()) + " / " + ic.level().name() + " thiếu " + outcome.shortage() + " câu");
                 cells.add(new ExamBlueprintFieldPreviewResponse.ExamBlueprintCellPreviewResponse(ic.level() == null ? ic.cell().cognitiveLevel() : ic.level().name(), ic.cell().percentage(), outcome.required(), outcome.rawAvailable(), outcome.shortage(), outcome.backfilled()));
             }
             String code = field == null ? null : field.getCode(); String name = field == null ? null : field.getName();
-            responses.add(new ExamBlueprintFieldPreviewResponse(draft.professionalFieldId(), code, name, draft.percentage(), fieldCount, availableField, Math.max(0, fieldCount - availableField), backfilledField, draft.displayOrder() == null ? i : draft.displayOrder(), cells));
+            responses.add(new ExamBlueprintFieldPreviewResponse(draft.professionalFieldId(), code, name, draft.percentage(), fieldCount, availableField, fieldShortage, backfilledField, draft.displayOrder() == null ? i : draft.displayOrder(), cells));
         }
         return new BlueprintPreview(fieldCounts.stream().mapToInt(Integer::intValue).sum(), warnings.isEmpty(), responses, warnings);
+    }
+
+    private Map<CognitiveLevel, Set<Long>> familiesByLevel(
+            List<QuestionBankQuestion> pool,
+            Long professionalFieldId,
+            Set<Long> excludedFamilies
+    ) {
+        Map<CognitiveLevel, Set<Long>> result = new EnumMap<>(CognitiveLevel.class);
+        pool.stream()
+                .filter(question -> question.getProfessionalField() != null
+                        && Objects.equals(question.getProfessionalField().getId(), professionalFieldId))
+                .filter(question -> !excludedFamilies.contains(ExamGenerationDeterminism.familyId(question)))
+                .forEach(question -> result.computeIfAbsent(question.getCognitiveLevel(), ignored -> new LinkedHashSet<>())
+                        .add(ExamGenerationDeterminism.familyId(question)));
+        return result;
     }
 
     private List<QuestionBankQuestion> directPool(ExamConfig config) {

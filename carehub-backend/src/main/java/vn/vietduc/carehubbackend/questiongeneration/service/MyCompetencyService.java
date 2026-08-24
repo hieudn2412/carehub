@@ -19,7 +19,6 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyComplianceFor
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.MyComplianceOverviewResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.user.entity.User;
 import vn.vietduc.carehubbackend.systemsettings.service.SystemSettingsService;
@@ -46,7 +45,6 @@ public class MyCompetencyService {
 
     private final ExamAttemptRepository attemptRepository;
     private final FormSubmissionRepository formSubmissionRepository;
-    private final CompetencyClassificationService classificationService;
     private final SystemSettingsService systemSettingsService;
 
     @Value("${app.competency.compliance.default-target:80.0}")
@@ -83,6 +81,7 @@ public class MyCompetencyService {
             groupedByCategory.computeIfAbsent(category, k -> new ArrayList<>()).add(a);
         }
 
+        BigDecimal targetScore = targetScore();
         List<KnowledgeCompetencyItemResponse> items = new ArrayList<>();
         BigDecimal totalScoreSum = BigDecimal.ZERO;
         int totalAttemptCount = 0;
@@ -108,9 +107,6 @@ public class MyCompetencyService {
                     ? Math.round((passCount * 100.0 / catAttempts.size()) * 10.0) / 10.0
                     : 0.0;
 
-            CompetencyLevel level = classificationService.classifyOverall(avg);
-            boolean isPassed = level != CompetencyLevel.NOT_COMPETENT;
-
             List<ExamAttemptBriefResponse> attemptBriefs = catAttempts.stream()
                     .map(this::toExamAttemptBrief)
                     .toList();
@@ -122,10 +118,7 @@ public class MyCompetencyService {
                     avg,
                     passCount,
                     passRate,
-                    level.name(),
-                    QuestionGenerationLabels.competencyLevel(level),
-                    QuestionGenerationLabels.competencyLevelColor(level),
-                    isPassed,
+                    CompetencyScoring.meetsTarget(avg, targetScore),
                     attemptBriefs
             ));
 
@@ -190,6 +183,7 @@ public class MyCompetencyService {
             groupedByForm.computeIfAbsent(form, k -> new ArrayList<>()).add(s);
         }
 
+        BigDecimal targetScore = targetScore();
         List<SkillCompetencyItemResponse> items = new ArrayList<>();
         BigDecimal totalScoreSum = BigDecimal.ZERO;
         int totalEvalCount = 0;
@@ -212,8 +206,6 @@ public class MyCompetencyService {
                     ? Math.round((passCount * 100.0 / formSubs.size()) * 10.0) / 10.0
                     : 0.0;
 
-            CompetencyLevel level = classificationService.classifyOverall(avg);
-            boolean isPassed = level != CompetencyLevel.NOT_COMPETENT;
             BigDecimal complianceTarget = complianceTarget(form);
             boolean belowTarget = passRate < complianceTarget.doubleValue();
 
@@ -228,10 +220,7 @@ public class MyCompetencyService {
                     avg,
                     passCount,
                     passRate,
-                    level.name(),
-                    QuestionGenerationLabels.competencyLevel(level),
-                    QuestionGenerationLabels.competencyLevelColor(level),
-                    isPassed,
+                    CompetencyScoring.meetsTarget(avg, targetScore),
                     belowTarget,
                     submissionBriefs,
                     complianceTarget,
@@ -262,19 +251,10 @@ public class MyCompetencyService {
         MyCompetencyKnowledgeResponse knowledge = getKnowledgeCompetency(user, fromDate, toDate);
         MyCompetencySkillResponse skills = getSkillCompetency(user, fromDate, toDate);
 
-        BigDecimal knowledgeAvg = knowledge.overallAverage() == null
-                ? BigDecimal.ZERO : knowledge.overallAverage();
-        BigDecimal skillAvg = skills.overallAverage() == null
-                ? BigDecimal.ZERO : skills.overallAverage();
-
-        BigDecimal overallScore = knowledgeAvg.add(skillAvg)
-                .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-
-        CompetencyLevel level = classificationService.classifyOverall(overallScore);
-
-        BigDecimal targetScore = systemSettingsService.competencyTargetScore();
-        boolean isPassed = targetScore != null
-                && overallScore.compareTo(targetScore) >= 0;
+        BigDecimal knowledgeAvg = knowledge.overallAverage();
+        BigDecimal skillAvg = skills.overallAverage();
+        BigDecimal overallScore = CompetencyScoring.overallScore(knowledgeAvg, skillAvg);
+        BigDecimal targetScore = targetScore();
 
         return new MyCompetencySummaryResponse(
                 knowledge.fromDate(),
@@ -287,11 +267,13 @@ public class MyCompetencyService {
                 user.getDepartment() == null ? null : user.getDepartment().getId(),
                 user.getDepartment() == null ? null : user.getDepartment().getName(),
                 targetScore,
-                level != null ? level.name() : null,
-                level != null ? QuestionGenerationLabels.competencyLevel(level) : null,
-                level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
-                isPassed
+                CompetencyScoring.meetsTarget(overallScore, targetScore)
         );
+    }
+
+    /** Điểm sàn toàn viện admin cấu hình ở /admin/system-settings/competency. */
+    private BigDecimal targetScore() {
+        return CompetencyScoring.normalizeTarget(systemSettingsService.competencyTargetScore());
     }
 
     private ExamAttemptBriefResponse toExamAttemptBrief(ExamAttempt attempt) {
@@ -299,9 +281,6 @@ public class MyCompetencyService {
         if (score != null && score.compareTo(BigDecimal.valueOf(10)) > 0) {
             score = score.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
         }
-        CompetencyLevel level = attempt.getClassification() != null
-                ? attempt.getClassification()
-                : classificationService.classifyOverall(score);
         return new ExamAttemptBriefResponse(
                 attempt.getId(),
                 attempt.getExamPaper() == null ? "Bài kiểm tra" : attempt.getExamPaper().getName(),
@@ -309,16 +288,12 @@ public class MyCompetencyService {
                 score,
                 attempt.getCorrectCount(),
                 attempt.getTotalQuestions(),
-                attempt.getPassed(),
-                level == null ? null : level.name(),
-                level == null ? null : QuestionGenerationLabels.competencyLevel(level),
-                level == null ? null : QuestionGenerationLabels.competencyLevelColor(level)
+                attempt.getPassed()
         );
     }
 
     private FormSubmissionBriefResponse toFormSubmissionBrief(FormSubmission submission) {
         BigDecimal score = practicalScore(submission);
-        CompetencyLevel level = classificationService.classifyOverall(score);
         String submittedByName = null;
         try {
             if (submission.getSubmittedBy() != null) {
@@ -335,10 +310,7 @@ public class MyCompetencyService {
                         : LocalDateTime.ofInstant(submission.getSubmittedAt(), ZoneId.systemDefault()),
                 submittedByName,
                 score,
-                submission.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED,
-                level.name(),
-                QuestionGenerationLabels.competencyLevel(level),
-                QuestionGenerationLabels.competencyLevelColor(level)
+                submission.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED
         );
     }
 

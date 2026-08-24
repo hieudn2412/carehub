@@ -200,6 +200,7 @@ function QuestionDocumentListPage() {
       const response = await documentQuestionApi.createQuestionJob(jobModalDocument.id, {
         questionsPerChunk: normalizedCount,
         categoryId: Number(selectedCategoryId),
+        pipelineVersion: 'GROUNDED_V4',
       })
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
