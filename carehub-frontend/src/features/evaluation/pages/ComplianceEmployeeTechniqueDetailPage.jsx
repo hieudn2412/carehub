@@ -1,10 +1,7 @@
 import { Fragment, useState, useEffect, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  WarningFilled,
-  CheckCircleFilled,
   ReloadOutlined,
-  CloseCircleFilled,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
@@ -13,6 +10,7 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 function ComplianceEmployeeTechniqueDetailPage() {
   const { employeeId } = useParams()
@@ -169,17 +167,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                               </span>
                             </td>
                             <td>
-                              <span className="evd-badge" style={{
-                                backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                color: item.colorHex || '#6b7280',
-                              }}>
-                                {item.isPassed
-                                  ? <CheckCircleFilled style={{ marginRight: 4 }} />
-                                  : item.belowTarget
-                                    ? <CloseCircleFilled style={{ marginRight: 4 }} />
-                                    : <WarningFilled style={{ marginRight: 4 }} />}
-                                {item.competencyLabel || '—'}
-                              </span>
+                              <PassFailBadge passed={item.isPassed} />
                             </td>
                           </tr>
                           {expandedRow === idx && item.attempts && item.attempts.length > 0 && (

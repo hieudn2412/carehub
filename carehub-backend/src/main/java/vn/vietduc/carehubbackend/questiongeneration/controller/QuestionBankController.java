@@ -27,6 +27,9 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankImp
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankAvailabilityResponse;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationAuditLogService;
+import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionDuplicateCheckRequest;
+import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionDuplicateMatchResponse;
+import vn.vietduc.carehubbackend.questiongeneration.service.CandidateReviewService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankImportExportService;
 import vn.vietduc.carehubbackend.questiongeneration.service.QuestionBankService;
 import vn.vietduc.carehubbackend.questiongeneration.service.EvaluationCutoverService;
@@ -43,6 +46,7 @@ public class QuestionBankController {
     private final QuestionBankImportExportService importExportService;
     private final EvaluationAuditLogService auditLogService;
     private final EvaluationCutoverService cutover;
+    private final CandidateReviewService candidateReviewService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<QuestionBankQuestionResponse>>> list(
@@ -159,6 +163,18 @@ public class QuestionBankController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Import ngân hàng câu hỏi thành công",
                 response
+        ));
+    }
+
+    /** Cảnh báo trùng TRƯỚC khi lưu; không ghi gì vào ngân hàng. */
+    @PostMapping("/duplicate-check")
+    @PreAuthorize("@evaluationSecurity.canAuthor(authentication)")
+    public ResponseEntity<ApiResponse<List<QuestionDuplicateMatchResponse>>> checkDuplicates(
+            @Valid @RequestBody QuestionDuplicateCheckRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Kiểm tra trùng thành công",
+                candidateReviewService.potentialDuplicatesForStem(request.stem(), request.excludeQuestionId())
         ));
     }
 

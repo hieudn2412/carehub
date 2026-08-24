@@ -26,7 +26,6 @@ import vn.vietduc.carehubbackend.questiongeneration.dto.response.FormSubmissionB
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.ExamAttempt;
-import vn.vietduc.carehubbackend.questiongeneration.entity.enums.CompetencyLevel;
 import vn.vietduc.carehubbackend.questiongeneration.repository.ExamAttemptRepository;
 import vn.vietduc.carehubbackend.questiongeneration.repository.QuestionCategoryRepository;
 import vn.vietduc.carehubbackend.user.entity.Department;
@@ -60,10 +59,9 @@ public class CompetencyService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
-    private final CompetencyClassificationService classificationService;
     private final SystemSettingsService systemSettingsService;
 
-    @Value("${competency.compliance.default-target:80.0}")
+    @Value("${app.competency.compliance.default-target:80.0}")
     private double defaultComplianceTarget;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -109,6 +107,7 @@ public class CompetencyService {
                         userIds(users), fromDateTime, toDateTime
                 ));
 
+        BigDecimal targetScore = targetScore();
         List<CompetencyByFieldItemResponse> items = new ArrayList<>();
         for (User user : users) {
             List<ExamAttempt> attempts = attemptsByUser.getOrDefault(user.getId(), List.of())
@@ -136,15 +135,11 @@ public class CompetencyService {
             double passRate = attempts.size() > 0
                     ? Math.round((passCount * 100.0 / attempts.size()) * 10.0) / 10.0 : 0.0;
 
-            CompetencyLevel level = classificationService.classifyOverall(avg);
-            boolean isPassed = level != CompetencyLevel.NOT_COMPETENT;
-
             items.add(new CompetencyByFieldItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
                     departmentName(user),
                     attempts.size(), avg, passCount, passRate,
-                    level.name(), QuestionGenerationLabels.competencyLevel(level),
-                    QuestionGenerationLabels.competencyLevelColor(level), isPassed
+                    meetsTarget(avg, targetScore)
             ));
         }
 
@@ -179,6 +174,7 @@ public class CompetencyService {
             grouped.computeIfAbsent(cat, k -> new ArrayList<>()).add(a);
         }
 
+        BigDecimal targetScore = targetScore();
         List<vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse> items = new ArrayList<>();
         for (var entry : grouped.entrySet()) {
             String catName = entry.getKey();
@@ -192,32 +188,22 @@ public class CompetencyService {
             BigDecimal avg = sum.divide(BigDecimal.valueOf(catAttempts.size()), 2, RoundingMode.HALF_UP);
             double passRate = catAttempts.size() > 0
                     ? Math.round((passCount * 100.0 / catAttempts.size()) * 10.0) / 10.0 : 0.0;
-            CompetencyLevel level = classificationService.classifyOverall(avg);
-
             List<ExamAttemptBriefResponse> attemptBriefs = catAttempts.stream()
                     .sorted(Comparator.comparing(ExamAttempt::getSubmittedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                    .map(a -> {
-                        CompetencyLevel aLevel = a.getClassification();
-                        return new ExamAttemptBriefResponse(
-                                a.getId(),
-                                a.getExamPaper() != null ? a.getExamPaper().getName() : "—",
-                                a.getSubmittedAt() != null ? a.getSubmittedAt().toLocalDate() : null,
-                                a.getScore(),
-                                a.getCorrectCount(),
-                                a.getTotalQuestions(),
-                                a.getPassed(),
-                                aLevel != null ? aLevel.name() : null,
-                                aLevel != null ? QuestionGenerationLabels.competencyLevel(aLevel) : null,
-                                aLevel != null ? QuestionGenerationLabels.competencyLevelColor(aLevel) : null
-                        );
-                    })
+                    .map(a -> new ExamAttemptBriefResponse(
+                            a.getId(),
+                            a.getExamPaper() != null ? a.getExamPaper().getName() : "—",
+                            a.getSubmittedAt() != null ? a.getSubmittedAt().toLocalDate() : null,
+                            a.getScore(),
+                            a.getCorrectCount(),
+                            a.getTotalQuestions(),
+                            a.getPassed()
+                    ))
                     .collect(Collectors.toList());
 
             items.add(new vn.vietduc.carehubbackend.questiongeneration.dto.response.KnowledgeCompetencyItemResponse(
                     null, catName, catAttempts.size(), avg, passCount, passRate,
-                    level.name(), QuestionGenerationLabels.competencyLevel(level),
-                    QuestionGenerationLabels.competencyLevelColor(level),
-                    level != CompetencyLevel.NOT_COMPETENT,
+                    meetsTarget(avg, targetScore),
                     attemptBriefs
             ));
         }
@@ -259,6 +245,7 @@ public class CompetencyService {
                         departmentId, fromInstant, toInstant
                 );
 
+        BigDecimal targetScore = targetScore();
         List<CompetencyByTechniqueItemResponse> items = new ArrayList<>();
         Form selectedForm = formId == null ? null : foundById(formId);
         for (FormSubmissionRepository.CompetencyTechniqueAggregateProjection aggregate : aggregatePage.getContent()) {
@@ -275,8 +262,6 @@ public class CompetencyService {
                     ? Math.round((passCount * 100.0 / evaluationCount) * 10.0) / 10.0 : 0.0;
             BigDecimal complianceTarget = complianceTarget(selectedForm);
             boolean belowTarget = passRate < complianceTarget.doubleValue();
-
-            CompetencyLevel level = classificationService.classifyOverall(avg);
 
             items.add(new CompetencyByTechniqueItemResponse(
                     aggregate.getEmployeeId(), aggregate.getEmployeeCode(), aggregate.getEmployeeName(),
@@ -322,6 +307,7 @@ public class CompetencyService {
             grouped.computeIfAbsent(form, k -> new ArrayList<>()).add(s);
         }
 
+        BigDecimal targetScore = targetScore();
         List<vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse> items = new ArrayList<>();
         for (var entry : grouped.entrySet()) {
             Form form = entry.getKey();
@@ -340,37 +326,27 @@ public class CompetencyService {
                     ? Math.round((passCount * 100.0 / subs.size()) * 10.0) / 10.0 : 0.0;
             BigDecimal complianceTarget = complianceTarget(form);
             boolean belowTarget = passRate < complianceTarget.doubleValue();
-            CompetencyLevel level = classificationService.classifyOverall(avg);
 
             List<FormSubmissionBriefResponse> submissionBriefs = subs.stream()
                     .sorted(Comparator.comparing(s -> {
                         java.time.Instant i = s.getSubmittedAt();
                         return i != null ? i : java.time.Instant.EPOCH;
                     }, Comparator.reverseOrder()))
-                    .map(s -> {
-                        BigDecimal score = practicalScore(s);
-                        CompetencyLevel sLevel = classificationService.classifyOverall(score);
-                        return new FormSubmissionBriefResponse(
-                                s.getId(),
-                                form.getTitle(),
-                                s.getSubmittedAt() != null
-                                        ? LocalDateTime.ofInstant(s.getSubmittedAt(), java.time.ZoneId.systemDefault())
-                                        : null,
-                                s.getSubmittedBy().getName(),
-                                score,
-                                s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED,
-                                sLevel.name(),
-                                QuestionGenerationLabels.competencyLevel(sLevel),
-                                QuestionGenerationLabels.competencyLevelColor(sLevel)
-                        );
-                    })
+                    .map(s -> new FormSubmissionBriefResponse(
+                            s.getId(),
+                            form.getTitle(),
+                            s.getSubmittedAt() != null
+                                    ? LocalDateTime.ofInstant(s.getSubmittedAt(), java.time.ZoneId.systemDefault())
+                                    : null,
+                            s.getSubmittedBy().getName(),
+                            practicalScore(s),
+                            s.getResult() == vn.vietduc.carehubbackend.form.submission.entity.FormSubmissionResult.PASSED
+                    ))
                     .collect(Collectors.toList());
 
             items.add(new vn.vietduc.carehubbackend.questiongeneration.dto.response.SkillCompetencyItemResponse(
                     form.getId(), form.getTitle(), subs.size(), avg, passCount, passRate,
-                    level.name(), QuestionGenerationLabels.competencyLevel(level),
-                    QuestionGenerationLabels.competencyLevelColor(level),
-                    level != CompetencyLevel.NOT_COMPETENT, belowTarget,
+                    meetsTarget(avg, targetScore), belowTarget,
                     submissionBriefs,
                     complianceTarget,
                     form.getComplianceTargetPercent() == null ? "DEFAULT" : "FORM"
@@ -409,7 +385,7 @@ public class CompetencyService {
         LocalDateTime toDateTime = to.atTime(LocalTime.MAX);
 
         Department department = findDepartment(departmentId);
-        BigDecimal targetScore = normalizeTargetScore(systemSettingsService.competencyTargetScore());
+        BigDecimal targetScore = targetScore();
         Page<User> userPage = userRepository.findCompetencySummaryCandidates(
                 departmentId,
                 normalizeKeyword(keyword),
@@ -497,25 +473,14 @@ public class CompetencyService {
             }
 
             // Calculate overall
-            BigDecimal overallScore = null;
-            if (knowledgeAvg != null && skillAvg != null) {
-                overallScore = knowledgeAvg.add(skillAvg)
-                        .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
-            }
+            BigDecimal overallScore = CompetencyScoring.overallScore(knowledgeAvg, skillAvg);
 
-            CompetencyLevel level = overallScore != null
-                    ? classificationService.classifyOverall(overallScore) : null;
             items.add(new CompetencySummaryItemResponse(
                     user.getId(), user.getEmployeeCode(), user.getName(),
                     departmentName(user),
                     knowledgeAvg, attempts.size(),
                     knowledgeAvg, skillAvg, overallScore,
-                    level != null ? level.name() : null,
-                    level != null ? QuestionGenerationLabels.competencyLevel(level) : null,
-                    level != null ? QuestionGenerationLabels.competencyLevelColor(level) : null,
-                    overallScore != null
-                            && targetScore != null
-                            && overallScore.compareTo(targetScore) >= 0
+                    meetsTarget(overallScore, targetScore)
             ));
         }
 
@@ -548,11 +513,13 @@ public class CompetencyService {
         return user.getDepartment() != null ? user.getDepartment().getName() : null;
     }
 
-    private BigDecimal normalizeTargetScore(BigDecimal targetScore) {
-        if (targetScore != null && targetScore.compareTo(BigDecimal.valueOf(10)) > 0) {
-            return targetScore.divide(BigDecimal.valueOf(10), 2, RoundingMode.HALF_UP);
-        }
-        return targetScore;
+    /** Điểm sàn toàn viện admin cấu hình ở /admin/system-settings/competency. */
+    private BigDecimal targetScore() {
+        return CompetencyScoring.normalizeTarget(systemSettingsService.competencyTargetScore());
+    }
+
+    private static boolean meetsTarget(BigDecimal score, BigDecimal target) {
+        return CompetencyScoring.meetsTarget(score, target);
     }
 
     private BigDecimal complianceTarget(Form form) {

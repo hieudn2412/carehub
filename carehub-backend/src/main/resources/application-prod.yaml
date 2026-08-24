@@ -22,11 +22,11 @@ app:
 ai:
   embedding:
     provider: ${EMBEDDING_PROVIDER:lexical}
-    preload: ${E5_PRELOAD:false}
+    preload: ${E5_PRELOAD:true}
     backfill-on-startup: ${E5_BACKFILL_ON_STARTUP:false}
   paraphrase:
     provider: ${PARAPHRASE_PROVIDER:disabled}
-    preload: ${VIETQUILL_PRELOAD:false}
+    preload: ${VIETQUILL_PRELOAD:true}
 
 document:
   storage-path: ${DOCUMENT_STORAGE_PATH:/data/documents}

@@ -3,6 +3,8 @@ package vn.vietduc.carehubbackend.questiongeneration.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import vn.vietduc.carehubbackend.questiongeneration.config.AiGenerationProperties;
@@ -111,6 +113,24 @@ class DocumentQuestionJobServiceTest {
         assertThat(response.status()).isEqualTo(JobStatus.CANCELLED.name());
         assertThat(job.getStatus()).isEqualTo(JobStatus.CANCELLED);
         assertThat(job.getErrorMessage()).contains("hủy");
+    }
+
+    @Test
+    void externalGeneratorCallIsBetweenShortTransactions() throws Exception {
+        var process = DocumentQuestionJobService.class.getMethod(
+                "processSingleChunk", Long.class, Long.class,
+                vn.vietduc.carehubbackend.questiongeneration.generation.DocumentQuestionGenerator.class);
+        var prepare = DocumentQuestionJobService.class.getMethod(
+                "prepareSingleChunkTransactional", Long.class, Long.class,
+                vn.vietduc.carehubbackend.questiongeneration.generation.DocumentQuestionGenerator.class);
+        var persist = DocumentQuestionJobService.class.getMethod(
+                "persistGeneratedChunkTransactional", DocumentQuestionJobService.ChunkPreparation.class,
+                vn.vietduc.carehubbackend.questiongeneration.service.model.GeneratedChunkResult.class,
+                String.class, long.class);
+
+        assertThat(process.getAnnotation(Transactional.class)).isNull();
+        assertThat(prepare.getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.REQUIRES_NEW);
+        assertThat(persist.getAnnotation(Transactional.class).propagation()).isEqualTo(Propagation.REQUIRES_NEW);
     }
 
     /**

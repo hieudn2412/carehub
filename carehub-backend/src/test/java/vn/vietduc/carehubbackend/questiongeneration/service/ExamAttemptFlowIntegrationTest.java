@@ -303,7 +303,6 @@ class ExamAttemptFlowIntegrationTest {
         assertThat(attempt.getStatus()).isEqualTo(ExamAttemptStatus.GRADED);
         assertThat(attempt.getScore()).isEqualByComparingTo("10.00");
         assertThat(attempt.getPassed()).isTrue();
-        assertThat(attempt.getClassification()).isNotNull();
 
         // AFTER_COMMIT listener effects (this class is not @Transactional, so the commit is real):
         String cmeRef = "EXAM_ASSIGNMENT:" + assignment.getId() + ":USER:" + employee.getId();

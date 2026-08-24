@@ -270,50 +270,17 @@ public class VietQuillParaphraseModelService implements ParaphraseModelService {
         log.debug("VietQuill decode: numBeams(config)={} beamWidth(effective)={} requestedCount={} kvCache={}",
                 properties.getNumBeams(), desiredBeamWidth, requestedCount,
                 properties.isKvCacheEnabled() && handle.kvCacheSupported());
-        List<String> decoded;
         try {
             List<String> stableCandidates = properties.isKvCacheEnabled() && handle.kvCacheSupported()
                     ? beamDecodeWithKvCache(handle, state.hiddenStates(), state.attentionMask(), desiredBeamWidth)
                     : beamDecode(handle, state.hiddenStates(), state.attentionMask(), desiredBeamWidth);
-            decoded = Stream.concat(structuralRewriter.rewrite(source).stream(), stableCandidates.stream())
+            List<String> decoded = Stream.concat(structuralRewriter.rewrite(source).stream(), stableCandidates.stream())
                     .distinct()
                     .toList();
+            return candidateSelector.select(source, decoded, changeStrength, requestedCount);
         } catch (Exception ex) {
             throw new ParaphraseModelException("Không decode được với VietQuill ONNX", ex);
         }
-
-        return selectWithDegradation(source, decoded, changeStrength, requestedCount);
-    }
-
-    /**
-     * Câu nguồn dài/nhiều thuật ngữ (vd bệnh án lâm sàng) có thể khiến VietQuill không sinh nổi
-     * ứng viên đạt ngưỡng của changeStrength gốc. Thay vì fail cứng, nới dần ngưỡng
-     * (high → medium → low) trước khi bỏ cuộc, để job vẫn ra được kết quả thay vì trắng tay.
-     */
-    private static final List<String> DEGRADATION_ORDER = List.of("high", "medium", "low");
-
-    private List<String> selectWithDegradation(
-            String source,
-            List<String> decoded,
-            String changeStrength,
-            int requestedCount
-    ) {
-        String normalizedStrength = changeStrength == null ? "" : changeStrength.trim().toLowerCase();
-        int startIndex = Math.max(0, DEGRADATION_ORDER.indexOf(normalizedStrength));
-        for (int i = startIndex; i < DEGRADATION_ORDER.size(); i++) {
-            String candidateStrength = DEGRADATION_ORDER.get(i);
-            List<String> selected = candidateSelector.select(source, decoded, candidateStrength, requestedCount);
-            if (!selected.isEmpty()) {
-                if (i > startIndex) {
-                    log.warn(
-                            "VietQuill hạ ngưỡng changeStrength {} -> {} vì không có ứng viên nào đạt ngưỡng gốc",
-                            changeStrength, candidateStrength
-                    );
-                }
-                return selected;
-            }
-        }
-        return List.of();
     }
 
     private boolean isAcceptable(

@@ -9,10 +9,8 @@ public record CompetencyClassificationResponse(
         String employeeCode,
         String employeeName,
         String departmentName,
-        String overallLevel,
-        String overallLevelText,
-        String overallLevelColor,
         BigDecimal overallScore,
+        boolean isPassed,
         Integer totalAttempts,
         LocalDateTime lastAttemptAt,
         List<CategoryClassificationResponse> categoryBreakdowns

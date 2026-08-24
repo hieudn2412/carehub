@@ -55,6 +55,19 @@ public class DocumentQuestionJob extends BaseEntity {
     @Column(name = "prompt_hash", length = 64)
     private String promptHash;
 
+    /**
+     * Tỷ lệ ba mức nhận thức admin đặt khi tạo phiên, tính theo phần trăm và cộng lại bằng 100.
+     * Bệnh viện quen gọi là dễ / trung bình / khó. Cả ba cùng null nghĩa là không đặt tỷ lệ.
+     */
+    @Column(name = "cognitive_mix_foundation")
+    private Integer cognitiveMixFoundation;
+
+    @Column(name = "cognitive_mix_application")
+    private Integer cognitiveMixApplication;
+
+    @Column(name = "cognitive_mix_reasoning")
+    private Integer cognitiveMixReasoning;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private JobStatus status;
@@ -108,6 +121,12 @@ public class DocumentQuestionJob extends BaseEntity {
 
     @Column(name = "total_prompt_tokens", nullable = false)
     private Integer totalPromptTokens;
+
+    @Column(name = "total_prompt_cache_hit_tokens", nullable = false)
+    private Integer totalPromptCacheHitTokens;
+
+    @Column(name = "total_prompt_cache_miss_tokens", nullable = false)
+    private Integer totalPromptCacheMissTokens;
 
     @Column(name = "total_completion_tokens", nullable = false)
     private Integer totalCompletionTokens;

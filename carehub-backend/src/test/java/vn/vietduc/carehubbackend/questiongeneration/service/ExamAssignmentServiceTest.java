@@ -309,6 +309,7 @@ class ExamAssignmentServiceTest {
         assertThat(response.get(0).actionLabel()).isEqualTo("Tiếp tục");
         assertThat(response.get(0).usedAttempts()).isEqualTo(1);
         assertThat(response.get(0).remainingAttempts()).isEqualTo(1);
+        assertThat(response.get(0).passingScore()).isEqualByComparingTo("7.00");
     }
 
     @Test
