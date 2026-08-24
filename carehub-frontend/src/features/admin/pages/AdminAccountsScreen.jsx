@@ -33,6 +33,15 @@ function normalizeReferenceList(payload) {
   return []
 }
 
+function isRemovedSystemRole(role) {
+  const code = String(role?.code || '').trim().toUpperCase()
+  return code === 'SYSTEM_JOB' || code === 'ROLE_SYSTEM_JOB'
+}
+
+function getVisibleRoles(userRoles) {
+  return (Array.isArray(userRoles) ? userRoles : []).filter(role => !isRemovedSystemRole(role))
+}
+
 function AdminAccountsScreen() {
   const { showToast } = useToast()
   const navigate = useNavigate()
@@ -112,7 +121,7 @@ function AdminAccountsScreen() {
   const [formEduLevelId, setFormEduLevelId] = useState('')
   const [formBirthday, setFormBirthday] = useState('')
   const [formGender, setFormGender] = useState(true) // true = Nam, false = Nữ
-  const [formRoleIds, setFormRoleIds] = useState([]) // Array of selected role IDs
+  const [formRoleId, setFormRoleId] = useState('')
   const [formStatus, setFormStatus] = useState('ACTIVE')
 
   // Password reset success banner state
@@ -156,7 +165,7 @@ function AdminAccountsScreen() {
     adminApi.getRoles()
       .then(res => {
         if (!isActive) return
-        setRoles(normalizeReferenceList(res.data?.data))
+        setRoles(normalizeReferenceList(res.data?.data).filter(role => !isRemovedSystemRole(role)))
       })
       .catch(err => console.error('Lỗi khi tải vai trò:', err))
 
@@ -258,7 +267,7 @@ function AdminAccountsScreen() {
     setFormEduLevelId('')
     setFormBirthday('')
     setFormGender(true)
-    setFormRoleIds([])
+    setFormRoleId('')
     setFormStatus('ACTIVE')
     setEditingUser(null)
     setIsFormModalOpen(true)
@@ -280,7 +289,7 @@ function AdminAccountsScreen() {
           setFormEduLevelId(u.educationLevelId || '')
           setFormBirthday(u.birthday || '')
           setFormGender(u.gender === undefined ? true : u.gender)
-          setFormRoleIds(u.roles ? u.roles.map(r => r.id) : [])
+          setFormRoleId(u.roles?.find(role => !isRemovedSystemRole(role))?.id || '')
           setFormStatus(u.status || 'ACTIVE')
           setEditingUser(u)
           setIsFormModalOpen(true)
@@ -349,9 +358,9 @@ function AdminAccountsScreen() {
       }
     }
 
-    // 7. Check at least one role
-    if (formRoleIds.length === 0) {
-      showToast('Vui lòng chọn ít nhất một vai trò cho tài khoản.', 'warning')
+    // 7. Exactly one role is required
+    if (!formRoleId) {
+      showToast('Vui lòng chọn một vai trò cho tài khoản.', 'warning')
       return
     }
 
@@ -373,16 +382,15 @@ function AdminAccountsScreen() {
 
         await adminApi.updateUser(editingUser.id, updatePayload)
 
-        // Sync Roles
-        const initialRoleIds = editingUser.roles ? editingUser.roles.map(r => r.id) : []
-        const rolesToAdd = formRoleIds.filter(id => !initialRoleIds.includes(id))
-        const rolesToRemove = initialRoleIds.filter(id => !formRoleIds.includes(id))
-
-        for (const rId of rolesToAdd) {
-          await adminApi.assignRole(editingUser.id, rId)
+        const targetRoleId = Number(formRoleId)
+        const initialRoleIds = (editingUser.roles || []).map(role => Number(role.id))
+        if (!initialRoleIds.includes(targetRoleId)) {
+          await adminApi.assignRole(editingUser.id, targetRoleId)
         }
-        for (const rId of rolesToRemove) {
-          await adminApi.removeRole(editingUser.id, rId)
+        for (const previousRoleId of initialRoleIds) {
+          if (previousRoleId !== targetRoleId) {
+            await adminApi.removeRole(editingUser.id, previousRoleId)
+          }
         }
 
         showToast('Cập nhật tài khoản thành công!', 'success')
@@ -394,7 +402,7 @@ function AdminAccountsScreen() {
           email: email,
           phone: phone || undefined,
           departmentId: parseInt(formDeptId),
-          roleIds: formRoleIds.map(id => parseInt(id))
+          roleIds: [Number(formRoleId)]
         }
 
         await adminApi.createUser(createPayload)
@@ -544,7 +552,7 @@ function AdminAccountsScreen() {
           u.employeeCode || '',
           u.fullName || '',
           getDeptName(u.departmentId),
-          formatRoleLabels(u.roles),
+          formatRoleLabels(getVisibleRoles(u.roles), 'Chưa cấu hình'),
           u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động')
         ])
 
@@ -586,10 +594,11 @@ function AdminAccountsScreen() {
 
   // Render Pill badges for roles
   const renderRoles = (userRoles) => {
-    if (!userRoles || userRoles.length === 0) return <span className="am-badge">Nhân viên</span>
+    const visibleRoles = getVisibleRoles(userRoles)
+    if (visibleRoles.length === 0) return <span className="am-badge">Chưa cấu hình</span>
     return (
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-        {userRoles.map(r => {
+        {visibleRoles.map(r => {
           let mod = 'staff'
           const label = formatRoleLabel(r)
           if (r.code === 'ADMIN') {
@@ -634,6 +643,15 @@ function AdminAccountsScreen() {
       hour: '2-digit', minute: '2-digit'
     })
   }
+
+  const fmtDateOnly = (dateStr) => {
+    if (!dateStr) return 'Chưa cập nhật'
+    return new Date(`${dateStr}T00:00:00`).toLocaleDateString('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })
+  }
+
+  const selectedUserPrimaryRole = getVisibleRoles(selectedUserDetail?.roles)[0] || null
 
   return (
     <AppShell title="Quản lý tài khoản">
@@ -817,7 +835,7 @@ function AdminAccountsScreen() {
       {/* Account Detail Modal overlay */}
       {selectedUserId && (
         <div className="am-modal-overlay" onClick={() => setSelectedUserId(null)}>
-          <div className="am-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="am-modal am-modal--account-detail" onClick={(e) => e.stopPropagation()}>
             <div className="am-modal-header">
               <h3 className="am-modal-title">Thông tin tài khoản</h3>
               <button className="am-modal-close" onClick={() => setSelectedUserId(null)}>
@@ -848,7 +866,24 @@ function AdminAccountsScreen() {
 
                     <div className="am-detail-item">
                       <span className="am-detail-label">Chức danh</span>
-                      <span className="am-detail-value">{selectedUserDetail.positionName || 'Nhân viên'}</span>
+                      <span className="am-detail-value">{selectedUserDetail.positionName || 'Chưa cấu hình'}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Trình độ học vấn</span>
+                      <span className="am-detail-value">{selectedUserDetail.educationLevelName || 'Chưa cập nhật'}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Ngày sinh</span>
+                      <span className="am-detail-value">{fmtDateOnly(selectedUserDetail.birthday)}</span>
+                    </div>
+
+                    <div className="am-detail-item">
+                      <span className="am-detail-label">Giới tính</span>
+                      <span className="am-detail-value">
+                        {selectedUserDetail.gender === true ? 'Nam' : selectedUserDetail.gender === false ? 'Nữ' : 'Chưa cập nhật'}
+                      </span>
                     </div>
 
                     <div className="am-detail-item">
@@ -864,14 +899,12 @@ function AdminAccountsScreen() {
                     <div className="am-detail-item">
                       <span className="am-detail-label">Vai trò hệ thống</span>
                       <span className="am-detail-value" style={{ display: 'flex', gap: 4 }}>
-                        {selectedUserDetail.roles && selectedUserDetail.roles.length > 0 ? (
-                          selectedUserDetail.roles.map(r => (
-                            <span key={r.id} className={`am-badge am-badge--role-${r.code === 'ADMIN' ? 'admin' : (r.code === 'MANAGER' ? 'manager' : 'staff')}`}>
-                              {formatRoleLabel(r)}
-                            </span>
-                          ))
+                        {selectedUserPrimaryRole ? (
+                          <span className={`am-badge am-badge--role-${selectedUserPrimaryRole.code === 'ADMIN' ? 'admin' : (selectedUserPrimaryRole.code === 'MANAGER' ? 'manager' : 'staff')}`}>
+                            {formatRoleLabel(selectedUserPrimaryRole)}
+                          </span>
                         ) : (
-                          <span className="am-badge am-badge--role-staff">Nhân viên</span>
+                          <span className="am-badge">Chưa cấu hình</span>
                         )}
                       </span>
                     </div>
@@ -1096,30 +1129,16 @@ function AdminAccountsScreen() {
                     </>
                   )}
 
-                  <div className="am-form-group am-form-group--full">
-                    <label className="am-form-label">Vai trò hệ thống *</label>
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
-                      {roles.map(r => {
-                        const roleLabel = formatRoleLabel(r)
-                        const isChecked = formRoleIds.includes(r.id)
-                        return (
-                          <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormRoleIds([...formRoleIds, r.id])
-                                } else {
-                                  setFormRoleIds(formRoleIds.filter(id => id !== r.id))
-                                }
-                              }}
-                            /> {roleLabel}
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  <FormSelectField
+                    className="am-form-group--full"
+                    label="Vai trò hệ thống"
+                    required
+                    value={formRoleId}
+                    onChange={setFormRoleId}
+                    options={roles.map(role => ({ value: role.id, label: formatRoleLabel(role) }))}
+                    placeholder="Chọn một vai trò..."
+                    searchable={false}
+                  />
 
                 </div>
               </div>
