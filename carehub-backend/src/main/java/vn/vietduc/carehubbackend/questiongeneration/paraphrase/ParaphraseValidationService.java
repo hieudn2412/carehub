@@ -17,9 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 @Service
@@ -51,7 +49,17 @@ public class ParaphraseValidationService {
             List.of("nhiều nhất", "tối đa"),
             List.of("duy nhất", "chỉ một"),
             List.of("luôn luôn"),
-            List.of("không bao giờ")
+            List.of("không bao giờ"),
+            List.of("trước"),
+            List.of("sau"),
+            List.of("sớm"),
+            List.of("muộn"),
+            List.of("tăng"),
+            List.of("giảm"),
+            List.of("dương tính"),
+            List.of("âm tính"),
+            List.of("cao nhất"),
+            List.of("thấp nhất")
     );
 
     /**
@@ -82,8 +90,6 @@ public class ParaphraseValidationService {
     private final QuestionEmbeddingService embeddingService;
     private final AiEmbeddingProperties embeddingProperties;
     private final AiParaphraseProperties paraphraseProperties;
-
-    private final Map<Long, List<String>> protectedTermsCache = new ConcurrentHashMap<>();
 
     public ParaphraseValidationResult validate(QuestionBankQuestion source, ParaphrasedMcq candidate) {
         List<String> warnings = new ArrayList<>();
@@ -120,24 +126,7 @@ public class ParaphraseValidationService {
             }
         }
 
-        List<String> protectedTerms = protectedTermsCache.computeIfAbsent(source.getId(),
-                id -> protectedTermService.extract(
-                        source.getStem(),
-                        source.getOptionA(),
-                        source.getOptionB(),
-                        source.getOptionC(),
-                        source.getOptionD()
-                ));
-        List<String> missingTerms = protectedTermService.missingTerms(
-                protectedTerms,
-                candidate.stem(),
-                candidate.optionA(),
-                candidate.optionB(),
-                candidate.optionC(),
-                candidate.optionD()
-        );
-        if (!missingTerms.isEmpty()) {
-            warnings.add("Mất thuật ngữ hoặc số liệu cần giữ: " + String.join(", ", missingTerms));
+        if (hasProtectedFactChanges("Câu hỏi", source.getStem(), candidate.stem(), warnings)) {
             rejected = true;
         }
 
@@ -174,6 +163,10 @@ public class ParaphraseValidationService {
             String sourceOption = sourceOptions.get(index);
             String candidateOption = options.get(index);
             String optionLabel = String.valueOf((char) ('A' + index));
+            if (hasProtectedFactChanges("Phương án " + optionLabel,
+                    sourceOption, candidateOption, warnings)) {
+                rejected = true;
+            }
             if (!hasSameLogicalMarkers(sourceOption, candidateOption)) {
                 warnings.add("Phương án " + optionLabel + " có thay đổi từ phủ định hoặc từ định lượng quan trọng");
                 rejected = true;
@@ -193,10 +186,13 @@ public class ParaphraseValidationService {
             warnings.add(duplicate.warning());
         }
         if (duplicate.strongDuplicate()) {
-            warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi khác trong ngân hàng");
-            rejected = true;
+            warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi khác trong ngân hàng; cần người duyệt quyết định");
         } else if (duplicate.needsReview()) {
             warnings.add("Có khả năng trùng ngữ nghĩa với câu hỏi khác trong ngân hàng");
+        }
+
+        if (!rejected) {
+            warnings.add("Biến thể do AI sinh cần người duyệt xác nhận nội dung trước khi sử dụng");
         }
 
         boolean needsReview = !rejected && !warnings.isEmpty();
@@ -210,6 +206,24 @@ public class ParaphraseValidationService {
                 duplicate.matchedQuestionStem(),
                 List.copyOf(warnings)
         );
+    }
+
+    private boolean hasProtectedFactChanges(
+            String field,
+            String source,
+            String candidate,
+            List<String> warnings
+    ) {
+        ProtectedTermService.FactChanges changes = protectedTermService.changes(source, candidate);
+        if (!changes.missing().isEmpty()) {
+            warnings.add(field + " mất thuật ngữ hoặc số liệu cần giữ: "
+                    + String.join(", ", changes.missing()));
+        }
+        if (!changes.added().isEmpty()) {
+            warnings.add(field + " thêm hoặc đổi thuật ngữ/số liệu: "
+                    + String.join(", ", changes.added()));
+        }
+        return changes.changed();
     }
 
     private Double sourceSemanticSimilarity(

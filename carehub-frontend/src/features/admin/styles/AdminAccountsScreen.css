@@ -907,6 +907,10 @@
   max-width: 640px;
 }
 
+.am-modal--account-detail {
+  max-width: 720px;
+}
+
 /* Thông báo lỗi trong modal chi tiết */
 .am-modal-error {
   color: #dc2626;

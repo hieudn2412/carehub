@@ -14,7 +14,6 @@ import {
   LogoutOutlined,
   HistoryOutlined,
   BookOutlined,
-  CalculatorOutlined,
   FileSearchOutlined,
   ScheduleOutlined,
   BarChartOutlined,
@@ -56,12 +55,9 @@ const navSections = [
   },
   {
     label: 'ĐÀO TẠO LIÊN TỤC',
-    // Dashboard giờ đào tạo đứng trên trang giờ đào tạo nhân viên; giờ đào tạo của chính
-    // người dùng nằm cuối nhóm.
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/admin/reports/training-dashboard' },
       { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
-      { icon: <ScheduleOutlined />, label: 'Giờ đào tạo cá nhân', path: '/staff/training' },
     ],
   },
   {
@@ -106,18 +102,6 @@ const navSections = [
           EVALUATION_PERMISSION.examPublisher,
           EVALUATION_PERMISSION.assignmentManager,
         ],
-      },
-      {
-        icon: <CalculatorOutlined />,
-        label: 'Ngưỡng phân loại',
-        path: '/admin/evaluation/competency-thresholds',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
-      {
-        icon: <BarChartOutlined />,
-        label: 'Phân loại theo khoa',
-        path: '/admin/evaluation/competency',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       // Dashboard năng lực trước đây nằm ở mục "Chất lượng chăm sóc" — nội dung là năng lực
       // chuyên môn nên chuyển về đúng nhóm này.

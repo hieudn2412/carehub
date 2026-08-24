@@ -77,11 +77,12 @@ ai:
     fallback-model: ${GENERATION_FALLBACK_MODEL:deepseek-v4-pro}
     # Nằm trong khoá idempotency — PHẢI tăng mỗi khi nội dung prompt đổi, nếu không các chunk
     # đã xử lý sẽ không bao giờ được sinh lại bằng prompt mới.
-    # v3: định nghĩa rõ generationEligible + yêu cầu sourceExcerpt trích nguyên văn.
-    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v3}
+    # v4: thêm ranh giới prompt-injection và loại metadata bibliography.
+    prompt-version: ${GENERATION_PROMPT_VERSION:docgen-mvp-flash-v4}
     pipeline-mode: ${GENERATION_PIPELINE_MODE:single_call}
-    default-pipeline: ${GENERATION_DEFAULT_PIPELINE:LEGACY_V3}
+    default-pipeline: ${GENERATION_DEFAULT_PIPELINE:GROUNDED_V4}
     grounded-v4-enabled: ${GENERATION_GROUNDED_V4_ENABLED:true}
+    allow-legacy-new-jobs: ${GENERATION_ALLOW_LEGACY_NEW_JOBS:false}
     timeout-seconds: ${GENERATION_TIMEOUT_SECONDS:60}
     connect-timeout-seconds: ${GENERATION_CONNECT_TIMEOUT_SECONDS:10}
     max-connections: ${GENERATION_MAX_CONNECTIONS:10}
@@ -96,9 +97,12 @@ ai:
     parallel-chunk-processing: ${GENERATION_PARALLEL_CHUNKS:true}
     chunk-parallelism: ${GENERATION_CHUNK_PARALLELISM:-1}
     input-price-per-million: ${GENERATION_INPUT_PRICE:0.14}
-    output-price-per-million: ${GENERATION_OUTPUT_PRICE:0.56}
-    fallback-input-price-per-million: ${GENERATION_FALLBACK_INPUT_PRICE:0.55}
-    fallback-output-price-per-million: ${GENERATION_FALLBACK_OUTPUT_PRICE:2.20}
+    output-price-per-million: ${GENERATION_OUTPUT_PRICE:0.28}
+    fallback-input-price-per-million: ${GENERATION_FALLBACK_INPUT_PRICE:0.435}
+    fallback-output-price-per-million: ${GENERATION_FALLBACK_OUTPUT_PRICE:0.87}
+    cache-hit-input-price-per-million: ${GENERATION_CACHE_HIT_INPUT_PRICE:0.0028}
+    fallback-cache-hit-input-price-per-million: ${GENERATION_FALLBACK_CACHE_HIT_INPUT_PRICE:0.003625}
+    critic-model: ${GENERATION_CRITIC_MODEL:deepseek-v4-pro}
     knowledge-temperature: ${GENERATION_KNOWLEDGE_TEMPERATURE:0.1}
     question-temperature: ${GENERATION_QUESTION_TEMPERATURE:0.3}
     critic-temperature: ${GENERATION_CRITIC_TEMPERATURE:0.0}
@@ -153,7 +157,7 @@ ai:
     max-output-length: ${VIETQUILL_MAX_OUTPUT_LENGTH:256}
     timeout-seconds: ${VIETQUILL_TIMEOUT_SECONDS:60}
     generate-timeout-seconds: ${VIETQUILL_GENERATE_TIMEOUT_SECONDS:30}
-    num-beams: ${VIETQUILL_NUM_BEAMS:6}
+    num-beams: ${VIETQUILL_NUM_BEAMS:8}
     max-decode-length: ${VIETQUILL_MAX_DECODE_LENGTH:160}
     requested-count-default: ${VIETQUILL_REQUESTED_COUNT_DEFAULT:3}
     paraphrase-options: ${VIETQUILL_PARAPHRASE_OPTIONS:false}
@@ -191,10 +195,13 @@ validation:
   # Tỉ lệ gắn cờ TĂNG theo kích thước ngân hàng. Đo lại trên ngân hàng thật bằng:
   #   RUN_E5_CALIBRATION=true ./mvnw.cmd test -Dtest=E5SimilarityCalibrationTest
   duplicate:
-    # Loại thẳng, không ai xem lại. Đặt cao có chủ đích: cặp điểm cao nhất trong corpus seed (0,973)
-    # lại là dương tính giả, nên không có ngưỡng nào an toàn tuyệt đối cho việc loại tự động.
-    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.97}   # >= : loại thẳng (~0,4% số câu)
-    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.93}   # >= : gắn cờ xem lại (~10% số câu)
+    # Cảnh báo mức trùng mạnh. Cặp điểm cao nhất trong corpus seed (0,973) lại là
+    # dương tính giả, nên cosine không bao giờ tự từ chối; người duyệt quyết định.
+    strong-min: ${VALIDATION_DUPLICATE_STRONG_MIN:0.97}   # >= : cảnh báo mạnh (~2,2% trên DB 457 câu)
+    # Hạ 0,95 -> 0,93 (25/08/2026) vì ở 0,95 reviewer gần như không còn thấy cảnh báo.
+    # Đo trên 1.168 ứng viên sinh từ tài liệu: 0,95 gắn cờ 30 câu (2,6%), 0,93 gắn cờ 77 câu (6,6%).
+    # Ngưỡng này CHỈ để cảnh báo, không tự từ chối câu nào.
+    review-min: ${VALIDATION_DUPLICATE_REVIEW_MIN:0.93}   # >= : gắn cờ xem lại (27,4% nn-max trên DB 457 câu)
     # Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ, KHÁC thang cosine ở trên).
     # Chỉ dùng khi provider=lexical hoặc E5 lỗi/chưa backfill xong.
     # Hiệu chỉnh trên 270 câu seed — xem developer_docs/ai/benchmarks/hieu-chinh-nguong-trung-lap-lexical-jaccard.md

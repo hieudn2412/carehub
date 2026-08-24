@@ -16,7 +16,11 @@ import vn.vietduc.carehubbackend.questiongeneration.service.model.GenerationInpu
 import vn.vietduc.carehubbackend.questiongeneration.service.model.LlmUsage;
 
 import java.net.SocketTimeoutException;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import com.sun.net.httpserver.HttpServer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -317,6 +321,158 @@ class DeepSeekDocumentQuestionGeneratorTest {
                 """))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("surfaceCueFree");
+    }
+
+    @Test
+    void sendsJsonModeAndAccountsForCacheTokensAtActualModelPrice() throws Exception {
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] body = successResponse(100, 40, 60, 20).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        try {
+            AiGenerationProperties local = apiProperties(server);
+            DeepSeekDocumentQuestionGenerator localGenerator =
+                    new DeepSeekDocumentQuestionGenerator(local, new ObjectMapper());
+
+            GeneratedChunkResult result = localGenerator.generate(new GenerationInput(
+                    1L, 2L, 3L, "Nội dung đủ nguồn.", "Mục", 1, "vi"));
+
+            assertThat(requestBody.get()).contains("\"thinking\":{\"type\":\"disabled\"}")
+                    .contains("\"response_format\":{\"type\":\"json_object\"}");
+            assertThat(result.usage().promptCacheHitTokens()).isEqualTo(40);
+            assertThat(result.usage().promptCacheMissTokens()).isEqualTo(60);
+            assertThat(result.usage().estimatedCostUsd()).isCloseTo(
+                    60 / 1_000_000.0 * 0.14 + 40 / 1_000_000.0 * 0.0028 + 20 / 1_000_000.0 * 0.28,
+                    org.assertj.core.data.Offset.offset(0.000000001));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void retriesRateLimitThreeTimesButAuthenticationOpensCircuitImmediately() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            if (call <= 3) {
+                exchange.getResponseHeaders().set("Retry-After", "0");
+                exchange.sendResponseHeaders(429, -1);
+            } else {
+                byte[] body = successResponse(1, 0, 1, 1).getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+            exchange.close();
+        });
+        server.start();
+        try {
+            DeepSeekDocumentQuestionGenerator localGenerator = new DeepSeekDocumentQuestionGenerator(
+                    apiProperties(server), new ObjectMapper());
+            localGenerator.generate(new GenerationInput(1L, 2L, 3L, "Nguồn", "Mục", 1, "vi"));
+            assertThat(calls).hasValue(4);
+        } finally {
+            server.stop(0);
+        }
+
+        AtomicInteger authCalls = new AtomicInteger();
+        HttpServer authServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        authServer.createContext("/chat/completions", exchange -> {
+            authCalls.incrementAndGet();
+            exchange.sendResponseHeaders(401, -1);
+            exchange.close();
+        });
+        authServer.start();
+        try {
+            DeepSeekDocumentQuestionGenerator authGenerator = new DeepSeekDocumentQuestionGenerator(
+                    apiProperties(authServer), new ObjectMapper());
+            GenerationInput input = new GenerationInput(1L, 2L, 3L, "Nguồn", "Mục", 1, "vi");
+            assertThatThrownBy(() -> authGenerator.generate(input)).isInstanceOf(RuntimeException.class);
+            assertThatThrownBy(() -> authGenerator.generate(input)).hasMessageContaining("circuit breaker OPEN");
+            assertThat(authCalls).hasValue(1);
+        } finally {
+            authServer.stop(0);
+        }
+    }
+
+    @Test
+    void keepsExactlyGroundedCandidateForHumanReviewWhenCriticIsUnavailable() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        String chunk = "Adrenalin được tiêm bắp trong xử trí phản vệ.";
+        String knowledge = "{\"knowledgePoints\":[{\"id\":\"KP1\",\"statement\":\"Adrenalin được tiêm bắp\","
+                + "\"type\":\"procedure\",\"importance\":\"high\",\"sourceExcerpt\":\"Adrenalin được tiêm bắp\","
+                + "\"generationEligible\":true}]}";
+        String question = "{\"questions\":[{\"questionType\":\"procedure\",\"stem\":\"Đường dùng nào phù hợp cho adrenalin trong xử trí phản vệ?\","
+                + "\"optionA\":\"Tiêm bắp\",\"optionB\":\"Uống\",\"optionC\":\"Nhỏ mắt\",\"optionD\":\"Bôi da\","
+                + "\"correctAnswer\":\"A\",\"explanation\":\"Nguồn nêu tiêm bắp.\",\"cognitiveLevel\":\"FOUNDATION\","
+                + "\"professionalFieldCode\":\"CAP_CUU\",\"topic\":\"Phản vệ\","
+                + "\"sourceExcerpt\":\"Adrenalin được tiêm bắp\",\"answerEvidence\":\"Adrenalin được tiêm bắp\","
+                + "\"knowledgePointId\":\"KP1\",\"distractorRationales\":{\"B\":\"không khớp nguồn\","
+                + "\"C\":\"không khớp nguồn\",\"D\":\"không khớp nguồn\"}}]}";
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/chat/completions", exchange -> {
+            int call = calls.incrementAndGet();
+            if (call == 3) {
+                exchange.sendResponseHeaders(400, -1);
+            } else {
+                String content = call == 1 ? knowledge : question;
+                byte[] body = jsonResponse(content).getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json");
+                exchange.sendResponseHeaders(200, body.length);
+                exchange.getResponseBody().write(body);
+            }
+            exchange.close();
+        });
+        server.start();
+        try {
+            AiGenerationProperties local = apiProperties(server);
+            local.setCriticModel(local.getModel());
+            DeepSeekDocumentQuestionGenerator localGenerator =
+                    new DeepSeekDocumentQuestionGenerator(local, new ObjectMapper());
+            GeneratedChunkResult result = localGenerator.generate(new GenerationInput(
+                    1L, 2L, 3L, chunk, "Phản vệ", 1, "vi", "guide.pdf", 1, 1,
+                    null, null, "AUTO", "GROUNDED_V4"));
+
+            assertThat(result.questions()).hasSize(1);
+            assertThat(result.criticCallCount()).isEqualTo(1);
+            assertThat(result.questions().get(0).llmValidationJson()).contains("bắt buộc người duyệt");
+            assertThat(calls).hasValue(3);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private static AiGenerationProperties apiProperties(HttpServer server) {
+        AiGenerationProperties value = new AiGenerationProperties();
+        value.setApiKey("test-key");
+        value.setApiBaseUrl("http://127.0.0.1:" + server.getAddress().getPort());
+        value.setModel("deepseek-v4-flash");
+        value.setFallbackModel("deepseek-v4-flash");
+        value.setPipelineMode("single_call");
+        value.setMaxRetries(1);
+        return value;
+    }
+
+    private static String successResponse(int prompt, int hit, int miss, int completion) {
+        return "{\"choices\":[{\"message\":{\"content\":\"{\\\"knowledgePoints\\\":[],\\\"questions\\\":[]}\"},"
+                + "\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":" + prompt
+                + ",\"prompt_cache_hit_tokens\":" + hit + ",\"prompt_cache_miss_tokens\":" + miss
+                + ",\"completion_tokens\":" + completion + ",\"total_tokens\":" + (prompt + completion) + "}}";
+    }
+
+    private static String jsonResponse(String content) {
+        String escaped = content.replace("\\", "\\\\").replace("\"", "\\\"");
+        return "{\"choices\":[{\"message\":{\"content\":\"" + escaped
+                + "\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,"
+                + "\"completion_tokens\":10,\"total_tokens\":20}}";
     }
 
     private static HttpClientErrorException unauthorized(HttpStatus status) {

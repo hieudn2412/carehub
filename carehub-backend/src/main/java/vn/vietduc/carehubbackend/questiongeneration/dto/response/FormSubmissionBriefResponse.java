@@ -9,9 +9,6 @@ public record FormSubmissionBriefResponse(
         LocalDateTime evaluatedAt,
         String evaluatedBy,
         BigDecimal score,
-        Boolean passed,
-        String competencyLevel,
-        String competencyLabel,
-        String colorHex
+        Boolean passed
 ) {
 }

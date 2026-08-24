@@ -11,9 +11,6 @@ public record CompetencyByFieldItemResponse(
         BigDecimal averageScore,
         Integer passCount,
         Double passRate,
-        String competencyLevel,
-        String competencyLabel,
-        String colorHex,
         boolean isPassed
 ) {
 }

@@ -108,6 +108,21 @@ class DocumentChunkingServiceTest {
         assertThat(DocumentChunkQualityRules.isGenerationEligible(chunks.get(1).qualityFlags())).isFalse();
     }
 
+    @Test
+    void blocksBibliographyChunks() {
+        DocumentChunkingService service = new DocumentChunkingService(new DocumentProcessingProperties());
+
+        List<ChunkDraft> chunks = service.createGenerationChunks(List.of(section(
+                "TÀI LIỆU THAM KHẢO",
+                "Herdman T.H. et al. Nursing Diagnoses. 2024. doi:10.1000/example",
+                0.9
+        )));
+
+        assertThat(chunks).hasSize(1);
+        assertThat(chunks.get(0).qualityFlags()).contains(DocumentChunkQualityRules.BIBLIOGRAPHY_LIKE);
+        assertThat(DocumentChunkQualityRules.isGenerationEligible(chunks.get(0).qualityFlags())).isFalse();
+    }
+
     private SectionBlock section(String title, String text, double confidence) {
         return new SectionBlock(
                 title,

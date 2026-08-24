@@ -1,4 +1,5 @@
-.exp-page {
+
+.exp-page {
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1099,7 +1100,7 @@
 }
 
 .exp-schedule-card {
-  padding: 18px 22px;
+  padding: 14px 16px;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #f8fafc;
@@ -1109,19 +1110,25 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 18px 24px;
+  gap: 12px 14px;
 }
 
 .exp-schedule-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  flex: 1 1 240px;
+  gap: 6px;
+  /* Bam sat noi dung thay vi gian deu ca hang, cho cac o nam gan nhau. */
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .exp-schedule-field--compact {
-  flex: 0 0 170px;
+  flex: 0 0 116px;
+}
+
+.exp-schedule-field--wide {
+  flex: 1 1 240px;
+  min-width: 220px;
 }
 
 .exp-schedule-label {
@@ -1173,7 +1180,7 @@
   z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 20px;
   padding: 16px 24px;
   background: #ffffff;

@@ -40,7 +40,7 @@ class QuestionCandidateValidationServiceTest {
     }
 
     @Test
-    void groundedV4RejectsEvidenceThatIsNotAnExactSourceExcerpt() {
+    void groundedV4WarnsButNoLongerRejectsEvidenceThatIsNotAnExactSourceExcerpt() {
         GeneratedQuestion legacy = validQuestion(
                 "Chỉ cần hỏi tên người bệnh.",
                 "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
@@ -69,9 +69,11 @@ class QuestionCandidateValidationServiceTest {
                 "Người bệnh cần được xác định bằng tối thiểu hai thông tin."
         );
 
-        assertThat(result.rejected()).isTrue();
-        assertThat(result.validationGrade()).isEqualTo("REJECT");
+        // Thiếu sót về grounding chỉ còn là cảnh báo; tự động từ chối chỉ dành cho lỗi cấu trúc.
+        assertThat(result.rejected()).isFalse();
         assertThat(result.evidenceStatus()).isEqualTo("MISMATCH");
+        assertThat(result.warnings())
+                .anyMatch(warning -> warning.contains("Bằng chứng đáp án không xuất hiện nguyên văn"));
     }
 
     @Test

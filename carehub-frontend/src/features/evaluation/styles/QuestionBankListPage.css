@@ -276,19 +276,23 @@
 }
 
 .qbl-col-question {
-  width: 44%;
+  width: 40%;
 }
 
 .qbl-col-category {
-  width: 15%;
+  width: 14%;
 }
 
 .qbl-col-professional-field {
-  width: 19%;
+  width: 17%;
+}
+
+.qbl-col-status {
+  width: 13%;
 }
 
 .qbl-col-actions {
-  width: 22%;
+  width: 16%;
 }
 
 .qbl-question-link {
@@ -332,7 +336,7 @@
   white-space: nowrap;
 }
 
-.qbl-question-table tbody td:nth-child(-n + 3) {
+.qbl-question-table tbody td:nth-child(-n + 4) {
   vertical-align: top;
 }
 
@@ -409,17 +413,6 @@
 .qbl-badge--inactive {
   background: #ffebeb;
   color: #d32f2f;
-}
-
-.qbl-mini-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 3px 9px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .qbl-actions {

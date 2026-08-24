@@ -80,6 +80,22 @@ public class CandidateReviewService {
                 .toList();
     }
 
+    /**
+     * Tìm các câu có thể trùng cho một stem bất kỳ (chưa cần lưu vào ngân hàng).
+     * Dùng cho màn hình soạn câu hỏi thủ công để cảnh báo TRƯỚC khi lưu.
+     */
+    @Transactional(readOnly = true)
+    public List<QuestionDuplicateMatchResponse> potentialDuplicatesForStem(String stem, Long excludeQuestionId) {
+        return duplicateCheckService.findPotentialMatches(
+                        stem,
+                        excludeQuestionId == null ? Set.of() : Set.of(excludeQuestionId),
+                        Set.of(),
+                        5
+                ).stream()
+                .map(this::toDuplicateMatchResponse)
+                .toList();
+    }
+
     private QuestionDuplicateMatchResponse toDuplicateMatchResponse(DuplicateMatchResult match) {
         if (match.sourceType() == DuplicateMatchResult.SourceType.QUESTION_BANK) {
             QuestionBankQuestion question = questionRepository.findById(match.sourceId()).orElse(null);
@@ -180,20 +196,14 @@ public class CandidateReviewService {
     @Transactional
     public DocumentQuestionCandidateResponse saveAsQuestion(Long candidateId, String actor) {
         DocumentQuestionCandidate candidate = findCandidate(candidateId);
-        if (candidate.getStatus() != CandidateStatus.APPROVED) {
-            throw new BadRequestException("Chỉ có thể lưu câu hỏi đã được duyệt vào ngân hàng câu hỏi");
+        // Duyệt và lưu đã gộp thành một thao tác nên không còn đòi trạng thái APPROVED trước.
+        if (candidate.getStatus() == CandidateStatus.SAVED) {
+            throw new BadRequestException("Câu hỏi này đã được lưu vào ngân hàng câu hỏi");
         }
-        if (candidate.getSourceExcerpt() == null || candidate.getSourceExcerpt().isBlank()) {
-            throw new BadRequestException("Câu hỏi cần có trích dẫn nguồn trước khi lưu vào ngân hàng câu hỏi");
+        if (candidate.getStatus() == CandidateStatus.REJECTED) {
+            throw new BadRequestException("Câu hỏi đã bị từ chối, không thể lưu vào ngân hàng câu hỏi");
         }
         requireReviewedTaxonomy(candidate);
-        if (isGenericDocumentReferenceStem(candidate.getStem())) {
-            throw new BadRequestException("Câu hỏi cần tự đứng độc lập, không được dùng mẫu chung như 'Theo tài liệu...'");
-        }
-        DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem(), Set.of(), Set.of(candidate.getId()));
-        if (duplicate.strongDuplicate()) {
-            throw new BadRequestException("Câu hỏi trùng mạnh với câu đã có, vui lòng chỉnh sửa hoặc từ chối candidate");
-        }
         QuestionBankQuestion question = QuestionBankQuestion.builder()
                 .stem(candidate.getStem())
                 .optionA(candidate.getOptionA())
@@ -211,6 +221,7 @@ public class CandidateReviewService {
                 .cognitiveVerifiedBy(candidate.getCognitiveVerifiedBy())
                 .language("vi")
                 .sourceDocument(candidate.getDocument().getFilename())
+                .sourceDocumentRef(candidate.getDocument())
                 .questionType(QuestionType.ORIGINAL)
                 .status(QuestionBankStatus.APPROVED)
                 .createdBy(actor)
@@ -328,14 +339,13 @@ public class CandidateReviewService {
         if (validation.rejected()) {
             candidate.setStatus(CandidateStatus.REJECTED);
             candidate.setLabel(CandidateLabel.REJECTED);
-        } else if (duplicate.strongDuplicate()) {
-            candidate.setStatus(CandidateStatus.REJECTED);
-            candidate.setLabel(CandidateLabel.REJECTED);
-            warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có");
-        } else if (!taxonomyWarnings.isEmpty() || validation.needsReview() || duplicate.needsReview()) {
+        } else if (!taxonomyWarnings.isEmpty() || validation.needsReview()
+                || duplicate.needsReview() || duplicate.strongDuplicate()) {
             candidate.setStatus(CandidateStatus.NEED_REVIEW);
             candidate.setLabel(CandidateLabel.NEED_REVIEW);
-            if (duplicate.needsReview()) {
+            if (duplicate.strongDuplicate()) {
+                warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có; cần người duyệt quyết định");
+            } else if (duplicate.needsReview()) {
                 warnings.add("Có khả năng trùng ngữ nghĩa với câu hỏi đã có");
             }
         } else {

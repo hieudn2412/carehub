@@ -42,11 +42,16 @@ export async function loadCompetencyOverview(requestPage, params) {
     : items
   const total = aggregateItems.length
   const passed = aggregateItems.filter((item) => item.isPassed).length
-  const classificationCounts = aggregateItems.reduce((counts, item) => {
-    const label = item.levelLabel || item.level || 'Chưa phân loại'
-    counts[label] = (counts[label] || 0) + 1
-    return counts
-  }, {})
+  // Kết luận theo điểm sàn toàn viện; chưa có điểm tổng thì chưa kết luận được.
+  const scored = aggregateItems.filter((item) => item.overallScore != null)
+  const classificationCounts = {
+    'Đạt': scored.filter((item) => item.isPassed).length,
+    'Chưa đạt': scored.filter((item) => !item.isPassed).length,
+    'Chưa có dữ liệu': aggregateItems.length - scored.length,
+  }
+  Object.keys(classificationCounts).forEach((key) => {
+    if (!classificationCounts[key]) delete classificationCounts[key]
+  })
   const matchedEmployee = normalizedEmployeeCode ? aggregateItems[0] || null : null
 
   return {

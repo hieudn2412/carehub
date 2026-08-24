@@ -11,18 +11,6 @@ export const competencyApi = {
     return httpClient.get(`/competency/employees/${employeeId}`, { headers: authHeaders() })
   },
 
-  getDepartmentClassification(departmentId) {
-    return httpClient.get(`/competency/departments/${departmentId}`, { headers: authHeaders() })
-  },
-
-  getThresholds() {
-    return httpClient.get('/competency/thresholds', { headers: authHeaders() })
-  },
-
-  updateThresholds(payload) {
-    return httpClient.put('/competency/thresholds', payload, { headers: authHeaders() })
-  },
-
   getByField(params) {
     return httpClient.get('/competency/by-field', { headers: authHeaders(), params })
   },

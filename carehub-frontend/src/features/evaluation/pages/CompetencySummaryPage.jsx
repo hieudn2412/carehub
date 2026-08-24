@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ReloadOutlined,
-  WarningFilled,
   CheckCircleFilled,
-  CloseCircleFilled,
   ExclamationCircleFilled,
   CaretUpOutlined,
   CaretDownOutlined,
@@ -36,6 +34,7 @@ import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 const PAGE_SIZE = 10
 const defaultDateRange = currentYearDateRange()
@@ -228,31 +227,17 @@ function CompetencySummaryPage() {
       : <CaretDownOutlined style={{ marginLeft: 4, fontSize: 10, color: '#2563eb' }} />
   }
 
+  // Phân bố theo kết luận so với điểm sàn toàn viện, không còn xếp loại 5 mức.
   const buildDistribution = () => {
     if (reportType !== 'summary' || !data?.items) return []
-    const counts = {}
-    data.items.forEach(item => {
-      const label = item.competencyLabel || 'Chưa xếp loại'
-      counts[label] = (counts[label] || 0) + 1
-    })
-    return Object.entries(counts)
-      .map(([name, count]) => {
-        const item = data.items.find(i => (i.competencyLabel || 'Chưa xếp loại') === name)
-
-        const shortNameMap = {
-          'Chưa đạt năng lực': 'Chưa đạt',
-          'Chưa xếp loại': 'Chưa xếp',
-        }
-        const displayName = shortNameMap[name] || name
-
-        return {
-          name: displayName,
-          fullName: name,
-          count,
-          fill: item?.colorHex || '#6b7280',
-        }
-      })
-      .sort((a, b) => b.count - a.count)
+    const buckets = [
+      { name: 'Đạt', fullName: 'Đạt điểm sàn', fill: '#10b981', match: item => item.isPassed },
+      { name: 'Chưa đạt', fullName: 'Chưa đạt điểm sàn', fill: '#ef4444', match: item => !item.isPassed && item.overallScore != null },
+      { name: 'Chưa có', fullName: 'Chưa có dữ liệu', fill: '#6b7280', match: item => item.overallScore == null },
+    ]
+    return buckets
+      .map(({ match, ...bucket }) => ({ ...bucket, count: data.items.filter(match).length }))
+      .filter(bucket => bucket.count > 0)
   }
 
   const distribution = buildDistribution()
@@ -581,9 +566,7 @@ function CompetencySummaryPage() {
                           </tr>
                         ) : (
                           getSortedSummaryItems().map((item, idx) => {
-                            const isNotCompetent = item.competencyLevel === 'NOT_COMPETENT'
-                            const isBeginner = item.competencyLevel === 'BEGINNER'
-                            const rowClass = isNotCompetent ? 'evd-row--danger' : (isBeginner ? 'evd-row--warning' : '')
+                            const rowClass = item.overallScore == null ? '' : (item.isPassed ? '' : 'evd-row--danger')
                             return (
                               <tr key={idx} className={rowClass}>
                                 <td>{page * PAGE_SIZE + idx + 1}</td>
@@ -594,17 +577,7 @@ function CompetencySummaryPage() {
                                 <td>{formatNumber(item.skillAverage)}</td>
                                 <td style={{ fontWeight: 700 }}>{formatNumber(item.overallScore)}</td>
                                 <td>
-                                  <span className="evd-badge" style={{
-                                    backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                    color: item.colorHex || '#6b7280',
-                                  }}>
-                                    {item.isPassed
-                                      ? <CheckCircleFilled style={{ marginRight: 4 }} />
-                                      : isNotCompetent
-                                        ? <CloseCircleFilled style={{ marginRight: 4 }} />
-                                        : <WarningFilled style={{ marginRight: 4 }} />}
-                                    {item.competencyLabel || '—'}
-                                  </span>
+                                  <PassFailBadge passed={item.overallScore == null ? null : item.isPassed} />
                                 </td>
                               </tr>
                             )
@@ -684,13 +657,7 @@ function CompetencySummaryPage() {
                                 </span>
                               </td>
                               <td>
-                                <span className="evd-badge" style={{
-                                  backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                  color: item.colorHex || '#6b7280',
-                                }}>
-                                  {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                                  {item.competencyLabel || '—'}
-                                </span>
+                                <PassFailBadge passed={item.isPassed} />
                               </td>
                               <td>
                                 <div className="admin-table-actions">
@@ -811,13 +778,7 @@ function CompetencySummaryPage() {
                                 )}
                               </td>
                               <td>
-                                <span className="evd-badge" style={{
-                                  backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                  color: item.colorHex || '#6b7280',
-                                }}>
-                                  {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                                  {item.competencyLabel || '—'}
-                                </span>
+                                <PassFailBadge passed={item.isPassed} />
                               </td>
                               <td>
                                 <div className="admin-table-actions">
