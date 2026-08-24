@@ -28,62 +28,11 @@ const STATUS_LABELS = {
 }
 const RETIRED_STATUS = 'RETIRED'
 const RETIRED_FORMS_CACHE_KEY = 'carehub.admin.retiredForms'
-const ASSIGNMENT_PAGE_SIZE = 100
 
 function normalizeReferenceList(data) {
   if (Array.isArray(data)) return data
   if (Array.isArray(data?.content)) return data.content
   return []
-}
-
-function getAssignmentPage(response) {
-  const data = response?.data?.data || {}
-  return {
-    content: Array.isArray(data.content) ? data.content : [],
-    totalPages: Math.max(1, Number(data.totalPages) || 1),
-  }
-}
-
-async function fetchAllActiveFormAssignments(formId) {
-  const firstResponse = await adminApi.getFormAssignmentsByForm(formId, {
-    page: 0,
-    size: ASSIGNMENT_PAGE_SIZE,
-    status: 'ACTIVE',
-  })
-  const firstPage = getAssignmentPage(firstResponse)
-  if (firstPage.totalPages === 1) return firstPage.content
-
-  const remainingResponses = await Promise.all(
-    Array.from({ length: firstPage.totalPages - 1 }, (_, index) => (
-      adminApi.getFormAssignmentsByForm(formId, {
-        page: index + 1,
-        size: ASSIGNMENT_PAGE_SIZE,
-        status: 'ACTIVE',
-      })
-    )),
-  )
-
-  return [
-    ...firstPage.content,
-    ...remainingResponses.flatMap((response) => getAssignmentPage(response).content),
-  ]
-}
-
-function countLatestVersionAssignees(assignments, form) {
-  const versionId = form.currentPublishedVersion?.id
-  if (!versionId) return 0
-
-  const assigneeIds = assignments
-    .filter((assignment) => (
-      String(assignment.formVersionId) === String(versionId)
-      && assignment.effectiveStatus === 'ACTIVE'
-      && assignment.itemStatus === 'ACTIVE'
-    ))
-    .map((assignment) => assignment.assignee?.id || assignment.manager?.id)
-    .filter(Boolean)
-    .map(String)
-
-  return new Set(assigneeIds).size
 }
 
 function formatChecklistDate(value) {
@@ -226,7 +175,6 @@ function FormListPage() {
   const [departmentId, setDepartmentId] = useState('all')
   const [appliedFilters, setAppliedFilters] = useState({ keyword: '', status: 'all', departmentId: 'all' })
   const [departments, setDepartments] = useState([])
-  const [formStats, setFormStats] = useState({})
   const [refreshKey, setRefreshKey] = useState(0)
   const [importMenuOpen, setImportMenuOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
@@ -289,7 +237,6 @@ function FormListPage() {
         }
 
         setForms(nextForms)
-        setFormStats({})
         setTotalElements(appliedFilters.status === RETIRED_STATUS
           ? Math.max(serverTotalElements, nextForms.length)
           : serverTotalElements)
@@ -297,37 +244,6 @@ function FormListPage() {
           ? Math.max(nextTotalPages, 1)
           : nextTotalPages)
         setLoading(false)
-
-        const activeForms = nextForms.filter((form) => getEffectiveStatus(form) !== RETIRED_STATUS)
-        const [performanceResult, ...assignmentResults] = await Promise.allSettled([
-          adminApi.getDashboardFormPerformance({ page: 0, size: 100 }),
-          ...activeForms.map((form) => fetchAllActiveFormAssignments(form.id)),
-        ])
-
-        if (ignoreResponse) return
-
-        const nextStats = Object.fromEntries(nextForms.map((form) => [form.id, {
-          responseCount: 0,
-        }]))
-        if (performanceResult.status === 'fulfilled') {
-          const performanceItems = performanceResult.value.data?.data?.content || []
-          performanceItems.forEach((item) => {
-            nextStats[item.formId] = {
-              ...nextStats[item.formId],
-              responseCount: Number(item.submittedCount || item.responseCount || 0),
-            }
-          })
-        }
-
-        assignmentResults.forEach((result, index) => {
-          if (result.status !== 'fulfilled') return
-          const form = activeForms[index]
-          nextStats[form.id] = {
-            ...nextStats[form.id],
-            activeAssignmentCount: countLatestVersionAssignees(result.value, form),
-          }
-        })
-        setFormStats(nextStats)
       } catch (error) {
         if (ignoreResponse) {
           return
@@ -720,11 +636,11 @@ function FormListPage() {
                                 title={`Quản lý người được giao ${form.title}`}
                                 type="button"
                               >
-                                <strong>{formStats[form.id]?.activeAssignmentCount ?? '—'}</strong>
+                                <strong>{Number(form.activeAssignmentCount || 0)}</strong>
                                 <span>Quản lý</span>
                               </button>
                             </td>
-                            <td className="flp-col-responses">{formStats[form.id]?.responseCount ?? '—'}</td>
+                            <td className="flp-col-responses">{Number(form.responseCount || 0)}</td>
                             <td className="flp-col-score">
                               {form.currentPublishedVersion?.passingScore !== undefined && form.currentPublishedVersion?.passingScore !== null ? (
                                 <strong style={{ color: '#0f6e56', fontWeight: 600 }}>

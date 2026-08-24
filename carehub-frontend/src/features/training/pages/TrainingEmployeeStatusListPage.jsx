@@ -251,7 +251,7 @@ function TrainingEmployeeStatusListPage() {
   }
 
   return (
-    <AppShell breadcrumbs={breadcrumbs}>
+    <AppShell breadcrumbs={breadcrumbs} className="training-employee-status-shell">
             <div className="tes-page">
 
               <div className="tes-title-card">
@@ -355,11 +355,11 @@ function TrainingEmployeeStatusListPage() {
                     <table className="tes-table admin-table-uppercase">
                       <thead>
                         <tr>
-                          <th>Mã NV</th>
-                          <th>Họ và tên</th>
-                          <th>Khoa/Phòng</th>
+                          <th className="tes-col-code">Mã NV</th>
+                          <th className="tes-col-name">Họ và tên</th>
+                          <th className="tes-col-department">Khoa/Phòng</th>
                           <th className="tes-col-progress">Tiến độ</th>
-                          <th>Trạng thái</th>
+                          <th className="tes-col-status">Trạng thái</th>
                           <th className="tes-col-action">Hành động</th>
                         </tr>
                       </thead>
@@ -369,9 +369,9 @@ function TrainingEmployeeStatusListPage() {
                           const pct = progressPct(item.submittedHours, item.requiredHours)
                           return (
                             <tr key={item.employeeId + '-' + idx}>
-                              <td className="tes-td-code">{item.employeeCode}</td>
-                              <td>{item.employeeName}</td>
-                              <td>{item.departmentName}</td>
+                              <td className="tes-col-code tes-td-code">{item.employeeCode}</td>
+                              <td className="tes-col-name">{item.employeeName}</td>
+                              <td className="tes-col-department">{item.departmentName}</td>
                               <td className="tes-col-progress">
                                 <div className="tes-progress-cell">
                                   <span className="tes-progress-label">{item.submittedHours}/{item.requiredHours}h</span>
@@ -383,7 +383,7 @@ function TrainingEmployeeStatusListPage() {
                                   </div>
                                 </div>
                               </td>
-                              <td>
+                              <td className="tes-col-status">
                                 <span className={`tes-badge ${cfg.cls}`}>{cfg.label}</span>
                               </td>
                               <td className="tes-col-action">
