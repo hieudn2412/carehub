@@ -1469,3 +1469,13 @@
     transform: none;
   }
 }
+
+/* Badge Đạt/Chưa đạt ở cột Kết quả — màu do PassFailBadge đặt inline. */
+.eh-result-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}

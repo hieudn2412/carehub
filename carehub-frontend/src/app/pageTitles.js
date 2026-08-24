@@ -86,13 +86,11 @@ const PAGE_TITLE_ROUTES = [
   ['/admin/evaluation/exam-management/new', 'Cấu hình bài kiểm tra'],
   ['/admin/evaluation/exam-management', 'Quản lý bài kiểm tra'],
   ['/admin/evaluation/exam-assignments/new', 'Tạo phân công kiểm tra'],
-  ['/admin/evaluation/competency-thresholds', 'Ngưỡng năng lực'],
   ['/admin/evaluation/competency-by-field/:employeeId', 'Chi tiết năng lực nhân viên'],
   ['/admin/evaluation/competency-by-field', 'Năng lực theo lĩnh vực'],
   ['/admin/evaluation/compliance-by-technique/:employeeId', 'Chi tiết tuân thủ chung'],
   ['/admin/evaluation/compliance-by-technique', 'Tuân thủ chung'],
   ['/admin/evaluation/competency-summary', 'Tổng hợp năng lực'],
-  ['/admin/evaluation/competency', 'Năng lực theo khoa phòng'],
   ['/admin/evaluation/training-groups', 'Nhóm đào tạo'],
 
   // Manager

@@ -13,9 +13,6 @@ public record MyCompetencySummaryResponse(
         Long departmentId,
         String departmentName,
         BigDecimal targetScore,
-        String competencyLevel,
-        String competencyLabel,
-        String colorHex,
         boolean isPassed
 ) {
 }

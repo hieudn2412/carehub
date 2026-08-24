@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import {
-  WarningFilled,
-  CheckCircleFilled,
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -12,6 +10,7 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import '../styles/EvaluationDashboardPage.css'
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 function CompetencyEmployeeFieldDetailPage() {
   const { employeeId } = useParams()
@@ -140,13 +139,7 @@ function CompetencyEmployeeFieldDetailPage() {
                               </span>
                             </td>
                             <td>
-                              <span className="evd-badge" style={{
-                                backgroundColor: (item.colorHex || '#6b7280') + '20',
-                                color: item.colorHex || '#6b7280',
-                              }}>
-                                {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                                {item.competencyLabel || '—'}
-                              </span>
+                              <PassFailBadge passed={item.isPassed} />
                             </td>
                           </tr>
                           {expandedRow === idx && item.attempts && item.attempts.length > 0 && (
@@ -186,18 +179,7 @@ function CompetencyEmployeeFieldDetailPage() {
                                             </span>
                                           </td>
                                           <td style={{ padding: '6px 8px', borderBottom: '1px solid #f3f4f6', textAlign: 'center' }}>
-                                            {att.competencyLabel ? (
-                                              <span style={{
-                                                backgroundColor: (att.colorHex || '#6b7280') + '20',
-                                                color: att.colorHex || '#6b7280',
-                                                padding: '2px 8px',
-                                                borderRadius: 4,
-                                                fontSize: 12,
-                                                fontWeight: 500,
-                                              }}>
-                                                {att.competencyLabel}
-                                              </span>
-                                            ) : '—'}
+                                            <PassFailBadge passed={att.passed} className="evd-badge" />
                                           </td>
                                         </tr>
                                       ))}

@@ -59,9 +59,8 @@ public class ExamPassedTrainingListener {
     }
 
     private void sendExamPassedNotification(ExamAttempt attempt, User user, String examName) {
-        String classification = attempt.getClassification() != null
-                ? QuestionGenerationLabels.competencyLevel(attempt.getClassification())
-                : "Không xác định";
+        // Listener chỉ chạy cho bài đã đạt điểm sàn của đề, nên kết luận luôn là "Đạt".
+        String classification = "Đạt";
         String score = attempt.getScore() != null ? attempt.getScore().toPlainString() : "N/A";
 
         Map<String, String> variables = new LinkedHashMap<>();

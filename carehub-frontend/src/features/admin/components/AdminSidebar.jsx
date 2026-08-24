@@ -14,7 +14,6 @@ import {
   LogoutOutlined,
   HistoryOutlined,
   BookOutlined,
-  CalculatorOutlined,
   FileSearchOutlined,
   ScheduleOutlined,
   BarChartOutlined,
@@ -106,18 +105,6 @@ const navSections = [
           EVALUATION_PERMISSION.examPublisher,
           EVALUATION_PERMISSION.assignmentManager,
         ],
-      },
-      {
-        icon: <CalculatorOutlined />,
-        label: 'Ngưỡng phân loại',
-        path: '/admin/evaluation/competency-thresholds',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
-      },
-      {
-        icon: <BarChartOutlined />,
-        label: 'Phân loại theo khoa',
-        path: '/admin/evaluation/competency',
-        requiredPermissions: [EVALUATION_PERMISSION.resultViewer],
       },
       // Dashboard năng lực trước đây nằm ở mục "Chất lượng chăm sóc" — nội dung là năng lực
       // chuyên môn nên chuyển về đúng nhóm này.

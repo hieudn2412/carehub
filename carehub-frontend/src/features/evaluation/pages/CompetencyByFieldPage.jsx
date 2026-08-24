@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import {
   SearchOutlined,
   EyeOutlined,
-  WarningFilled,
-  CheckCircleFilled,
   ReloadOutlined,
 } from '@ant-design/icons'
 import AppShell from '../../../shared/components/AppShell.jsx'
@@ -22,6 +20,7 @@ import AdminFilterDisclosure from '../../../shared/components/AdminFilterDisclos
 import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
 import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
+import PassFailBadge from '../../../shared/components/PassFailBadge.jsx'
 
 const DEFAULT_FIELD_DATES = currentYearDateRange()
 
@@ -264,13 +263,7 @@ function CompetencyByFieldPage() {
                             </span>
                           </td>
                           <td>
-                            <span className="evd-badge" style={{
-                              backgroundColor: (item.colorHex || '#6b7280') + '20',
-                              color: item.colorHex || '#6b7280',
-                            }}>
-                              {item.isPassed ? <CheckCircleFilled style={{ marginRight: 4 }} /> : <WarningFilled style={{ marginRight: 4 }} />}
-                              {item.competencyLabel || '—'}
-                            </span>
+                            <PassFailBadge passed={item.isPassed} />
                           </td>
                           <td>
                             <button className="evd-btn-text" onClick={e => { e.stopPropagation(); navigate(`${detailPathBase}/${item.employeeId}`) }}>
