@@ -11,6 +11,7 @@ import { myCompetencyApi } from '../../../evaluation/api/myCompetencyApi.js'
 import { indexAnswersByQuestion, resolveStepRating } from '../../utils/checklistRating.js'
 import { apiData, apiErrorMessage, formatNumber } from '../../../../shared/utils/apiUi.js'
 import { useToast } from '../../../../shared/context/ToastContext.jsx'
+import { validateHistoricalDateRange } from '../../../../shared/utils/dateRange.js'
 import '../../styles/StaffCompetencyPage.css'
 
 const localToday = () => {
@@ -92,8 +93,9 @@ export default function StaffCompetencyPage() {
   }, [detail])
 
   const applyFilters = () => {
-    if (draftFilters.dateFrom && draftFilters.dateTo && draftFilters.dateFrom > draftFilters.dateTo) {
-      setDateError('Đến ngày phải lớn hơn hoặc bằng Từ ngày.')
+    const validationError = validateHistoricalDateRange(draftFilters.dateFrom, draftFilters.dateTo, { maxDate: today })
+    if (validationError) {
+      setDateError(validationError)
       return false
     }
     setDateError('')
@@ -133,8 +135,8 @@ export default function StaffCompetencyPage() {
         </div>
       </label>
       <div className="th-mobile-search-form__grid">
-        <label className="th-mobile-search-form__field"><span>Từ ngày</span><KeyboardDatePicker value={draftFilters.dateFrom} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} aria-label="Từ ngày" /></label>
-        <label className="th-mobile-search-form__field"><span>Đến ngày</span><KeyboardDatePicker value={draftFilters.dateTo} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} aria-label="Đến ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Từ ngày</span><KeyboardDatePicker allowInvalidValue value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => { setDateError(''); setDraftFilters(current => ({ ...current, dateFrom: val })) }} aria-label="Từ ngày" /></label>
+        <label className="th-mobile-search-form__field"><span>Đến ngày</span><KeyboardDatePicker allowInvalidValue value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => { setDateError(''); setDraftFilters(current => ({ ...current, dateTo: val })) }} aria-label="Đến ngày" /></label>
       </div>
       {dateError && <p className="th-mobile-search-form__error" role="alert">{dateError}</p>}
       <FilterActionButtons
@@ -193,11 +195,15 @@ export default function StaffCompetencyPage() {
           activeCount={Number(Boolean(fromDate && fromDate !== `${new Date().getFullYear()}-01-01`)) + Number(Boolean(toDate && toDate !== today))}
           ariaLabel="Bộ lọc tuân thủ cá nhân"
           className="sc-toolbar"
+          errorMessage={dateError}
           isOpen={isFilterOpen}
           onApply={() => { if (applyFilters()) setIsFilterOpen(false) }}
           onReset={clearFilters}
           onSearchChange={value => setDraftFilters(current => ({ ...current, q: value }))}
-          onToggle={() => setIsFilterOpen(current => !current)}
+          onToggle={() => {
+            setDateError('')
+            setIsFilterOpen(current => !current)
+          }}
           panelClassName="sc-toolbar__filter-panel"
           panelId="staff-compliance-filter-panel"
           searchAriaLabel="Tìm tên bảng kiểm"
@@ -207,13 +213,12 @@ export default function StaffCompetencyPage() {
         >
               <label className="admin-control-toolbar__field">
                 <span>Từ ngày</span>
-                <KeyboardDatePicker value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => setDraftFilters(current => ({ ...current, dateFrom: val }))} />
+                <KeyboardDatePicker allowInvalidValue value={draftFilters.dateFrom} max={draftFilters.dateTo || today} onChange={val => { setDateError(''); setDraftFilters(current => ({ ...current, dateFrom: val })) }} />
               </label>
               <label className="admin-control-toolbar__field">
                 <span>Đến ngày</span>
-                <KeyboardDatePicker value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => setDraftFilters(current => ({ ...current, dateTo: val }))} />
+                <KeyboardDatePicker allowInvalidValue value={draftFilters.dateTo} min={draftFilters.dateFrom || undefined} max={today} onChange={val => { setDateError(''); setDraftFilters(current => ({ ...current, dateTo: val })) }} />
               </label>
-              {dateError && <span className="sc-filter-error" role="alert">{dateError}</span>}
         </AppliedFilterToolbar>
         <section className="sc-personal-metrics sc-personal-metrics--compact" aria-label="Tổng quan tuân thủ">
           <article className="sc-personal-metric sc-personal-metric--primary"><span className="sc-personal-metric__icon"><SafetyCertificateOutlined /></span><div><span>Tỷ lệ tuân thủ chung</span><strong>{formatNumber(totals.rate)}%</strong></div></article>

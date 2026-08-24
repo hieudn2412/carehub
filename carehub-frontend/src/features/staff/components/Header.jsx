@@ -14,6 +14,7 @@ import { staffApi } from '../api/staffApi'
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
+import { formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import AccountDropdown from '../../../shared/components/AccountDropdown.jsx'
 import HeaderBackNavigation from '../../../shared/components/HeaderBackNavigation.jsx'
@@ -32,7 +33,7 @@ function getFallbackLink(label, roles = []) {
     return '/training/employees'
   }
   if (lbl.includes('đánh giá') || lbl.includes('lịch sử')) {
-    return isAdm ? '/admin/quality/history' : '/manager/quality/history'
+    return isAdm ? '/admin/reports/checklist-dashboard' : '/manager/reports/checklist-dashboard'
   }
   if (lbl.includes('nhân sự') || lbl.includes('nhân viên')) {
     return isAdm ? '/admin/reference/employees' : '/manager/employees'
@@ -73,6 +74,10 @@ function getFallbackLink(label, roles = []) {
   return null
 }
 
+function getDisplayRole(profileRoles, tokenRoles, fallbackRole) {
+  return formatRoleLabels(profileRoles || tokenRoles, fallbackRole) || 'Nhân viên'
+}
+
 function Header({
   title = 'Trang chủ',
   userName = '',
@@ -97,7 +102,7 @@ function Header({
   }, [])
 
   const displayName = profile?.fullName || userName
-  const displayRole = profile?.roles?.map(r => r.name).join(', ') || roleName
+  const displayRole = getDisplayRole(profile?.roles, roles, roleName)
   const avatarLetter = displayName ? displayName.trim().split(' ').pop().charAt(0).toUpperCase() : 'U'
   const [showNotifications, setShowNotifications] = useState(false)
   const popoverRef = useRef(null)
@@ -107,13 +112,14 @@ function Header({
     notifications,
     unreadCount,
     pendingExamCount,
+    hasChecklistAssignment,
     markAllAsRead,
     markAsRead,
   } = useNotifications()
 
   useEffect(() => {
-    onAlertSummaryChange?.({ unreadCount, pendingExamCount })
-  }, [onAlertSummaryChange, pendingExamCount, unreadCount])
+    onAlertSummaryChange?.({ unreadCount, pendingExamCount, hasChecklistAssignment })
+  }, [onAlertSummaryChange, pendingExamCount, unreadCount, hasChecklistAssignment])
 
   // Xử lý đóng popover khi click ra ngoài
   useEffect(() => {

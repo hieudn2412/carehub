@@ -1,4 +1,26 @@
-.ss-page { padding: 0; }
+.ss-page {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+}
+
+.ss-page-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.ss-page-heading h1 {
+  margin: 0;
+  color: #172033;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.ss-page-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+}
 
 .ss-card {
   background: #fff;
@@ -178,6 +200,58 @@
   color: #475569;
   font-weight: 600;
   white-space: nowrap;
+}
+
+.ss-settings-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.ss-settings-card {
+  display: flex;
+  min-height: 128px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid #dbe4ee;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.ss-settings-card:hover {
+  border-color: #98e7d8;
+  box-shadow: 0 14px 28px rgba(15, 118, 110, .1);
+  transform: translateY(-1px);
+}
+
+.ss-settings-card__icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border-radius: 12px;
+  background: #e7f8f4;
+  color: #087f6a;
+  font-size: 22px;
+}
+
+.ss-settings-card h2 {
+  margin: 0 0 8px;
+  color: #172033;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.ss-settings-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 /* ── Responsive ── */

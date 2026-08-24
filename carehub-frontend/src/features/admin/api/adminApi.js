@@ -422,33 +422,91 @@ export const adminApi = {
     })
   },
 
-  getFormAssignmentById(id) {
-    return httpClient.get(`/form-assignments/${id}`, {
-      headers: authHeaders(),
-    })
-  },
-
-  revokeFormAssignment(id) {
-    return httpClient.delete(`/form-assignments/${id}`, {
-      headers: authHeaders(),
-    })
-  },
-
   revokeFormAssignmentItem(id) {
     return httpClient.delete(`/form-assignment-items/${id}`, {
       headers: authHeaders(),
     })
   },
 
-  getFormSubmissions(params) {
-    return httpClient.get('/form-submissions', {
+  getFormAssignmentOverview() {
+    return httpClient.get('/form-assignments/overview', {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormAssignmentForms(params) {
+    return httpClient.get('/form-assignments/forms', {
       headers: authHeaders(),
       params,
     })
   },
 
-  getFormHistory(params) {
-    return httpClient.get('/forms/history', {
+  getFormAssignmentAssignees(params) {
+    return httpClient.get('/form-assignments/assignees', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentItems(params) {
+    return httpClient.get('/form-assignments/items', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentItemAllowedDepartments(itemId) {
+    return httpClient.get(`/form-assignment-items/${itemId}/allowed-departments`, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormAssignmentFormCandidates(params) {
+    return httpClient.get('/form-assignments/form-candidates', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentAssigneeCandidates(params) {
+    return httpClient.get('/form-assignments/assignee-candidates', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getFormAssignmentManagerCandidates() {
+    return httpClient.get('/form-assignments/manager-candidate-ids', {
+      headers: authHeaders(),
+    })
+  },
+
+  previewBulkFormAssignment(data) {
+    return httpClient.post('/form-assignments/preview', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  bulkAssignForms(data) {
+    return httpClient.post('/form-assignments/bulk', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormAssignmentItemValidity(data) {
+    return httpClient.patch('/form-assignment-items/bulk-validity', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  bulkRevokeFormAssignmentItems(data) {
+    return httpClient.post('/form-assignment-items/bulk-revoke', data, {
+      headers: authHeaders(),
+    })
+  },
+
+  getFormSubmissions(params) {
+    return httpClient.get('/form-submissions', {
       headers: authHeaders(),
       params,
     })
@@ -490,6 +548,20 @@ export const adminApi = {
   getFormSubmission(id) {
     return httpClient.get(`/form-submissions/${id}`, {
       headers: authHeaders(),
+    })
+  },
+
+  getEvaluationHistory(params) {
+    return httpClient.get('/forms/evaluations/history', {
+      headers: authHeaders(),
+      params,
+    })
+  },
+
+  getEvaluationHistorySummary(params) {
+    return httpClient.get('/forms/evaluations/history/summary', {
+      headers: authHeaders(),
+      params,
     })
   },
 

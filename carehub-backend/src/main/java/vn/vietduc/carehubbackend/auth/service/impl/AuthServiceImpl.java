@@ -42,10 +42,11 @@ public class AuthServiceImpl implements AuthService {
         if (user.getStatus() == UserStatus.LOCKED) {
             throw new UnauthorizedException("Tài khoản đã bị khóa");
         }
-        if (user.getStatus() != UserStatus.ACTIVE && !user.requiresFirstLoginSetup()) {
+        if (user.getStatus() != UserStatus.ACTIVE && !isPendingFirstLoginActivation(user)) {
             throw new UnauthorizedException("Tài khoản chưa được kích hoạt");
         }
 
+        activateFirstLoginAccountIfNeeded(user);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
@@ -76,6 +77,21 @@ public class AuthServiceImpl implements AuthService {
                 .tokenType("Bearer")
                 .requiresFirstLoginSetup(user.requiresFirstLoginSetup())
                 .build();
+    }
+
+    private boolean isPendingFirstLoginActivation(User user) {
+        return user.getStatus() == UserStatus.INACTIVE && user.isFirstLogin();
+    }
+
+    private void activateFirstLoginAccountIfNeeded(User user) {
+        if (!isPendingFirstLoginActivation(user)) {
+            return;
+        }
+
+        user.setFirstLogin(false);
+        user.setStatus(UserStatus.ACTIVE);
+        user.bumpAuthVersion();
+        refreshTokenService.revokeAllUserTokens(user);
     }
 
     private Long refreshExpiresInSeconds(RefreshToken refreshToken) {

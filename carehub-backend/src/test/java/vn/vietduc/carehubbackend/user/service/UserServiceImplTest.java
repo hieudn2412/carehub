@@ -17,6 +17,7 @@ import vn.vietduc.carehubbackend.notification.config.MailProperties;
 import vn.vietduc.carehubbackend.notification.service.BrandedEmailRenderer;
 import vn.vietduc.carehubbackend.user.dto.request.ChangePasswordRequest;
 import vn.vietduc.carehubbackend.user.dto.request.CreateUserRequest;
+import vn.vietduc.carehubbackend.user.dto.request.UpdateMyProfileRequest;
 import vn.vietduc.carehubbackend.user.entity.Department;
 import vn.vietduc.carehubbackend.user.entity.Role;
 import vn.vietduc.carehubbackend.user.entity.User;
@@ -167,6 +168,36 @@ class UserServiceImplTest {
                 () -> service.changePassword(changePassword("old-password", "old-password", "old-password")));
         assertThrows(BadRequestException.class,
                 () -> service.changePassword(changePassword("old-password", "new-password", "different")));
+    }
+
+    @Test
+    void updateCurrentUserProfileAllowsBlankEmailAndPhone() {
+        User user = User.builder()
+                .id(9L)
+                .employeeCode("EMP009")
+                .name("Employee Nine")
+                .email("old@example.com")
+                .phone("0912345678")
+                .status(UserStatus.ACTIVE)
+                .build();
+        when(securityUtils.getCurrentUserId()).thenReturn(9L);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+        when(userRoleRepository.findRolesByUserId(9L)).thenReturn(List.of(userRole));
+
+        var response = service.updateCurrentUserProfile(new UpdateMyProfileRequest(
+                "Employee Nine",
+                " ",
+                "",
+                null,
+                null
+        ));
+
+        assertNull(response.email());
+        assertNull(response.phone());
+        assertNull(user.getEmail());
+        assertNull(user.getPhone());
+        verify(userRepository, never()).existsByEmailAndIsDeletedFalseAndIdNot(anyString(), anyLong());
     }
 
     @Test

@@ -46,6 +46,23 @@ function Sidebar({ alertSummary = {} }) {
   const [isMobileClosing, setIsMobileClosing] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [pendingRoute, setPendingRoute] = useState(null)
+  const [assignedCount, setAssignedCount] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    staffApi.getAssignedForms({ page: 0, size: 1 })
+      .then((res) => {
+        if (!alive) return
+        const total = res.data?.data?.totalElements
+        if (typeof total === 'number') {
+          setAssignedCount(total)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [currentPath])
 
   useLayoutEffect(() => {
     pendingRouteRef.current = pendingRoute
@@ -54,49 +71,8 @@ function Sidebar({ alertSummary = {} }) {
   const accessToken = tokenStorage.getAccessToken()
   const roles = getRolesFromAccessToken(accessToken)
   const isManager = hasAnyRole(roles, [AUTH_ROLE.manager])
-  const [assignedChecklistAccess, setAssignedChecklistAccess] = useState({
-    accessToken: null,
-    hasAssignment: false,
-  })
-  const hasAssignedChecklist = assignedChecklistAccess.accessToken === accessToken
-    && assignedChecklistAccess.hasAssignment
   const unreadCount = Number(alertSummary.unreadCount) || 0
   const pendingExamCount = Number(alertSummary.pendingExamCount) || 0
-
-  useEffect(() => {
-    let active = true
-
-    if (isManager) {
-      return () => {
-        active = false
-      }
-    }
-
-    staffApi.getAssignedForms({ page: 0, size: 1, sort: 'id,desc' })
-      .then((response) => {
-        if (!active) {
-          return
-        }
-
-        const page = response.data?.data
-        const content = Array.isArray(page?.content) ? page.content : []
-        const totalElements = Number(page?.totalElements)
-
-        setAssignedChecklistAccess({
-          accessToken,
-          hasAssignment: Number.isFinite(totalElements) ? totalElements > 0 : content.length > 0,
-        })
-      })
-      .catch(() => {
-        if (active) {
-          setAssignedChecklistAccess({ accessToken, hasAssignment: false })
-        }
-      })
-
-    return () => {
-      active = false
-    }
-  }, [isManager, accessToken])
 
   const isLinkActive = (itemPath) => {
     if (itemPath === '/staff/professional-competency') {
@@ -129,9 +105,9 @@ function Sidebar({ alertSummary = {} }) {
         { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/staff/professional-competency' },
         ...(!isManager ? [
           { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/staff/reports/checklist-dashboard' },
-          { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists' },
+          { icon: <FileDoneOutlined />, label: 'Bảng kiểm giám sát', path: '/staff/checklists', badge: assignedCount },
         ] : []),
-        ...(!isManager && hasAssignedChecklist ? [
+        ...(!isManager ? [
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/staff/quality/history' },
         ] : []),
       ],
@@ -150,17 +126,19 @@ function Sidebar({ alertSummary = {} }) {
       {
         label: 'Giám sát tuân thủ',
         items: [
-          { icon: <CheckSquareOutlined />, label: 'Giám sát tuân thủ', path: '/manager/reports/checklist-dashboard' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
-          { icon: <BarChartOutlined />, label: 'Chất lượng chăm sóc', path: '/manager/competency-summary' },
-          { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists' },
+          { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
           { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
+          { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists', badge: assignedCount },
         ],
       },
       {
         label: 'Năng lực chuyên môn',
         items: [
           { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
+          // Mục này trước đây tên "Chất lượng chăm sóc" và nằm trong nhóm giám sát tuân thủ,
+          // nhưng nội dung là dashboard năng lực nên thuộc về nhóm này.
+          { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
           { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         ],
       },
@@ -180,9 +158,14 @@ function Sidebar({ alertSummary = {} }) {
     section.items.some((item) => isLinkActive(item.path))
   )
 
-  const [expandedSectionLabel, setExpandedSectionLabel] = useState(
-    activeSection ? activeSection.label : null
-  )
+  const activeSectionLabel = activeSection?.label ?? null
+  const [expandedSectionLabel, setExpandedSectionLabel] = useState(activeSectionLabel)
+
+  useLayoutEffect(() => {
+    if (!activeSectionLabel) return
+
+    setExpandedSectionLabel(activeSectionLabel)
+  }, [activeSectionLabel])
 
   // Restore scroll position
   useEffect(() => {
@@ -356,20 +339,23 @@ function Sidebar({ alertSummary = {} }) {
     },
     ...(!isManager ? [
       {
-        title: 'Giám sát tuân thủ',
+        title: 'Đánh giá',
         items: [
-          ...(hasAssignedChecklist ? [
-            {
-              icon: <FileDoneOutlined />,
-              label: 'Bảng kiểm giám sát',
-              route: '/staff/checklists',
-            },
-            {
-              icon: <HistoryOutlined />,
-              label: 'Lịch sử đánh giá',
-              route: '/staff/quality/history',
-            },
-          ] : []),
+          {
+            icon: <BarChartOutlined />,
+            label: 'Chất lượng chăm sóc',
+            route: '/staff/reports/checklist-dashboard',
+          },
+          {
+            icon: <FileDoneOutlined />,
+            label: 'Bảng kiểm giám sát',
+            route: '/staff/checklists',
+          },
+          {
+            icon: <HistoryOutlined />,
+            label: 'Lịch sử đánh giá',
+            route: '/staff/quality/history',
+          },
         ],
       },
     ] : []),
@@ -606,7 +592,30 @@ function Sidebar({ alertSummary = {} }) {
                         onClick={() => setIsMobileOpen(false)}
                       >
                         <span className="sidebar__item-icon">{item.icon}</span>
-                        <span>{item.label}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <span>{item.label}</span>
+                          {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 20,
+                                height: 18,
+                                padding: '0 5px',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: 'inherit',
+                                border: '1px solid #ef4444',
+                                borderRadius: 999,
+                                lineHeight: 1,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </span>
                       </NavLink>
                     ))}
                   </div>

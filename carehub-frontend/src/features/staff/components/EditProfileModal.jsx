@@ -35,8 +35,8 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
       setSubmitting(true)
       const response = await staffApi.updateProfile({
         fullName: form.fullName.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
+        email: form.email.trim() || null,
+        phone: form.phone.trim() || null,
         birthday: form.birthday || null,
         gender: form.gender === '' ? null : form.gender === 'true',
       })
@@ -57,8 +57,8 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
           <input id="profile-full-name" maxLength={150} onChange={updateField('fullName')} required value={form.fullName} />
         </div>
         <div className="profile-edit-form__field">
-          <label htmlFor="profile-email">Email <span aria-hidden="true">*</span></label>
-          <input id="profile-email" maxLength={255} onChange={updateField('email')} required type="email" value={form.email} />
+          <label htmlFor="profile-email">Email</label>
+          <input id="profile-email" maxLength={255} onChange={updateField('email')} type="email" value={form.email} />
         </div>
         <div className="profile-edit-form__field">
           <label htmlFor="profile-phone">Số điện thoại</label>

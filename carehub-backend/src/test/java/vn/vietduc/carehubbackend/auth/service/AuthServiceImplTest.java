@@ -83,6 +83,55 @@ class AuthServiceImplTest {
     }
 
     @Test
+    void loginActivatesImportedFirstLoginUserWithoutEmailSetup() {
+        User firstLoginUser = User.builder()
+                .id(22L)
+                .employeeCode("NEW001")
+                .name("New Employee")
+                .password("encoded-password")
+                .firstLogin(true)
+                .status(UserStatus.INACTIVE)
+                .build();
+        when(userRepository.findByEmployeeCodeAndIsDeletedFalse("NEW001")).thenReturn(Optional.of(firstLoginUser));
+        when(passwordEncoder.matches("plain-password", "encoded-password")).thenReturn(true);
+        when(jwtTokenService.generateAccessToken(firstLoginUser)).thenReturn(new AccessTokenResult("access-token", 900));
+        when(refreshTokenService.createRefreshToken(firstLoginUser)).thenReturn(RefreshToken.builder()
+                .token("refresh-token")
+                .user(firstLoginUser)
+                .revoked(false)
+                .expiredAt(LocalDateTime.now().plusDays(7))
+                .build());
+
+        var response = service.login(login("NEW001", "plain-password"));
+
+        assertEquals("access-token", response.getAccessToken());
+        assertFalse(response.isRequiresFirstLoginSetup());
+        assertFalse(firstLoginUser.isFirstLogin());
+        assertEquals(UserStatus.ACTIVE, firstLoginUser.getStatus());
+        assertEquals(1L, firstLoginUser.getAuthVersion());
+        assertNotNull(firstLoginUser.getLastLogin());
+        verify(refreshTokenService).revokeAllUserTokens(firstLoginUser);
+        verify(userRepository).save(firstLoginUser);
+    }
+
+    @Test
+    void loginRejectsInactiveNonFirstLoginAccount() {
+        activeUser.setStatus(UserStatus.INACTIVE);
+        activeUser.setFirstLogin(false);
+        when(userRepository.findByEmployeeCodeAndIsDeletedFalse("EMP001")).thenReturn(Optional.of(activeUser));
+        when(passwordEncoder.matches("plain-password", "encoded-password")).thenReturn(true);
+
+        UnauthorizedException exception = assertThrows(
+                UnauthorizedException.class,
+                () -> service.login(login("EMP001", "plain-password"))
+        );
+
+        assertEquals("Tài khoản chưa được kích hoạt", exception.getMessage());
+        verify(refreshTokenService, never()).revokeAllUserTokens(any());
+        verify(jwtTokenService, never()).generateAccessToken(any());
+    }
+
+    @Test
     void loginRejectsInvalidPasswordWithoutRevokingTokens() {
         when(userRepository.findByEmployeeCodeAndIsDeletedFalse("EMP001")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("wrong", "encoded-password")).thenReturn(false);

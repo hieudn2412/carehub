@@ -327,14 +327,14 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDetailResponse updateCurrentUserProfile(UpdateMyProfileRequest request) {
         User user = findUser(securityUtils.getCurrentUserId());
-        String email = request.email().trim();
-        if (userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
+        String email = normalizeOptionalText(request.email());
+        if (email != null && userRepository.existsByEmailAndIsDeletedFalseAndIdNot(email, user.getId())) {
             throw new ConflictException("Email này đã được sử dụng");
         }
 
         user.setName(request.fullName().trim());
         user.setEmail(email);
-        user.setPhone(request.phone() == null || request.phone().isBlank() ? null : request.phone().trim());
+        user.setPhone(normalizeOptionalText(request.phone()));
         user.setBirthday(request.birthday());
         if (request.gender() != null) {
             user.setGender(request.gender());
@@ -413,6 +413,10 @@ public class UserServiceImpl implements UserService {
     private void invalidateUserSessions(User user) {
         user.bumpAuthVersion();
         refreshTokenService.revokeAllUserTokens(user);
+    }
+
+    private String normalizeOptionalText(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
 }

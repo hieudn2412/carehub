@@ -202,35 +202,6 @@
   font-weight: 650;
 }
 
-.am-filter-panel {
-  display: grid;
-  width: 100%;
-  box-sizing: border-box;
-  grid-template-columns: minmax(240px, 320px) repeat(2, minmax(180px, 240px));
-  align-items: end;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid #dbe3ee;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-
-.am-filter-field {
-  display: grid;
-  gap: 6px;
-}
-
-.am-filter-label {
-  color: #475569;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.am-filter-panel .am-filter-select {
-  width: 100%;
-  min-height: 44px;
-}
-
 .am-export-btn {
   display: inline-flex;
   align-items: center;
@@ -975,15 +946,6 @@
     width: 100%;
   }
 
-  .am-filter-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .am-filter-department {
-    width: 100%;
-    min-width: 0;
-    flex: 1 1 200px;
-  }
 
   .am-filter-department .am-department-combobox__menu {
     min-width: 0;

@@ -22,6 +22,9 @@ import vn.vietduc.carehubbackend.utils.SecurityUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -58,6 +61,8 @@ class FormHistoryAccessPolicyTest {
         when(securityUtils.getCurrentUserId()).thenReturn(2L);
         when(userRepository.findByIdAndIsDeletedFalse(2L)).thenReturn(Optional.of(manager));
         when(assignmentItemRepository.existsEverAssignedToManager(2L, 18L)).thenReturn(true);
+        lenient().when(assignmentItemRepository.findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(List.of(7L));
 
         var service = policy();
         var scope = service.requireHistoryScope();
@@ -86,6 +91,8 @@ class FormHistoryAccessPolicyTest {
         when(securityUtils.getCurrentUserId()).thenReturn(2L);
         when(userRepository.findByIdAndIsDeletedFalse(2L)).thenReturn(Optional.of(manager));
         when(assignmentItemRepository.existsEverAssignedToManager(2L, 18L)).thenReturn(true);
+        when(assignmentItemRepository.findActiveAllowedDepartmentIds(
+                anyLong(), anyLong(), any(), any(), any(), any())).thenReturn(List.of(7L));
 
         var service = policy();
         assertTrue(service.managerCanRead(submission));
@@ -95,7 +102,8 @@ class FormHistoryAccessPolicyTest {
     }
 
     private FormHistoryAccessPolicy policy() {
-        return new FormHistoryAccessPolicy(securityUtils, userRepository, assignmentItemRepository);
+        return new FormHistoryAccessPolicy(securityUtils, userRepository, assignmentItemRepository,
+                Clock.fixed(Instant.parse("2026-06-21T00:00:00Z"), ZoneOffset.UTC));
     }
 
     private void authenticate(String... roles) {

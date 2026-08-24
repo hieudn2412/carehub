@@ -104,6 +104,7 @@ function ComplianceTargetSettingsPage() {
   }, [isFilterOpen, statusFilter])
 
   useEffect(() => {
+    if (!targetModalForm || departments.length > 0) return undefined
     let active = true
     adminApi.getDepartments()
       .then((response) => {
@@ -114,7 +115,7 @@ function ComplianceTargetSettingsPage() {
         if (active) setError(apiErrorMessage(requestError))
       })
     return () => { active = false }
-  }, [reloadKey])
+  }, [departments.length, reloadKey, targetModalForm])
 
   useEffect(() => {
     let active = true
@@ -174,7 +175,8 @@ function ComplianceTargetSettingsPage() {
   const activeFilterCount = [statusFilter].filter(Boolean).length
 
   const breadcrumbs = useMemo(() => [
-    { label: 'Giám sát tuân thủ' },
+    { label: 'Cấu hình hệ thống' },
+    { label: 'Cấu hình giám sát tuân thủ', link: '/admin/system-settings/compliance' },
     { label: 'Cài đặt mục tiêu tuân thủ' },
   ], [])
 

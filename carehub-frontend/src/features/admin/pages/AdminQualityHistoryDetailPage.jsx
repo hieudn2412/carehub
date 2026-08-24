@@ -94,7 +94,8 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [expandedSections, setExpandedSections] = useState(new Set())
   const isManager = role === 'manager'
-  const basePath = isManager ? '/manager/quality/history' : '/admin/quality/history'
+  const technicalDashboardPath = isManager ? '/manager/reports/checklist-dashboard' : '/admin/reports/checklist-dashboard'
+  const basePath = `${technicalDashboardPath}/results`
 
   useEffect(() => {
     let alive = true
@@ -143,6 +144,11 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   const returnTo = searchParams.get('returnTo') || ''
   const backTarget = getBackTarget(submission, returnTo, basePath)
   const allExpanded = sections.length > 0 && expandedSections.size === sections.length
+  const breadcrumbs = [
+    { label: 'Giám sát tuân thủ' },
+    { label: 'Tuân thủ theo kỹ thuật', link: technicalDashboardPath },
+    { label: 'Chi tiết kết quả' },
+  ]
 
   const toggleSection = (sectionKey) => {
     setExpandedSections((current) => {
@@ -156,12 +162,8 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
   return (
     <AppShell
       className="admin-quality-history-page"
-      back={{ label: 'Quay lại', onClick: () => navigate(backTarget) }}
-      breadcrumbs={[
-        { label: 'Chất lượng' },
-        { label: 'Lịch sử đánh giá', link: basePath },
-        { label: 'Chi tiết kết quả' },
-      ]}
+      back={{ label: 'Quay lại', onClick: () => navigate(backTarget, { replace: true }) }}
+      breadcrumbs={breadcrumbs}
     >
         <div className="admin-quality-history admin-quality-history--detail">
           {loading ? (
@@ -190,7 +192,7 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
               )}
 
               <section className="aqh-detail-summary-grid">
-                <article><span>Nhân viên được đánh giá</span><strong>{submission.subject?.fullName || 'Chưa có tên'}</strong><small>{submission.subject?.employeeCode || 'Chưa có mã'} · {submission.subject?.department || 'Chưa xác định khoa/phòng'}</small></article>
+                <article><span>Nhân viên được đánh giá</span><strong style={{ color: '#00866b' }}>{submission.subject?.fullName || 'Chưa có tên'}</strong><small>{submission.subject?.employeeCode || 'Chưa có mã'} · {submission.subject?.department || 'Chưa xác định khoa/phòng'}</small></article>
                 <article><span>Người thực hiện chấm</span><strong>{submission.submittedBy?.fullName || 'Chưa xác định'}</strong><small>{submission.submittedBy?.employeeCode || 'Chưa có mã nhân viên'}</small></article>
                 <article><span>Thời gian nộp</span><strong>{formatDateTime(submission.submittedAt || submission.updatedAt)}</strong><small>Phiếu đã nộp</small></article>
                 <article><span>Điểm</span><strong>{formatScore(submission.convertedScore)}/10</strong><small>Điểm sàn: {formatScore(version.passingScore ?? submission.passingScore)}/10</small></article>
@@ -245,7 +247,7 @@ function AdminQualityHistoryDetailPage({ role = 'admin' }) {
                                   <div className="aqh-readonly-question__main">
                                     <div className="aqh-readonly-question__title">
                                       <span>{itemIndex + 1}</span>
-                                      <div><strong>{question.title || item.title || `Câu hỏi ${itemIndex + 1}`}</strong>{question.code && <small>{question.code}</small>}</div>
+                                      <div><strong>{question.title || item.title || `Câu hỏi ${itemIndex + 1}`}</strong></div>
                                       {question.critical && <em>Trọng yếu</em>}
                                       {question.excludeFromScore && <em className="is-neutral">Không tính điểm</em>}
                                     </div>

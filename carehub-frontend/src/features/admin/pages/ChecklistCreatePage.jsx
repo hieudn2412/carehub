@@ -770,10 +770,10 @@ function ChecklistCreatePage() {
                   {isDetailMode && (
                     <button
                       className="ccp-manage-button ccp-manage-button--permissions"
-                      onClick={() => navigate(`/admin/quality/checklists/${id}/assignments`)}
+                      onClick={() => navigate(`/admin/quality/checklist-assignments?formId=${id}`)}
                       type="button"
                     >
-                      <UserSwitchOutlined /> Quản lý phân quyền
+                      <UserSwitchOutlined /> Giao bảng kiểm
                     </button>
                   )}
                   {isDetailMode && (
@@ -887,7 +887,7 @@ function ChecklistCreatePage() {
                     <span>
                       <strong>Tra cứu đối tượng bằng mã nhân viên</strong>
                       <small>
-                        Khi manager thực hiện đánh giá, hệ thống yêu cầu nhập mã nhân viên và tự lấy họ tên, chức vụ, khoa/phòng.
+                        Khi Quản lý cấp Khoa thực hiện đánh giá, hệ thống yêu cầu nhập mã nhân viên và tự lấy họ tên, chức vụ, khoa/phòng.
                       </small>
                     </span>
                   </label>

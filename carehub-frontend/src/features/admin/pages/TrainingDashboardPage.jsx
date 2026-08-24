@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
+  ArrowRightOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   LoadingOutlined,
@@ -20,12 +22,15 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import ProgressRing from '../../../shared/components/ProgressRing.jsx'
+import ChartConfigPanel from '../components/ChartConfigPanel.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
 import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
+import { wrapChartLabel } from '../utils/chartLabel.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/TrainingDashboardPage.css'
 
@@ -109,14 +114,74 @@ function exportCsv(rows) {
   URL.revokeObjectURL(url)
 }
 
-function MetricCard({ icon, label, value, detail, tone }) {
+/* Tên khoa / lĩnh vực / hình thức đào tạo đều là chuỗi tiếng Việt dài, còn thẻ biểu đồ chỉ
+   rộng nửa màn hình. Xoay nhãn thôi không đủ: 12 nhãn nghiêng 22° chồng hẳn lên nhau. Ba việc
+   dưới đây xử lý triệt để — ngắt nhãn tối đa 2 dòng, xoay dốc 60°, và cấp cho mỗi cột một bề
+   ngang tối thiểu. Nhãn rộng nhất đo được là 55px nên 66px cho mỗi cột là đủ hở; khi thẻ hẹp
+   hơn tổng bề ngang đó thì biểu đồ cuộn ngang thay vì ép nhãn đè nhau. Tên đầy đủ vẫn đọc
+   được ở tooltip và ở title của tick. */
+const CHART_CATEGORY_WIDTH = 66
+const CHART_LABEL_ANGLE = -60
+
+function CategoryTick({ x, y, payload }) {
+  const lines = wrapChartLabel(payload?.value)
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        fill="#64748b"
+        fontSize={11}
+        textAnchor="end"
+        transform={`rotate(${CHART_LABEL_ANGLE})`}
+      >
+        <title>{payload?.value}</title>
+        {lines.map((line, index) => (
+          <tspan key={`${line}-${index}`} x={0} dy={index === 0 ? 12 : 13}>{line}</tspan>
+        ))}
+      </text>
+    </g>
+  )
+}
+
+/** Khung cuộn ngang giữ cho mỗi cột luôn có đủ bề ngang cho nhãn của nó. */
+function ChartCanvas({ count, height = 340, children }) {
+  return (
+    <div className="training-chart-card__scroll">
+      <div
+        className="training-chart-card__canvas"
+        style={{ height, minWidth: Math.max(320, count * CHART_CATEGORY_WIDTH) }}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          {children}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+/* Chiều cao dành cho nhãn nằm ở XAxis height; margin.bottom chỉ chừa mép, nếu đặt cả hai
+   thì khoảng trống bị tính hai lần và vùng vẽ cột bị bóp lại. */
+const CHART_MARGIN = { top: 24, right: 12, left: 0, bottom: 4 }
+const CHART_AXIS_HEIGHT = 92
+
+function MetricCard({ icon, label, value, detail, tone, progress }) {
   return (
     <article className={`training-kpi training-kpi--${tone}`}>
       <span className="training-kpi__icon">{icon}</span>
-      <div>
+      <div className="training-kpi__content">
         <p>{label}</p>
-        <strong>{value}</strong>
-        <small>{detail}</small>
+        <div className="training-kpi__metrics">
+          <div>
+            <strong>{value}</strong>
+            <small>{detail}</small>
+          </div>
+          {progress != null && (
+            <ProgressRing
+              progress={progress}
+              size={48}
+              color={tone === 'green' ? '#10a77d' : tone === 'red' ? '#ef4444' : '#0284c7'}
+            />
+          )}
+        </div>
       </div>
     </article>
   )
@@ -124,16 +189,19 @@ function MetricCard({ icon, label, value, detail, tone }) {
 
 function DashboardContent({ role }) {
   const isManager = role === 'manager'
+  const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [departments, setDepartments] = useState([])
   const [professionalFields, setProfessionalFields] = useState([])
   const [filters, setFilters] = useState({
+    keyword: '',
     departmentId: '',
     professionalFieldId: '',
     asOf: today,
     status: '',
   })
   const [appliedFilters, setAppliedFilters] = useState({
+    keyword: '',
     departmentId: '',
     professionalFieldId: '',
     asOf: today,
@@ -144,6 +212,13 @@ function DashboardContent({ role }) {
   const [exporting, setExporting] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [error, setError] = useState('')
+  const [fieldSort, setFieldSort] = useState('desc')
+  const [fieldLimit, setFieldLimit] = useState('12')
+  const [typeSort, setTypeSort] = useState('desc')
+  const [typeLimit, setTypeLimit] = useState('12')
+  const [deptSort, setDeptSort] = useState('desc')
+  const [deptLimit, setDeptLimit] = useState('12')
+
   const managerDepartmentId = profile?.departmentId || ''
   const effectiveFilters = appliedFilters
   const activeFilterCount = [
@@ -165,7 +240,7 @@ function DashboardContent({ role }) {
           const managerProfile = responsePayload(scopeResult.value)
           setProfile(managerProfile)
           if (!managerProfile?.departmentId) {
-            setError('Tài khoản Manager chưa được gán khoa/phòng nên không thể xem dashboard.')
+            setError('Tài khoản Quản lý cấp Khoa chưa được gán khoa/phòng nên không thể xem dashboard.')
             setLoading(false)
           }
         }
@@ -224,35 +299,62 @@ function DashboardContent({ role }) {
   }
 
   const departmentData = useMemo(() => {
-    return (summary?.byDepartment || [])
+    let data = (summary?.byDepartment || [])
       .map((item) => ({
         name: item.departmentName || 'Chưa xác định',
         total: Number(item.employeeCount) || 0,
         rate: Number(item.complianceRate) || 0,
       }))
-      .sort((left, right) => right.total - left.total)
-      .slice(0, 12)
-  }, [summary])
+    if (deptSort === 'asc') {
+      data = data.sort((left, right) => left.rate - right.rate)
+    } else {
+      data = data.sort((left, right) => right.rate - left.rate)
+    }
+    if (deptLimit !== 'all') {
+      const limit = parseInt(deptLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, deptSort, deptLimit])
 
   const professionalFieldData = useMemo(() => {
-    return (summary?.byProfessionalField || [])
+    let data = (summary?.byProfessionalField || [])
       .map((item) => ({
         name: item.professionalFieldName || 'Chưa xác định',
         hours: Number(item.submittedHours) || 0,
       }))
-      .sort((left, right) => right.hours - left.hours)
-      .slice(0, 12)
-  }, [summary])
+    if (fieldSort === 'asc') {
+      data = data.sort((left, right) => left.hours - right.hours)
+    } else {
+      data = data.sort((left, right) => right.hours - left.hours)
+    }
+
+    if (fieldLimit !== 'all') {
+      const limit = parseInt(fieldLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, fieldSort, fieldLimit])
 
   const activityTypeData = useMemo(() => {
-    return (summary?.byActivityType || [])
+    let data = (summary?.byActivityType || [])
       .map((item) => ({
         name: item.activityTypeName || 'Chưa xác định',
         hours: Number(item.submittedHours) || 0,
       }))
-      .sort((left, right) => right.hours - left.hours)
-      .slice(0, 12)
-  }, [summary])
+
+    if (typeSort === 'asc') {
+      data = data.sort((left, right) => left.hours - right.hours)
+    } else {
+      data = data.sort((left, right) => right.hours - left.hours)
+    }
+
+    if (typeLimit !== 'all') {
+      const limit = parseInt(typeLimit, 10) || 12
+      data = data.slice(0, limit)
+    }
+    return data
+  }, [summary, typeSort, typeLimit])
 
   const completionData = [
     { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
@@ -268,6 +370,7 @@ function DashboardContent({ role }) {
         professionalFieldId: effectiveFilters.professionalFieldId || undefined,
         complianceStatus: effectiveFilters.status || undefined,
         asOf: effectiveFilters.asOf || undefined,
+        keyword: effectiveFilters.keyword || undefined,
       })
       exportCsv(rows.map(normalizeEmployee))
     } catch {
@@ -278,7 +381,7 @@ function DashboardContent({ role }) {
   }
 
   function resetFilters() {
-    const initialFilters = { departmentId: '', professionalFieldId: '', asOf: today, status: '' }
+    const initialFilters = { keyword: '', departmentId: '', professionalFieldId: '', asOf: today, status: '' }
     setFilters(initialFilters)
     setAppliedFilters(initialFilters)
   }
@@ -288,22 +391,35 @@ function DashboardContent({ role }) {
     setIsFilterOpen(false)
   }
 
-  const exportButton = (
-    <button
-      type="button"
-      className="training-dashboard__export"
-      onClick={handleExport}
-      disabled={loading || exporting || metrics.total === 0}
-    >
-      {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
-      {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
-    </button>
+  const toolbarActions = (
+    <>
+      {/* Manager đã có bảng nhân sự ngay trong dashboard này, chỉ Admin mới cần đường dẫn
+          sang trang giờ đào tạo nhân viên. */}
+      {!isManager && (
+        <button
+          type="button"
+          className="training-dashboard__details"
+          onClick={() => navigate('/training/employees')}
+        >
+          Xem chi tiết <ArrowRightOutlined />
+        </button>
+      )}
+      <button
+        type="button"
+        className="training-dashboard__export"
+        onClick={handleExport}
+        disabled={loading || exporting || metrics.total === 0}
+      >
+        {exporting ? <LoadingOutlined spin /> : <UploadOutlined />}
+        {exporting ? 'Đang chuẩn bị...' : 'Xuất danh sách'}
+      </button>
+    </>
   )
 
   const filterFields = (
     <>
       {isManager ? (
-        <label><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
+        <label className="admin-control-toolbar__field"><span>Khoa/Phòng</span><div>{profile?.departmentName || 'Khoa của tôi'}</div></label>
       ) : (
           <FilterSelectField
             label="Khoa/Phòng"
@@ -330,7 +446,7 @@ function DashboardContent({ role }) {
           searchable
           searchPlaceholder="Tìm tên lĩnh vực..."
         />
-      <label>
+      <label className="admin-control-toolbar__field">
         <span>Tính đến ngày</span>
         <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
       </label>
@@ -348,13 +464,16 @@ function DashboardContent({ role }) {
     <div className="training-dashboard">
       <AppliedFilterToolbar
         activeCount={activeFilterCount}
-        actions={exportButton}
+        actions={toolbarActions}
         ariaLabel="Công cụ dashboard giờ đào tạo"
         className="training-dashboard__toolbar"
         isOpen={isFilterOpen}
         onApply={applyFilters}
         onReset={resetFilters}
         onToggle={() => setIsFilterOpen((current) => !current)}
+        onSearchChange={(value) => setFilters({ ...filters, keyword: value })}
+        searchValue={filters.keyword}
+        searchPlaceholder="Tìm nhân sự theo tên, mã NV..."
         panelClassName="training-dashboard__filter-panel"
         panelId="training-dashboard-filter-panel"
       >
@@ -369,8 +488,8 @@ function DashboardContent({ role }) {
         <>
           <section className="training-dashboard__kpis">
             <MetricCard icon={<TeamOutlined />} label="Tổng nhân viên" value={metrics.total.toLocaleString('vi-VN')} detail="Theo bộ lọc đang chọn" tone="blue" />
-            <MetricCard icon={<CheckCircleOutlined />} label="Đạt" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên`} tone="green" />
-            <MetricCard icon={<ExclamationCircleOutlined />} label="Chưa đạt" value={(metrics.total - metrics.completed).toLocaleString('vi-VN')} detail="Cần theo dõi tiến độ" tone="red" />
+            <MetricCard icon={<CheckCircleOutlined />} label="Đạt" value={metrics.completed.toLocaleString('vi-VN')} detail={`${metrics.rate.toFixed(1).replace('.', ',')}% nhân viên`} tone="green" progress={metrics.rate} />
+            <MetricCard icon={<ExclamationCircleOutlined />} label="Chưa đạt" value={(metrics.total - metrics.completed).toLocaleString('vi-VN')} detail="Cần theo dõi tiến độ" tone="red" progress={metrics.total > 0 ? 100 - metrics.rate : 0} />
           </section>
 
           {metrics.total === 0 ? (
@@ -380,39 +499,41 @@ function DashboardContent({ role }) {
               <span>Dữ liệu sẽ hiển thị khi backend trả kết quả theo phạm vi bộ lọc.</span>
             </section>
           ) : (
-            <section className="training-dashboard__charts">
-              <article className="training-chart-card">
-                <header><h2>Phân bố Đạt/Chưa đạt</h2><span>{metrics.rate.toFixed(1).replace('.', ',')}%</span></header>
-                <ResponsiveContainer width="100%" height={270}>
-                  <PieChart>
-                    <Pie data={completionData} dataKey="value" nameKey="name" innerRadius={72} outerRadius={102} paddingAngle={2} stroke="none">
-                      {completionData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip formatter={(value, name) => [`${value} nhân viên`, name]} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="training-chart-card__legend">
-                  {completionData.map((entry) => <span key={entry.name}><i style={{ background: entry.color }} />{entry.name}: <b>{entry.value}</b></span>)}
-                </div>
-              </article>
+            <section className={`training-dashboard__charts${isManager ? ' training-dashboard__charts--manager' : ''}`}>
 
               {/* Manager chỉ quản lý một khoa nên biểu đồ so sánh giữa các khoa không có ý
                   nghĩa; chỗ này dành cho danh sách nhân sự trong khoa. */}
               {isManager ? (
-                <article className="training-chart-card training-chart-card--wide">
+                <article className="training-chart-card training-chart-card--full">
                   <header><h2>Nhân sự trong khoa</h2><span>{profile?.departmentName || 'Khoa của tôi'}</span></header>
-                  <DepartmentTrainingStaffTable />
+                  <DepartmentTrainingStaffTable
+                    hideToolbar={true}
+                    externalFilters={{
+                      keyword: effectiveFilters.keyword,
+                      complianceStatus: effectiveFilters.status,
+                      asOf: effectiveFilters.asOf,
+                      professionalFieldId: effectiveFilters.professionalFieldId
+                    }}
+                  />
                 </article>
               ) : (
-                <article className="training-chart-card training-chart-card--wide">
-                  <header><h2>Tỷ lệ hoàn thành theo khoa</h2><span>Tối đa 12 khoa</span></header>
+                <article className="training-chart-card training-chart-card--full">
+                  <header>
+                    <h2>Tỷ lệ hoàn thành theo khoa</h2>
+                    <ChartConfigPanel
+                      sortOrder={deptSort}
+                      onSortOrderChange={setDeptSort}
+                      displayLimit={deptLimit}
+                      onDisplayLimitChange={setDeptLimit}
+                    />
+                  </header>
                   {departmentData.length === 0 ? (
                     <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo khoa trong phạm vi này.</div>
                   ) : (
-                    <ResponsiveContainer width="100%" height={310}>
-                      <BarChart data={departmentData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
+                    <ChartCanvas count={departmentData.length}>
+                      <BarChart data={departmentData} margin={CHART_MARGIN} barCategoryGap="30%">
                         <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
-                        <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
+                        <XAxis dataKey="name" interval={0} tickLine={false} height={CHART_AXIS_HEIGHT} tick={<CategoryTick />} />
                         <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 11, fill: '#64748b' }} />
                         <Tooltip formatter={(value) => [`${value}%`, 'Tỷ lệ hoàn thành']} />
                         <Bar dataKey="rate" radius={[7, 7, 0, 0]} maxBarSize={46}>
@@ -420,52 +541,70 @@ function DashboardContent({ role }) {
                           <LabelList dataKey="rate" position="top" formatter={(value) => `${value}%`} fill="#334155" fontSize={11} />
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartCanvas>
                   )}
                 </article>
               )}
             </section>
           )}
 
-          <section className="training-dashboard__charts training-dashboard__charts--equal">
-            <article className="training-chart-card">
-              <header><h2>Tổng giờ đào tạo theo lĩnh vực</h2><span>Tối đa 12 lĩnh vực</span></header>
-              {professionalFieldData.length === 0 ? (
-                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo lĩnh vực trong phạm vi này.</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={310}>
-                  <BarChart data={professionalFieldData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
-                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
-                    <Bar dataKey="hours" fill="#0284c7" radius={[7, 7, 0, 0]} maxBarSize={46}>
-                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </article>
+          {!isManager && (
+            <section className="training-dashboard__charts training-dashboard__charts--equal">
+              <article className="training-chart-card">
+                <header>
+                  <h2>Tổng giờ đào tạo theo lĩnh vực</h2>
+                  <ChartConfigPanel
+                    sortOrder={fieldSort}
+                    onSortOrderChange={setFieldSort}
+                    displayLimit={fieldLimit}
+                    onDisplayLimitChange={setFieldLimit}
+                  />
+                </header>
+                {professionalFieldData.length === 0 ? (
+                  <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo lĩnh vực trong phạm vi này.</div>
+                ) : (
+                  <ChartCanvas count={professionalFieldData.length}>
+                    <BarChart data={professionalFieldData} margin={CHART_MARGIN} barCategoryGap="30%">
+                      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                      <XAxis dataKey="name" interval={0} tickLine={false} height={CHART_AXIS_HEIGHT} tick={<CategoryTick />} />
+                      <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                      <Bar dataKey="hours" fill="#0284c7" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                        <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                      </Bar>
+                    </BarChart>
+                  </ChartCanvas>
+                )}
+              </article>
 
-            <article className="training-chart-card">
-              <header><h2>Tổng giờ đào tạo theo hình thức</h2><span>Tối đa 12 hình thức</span></header>
-              {activityTypeData.length === 0 ? (
-                <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo hình thức trong phạm vi này.</div>
-              ) : (
-                <ResponsiveContainer width="100%" height={310}>
-                  <BarChart data={activityTypeData} margin={{ top: 24, right: 12, left: 0, bottom: 48 }}>
-                    <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
-                    <XAxis dataKey="name" angle={-22} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
-                    <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
-                    <Bar dataKey="hours" fill="#0f9f7a" radius={[7, 7, 0, 0]} maxBarSize={46}>
-                      <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </article>
-          </section>
+              <article className="training-chart-card">
+                <header>
+                  <h2>Tổng giờ đào tạo theo hình thức</h2>
+                  <ChartConfigPanel
+                    sortOrder={typeSort}
+                    onSortOrderChange={setTypeSort}
+                    displayLimit={typeLimit}
+                    onDisplayLimitChange={setTypeLimit}
+                  />
+                </header>
+                {activityTypeData.length === 0 ? (
+                  <div className="training-dashboard__empty training-dashboard__empty--compact">Chưa có dữ liệu theo hình thức trong phạm vi này.</div>
+                ) : (
+                  <ChartCanvas count={activityTypeData.length}>
+                    <BarChart data={activityTypeData} margin={CHART_MARGIN} barCategoryGap="30%">
+                      <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e6edf4" />
+                      <XAxis dataKey="name" interval={0} tickLine={false} height={CHART_AXIS_HEIGHT} tick={<CategoryTick />} />
+                      <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                      <Tooltip formatter={(value) => [`${value} giờ`, 'Tổng giờ']} />
+                      <Bar dataKey="hours" fill="#0f9f7a" radius={[7, 7, 0, 0]} maxBarSize={46}>
+                        <LabelList dataKey="hours" position="top" fill="#334155" fontSize={11} />
+                      </Bar>
+                    </BarChart>
+                  </ChartCanvas>
+                )}
+              </article>
+            </section>
+          )}
         </>
       )}
     </div>
@@ -477,7 +616,7 @@ export default function TrainingDashboardPage({ role = 'admin' }) {
   return (
     <AppShell
       title={isManager ? 'Dashboard giờ đào tạo' : undefined}
-      breadcrumbs={isManager ? undefined : [{ label: 'Dashboard & Báo cáo' }, { label: 'Dashboard giờ đào tạo' }]}
+      breadcrumbs={isManager ? undefined : [{ label: 'Đào tạo liên tục' }, { label: 'Dashboard giờ đào tạo' }]}
     >
       <DashboardContent role={role} />
     </AppShell>

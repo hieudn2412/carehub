@@ -23,6 +23,7 @@ import {
   DownloadOutlined
 } from '@ant-design/icons'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
+import { formatRoleLabel, formatRoleLabels } from '../../../shared/utils/roleLabels.js'
 import '../styles/AdminAccountsScreen.css'
 
 function normalizeReferenceList(payload) {
@@ -210,6 +211,18 @@ function AdminAccountsScreen() {
     loadUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, appliedFilters])
+
+  useEffect(() => {
+    const nextSearch = search.trim()
+    if (nextSearch === appliedFilters.search) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(1)
+      setAppliedFilters((current) => (
+        current.search === nextSearch ? current : { ...current, search: nextSearch }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.search, search])
 
   // Load detail data when select user changes
   useEffect(() => {
@@ -531,7 +544,7 @@ function AdminAccountsScreen() {
           u.employeeCode || '',
           u.fullName || '',
           getDeptName(u.departmentId),
-          u.roles?.map(r => r.name || r.code).join(', ') || '',
+          formatRoleLabels(u.roles),
           u.status === 'ACTIVE' ? 'Hoạt động' : (u.status === 'LOCKED' ? 'Đã khoá' : 'Ngưng hoạt động')
         ])
 
@@ -578,7 +591,7 @@ function AdminAccountsScreen() {
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {userRoles.map(r => {
           let mod = 'staff'
-          let label = r.name || r.code
+          const label = formatRoleLabel(r)
           if (r.code === 'ADMIN') {
             mod = 'admin'
           } else if (r.code === 'MANAGER') {
@@ -694,7 +707,7 @@ function AdminAccountsScreen() {
                       label="Vai trò"
                       value={roleFilter}
                       onChange={setRoleFilter}
-                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: role.name || role.code }))]}
+                      options={[{ value: 'all', label: 'Tất cả vai trò' }, ...roles.map((role) => ({ value: role.id, label: formatRoleLabel(role) }))]}
                       placeholder="Tất cả vai trò"
                     />
                     <FilterSelectField
@@ -854,7 +867,7 @@ function AdminAccountsScreen() {
                         {selectedUserDetail.roles && selectedUserDetail.roles.length > 0 ? (
                           selectedUserDetail.roles.map(r => (
                             <span key={r.id} className={`am-badge am-badge--role-${r.code === 'ADMIN' ? 'admin' : (r.code === 'MANAGER' ? 'manager' : 'staff')}`}>
-                              {r.name || r.code}
+                              {formatRoleLabel(r)}
                             </span>
                           ))
                         ) : (
@@ -1087,7 +1100,7 @@ function AdminAccountsScreen() {
                     <label className="am-form-label">Vai trò hệ thống *</label>
                     <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 6 }}>
                       {roles.map(r => {
-                        const roleLabel = r.name || r.code
+                        const roleLabel = formatRoleLabel(r)
                         const isChecked = formRoleIds.includes(r.id)
                         return (
                           <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '13.5px', cursor: 'pointer' }}>

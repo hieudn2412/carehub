@@ -182,11 +182,15 @@ function ScoringFormulaPage() {
     <AppShell
       className="dashboard-layout scoring-formula-page"
       title="Cài đặt điểm sàn quy trình kỹ thuật"
-      breadcrumbs={[{ label: 'Giám sát tuân thủ' }, { label: 'Cài đặt điểm sàn quy trình kỹ thuật' }]}
+      breadcrumbs={[
+        { label: 'Cấu hình hệ thống' },
+        { label: 'Cấu hình giám sát tuân thủ', link: '/admin/system-settings/compliance' },
+        { label: 'Cài đặt điểm sàn quy trình kỹ thuật' },
+      ]}
     >
       <div className="sfp-main">
           <AppliedFilterToolbar
-            activeCount={status ? 1 : 0}
+            activeCount={[appliedFilters.keyword, appliedFilters.status].filter(Boolean).length}
             actions={<div className="sfp-toolbar-actions">
                 <span className="sfp-result-count">{totalElements} phiên bản</span>
                 <button className="sfp-refresh" onClick={() => loadRows()} title="Tải lại dữ liệu" aria-label="Tải lại dữ liệu" type="button">

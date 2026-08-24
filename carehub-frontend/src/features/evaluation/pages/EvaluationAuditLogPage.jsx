@@ -61,6 +61,17 @@ function EvaluationAuditLogPage() {
     loadLogs()
   }, [loadLogs])
 
+  useEffect(() => {
+    const nextQuery = filters.q.trim()
+    if (nextQuery === appliedFilters.q) return undefined
+    const timer = window.setTimeout(() => {
+      setAppliedFilters((current) => (
+        current.q === nextQuery ? current : { ...current, q: nextQuery }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.q, filters.q])
+
   const detailJson = useMemo(() => formatJson(selectedLog?.detailJson), [selectedLog])
   const breadcrumbs = [{ label: 'Audit đánh giá' }]
   const applyFilters = () => setAppliedFilters({ ...filters, q: filters.q.trim(), actor: filters.actor.trim() })

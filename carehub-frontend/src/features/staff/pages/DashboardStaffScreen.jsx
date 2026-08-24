@@ -70,9 +70,12 @@ function DashboardMetricCard({
 }) {
   const content = (
     <>
-      <div className="staff-home-metric__heading">
-        <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
-        <h2>{title}</h2>
+      <div>
+        <div className="staff-home-metric__heading">
+          <span className="staff-home-metric__icon" aria-hidden="true">{icon}</span>
+          <h2>{title}</h2>
+        </div>
+        <p>{description}</p>
       </div>
       <div className="staff-home-metric__values">
         {progress != null && (
@@ -93,7 +96,6 @@ function DashboardMetricCard({
           <span style={{ width: `${clampPercentage(progress)}%` }} />
         </div>
       )}
-      <p>{description}</p>
     </>
   )
 
@@ -182,10 +184,6 @@ export default function DashboardStaffScreen() {
     }
   }, [compliance, competency, training])
 
-  const roleName = profile?.roles
-    ?.map(role => role.name || role.displayName)
-    .filter(Boolean)
-    .join(', ') || 'Nhân viên'
   const competencyPassed = competency?.targetScore == null
     ? metrics.overallScore >= metrics.targetScore
     : Boolean(competency?.isPassed)
@@ -204,7 +202,6 @@ export default function DashboardStaffScreen() {
             <span>Bệnh viện Hữu nghị Việt Đức</span>
             <h1>{loading ? 'Đang tải thông tin...' : profile?.fullName || 'Nhân viên'}</h1>
             <div className="staff-home-profile__meta">
-              <span>{roleName}</span>
               <span>{profile?.employeeCode || 'Chưa có mã nhân viên'}</span>
               {profile?.departmentName && <span>{profile.departmentName}</span>}
             </div>
@@ -276,6 +273,10 @@ export default function DashboardStaffScreen() {
             <span>Điểm sàn {formatScore(metrics.targetScore)}/10</span>
           </div>
         </section>
+
+        <footer className="staff-home-footer">
+          &copy; {new Date().getFullYear()} Hệ thống quản lý điều dưỡng - VietDuc Care
+        </footer>
       </div>
     </AppShell>
   )

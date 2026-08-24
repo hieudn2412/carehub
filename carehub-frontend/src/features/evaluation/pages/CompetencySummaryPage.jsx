@@ -34,11 +34,13 @@ import { apiData, apiErrorMessage, formatNumber } from '../utils/documentQuestio
 import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
 
 const PAGE_SIZE = 10
-const today = new Date().toISOString().slice(0, 10)
-const yearStart = `${new Date().getFullYear()}-01-01`
+const defaultDateRange = currentYearDateRange()
+const today = defaultDateRange.toDate
+const yearStart = defaultDateRange.fromDate
 
 function formatScore(value) {
   const score = Number(value)
@@ -62,6 +64,7 @@ function CompetencySummaryPage() {
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterError, setFilterError] = useState('')
 
   // Field specific states
   const [categories, setCategories] = useState([])
@@ -133,6 +136,18 @@ function CompetencySummaryPage() {
     }, 0)
     return () => window.clearTimeout(timer)
   }, [isAdmin, showToast, loadCategories])
+
+  useEffect(() => {
+    const nextSearchTerm = searchTerm.trim()
+    if (nextSearchTerm === appliedFilters.searchTerm) return undefined
+    const timer = window.setTimeout(() => {
+      setPage(0)
+      setAppliedFilters((current) => (
+        current.searchTerm === nextSearchTerm ? current : { ...current, searchTerm: nextSearchTerm }
+      ))
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [appliedFilters.searchTerm, searchTerm])
 
   const loadData = useCallback(async () => {
     if (!isAdmin && !departmentId) return
@@ -340,15 +355,15 @@ function CompetencySummaryPage() {
     { label: 'Dashboard', link: dashboardPath },
     { label: 'Đánh giá' },
     {
-      label: reportType === 'summary' ? 'Dashboard năng lực'
+      label: reportType === 'summary' ? 'Năng lực chuyên môn'
         : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-        : 'Tuân thủ kỹ thuật'
+        : 'Kỹ năng chuyên môn'
     },
   ]
 
-  const pageTitle = reportType === 'summary' ? 'Dashboard năng lực'
+  const pageTitle = reportType === 'summary' ? 'Năng lực chuyên môn'
     : reportType === 'field' ? 'Năng lực theo lĩnh vực'
-    : 'Tuân thủ kỹ thuật'
+    : 'Kỹ năng chuyên môn'
 
   function selectReportType(nextReportType) {
     setReportType(nextReportType)
@@ -358,10 +373,12 @@ function CompetencySummaryPage() {
   }
 
   function applyFilters() {
-    if (fromDate && toDate && fromDate > toDate) {
-      showToast('Từ ngày không được sau đến ngày', 'warning')
+    const dateError = validateHistoricalDateRange(fromDate, toDate, { maxDate: today })
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
+    setFilterError('')
     setAppliedFilters({
       departmentId,
       fromDate,
@@ -382,15 +399,16 @@ function CompetencySummaryPage() {
     setSelectedFormId('')
     if (isAdmin) setDepartmentId('')
     setAppliedFilters({ departmentId: '', fromDate: yearStart, searchTerm: '', selectedCategory: '', selectedFormId: '', toDate: today })
+    setFilterError('')
     setPage(0)
   }
 
   const reportTabs = (
     <div className="competency-dashboard-tabs" role="tablist" aria-label="Loại báo cáo năng lực">
       {[
-        { key: 'summary', label: 'Lý thuyết + thực hành' },
+        { key: 'summary', label: 'Năng lực chuyên môn' },
         { key: 'field', label: 'Năng lực theo lĩnh vực' },
-        { key: 'technique', label: 'Tuân thủ kỹ thuật' },
+        { key: 'technique', label: 'Kỹ năng chuyên môn' },
       ].map(tab => (
         <button key={tab.key} onClick={() => selectReportType(tab.key)}
           className={reportType === tab.key ? 'competency-dashboard-tabs__button is-active' : 'competency-dashboard-tabs__button'}
@@ -418,13 +436,15 @@ function CompetencySummaryPage() {
           options={[...(isAdmin ? [{ value: '', label: 'Toàn viện' }] : []), ...departments.map((department) => ({ value: department.id, label: department.name }))]}
           placeholder={isAdmin ? 'Toàn viện' : 'Khoa của tôi'} searchable searchPlaceholder="Tìm tên khoa/phòng..." />
       <label className="admin-control-toolbar__field"><span>Từ ngày</span>
-        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={(value) => {
+        <KeyboardDatePicker allowInvalidValue value={fromDate} max={toDate || today} onChange={(value) => {
+          setFilterError('')
           setFromDate(value)
           if (!isManager) setPage(0)
         }} />
       </label>
       <label className="admin-control-toolbar__field"><span>Đến ngày</span>
-        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={(value) => {
+        <KeyboardDatePicker allowInvalidValue value={toDate} min={fromDate || undefined} max={today} onChange={(value) => {
+          setFilterError('')
           setToDate(value)
           if (!isManager) setPage(0)
         }} />
@@ -453,12 +473,16 @@ function CompetencySummaryPage() {
                 actions={toolbarActions}
                 ariaLabel="Công cụ dashboard năng lực"
                 className="competency-dashboard-toolbar"
+                errorMessage={filterError}
                 header={reportTabs}
                 isOpen={isFilterOpen}
                 onApply={applyFilters}
                 onReset={resetFilters}
                 onSearchChange={setSearchTerm}
-                onToggle={() => setIsFilterOpen((current) => !current)}
+                onToggle={() => {
+                  setFilterError('')
+                  setIsFilterOpen((current) => !current)
+                }}
                 panelClassName="competency-dashboard-filter-panel"
                 panelId="competency-dashboard-filter-panel"
                 searchAriaLabel="Tìm theo tên hoặc mã nhân viên"
@@ -711,7 +735,7 @@ function CompetencySummaryPage() {
                       )}
                       {totalCount === 0 && data && (
                         <div style={{ fontSize: 14, color: '#9ca3af' }}>
-                          Chưa có dữ liệu tuân thủ kỹ thuật trong khoảng thời gian đã chọn.
+                          Chưa có dữ liệu kỹ năng chuyên môn trong khoảng thời gian đã chọn.
                         </div>
                       )}
                     </section>
@@ -757,7 +781,7 @@ function CompetencySummaryPage() {
                             <td colSpan={isAdmin ? 10 : 9} className="ch-empty">
                               {!isAdmin && !departmentId
                                 ? 'Vui lòng chọn khoa/phòng.'
-                                : 'Chưa có dữ liệu tuân thủ kỹ thuật.'}
+                                : 'Chưa có dữ liệu kỹ năng chuyên môn.'}
                             </td>
                           </tr>
                         ) : (
@@ -801,11 +825,11 @@ function CompetencySummaryPage() {
                                     className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                     type="button"
                                     title="Xem chi tiết"
-                                    aria-label={`Xem chi tiết tuân thủ của ${item.employeeName || item.employeeCode}`}
+                                    aria-label={`Xem chi tiết kỹ năng chuyên môn của ${item.employeeName || item.employeeCode}`}
                                     onClick={() => {
                                       const params = new URLSearchParams()
-                                      params.set('from', fromDate)
-                                      params.set('to', toDate)
+                                      params.set('from', effectiveFromDate)
+                                      params.set('to', effectiveToDate)
                                       navigate(
                                         isAdmin
                                           ? `/admin/evaluation/compliance-by-technique/${item.employeeId}?${params.toString()}`

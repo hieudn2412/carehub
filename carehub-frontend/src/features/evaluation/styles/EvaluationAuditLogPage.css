@@ -111,40 +111,6 @@
   opacity: .55;
 }
 
-.eal-filter-panel {
-  grid-template-columns: repeat(3, minmax(200px, 1fr));
-}
-
-.eal-filter-panel label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.eal-filter-panel input,
-.eal-filter-panel select {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  box-sizing: border-box;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  background: #fff;
-  color: #0f172a;
-  padding: 0 12px;
-  font: inherit;
-  font-size: 13.5px;
-  outline: none;
-}
-
-.eal-filter-panel :is(input, select):focus {
-  border-color: #16a085;
-  box-shadow: 0 0 0 3px rgba(22, 160, 133, .12);
-}
-
 .eal-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
@@ -306,7 +272,6 @@
 
 /* bp-lg */
 @media (max-width: 1024px) {
-  .eal-filter-panel,
   .eal-content {
     grid-template-columns: 1fr;
   }

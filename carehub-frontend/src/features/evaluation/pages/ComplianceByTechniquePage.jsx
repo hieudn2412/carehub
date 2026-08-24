@@ -17,10 +17,12 @@ import { tokenStorage } from '../../../shared/auth/tokenStorage.js'
 import { getRolesFromAccessToken } from '../../../shared/auth/jwt.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import '../styles/EvaluationDashboardPage.css'
 
-const today = new Date().toISOString().slice(0, 10)
-const yearStart = `${new Date().getFullYear()}-01-01`
+const defaultDateRange = currentYearDateRange()
+const today = defaultDateRange.toDate
+const yearStart = defaultDateRange.fromDate
 const TECHNIQUE_PAGE_SIZE = 100
 
 async function loadAllTechniqueRows(params) {
@@ -83,15 +85,15 @@ function ComplianceByTechniquePage() {
   const [fromDate, setFromDate] = useState(yearStart)
   const [toDate, setToDate] = useState(today)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [filterError, setFilterError] = useState('')
   const [appliedFilters, setAppliedFilters] = useState({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
   const effectiveDepartmentId = isAdmin ? appliedFilters.departmentId : departmentId
   const effectiveKeyword = appliedFilters.keyword
   const effectiveFromDate = appliedFilters.fromDate
   const effectiveToDate = appliedFilters.toDate
 
-  const dashboardPath = isAdmin ? '/admin/dashboard' : '/manager/dashboard'
-
   useEffect(() => {
+    if (departments.length > 0 || (isAdmin && !isFilterOpen)) return undefined
     const timer = window.setTimeout(async () => {
       try {
         if (isAdmin) {
@@ -104,7 +106,7 @@ function ComplianceByTechniquePage() {
         const response = await staffApi.getProfile()
         const profile = apiData(response, null)
         if (!profile?.departmentId) {
-          throw new Error('Manager chưa được gán khoa/phòng')
+          throw new Error('Quản lý cấp Khoa chưa được gán khoa/phòng')
         }
         setDepartments([{
           id: profile.departmentId,
@@ -116,7 +118,7 @@ function ComplianceByTechniquePage() {
       }
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [isAdmin, showToast])
+  }, [departments.length, isAdmin, isFilterOpen, showToast])
 
   const loadData = useCallback(async () => {
     if (!departmentId && !isAdmin) {
@@ -162,8 +164,7 @@ function ComplianceByTechniquePage() {
   }
 
   const breadcrumbs = [
-    { label: 'Dashboard', link: dashboardPath },
-    { label: 'Đánh giá' },
+    { label: 'Giám sát tuân thủ' },
     { label: 'Tuân thủ chung' },
   ]
 
@@ -176,10 +177,12 @@ function ComplianceByTechniquePage() {
   ].filter(Boolean).length
 
   function applyFilters() {
-    if (fromDate && toDate && fromDate > toDate) {
-      showToast('Từ ngày không được sau đến ngày', 'warning')
+    const dateError = validateHistoricalDateRange(fromDate, toDate, { maxDate: today })
+    if (dateError) {
+      setFilterError(dateError)
       return
     }
+    setFilterError('')
     setAppliedFilters({ departmentId, keyword: keyword.trim(), fromDate, toDate })
     setIsFilterOpen(false)
   }
@@ -190,6 +193,7 @@ function ComplianceByTechniquePage() {
     setToDate(today)
     setDepartmentId(isAdmin ? '' : departmentId)
     setAppliedFilters({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
+    setFilterError('')
   }
 
   const toolbarActions = (
@@ -214,10 +218,10 @@ function ComplianceByTechniquePage() {
             placeholder="Toàn viện" searchable searchPlaceholder="Tìm tên khoa/phòng..." />
         ) : <label className="admin-control-toolbar__field"><span>Khoa/phòng</span><div className="compliance-filter-panel__fixed">{departments[0]?.name || 'Khoa của tôi'}</div></label>}
       <label className="admin-control-toolbar__field"><span>Từ ngày</span>
-        <KeyboardDatePicker value={fromDate} max={toDate || undefined} onChange={setFromDate} />
+        <KeyboardDatePicker allowInvalidValue value={fromDate} max={toDate || today} onChange={(value) => { setFilterError(''); setFromDate(value) }} />
       </label>
       <label className="admin-control-toolbar__field"><span>Đến ngày</span>
-        <KeyboardDatePicker value={toDate} min={fromDate || undefined} onChange={setToDate} />
+        <KeyboardDatePicker allowInvalidValue value={toDate} min={fromDate || undefined} max={today} onChange={(value) => { setFilterError(''); setToDate(value) }} />
       </label>
     </>
   )
@@ -230,11 +234,15 @@ function ComplianceByTechniquePage() {
                 actions={toolbarActions}
                 ariaLabel="Công cụ tuân thủ chung"
                 className="compliance-toolbar"
+                errorMessage={filterError}
                 isOpen={isFilterOpen}
                 onApply={applyFilters}
                 onReset={resetFilters}
                 onSearchChange={setKeyword}
-                onToggle={() => setIsFilterOpen((current) => !current)}
+                onToggle={() => {
+                  setFilterError('')
+                  setIsFilterOpen((current) => !current)
+                }}
                 panelClassName="compliance-filter-panel"
                 panelId="compliance-filter-panel"
                 searchAriaLabel="Tìm theo tên nhân viên"

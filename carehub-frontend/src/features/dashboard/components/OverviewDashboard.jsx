@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertOutlined,
   ArrowLeftOutlined,
@@ -17,6 +17,8 @@ import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import FilterActionButtons from '../../../shared/components/FilterActionButtons.jsx'
+import { downloadCsv, exportFileName } from '../../../shared/utils/tableExport.js'
+import { currentYearDateRange, validateHistoricalDateRange } from '../../../shared/utils/dateRange.js'
 import {
   Area,
   AreaChart,
@@ -153,14 +155,6 @@ function formatScore(value) {
   return Number.isFinite(numeric) ? numeric.toFixed(1).replace('.', ',') : '—'
 }
 
-function currentYearRange() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return { fromDate: `${year}-01-01`, toDate: `${year}-${month}-${day}` }
-}
-
 function ManagementKpiCard({ type, data, content, onOpen }) {
   const total = Number(data?.total) || 0
   const passed = Number(data?.passed) || 0
@@ -185,8 +179,8 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
     ? '≥ 120h'
     : type === 'exams'
       ? data?.targetScore == null
-        ? 'Điểm sàn theo từng khoa'
-        : `Điểm sàn ≥ ${formatScore(data.targetScore)}/10`
+        ? 'Theo từng khoa'
+        : `≥ ${formatScore(data.targetScore)}/10`
       : `${formatNumber(passed)}/${formatNumber(total)}`
   const detail = type === 'training'
     ? 'Mục tiêu 5 năm'
@@ -203,7 +197,10 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       onClick={onOpen}
       type="button"
     >
-      <span className="overview-management-kpi__label">{labels[type]}</span>
+      <div>
+        <span className="overview-management-kpi__label">{labels[type]}</span>
+        <small>{detail}</small>
+      </div>
       {available ? (
         <span className="overview-management-kpi__metrics">
           <strong>{primaryValue}</strong>
@@ -212,7 +209,6 @@ function ManagementKpiCard({ type, data, content, onOpen }) {
       ) : (
         <span className="overview-management-kpi__empty">Chưa có dữ liệu</span>
       )}
-      <small>{detail}</small>
     </button>
   )
 }
@@ -408,28 +404,50 @@ function ComplianceDetailCard({ item, trend, loading, fromDate, toDate }) {
   )
 }
 
-function ComplianceDetails({ items, trends, loading, fromDate, toDate, onBack }) {
+function ComplianceDetails({ items, trends, loading, fromDate, toDate, onBack, onExport }) {
   return (
     <section className="overview-checklist-details">
       <header>
-        <button type="button" onClick={onBack}><ArrowLeftOutlined /> Quay lại biểu đồ</button>
+        {/* Không có nút quay lại khi màn hình mở thẳng vào phần chi tiết (Chất lượng chăm sóc). */}
+        {onBack && (
+          <button type="button" className="overview-checklist-details__back" onClick={onBack}>
+            <ArrowLeftOutlined /> Quay lại biểu đồ
+          </button>
+        )}
         <div>
-          <h2>Chi tiết tuân thủ theo bảng kiểm</h2>
+          <h2>Chỉ số chất lượng chăm sóc</h2>
           <p>Số liệu tính từ đầu năm đến thời điểm truy cập trong phạm vi đang chọn.</p>
         </div>
+        <button
+          type="button"
+          className="overview-checklist-details__export"
+          onClick={onExport}
+          disabled={items.length === 0}
+          title="Xuất danh sách đang lọc ra file Excel"
+        >
+          <DownloadOutlined /> Xuất Excel
+        </button>
       </header>
-      <div className="overview-checklist-details__grid">
-        {items.map((item) => (
-          <ComplianceDetailCard
-            key={item.id}
-            item={item}
-            trend={trends[item.id] || []}
-            loading={loading}
-            fromDate={fromDate}
-            toDate={toDate}
-          />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <div className="overview-checklist-details__empty">
+          <ExperimentOutlined />
+          <strong>Chưa có dữ liệu bảng kiểm trong phạm vi này</strong>
+          <span>Chỉ số sẽ xuất hiện khi hệ thống ghi nhận kết quả đánh giá.</span>
+        </div>
+      ) : (
+        <div className="overview-checklist-details__grid">
+          {items.map((item) => (
+            <ComplianceDetailCard
+              key={item.id}
+              item={item}
+              trend={trends[item.id] || []}
+              loading={loading}
+              fromDate={fromDate}
+              toDate={toDate}
+            />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -450,15 +468,19 @@ export default function OverviewDashboard({
   complianceChart = EMPTY_COMPLIANCE_CHART,
   onLoadComplianceTrend,
   visibleDomains = ['training', 'exams', 'quality'],
+  complianceOnly = false,
 }) {
   const isStaff = role === 'staff'
   const visibleTypes = visibleDomains.filter((type) => DOMAIN_META[type] && domains[type])
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [showComplianceDetails, setShowComplianceDetails] = useState(false)
+  const [draftFilters, setDraftFilters] = useState(() => ({ ...filters }))
+  const [filterError, setFilterError] = useState('')
+  // Màn hình "Chất lượng chăm sóc" mở thẳng phần chi tiết theo bảng kiểm, không qua biểu đồ.
+  const [showComplianceDetails, setShowComplianceDetails] = useState(complianceOnly)
   const [complianceTrends, setComplianceTrends] = useState({})
   const [complianceTrendsLoading, setComplianceTrendsLoading] = useState(false)
   const complianceTrendRequestId = useRef(0)
-  const defaultDates = currentYearRange()
+  const defaultDates = currentYearDateRange()
   const activeFilterCount = [
     role === 'admin' && filters.departmentId,
     filters.employeeCode?.trim(),
@@ -473,30 +495,57 @@ export default function OverviewDashboard({
       : ['knowledge', 'skill', 'classification'].includes(filters.content)
         ? ['exams']
         : ['training', 'quality', 'exams']
-  const showComplianceSection = !filters.content || filters.content === 'all' || filters.content === 'compliance'
-  const changeFilter = (key, value) => {
+  const showComplianceSection = complianceOnly
+    || !filters.content || filters.content === 'all' || filters.content === 'compliance'
+  const changeAppliedFilter = (key, value) => {
     complianceTrendRequestId.current += 1
-    setShowComplianceDetails(false)
+    setShowComplianceDetails(complianceOnly)
     setComplianceTrendsLoading(false)
     onFilterChange(key, value)
   }
+  const changeDraftFilter = (key, value) => {
+    setFilterError('')
+    setDraftFilters((current) => ({ ...current, [key]: value }))
+  }
   const resetFilters = () => {
-    if (role === 'admin') changeFilter('departmentId', '')
-    changeFilter('employeeCode', '')
-    changeFilter('content', 'all')
-    changeFilter('fromDate', defaultDates.fromDate)
-    changeFilter('toDate', defaultDates.toDate)
+    const nextFilters = {
+      ...filters,
+      departmentId: role === 'admin' ? '' : filters.departmentId,
+      employeeCode: '',
+      content: 'all',
+      ...defaultDates,
+    }
+    setDraftFilters(nextFilters)
+    setFilterError('')
+    if (role === 'admin') changeAppliedFilter('departmentId', '')
+    changeAppliedFilter('employeeCode', '')
+    changeAppliedFilter('content', 'all')
+    changeAppliedFilter('fromDate', defaultDates.fromDate)
+    changeAppliedFilter('toDate', defaultDates.toDate)
+  }
+  const applyFilters = () => {
+    const dateError = validateHistoricalDateRange(draftFilters.fromDate, draftFilters.toDate, {
+      maxDate: defaultDates.toDate,
+    })
+    if (dateError) {
+      setFilterError(dateError)
+      return
+    }
+
+    setFilterError('')
+    if (role === 'admin') changeAppliedFilter('departmentId', draftFilters.departmentId || '')
+    changeAppliedFilter('employeeCode', draftFilters.employeeCode?.trim() || '')
+    changeAppliedFilter('content', draftFilters.content || 'all')
+    changeAppliedFilter('fromDate', draftFilters.fromDate)
+    changeAppliedFilter('toDate', draftFilters.toDate)
+    setIsFilterOpen(false)
   }
 
   useEffect(() => {
-    if (isStaff) return
-    complianceTrendRequestId.current += 1
-    setShowComplianceDetails(false)
-    setComplianceTrends({})
-  }, [complianceChart, isStaff])
+    if (!isFilterOpen) setDraftFilters({ ...filters })
+  }, [filters, isFilterOpen])
 
-  const openComplianceDetails = async () => {
-    setShowComplianceDetails(true)
+  const loadComplianceTrends = useCallback(async () => {
     if (!onLoadComplianceTrend || !complianceChart.length) return
     const requestId = ++complianceTrendRequestId.current
     setComplianceTrendsLoading(true)
@@ -511,12 +560,43 @@ export default function OverviewDashboard({
         : [],
     ])))
     setComplianceTrendsLoading(false)
+  }, [complianceChart, filters.fromDate, filters.toDate, onLoadComplianceTrend])
+
+  useEffect(() => {
+    if (isStaff) return
+    complianceTrendRequestId.current += 1
+    setShowComplianceDetails(complianceOnly)
+    setComplianceTrends({})
+    // Ở chế độ chỉ hiển thị chi tiết thì không có nút "Xem chi tiết" để bấm,
+    // nên xu hướng phải được nạp ngay khi dữ liệu bảng kiểm thay đổi.
+    if (complianceOnly) loadComplianceTrends()
+  }, [complianceChart, complianceOnly, isStaff, loadComplianceTrends])
+
+  const openComplianceDetails = () => {
+    setShowComplianceDetails(true)
+    loadComplianceTrends()
   }
 
   const closeComplianceDetails = () => {
     complianceTrendRequestId.current += 1
     setShowComplianceDetails(false)
     setComplianceTrendsLoading(false)
+  }
+
+  const exportComplianceDetails = () => {
+    downloadCsv(
+      exportFileName('chi-so-chat-luong-cham-soc'),
+      ['Bảng kiểm', 'Tỷ lệ tuân thủ (%)', 'Đạt', 'Tổng lượt', 'Tỷ lệ mục tiêu (%)', 'Từ ngày', 'Đến ngày'],
+      complianceChart.map((item) => [
+        item.name,
+        Number(item.actual) || 0,
+        Number(item.passed) || 0,
+        Number(item.total) || 0,
+        Number(item.target) || 0,
+        filters.fromDate || defaultDates.fromDate,
+        filters.toDate || defaultDates.toDate,
+      ]),
+    )
   }
 
   return (
@@ -529,7 +609,11 @@ export default function OverviewDashboard({
                 aria-controls="overview-dashboard-filter-panel"
                 aria-expanded={isFilterOpen}
                 className={`admin-control-toolbar__filter-trigger${isFilterOpen ? ' is-open' : ''}`}
-                onClick={() => setIsFilterOpen((current) => !current)}
+                onClick={() => {
+                  setFilterError('')
+                  setDraftFilters({ ...filters })
+                  setIsFilterOpen((current) => !current)
+                }}
                 type="button"
               >
                 <FilterOutlined /> Bộ lọc
@@ -551,8 +635,8 @@ export default function OverviewDashboard({
                 <span>Khoa/Phòng</span>
                 {role === 'admin' ? (
                   <SearchableSelect
-                    value={filters.departmentId}
-                    onChange={(value) => changeFilter('departmentId', value)}
+                    value={draftFilters.departmentId}
+                    onChange={(value) => changeDraftFilter('departmentId', value)}
                     ariaLabel="Tìm và chọn khoa/phòng"
                     placeholder="Toàn viện"
                     searchPlaceholder="Gõ tên khoa/phòng..."
@@ -573,32 +657,35 @@ export default function OverviewDashboard({
               <label>
                 <span>Từ ngày</span>
                 <KeyboardDatePicker
-                  value={filters.fromDate}
-                  max={filters.toDate}
-                  onChange={(val) => changeFilter('fromDate', val)}
+                  allowInvalidValue
+                  value={draftFilters.fromDate}
+                  max={draftFilters.toDate || defaultDates.toDate}
+                  onChange={(val) => changeDraftFilter('fromDate', val)}
                 />
               </label>
               <label>
                 <span>Đến ngày</span>
                 <KeyboardDatePicker
-                  value={filters.toDate}
-                  min={filters.fromDate}
-                  onChange={(val) => changeFilter('toDate', val)}
+                  allowInvalidValue
+                  value={draftFilters.toDate}
+                  min={draftFilters.fromDate}
+                  max={defaultDates.toDate}
+                  onChange={(val) => changeDraftFilter('toDate', val)}
                 />
               </label>
               <label>
                 <span>Mã nhân viên</span>
                 <input
                   type="search"
-                  value={filters.employeeCode}
+                  value={draftFilters.employeeCode}
                   placeholder="Nhập mã nhân viên..."
-                  onChange={(event) => changeFilter('employeeCode', event.target.value)}
+                  onChange={(event) => changeDraftFilter('employeeCode', event.target.value)}
                 />
               </label>
               <FilterSelectField
                 label="Nội dung"
-                value={filters.content}
-                onChange={(value) => changeFilter('content', value)}
+                value={draftFilters.content}
+                onChange={(value) => changeDraftFilter('content', value)}
                 options={[
                   { value: 'all', label: 'Tất cả nội dung' },
                   { value: 'training', label: 'Đào tạo liên tục' },
@@ -609,9 +696,10 @@ export default function OverviewDashboard({
                 ]}
               />
               <FilterActionButtons
-                onApply={() => setIsFilterOpen(false)}
+                onApply={applyFilters}
                 onReset={resetFilters}
               />
+              {filterError && <p className="applied-filter-toolbar__error" role="alert">{filterError}</p>}
               <p className="overview-filter-hint">
                 Tuân thủ và năng lực dùng toàn bộ khoảng ngày; đào tạo liên tục được tính tại mốc Đến ngày theo mục tiêu 5 năm.
               </p>
@@ -674,17 +762,19 @@ export default function OverviewDashboard({
         </section>
       ) : (
         <>
-          <section className="overview-management-kpis" aria-label="Chỉ số tổng quan">
-            {managementTypes.map((type) => (
-              <ManagementKpiCard
-                key={type}
-                type={type}
-                data={domains[type]}
-                content={filters.content}
-                onOpen={domains[type]?.path ? () => onNavigate(domains[type].path) : undefined}
-              />
-            ))}
-          </section>
+          {!complianceOnly && (
+            <section className="overview-management-kpis" aria-label="Chỉ số tổng quan">
+              {managementTypes.map((type) => (
+                <ManagementKpiCard
+                  key={type}
+                  type={type}
+                  data={domains[type]}
+                  content={filters.content}
+                  onOpen={domains[type]?.path ? () => onNavigate(domains[type].path) : undefined}
+                />
+              ))}
+            </section>
+          )}
           {showComplianceSection && (showComplianceDetails ? (
             <ComplianceDetails
               items={complianceChart}
@@ -692,7 +782,8 @@ export default function OverviewDashboard({
               loading={complianceTrendsLoading}
               fromDate={filters.fromDate}
               toDate={filters.toDate}
-              onBack={closeComplianceDetails}
+              onExport={exportComplianceDetails}
+              onBack={complianceOnly ? undefined : closeComplianceDetails}
             />
           ) : (
             <ComplianceTargetChart

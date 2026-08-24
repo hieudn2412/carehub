@@ -13,6 +13,7 @@ import vn.vietduc.carehubbackend.form.assignment.dto.*;
 import vn.vietduc.carehubbackend.form.assignment.service.FormAssignmentService;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("${app.api-prefix}/form-assignments")
@@ -35,14 +36,73 @@ public class FormAssignmentController {
         return ApiResponse.success("Get form assignments successfully", PageResponse.from(service.search(managerId, pageable)));
     }
 
-    @GetMapping("/{id}")
-    public ApiResponse<FormAssignmentResponse> get(@PathVariable Long id) {
-        return ApiResponse.success("Get form assignment successfully", service.get(id));
+    @GetMapping("/overview")
+    public ApiResponse<FormAssignmentOverviewResponse> overview() {
+        return ApiResponse.success("Get form assignment overview successfully", service.overview());
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> revoke(@PathVariable Long id) {
-        service.revoke(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/forms")
+    public ApiResponse<PageResponse<FormAssignmentFormRowResponse>> assignedForms(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long ownerDepartmentId,
+            @RequestParam(defaultValue = "false") boolean expiringSoon,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success("Get assigned forms successfully",
+                PageResponse.from(service.assignedFormsDashboard(keyword, ownerDepartmentId, expiringSoon, pageable)));
     }
+
+    @GetMapping("/assignees")
+    public ApiResponse<PageResponse<FormAssignmentAssigneeRowResponse>> assignedAssignees(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String roleCode,
+            @RequestParam(defaultValue = "false") boolean expiringSoon,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success("Get assigned assignees successfully",
+                PageResponse.from(service.assignedAssigneesDashboard(keyword, departmentId, roleCode, expiringSoon, pageable)));
+    }
+
+    @GetMapping("/items")
+    public ApiResponse<PageResponse<FormAssignmentItemRowResponse>> activeItems(
+            @RequestParam(required = false) Long formId,
+            @RequestParam(required = false) Long assigneeId,
+            @PageableDefault(size = 50) Pageable pageable) {
+        return ApiResponse.success("Get form assignment items successfully",
+                PageResponse.from(service.activeItems(formId, assigneeId, pageable)));
+    }
+
+    @GetMapping("/form-candidates")
+    public ApiResponse<PageResponse<FormAssignmentCandidateResponse>> formCandidates(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long ownerDepartmentId,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success("Get form assignment candidates successfully",
+                PageResponse.from(service.formCandidates(keyword, ownerDepartmentId, pageable)));
+    }
+
+    @GetMapping("/assignee-candidates")
+    public ApiResponse<PageResponse<FormAssignmentCandidateResponse>> assigneeCandidates(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String roleCode,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ApiResponse.success("Get assignee candidates successfully",
+                PageResponse.from(service.assigneeCandidates(keyword, departmentId, roleCode, pageable)));
+    }
+
+    @GetMapping("/manager-candidate-ids")
+    public ApiResponse<List<FormAssignmentCandidateResponse>> managerCandidates() {
+        return ApiResponse.success("Get manager candidates successfully", service.managerCandidates());
+    }
+
+    @PostMapping("/preview")
+    public ApiResponse<BulkFormAssignmentPreviewResponse> preview(@Valid @RequestBody BulkFormAssignmentRequest request) {
+        return ApiResponse.success("Preview form assignments successfully", service.previewBulk(request));
+    }
+
+    @PostMapping("/bulk")
+    public ApiResponse<BulkFormAssignmentResponse> bulk(@Valid @RequestBody BulkFormAssignmentRequest request) {
+        return ApiResponse.success("Bulk assign forms successfully", service.bulkAssign(request));
+    }
+
 }
