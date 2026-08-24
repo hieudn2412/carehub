@@ -48,6 +48,36 @@ public interface FormAssignmentItemRepository extends JpaRepository<FormAssignme
         Instant getNearestExpiry();
     }
 
+    interface FormAssignmentCountProjection {
+        Long getFormId();
+        long getActiveAssignmentCount();
+    }
+
+    @Query("""
+            select i.form.id as formId,
+                   count(distinct i.assignment.manager.id) as activeAssignmentCount
+            from FormAssignmentItem i
+            where i.form.id in :formIds
+              and i.status = :active
+              and i.assignment.status = :active
+              and i.assignment.manager.isDeleted = false
+              and i.assignment.manager.status = vn.vietduc.carehubbackend.user.entity.UserStatus.ACTIVE
+              and i.form.deleted = false
+              and i.form.status = :publishedForm
+              and i.form.currentPublishedVersion is not null
+              and i.form.currentPublishedVersion.status = :publishedVersion
+              and i.formVersion.id = i.form.currentPublishedVersion.id
+              and (i.assignment.effectiveFrom is null or i.assignment.effectiveFrom <= :now)
+              and (i.assignment.effectiveTo is null or i.assignment.effectiveTo >= :now)
+            group by i.form.id
+            """)
+    List<FormAssignmentCountProjection> countActiveRecipientsByFormIds(
+            @Param("formIds") List<Long> formIds,
+            @Param("active") FormAssignmentStatus active,
+            @Param("publishedForm") FormStatus publishedForm,
+            @Param("publishedVersion") FormVersionStatus publishedVersion,
+            @Param("now") Instant now);
+
     @Query("""
             select (count(i) > 0) from FormAssignmentItem i
             where i.assignment.manager.id = :managerId

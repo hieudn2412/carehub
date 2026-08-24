@@ -34,6 +34,10 @@ public class FormMapper {
     }
 
     public FormResponse toResponse(Form form) {
+        return toResponse(form, 0L, 0L);
+    }
+
+    public FormResponse toResponse(Form form, long activeAssignmentCount, long responseCount) {
         FormResponse.DepartmentSummary department = form.getOwnerDepartment() == null
                 ? null
                 : FormResponse.DepartmentSummary.builder()
@@ -59,6 +63,8 @@ public class FormMapper {
                 .ownerDepartment(department)
                 .currentPublishedVersion(publishedVersion)
                 .complianceTargetPercent(form.getComplianceTargetPercent())
+                .activeAssignmentCount(activeAssignmentCount)
+                .responseCount(responseCount)
                 .createdAt(form.getCreatedAt())
                 .updatedAt(form.getUpdatedAt())
                 .build();

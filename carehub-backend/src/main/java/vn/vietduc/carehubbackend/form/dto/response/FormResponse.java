@@ -17,6 +17,8 @@ public record FormResponse (
         DepartmentSummary ownerDepartment,
         VersionSummary currentPublishedVersion,
         java.math.BigDecimal complianceTargetPercent,
+        long activeAssignmentCount,
+        long responseCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ){
