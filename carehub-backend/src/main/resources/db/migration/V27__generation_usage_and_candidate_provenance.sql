@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 79748c6039e02eb36152a0da8bef01d0cd56b260
 -- Keep document question generation usage and candidate provenance schema in sync.
 
 ALTER TABLE document_question_jobs
@@ -59,6 +62,7 @@ CREATE INDEX IF NOT EXISTS idx_document_question_chunk_results_job
 
 CREATE INDEX IF NOT EXISTS idx_document_question_chunk_results_chunk
     ON document_question_chunk_results (chunk_id, attempt_no);
+<<<<<<< HEAD
 =======
 ALTER TABLE document_question_jobs
     ADD COLUMN IF NOT EXISTS total_prompt_cache_hit_tokens integer NOT NULL DEFAULT 0,
@@ -87,3 +91,5 @@ BEGIN
     END IF;
 END $$;
 >>>>>>> 8b1f79cc2deab903f0f2bdaaa3373a75db9b5fae
+=======
+>>>>>>> 79748c6039e02eb36152a0da8bef01d0cd56b260

@@ -265,18 +265,24 @@ public class CompetencyService {
 
             items.add(new CompetencyByTechniqueItemResponse(
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 79748c6039e02eb36152a0da8bef01d0cd56b260
                     aggregate.getEmployeeId(), aggregate.getEmployeeCode(), aggregate.getEmployeeName(),
                     aggregate.getDepartmentName(),
                     evaluationCount, avg, passCount, passRate,
                     level.name(), QuestionGenerationLabels.competencyLevel(level),
                     QuestionGenerationLabels.competencyLevelColor(level),
                     level != CompetencyLevel.NOT_COMPETENT, belowTarget
+<<<<<<< HEAD
 =======
                     subject.getId(), subject.getEmployeeCode(), subject.getName(),
                     departmentName(subject),
                     subs.size(), avg, passCount, passRate,
                     meetsTarget(avg, targetScore), belowTarget
 >>>>>>> 8b1f79cc2deab903f0f2bdaaa3373a75db9b5fae
+=======
+>>>>>>> 79748c6039e02eb36152a0da8bef01d0cd56b260
             ));
         }
 
