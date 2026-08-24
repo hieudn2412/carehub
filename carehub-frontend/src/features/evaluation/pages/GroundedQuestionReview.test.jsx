@@ -5,19 +5,24 @@ import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
 import { CandidateCard } from './DocumentQuestionJobReviewPage.jsx'
 
 describe('Grounded question generation UI', () => {
-  it('builds the modal payload with cognitive level and maximum count', () => {
+  it('builds the modal payload with the cognitive mix and maximum count', () => {
     expect(buildCreateQuestionJobPayload({
       questionsPerChunk: 9,
       categoryId: '12',
-      targetCognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
+      targetCognitiveLevel: 'AUTO',
+      cognitiveMix: { foundation: 20, application: 50, reasoning: 30 },
     })).toEqual({
       questionsPerChunk: 5,
       categoryId: 12,
-      targetCognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
+      pipelineVersion: 'GROUNDED_V4',
+      targetCognitiveLevel: 'AUTO',
+      cognitiveMixFoundation: 20,
+      cognitiveMixApplication: 50,
+      cognitiveMixReasoning: 30,
     })
   })
 
-  it('shows the page reference in the explanation box while preventing approval of rejected candidates', () => {
+  it('shows the page reference in the explanation box while preventing saving of rejected candidates', () => {
     const noop = vi.fn()
     render(
       <MemoryRouter>
@@ -52,7 +57,6 @@ describe('Grounded question generation UI', () => {
           onSelect={noop}
           onToggleSelection={noop}
           onEdit={noop}
-          onApprove={noop}
           onReject={noop}
           onSave={noop}
           onViewDuplicates={noop}
@@ -64,7 +68,9 @@ describe('Grounded question generation UI', () => {
     expect(screen.getByText('Giải thích')).toBeInTheDocument()
     expect(screen.getByText('Trang 2–3')).toBeInTheDocument()
     expect(screen.queryByText('Nguồn trích dẫn')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Duyệt/ })).toBeDisabled()
+    // Nút Duyệt đã bị bỏ, chỉ còn Lưu vào ngân hàng câu hỏi và nút này phải bị khoá với câu đã từ chối.
+    expect(screen.queryByRole('button', { name: /^Duyệt$/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lưu vào ngân hàng câu hỏi/ })).toBeDisabled()
   })
 
   it('renders cards without explanation or page reference cleanly', () => {
@@ -89,7 +95,6 @@ describe('Grounded question generation UI', () => {
           onSelect={noop}
           onToggleSelection={noop}
           onEdit={noop}
-          onApprove={noop}
           onReject={noop}
           onSave={noop}
           onViewDuplicates={noop}
@@ -101,5 +106,42 @@ describe('Grounded question generation UI', () => {
     expect(screen.queryByText('Giải thích')).not.toBeInTheDocument()
     expect(screen.queryByText('Nguồn trích dẫn')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sửa/ })).toBeInTheDocument()
+  })
+
+  it('keeps a strong duplicate visible but lets the reviewer save an approved candidate', () => {
+    const noop = vi.fn()
+    render(
+      <MemoryRouter>
+        <CandidateCard
+          candidate={{
+            id: 3,
+            status: 'APPROVED',
+            stem: 'Cần đối chiếu bao nhiêu thông tin người bệnh?',
+            optionA: 'Hai thông tin',
+            optionB: 'Một thông tin',
+            optionC: 'Ba thông tin',
+            optionD: 'Không cần',
+            correctAnswer: 'A',
+            cognitiveLevel: 'FOUNDATION',
+            duplicateNeedsReview: true,
+            strongDuplicate: true,
+            duplicateMaxSimilarity: 0.98,
+          }}
+          isSelected
+          isChecked={false}
+          isBusy={false}
+          onSelect={noop}
+          onToggleSelection={noop}
+          onEdit={noop}
+          onReject={noop}
+          onSave={noop}
+          onViewDuplicates={noop}
+          onOpenSavedQuestion={noop}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Phát hiện câu trùng mạnh')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lưu vào ngân hàng câu hỏi/ })).toBeEnabled()
   })
 })

@@ -122,6 +122,8 @@ public class DocumentQuestionMapper {
                 new UsageResponse(
                         job.getLlmCallCount(),
                         job.getTotalPromptTokens(),
+                        job.getTotalPromptCacheHitTokens(),
+                        job.getTotalPromptCacheMissTokens(),
                         job.getTotalCompletionTokens(),
                         job.getTotalTokens(),
                         job.getTotalLatencyMs(),
@@ -206,9 +208,12 @@ public class DocumentQuestionMapper {
                 result.getRepairCallCount(),
                 result.getLlmCallCount(),
                 result.getPromptTokens(),
+                result.getPromptCacheHitTokens(),
+                result.getPromptCacheMissTokens(),
                 result.getCompletionTokens(),
                 result.getTotalTokens(),
                 result.getLatencyMs(),
+                result.getEstimatedCostUsd(),
                 result.getErrorCode(),
                 result.getErrorMessage(),
                 Boolean.TRUE.equals(result.getRetryable())

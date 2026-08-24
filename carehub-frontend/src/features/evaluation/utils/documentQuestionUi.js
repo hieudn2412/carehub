@@ -63,11 +63,6 @@ export function candidateLabelText(candidate) {
   return candidate?.labelText || CANDIDATE_LABELS[candidate?.label] || ''
 }
 
-export function shouldShowCandidateLabelBadge(candidate) {
-  return Boolean(candidate?.label)
-    && candidateLabelText(candidate) !== candidateStatusText(candidate)
-}
-
 export function cognitiveLevelText(value) {
   return COGNITIVE_LEVEL_LABELS[value] || value || 'Chưa phân loại nhận thức'
 }

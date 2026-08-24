@@ -10,9 +10,6 @@ public record ExamAttemptBriefResponse(
         BigDecimal score,
         Integer correctCount,
         Integer totalQuestions,
-        Boolean passed,
-        String competencyLevel,
-        String competencyLabel,
-        String colorHex
+        Boolean passed
 ) {
 }

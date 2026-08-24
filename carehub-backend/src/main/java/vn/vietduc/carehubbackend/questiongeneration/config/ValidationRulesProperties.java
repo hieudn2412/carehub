@@ -29,15 +29,14 @@ public class ValidationRulesProperties {
     @Setter
     public static class Duplicate {
         /**
-         * Loại thẳng, không ai xem lại. Đặt cao có chủ đích: trên corpus seed, cặp điểm cao nhất
+         * Cảnh báo mức trùng mạnh cho người duyệt. Đặt cao có chủ đích: trên corpus seed, cặp điểm cao nhất
          * (0,973) lại là DƯƠNG TÍNH GIẢ — hai câu khác bài, khác nội dung. Nghĩa là không có ngưỡng
-         * nào an toàn tuyệt đối cho việc loại tự động; giữ nó hiếm khi kích hoạt và để cờ
-         * {@link #reviewMin} làm chốt chặn chính.
+         * nào an toàn tuyệt đối cho việc loại tự động, nên cờ này không được tự từ chối câu hỏi.
          */
         private double strongMin = 0.97;
 
         /** Gắn cờ cho người duyệt. 0,93 ≈ p90 của phân bố nn-max trên corpus seed (~10 % số câu). */
-        private double reviewMin = 0.93;
+        private double reviewMin = 0.95;
 
         /**
          * Ngưỡng riêng cho đường lexical fallback (Jaccard trên tập từ đã bỏ dấu — xem

@@ -20,8 +20,10 @@ class GroundedV4PromptCatalogTest {
         assertThat(first.criticPrompt()).isNotBlank();
         assertThat(first.version()).isEqualTo("grounded-v4.1.0");
         assertThat(first.questionPrompt())
-                .contains("AUTO: chọn mức phù hợp nhất")
-                .contains("ưu tiên CLINICAL_APPLICATION")
+                // AUTO phải leo thang lên mức khó nhất mà chunk chịu được, và phải tôn trọng
+                // tỷ lệ ba mức khi admin đặt tỷ lệ lúc tạo phiên.
+                .contains("Khi được giao tỷ lệ mục tiêu, bám theo tỷ lệ đó")
+                .contains("ưu tiên CLINICAL_REASONING_ANALYSIS")
                 .contains("không đến từ câu chữ mơ hồ");
         assertThat(first.criticPrompt())
                 .contains("surfaceCueFree")

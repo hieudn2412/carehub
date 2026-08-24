@@ -27,6 +27,7 @@ const INITIAL_QUESTIONS = [
     content: 'Kỹ thuật vệ sinh tay đúng trước khi tiếp xúc người bệnh là gì?',
     category: 'Kiểm soát nhiễm khuẩn',
     cognitiveLevel: 'FOUNDATION',
+    status: 'APPROVED',
     options: ['5 bước', '6 bước', '7 bước', '8 bước'],
     correctOptionIndex: 1,
     backend: false,
@@ -36,6 +37,7 @@ const INITIAL_QUESTIONS = [
     content: 'Các bước đảm bảo an toàn khi dùng thuốc đường tĩnh mạch là gì?',
     category: 'Quy trình lâm sàng',
     cognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
+    status: 'APPROVED',
     options: ['Chạm vào mọi bề mặt của găng', 'Chỉ chạm vào mặt trong của găng thứ nhất, tránh chạm mặt ngoài', 'Nhờ đồng nghiệp đeo giúp', 'Không cần đeo găng tay'],
     correctOptionIndex: 1,
     backend: false,
@@ -93,13 +95,13 @@ function QuestionBankListPage() {
   const [importPreview, setImportPreview] = useState(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [importDuplicateMode, setImportDuplicateMode] = useState('BLOCK')
   const [importColumnMapping, setImportColumnMapping] = useState({})
   const [isExporting, setIsExporting] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [cognitiveLevelFilter, setCognitiveLevelFilter] = useState('')
-  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', category: '', cognitiveLevel: '' })
+  const [statusFilter, setStatusFilter] = useState('')
+  const [appliedFilters, setAppliedFilters] = useState({ keyword: '', category: '', cognitiveLevel: '', status: '' })
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [page, setPage] = useState(0)
   const [questionToArchive, setQuestionToArchive] = useState(null)
@@ -108,9 +110,7 @@ function QuestionBankListPage() {
     setIsLoading(true)
     try {
       const response = await questionBankApi.listQuestions({ status: 'ALL' })
-      const backendQuestions = apiData(response, [])
-        .map(mapBackendQuestion)
-        .filter((question) => question.status !== 'ARCHIVED')
+      const backendQuestions = apiData(response, []).map(mapBackendQuestion)
       setQuestions(backendQuestions)
       setApiAvailable(true)
     } catch (error) {
@@ -151,7 +151,9 @@ function QuestionBankListPage() {
       const matchesKeyword = !normalizedKeyword || normalizeText(question.content).includes(normalizedKeyword)
       const matchesCategory = !appliedFilters.category || question.category === appliedFilters.category
       const matchesCognitiveLevel = !appliedFilters.cognitiveLevel || question.cognitiveLevel === appliedFilters.cognitiveLevel
-      return matchesKeyword && matchesCategory && matchesCognitiveLevel
+      const matchesStatus = !appliedFilters.status
+        || (appliedFilters.status === 'ACTIVE') === (question.status === 'APPROVED')
+      return matchesKeyword && matchesCategory && matchesCognitiveLevel && matchesStatus
     })
   }, [appliedFilters, questions])
 
@@ -159,7 +161,7 @@ function QuestionBankListPage() {
   const totalElements = filteredQuestions.length
   const totalPages = Math.ceil(totalElements / pageSize) || 1
   const displayRows = filteredQuestions.slice(page * pageSize, (page + 1) * pageSize)
-  const activeFilterCount = [categoryFilter, cognitiveLevelFilter].filter(Boolean).length
+  const activeFilterCount = [categoryFilter, cognitiveLevelFilter, statusFilter].filter(Boolean).length
 
   async function handleDelete(item) {
     if (!item.backend) {
@@ -293,7 +295,7 @@ function QuestionBankListPage() {
         professionalFieldReference: row.professionalFieldReference,
         cognitiveLevel: row.cognitiveLevel,
       }))
-      const response = await questionBankApi.commitImport(rows, importPreview?.importJobId || null, importDuplicateMode)
+      const response = await questionBankApi.commitImport(rows, importPreview?.importJobId || null)
       const result = apiData(response)
       showToast(`Đã import ${result.createdCount || 0} câu hỏi. ${result.skippedCount || 0} dòng bỏ qua. ${result.failedCount || 0} dòng lỗi.`, result.failedCount ? 'warning' : 'success')
       setImportPreview(result)
@@ -335,7 +337,6 @@ function QuestionBankListPage() {
     setImportFile(null)
     setImportPreview(null)
     setIsImporting(false)
-    setImportDuplicateMode('BLOCK')
     setImportColumnMapping({})
   }
 
@@ -362,13 +363,14 @@ function QuestionBankListPage() {
     setKeyword('')
     setCategoryFilter('')
     setCognitiveLevelFilter('')
+    setStatusFilter('')
     setPage(0)
-    setAppliedFilters({ keyword: '', category: '', cognitiveLevel: '' })
+    setAppliedFilters({ keyword: '', category: '', cognitiveLevel: '', status: '' })
   }
 
   function applyFilters() {
     setPage(0)
-    setAppliedFilters({ keyword: keyword.trim(), category: categoryFilter, cognitiveLevel: cognitiveLevelFilter })
+    setAppliedFilters({ keyword: keyword.trim(), category: categoryFilter, cognitiveLevel: cognitiveLevelFilter, status: statusFilter })
   }
 
   function getVisiblePages() {
@@ -443,28 +445,37 @@ function QuestionBankListPage() {
                 searchPlaceholder="Tìm theo nội dung câu hỏi..."
                 searchValue={keyword}
               >
-                    <div className="applied-filter-toolbar__fields">
-                      <FilterSelectField
-                        label="Danh mục"
-                        value={categoryFilter}
-                        onChange={(value) => setCategoryFilter(value)}
-                        options={[
-                          { value: '', label: 'Tất cả danh mục' },
-                          ...categories.map((category) => ({ value: category, label: category }))
-                        ]}
-                        placeholder="Tất cả danh mục"
-                      />
-                      <FilterSelectField
-                        label="Mức độ nhận thức"
-                        value={cognitiveLevelFilter}
-                        onChange={(value) => setCognitiveLevelFilter(value)}
-                        options={[
-                          { value: '', label: 'Tất cả mức độ nhận thức' },
-                          ...COGNITIVE_LEVELS
-                        ]}
-                        placeholder="Tất cả mức độ nhận thức"
-                      />
-                    </div>
+                <FilterSelectField
+                  label="Danh mục"
+                  value={categoryFilter}
+                  onChange={(value) => setCategoryFilter(value)}
+                  options={[
+                    { value: '', label: 'Tất cả danh mục' },
+                    ...categories.map((category) => ({ value: category, label: category }))
+                  ]}
+                  placeholder="Tất cả danh mục"
+                />
+                <FilterSelectField
+                  label="Mức độ nhận thức"
+                  value={cognitiveLevelFilter}
+                  onChange={(value) => setCognitiveLevelFilter(value)}
+                  options={[
+                    { value: '', label: 'Tất cả mức độ nhận thức' },
+                    ...COGNITIVE_LEVELS
+                  ]}
+                  placeholder="Tất cả mức độ nhận thức"
+                />
+                <FilterSelectField
+                  label="Trạng thái"
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={[
+                    { value: '', label: 'Tất cả trạng thái' },
+                    { value: 'ACTIVE', label: 'Hoạt động' },
+                    { value: 'INACTIVE', label: 'Không hoạt động' },
+                  ]}
+                  placeholder="Tất cả trạng thái"
+                />
               </AppliedFilterToolbar>
 
               <div className="qbl-table-card">
@@ -473,6 +484,7 @@ function QuestionBankListPage() {
                     <col className="qbl-col-question" />
                     <col className="qbl-col-category" />
                     <col className="qbl-col-professional-field" />
+                    <col className="qbl-col-status" />
                     <col className="qbl-col-actions" />
                   </colgroup>
                   <thead>
@@ -480,17 +492,18 @@ function QuestionBankListPage() {
                       <th>Nội dung câu hỏi</th>
                       <th>Danh mục</th>
                       <th>Lĩnh vực chuyên môn</th>
+                      <th>Trạng thái</th>
                       <th>Hành động</th>
                     </tr>
                   </thead>
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan="4" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
+                        <td colSpan="5" className="qbl-empty-cell">Đang tải ngân hàng câu hỏi...</td>
                       </tr>
                     ) : displayRows.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="qbl-empty-cell">
+                        <td colSpan="5" className="qbl-empty-cell">
                           <strong>Không tìm thấy câu hỏi phù hợp</strong>
                           <span>Thử đổi từ khóa hoặc xóa bớt bộ lọc.</span>
                         </td>
@@ -504,7 +517,6 @@ function QuestionBankListPage() {
                             </button>
                             <div className="qbl-question-meta">
                               <span className={`diff-badge ${getCognitiveLevelClass(item.cognitiveLevel)}`}>{cognitiveLevelText(item.cognitiveLevel)}</span>
-                              <span className="qbl-mini-badge">{item.questionType === 'PARAPHRASE' ? 'Diễn đạt lại' : 'Câu hỏi gốc'}</span>
                             </div>
                           </td>
                           <td className="qbl-category-cell" data-label="Danh mục">
@@ -513,9 +525,14 @@ function QuestionBankListPage() {
                           <td className="qbl-professional-field-cell" data-label="Lĩnh vực chuyên môn">
                             {item.professionalFieldName || 'Chưa có lĩnh vực'}
                           </td>
+                          <td data-label="Trạng thái">
+                            <span className={`qbl-badge qbl-badge--${item.status === 'APPROVED' ? 'active' : 'inactive'}`}>
+                              {item.status === 'APPROVED' ? 'Hoạt động' : 'Không hoạt động'}
+                            </span>
+                          </td>
                           <td data-label="Hành động">
                             <div className="qbl-actions admin-table-actions">
-                              <button
+                              {item.status !== 'ARCHIVED' && <button
                                 type="button"
                                 className="admin-table-action admin-table-action--icon admin-table-action--primary"
                                 onClick={() => navigate(`/admin/evaluation/question-bank/${item.id}/edit`)}
@@ -523,7 +540,7 @@ function QuestionBankListPage() {
                                 title="Chỉnh sửa"
                               >
                                 <FormOutlined />
-                              </button>
+                              </button>}
                               <button
                                 type="button"
                                 className="admin-table-action admin-table-action--icon admin-table-action--success"
@@ -533,7 +550,7 @@ function QuestionBankListPage() {
                               >
                                 <ExportOutlined />
                               </button>
-                              <button
+                              {item.status !== 'ARCHIVED' && <button
                                 type="button"
                                 className="admin-table-action admin-table-action--icon admin-table-action--danger"
                                 onClick={() => handleDelete(item)}
@@ -541,7 +558,7 @@ function QuestionBankListPage() {
                                 title="Xóa câu hỏi"
                               >
                                 <DeleteOutlined />
-                              </button>
+                              </button>}
                             </div>
                           </td>
                         </tr>
@@ -594,18 +611,9 @@ function QuestionBankListPage() {
               />
             </label>
 
-            <label className="qbl-field">
-              <span>Khi gặp câu hỏi trùng mạnh</span>
-              <FormSelectField
-                value={importDuplicateMode}
-                onChange={setImportDuplicateMode}
-                options={[
-                  { value: 'BLOCK', label: 'Báo lỗi dòng trùng' },
-                  { value: 'SKIP_DUPLICATES', label: 'Bỏ qua dòng trùng' },
-                  { value: 'IMPORT_DUPLICATES_AS_DRAFT', label: 'Lưu dòng trùng thành bản nháp' }
-                ]}
-              />
-            </label>
+            <p className="qbl-modal-subtitle">
+              Câu trùng mạnh sẽ được lưu dưới dạng bản nháp để người duyệt quyết định.
+            </p>
 
             {(importPreview?.sourceHeaders || []).length > 0 && (
               <div className="qbl-import-preview">

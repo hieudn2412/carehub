@@ -1012,7 +1012,7 @@ function ChecklistAssignmentPage() {
               {wizardStep === 2 && (
                 <>
                   <div className="cap-assignment-wizard__heading-row">
-                    <h3>Chọn người nhận active</h3>
+                    <h3>Chọn người chấm</h3>
                     <button type="button" onClick={selectAllManagers} disabled={managerCandidateLoading}>
                       {managerCandidateLoading ? <LoadingOutlined spin /> : <UserSwitchOutlined />} Chọn tất cả quản lý
                     </button>
@@ -1047,7 +1047,7 @@ function ChecklistAssignmentPage() {
               {wizardStep === 3 && (
                 <>
                   <div className="cap-assignment-wizard__heading-row">
-                    <h3>Chọn khoa/phòng được phép chấm</h3>
+                    <h3>Chọn khoa/phòng được chấm</h3>
                     <button type="button" onClick={selectAllDepartments} disabled={wizardDepartmentOptions.length === 0}>
                       <ApartmentOutlined /> Chọn tất cả khoa/phòng
                     </button>

@@ -1,4 +1,5 @@
-.qdoc-page {
+
+.qdoc-page {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -71,61 +72,10 @@
 
 .qdoc-review-toolbar {
   padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
   background: #ffffff;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
-}
-
-.qdoc-review-toolbar > .qdoc-search {
-  flex: 1 1 320px;
-  max-width: 460px;
-  min-width: 240px;
-}
-
-.qdoc-toolbar-filters {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-}
-
-.qdoc-toolbar-filters .qdoc-select {
-  height: 40px;
-  min-height: 40px;
-  min-width: 180px;
-  max-width: 220px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  color: #334155;
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.qdoc-toolbar-filters .qdoc-select:hover {
-  border-color: #94a3b8;
-  background-color: #f8fafc;
-}
-
-.qdoc-toolbar-filters .qdoc-select:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
-}
-
-.qdoc-review-toolbar .qdoc-search input {
-  height: 40px;
-  min-height: 40px;
-  padding: 8px 12px 8px 38px;
 }
 
 .qdoc-filter-bar--compact {
@@ -1194,6 +1144,28 @@
   margin: 4px 0 0;
 }
 
+.qdoc-reason-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+}
+
+.qdoc-reason-box strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.qdoc-reason-box ul {
+  color: #475569;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
 .qdoc-duplicate-alert {
   align-items: center;
   background: #fffbeb;
@@ -1323,6 +1295,10 @@
 }
 
 .qdoc-paraphrase-similarity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 10px 0;
   color: #64748b;
   font-size: 12.5px;
   font-weight: 600;
@@ -1723,14 +1699,6 @@
     max-width: none;
   }
 
-  .qdoc-toolbar-filters {
-    width: 100%;
-  }
-
-  .qdoc-toolbar-filters .qdoc-select {
-    flex: 1 1 0;
-  }
-
   .qdoc-filter-bar > .admin-filter-disclosure,
   .qdoc-filter-bar > .admin-filter-disclosure .admin-filter-disclosure__panel {
     width: 100%;
@@ -1756,3 +1724,31 @@
   }
 }
 
+
+/* Ba ô tỷ lệ mức nhận thức trong modal tạo phiên sinh câu hỏi. */
+.qdoc-mix-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.qdoc-mix-item {
+  display: grid;
+  gap: 4px;
+}
+
+.qdoc-mix-item > span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qdoc-mix-item small {
+  color: #94a3b8;
+  font-size: 11.5px;
+}
+
+.qdoc-field-help--error {
+  color: #dc2626;
+  font-weight: 600;
+}

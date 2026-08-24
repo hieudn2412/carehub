@@ -70,7 +70,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -498,7 +500,6 @@ public class ExamPaperService {
             throw new BadRequestException("Blueprint repository chưa được cấu hình");
         }
         Random random = new Random(seed);
-        Set<Long> used = new HashSet<>();
         Set<Long> usedFamilies = new HashSet<>();
         List<PaperSourceQuestion> selected = new ArrayList<>();
         boolean backfill = Boolean.TRUE.equals(config.getBackfillNearestCognitiveLevel());
@@ -509,27 +510,38 @@ public class ExamPaperService {
                     .filter(item -> item.question() != null && item.question().getProfessionalField() != null)
                     .filter(item -> item.question().getProfessionalField().getId().equals(field.getProfessionalField().getId()))
                     .collect(Collectors.groupingBy(item -> item.question().getCognitiveLevel()));
-            for (ExamBlueprintCell cell : cells) {
-                List<PaperSourceQuestion> candidates = candidatesByLevel.getOrDefault(cell.getCognitiveLevel(), List.of());
-                List<PaperSourceQuestion> picked = new ArrayList<>(pickByFamily(
-                        candidates, cell.getQuestionCount(), used, usedFamilies, batchUsedFamilies, random));
-                int shortfall = cell.getQuestionCount() - picked.size();
-                if (shortfall > 0 && backfill) {
-                    for (CognitiveLevel donor : CognitiveBackfillAllocator.nearestLevels(cell.getCognitiveLevel())) {
-                        if (shortfall <= 0) break;
-                        List<PaperSourceQuestion> donorCandidates = candidatesByLevel.getOrDefault(donor, List.of());
-                        List<PaperSourceQuestion> extra = pickByFamily(
-                                donorCandidates, shortfall, used, usedFamilies, batchUsedFamilies, random);
-                        picked.addAll(extra);
-                        shortfall -= extra.size();
-                    }
-                }
-                if (picked.size() < cell.getQuestionCount()) {
+            Set<Long> excludedFamilies = new HashSet<>(usedFamilies);
+            if (batchUsedFamilies != null) excludedFamilies.addAll(batchUsedFamilies);
+            Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
+                    candidatesByLevel, excludedFamilies, random);
+            List<CognitiveBackfillAllocator.CellDemand> demands = cells.stream()
+                    .map(cell -> new CognitiveBackfillAllocator.CellDemand(
+                            cell.getCognitiveLevel(), cell.getQuestionCount()))
+                    .toList();
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(
+                    demands, familiesByLevel, backfill);
+            for (int cellIndex = 0; cellIndex < cells.size(); cellIndex++) {
+                ExamBlueprintCell cell = cells.get(cellIndex);
+                CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(cellIndex);
+                if (outcome.shortage() > 0) {
                     throw new BadRequestException("Không đủ họ câu hỏi độc lập cho "
                             + field.getProfessionalField().getName() + " / "
                             + QuestionGenerationLabels.cognitiveLevel(cell.getCognitiveLevel()));
                 }
-                selected.addAll(picked);
+                for (CognitiveBackfillAllocator.FamilyPick pick : outcome.picks()) {
+                    List<PaperSourceQuestion> familyCandidates = candidatesByLevel
+                            .getOrDefault(pick.sourceLevel(), List.of()).stream()
+                            .filter(item -> ExamGenerationDeterminism.familyId(item.question()) == pick.familyId())
+                            .sorted(Comparator.comparing(item -> item.question().getId()))
+                            .collect(Collectors.toCollection(ArrayList::new));
+                    ExamGenerationDeterminism.stableShuffle(familyCandidates, random);
+                    if (familyCandidates.isEmpty()) {
+                        throw new BadRequestException("Không tìm thấy câu hỏi thuộc họ đã phân bổ");
+                    }
+                    selected.add(familyCandidates.get(0));
+                    usedFamilies.add(pick.familyId());
+                    if (batchUsedFamilies != null) batchUsedFamilies.add(pick.familyId());
+                }
             }
         }
         if (selected.size() != config.getTotalQuestions()) {
@@ -542,33 +554,23 @@ public class ExamPaperService {
         return selected;
     }
 
-    private List<PaperSourceQuestion> pickByFamily(
-            List<PaperSourceQuestion> candidates,
-            int count,
-            Set<Long> usedQuestionIds,
-            Set<Long> usedFamilies,
-            Set<Long> batchUsedFamilies,
+    private Map<CognitiveLevel, Set<Long>> familiesByLevel(
+            Map<CognitiveLevel, List<PaperSourceQuestion>> candidatesByLevel,
+            Set<Long> excludedFamilies,
             Random random
     ) {
-        List<PaperSourceQuestion> pool = candidates.stream()
-                .filter(item -> item.question() != null && item.question().getId() != null)
-                .sorted(Comparator.comparing(item -> item.question().getId()))
-                .filter(item -> !usedQuestionIds.contains(item.question().getId()))
-                .filter(item -> !usedFamilies.contains(ExamGenerationDeterminism.familyId(item.question())))
-                .filter(item -> batchUsedFamilies == null
-                        || !batchUsedFamilies.contains(ExamGenerationDeterminism.familyId(item.question())))
-                .collect(Collectors.toCollection(ArrayList::new));
-        ExamGenerationDeterminism.stableShuffle(pool, random);
-        List<PaperSourceQuestion> picked = pool.stream().limit(count).toList();
-        for (PaperSourceQuestion item : picked) {
-            long familyId = ExamGenerationDeterminism.familyId(item.question());
-            usedQuestionIds.add(item.question().getId());
-            usedFamilies.add(familyId);
-            if (batchUsedFamilies != null) {
-                batchUsedFamilies.add(familyId);
-            }
+        Map<CognitiveLevel, Set<Long>> result = new EnumMap<>(CognitiveLevel.class);
+        for (CognitiveLevel level : CognitiveLevel.values()) {
+            List<Long> families = candidatesByLevel.getOrDefault(level, List.of()).stream()
+                    .map(item -> ExamGenerationDeterminism.familyId(item.question()))
+                    .filter(familyId -> !excludedFamilies.contains(familyId))
+                    .distinct()
+                    .sorted()
+                    .collect(Collectors.toCollection(ArrayList::new));
+            ExamGenerationDeterminism.stableShuffle(families, random);
+            result.put(level, new LinkedHashSet<>(families));
         }
-        return picked;
+        return result;
     }
 
     private ExamPaper createPaper(
@@ -769,22 +771,27 @@ public class ExamPaperService {
     ) {
         boolean backfill = Boolean.TRUE.equals(config.getBackfillNearestCognitiveLevel());
         List<ErrorResponse.FieldErrorDetail> shortages = new ArrayList<>();
+        Set<Long> usedFamilies = new HashSet<>();
         for (ExamBlueprintField field : blueprintFieldRepository.findByExamConfigIdOrderByDisplayOrderAsc(config.getId())) {
             List<ExamBlueprintCell> cells = new ArrayList<>(blueprintCellRepository.findByBlueprintFieldId(field.getId()));
             cells.sort(Comparator.comparingInt(cell -> cognitiveOrder(cell.getCognitiveLevel())));
+            Map<CognitiveLevel, List<PaperSourceQuestion>> candidatesByLevel = sourceItems.stream()
+                    .filter(item -> item.question().getProfessionalField().getId()
+                            .equals(field.getProfessionalField().getId()))
+                    .collect(Collectors.groupingBy(item -> item.question().getCognitiveLevel()));
+            Map<CognitiveLevel, Set<Long>> familiesByLevel = familiesByLevel(
+                    candidatesByLevel, usedFamilies, new Random(0));
             List<CognitiveBackfillAllocator.CellDemand> demands = new ArrayList<>();
             for (ExamBlueprintCell cell : cells) {
-                long uniqueFamilies = sourceItems.stream()
-                        .filter(item -> item.question().getProfessionalField().getId()
-                                .equals(field.getProfessionalField().getId()))
-                        .filter(item -> item.question().getCognitiveLevel() == cell.getCognitiveLevel())
-                        .mapToLong(item -> ExamGenerationDeterminism.familyId(item.question()))
-                        .distinct()
-                        .count();
                 long required = zeroOverlap ? (long) cell.getQuestionCount() * variantCount : cell.getQuestionCount();
-                demands.add(new CognitiveBackfillAllocator.CellDemand(cell.getCognitiveLevel(), Math.toIntExact(required), Math.toIntExact(uniqueFamilies)));
+                demands.add(new CognitiveBackfillAllocator.CellDemand(
+                        cell.getCognitiveLevel(), Math.toIntExact(required)));
             }
-            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(demands, backfill);
+            List<CognitiveBackfillAllocator.CellOutcome> outcomes = CognitiveBackfillAllocator.allocate(
+                    demands, familiesByLevel, backfill);
+            outcomes.stream().flatMap(outcome -> outcome.picks().stream())
+                    .map(CognitiveBackfillAllocator.FamilyPick::familyId)
+                    .forEach(usedFamilies::add);
             for (int i = 0; i < cells.size(); i++) {
                 CognitiveBackfillAllocator.CellOutcome outcome = outcomes.get(i);
                 if (outcome.shortage() > 0) {
@@ -826,11 +833,27 @@ public class ExamPaperService {
             return;
         }
         List<ExamPaperCoverageCellResponse> coverage = coverage(paper);
-        List<String> mismatches = coverage.stream()
-                .filter(cell -> !Boolean.TRUE.equals(cell.matchesBlueprint()))
-                .map(cell -> cell.professionalFieldName() + " / " + cell.cognitiveLabel()
-                        + " cần " + cell.requiredCount() + " câu nhưng đề có " + cell.actualCount())
-                .toList();
+        List<String> mismatches;
+        if (Boolean.TRUE.equals(paper.getExamConfig().getBackfillNearestCognitiveLevel())) {
+            mismatches = coverage.stream()
+                    .collect(Collectors.groupingBy(
+                            ExamPaperCoverageCellResponse::professionalFieldId,
+                            LinkedHashMap::new,
+                            Collectors.toList()))
+                    .values().stream()
+                    .filter(cells -> cells.stream().mapToInt(ExamPaperCoverageCellResponse::requiredCount).sum()
+                            != cells.stream().mapToInt(ExamPaperCoverageCellResponse::actualCount).sum())
+                    .map(cells -> cells.get(0).professionalFieldName()
+                            + " cần " + cells.stream().mapToInt(ExamPaperCoverageCellResponse::requiredCount).sum()
+                            + " câu nhưng đề có " + cells.stream().mapToInt(ExamPaperCoverageCellResponse::actualCount).sum())
+                    .toList();
+        } else {
+            mismatches = coverage.stream()
+                    .filter(cell -> !Boolean.TRUE.equals(cell.matchesBlueprint()))
+                    .map(cell -> cell.professionalFieldName() + " / " + cell.cognitiveLabel()
+                            + " cần " + cell.requiredCount() + " câu nhưng đề có " + cell.actualCount())
+                    .toList();
+        }
         if (!mismatches.isEmpty()) {
             throw new BadRequestException("Ma trận đề không khớp blueprint snapshot: " + String.join("; ", mismatches));
         }
