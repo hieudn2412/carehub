@@ -397,16 +397,17 @@ function QuestionFormPage() {
                   <label>
                     Mức độ nhận thức <span className="qf-required-star">*</span>
                   </label>
-                  <FormSelectField
-                    className="qf-input-red"
-                    required
+                  <SearchableSelect
                     value={cognitiveLevel}
-                    onChange={setCognitiveLevel}
-                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
                     options={[
-                      { value: '', label: 'Chọn mức độ nhận thức' },
+                      { value: '', label: '-- Chọn mức độ nhận thức --' },
                       ...COGNITIVE_LEVELS.map((level) => ({ value: level.value, label: level.label }))
                     ]}
+                    onChange={(val) => setCognitiveLevel(val)}
+                    placeholder="-- Chọn mức độ nhận thức --"
+                    searchPlaceholder="Tìm mức độ nhận thức..."
+                    disabled={isLoadingQuestion || isSaving || Boolean(loadError)}
+                    ariaLabel="Mức độ nhận thức"
                   />
                 </div>
               </div>

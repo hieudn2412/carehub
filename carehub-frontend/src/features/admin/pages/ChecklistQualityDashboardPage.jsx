@@ -153,7 +153,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
   const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
   const [filteredSelectedFormId, setFilteredSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
-  const [forceFilteredView, setForceFilteredView] = useState(() => isAdmin || Boolean(numericParam(searchParams.get('selectedFormId'))))
+  const [forceFilteredView, setForceFilteredView] = useState(true)
   const [selectedDetailForm, setSelectedDetailForm] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
@@ -274,7 +274,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   }, [view])
 
   useEffect(() => {
-    if (isManager && !effectiveDepartmentId) return undefined
+    if (isManager && !ownDepartmentId) return undefined
     let active = true
     async function load() {
       setLoading(true)
@@ -403,7 +403,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setSubjectUserId('')
     setSubmittedByUserId('')
     setFilteredSelectedFormId('')
-    setForceFilteredView(false)
+    setForceFilteredView(true)
     setSelectedDetailForm(null)
     setDetailError('')
     setDetailLoading(false)
