@@ -764,7 +764,7 @@ export function CandidateCard({
   const canReject = !['REJECTED', 'SAVED'].includes(candidate.status)
   const isStrongDuplicate = hasStrongDuplicate(candidate)
   const isPotentialDuplicate = hasPotentialDuplicate(candidate)
-  const canSave = candidate.status === 'APPROVED' && !isStrongDuplicate
+  const canSave = candidate.status === 'APPROVED'
   const statusText = candidateStatusText(candidate)
   const labelText = candidateLabelText(candidate)
   const showLabelBadge = shouldShowCandidateLabelBadge(candidate)

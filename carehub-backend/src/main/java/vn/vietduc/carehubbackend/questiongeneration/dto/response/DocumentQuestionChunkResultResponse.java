@@ -14,9 +14,12 @@ public record DocumentQuestionChunkResultResponse(
         Integer repairCallCount,
         Integer llmCallCount,
         Integer promptTokens,
+        Integer promptCacheHitTokens,
+        Integer promptCacheMissTokens,
         Integer completionTokens,
         Integer totalTokens,
         Long latencyMs,
+        Double estimatedCostUsd,
         String errorCode,
         String errorMessage,
         boolean retryable

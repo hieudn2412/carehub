@@ -91,11 +91,14 @@ public class QuestionDocumentService {
         validateSupportedFile(filename);
         byte[] bytes = readBytes(file);
         String contentHash = sha256(bytes);
-        String storagePath = storeOriginalFile(bytes, contentHash, filename);
 
         long extractStarted = System.nanoTime();
         ExtractedDocument extracted = textExtractor.extract(bytes, filename);
         long extractMs = elapsedMs(extractStarted);
+        if (extracted.errorMessage() != null) {
+            throw new BadRequestException(extracted.errorMessage());
+        }
+        String storagePath = storeOriginalFile(bytes, contentHash, filename);
         QuestionDocument document = QuestionDocument.builder()
                 .filename(filename)
                 .contentType(file.getContentType())
@@ -107,14 +110,6 @@ public class QuestionDocumentService {
                 .createdBy(actor)
                 .build();
 
-        if (extracted.errorMessage() != null) {
-            document.setStatus(DocumentStatus.FAILED);
-            document.setErrorMessage(extracted.errorMessage());
-            long persistStarted = System.nanoTime();
-            QuestionDocument saved = documentRepository.save(document);
-            logUploadTiming(saved, extractMs, 0, 0, 0, elapsedMs(persistStarted), 0, 0, 0);
-            return mapper.toDocumentResponse(saved, List.of(), List.of());
-        }
         if (extracted.ocrRequired()) {
             document.setStatus(DocumentStatus.OCR_REQUIRED);
             document.setErrorMessage("PDF chưa có text layer đủ tin cậy, cần OCR trước khi tạo câu hỏi");

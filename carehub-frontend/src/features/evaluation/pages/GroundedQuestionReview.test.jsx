@@ -13,6 +13,7 @@ describe('Grounded question generation UI', () => {
     })).toEqual({
       questionsPerChunk: 5,
       categoryId: 12,
+      pipelineVersion: 'GROUNDED_V4',
       targetCognitiveLevel: 'CLINICAL_REASONING_ANALYSIS',
     })
   })
@@ -101,5 +102,43 @@ describe('Grounded question generation UI', () => {
     expect(screen.queryByText('Giải thích')).not.toBeInTheDocument()
     expect(screen.queryByText('Nguồn trích dẫn')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Sửa/ })).toBeInTheDocument()
+  })
+
+  it('keeps a strong duplicate visible but lets the reviewer save an approved candidate', () => {
+    const noop = vi.fn()
+    render(
+      <MemoryRouter>
+        <CandidateCard
+          candidate={{
+            id: 3,
+            status: 'APPROVED',
+            stem: 'Cần đối chiếu bao nhiêu thông tin người bệnh?',
+            optionA: 'Hai thông tin',
+            optionB: 'Một thông tin',
+            optionC: 'Ba thông tin',
+            optionD: 'Không cần',
+            correctAnswer: 'A',
+            cognitiveLevel: 'FOUNDATION',
+            duplicateNeedsReview: true,
+            strongDuplicate: true,
+            duplicateMaxSimilarity: 0.98,
+          }}
+          isSelected
+          isChecked={false}
+          isBusy={false}
+          onSelect={noop}
+          onToggleSelection={noop}
+          onEdit={noop}
+          onApprove={noop}
+          onReject={noop}
+          onSave={noop}
+          onViewDuplicates={noop}
+          onOpenSavedQuestion={noop}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Phát hiện câu trùng mạnh')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Lưu vào ngân hàng câu hỏi/ })).toBeEnabled()
   })
 })

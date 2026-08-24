@@ -109,6 +109,12 @@ public class DocumentQuestionJob extends BaseEntity {
     @Column(name = "total_prompt_tokens", nullable = false)
     private Integer totalPromptTokens;
 
+    @Column(name = "total_prompt_cache_hit_tokens", nullable = false)
+    private Integer totalPromptCacheHitTokens;
+
+    @Column(name = "total_prompt_cache_miss_tokens", nullable = false)
+    private Integer totalPromptCacheMissTokens;
+
     @Column(name = "total_completion_tokens", nullable = false)
     private Integer totalCompletionTokens;
 

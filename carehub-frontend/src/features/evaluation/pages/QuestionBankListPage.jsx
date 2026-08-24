@@ -93,7 +93,6 @@ function QuestionBankListPage() {
   const [importPreview, setImportPreview] = useState(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
-  const [importDuplicateMode, setImportDuplicateMode] = useState('BLOCK')
   const [importColumnMapping, setImportColumnMapping] = useState({})
   const [isExporting, setIsExporting] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -281,7 +280,7 @@ function QuestionBankListPage() {
         professionalFieldReference: row.professionalFieldReference,
         cognitiveLevel: row.cognitiveLevel,
       }))
-      const response = await questionBankApi.commitImport(rows, importPreview?.importJobId || null, importDuplicateMode)
+      const response = await questionBankApi.commitImport(rows, importPreview?.importJobId || null)
       const result = apiData(response)
       showToast(`Đã import ${result.createdCount || 0} câu hỏi. ${result.skippedCount || 0} dòng bỏ qua. ${result.failedCount || 0} dòng lỗi.`, result.failedCount ? 'warning' : 'success')
       setImportPreview(result)
@@ -323,7 +322,6 @@ function QuestionBankListPage() {
     setImportFile(null)
     setImportPreview(null)
     setIsImporting(false)
-    setImportDuplicateMode('BLOCK')
     setImportColumnMapping({})
   }
 
@@ -582,18 +580,9 @@ function QuestionBankListPage() {
               />
             </label>
 
-            <label className="qbl-field">
-              <span>Khi gặp câu hỏi trùng mạnh</span>
-              <FormSelectField
-                value={importDuplicateMode}
-                onChange={setImportDuplicateMode}
-                options={[
-                  { value: 'BLOCK', label: 'Báo lỗi dòng trùng' },
-                  { value: 'SKIP_DUPLICATES', label: 'Bỏ qua dòng trùng' },
-                  { value: 'IMPORT_DUPLICATES_AS_DRAFT', label: 'Lưu dòng trùng thành bản nháp' }
-                ]}
-              />
-            </label>
+            <p className="qbl-modal-subtitle">
+              Câu trùng mạnh sẽ được lưu dưới dạng bản nháp để người duyệt quyết định.
+            </p>
 
             {(importPreview?.sourceHeaders || []).length > 0 && (
               <div className="qbl-import-preview">

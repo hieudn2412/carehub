@@ -206,7 +206,7 @@ class ParaphraseServiceTest {
     }
 
     @Test
-    void createJobGeneratesValidatedFullMcqCandidate() {
+    void createJobGeneratesFullMcqCandidateForHumanReview() {
         ParaphraseJobResponse response = processJob(
                 sourceQuestion.getId(),
                 new CreateParaphraseJobRequest(1, "medium"),
@@ -220,7 +220,8 @@ class ParaphraseServiceTest {
         assertThat(candidate.optionA()).contains("tối thiểu hai thông tin");
         assertThat(candidate.optionB()).contains("số phòng");
         assertThat(candidate.correctAnswer()).isEqualTo("A");
-        assertThat(candidate.status()).isEqualTo(CandidateStatus.VALIDATED.name());
+        assertThat(candidate.status()).as(candidate.warnings()).isEqualTo(CandidateStatus.NEED_REVIEW.name());
+        assertThat(candidate.warnings()).contains("cần người duyệt xác nhận");
         assertThat(candidate.lexicalDifferenceFromSource()).isEqualTo(0.38);
     }
 
@@ -245,6 +246,37 @@ class ParaphraseServiceTest {
         assertThat(savedQuestion.getParentQuestion()).isEqualTo(sourceQuestion);
         assertThat(savedQuestion.getCorrectAnswer()).isEqualTo(sourceQuestion.getCorrectAnswer());
         verify(embeddingService).saveStemEmbedding(savedQuestion);
+    }
+
+    @Test
+    void approveRevalidatesCandidateEditedOutsideTheNormalUpdateFlow() {
+        ParaphraseJobResponse response = processJob(
+                sourceQuestion.getId(),
+                new CreateParaphraseJobRequest(1, "medium"),
+                "admin"
+        );
+        Long candidateId = response.candidates().get(0).id();
+        savedCandidates.get(0).setStem("Nhân viên phải xác định người bệnh như thế nào?");
+
+        assertThatThrownBy(() -> service.approve(candidateId, "Ổn"))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("không còn đạt validation");
+    }
+
+    @Test
+    void saveRevalidatesPreviouslyApprovedCandidate() {
+        ParaphraseJobResponse response = processJob(
+                sourceQuestion.getId(),
+                new CreateParaphraseJobRequest(1, "medium"),
+                "admin"
+        );
+        Long candidateId = response.candidates().get(0).id();
+        service.approve(candidateId, "Ổn");
+        savedCandidates.get(0).setStem("Nhân viên phải xác định người bệnh như thế nào?");
+
+        assertThatThrownBy(() -> service.saveAsQuestion(candidateId, "admin"))
+                .isInstanceOf(vn.vietduc.carehubbackend.exception.BadRequestException.class)
+                .hasMessageContaining("không còn đạt validation");
     }
 
     @Test

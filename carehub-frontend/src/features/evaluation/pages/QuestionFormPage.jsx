@@ -282,7 +282,8 @@ function QuestionFormPage() {
         : await questionBankApi.createQuestion(payload)
       const saved = apiData(response)
       if (saved?.duplicateWarning) {
-        showToast('Đã lưu câu hỏi, nhưng có cảnh báo gần trùng. Nên kiểm tra lại trong ngân hàng.', 'warning')
+        const similarity = Math.round(Number(saved.duplicateWarning.maxSimilarity || 0) * 100)
+        showToast(`Đã lưu câu hỏi. Cảnh báo trùng: mức tương đồng cao nhất ${similarity}%; người duyệt quyết định.`, 'warning')
       } else if (saved?.impactWarning?.warning) {
         showToast('Đã lưu câu hỏi. Câu hỏi này đang được dùng trong bộ câu hỏi hoặc bộ đề.', 'warning')
       } else {

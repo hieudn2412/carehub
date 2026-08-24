@@ -74,7 +74,11 @@ replay_pid*
 developer_docs/*
 !developer_docs/evaluation-multi-field-redesign/
 !developer_docs/evaluation-multi-field-redesign/**
-docs/
+docs/*
+!docs/ai/
+docs/ai/*
+!docs/ai/semantic-duplicate-detection-vi.md
+!docs/ai/semantic-duplicate-detection-en.md
 
 # Local storage
 storage/
@@ -84,3 +88,6 @@ carehub-backend/models/
 # Python
 __pycache__/
 *.pyc
+
+# Submission bundles / DB dumps
+submission/

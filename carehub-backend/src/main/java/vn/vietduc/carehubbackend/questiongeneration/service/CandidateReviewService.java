@@ -190,10 +190,6 @@ public class CandidateReviewService {
         if (isGenericDocumentReferenceStem(candidate.getStem())) {
             throw new BadRequestException("Câu hỏi cần tự đứng độc lập, không được dùng mẫu chung như 'Theo tài liệu...'");
         }
-        DuplicateCheckResult duplicate = duplicateCheckService.check(candidate.getStem(), Set.of(), Set.of(candidate.getId()));
-        if (duplicate.strongDuplicate()) {
-            throw new BadRequestException("Câu hỏi trùng mạnh với câu đã có, vui lòng chỉnh sửa hoặc từ chối candidate");
-        }
         QuestionBankQuestion question = QuestionBankQuestion.builder()
                 .stem(candidate.getStem())
                 .optionA(candidate.getOptionA())
@@ -211,6 +207,7 @@ public class CandidateReviewService {
                 .cognitiveVerifiedBy(candidate.getCognitiveVerifiedBy())
                 .language("vi")
                 .sourceDocument(candidate.getDocument().getFilename())
+                .sourceDocumentRef(candidate.getDocument())
                 .questionType(QuestionType.ORIGINAL)
                 .status(QuestionBankStatus.APPROVED)
                 .createdBy(actor)
@@ -328,14 +325,13 @@ public class CandidateReviewService {
         if (validation.rejected()) {
             candidate.setStatus(CandidateStatus.REJECTED);
             candidate.setLabel(CandidateLabel.REJECTED);
-        } else if (duplicate.strongDuplicate()) {
-            candidate.setStatus(CandidateStatus.REJECTED);
-            candidate.setLabel(CandidateLabel.REJECTED);
-            warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có");
-        } else if (!taxonomyWarnings.isEmpty() || validation.needsReview() || duplicate.needsReview()) {
+        } else if (!taxonomyWarnings.isEmpty() || validation.needsReview()
+                || duplicate.needsReview() || duplicate.strongDuplicate()) {
             candidate.setStatus(CandidateStatus.NEED_REVIEW);
             candidate.setLabel(CandidateLabel.NEED_REVIEW);
-            if (duplicate.needsReview()) {
+            if (duplicate.strongDuplicate()) {
+                warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có; cần người duyệt quyết định");
+            } else if (duplicate.needsReview()) {
                 warnings.add("Có khả năng trùng ngữ nghĩa với câu hỏi đã có");
             }
         } else {

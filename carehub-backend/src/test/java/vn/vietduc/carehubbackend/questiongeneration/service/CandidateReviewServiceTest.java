@@ -82,9 +82,10 @@ class CandidateReviewServiceTest {
 
         assertThat(response.status()).isEqualTo(CandidateStatus.SAVED.name());
         assertThat(response.savedQuestionId()).isNotNull();
-        verify(questionRepository).save(any(QuestionBankQuestion.class));
+        var savedQuestion = org.mockito.ArgumentCaptor.forClass(QuestionBankQuestion.class);
+        verify(questionRepository).save(savedQuestion.capture());
+        assertThat(savedQuestion.getValue().getSourceDocumentRef()).isSameAs(candidate.getDocument());
         verify(embeddingService).saveStemEmbedding(any(QuestionBankQuestion.class));
-        verify(duplicateCheckService).check(eq(candidate.getStem()), eq(Set.of()), eq(Set.of(candidate.getId())));
     }
 
     @Test
@@ -121,15 +122,16 @@ class CandidateReviewServiceTest {
     }
 
     @Test
-    void saveAsQuestionRejectsStrongDuplicateAtSaveTime() {
+    void saveAsQuestionAllowsStrongDuplicateAfterReviewerApproval() {
         DocumentQuestionCandidate candidate = approvedCandidate();
+        candidate.setDuplicateMaxSimilarity(0.97);
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
-        when(duplicateCheckService.check(any(), anySet(), anySet()))
-                .thenReturn(new DuplicateCheckResult(0.96, 22L, "Câu hỏi đã có", true, true));
 
-        assertThatThrownBy(() -> service.saveAsQuestion(candidate.getId(), "admin"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("trùng mạnh");
+        var response = service.saveAsQuestion(candidate.getId(), "admin");
+
+        assertThat(response.status()).isEqualTo(CandidateStatus.SAVED.name());
+        assertThat(response.savedQuestionId()).isNotNull();
+        assertThat(response.strongDuplicate()).isTrue();
     }
 
     @Test
@@ -227,8 +229,8 @@ class CandidateReviewServiceTest {
     @Test
     void candidateResponseUsesConfiguredDuplicateThresholds() {
         DocumentQuestionCandidate candidate = approvedCandidate();
-        // Trong dải xem lại: >= reviewMin (0.93) nhưng < strongMin (0.97).
-        candidate.setDuplicateMaxSimilarity(0.94);
+        // Trong dải xem lại: >= reviewMin (0.95) nhưng < strongMin (0.97).
+        candidate.setDuplicateMaxSimilarity(0.96);
         when(candidateRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
 
         var response = service.get(candidate.getId());
