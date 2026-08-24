@@ -653,13 +653,15 @@ function DocumentQuestionJobReviewPage() {
               </label>
               <label className="qdoc-field">
                 <span>Mức độ nhận thức</span>
-                <FormSelectField
+                <SearchableSelect
                   value={editForm.cognitiveLevel}
-                  onChange={(value) => setEditFormField('cognitiveLevel', value)}
+                  onChange={(val) => setEditFormField('cognitiveLevel', val)}
                   options={[
                     { value: '', label: '-- Chọn mức độ --' },
                     ...COGNITIVE_LEVELS
                   ]}
+                  placeholder="-- Chọn mức độ --"
+                  searchPlaceholder="Tìm mức độ nhận thức..."
                 />
               </label>
 
