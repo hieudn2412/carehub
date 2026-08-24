@@ -60,7 +60,6 @@ const navSections = [
     items: [
       { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/admin/reports/training-dashboard' },
       { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
-      { icon: <ScheduleOutlined />, label: 'Giờ đào tạo cá nhân', path: '/staff/training' },
     ],
   },
   {
