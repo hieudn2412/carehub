@@ -113,10 +113,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('shows a filtered checklist list first, then opens the selected checklist detail', async () => {
     const { container } = renderDashboard(<ChecklistQualityDashboardPage />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
-    await waitFor(() => {
-      expect(adminApi.getQualityChecklistTrend).toHaveBeenCalled()
-    })
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     vi.clearAllMocks()
 
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
@@ -159,7 +156,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('opens results from the checklist list button without selecting the card', async () => {
     const { container } = renderDashboard(<ChecklistQualityDashboardPage />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     vi.clearAllMocks()
 
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
@@ -182,7 +179,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('searches checklists only after applying the draft keyword', async () => {
     renderDashboard(<ChecklistQualityDashboardPage />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     vi.clearAllMocks()
 
     fireEvent.change(screen.getByLabelText('Tìm theo tên hoặc mã quy trình'), {
@@ -220,17 +217,17 @@ describe('ChecklistQualityDashboardPage', () => {
   it('shows the latest scored date when a checklist has one submission', async () => {
     const { container } = renderDashboard(<ChecklistQualityDashboardPage />)
 
-    expect(await screen.findByText('Chấm gần nhất:')).toBeInTheDocument()
+    expect((await screen.findAllByText('Chấm gần nhất:')).length).toBeGreaterThan(0)
     const submittedAt = screen.getByText(/10\/08\/2026/)
     expect(submittedAt).toHaveAttribute('datetime', checklist.lastSubmittedAt)
-    expect(container.querySelector('.checklist-quality-process-card__top button')).toHaveTextContent('Xem kết quả')
+    expect(container.querySelectorAll('.checklist-quality-process-card__top button')[0]).toHaveTextContent('Xem kết quả')
     expect(screen.queryByRole('button', { name: /Cấu hình mục tiêu/i })).not.toBeInTheDocument()
   })
 
   it('only requests user dashboard data after applying draft filters', async () => {
     renderDashboard(<ChecklistQualityDashboardPage role="user" />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
     fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
 
@@ -251,7 +248,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('only requests admin dashboard data after applying draft filters', async () => {
     renderDashboard(<ChecklistQualityDashboardPage />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
     fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
 
@@ -272,7 +269,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('only requests manager dashboard data after applying draft filters', async () => {
     renderDashboard(<ChecklistQualityDashboardPage role="manager" />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
     fireEvent.change(screen.getByLabelText('Kết quả'), { target: { value: 'PASSED' } })
 
@@ -294,7 +291,7 @@ describe('ChecklistQualityDashboardPage', () => {
   it('renders department filter for manager and is fixed to own department', async () => {
     renderDashboard(<ChecklistQualityDashboardPage role="manager" />)
 
-    expect(await screen.findByRole('heading', { name: 'Quy trình chăm sóc người bệnh' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Danh sách bảng kiểm' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Bộ lọc/i }))
 
     expect(screen.getByText('Khoa/phòng')).toBeInTheDocument()

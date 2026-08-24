@@ -21,14 +21,13 @@ import {
   apiData,
   apiErrorMessage,
   chunkGenerationEligible,
-  COGNITIVE_LEVELS,
   documentStatusText,
   formatDateTime,
   formatNumber,
   jobStatusText,
   statusTone,
 } from '../utils/documentQuestionUi.js'
-import { buildCreateQuestionJobPayload } from '../utils/groundedQuestionUi.js'
+import { buildCreateQuestionJobPayload, COGNITIVE_MIX_FIELDS, DEFAULT_COGNITIVE_MIX, cognitiveMixTotal } from '../utils/groundedQuestionUi.js'
 import '../styles/QuestionDocumentPages.css'
 
 function QuestionDocumentDetailPage() {
@@ -42,7 +41,8 @@ function QuestionDocumentDetailPage() {
   const [showJobModal, setShowJobModal] = useState(false)
   const [questionsPerChunk, setQuestionsPerChunk] = useState(1)
   const [categoryId, setCategoryId] = useState('')
-  const [targetCognitiveLevel, setTargetCognitiveLevel] = useState('AUTO')
+  const targetCognitiveLevel = 'AUTO'
+  const [cognitiveMix, setCognitiveMix] = useState(DEFAULT_COGNITIVE_MIX)
   const [categories, setCategories] = useState([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -95,12 +95,17 @@ function QuestionDocumentDetailPage() {
       showToast('Số câu mỗi đoạn nội dung chỉ được từ 1 đến 3.', 'warning')
       return
     }
+    if (mixTotal !== 100) {
+      showToast('Tổng tỷ lệ ba mức nhận thức phải bằng 100%.', 'warning')
+      return
+    }
     setIsCreatingJob(true)
     try {
       const response = await documentQuestionApi.createQuestionJob(documentDetail.id, buildCreateQuestionJobPayload({
         questionsPerChunk,
         categoryId,
         targetCognitiveLevel,
+        cognitiveMix,
       }))
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
@@ -111,6 +116,8 @@ function QuestionDocumentDetailPage() {
       setIsCreatingJob(false)
     }
   }
+
+  const mixTotal = cognitiveMixTotal(cognitiveMix)
 
   async function openJobModal() {
     setShowJobModal(true)
@@ -354,18 +361,34 @@ function QuestionDocumentDetailPage() {
               />
               <small className="qdoc-field-help">Tối đa 3 câu/đoạn — vượt quá dễ khiến AI trả lời bị cắt dở và sinh câu thất bại.</small>
             </label>
-            <label className="qdoc-field">
-              <span>Mức độ nhận thức mục tiêu</span>
-              <FormSelectField
-                value={targetCognitiveLevel}
-                onChange={setTargetCognitiveLevel}
-                disabled={isCreatingJob}
-                options={[
-                  { value: 'AUTO', label: 'Tự động theo nguồn' },
-                  ...COGNITIVE_LEVELS
-                ]}
-              />
-            </label>
+            <div className="qdoc-field">
+              <span>Tỷ lệ mức độ nhận thức (%)</span>
+              <div className="qdoc-mix-grid">
+                {COGNITIVE_MIX_FIELDS.map((field) => (
+                  <label key={field.key} className="qdoc-mix-item">
+                    <span>{field.label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="ch-input"
+                      value={cognitiveMix[field.key]}
+                      disabled={isCreatingJob}
+                      onFocus={(event) => event.target.select()}
+                      onChange={(event) => setCognitiveMix((current) => ({
+                        ...current,
+                        [field.key]: Math.max(0, Math.min(100, Number(event.target.value) || 0)),
+                      }))}
+                      aria-label={`Tỷ lệ mức ${field.label} - ${field.hint}`}
+                    />
+                    <small>{field.hint}</small>
+                  </label>
+                ))}
+              </div>
+              <small className={`qdoc-field-help ${mixTotal === 100 ? '' : 'qdoc-field-help--error'}`}>
+                Tổng: {mixTotal}% {mixTotal === 100 ? '' : '— phải bằng 100%'}
+              </small>
+            </div>
             <div className="qdoc-field">
               <span>Danh mục câu hỏi (không bắt buộc)</span>
               <div className="qdoc-inline-field">

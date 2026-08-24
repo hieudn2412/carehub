@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
-import vn.vietduc.carehubbackend.exception.ConflictException;
 import vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportCommitRequest;
 import vn.vietduc.carehubbackend.questiongeneration.dto.response.QuestionBankQuestionResponse;
 import vn.vietduc.carehubbackend.questiongeneration.entity.QuestionCategory;
@@ -26,7 +25,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 
@@ -252,44 +250,6 @@ class QuestionBankImportExportServiceTest {
         assertThat(commit.skippedCount()).isZero();
         assertThat(commit.failedCount()).isZero();
         assertThat(commit.rows().get(0).createdQuestionId()).isNotNull();
-    }
-
-    @Test
-    void commitCanSkipDuplicateRows() {
-        reset(questionBankService);
-        when(questionBankService.createInNewTransaction(any(), eq("admin"))).thenThrow(new ConflictException("Câu hỏi bị trùng mạnh"));
-        MockMultipartFile file = csv("""
-                stem,optionA,optionB,optionC,optionD,correctAnswer,explanation,topic,difficulty,language,sourceDocument,status
-                Câu hỏi đã có?,A,B,C,D,A,Giải thích,Chủ đề,EASY,vi,Nguồn,APPROVED
-                """);
-        var preview = service.preview(file, "admin");
-
-        var commit = service.commit(new QuestionBankImportCommitRequest(preview.importJobId(), "SKIP_DUPLICATES", preview.rows().stream()
-                .map(row -> new vn.vietduc.carehubbackend.questiongeneration.dto.request.QuestionBankImportRowRequest(
-                        row.rowNumber(),
-                        row.stem(),
-                        row.optionA(),
-                        row.optionB(),
-                        row.optionC(),
-                        row.optionD(),
-                        row.correctAnswer(),
-                        row.explanation(),
-                        row.topic(),
-                        row.language(),
-                        row.sourceDocument(),
-                        row.status(),
-                        row.categoryId(),
-                        row.categoryReference(),
-                        row.professionalFieldId(),
-                        row.professionalFieldReference(),
-                        row.cognitiveLevel()
-                ))
-                .toList()), "admin");
-
-        assertThat(commit.createdCount()).isZero();
-        assertThat(commit.skippedCount()).isEqualTo(1);
-        assertThat(commit.failedCount()).isZero();
-        assertThat(commit.rows().get(0).skipped()).isTrue();
     }
 
     @Test

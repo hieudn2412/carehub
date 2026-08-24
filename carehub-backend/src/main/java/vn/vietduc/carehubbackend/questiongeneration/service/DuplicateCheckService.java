@@ -70,9 +70,30 @@ public class DuplicateCheckService {
             double[][] vectors,
             int candidateIndex
     ) {
-        if (candidateIndex <= 0 || vectors == null || candidateIndex >= vectors.length
-                || vectors[candidateIndex] == null) {
+        if (candidateIndex <= 0 || stems == null || candidateIndex >= stems.size()) {
             return new DuplicateCheckResult(0, null, null, false, false, null, "e5-batch");
+        }
+        if (vectors == null || candidateIndex >= vectors.length || vectors[candidateIndex] == null) {
+            double best = 0;
+            String matchedStem = null;
+            for (int index = 0; index < candidateIndex; index++) {
+                double similarity = similarity(stems.get(candidateIndex), stems.get(index));
+                if (similarity > best) {
+                    best = similarity;
+                    matchedStem = stems.get(index);
+                }
+            }
+            return new DuplicateCheckResult(
+                    best,
+                    null,
+                    matchedStem,
+                    best >= properties.getDuplicate().getLexicalStrongMin(),
+                    best >= properties.getDuplicate().getLexicalReviewMin(),
+                    best >= properties.getDuplicate().getLexicalReviewMin()
+                            ? "Có khả năng trùng với câu khác trong cùng response"
+                            : null,
+                    "lexical-batch"
+            );
         }
         double best = 0;
         String matchedStem = null;
@@ -326,7 +347,8 @@ public class DuplicateCheckService {
 
         double strongMin = properties.getDuplicate().getStrongMin();
 
-        // Thử ANN search trước nếu index sẵn sàng
+        // Thử ANN search trước nếu index sẵn sàng, sau đó vẫn quét exact để
+        // maxSimilarity và câu đối chiếu thực sự là kết quả cao nhất.
         if (annIndex.isReady()) {
             // Ngưỡng dừng sớm phải là strongMin: dừng ở reviewMin sẽ trả về match ĐẦU TIÊN
             // vượt 0.80 thay vì match tốt nhất, khiến câu trùng mạnh bị hạ thành NEED_REVIEW.
@@ -342,20 +364,16 @@ public class DuplicateCheckService {
                 checker = "e5-ann";
             }
 
-            // ANN chỉ quét một phần index (bucket LSH + hàng xóm, tối đa annSearchK ứng viên),
-            // nên khi chưa chắc chắn trùng mạnh vẫn phải quét đầy đủ để không bỏ sót.
-            if (best < strongMin) {
+            ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best);
+            if (scan.similarity() > best) {
+                best = scan.similarity();
+                matchedId = scan.questionId();
+                matchedStem = scan.stem();
                 checker = "e5-exact";
-                ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best, strongMin);
-                if (scan.similarity() > best) {
-                    best = scan.similarity();
-                    matchedId = scan.questionId();
-                    matchedStem = scan.stem();
-                }
             }
         } else {
             // Exact search (ANN chưa sẵn sàng) — giữ nhãn "e5" để phân biệt với đường có ANN.
-            ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best, strongMin);
+            ExactScan scan = exactScan(candidateVector, embeddings, excludedQuestionIds, best);
             best = scan.similarity();
             matchedId = scan.questionId();
             matchedStem = scan.stem();
@@ -378,13 +396,12 @@ public class DuplicateCheckService {
         );
     }
 
-    /** Quét cosine đầy đủ trên tập embedding, dừng sớm khi đã chắc chắn là trùng mạnh. */
+    /** Quét cosine đầy đủ trên tập embedding để trả về đúng láng giềng gần nhất. */
     private ExactScan exactScan(
             double[] candidateVector,
             List<QuestionEmbeddingSnapshot> embeddings,
             Set<Long> excludedQuestionIds,
-            double startingBest,
-            double strongMin
+            double startingBest
     ) {
         double best = startingBest;
         Long matchedId = null;
@@ -398,9 +415,6 @@ public class DuplicateCheckService {
                 best = score;
                 matchedId = embedding.questionId();
                 matchedStem = embedding.stem();
-            }
-            if (best >= strongMin) {
-                break;
             }
         }
         return new ExactScan(best, matchedId, matchedStem);

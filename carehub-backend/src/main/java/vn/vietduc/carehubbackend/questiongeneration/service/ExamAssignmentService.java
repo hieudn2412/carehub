@@ -862,6 +862,10 @@ public class ExamAssignmentService {
             actionLabel = "Đã đóng";
             actionable = false;
         }
+        BigDecimal passingScore = BigDecimal.valueOf(assignedPaper.getPassingScore());
+        if (passingScore.compareTo(BigDecimal.TEN) > 0) {
+            passingScore = passingScore.divide(BigDecimal.TEN, 2, RoundingMode.HALF_UP);
+        }
 
         return new MyExamAssignmentResponse(
                 assignment.getId(),
@@ -870,6 +874,7 @@ public class ExamAssignmentService {
                 assignedPaper.getId(),
                 assignedPaper.getCode(),
                 assignedPaper.getName(),
+                passingScore,
                 target.getAssignedVariantIndex() == null ? assignedPaper.getVariantIndex() : target.getAssignedVariantIndex(),
                 (assignment.getRetakeVariantPolicy() == null
                         ? ExamAssignmentRetakeVariantPolicy.KEEP_VARIANT

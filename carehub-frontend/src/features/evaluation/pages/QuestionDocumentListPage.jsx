@@ -200,6 +200,7 @@ function QuestionDocumentListPage() {
       const response = await documentQuestionApi.createQuestionJob(jobModalDocument.id, {
         questionsPerChunk: normalizedCount,
         categoryId: Number(selectedCategoryId),
+        pipelineVersion: 'GROUNDED_V4',
       })
       const job = apiData(response)
       showToast('Tạo phiên sinh câu hỏi thành công.', 'success')
@@ -239,7 +240,7 @@ function QuestionDocumentListPage() {
                 </div>
                 <div className="qdoc-upload-actions">
                   <label className="qdoc-secondary-btn">
-                    <UploadOutlined />
+                    <FileAddOutlined />
                     <span>Chọn tệp</span>
                     <input
                       ref={fileInputRef}
@@ -251,7 +252,7 @@ function QuestionDocumentListPage() {
                     />
                   </label>
                   <button className="qdoc-primary-btn" type="button" disabled={isUploading} onClick={handleUpload}>
-                    {isUploading ? <LoadingOutlined /> : <FileAddOutlined />}
+                    {isUploading ? <LoadingOutlined /> : <UploadOutlined />}
                     <span>{isUploading ? 'Đang tải và phân tích tài liệu...' : 'Tải lên'}</span>
                   </button>
                   {selectedFile && (

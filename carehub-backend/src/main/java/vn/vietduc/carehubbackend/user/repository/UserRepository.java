@@ -326,6 +326,12 @@ public interface UserRepository extends JpaRepository<User, Long>, UserRepositor
                    OR LOWER(u.name) LIKE :keyword)
               AND (:departmentId IS NULL OR u.department.id = :departmentId)
               AND (:positionId IS NULL OR u.position.id = :positionId)
+              AND NOT EXISTS (
+                  SELECT adminRole.id
+                  FROM UserRole adminRole
+                  WHERE adminRole.user = u
+                    AND (UPPER(adminRole.role.code) = 'ADMIN' OR UPPER(adminRole.role.code) = 'ROLE_ADMIN')
+              )
             ORDER BY u.employeeCode ASC, u.id ASC
             """)
     List<User> searchTrainingEmployeeCandidates(

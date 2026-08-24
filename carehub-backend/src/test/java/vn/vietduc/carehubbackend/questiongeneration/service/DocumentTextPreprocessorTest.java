@@ -36,4 +36,14 @@ class DocumentTextPreprocessorTest {
         assertThat(paragraphs).hasSize(1);
         assertThat(paragraphs.get(0).text()).contains("kiểmsoát nhiễm khuẩn");
     }
+
+    @Test
+    void keepsRepeatedClinicalLineWhenItIsNotAtPageEdges() {
+        String page = "Đầu 1\nĐầu 2\nĐầu 3\nNội dung lâm sàng lặp có chủ đích.\nCuối 1\nCuối 2\nCuối 3";
+
+        String text = preprocessor.preprocessPages(List.of(page, page, page)).stream()
+                .map(NormalizedParagraph::text).reduce("", (left, right) -> left + " " + right);
+
+        assertThat(text.split("Nội dung lâm sàng lặp có chủ đích\\.", -1)).hasSize(4);
+    }
 }
