@@ -153,17 +153,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
   const [submittedByUserId, setSubmittedByUserId] = useState(() => numericParam(searchParams.get('submittedByUserId')))
   const [selectedFormId, setSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
   const [filteredSelectedFormId, setFilteredSelectedFormId] = useState(() => numericParam(searchParams.get('selectedFormId')))
-  const [forceFilteredView, setForceFilteredView] = useState(() => Boolean(
-    searchParams.get('dateFrom')
-    || searchParams.get('dateTo')
-    || searchParams.get('selectedFormId')
-    || searchParams.get('keyword')
-    || searchParams.get('departmentId')
-    || searchParams.get('processId')
-    || searchParams.get('resultStatus')
-    || searchParams.get('subjectUserId')
-    || searchParams.get('submittedByUserId')
-  ))
+  const [forceFilteredView, setForceFilteredView] = useState(true)
   const [selectedDetailForm, setSelectedDetailForm] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState('')
@@ -413,7 +403,7 @@ function ChecklistQualityDashboardPage({ role = 'admin' }) {
     setSubjectUserId('')
     setSubmittedByUserId('')
     setFilteredSelectedFormId('')
-    setForceFilteredView(false)
+    setForceFilteredView(true)
     setSelectedDetailForm(null)
     setDetailError('')
     setDetailLoading(false)
@@ -819,8 +809,10 @@ function EmptyState({ isUser, filtered }) {
 function Pagination({ page, size, totalElements, totalPages, onPage, onSize }) {
   return <div className="checklist-quality-pagination">
     <span>Hiển thị {totalElements === 0 ? 0 : page * size + 1}–{Math.min((page + 1) * size, totalElements)} / {totalElements}</span>
-    <label>Số dòng <SearchableSelect value={size} onChange={(val) => onSize(Number(val))} options={PAGE_SIZES.map((item) => ({ value: item, label: String(item) }))} searchable={false} /></label>
-    <div><button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)} aria-label="Trang trước">‹</button>
+    <label className="checklist-quality-pagination__size"><span>Số dòng</span>
+      <SearchableSelect ariaLabel="Số dòng mỗi trang" className="checklist-quality-pagination__size-select" value={size} onChange={(val) => onSize(Number(val))} options={PAGE_SIZES.map((item) => ({ value: item, label: String(item) }))} searchable={false} />
+    </label>
+    <div className="checklist-quality-pagination__nav"><button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)} aria-label="Trang trước">‹</button>
       <strong>{page + 1}/{totalPages}</strong>
       <button type="button" disabled={page + 1 >= totalPages} onClick={() => onPage(page + 1)} aria-label="Trang sau">›</button></div>
   </div>

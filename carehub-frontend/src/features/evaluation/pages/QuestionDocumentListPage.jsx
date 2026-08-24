@@ -240,7 +240,7 @@ function QuestionDocumentListPage() {
                 </div>
                 <div className="qdoc-upload-actions">
                   <label className="qdoc-secondary-btn">
-                    <UploadOutlined />
+                    <FileAddOutlined />
                     <span>Chọn tệp</span>
                     <input
                       ref={fileInputRef}
@@ -252,7 +252,7 @@ function QuestionDocumentListPage() {
                     />
                   </label>
                   <button className="qdoc-primary-btn" type="button" disabled={isUploading} onClick={handleUpload}>
-                    {isUploading ? <LoadingOutlined /> : <FileAddOutlined />}
+                    {isUploading ? <LoadingOutlined /> : <UploadOutlined />}
                     <span>{isUploading ? 'Đang tải và phân tích tài liệu...' : 'Tải lên'}</span>
                   </button>
                   {selectedFile && (

@@ -14,7 +14,6 @@ import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolba
 import ConfirmModal from '../../../shared/components/ConfirmModal.jsx'
 import SearchableSelect from '../../../shared/components/SearchableSelect.jsx'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
-import FormSelectField from '../../../shared/components/FormSelectField.jsx'
 import { useToast } from '../../../shared/context/ToastContext.jsx'
 import { documentQuestionApi } from '../api/documentQuestionApi.js'
 import { questionCategoryApi } from '../api/questionCategoryApi.js'
@@ -622,13 +621,15 @@ function DocumentQuestionJobReviewPage() {
               </label>
               <label className="qdoc-field">
                 <span>Mức độ nhận thức</span>
-                <FormSelectField
+                <SearchableSelect
                   value={editForm.cognitiveLevel}
-                  onChange={(value) => setEditFormField('cognitiveLevel', value)}
+                  onChange={(val) => setEditFormField('cognitiveLevel', val)}
                   options={[
                     { value: '', label: '-- Chọn mức độ --' },
                     ...COGNITIVE_LEVELS
                   ]}
+                  placeholder="-- Chọn mức độ --"
+                  searchPlaceholder="Tìm mức độ nhận thức..."
                 />
               </label>
 
