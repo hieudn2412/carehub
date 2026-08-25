@@ -202,6 +202,19 @@
   min-width: 190px;
 }
 
+.tes-scope-value {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #d8e2ec;
+  border-radius: 9px;
+  background: #f8fafc;
+  color: #263247;
+  font-size: 13px;
+}
+
 /* Table Card */
 .tes-table-card {
   background: #fff;

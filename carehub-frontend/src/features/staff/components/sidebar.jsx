@@ -14,6 +14,7 @@ import {
   LeftOutlined,
   SearchOutlined,
   BellOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -118,9 +119,10 @@ function Sidebar({ alertSummary = {} }) {
   if (isManager) {
     navSections.push(
       {
-        label: 'Đào tạo liên tục',
+        label: 'ĐÀO TẠO LIÊN TỤC',
         items: [
-          { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+          { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
+          { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
         ],
       },
       {

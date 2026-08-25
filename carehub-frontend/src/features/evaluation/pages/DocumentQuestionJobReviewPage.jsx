@@ -22,6 +22,7 @@ import {
   apiData,
   apiErrorMessage,
   candidateStatusText,
+  parseJsonList,
   cognitiveLevelText,
   COGNITIVE_LEVELS,
   formatDateTime,
@@ -176,7 +177,7 @@ function DocumentQuestionJobReviewPage() {
     try {
       const response = await documentQuestionApi.cancelQuestionJob(jobId)
       setJobDetail(apiData(response))
-      showToast('Đã hủy phiên tạo câu hỏi.', 'success')
+      showToast('Đã dừng tạo câu hỏi.', 'success')
     } catch (error) {
       showToast(apiErrorMessage(error), 'error')
     }
@@ -367,7 +368,7 @@ function DocumentQuestionJobReviewPage() {
   const breadcrumbs = [
     { label: 'Đánh giá' },
     { label: 'Tạo câu hỏi từ tài liệu', link: '/admin/evaluation/question-documents' },
-    { label: 'Review phiên tạo' },
+    { label: 'Duyệt câu hỏi từ tài liệu' },
   ]
 
   return (
@@ -378,10 +379,10 @@ function DocumentQuestionJobReviewPage() {
     >
       <div className="qdoc-page">
               {isLoading ? (
-                <section className="qdoc-panel qdoc-loading-panel">Đang tải phiên tạo câu hỏi...</section>
+                <section className="qdoc-panel qdoc-loading-panel">Đang tải câu hỏi từ tài liệu...</section>
               ) : !jobDetail ? (
                 <section className="qdoc-panel qdoc-loading-panel">
-                  <p>{loadError || 'Không tìm thấy phiên tạo câu hỏi.'}</p>
+                  <p>{loadError || 'Không tìm thấy dữ liệu tạo câu hỏi.'}</p>
                   <button type="button" className="qdoc-primary-btn" onClick={() => loadJob()}>
                     <ReloadOutlined />
                     <span>Thử tải lại</span>
@@ -393,7 +394,7 @@ function DocumentQuestionJobReviewPage() {
                     <div className="qdoc-detail-heading">
                       <FileBadge />
                       <div>
-                        <h1>Review phiên tạo câu hỏi #{jobDetail.id}</h1>
+                        <h1>Duyệt câu hỏi từ tài liệu #{jobDetail.id}</h1>
                         <div className="qdoc-detail-meta">
                           <span className={`qdoc-badge qdoc-badge--${statusTone(jobDetail.status)}`}>
                             {jobStatusText(jobDetail)}
@@ -406,7 +407,7 @@ function DocumentQuestionJobReviewPage() {
                       {LIVE_JOB_STATUSES.has(jobDetail.status) && (
                         <button type="button" className="qdoc-secondary-btn qdoc-secondary-btn--danger" onClick={cancelJob}>
                           <StopOutlined />
-                          <span>Hủy phiên</span>
+                          <span>Dừng tạo câu hỏi</span>
                         </button>
                       )}
                     </div>
@@ -421,7 +422,7 @@ function DocumentQuestionJobReviewPage() {
                   {LIVE_JOB_STATUSES.has(jobDetail.status) && (
                     <section className="qdoc-alert qdoc-alert--info">
                       <LoadingOutlined />
-                      <span>Phiên tạo câu hỏi đang xử lý nền. Trang sẽ tự cập nhật sau vài giây.</span>
+                      <span>Hệ thống đang tạo câu hỏi. Trang sẽ tự cập nhật sau vài giây.</span>
                     </section>
                   )}
 
@@ -436,7 +437,7 @@ function DocumentQuestionJobReviewPage() {
                     <section className="qdoc-alert qdoc-alert--info qdoc-alert--action">
                       <div>
                         <ReloadOutlined />
-                        <span>Phiên trước chưa tạo được câu hỏi mới. Bạn có thể chạy lại để thử với cấu hình hiện tại.</span>
+                        <span>Chưa tạo được câu hỏi mới. Bạn có thể chạy lại với cấu hình hiện tại.</span>
                       </div>
                       <button type="button" className="qdoc-secondary-btn" onClick={retryFailedChunks} disabled={isRetrying}>
                         {isRetrying ? <LoadingOutlined /> : <ReloadOutlined />}
@@ -698,9 +699,9 @@ function DocumentQuestionJobReviewPage() {
       )}
       <ConfirmModal
         isOpen={isCancelConfirmOpen}
-        title="Hủy phiên tạo câu hỏi?"
-        message="Phiên đang chạy sẽ dừng xử lý các đoạn còn lại. Những câu hỏi đã tạo trước đó vẫn được giữ lại để bạn tiếp tục duyệt."
-        confirmText="Hủy phiên"
+        title="Dừng tạo câu hỏi?"
+        message="Hệ thống sẽ dừng xử lý các đoạn còn lại. Những câu hỏi đã tạo trước đó vẫn được giữ lại để bạn tiếp tục duyệt."
+        confirmText="Dừng tạo câu hỏi"
         danger
         onCancel={() => setIsCancelConfirmOpen(false)}
         onConfirm={confirmCancelJob}
@@ -734,6 +735,11 @@ export function CandidateCard({
   const isPotentialDuplicate = hasPotentialDuplicate(candidate)
   const canSave = !['REJECTED', 'SAVED'].includes(candidate.status)
   const statusText = candidateStatusText(candidate)
+  // Chỉ hiện khi AI critic có kết luận xấu (~1% ứng viên). Trùng lặp đã có khối riêng
+  // bên dưới nên không lặp lại ở đây.
+  const criticIssues = candidate.criticStatus === 'FAILED'
+    ? parseJsonList(candidate.warnings).filter((w) => typeof w === 'string' && w.startsWith('LLM validation:'))
+    : []
   const fieldLabel = candidate.professionalFieldCode
     ? `${candidate.professionalFieldCode} · ${candidate.professionalFieldName || 'Lĩnh vực chuyên môn'}`
     : 'Chưa có lĩnh vực chuyên môn'
@@ -791,6 +797,15 @@ export function CandidateCard({
             {candidate.explanation}
             {pageRef && (candidate.explanation ? ` (${pageRef})` : pageRef)}
           </p>
+        </div>
+      )}
+
+      {criticIssues.length > 0 && (
+        <div className="qdoc-reason-box">
+          <strong>AI kiểm định có cảnh báo</strong>
+          <ul>
+            {criticIssues.map((issue) => <li key={issue}>{issue.replace('LLM validation: ', '')}</li>)}
+          </ul>
         </div>
       )}
 

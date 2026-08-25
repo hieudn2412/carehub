@@ -1,8 +1,7 @@
-// Ba mức nhận thức, bệnh viện quen gọi là dễ / trung bình / khó.
 export const COGNITIVE_MIX_FIELDS = [
-  { key: 'foundation', label: 'Dễ', hint: 'Kiến thức nền tảng' },
-  { key: 'application', label: 'Trung bình', hint: 'Áp dụng lâm sàng' },
-  { key: 'reasoning', label: 'Khó', hint: 'Tư duy phân tích' },
+  { key: 'foundation', label: 'Kiến thức nền tảng' },
+  { key: 'application', label: 'Áp dụng lâm sàng' },
+  { key: 'reasoning', label: 'Tư duy phân tích' },
 ]
 
 export const DEFAULT_COGNITIVE_MIX = { foundation: 20, application: 50, reasoning: 30 }
