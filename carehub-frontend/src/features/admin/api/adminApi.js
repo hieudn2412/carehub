@@ -289,6 +289,12 @@ export const adminApi = {
     })
   },
 
+  restoreForm(id) {
+    return httpClient.post(`/forms/${id}/restore`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   // Form Versions
   getFormVersions(formId, params) {
     return httpClient.get(`/forms/${formId}/versions`, {
@@ -463,6 +469,12 @@ export const adminApi = {
 
   getFormAssignmentItemAllowedDepartments(itemId) {
     return httpClient.get(`/form-assignment-items/${itemId}/allowed-departments`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormAssignmentItemAllowedDepartments(itemId, data) {
+    return httpClient.put(`/form-assignment-items/${itemId}/allowed-departments`, data, {
       headers: authHeaders(),
     })
   },

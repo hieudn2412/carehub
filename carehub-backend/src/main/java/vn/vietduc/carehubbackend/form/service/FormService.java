@@ -27,4 +27,6 @@ public interface FormService {
     FormComplianceTargetResponse updateComplianceTarget(Long id, java.math.BigDecimal targetPercent);
 
     void delete(Long id);
+
+    FormResponse restore(Long id);
 }
