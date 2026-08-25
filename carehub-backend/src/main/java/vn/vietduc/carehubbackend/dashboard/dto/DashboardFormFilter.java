@@ -9,13 +9,15 @@ public record DashboardFormFilter(
         Long formId,
         Long subjectUserId,
         Long submittedByUserId,
-        DashboardFormResultFilter resultStatus
+        DashboardFormResultFilter resultStatus,
+        DashboardFormTargetFilter targetStatus
 ) {
     public boolean restrictToMatchedForms() {
         return departmentId != null
                 || formId != null
                 || subjectUserId != null
                 || submittedByUserId != null
-                || resultStatus != null;
+                || resultStatus != null
+                || targetStatus != null;
     }
 }

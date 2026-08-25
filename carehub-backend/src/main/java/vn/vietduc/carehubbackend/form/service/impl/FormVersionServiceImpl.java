@@ -179,7 +179,7 @@ public class FormVersionServiceImpl implements FormVersionService {
     }
 
     private Form requireForm(Long formId) {
-        return formRepository.findByIdAndDeletedFalse(formId)
+        return formRepository.findById(formId)
                 .orElseThrow(() -> new ResourceNotFoundException("Form not found"));
     }
 

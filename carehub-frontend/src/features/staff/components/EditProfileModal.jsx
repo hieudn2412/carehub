@@ -10,6 +10,10 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
+  const today = new Date()
+  const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().slice(0, 10)
+  const minDate = new Date(today.getFullYear() - 100, today.getMonth(), today.getDate()).toISOString().slice(0, 10)
+
   useEffect(() => {
     if (!isOpen) return
     setForm({
@@ -28,15 +32,67 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
     setForm((current) => ({ ...current, [field]: event.target.value }))
   }
 
+  const handlePhoneChange = (event) => {
+    let inputVal = event.target.value
+
+    if (!inputVal) {
+      setForm((current) => ({ ...current, phone: '' }))
+      return
+    }
+
+    let cleaned = inputVal.replace(/[^\d+]/g, '')
+
+    if (cleaned.startsWith('0')) {
+      cleaned = '+84' + cleaned.substring(1)
+    } else if (cleaned.length > 0 && /^[1-9]/.test(cleaned)) {
+      if (cleaned.startsWith('84')) {
+        cleaned = '+' + cleaned
+      } else {
+        cleaned = '+84' + cleaned
+      }
+    }
+
+    if (cleaned.startsWith('+840')) {
+      cleaned = '+84' + cleaned.substring(4)
+    }
+
+    if (cleaned.length > 12) {
+      cleaned = cleaned.substring(0, 12)
+    }
+
+    setForm((current) => ({ ...current, phone: cleaned }))
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')
+
+    const phoneVal = form.phone.trim()
+    if (phoneVal && phoneVal !== '+84' && phoneVal.length !== 12) {
+      setErrorMessage('Số điện thoại không hợp lệ. Vui lòng nhập đủ 10 số.')
+      return
+    }
+
+    if (form.birthday) {
+      const birthDate = new Date(form.birthday)
+      const todayDate = new Date()
+      let age = todayDate.getFullYear() - birthDate.getFullYear()
+      const m = todayDate.getMonth() - birthDate.getMonth()
+      if (m < 0 || (m === 0 && todayDate.getDate() < birthDate.getDate())) {
+        age--
+      }
+      if (age < 18 || age > 100) {
+        setErrorMessage('Độ tuổi không hợp lệ. Nhân viên phải từ 18 đến 100 tuổi.')
+        return
+      }
+    }
+
     try {
       setSubmitting(true)
       const response = await staffApi.updateProfile({
         fullName: form.fullName.trim(),
         email: form.email.trim() || null,
-        phone: form.phone.trim() || null,
+        phone: (phoneVal === '+84' ? null : phoneVal) || null,
         birthday: form.birthday || null,
         gender: form.gender === '' ? null : form.gender === 'true',
       })
@@ -62,11 +118,11 @@ function EditProfileModal({ isOpen, profile, onClose, onSaved }) {
         </div>
         <div className="profile-edit-form__field">
           <label htmlFor="profile-phone">Số điện thoại</label>
-          <input id="profile-phone" inputMode="tel" maxLength={20} onChange={updateField('phone')} placeholder="Chưa cập nhật" value={form.phone} />
+          <input id="profile-phone" inputMode="tel" maxLength={12} onChange={handlePhoneChange} placeholder="+84" value={form.phone} />
         </div>
         <div className="profile-edit-form__field">
           <label htmlFor="profile-birthday">Ngày sinh</label>
-          <KeyboardDatePicker id="profile-birthday" max={new Date().toISOString().slice(0, 10)} onChange={(val) => setForm((current) => ({ ...current, birthday: val }))} value={form.birthday} />
+          <KeyboardDatePicker id="profile-birthday" min={minDate} max={maxDate} onChange={(val) => setForm((current) => ({ ...current, birthday: val }))} value={form.birthday} />
         </div>
         <div className="profile-edit-form__field profile-edit-form__field--gender">
           <label htmlFor="profile-gender">Giới tính</label>

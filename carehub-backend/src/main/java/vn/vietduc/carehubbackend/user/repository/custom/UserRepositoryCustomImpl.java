@@ -26,7 +26,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE 1 = 1
+                WHERE u.is_deleted = false
                 """);
 
         Map<String, Object> params = new HashMap<>();
@@ -59,7 +59,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE 1 = 1
+                WHERE u.is_deleted = false
                 """);
 
         StringBuilder countSql = new StringBuilder("""
@@ -67,7 +67,7 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
                 FROM users u
                 LEFT JOIN user_roles ur
                     ON ur.user_id = u.id
-                WHERE 1 = 1
+                WHERE u.is_deleted = false
                 """);
 
         Map<String, Object> params = new HashMap<>();
@@ -131,6 +131,16 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             StringBuilder countSql,
             Map<String, Object> params
     ) {
+        boolean deleted = request != null && Boolean.TRUE.equals(request.getDeleted());
+        String deletedCondition = """
+                    AND u.is_deleted = :deleted
+                    """;
+        sql.append(deletedCondition);
+        if (countSql != null) {
+            countSql.append(deletedCondition);
+        }
+        params.put("deleted", deleted);
+
         if (request == null) {
             return;
         }

@@ -14,6 +14,7 @@ import {
   LeftOutlined,
   SearchOutlined,
   BellOutlined,
+  BookOutlined,
 } from '@ant-design/icons'
 import { AUTH_ROUTES } from '../../auth/constants/authRoutes.js'
 import { logoutUser } from '../../auth/services/logoutUser.js'
@@ -118,9 +119,10 @@ function Sidebar({ alertSummary = {} }) {
   if (isManager) {
     navSections.push(
       {
-        label: 'Đào tạo liên tục',
+        label: 'ĐÀO TẠO LIÊN TỤC',
         items: [
-          { icon: <BarChartOutlined />, label: 'Đào tạo liên tục', path: '/manager/reports/training-dashboard' },
+          { icon: <BarChartOutlined />, label: 'Dashboard giờ đào tạo', path: '/manager/reports/training-dashboard' },
+          { icon: <BookOutlined />, label: 'Giờ đào tạo nhân viên', path: '/training/employees' },
         ],
       },
       {
@@ -128,17 +130,16 @@ function Sidebar({ alertSummary = {} }) {
         items: [
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ chung', path: '/manager/compliance-by-technique' },
           { icon: <CheckSquareOutlined />, label: 'Tuân thủ theo kỹ thuật', path: '/manager/reports/checklist-dashboard' },
-          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
           { icon: <CheckSquareOutlined />, label: 'Bảng kiểm giám sát', path: '/manager/quality/checklists', badge: assignedCount },
+          { icon: <HistoryOutlined />, label: 'Lịch sử đánh giá', path: '/manager/quality/history' },
         ],
       },
       {
         label: 'Năng lực chuyên môn',
         items: [
-          { icon: <TrophyOutlined />, label: 'Năng lực chuyên môn', path: '/manager/reports/quality-dashboard' },
           // Mục này trước đây tên "Chất lượng chăm sóc" và nằm trong nhóm giám sát tuân thủ,
           // nhưng nội dung là dashboard năng lực nên thuộc về nhóm này.
-          { icon: <BarChartOutlined />, label: 'Dashboard năng lực', path: '/manager/competency-summary' },
+          { icon: <BarChartOutlined />, label: 'Năng lực chuyên môn', path: '/manager/competency-summary' },
           { icon: <FileDoneOutlined />, label: 'Kết quả năng lực chuyên môn', path: '/manager/exam-results' },
         ],
       },

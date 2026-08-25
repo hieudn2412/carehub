@@ -115,7 +115,7 @@ function ComplianceEmployeeTechniqueDetailPage() {
                       <th>Điểm TB</th>
                       <th>Đạt/Không đạt</th>
                       <th>Tỷ lệ</th>
-                      <th>Phân loại</th>
+                      <th>Kết quả</th>
                     </tr>
                   </thead>
                   <tbody>

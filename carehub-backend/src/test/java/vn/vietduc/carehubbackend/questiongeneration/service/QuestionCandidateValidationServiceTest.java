@@ -77,7 +77,7 @@ class QuestionCandidateValidationServiceTest {
     }
 
     @Test
-    void groundedV4RejectsMediumQuestionThatCanBeGuessedWithoutDomainReasoning() {
+    void groundedV4FlagsMediumQuestionThatCanBeGuessedWithoutDomainReasoning() {
         String source = "Người bệnh cần được xác định bằng tối thiểu hai thông tin.";
         GeneratedQuestion question = new GeneratedQuestion(
                 "Yêu cầu nào đúng khi xác định người bệnh?",
@@ -112,9 +112,11 @@ class QuestionCandidateValidationServiceTest {
 
         CandidateValidationResult result = service.validate(question, source);
 
-        assertThat(result.rejected()).isTrue();
+        // Critic không còn tự động từ chối: chỉ đánh dấu FAILED để đẩy sang NEED_REVIEW.
+        assertThat(result.rejected()).isFalse();
+        assertThat(result.criticStatus()).isEqualTo("FAILED");
+        assertThat(result.validationGrade()).isEqualTo("REVIEW");
         assertThat(result.warnings())
-                .anyMatch(warning -> warning.contains("surfaceCueFree") || warning.contains("LLM validation"))
                 .anyMatch(warning -> warning.contains("LLM validation"));
     }
 

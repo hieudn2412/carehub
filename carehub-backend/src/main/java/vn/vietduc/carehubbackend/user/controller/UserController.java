@@ -68,6 +68,12 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null));
     }
 
+    @PatchMapping("/users/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<UserDetailResponse>> restoreUser(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success("User restored successfully", userService.restoreUser(id)));
+    }
+
     @PatchMapping("/users/{id}/lock")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserDetailResponse>> lockUser(@PathVariable Long id) {

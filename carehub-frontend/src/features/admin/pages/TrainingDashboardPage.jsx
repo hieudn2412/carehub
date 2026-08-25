@@ -15,8 +15,6 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -26,16 +24,13 @@ import ProgressRing from '../../../shared/components/ProgressRing.jsx'
 import ChartConfigPanel from '../components/ChartConfigPanel.jsx'
 import AppShell from '../../../shared/components/AppShell.jsx'
 import AppliedFilterToolbar from '../../../shared/components/AppliedFilterToolbar.jsx'
-import KeyboardDatePicker from '../../../shared/components/KeyboardDatePicker.jsx'
 import { staffApi } from '../../staff/api/staffApi.js'
 import { trainingApi } from '../../training/api/trainingApi.js'
-import DepartmentTrainingStaffTable from '../../training/components/DepartmentTrainingStaffTable.jsx'
 import { wrapChartLabel } from '../utils/chartLabel.js'
 import FilterSelectField from '../../../shared/components/FilterSelectField.jsx'
 import '../styles/TrainingDashboardPage.css'
 
 const PAGE_SIZE = 100
-const today = new Date().toISOString().slice(0, 10)
 
 function responsePayload(response) {
   return response?.data?.data || {}
@@ -197,14 +192,12 @@ function DashboardContent({ role }) {
     keyword: '',
     departmentId: '',
     professionalFieldId: '',
-    asOf: today,
     status: '',
   })
   const [appliedFilters, setAppliedFilters] = useState({
     keyword: '',
     departmentId: '',
     professionalFieldId: '',
-    asOf: today,
     status: '',
   })
   const [summary, setSummary] = useState(null)
@@ -224,7 +217,6 @@ function DashboardContent({ role }) {
   const activeFilterCount = [
     !isManager && effectiveFilters.departmentId,
     effectiveFilters.professionalFieldId,
-    effectiveFilters.asOf && effectiveFilters.asOf !== today,
     effectiveFilters.status,
   ].filter(Boolean).length
 
@@ -268,7 +260,6 @@ function DashboardContent({ role }) {
           : effectiveFilters.departmentId || undefined,
         professionalFieldId: effectiveFilters.professionalFieldId || undefined,
         complianceStatus: effectiveFilters.status || undefined,
-        asOf: effectiveFilters.asOf || undefined,
       })
       setSummary(responsePayload(response))
     } catch {
@@ -277,7 +268,7 @@ function DashboardContent({ role }) {
     } finally {
       setLoading(false)
     }
-  }, [effectiveFilters.asOf, effectiveFilters.departmentId, effectiveFilters.professionalFieldId, effectiveFilters.status, isManager, managerDepartmentId])
+  }, [effectiveFilters.departmentId, effectiveFilters.professionalFieldId, effectiveFilters.status, isManager, managerDepartmentId])
 
   useEffect(() => {
     const timer = window.setTimeout(loadData, 0)
@@ -356,11 +347,6 @@ function DashboardContent({ role }) {
     return data
   }, [summary, typeSort, typeLimit])
 
-  const completionData = [
-    { name: 'Đạt', value: metrics.completed, color: '#10a77d' },
-    { name: 'Chưa đạt', value: metrics.total - metrics.completed, color: '#ef4444' },
-  ]
-
   async function handleExport() {
     setExporting(true)
     setError('')
@@ -369,7 +355,6 @@ function DashboardContent({ role }) {
         departmentId: isManager ? managerDepartmentId : effectiveFilters.departmentId || undefined,
         professionalFieldId: effectiveFilters.professionalFieldId || undefined,
         complianceStatus: effectiveFilters.status || undefined,
-        asOf: effectiveFilters.asOf || undefined,
         keyword: effectiveFilters.keyword || undefined,
       })
       exportCsv(rows.map(normalizeEmployee))
@@ -381,7 +366,7 @@ function DashboardContent({ role }) {
   }
 
   function resetFilters() {
-    const initialFilters = { keyword: '', departmentId: '', professionalFieldId: '', asOf: today, status: '' }
+    const initialFilters = { keyword: '', departmentId: '', professionalFieldId: '', status: '' }
     setFilters(initialFilters)
     setAppliedFilters(initialFilters)
   }
@@ -393,17 +378,13 @@ function DashboardContent({ role }) {
 
   const toolbarActions = (
     <>
-      {/* Manager đã có bảng nhân sự ngay trong dashboard này, chỉ Admin mới cần đường dẫn
-          sang trang giờ đào tạo nhân viên. */}
-      {!isManager && (
-        <button
-          type="button"
-          className="training-dashboard__details"
-          onClick={() => navigate('/training/employees')}
-        >
-          Xem chi tiết <ArrowRightOutlined />
-        </button>
-      )}
+      <button
+        type="button"
+        className="training-dashboard__details"
+        onClick={() => navigate('/training/employees')}
+      >
+        Xem chi tiết <ArrowRightOutlined />
+      </button>
       <button
         type="button"
         className="training-dashboard__export"
@@ -446,10 +427,6 @@ function DashboardContent({ role }) {
           searchable
           searchPlaceholder="Tìm tên lĩnh vực..."
         />
-      <label className="admin-control-toolbar__field">
-        <span>Tính đến ngày</span>
-        <KeyboardDatePicker value={filters.asOf} max={today} onChange={(val) => setFilters((current) => ({ ...current, asOf: val }))} />
-      </label>
       <FilterSelectField
         label="Trạng thái"
         value={filters.status}
@@ -498,26 +475,9 @@ function DashboardContent({ role }) {
               <strong>Chưa có dữ liệu đào tạo phù hợp</strong>
               <span>Dữ liệu sẽ hiển thị khi backend trả kết quả theo phạm vi bộ lọc.</span>
             </section>
-          ) : (
-            <section className={`training-dashboard__charts${isManager ? ' training-dashboard__charts--manager' : ''}`}>
-
-              {/* Manager chỉ quản lý một khoa nên biểu đồ so sánh giữa các khoa không có ý
-                  nghĩa; chỗ này dành cho danh sách nhân sự trong khoa. */}
-              {isManager ? (
-                <article className="training-chart-card training-chart-card--full">
-                  <header><h2>Nhân sự trong khoa</h2><span>{profile?.departmentName || 'Khoa của tôi'}</span></header>
-                  <DepartmentTrainingStaffTable
-                    hideToolbar={true}
-                    externalFilters={{
-                      keyword: effectiveFilters.keyword,
-                      complianceStatus: effectiveFilters.status,
-                      asOf: effectiveFilters.asOf,
-                      professionalFieldId: effectiveFilters.professionalFieldId
-                    }}
-                  />
-                </article>
-              ) : (
-                <article className="training-chart-card training-chart-card--full">
+          ) : isManager ? null : (
+            <section className="training-dashboard__charts">
+              <article className="training-chart-card training-chart-card--full">
                   <header>
                     <h2>Tỷ lệ hoàn thành theo khoa</h2>
                     <ChartConfigPanel
@@ -543,13 +503,11 @@ function DashboardContent({ role }) {
                       </BarChart>
                     </ChartCanvas>
                   )}
-                </article>
-              )}
+              </article>
             </section>
           )}
 
-          {!isManager && (
-            <section className="training-dashboard__charts training-dashboard__charts--equal">
+          <section className="training-dashboard__charts training-dashboard__charts--equal">
               <article className="training-chart-card">
                 <header>
                   <h2>Tổng giờ đào tạo theo lĩnh vực</h2>
@@ -603,8 +561,7 @@ function DashboardContent({ role }) {
                   </ChartCanvas>
                 )}
               </article>
-            </section>
-          )}
+          </section>
         </>
       )}
     </div>
@@ -612,11 +569,10 @@ function DashboardContent({ role }) {
 }
 
 export default function TrainingDashboardPage({ role = 'admin' }) {
-  const isManager = role === 'manager'
   return (
     <AppShell
-      title={isManager ? 'Dashboard giờ đào tạo' : undefined}
-      breadcrumbs={isManager ? undefined : [{ label: 'Đào tạo liên tục' }, { label: 'Dashboard giờ đào tạo' }]}
+      title="Dashboard giờ đào tạo"
+      breadcrumbs={[{ label: 'Đào tạo liên tục' }, { label: 'Dashboard giờ đào tạo' }]}
     >
       <DashboardContent role={role} />
     </AppShell>

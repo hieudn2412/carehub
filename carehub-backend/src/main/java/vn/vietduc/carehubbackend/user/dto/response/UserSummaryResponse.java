@@ -18,6 +18,7 @@ public record UserSummaryResponse(
         Boolean gender,
         java.time.LocalDate birthday,
         List<Role> roles,
-        UserStatus status
+        UserStatus status,
+        Boolean deleted
 ) {
 }

@@ -84,6 +84,8 @@ export default function ExamConfigPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitAction, setSubmitAction] = useState('')
+  const [showValidationErrors, setShowValidationErrors] = useState(false)
+  const [validationTimestamp, setValidationTimestamp] = useState(null)
 
   useEffect(() => {
     Promise.all([
@@ -209,22 +211,73 @@ export default function ExamConfigPage() {
     }
   }
 
-  function validate() {
-    if (!form.name.trim()) return 'Vui lòng nhập tên bài kiểm tra.'
-    if (!blueprint.length) return 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
-    if (totalAllocated !== totalQuestions) return `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
-    if (blueprint.some((field) => Math.abs(field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage || 0), 0) - 100) > 0.001)) {
-      return 'Tổng tỷ lệ ba mức nhận thức trong mỗi lĩnh vực phải bằng 100%.'
+  function collectValidationErrors(referenceTime = null) {
+    const errors = {}
+    const duration = Number(form.timeLimitMinutes)
+    const passingScore = Number(form.passingScore)
+    const attempts = Number(maxAttempts)
+
+    if (!form.name.trim()) errors.name = 'Vui lòng nhập tên bài kiểm tra.'
+    else if (form.name.trim().length > 255) errors.name = 'Tên bài kiểm tra không được vượt quá 255 ký tự.'
+
+    if (!Number.isInteger(totalQuestions) || totalQuestions < 1 || totalQuestions > 200) {
+      errors.totalQuestions = 'Tổng số câu hỏi phải là số nguyên từ 1 đến 200.'
     }
-    if (!totalQuestions || totalQuestions < 1) return 'Tổng số câu phải lớn hơn 0.'
-    if (selectedUserIds.length === 0) return 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
-    if (availableFrom && dueAt && availableFrom >= dueAt) return 'Thời điểm mở đề phải sớm hơn hạn hoàn thành.'
-    return ''
+    if (!Number.isInteger(duration) || duration < 1 || duration > 300) {
+      errors.timeLimitMinutes = 'Thời gian làm bài phải là số nguyên từ 1 đến 300 phút.'
+    }
+    if (!Number.isInteger(passingScore) || passingScore < 0 || passingScore > 10) {
+      errors.passingScore = 'Điểm đạt chuẩn phải là số nguyên từ 0 đến 10.'
+    }
+
+    if (!blueprint.length) {
+      errors.blueprint = 'Vui lòng chọn ít nhất một lĩnh vực chuyên môn.'
+    } else {
+      blueprint.forEach((field) => {
+        const count = Number(field.questionCount)
+        const cognitiveSum = field.cognitive.reduce((sum, cell) => sum + Number(cell.percentage), 0)
+        if (!Number.isInteger(count) || count < 1 || count > totalQuestions) {
+          errors[`field-${field.professionalFieldId}-count`] = `Số câu của mỗi lĩnh vực phải là số nguyên từ 1 đến ${Math.max(totalQuestions, 1)}.`
+        }
+        if (field.cognitive.some((cell) => !Number.isFinite(Number(cell.percentage)) || Number(cell.percentage) < 0 || Number(cell.percentage) > 100)
+          || Math.abs(cognitiveSum - 100) > 0.001) {
+          errors[`field-${field.professionalFieldId}-cognitive`] = 'Tổng tỷ lệ ba mức nhận thức phải bằng 100% và mỗi tỷ lệ nằm trong khoảng 0–100%.'
+        }
+      })
+      if (!errors.totalQuestions && totalAllocated !== totalQuestions) {
+        errors.allocation = `Tổng số câu các lĩnh vực (${totalAllocated}) phải bằng tổng số câu (${totalQuestions}).`
+      }
+    }
+
+    if (selectedUserIds.length === 0) errors.audience = 'Vui lòng chọn ít nhất một nhân viên nhận đề.'
+    if (!Number.isInteger(attempts) || attempts < 1 || attempts > 10) {
+      errors.maxAttempts = 'Số lượt thi phải là số nguyên từ 1 đến 10.'
+    }
+
+    const availableTime = availableFrom ? Date.parse(availableFrom) : null
+    const dueTime = dueAt ? Date.parse(dueAt) : null
+    if (availableFrom && Number.isNaN(availableTime)) errors.availableFrom = 'Thời điểm mở đề không hợp lệ.'
+    if (dueAt && Number.isNaN(dueTime)) errors.dueAt = 'Hạn nộp bài không hợp lệ.'
+    else if (dueTime !== null && referenceTime !== null && dueTime <= referenceTime) errors.dueAt = 'Hạn nộp bài phải ở thời điểm tương lai.'
+    if (availableTime !== null && dueTime !== null && availableTime >= dueTime) {
+      errors.dueAt = 'Hạn nộp bài phải sau thời điểm mở đề.'
+    }
+
+    return errors
+  }
+
+  function validate() {
+    const referenceTime = Date.now()
+    const errors = collectValidationErrors(referenceTime)
+    setShowValidationErrors(true)
+    setValidationTimestamp(referenceTime)
+    const firstError = Object.values(errors)[0]
+    if (firstError) showToast(firstError, 'warning')
+    return !firstError
   }
 
   async function previewBlueprint() {
-    const error = validate()
-    if (error) return showToast(error, 'warning')
+    if (!validate()) return
     setSubmitting(true)
     setSubmitAction('PREVIEW')
     try {
@@ -242,8 +295,7 @@ export default function ExamConfigPage() {
   }
 
   async function createAndAssign() {
-    const error = validate()
-    if (error) return showToast(error, 'warning')
+    if (!validate()) return
     setSubmitting(true)
     setSubmitAction('CREATE')
     try {
@@ -300,6 +352,8 @@ export default function ExamConfigPage() {
     }
   }
 
+  const validationErrors = showValidationErrors ? collectValidationErrors(validationTimestamp) : {}
+
   return (
     <AppShell
       className="dashboard-layout"
@@ -314,6 +368,7 @@ export default function ExamConfigPage() {
                 ) : (
                   <form
                     className="exp-assignment-form"
+                    noValidate
                     onSubmit={(event) => {
                       event.preventDefault()
                       createAndAssign()
@@ -330,57 +385,69 @@ export default function ExamConfigPage() {
 
                       <div className="exp-form-grid">
                         <label className="exp-form-grid__wide">
-                          <span>Tên bài kiểm tra</span>
+                          <span>Tên bài kiểm tra <b>*</b></span>
                           <input
                             required
-                            className="ch-input"
+                            className={`ch-input${validationErrors.name ? ' is-invalid' : ''}`}
                             value={form.name}
                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder="Ví dụ: Kiểm tra quy trình điều dưỡng chuyên khoa - 08/2026"
+                            aria-invalid={Boolean(validationErrors.name)}
+                            aria-describedby={validationErrors.name ? 'exam-name-error' : undefined}
                           />
+                          {validationErrors.name && <small id="exam-name-error" className="exp-field-error">{validationErrors.name}</small>}
                         </label>
 
                         <label>
-                          <span>Tổng số câu hỏi</span>
+                          <span>Tổng số câu hỏi <b>*</b></span>
                           <input
                             required
                             type="number"
                             min="1"
                             max="200"
-                            className="ch-input"
+                            className={`ch-input${validationErrors.totalQuestions ? ' is-invalid' : ''}`}
                             value={form.totalQuestions}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.totalQuestions)}
+                            aria-describedby={validationErrors.totalQuestions ? 'exam-total-error' : undefined}
                           />
+                          {validationErrors.totalQuestions && <small id="exam-total-error" className="exp-field-error">{validationErrors.totalQuestions}</small>}
                         </label>
 
                         <label>
-                          <span>Thời gian làm bài (phút)</span>
+                          <span>Thời gian làm bài (phút) <b>*</b></span>
                           <input
                             required
                             type="number"
                             min="1"
                             max="300"
-                            className="ch-input"
+                            className={`ch-input${validationErrors.timeLimitMinutes ? ' is-invalid' : ''}`}
                             value={form.timeLimitMinutes}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, timeLimitMinutes: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.timeLimitMinutes)}
+                            aria-describedby={validationErrors.timeLimitMinutes ? 'exam-duration-error' : undefined}
                           />
+                          {validationErrors.timeLimitMinutes && <small id="exam-duration-error" className="exp-field-error">{validationErrors.timeLimitMinutes}</small>}
                         </label>
 
                         <label>
-                          <span>Điểm đạt chuẩn (thang 10)</span>
+                          <span>Điểm đạt chuẩn (thang 10) <b>*</b></span>
                           <input
                             required
                             type="number"
                             min="0"
                             max="10"
-                            step="0.5"
-                            className="ch-input"
+                            step="1"
+                            className={`ch-input${validationErrors.passingScore ? ' is-invalid' : ''}`}
                             value={form.passingScore}
                             onFocus={(e) => e.target.select()}
                             onChange={(e) => setForm({ ...form, passingScore: e.target.value })}
+                            aria-invalid={Boolean(validationErrors.passingScore)}
+                            aria-describedby={validationErrors.passingScore ? 'exam-score-error' : undefined}
                           />
+                          {validationErrors.passingScore && <small id="exam-score-error" className="exp-field-error">{validationErrors.passingScore}</small>}
                         </label>
                       </div>
                     </section>
@@ -396,7 +463,7 @@ export default function ExamConfigPage() {
 
                       <div className="exp-form-grid">
                         <label className="exp-form-grid__wide">
-                          <span>Chọn lĩnh vực chuyên môn để thêm vào ma trận</span>
+                          <span>Chọn lĩnh vực chuyên môn để thêm vào ma trận <b>*</b></span>
                           <DepartmentCombobox
                             departments={fields}
                             value=""
@@ -404,6 +471,7 @@ export default function ExamConfigPage() {
                             placeholder="Tìm kiếm và chọn lĩnh vực chuyên môn..."
                             emptyValue=""
                           />
+                          {validationErrors.blueprint && <small className="exp-field-error">{validationErrors.blueprint}</small>}
                         </label>
                       </div>
 
@@ -444,7 +512,7 @@ export default function ExamConfigPage() {
                                     <input
                                       type="number"
                                       min="0"
-                                      className="ch-input"
+                                      className={`ch-input${validationErrors[`field-${item.professionalFieldId}-count`] ? ' is-invalid' : ''}`}
                                       value={item.questionCount}
                                       onFocus={(e) => e.target.select()}
                                       onChange={(e) => {
@@ -456,7 +524,11 @@ export default function ExamConfigPage() {
                                         }
                                         updateField(item.professionalFieldId, 'questionCount', normalized)
                                       }}
+                                      aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-count`])}
                                     />
+                                    {validationErrors[`field-${item.professionalFieldId}-count`] && (
+                                      <small className="exp-field-error">{validationErrors[`field-${item.professionalFieldId}-count`]}</small>
+                                    )}
                                     {previewField && (
                                       <span className={`exp-cognitive-availability ${previewField.shortage > 0 ? 'is-short' : previewField.backfilledQuestionCount > 0 ? 'is-backfilled' : 'is-ok'}`}>
                                         Khả dụng {previewField.availableQuestionCount}/{previewField.requiredQuestionCount} câu
@@ -486,7 +558,7 @@ export default function ExamConfigPage() {
                                                   type="number"
                                                   min="0"
                                                   max="100"
-                                                  className="ch-input"
+                                                  className={`ch-input${validationErrors[`field-${item.professionalFieldId}-cognitive`] ? ' is-invalid' : ''}`}
                                                   style={{ width: '80px', textAlign: 'center' }}
                                                   value={cell.percentage}
                                                   onFocus={(e) => e.target.select()}
@@ -499,6 +571,7 @@ export default function ExamConfigPage() {
                                                     }
                                                     updateCognitive(item.professionalFieldId, cell.cognitiveLevel, normalized)
                                                   }}
+                                                  aria-invalid={Boolean(validationErrors[`field-${item.professionalFieldId}-cognitive`])}
                                                 />
                                               </td>
                                               <td style={{ textAlign: 'right' }}>
@@ -521,7 +594,7 @@ export default function ExamConfigPage() {
 
                                   <div className={`exp-cognitive-summary ${cognitiveValid ? 'is-valid' : 'is-invalid'}`}>
                                     <span>Tổng tỷ lệ: <strong>{cognitiveSum}%</strong></span>
-                                    {!cognitiveValid && <small> (Tổng tỷ lệ phải bằng 100%)</small>}
+                                    {!cognitiveValid && <small> {validationErrors[`field-${item.professionalFieldId}-cognitive`] || '(Tổng tỷ lệ phải bằng 100%)'}</small>}
                                   </div>
                                 </div>
                               </div>
@@ -537,6 +610,7 @@ export default function ExamConfigPage() {
                           <><ExclamationCircleOutlined /> Đã phân bổ <strong>{totalAllocated} / {totalQuestions}</strong> câu hỏi. Hãy điều chỉnh để khớp số lượng.</>
                         )}
                       </div>
+                      {validationErrors.allocation && <small className="exp-field-error">{validationErrors.allocation}</small>}
                     </section>
 
                     {/* Section 3 */}
@@ -594,7 +668,7 @@ export default function ExamConfigPage() {
 
                         <div>
                           <div className="exam-flow__target-title">
-                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị</span>
+                            <span>{selectedUserIds.length} đã chọn / {filteredUsers.length} hiển thị <b>*</b></span>
                             <div style={{ display: 'flex', gap: 8 }}>
                               <button type="button" className="exp-btn-secondary" onClick={selectAllFiltered}>Chọn tất cả</button>
                               <button type="button" className="exp-btn-secondary" onClick={deselectAllFiltered}>Bỏ tất cả</button>
@@ -623,6 +697,7 @@ export default function ExamConfigPage() {
                           </div>
                         </div>
                       </div>
+                      {validationErrors.audience && <small className="exp-field-error">{validationErrors.audience}</small>}
                     </section>
 
                     {/* Section 4 */}
@@ -636,19 +711,21 @@ export default function ExamConfigPage() {
 
                       <div className="exp-schedule-card">
                         <div className="exp-schedule-row">
-                          <div className="exp-schedule-field">
+                          <div className={`exp-schedule-field${validationErrors.availableFrom ? ' is-invalid' : ''}`}>
                             <label className="exp-schedule-label">Mở đề lúc</label>
                             <DateTimePicker24h value={availableFrom} onChange={(val) => setAvailableFrom(val)} />
+                            {validationErrors.availableFrom && <small className="exp-field-error">{validationErrors.availableFrom}</small>}
                           </div>
 
-                          <div className="exp-schedule-field">
+                          <div className={`exp-schedule-field${validationErrors.dueAt ? ' is-invalid' : ''}`}>
                             <label className="exp-schedule-label">Hạn nộp bài</label>
                             <DateTimePicker24h value={dueAt} onChange={(val) => setDueAt(val)} />
+                            {validationErrors.dueAt && <small className="exp-field-error">{validationErrors.dueAt}</small>}
                           </div>
 
                           <div className="exp-schedule-field exp-schedule-field--compact">
-                            <label className="exp-schedule-label">Số lượt thi</label>
-                            <div className="exp-number-stepper">
+                            <label className="exp-schedule-label">Số lượt thi <b>*</b></label>
+                            <div className={`exp-number-stepper${validationErrors.maxAttempts ? ' is-invalid' : ''}`}>
                               <input
                                 type="number"
                                 min="1"
@@ -659,6 +736,7 @@ export default function ExamConfigPage() {
                               />
                               <span className="exp-stepper-unit">lần</span>
                             </div>
+                            {validationErrors.maxAttempts && <small className="exp-field-error">{validationErrors.maxAttempts}</small>}
                           </div>
 
                           <div className="exp-schedule-field exp-schedule-field--wide">

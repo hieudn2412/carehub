@@ -594,7 +594,7 @@ public class DocumentQuestionJobService {
                 job.getQuestionsPerChunk(), "vi", job.getDocument().getFilename(), chunk.getPageStart(),
                 chunk.getPageEnd(), job.getCategory() == null ? null : job.getCategory().getName(),
                 job.getCategory() == null ? null : job.getCategory().getDescription(),
-                cognitiveDirective(job),
+                cognitiveDirective(job, chunk.getChunkIndex()),
                 job.getPipelineVersion() == null ? GenerationPipelineVersion.LEGACY_V3.name() : job.getPipelineVersion().name(),
                 professionalFieldPromptOptions(job)
         );
@@ -843,7 +843,7 @@ public class DocumentQuestionJobService {
         for (int i = 0; i < questions.size(); i++) {
             GeneratedQuestion question = questions.get(i);
             ProfessionalField questionProfessionalField = resolveGeneratedProfessionalField(job, question.professionalFieldCode());
-            CognitiveLevel questionCognitiveLevel = resolveGeneratedCognitiveLevel(job, question.cognitiveLevel());
+            CognitiveLevel questionCognitiveLevel = resolveGeneratedCognitiveLevel(job, chunk.getChunkIndex(), question.cognitiveLevel());
             String generationKey = job.getPipelineVersion() == GenerationPipelineVersion.GROUNDED_V4
                     ? generationKeyService.groundedCandidateKey(
                             provider,
@@ -912,17 +912,19 @@ public class DocumentQuestionJobService {
             }
             CandidateStatus status;
             CandidateLabel label;
-            // NEED_REVIEW giờ CHỈ mang nghĩa "nghi ngờ trùng". Thiếu lĩnh vực/mức nhận thức/danh mục
-            // vẫn hiện bằng mini-badge cảnh báo trên thẻ câu hỏi nên không cần gắn cờ thêm ở đây.
+            // NEED_REVIEW mang đúng hai nghĩa: nghi ngờ trùng, hoặc AI critic có kết luận xấu.
+            // Thiếu lĩnh vực/mức nhận thức/danh mục vẫn hiện bằng mini-badge trên thẻ câu hỏi
+            // nên không cần gắn cờ thêm ở đây.
+            boolean criticFailed = "FAILED".equals(validation.criticStatus());
             if (validation.rejected()) {
                 status = CandidateStatus.REJECTED;
                 label = CandidateLabel.REJECTED;
-            } else if (duplicate.needsReview() || duplicate.strongDuplicate()) {
+            } else if (criticFailed || duplicate.needsReview() || duplicate.strongDuplicate()) {
                 status = CandidateStatus.NEED_REVIEW;
                 label = CandidateLabel.NEED_REVIEW;
                 if (duplicate.strongDuplicate()) {
                     warnings.add("Trùng ngữ nghĩa mạnh với câu hỏi đã có; cần người duyệt quyết định");
-                } else {
+                } else if (duplicate.needsReview()) {
                     warnings.add("Có khả năng trùng ngữ nghĩa với câu hỏi đã có");
                 }
             } else {
@@ -1137,16 +1139,27 @@ public class DocumentQuestionJobService {
     }
 
     /**
-     * Chỉ thị mức nhận thức gửi kèm prompt. Khi admin đặt tỷ lệ thì mô tả tỷ lệ đó,
-     * còn lại giữ nguyên tên mức như trước.
+     * Chỉ thị mức nhận thức gửi kèm prompt cho MỘT chunk.
+     *
+     * <p>Prompt được gửi theo từng chunk, mà mỗi chunk chỉ sinh 1–3 câu, nên gửi thẳng
+     * tỷ lệ xuống là vô nghĩa: model không thể phân bổ tỷ lệ trong phạm vi một câu, và
+     * các lần gọi độc lập nhau nên không lần nào giữ được tỷ lệ trên toàn phiên. Vì vậy
+     * backend tự quy tỷ lệ thành MỘT mức cụ thể cho từng chunk; tỷ lệ do backend bảo đảm
+     * chứ không phó mặc cho model.</p>
+     *
+     * <p>Giới hạn đã biết: tỷ lệ được tính trên số chunk, nên khi questionsPerChunk &gt; 1
+     * thì mọi câu trong cùng một chunk chia chung một mức mục tiêu — tỷ lệ thực tế vẫn
+     * bám sát nhưng thô hơn. Muốn mịn hơn thì phải phân bổ theo từng câu.</p>
      */
-    private static String cognitiveDirective(DocumentQuestionJob job) {
+    private static String cognitiveDirective(DocumentQuestionJob job, Integer chunkIndex) {
         if (hasCognitiveMix(job)) {
-            return ("Phân bổ theo tỷ lệ mục tiêu trên tổng số câu của phiên: "
-                    + "FOUNDATION %d%%, CLINICAL_APPLICATION %d%%, CLINICAL_REASONING_ANALYSIS %d%%. "
-                    + "Bám tỷ lệ này khi chunk đủ dữ kiện; chunk không đủ dữ kiện thì hạ mức và "
-                    + "KHÔNG bịa thêm tình huống ngoài nguồn chỉ để đạt tỷ lệ.")
+            CognitiveLevel target = levelForChunk(job, chunkIndex == null ? 0 : chunkIndex);
+            return ("Mức mục tiêu cho chunk này: %s (%s). Tỷ lệ toàn phiên do hệ thống phân bổ "
+                    + "sẵn theo từng chunk — dễ %d%%, trung bình %d%%, khó %d%% — nên chỉ cần bám "
+                    + "đúng mức mục tiêu ở trên và KHÔNG bịa thêm tình huống ngoài nguồn chỉ để đạt mức.")
                     .formatted(
+                            target.name(),
+                            cognitiveLevelInVietnamese(target),
                             job.getCognitiveMixFoundation(),
                             job.getCognitiveMixApplication(),
                             job.getCognitiveMixReasoning()
@@ -1155,6 +1168,53 @@ public class DocumentQuestionJobService {
         return job.getTargetCognitiveLevel() == null
                 ? TargetCognitiveLevel.AUTO.name()
                 : job.getTargetCognitiveLevel().name();
+    }
+
+    /**
+     * Quy tỷ lệ phần trăm thành mức cho chunk thứ {@code chunkIndex}.
+     *
+     * <p>Mỗi bước chọn mức đang thiếu nhiều nhất so với hạn mức của nó
+     * ({@code phanTram * soChunk / 100} trừ đi số đã phát). Cách này giữ đúng tỷ lệ ở mọi
+     * đoạn đầu của dãy, nên phiên ít chunk cũng không bị lệch.</p>
+     *
+     * <p>Không tính riêng từng mức rồi cộng lại: khi hai mức cùng "đến lượt" ở một chỉ số
+     * thì mức xét sau sẽ mất lượt vĩnh viễn và tỷ lệ hụt đi (20/50/30 từng ra 20/40/40).</p>
+     */
+    /* package */ static CognitiveLevel levelForChunk(DocumentQuestionJob job, int chunkIndex) {
+        int[] share = {
+                job.getCognitiveMixFoundation(),
+                job.getCognitiveMixApplication(),
+                job.getCognitiveMixReasoning()
+        };
+        CognitiveLevel[] levels = {
+                CognitiveLevel.FOUNDATION,
+                CognitiveLevel.CLINICAL_APPLICATION,
+                CognitiveLevel.CLINICAL_REASONING_ANALYSIS
+        };
+        int[] issued = new int[3];
+        int picked = 2;
+        for (int n = 1; n <= Math.max(0, chunkIndex) + 1; n++) {
+            picked = 0;
+            double bestDeficit = share[0] * n / 100.0 - issued[0];
+            for (int i = 1; i < 3; i++) {
+                double deficit = share[i] * n / 100.0 - issued[i];
+                if (deficit > bestDeficit) {
+                    bestDeficit = deficit;
+                    picked = i;
+                }
+            }
+            issued[picked]++;
+        }
+        return levels[picked];
+    }
+
+    /** Bệnh viện quen gọi ba mức là dễ / trung bình / khó; nói kèm cho model dễ hiểu. */
+    private static String cognitiveLevelInVietnamese(CognitiveLevel level) {
+        return switch (level) {
+            case FOUNDATION -> "dễ";
+            case CLINICAL_APPLICATION -> "trung bình";
+            case CLINICAL_REASONING_ANALYSIS -> "khó";
+        };
     }
 
     /** Phần mức nhận thức trong khoá chống sinh trùng; đổi tỷ lệ phải ra khoá khác. */
@@ -1201,7 +1261,10 @@ public class DocumentQuestionJobService {
                 .orElse(null);
     }
 
-    private CognitiveLevel resolveGeneratedCognitiveLevel(DocumentQuestionJob job, String value) {
+    private CognitiveLevel resolveGeneratedCognitiveLevel(DocumentQuestionJob job, Integer chunkIndex, String value) {
+        if (hasCognitiveMix(job)) {
+            return levelForChunk(job, chunkIndex == null ? 0 : chunkIndex);
+        }
         if (job.getTargetCognitiveLevel() != null
                 && job.getTargetCognitiveLevel() != TargetCognitiveLevel.AUTO) {
             return CognitiveLevel.valueOf(job.getTargetCognitiveLevel().name());

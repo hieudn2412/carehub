@@ -104,6 +104,28 @@ describe('ExamConfigPage blueprint flow', () => {
     expect(payload.fieldBlueprints[0].professionalFieldId).toBe(1)
     expect(payload.fieldBlueprints[0].cognitive).toHaveLength(3)
   })
+
+  it('hien loi tai truong va khong goi API khi thong tin khong hop le', async () => {
+    const { default: ExamConfigPage } = await import('./ExamConfigPage.jsx')
+    render(<MemoryRouter><ExamConfigPage /></MemoryRouter>)
+
+    await screen.findByRole('option', { name: 'Hồi sức cấp cứu' })
+    fireEvent.change(screen.getByLabelText(/Tên bài kiểm tra/), { target: { value: '   ' } })
+    fireEvent.change(screen.getByLabelText(/Tổng số câu hỏi/), { target: { value: '0' } })
+    fireEvent.change(screen.getByLabelText(/Thời gian làm bài/), { target: { value: '301' } })
+    fireEvent.change(screen.getByLabelText(/Điểm đạt chuẩn/), { target: { value: '7.5' } })
+    fireEvent.click(screen.getByRole('button', { name: /Tạo đề/ }))
+
+    expect(screen.getByText('Vui lòng nhập tên bài kiểm tra.')).toBeInTheDocument()
+    expect(screen.getByText('Tổng số câu hỏi phải là số nguyên từ 1 đến 200.')).toBeInTheDocument()
+    expect(screen.getByText('Thời gian làm bài phải là số nguyên từ 1 đến 300 phút.')).toBeInTheDocument()
+    expect(screen.getByText('Điểm đạt chuẩn phải là số nguyên từ 0 đến 10.')).toBeInTheDocument()
+    expect(screen.getByText('Vui lòng chọn ít nhất một lĩnh vực chuyên môn.')).toBeInTheDocument()
+    expect(screen.getByText('Vui lòng chọn ít nhất một nhân viên nhận đề.')).toBeInTheDocument()
+    expect(previewExamConfig).not.toHaveBeenCalled()
+    expect(createExamConfig).not.toHaveBeenCalled()
+  })
+
   it('tim nhieu ma nhan vien cach nhau bang dau cach', async () => {
     const { default: ExamConfigPage } = await import('./ExamConfigPage.jsx')
     render(<MemoryRouter><ExamConfigPage /></MemoryRouter>)

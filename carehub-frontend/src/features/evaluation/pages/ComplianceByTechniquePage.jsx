@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  CaretDownOutlined,
+  CaretUpOutlined,
   DownloadOutlined,
   EyeOutlined,
   ReloadOutlined,
@@ -87,6 +89,7 @@ function ComplianceByTechniquePage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filterError, setFilterError] = useState('')
   const [appliedFilters, setAppliedFilters] = useState({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
+  const [sortDirection, setSortDirection] = useState(null)
   const effectiveDepartmentId = isAdmin ? appliedFilters.departmentId : departmentId
   const effectiveKeyword = appliedFilters.keyword
   const effectiveFromDate = appliedFilters.fromDate
@@ -194,7 +197,30 @@ function ComplianceByTechniquePage() {
     setDepartmentId(isAdmin ? '' : departmentId)
     setAppliedFilters({ departmentId: '', keyword: '', fromDate: yearStart, toDate: today })
     setFilterError('')
+    setSortDirection(null)
   }
+
+  const toggleSort = () => {
+    setSortDirection((current) => {
+      if (current === 'desc') return 'asc'
+      if (current === 'asc') return null
+      return 'desc'
+    })
+  }
+
+  const sortedItems = useMemo(() => {
+    const items = data?.items || []
+    if (!sortDirection) return items
+    return [...items].sort((a, b) => {
+      const countA = Number(a.evaluationCount || 0)
+      const countB = Number(b.evaluationCount || 0)
+      if (sortDirection === 'asc') {
+        return countA - countB
+      } else {
+        return countB - countA
+      }
+    })
+  }, [data?.items, sortDirection])
 
   const toolbarActions = (
     <div className="compliance-toolbar__actions">
@@ -258,7 +284,37 @@ function ComplianceByTechniquePage() {
                   <thead>
                     <tr>
                       <th>Nhân viên</th>
-                      <th>Tổng số lần được kiểm tra</th>
+                      <th
+                        onClick={toggleSort}
+                        style={{ cursor: 'pointer', userSelect: 'none' }}
+                        title="Nhấn để sắp xếp theo tổng số lần được kiểm tra/được giao"
+                      >
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <span>Tổng số lần được kiểm tra</span>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '9px',
+                              lineHeight: 1,
+                            }}
+                          >
+                            <CaretUpOutlined
+                              style={{
+                                color: sortDirection === 'asc' ? '#14866d' : '#bfbfbf',
+                                marginBottom: '-3px',
+                              }}
+                            />
+                            <CaretDownOutlined
+                              style={{
+                                color: sortDirection === 'desc' ? '#14866d' : '#bfbfbf',
+                              }}
+                            />
+                          </span>
+                        </div>
+                      </th>
                       <th>Tỷ lệ tuân thủ chung</th>
                       <th>Hành động</th>
                     </tr>
@@ -277,7 +333,7 @@ function ComplianceByTechniquePage() {
                         </td>
                       </tr>
                     ) : (
-                      data.items.map((item, idx) => (
+                      sortedItems.map((item, idx) => (
                         <tr key={idx}>
                           <td style={{ fontWeight: 500 }}>{item.employeeName}<br /><small>{item.employeeCode} · {item.departmentName || data?.departmentName || '—'}</small></td>
                           <td>{item.evaluationCount}</td>

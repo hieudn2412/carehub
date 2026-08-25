@@ -123,6 +123,12 @@ export const adminApi = {
     })
   },
 
+  restoreUser(id) {
+    return httpClient.patch(`/users/${id}/restore`, {}, {
+      headers: authHeaders(),
+    })
+  },
+
   lockUser(id) {
     return httpClient.patch(`/users/${id}/lock`, {}, {
       headers: authHeaders(),
@@ -279,6 +285,12 @@ export const adminApi = {
 
   deleteForm(id) {
     return httpClient.delete(`/forms/${id}`, {
+      headers: authHeaders(),
+    })
+  },
+
+  restoreForm(id) {
+    return httpClient.post(`/forms/${id}/restore`, {}, {
       headers: authHeaders(),
     })
   },
@@ -457,6 +469,12 @@ export const adminApi = {
 
   getFormAssignmentItemAllowedDepartments(itemId) {
     return httpClient.get(`/form-assignment-items/${itemId}/allowed-departments`, {
+      headers: authHeaders(),
+    })
+  },
+
+  updateFormAssignmentItemAllowedDepartments(itemId, data) {
+    return httpClient.put(`/form-assignment-items/${itemId}/allowed-departments`, data, {
       headers: authHeaders(),
     })
   },
